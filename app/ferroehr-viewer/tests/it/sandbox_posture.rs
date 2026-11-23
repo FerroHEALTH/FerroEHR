@@ -5,10 +5,6 @@
 //! read the way the box's viewer reads it at boot: the file under the
 //! environment the viewer image and the box's compose file give the
 //! container, through the same load and session check.
-//!
-//! The 5.6.0 release deployed a posture that still spelled the 5.5
-//! `[session]` keys, and the viewer refused the start on the box (#4985);
-//! nothing read the file before the box did.
 
 #![expect(
     clippy::expect_used,

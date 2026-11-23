@@ -2,9 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Viewer authentication: sign-in, sign-out and the session's state.
-//!
-//! Every route is a public HTTP endpoint, so each one enforces the session
-//! itself; the CDR credential never leaves the server.
 
 use ferrohealth_secret::secret::Secret;
 use ferrohealth_session::return_path::ReturnPath;
@@ -13,9 +10,6 @@ use serde::Deserialize;
 use crate::error::ViewerError;
 
 /// One deployment-configured link rendered under the sign-in card.
-///
-/// Doubles as the `[login.links]` configuration entry, so the page
-/// and the configuration cannot drift; both fields are required there.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LoginLink {
@@ -67,10 +61,6 @@ pub enum SignedIn {
 
 /// Basic sign-in: checks the credentials against the CDR with an
 /// authenticated ITS-REST read, then begins the session that carries them.
-///
-/// Credentials the CDR refuses are not an error: the answer says so, and the
-/// sign-in page draws the refusal with the username kept. The session cookie
-/// is appended to the response of the page being drawn.
 ///
 /// # Errors
 /// [`ViewerError::Invalid`] when Basic sign-in is off,

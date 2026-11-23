@@ -24,9 +24,6 @@ use crate::locale::{Msg, tr_served};
 
 /// One row of the template list, distilled from the ITS-REST Definition list
 /// shape (`template_id` / `concept` / `created_timestamp`).
-///
-/// Shared across both compilation targets, so it carries only fixed-size,
-/// client-safe fields (no `usize` in serialized types).
 #[derive(Debug, Clone, PartialEq)]
 pub struct TemplateRow {
     /// The operational-template id (the detail route segment).
@@ -71,13 +68,8 @@ fn root_is_composition(archetype_id: &str) -> bool {
 
 /// List the CDR's ADL 1.4 operational templates.
 ///
-/// GET `definition/template/adl1.4?version=*` with
-/// `Accept: application/json`; the body is an array whose elements are parsed
-/// defensively (missing fields become empty strings) into [`TemplateRow`]s.
-/// `version=*` pins the FULL inventory: an absent `version` collapses the
-/// CDR's listing to the latest version of each template (the released OAS
-/// `parameters/query/filter_version.yaml`), and a management client must
-/// show every stored version, not just the latest.
+/// `version=*` asks for every stored version; without it the CDR lists only the
+/// latest of each template (`parameters/query/filter_version.yaml`).
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -115,13 +107,8 @@ fn template_row(item: &serde_json::Value) -> TemplateRow {
 
 /// Upload an operational template (OPT/XML) to the CDR.
 ///
-/// POST `definition/template/adl1.4` with `Content-Type: application/xml`,
-/// `Accept: application/xml` and `Prefer: return=representation`, as
-/// [`upload_adl2_template`] does: a `400` names each violation
-/// ([`TemplateUpload::Invalid`]), and the `201` carries the stored OPT, so
-/// the `template_id` is read from its `ETag`, else from its `Location`. The
-/// other refusals (a `400` without violations, `409` duplicate) surface through
-/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
+/// A `400` naming violations is [`TemplateUpload::Invalid`]; the stored
+/// `template_id` is read from the `201`'s `ETag`, else its `Location`.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -149,14 +136,8 @@ pub async fn upload_template(
 
 /// List the CDR's ADL2 operational templates.
 ///
-/// GET `definition/template/adl2?version=*` with
-/// `Accept: application/json`. The row shape is the same four fields the ADL
-/// 1.4 listing carries (`template_id` / `concept` / `archetype_id` /
-/// `created_timestamp`), so both families share one [`TemplateRow`] and one
-/// parser. `version=*` pins the FULL inventory: without it the CDR collapses
-/// the listing to the latest version of each HRID family (the released OAS
-/// `parameters/query/filter_version.yaml`), which would hide every superseded
-/// ADL2 artefact from a management client.
+/// `version=*` asks for every stored version; without it the CDR lists only the
+/// latest of each HRID family (`parameters/query/filter_version.yaml`).
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -307,14 +288,9 @@ fn stored_id(response: &crate::cdr::CdrResponse) -> Option<String> {
 /// Delete one stored ADL2 artefact
 /// (`DELETE definition/artefact/adl2/{artefact_id}`).
 ///
-/// The ADL2 store's templates are removed through the ARTEFACT resource, not
-/// through the Admin API's `admin/template/{template_id}` (which addresses the
-/// ADL 1.4 store alone): the route is the CDR's own extension, whose unknown
-/// artefact is the `404` — which is also the answer for
-/// a malformed HRID, since the store key is opaque. A template-kind artefact
-/// that committed versions still reference is refused `409` with the
-/// referencing count in the diagnostic, and the page shows that text
-/// verbatim.
+/// ADL2 templates are removed through the artefact resource, the CDR's own
+/// extension. A malformed HRID is also a `404`, and an artefact that committed
+/// versions reference is refused `409`.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -343,10 +319,6 @@ const COMPOSITIONS_OF_TEMPLATE_AQL: &str = "SELECT COUNT(*) FROM EHR e CONTAINS 
 /// their order: the [`CountShape`](crate::bff::dashboard::CountShape) when
 /// the CDR answered a result set of another shape, `Err` with the CDR's
 /// refusal of that one count.
-///
-/// One `POST query/aql` per template, the id a query parameter and never
-/// part of the query text, bounded by
-/// [`FANOUT_CONCURRENCY`](crate::cdr::FANOUT_CONCURRENCY).
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)); each count carries its

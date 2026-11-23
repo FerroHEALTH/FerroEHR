@@ -3,10 +3,6 @@
 
 //! The CDR **Admin API** surface the viewer consumes.
 //!
-//! The availability probe every admin affordance is gated on, plus the three
-//! destructive operations (template delete, stored-query delete, physical EHR
-//! delete).
-//!
 //! The CDR's admin group is **off by default**, and while it is disabled every
 //! admin route answers `405 Method Not Allowed` with an empty `Allow` (the
 //! route exists but supports no method — ITS-REST overview
@@ -21,19 +17,10 @@
 //! spec's own capability-discovery operation, so the viewer never pokes a
 //! destructive group to learn whether it exists.
 //!
-//! **Capability is not authorization.** The manifest says the admin group is
-//! MOUNTED; whether THIS session may use it is answered per request by the CDR's
-//! RBAC (`401`/`403`), and a refusal surfaces on the page through
-//! [`refused`](crate::pages::common::refused).
-//!
 //! NOTE: no openEHR spec governs the viewer, and none governs the template or
 //! stored-query deletes it drives either — our own design. The EHR delete is the
 //! spec-grounded one: ITS-REST `operations/admin_ehr_delete.yaml`, whose unknown
 //! EHR is the `404`.
-//!
-//! Every read guards with
-//! [`require_session`](crate::session::require_session) first and keeps the
-//! CDR credential server-side.
 
 use crate::error::ViewerError;
 use crate::locale::server::ServerMsg;
@@ -77,9 +64,6 @@ pub fn availability_of(manifest: &ConformanceManifest) -> AdminAvailability {
 
 /// The single predicate every admin-gated view uses: destructive affordances
 /// render ONLY for a probe that succeeded and found the group mounted.
-///
-/// A failed probe (CDR unreachable, unreadable manifest, expired session)
-/// hides them — never render a button that cannot work.
 #[must_use]
 pub fn renders_admin_ops(probe: &Result<AdminAvailability, ViewerError>) -> bool {
     probe.as_ref().copied().is_ok_and(AdminAvailability::usable)
@@ -98,11 +82,6 @@ pub async fn probe_admin_api() -> Result<AdminAvailability, ViewerError> {
 
 /// Physically delete an operational template
 /// (`DELETE admin/template/{template_id}`).
-///
-/// The id is a CDR-supplied string, so the path segment is percent-encoded with
-/// the `urlencoding` crate — a template id containing a `/`, `#`, `?` or `%`
-/// would otherwise address a different resource. A template still referenced by
-/// a committed version is refused `409`, the CDR's diagnostic naming why.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -130,8 +109,6 @@ pub async fn admin_delete_template(
 /// Delete ONE version of a stored query from the CDR
 /// (`DELETE admin/query/{name}/{version}`) — the CDR's own store, so every
 /// client loses that version.
-///
-/// Both segments are percent-encoded (the qualified name carries `::`).
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
