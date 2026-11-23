@@ -43,6 +43,7 @@ pub mod committer;
 pub(crate) mod content_facts;
 pub(crate) mod contribution;
 pub mod envelope;
+pub mod episode;
 pub(crate) mod external;
 pub(crate) mod import;
 pub(crate) mod integrity;

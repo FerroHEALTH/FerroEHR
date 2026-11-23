@@ -113,6 +113,7 @@ pub mod contribution;
 pub mod ehr_access;
 pub mod gate;
 pub mod guarded;
+pub(crate) mod head_upsert;
 pub mod import;
 pub mod judged;
 pub mod meta;

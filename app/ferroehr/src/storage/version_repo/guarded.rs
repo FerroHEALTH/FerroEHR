@@ -495,12 +495,19 @@ fn audit_cte(name: &str, first: usize, time: &str, from: &str) -> String {
 /// [`DirectorySlot`] (the highest rank, the slot's object and head, and
 /// whether it adds a hierarchy), and
 /// for a party commit the key-space gate flag and the reverse targets of
-/// [`party_ctes`]; `beside` names what else it writes. The
-/// audit insert reads from `g`, and every later insert from the audit's, so
+/// [`party_ctes`], and last the episodes of a version whose `placement`
+/// writes them; `beside` names what else it writes. The audit insert reads from `g`, and every later insert from the audit's, so
 /// nothing is written unless every requirement holds; the last row names a
 /// flag per requirement.
-pub(super) fn statement(beside: Beside) -> String {
+pub(super) fn statement(beside: Beside, placement: super::head_upsert::Placement) -> String {
     let after_nodes = 33 + crate::storage::node_write::node_array_count();
+    let beside_params = match beside {
+        Beside::Status => 6,
+        Beside::Folder => 4,
+        Beside::Party => 2,
+        Beside::Nothing => 0,
+    };
+    let episodes = after_nodes + beside_params;
     let (sync, notified) = match beside {
         Beside::Status => (
             status_ctes("$7", after_nodes),
@@ -528,7 +535,12 @@ pub(super) fn statement(beside: Beside) -> String {
             (("$29", "$30"), lead)
         ),
         audit_cte("a", 1, "$22", "g"),
-        super::commit::version_ctes("", ("$7", "c.id", "a.id", "a, c"), 8, 33),
+        super::commit::version_ctes(
+            "",
+            ("$7", "c.id", "a.id", "a, c"),
+            8,
+            (33, placement, episodes),
+        ),
         sync,
         outbox_cte("$6", "$7", ("$31", "$22"), "v", beside != Beside::Party),
         reservation_cte("$32"),
@@ -574,11 +586,14 @@ const MEMBER_SCALARS: usize = 26;
 /// then each member's audit,
 /// version, expected head and node arrays in turn. Each member repeats the
 /// single write's audit, version, head-upsert and node CTEs under its own
-/// names.
-fn set_statement(n: usize) -> String {
+/// names. The members whose placement writes their episodes bind them last,
+/// in member order.
+fn set_statement(members: &[SetMember<'_>]) -> String {
     use std::fmt::Write as _;
+    let n = members.len();
     let stride = MEMBER_SCALARS + crate::storage::node_write::node_array_count();
     let base = |i: usize| 13 + i * stride;
+    let mut next_episodes = base(n);
     let targets: Vec<(String, String)> = (0..n)
         .map(|i| (format!("${}", base(i) + 5), format!("${}", base(i) + 25)))
         .collect();
@@ -590,8 +605,13 @@ fn set_statement(n: usize) -> String {
         guard_ctes("$2", &targets, "$6", (("$3", "$4"), Lead::Content)),
         audit_cte("ca", 7, "$6", "g"),
     );
-    for i in 0..n {
+    for (i, member) in members.iter().enumerate() {
         let b = base(i);
+        let placement = super::head_upsert::Placement::of(&member.version);
+        let episodes = next_episodes;
+        if placement == super::head_upsert::Placement::Placed {
+            next_episodes += 1;
+        }
         let _ = write!(
             sql,
             ", {}{}",
@@ -600,7 +620,7 @@ fn set_statement(n: usize) -> String {
                 &i.to_string(),
                 ("$2", "c.id", &format!("a{i}.id"), &format!("a{i}, c")),
                 b + 5,
-                b + MEMBER_SCALARS,
+                (b + MEMBER_SCALARS, placement, episodes),
             )
         );
     }
@@ -634,7 +654,7 @@ pub async fn commit_set(
     guard: &Guard,
 ) -> Result<jiff::Timestamp, StorageError> {
     use sqlx::Row as _;
-    let sql = set_statement(members.len());
+    let sql = set_statement(members);
     let mut query = sqlx::query(sqlx::AssertSqlSafe(sql))
         .bind(head.id)
         .bind(head.ehr_id)
@@ -661,6 +681,9 @@ pub async fn commit_set(
             query,
             &member.version.rows.iter().collect::<Vec<_>>(),
         );
+    }
+    for member in members {
+        query = super::commit::bind_episodes(query, &member.version);
     }
     let row = query.fetch_one(&mut *conn).await?;
     GuardFlags::read(&row)?.require()?;

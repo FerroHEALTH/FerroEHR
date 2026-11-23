@@ -512,6 +512,11 @@ async fn import_one_version(
     if !cursor.kind.is_demographic() && !version.data.is_null() {
         act.privacy.enforce(cursor.kind.as_str(), &version.data)?;
     }
+    // NOTE: draft access control, Episodes of Care: an imported COMPOSITION is
+    // placed by the same rule as a committed one; `sync_heads` keeps its episodes.
+    if cursor.kind == Kind::Composition && !version.data.is_null() {
+        crate::versioning::episode::placed(&version.data)?;
+    }
     // The content, decomposed once: the node rows to write AND — through
     // `reassemble` — the exact bytes a later read will serve.
     let version_uid = object_version_id(cursor.vo_id, &version.creating_system_id, version.tree);
