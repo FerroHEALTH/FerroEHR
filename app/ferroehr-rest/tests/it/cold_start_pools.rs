@@ -4,8 +4,9 @@
 //! A request on a replica that has just started, with every copy cold, needs
 //! at most one connection of each pool at a time: with pools of one
 //! connection each, a burst of reads after the start is answered, never left
-//! waiting for a connection another of its own statements holds. No openEHR
-//! spec governs connection handling: our own design (#5879).
+//! waiting for a connection another of its own statements holds, and each
+//! read is answered `200` (#6345). No openEHR spec governs connection
+//! handling: our own design (#5879).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -16,6 +17,7 @@ use ferroehr::config::rest::ApiConfig;
 use ferroehr::db::DbConfig;
 use ferroehr::db::domain::DomainPools;
 use ferroehr::ids::EhrId;
+use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr_rest::config::AppConfig;
@@ -41,6 +43,7 @@ async fn cold_replica(db: &testkit::TestDb) -> Router {
     let svc = Arc::new(FerroEhrService::new(&pools).with_binding_mapping(
         ferroehr::party_binding::BindingMapping::default().with_admin_role("ADMIN"),
     ));
+    common::allowing(&svc, &[Operation::HoldRoles, Operation::HoldScopes]);
     let mut config = AppConfig {
         server: common::server(),
         api: ApiConfig {
@@ -64,10 +67,12 @@ async fn a_cold_replica_answers_with_one_connection_per_pool() {
         ),
     );
     common::grant_basic_users(&warm, &pool, USERS).await;
+    let bob = common::basic_person(&pool, "bob").await;
     let ehr_id: EhrId = EHR_ID.parse().expect("an EHR id");
     Box::pin(warm.create_ehr_with_id_meta(ehr_id, WriteRequest::new(None)))
         .await
         .expect("create the EHR");
+    common::commit_access_settings(&warm, ehr_id, common::access_settings("open", &[bob])).await;
 
     let app = cold_replica(&db).await;
     for user in ["root", "bob", "root"] {
@@ -80,6 +85,6 @@ async fn a_cold_replica_answers_with_one_connection_per_pool() {
             tokio::time::timeout(Duration::from_secs(20), common::send_status(&app, request))
                 .await
                 .unwrap_or_else(|_| panic!("{user}'s read waited for a connection"));
-        assert_ne!(status, StatusCode::SERVICE_UNAVAILABLE, "{user}");
+        assert_eq!(status, StatusCode::OK, "{user}");
     }
 }
