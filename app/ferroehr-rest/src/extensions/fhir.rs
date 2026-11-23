@@ -530,10 +530,9 @@ fn service_error_outcome(e: ServiceError) -> Response {
     let mut response = operation_outcome(status, issue_type(status), &message);
     // NOTE: RFC 9110 §10.2.3, a 503 here is transient, as every other 503 of the server says.
     if status == StatusCode::SERVICE_UNAVAILABLE {
-        response.headers_mut().insert(
-            http::header::RETRY_AFTER,
-            http::HeaderValue::from_static("1"),
-        );
+        response
+            .headers_mut()
+            .insert(http::header::RETRY_AFTER, HeaderValue::from_static("1"));
     }
     response
 }

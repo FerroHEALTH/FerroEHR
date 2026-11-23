@@ -41,7 +41,7 @@ use sqlx::postgres::PgRow;
 use sqlx::{Connection, PgPool};
 use uuid::Uuid;
 
-mod access_index;
+pub mod access_index;
 mod access_log;
 mod batch;
 pub mod chain_walk;
@@ -571,7 +571,7 @@ impl AuditStore {
         #[cfg(feature = "fhir")]
         if reserved_by.is_none() && Self::only_entries(&records) {
             let entered = self.with_entries(&writing, records).await?;
-            let (uids, intake) = self.entry_rows(&writing, entered)?;
+            let (uids, intake) = Self::entry_rows(&writing, entered)?;
             self.group().write(intake).await?;
             let wrote = intake::Chains {
                 access_log: !uids.is_empty(),

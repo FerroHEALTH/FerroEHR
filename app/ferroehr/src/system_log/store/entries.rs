@@ -33,7 +33,6 @@ use crate::access_log::intake::{IndexRow, IntakeEntry};
 use super::chains::AuditChain;
 use super::writers::Pinned;
 use super::{AuditRecord, AuditStore, LearnedSets, RecordEnd, stored_record};
-use crate::access_log::projection::Projection;
 use crate::access_log::store::AccessLogStore;
 use crate::system_log::AuditError;
 use crate::system_log::event::{AuditEvent, EntryScope, EventOutcome};
@@ -81,7 +80,7 @@ impl AuditStore {
         records: Vec<AuditRecord>,
         reserved_by: Option<uuid::Uuid>,
     ) -> Result<(Vec<uuid::Uuid>, LearnedSets), AuditError> {
-        let (uids, intake) = self.entry_rows(writing, records)?;
+        let (uids, intake) = Self::entry_rows(writing, records)?;
         crate::access_log::intake::take_in(conn, &intake, reserved_by, &BTreeSet::new()).await?;
         Ok((uids, LearnedSets::default()))
     }
@@ -102,7 +101,7 @@ impl AuditStore {
         reservation: uuid::Uuid,
     ) -> Result<(), AuditError> {
         let entered = self.with_entries(writing, records).await?;
-        let (_, intake) = self.entry_rows(writing, entered)?;
+        let (_, intake) = Self::entry_rows(writing, entered)?;
         self.group()
             .write_on(conn, &intake, Some(reservation))
             .await?;
@@ -117,7 +116,6 @@ impl AuditStore {
     /// # Errors
     /// As [`Self::intake_entries`], less the store's.
     pub(super) fn entry_rows(
-        &self,
         writing: &Pinned,
         records: Vec<AuditRecord>,
     ) -> Result<EntryRows, AuditError> {

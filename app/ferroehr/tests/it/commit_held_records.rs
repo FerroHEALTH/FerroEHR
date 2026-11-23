@@ -653,12 +653,12 @@ async fn a_held_write_sends_again_a_shared_part_the_store_lost() {
     );
 }
 
-/// A held write names the search tokens an earlier write resolved by id
-/// under their generation (#6244); when the store's generation moved on, the
-/// intake refuses the ids (`FE001`), and the write resolves its tokens again:
-/// exactly one entry is recorded, and the version still commits after it.
+/// A held write after the store's token generation moved on records exactly
+/// one entry, and the version still commits after it; the entry carries no
+/// search token, which the frontier round renders into the index from the
+/// stored entry once its write is released (#6244, #6322).
 #[tokio::test]
-async fn a_held_write_resolves_again_search_tokens_of_a_stale_generation() {
+async fn a_held_write_after_the_token_generation_moved_is_indexed_with_its_tokens() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = audited(&pool).await;
@@ -681,14 +681,35 @@ async fn a_held_write_resolves_again_search_tokens_of_a_stale_generation() {
     let (second, recorder) = Box::pin(recorded_update(&svc, (ehr, &first), 2)).await;
     assert_eq!(entries(&pool).await, before + 1, "one entry is recorded");
     holds_one_entry(&pool, &recorder).await;
-    let tokens: i32 = sqlx::query_scalar(
-        "SELECT cardinality(e.search_tokens) FROM audit.access_log_entry e \
-         ORDER BY e.id DESC LIMIT 1",
+    let newest: i64 = sqlx::query_scalar("SELECT max(id) FROM audit.access_log_entry")
+        .fetch_one(&pool)
+        .await
+        .expect("the newest entry");
+    // NOTE: our own design (#5762), the chainer releases a committed reservation's holds; this
+    // test's audit tasks are stopped, so the test releases them as the chainer would.
+    sqlx::query(
+        "SELECT audit.audit_intake_release(array_agg(DISTINCT h.reserved_by)) \
+           FROM audit.access_log_hold h",
     )
-    .fetch_one(&pool)
+    .execute(&pool)
     .await
-    .expect("the newest entry's tokens");
-    assert!(tokens > 0, "the newest entry names its search tokens");
+    .expect("the committed writes' holds are released");
+    ferroehr::system_log::store::AuditStore::new(pool.clone())
+        .catch_up()
+        .await
+        .expect("the index catches up");
+    let tokens: Option<i32> = sqlx::query_scalar(
+        "SELECT cardinality(i.search_tokens) FROM audit.access_log_index i WHERE i.entry_id = $1",
+    )
+    .bind(newest)
+    .fetch_optional(&pool)
+    .await
+    .expect("the newest entry's index row")
+    .flatten();
+    assert!(
+        tokens.is_some_and(|count| count > 0),
+        "the newest entry is indexed with its search tokens: {tokens:?}"
+    );
     assert!(
         second.version_uid() != first.version_uid(),
         "the version committed after its record"

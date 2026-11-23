@@ -203,13 +203,7 @@ impl AccessLogStore {
             .collect::<Result<Vec<_>, _>>()?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        take_in(
-            &mut tx,
-            &intake,
-            None,
-            &std::collections::BTreeSet::new(),
-        )
-        .await?;
+        take_in(&mut tx, &intake, None, &std::collections::BTreeSet::new()).await?;
         // NOTE: our own design (#5762), the audit domain's own store, whose records are this
         // transaction's rows.
         tx.commit().await?;

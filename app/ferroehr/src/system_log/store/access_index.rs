@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The access log's search index, filled from the stored entries (#6319,
-//! #6322): each frontier round copies the search columns of the entries up to
+//! The access log's search index, filled from the stored entries.
+//!
+//! Each frontier round (#6319, #6322) copies the search columns of the entries up to
 //! the frontier into `audit.access_log_index`, with the ITI-81 search tokens
 //! of each entry's projection rendered from the stored entry, and a search on
 //! a token parameter first moves the frontier and the index past every entry
@@ -267,8 +268,28 @@ pub(crate) fn entry_tokens(
             crate::telemetry::metrics::metrics()
                 .atna_audit_serialize_failed
                 .add(1, &[]);
-            tracing::warn!(chain_seq, "access-log entry indexed without search tokens: {error}");
+            tracing::warn!(
+                chain_seq,
+                "access-log entry indexed without search tokens: {error}"
+            );
             BTreeSet::new()
         }
+    }
+}
+
+#[cfg(all(test, feature = "fhir"))]
+mod tests {
+    use super::CATCH_UP_WAIT;
+    use crate::error::ServiceError;
+    use crate::system_log::AuditError;
+
+    /// A search whose index did not catch up is unavailable, which the wire
+    /// answers `503` with `Retry-After`, never a server fault.
+    #[test]
+    fn an_index_behind_is_refused_as_unavailable() {
+        assert!(matches!(
+            crate::system_log::search_refusal(AuditError::IndexBehind(CATCH_UP_WAIT)),
+            ServiceError::Overloaded(_)
+        ));
     }
 }

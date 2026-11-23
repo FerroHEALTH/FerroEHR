@@ -257,7 +257,9 @@ impl<'e> Columns<'e> {
     }
 }
 
-/// The write of a batch: its shared parts, one the store already holds or one
+/// The write of a batch, its entries' rows and shared parts in one statement.
+///
+/// Its shared parts, one the store already holds or one
 /// the batch carries (`$24`, `$25`), stored or raised in the same statement,
 /// its entries' rows with their render policy by digest, and a hold of each
 /// under `$23` when it names a reservation (#6242). A part an entry outlives
@@ -265,7 +267,7 @@ impl<'e> Columns<'e> {
 /// hold, or a part removed while it was raised, is refused. The entry carries
 /// no search token: the frontier round renders them from the stored entry
 /// (#6322).
-const PLAIN: &str = "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_current_xact_id() AS taken), \
+pub const PLAIN: &str = "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_current_xact_id() AS taken), \
      u AS MATERIALIZED ( \
        SELECT * FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], \
                             $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], \
