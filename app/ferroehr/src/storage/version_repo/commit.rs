@@ -3,12 +3,6 @@
 
 //! The local commit write path.
 //!
-//! Covers the folded commit statement ([`commit_folded`]): the `commit_audit`
-//! row with its `contribution`, its version with the head upsert and node
-//! rows, or both, in one statement; and the
-//! folder-membership + event-outbox writes that ride along inside the same
-//! commit transaction.
-//!
 //! No openEHR spec governs the SQL — our own design. The change-control law realized here is RM common master06
 //! (§Committal and Audits, §The 'Virtual Version Tree'); `AUDIT_DETAILS` is
 //! master04.
@@ -35,12 +29,6 @@ use crate::storage::error::StorageError;
 /// group code, never a rubric (`Change_type_valid`), and the three jsonb
 /// columns arrive as the canonical RM fragments they store
 /// (`DV_TEXT` / `PARTY_PROXY` / the `ATTESTATION`-declared attributes).
-///
-/// The fragments are OWNED because the versioning layer holds these attributes
-/// as their RM values and encodes them once, here at its boundary
-/// (`crate::versioning::audit::AuditInput::row`): storage takes plain value
-/// inputs and never decodes RM types (see the module docs), and the
-/// `ATTESTATION`-declared subset is not an RM class it could name.
 #[derive(Debug)]
 pub struct AuditRow<'a> {
     /// `AUDIT_DETAILS.system_id`.
@@ -464,14 +452,6 @@ pub(super) fn bind_version<'q>(
 }
 
 /// Run one folded commit statement ([`Folded`]), returning the rows it wrote.
-///
-/// A version's audit `time_committed` and its row's `committed_at` are both the
-/// caller's bound [`FoldedVersion::time_committed`], the instant its
-/// `VERSION.signature` was computed over, so stored and signed agree by
-/// construction. The externalized multimedia URIs a version's node rows
-/// reference are indexed in the same transaction
-/// ([`crate::storage::blob_ref::record_uris`]), which issues no statement when there
-/// are none.
 ///
 /// On a CONTRIBUTION uid already in use the `contribution` CTE inserts nothing
 /// (`ON CONFLICT DO NOTHING`), so the outer `LEFT JOIN` yields a NULL id; the

@@ -623,7 +623,7 @@ fn set_statement(n: usize) -> String {
 /// references follow in the caller's transaction.
 ///
 /// # Errors
-/// [`StorageError::GuardMoved`] when a requirement no longer held,
+/// [`StorageError::GuardMoved`] when a requirement did not hold,
 /// [`StorageError::ContributionUidInUse`] when the CONTRIBUTION uid is in
 /// use, and [`StorageError::Database`] on a driver failure (a version key
 /// refusing a member whose place a concurrent commit took among them).

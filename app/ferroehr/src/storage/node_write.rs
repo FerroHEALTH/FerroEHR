@@ -262,10 +262,6 @@ static WRITE_NODES_BATCH_SQL: std::sync::LazyLock<String> =
 /// Bulk-insert the decomposed node rows of one stored version — ONE
 /// fixed-text `unnest` statement whatever the row count.
 ///
-/// `version` is the output of [`crate::storage::render::decompose`]; the
-/// storage context (`vo_id`/`sys_version`/`ehr_id`) is supplied here and
-/// written onto every row as constant scalars.
-///
 /// A logically-deleted version (data Void, RM common master06 §Logical
 /// Deletion) has no node rows — the caller simply passes an empty set and no
 /// statement runs.
@@ -313,14 +309,6 @@ pub struct VersionNodes {
 
 /// Bulk-insert the decomposed node rows of MANY stored versions in ONE
 /// statement.
-///
-/// The same fixed-text `unnest` shape as [`write_nodes`], with the storage
-/// context (`vo_id`/`sys_version`/`ehr_id`) unnesting per row instead of
-/// binding as constants. The archive load writes a whole record's node rows
-/// through this (never one statement per version), and their externalized
-/// multimedia URIs are indexed with them
-/// ([`crate::storage::blob_ref::record_uris`]), so a loaded record's blobs are
-/// as visible to the collector as a committed one's.
 ///
 /// # Errors
 ///

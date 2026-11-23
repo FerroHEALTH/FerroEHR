@@ -69,7 +69,7 @@ pub async fn delete_ehrs(
     .await?)
 }
 
-/// Delete the commit-audit rows `ids`, which nothing references any more.
+/// Delete the commit-audit rows `ids`, which nothing references.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -136,9 +136,6 @@ pub async fn referenced_blob_uris(
 
 /// Every `PARTY_RELATIONSHIP` versioned object whose `source` or `target`
 /// `PARTY_REF` names `party_id`, in any version.
-///
-/// The references are data attributes of the relationship's root node, so
-/// their `id.value` is matched by a jsonb path extraction.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.

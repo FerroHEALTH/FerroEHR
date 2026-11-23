@@ -15,29 +15,6 @@
 //! Every write runs inside a caller-owned `sqlx` transaction so a version, its
 //! nodes, contribution, audit and outbox row commit atomically (master06
 //! §Committal and Audits: "similar to nested transactions").
-//!
-//! One file per concern; consumers import each item from its defining
-//! submodule (no re-exports):
-//! - [`commit`] — the local write path: audit/contribution inserts, the
-//!   folded one-statement version commit, lineage-tip close, and the
-//!   ride-along folder-membership + event-outbox writes.
-//! - [`gate`] — the one-statement gate read of a composition write (#6256).
-//! - [`guarded`] — the guarded commit statement of a composition write (#6256).
-//! - [`import`] — the EHR-Extract / archive-load write path: explicit
-//!   `committed_at` version rows, the head sync, container-state read.
-//! - [`read`] — the full version reads ([`read::StoredVersion`]: metadata + body +
-//!   attestations) by current / ordinal / tree id / instant.
-//! - [`placement`] — the version-tree placement reads (lineage tip, next
-//!   ordinal, transaction timestamp); the placement *decision* stays in
-//!   versioning.
-//! - [`attestation`] — `vo_attestation` writes and reads.
-//! - [`meta`] — the lean metadata-only reads (`ETag`/`If-Match`, revision
-//!   history, existence/kind/count lookups) that skip node reassembly.
-//! - [`contribution`] — CONTRIBUTION reads (audit, affected versions,
-//!   listing/counting).
-//! - [`tier`] — the cold archival storage tier: the physical archive move, its
-//!   reverse, and the primary-miss read fallback the
-//!   reads above use.
 
 #![expect(
     clippy::disallowed_types,
