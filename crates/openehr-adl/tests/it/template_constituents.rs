@@ -1,14 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! A template whose constituent archetype the repository does not hold.
-//!
-//! Oracle: AOM2 VARXR (`AM/docs/AOM2/master04.5-constraint_model-class_definitions.adoc`
-//! §Validity Rules: `C_ARCHETYPE_ROOT`: "the archetype reference must refer to
-//! an artefact that can be found in the current repository") and OPT2
-//! `master03-opt_raw.adoc` §Archetype References. The template is the
-//! vendored `t_encounter_opt_test`, which fills `content` with
-//! `openEHR-EHR-OBSERVATION.apgar.v1` beside its parent `encounter.v1`.
+//! A template whose constituent archetype the repository does not hold (AOM2
+//! VARXR; OPT2 `master03-opt_raw.adoc` §Archetype References).
 
 #![allow(
     clippy::expect_used,

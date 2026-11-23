@@ -5,10 +5,7 @@
 //! FerroEHR-local draft packages: openEHR change proposals generated from
 //! their draft BMM under `tools/openehr-codegen/draft/bmm/`, no openEHR release.
 //!
-//! The module compiles only with the `draft` feature, which no default feature
-//! set enables, so a consumer of the published crate meets no draft type
-//! unless it asks for one. A draft carries no prelude and no `Generation`;
-//! its types are named by full module path.
+//! Compiled only with the `draft` feature, which no default set enables.
 
 pub mod access_control;
 pub mod access_log;

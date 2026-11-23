@@ -6,12 +6,6 @@
 //! costs per document now and as it stood before them
 //! (`tests/it/canonical_reference.rs`).
 //!
-//! `cargo bench -p openehr-rm --bench canonical_form` prints one JSON object
-//! per document on stdout: the median nanoseconds of each writer over
-//! repeated runs and the share saved. The documents are a record shaped like
-//! an access-log entry (ASCII names, identifiers and codes), a vendored
-//! composition, and a text-heavy document of non-ASCII prose with escapes.
-//!
 //! A second set of rows times a typed composition both ways #5849 compares:
 //! `canonical_json(&serde_json::to_value(x))` and the serializer that writes
 //! the form straight from `x`. No specification governs this measurement: our

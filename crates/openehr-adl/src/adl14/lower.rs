@@ -1,25 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADL 1.4-only cADL productions — the 1.4→2 converter front end.
+//! The ADL 1.4-only cADL productions, the 1.4→2 converter front end.
 //!
-//! NOTE: no openEHR spec governs the 1.4 → 2 conversion algorithm — these
-//! productions, like the rest of [`crate::adl14`], are our own design/extension.
+//! NOTE: no openEHR spec governs the 1.4 → 2 conversion: our own design.
 //!
-//! They run for `Dialect::Adl14` only, reached
-//! from the three dialect-gated dispatch points of [`crate::parse::parser`],
-//! and are the WRITE side of a converter-internal encoding: the qualified /
-//! listed 1.4 terminology constraint is kept verbatim in
-//! `C_TERMINOLOGY_CODE.constraint`, the pipe-ordinal shorthand and the inline
-//! dADL domain blocks (lowered by [`crate::adl14::domain`]) become a
-//! `DV_ORDINAL` / `DV_QUANTITY` `C_COMPLEX_OBJECT` with an attribute tuple.
-//! The READ side — the pass that rewrites that encoding into spec-valid
-//! ADL2 — is `crate::adl14::term_constraint`.
-//!
-//! The one construct with a spec target rather than a spec source is the
-//! ordinal shorthand: `ADL2/master04.4-cadl_second_order.adoc` §Tuple
-//! Constraints names it deprecated and gives the generic
-//! `[value, symbol]` tuple as its replacement, which is what it lowers to.
+//! A 1.4 term constraint is kept verbatim in `C_TERMINOLOGY_CODE.constraint` for
+//! `crate::adl14::term_constraint` to rewrite; the ordinal shorthand and the
+//! inline dADL domain blocks become a `C_COMPLEX_OBJECT` with an attribute
+//! tuple (`ADL2/master04.4-cadl_second_order.adoc` §Tuple Constraints).
 
 use openehr_am::v2_4::aom2::constraint_model::c_attribute_tuple::CAttributeTuple;
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
@@ -40,26 +29,14 @@ use openehr_lang::v1_1::lexer::Token;
 
 // ── the ADL 1.4-only object productions ───────────────────────────────────
 impl Parser<'_> {
-    /// True if the cursor is at a BARE (unparenthesised) 1.4 inline dADL domain
-    /// block: a type name immediately followed by `<` whose first inner token is
-    /// an attribute name.
-    ///
-    /// `ADL1.4/master09-customising_adl.adoc` §Introduction fixes the shape —
-    /// "the dADL section must be 'typed', i.e. it must start with a type name"
-    /// followed by the ODIN object — so the discriminator against a generic cADL
-    /// type (`HISTORY<ITEM_LIST>`, whose `<` is followed by a TYPE name) is the
-    /// case of the token after `<`. Matching on the shape rather than on a
-    /// known-type list is what lets an unsupported domain type
-    /// (`C_CODE_PHRASE <…>`) reach the typed refusal in
-    /// [`Parser::parse_adl14_domain_object`] instead of being mis-parsed as a
-    /// generic type.
+    /// Whether the cursor is at a bare 1.4 inline dADL domain block: a type name,
+    /// `<`, then an attribute name (`ADL1.4/master09-customising_adl.adoc`
+    /// §Introduction). Matching the shape lets an unsupported domain type reach the
+    /// typed refusal of [`Parser::parse_adl14_domain_object`].
     pub(crate) fn is_adl14_domain_block_start(&self) -> bool {
-        // After the `<`: a lowercase attribute name (a populated dADL object),
-        // or an immediate `>` (the EMPTY block, legal dADL per
-        // `ADL1.4/master04-dadl.adoc` §Empty Sections). The empty form cannot be
-        // a generic cADL type: `master05-cadl.adoc` §Symbols
-        // `V_TYPE_IDENTIFIER` requires a NON-EMPTY generic parameter list, so
-        // `<` directly followed by `>` is unambiguous.
+        // An attribute name or an immediate `>` (the empty block, `ADL1.4/master04-dadl.adoc`
+        // §Empty Sections); a generic type's parameter list is never empty
+        // (`master05-cadl.adoc` §Symbols `V_TYPE_IDENTIFIER`).
         matches!(self.peek(), Some(Token::AlphaUcId(_)))
             && matches!(self.peek_at(1), Some(Token::SymLt))
             && matches!(self.peek_at(2), Some(Token::AlphaLcId(_) | Token::SymGt))
@@ -81,16 +58,9 @@ impl Parser<'_> {
         }
     }
 
-    /// 1.4-only: a bare terminology-code object — a single qualified code
-    /// (`[local::at0001]` / `[openehr::524]`, one `TermCodeRef` token) or a
-    /// code list (`[local:: a, b, c ; assumed]`, loose tokens). The full 1.4
-    /// form is preserved verbatim in `C_TERMINOLOGY_CODE.constraint` for
-    /// `crate::adl14::convert` to rewrite. No openEHR spec governs this — our
-    /// own design (1.4→2 converter front end).
-    ///
-    /// The list form additionally carries the two catalogue rules on the code
-    /// list itself — STCDC (duplicates) and STCAC (an assumed code outside the
-    /// list), both raised by [`Parser::adl14_term_constraint`].
+    /// 1.4-only: a bare terminology-code object, a single qualified code or a code
+    /// list, kept verbatim in `C_TERMINOLOGY_CODE.constraint` (our own design), with
+    /// STCDC and STCAC raised by [`Parser::adl14_term_constraint`].
     pub(crate) fn parse_adl14_term_object(&mut self) -> PResult<CObject> {
         let constraint = if let Some(Token::TermCodeRef(raw)) = self.peek().cloned() {
             self.pos += 1;
@@ -132,19 +102,10 @@ impl Parser<'_> {
     }
 
     /// The code list of a 1.4 qualified term constraint, with its optional
-    /// `;assumed` value.
+    /// `;assumed` value. An empty list (`[openEHR::]`) names only the terminology.
     ///
-    /// An EMPTY code list — `[local::]`, `[openEHR::]` — names the terminology
-    /// and constrains the code to nothing further. Real CKM content relies on
-    /// it (`media_type matches {[openEHR::]}`), and the verbatim form
-    /// (`terminology::`) is preserved for the converter exactly as the
-    /// non-empty spelling is. External codes may be bare integers
-    /// (`[openehr:: 253, …]`) as well as at/ac/id codes
-    /// (`[local:: at0136, …]`).
-    ///
-    /// NOTE: the compact empty spelling is docs-text SILENT; the normative
-    /// `cadl14_primitives.g4` `c_qualified_term_code` makes the code-list group
-    /// optional (`ADL1.4/master09` §Custom Syntax).
+    /// NOTE: the docs text is silent on the empty spelling; `cadl14_primitives.g4`
+    /// `c_qualified_term_code` makes the code list optional (`ADL1.4/master09`).
     ///
     /// # Errors
     /// [`SyntaxErrorCode::Stccp`] for a non-code list member or an assumed
@@ -182,16 +143,9 @@ impl Parser<'_> {
         Ok((codes, assumed))
     }
 
-    /// Build the verbatim `terminology::code[,code]*[;assumed]` constraint string
-    /// of a 1.4 term constraint, enforcing the two catalogue rules that govern
-    /// the code list itself.
-    ///
-    /// Shared by the two 1.4 spellings of one and the same constraint — the
-    /// compact custom syntax `[local:: at0039, at0040]` and the inline dADL
-    /// `C_CODE_PHRASE <…>` block — which
-    /// `ADL1.4/master09-customising_adl.adoc` §Custom Syntax says "express
-    /// exactly the same constraint", so they must also be judged by the same
-    /// rules.
+    /// Build the verbatim `terminology::code[,code]*[;assumed]` string of a 1.4 term
+    /// constraint, enforcing STCDC and STCAC for both of its spellings
+    /// (`ADL1.4/master09-customising_adl.adoc` §Custom Syntax).
     fn adl14_term_constraint(
         &mut self,
         terminology: &str,
@@ -224,12 +178,8 @@ impl Parser<'_> {
             );
             return Err(());
         }
-        // STCAC: "assumed value code $1 not found in code list" (same
-        // catalogue). `ADL1.4/master05-cadl.adoc` §Assumed Values L1012
-        // requires the assumed value to be "a value of the same type as
-        // that implied by the preceding part of the constraint" — for a
-        // listed term constraint the implied type is the listed set, so an
-        // assumed code outside it can never be assumed.
+        // STCAC: the assumed value must be of the implied type, here the listed set
+        // (`ADL1.4/master05-cadl.adoc` §Assumed Values).
         if let Some(a) = assumed
             && !codes.iter().any(|c| c == a)
         {
@@ -248,14 +198,8 @@ impl Parser<'_> {
         Ok(s)
     }
 
-    /// True if the cursor is at the ADL 1.4 pipe-ordinal shorthand — a numeric
-    /// ordinal value immediately followed by the `|` separator
-    /// (`cadl14.g4` `ordinal_term : (integer_value | real_value) '|'
-    /// c_terminology_code`).
-    ///
-    /// The `|` is what discriminates it from every other numeric constraint: a
-    /// value list continues with `,`, an interval OPENS with `|`, and a range
-    /// separator is `..` — none of them puts `|` directly after a number.
+    /// Whether the cursor is at the ADL 1.4 pipe-ordinal shorthand, a number
+    /// directly followed by `|` (`cadl14.g4` `ordinal_term`).
     pub(crate) fn is_adl14_ordinal_start(&self) -> bool {
         let signed = usize::from(matches!(
             self.peek(),
@@ -267,22 +211,12 @@ impl Parser<'_> {
         ) && matches!(self.peek_at(signed + 1), Some(Token::SymIvlDelim))
     }
 
-    /// 1.4-only: the openEHR-profiled ordinal shorthand
-    /// `0|[local::at0005], 1|[local::at0006] ; 0` (`cadl14.g4` `c_ordinal :
-    /// ordinal_term (',' ordinal_term)* (';' assumed_ordinal_value)?`).
+    /// 1.4-only: the ordinal shorthand `0|[local::at0005], 1|[local::at0006] ; 0`
+    /// (`cadl14.g4` `c_ordinal`).
     ///
-    /// `ADL2/master04.4-cadl_second_order.adoc` §Tuple Constraints names this
-    /// exact form deprecated and gives its replacement in the same breath — the
-    /// generic `DV_ORDINAL` tuple `[value, symbol] ∈ { [{0}, {[at1]}], … }`,
-    /// noting that the 1.4 spelling "hides the `DV_ORDINAL` type altogether".
-    /// So it lowers to precisely that replacement: a `DV_ORDINAL`
-    /// `C_COMPLEX_OBJECT` whose single `[value, symbol]` attribute tuple has one
-    /// row per ordinal term, pairing the integer/real value constraint with the
-    /// symbol's terminology-code constraint. `AOM1.4/masterAppA-domain_extension.adoc`
-    /// §ORDINAL is the member typing (`value: Integer`, `symbol: CODE_PHRASE`).
-    ///
-    /// The form is ADL 1.4-only: ADL 2 removed it, so the ADL2 dialect never
-    /// reaches this production and refuses the text.
+    /// It lowers to the replacement `ADL2/master04.4` §Tuple Constraints gives: a
+    /// `DV_ORDINAL` with one `[value, symbol]` tuple row per term
+    /// (`AOM1.4/masterAppA-domain_extension.adoc` §ORDINAL).
     pub(crate) fn parse_adl14_ordinal(&mut self) -> PResult<CObject> {
         let start = self.cur_span().start;
         let mut tuples: Vec<CPrimitiveTuple> = Vec::new();
@@ -369,17 +303,9 @@ impl Parser<'_> {
         )
     }
 
-    /// Land the `; assumed_ordinal_value` tail (`cadl14.g4`
-    /// `assumed_ordinal_value : INTEGER | REAL`) on the ordinal term it names.
-    ///
-    /// The assumed value is an ordinal VALUE, so it belongs to exactly one term
-    /// of the list — the AOM2 carrier is that row's own value
-    /// `C_PRIMITIVE_OBJECT.assumed_value` (`AOM2/master04.2` §`Assumed_value` puts
-    /// `assumed_value` on `C_PRIMITIVE_OBJECT`). A value naming no term is
-    /// refused loudly rather than bound to an arbitrary row, on the same reading
-    /// as the listed term constraint's STCAC: `ADL1.4/master05-cadl.adoc`
-    /// §Assumed Values L1012 requires the assumed value to be "a value of the
-    /// same type as that implied by the preceding part of the constraint".
+    /// Land the `; assumed_ordinal_value` tail on the one ordinal term it names, as
+    /// that row's `assumed_value` (`AOM2/master04.2` §`Assumed_value`); a value
+    /// naming no term is refused (`ADL1.4/master05-cadl.adoc` §Assumed Values).
     fn apply_adl14_ordinal_assumed(
         &mut self,
         tuples: &mut [CPrimitiveTuple],
@@ -427,37 +353,16 @@ impl Parser<'_> {
         Ok(())
     }
 
-    /// 1.4-only: an inline dADL domain constraint `(C_DV_QUANTITY) <…>` /
-    /// `C_DV_ORDINAL <…>` / `C_CODE_PHRASE <…>`. The ODIN block is parsed via
-    /// `openehr_lang::v1_1::odin` and lowered to the constraint the RM type the domain
-    /// constrainer targets takes:
+    /// 1.4-only: an inline dADL domain constraint `(C_DV_QUANTITY) <…>`,
+    /// `C_DV_ORDINAL <…>` or `C_CODE_PHRASE <…>`.
     ///
-    /// * `C_DV_QUANTITY`/`C_DV_ORDINAL` → a `DV_QUANTITY`/`DV_ORDINAL`
-    ///   `C_COMPLEX_OBJECT`, carrying the `property` external code as a
-    ///   `C_TERMINOLOGY_CODE`, the `list` rows as an attribute tuple
-    ///   (multi-member) or plain attributes (single member), and the
-    ///   `assumed_value` object as the per-leaf
-    ///   `C_PRIMITIVE_OBJECT.assumed_value`s it decomposes into;
-    /// * `C_CODE_PHRASE` → the same `C_TERMINOLOGY_CODE` the compact custom
-    ///   syntax `[local:: at0039, at0040]` produces, because
-    ///   `ADL1.4/master09-customising_adl.adoc` §Custom Syntax presents the two
-    ///   as alternative spellings that "express exactly the same constraint".
-    ///
-    /// No openEHR spec governs the 1.4→2 lowering — our own design (converter
-    /// front end); `AOM2/master04.3` §Tuple Constraints is the ADL2 target ("The
-    /// tuple constraint type replaces all domain-specific constraint types
-    /// defined in ADL/AOM 1.4, including `C_DV_QUANTITY` and `C_DV_ORDINAL`").
-    ///
-    /// A domain type this lowering does not model is refused with a typed
-    /// [`SyntaxErrorCode::Sdinv`] naming the type, never lowered to some other
-    /// type: `ADL1.4/master09-customising_adl.adoc` §Introduction admits any
-    /// `C_DOMAIN_TYPE` descendant here ("This approach can be used for any custom
-    /// type which represents a constraint on a reference model type"), and each
-    /// one targets a DIFFERENT RM type, so guessing is a silent wrong answer.
+    /// The first two lower to a `C_COMPLEX_OBJECT` with an attribute tuple
+    /// (`AOM2/master04.3` §Tuple Constraints: "The tuple constraint type replaces
+    /// all domain-specific constraint types"); `C_CODE_PHRASE` to the custom-syntax
+    /// `C_TERMINOLOGY_CODE`. Any other domain type is refused with
+    /// [`SyntaxErrorCode::Sdinv`], since each targets a different RM type.
     //
-    // NOTE: `C_DV_STATE` stays refused — no vendored openEHR spec text defines
-    // its attributes or RM target, so a typed refusal is the honest boundary
-    // and inventing a shape would be a silent wrong answer.
+    // NOTE: `C_DV_STATE` stays refused: no vendored openEHR text defines it.
     #[expect(
         clippy::too_many_lines,
         reason = "one linear parse: the type name, the ODIN block's token span, then one dispatch per lowered domain type"
@@ -483,11 +388,8 @@ impl Parser<'_> {
                 "expecting ')' after the domain type",
             )?;
         }
-        // Nesting depth is counted OUTSIDE `|…|` intervals only: a one-sided
-        // endpoint carries its own `<`/`>` operator (`magnitude = <|>0.0|>`),
-        // which would close the block early. `ADL1.4/master05-cadl.adoc`
-        // §Symbols `V_C_DOMAIN_TYPE` flags the hazard: "there can be '>' inside
-        // '||' ranges".
+        // Depth counts outside `|…|` only (`ADL1.4/master05-cadl.adoc` §Symbols
+        // `V_C_DOMAIN_TYPE`: "there can be '>' inside '||' ranges").
         let open = self.pos;
         if !matches!(self.peek(), Some(Token::SymLt)) {
             return self.err(
@@ -619,12 +521,7 @@ mod tests {
     use crate::error::SyntaxErrorCode;
     use crate::parse::{Dialect, parse_definition_body};
 
-    /// An inline dADL domain block whose type is not one this lowering models is
-    /// refused by NAME, never lowered to a different RM type
-    /// (`ADL1.4/master09-customising_adl.adoc` §Introduction admits any
-    /// `C_DOMAIN_TYPE` descendant, each targeting a different RM type).
-    /// `C_DV_STATE` is the standing case: no vendored openEHR spec text defines
-    /// it, so it has no citable shape.
+    /// An unmodelled inline domain type, `C_DV_STATE` here, is refused by name.
     #[test]
     fn adl14_unsupported_domain_type_is_refused_by_name() {
         let errs = parse_definition_body(

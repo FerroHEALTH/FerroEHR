@@ -20,10 +20,6 @@
 //! End-to-end journeys over the destructive operations: deleting a template
 //! from its row and from its page, saving, versioning and deleting stored
 //! queries, deleting an EHR, and the refusal a plain user meets.
-//!
-//! Each delete confirms first: a row's Delete… opens the object's page with
-//! the confirmation inline (`?confirm=delete`), and a page's Delete… opens a
-//! `<dialog>` by the browser's own command. Both post a plain form.
 
 use crate::common;
 

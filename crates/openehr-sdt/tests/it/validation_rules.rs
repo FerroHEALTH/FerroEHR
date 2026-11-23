@@ -355,12 +355,8 @@ fn coded_value_external_terminology_is_skipped() {
     assert_eq!(walk_only(&external, &n), Vec::<ValidationMessage>::new());
 }
 
-/// AOM 1.4 `AM/docs/UML/classes/org.openehr.am.aom14.c_coded_text.adoc`
-/// §`C_CODED_TEXT` (the AOM1.4 form of `C_CODE_PHRASE`): the `code_list` is "a
-/// list of codes FROM the terminology", so a `C_CODE_PHRASE` that EXPLICITLY binds to
-/// the archetype-`local` terminology admits only local codes in its closed
-/// list. A `defining_code` from a different terminology (here SNOMED-CT) is a
-/// violation — the enforcement the `coded_terminology_local` node flag drives.
+/// An explicitly `local` closed `C_CODE_PHRASE` refuses a SNOMED-CT code
+/// (`org.openehr.am.aom14.c_coded_text.adoc` §`C_CODED_TEXT`).
 #[test]
 fn coded_value_explicit_local_rejects_foreign_terminology() {
     let mut n = coded_node(&["ABC", "OPQ"]);
@@ -412,12 +408,8 @@ fn quantity_property_node(property: &str) -> WebTemplateNode {
     n
 }
 
-/// AOM 1.4 `AM/docs/UML/classes/org.openehr.am.aom14.c_quantity.adoc`
-/// §`C_QUANTITY`: `property` is the physical property the Quantities are
-/// constrained to. When no unit list is enumerated, the instance's `units` must
-/// belong to that property's unit set (grounded on the openEHR
-/// `PropertyUnitData.xml` property↔unit table). Property `122` = Length; a
-/// mass unit ("mg") is not a Length unit.
+/// With no unit list, `units` must belong to the `C_QUANTITY.property` unit set
+/// (`aom14.c_quantity.adoc`; `PropertyUnitData.xml`): "mg" is no Length unit.
 #[test]
 fn quantity_property_units_membership() {
     let n = quantity_property_node("122"); // Length
@@ -438,13 +430,8 @@ fn quantity_property_units_membership() {
     assert_eq!(walk_only(&any, &no_prop), Vec::<ValidationMessage>::new());
 }
 
-/// TERM 3.1.0 amendment 3.1.4 (SPECPR-450) gives property `765` (Concentration
-/// per volume) the units `ng/mL/cm³` and `μg/L/cm³` (UCUM `ng/mL/cm3`,
-/// `ug/L/cm3`) in the vendored `PropertyUnitData.xml`, and property `764`
-/// (Length per area) the unit `mm/m²`. A unit of the constrained property
-/// validates in either spelling; a unit the table files under another
-/// property is refused, which needs 765's unit set (absent before the
-/// amendment, when every unit was tolerated under 765).
+/// TERM 3.1.0 amendment 3.1.4 (SPECPR-450) units of properties `765` and `764`
+/// validate in either spelling; a unit filed under another property is refused.
 #[test]
 fn quantity_property_units_follow_the_specpr_450_table() {
     let n = quantity_property_node("765"); // Concentration per volume
@@ -487,10 +474,8 @@ fn wrong_type_reported() {
     );
 }
 
-/// Register AMB-229, `unmatched-member-refused` (the posture the party
-/// statement declares): a container member whose RM type matches no constraint
-/// node of the attribute is refused, so a CLUSTER where the template constrains
-/// `items[at0004]` to ELEMENT is `WrongType` at that node.
+/// A container member whose RM type matches no constraint node of the
+/// attribute is `WrongType` (register AMB-229).
 #[test]
 fn unmatched_container_member_refused() {
     let mut tree = node("ITEM_TREE", "/data[at0003]");
@@ -772,10 +757,8 @@ fn dv_ordered_bad_normal_status_reported() {
     );
 }
 
-/// BASE `master06-time_types.adoc` §Primitive Time Types ("in openEHR, only
-/// fractional seconds are supported"): a `DV_DURATION` whose value carries a
-/// decimal fraction on any component other than seconds fails its `Value_valid`
-/// RM invariant, surfaced through the composition RM-invariant pass.
+/// A `DV_DURATION` with a fraction on a component other than seconds fails
+/// `Value_valid` (BASE `master06-time_types.adoc` §Primitive Time Types).
 #[test]
 fn dv_duration_fractional_non_seconds_rejected() {
     // The `_as` entry with the instance's true declared type: the composition
@@ -1615,10 +1598,8 @@ fn timezone_validity_mandatory_and_disallowed() {
 
 // ── LOCATABLE.Archetyped_valid (A1 rm-common-change-control-R46) ─────────────────
 
-/// A non-root node — `archetype_node_id` an `at`/`id` term code — must not
-/// carry `archetype_details` (`locatable.adoc` §`Archetyped_valid`); an
-/// archetype-HRID node carrying them, and a nested archetype root *without*
-/// them (the CNF-corpus-sanctioned shape), both stay valid.
+/// A term-code node must not carry `archetype_details` (`locatable.adoc`
+/// §`Archetyped_valid`); an archetype root with or without them is valid.
 #[test]
 fn non_root_node_with_archetype_details_rejected() {
     let details = json!({"_type": "ARCHETYPED",
@@ -1665,10 +1646,8 @@ fn non_root_node_with_archetype_details_rejected() {
 
 // ── "present implies non-empty" list invariants (A1 rm-composition) ──────────────
 
-/// `COMPOSITION.Content_valid` / `SECTION.Items_valid` /
-/// `INSTRUCTION.Activities_valid` etc.: a PRESENT empty list violates the
-/// invariant; an absent list does not (`composition.adoc` §Invariants and
-/// siblings).
+/// A present empty list violates `Content_valid` and its siblings; an absent
+/// one does not (`composition.adoc` §Invariants).
 #[test]
 fn present_empty_lists_are_rejected() {
     let base = json!({
@@ -1760,12 +1739,8 @@ fn data_structure_shapes_are_enforced() {
 
 // ── name-differentiated same-archetype-id siblings ──────────────────────────────
 //
-// A template may fill the same archetype twice under one container, the two
-// fills differentiated by their runtime `name` (RM common
-// `master03-archetyped_package.adoc` §"The `LOCATABLE` class"; AOM 1.4
-// `master04-constraint_model_package.adoc` §`node_id`). Templates put a fixed
-// `name/value` `C_STRING` on all-but-one sibling, so each instance must route to
-// the sibling whose name it matches, the unqualified one taking the rest.
+// RM common `master03-archetyped_package.adoc` §"The `LOCATABLE` class"; AOM
+// 1.4 `master04-constraint_model_package.adoc` §`node_id`.
 
 /// Two same-archetype siblings under `items`, one unqualified (name "A", inner
 /// `items` closed to `at0004`) and one name-qualified ('B', inner `items` closed
@@ -1858,10 +1833,7 @@ fn name_qualified_siblings_child_in_unqualified_instance_is_unexpected() {
 #[test]
 fn unqualified_sibling_admits_a_runtime_named_residual_instance() {
     let root = name_diff_parent();
-    // An instance whose name matches NO name-qualified sibling ("other") routes
-    // to the unqualified (residual) sibling — its `name` being unconstrained,
-    // master03 §"The `LOCATABLE` class" L35. Its own overlay child (`at0004`)
-    // therefore validates clean…
+    // A name no qualified sibling claims routes to the unqualified sibling.
     let ok = json!({
         "_type": "CLUSTER", "archetype_node_id": "x",
         "name": {"_type": "DV_TEXT", "value": "root"},
@@ -1906,17 +1878,8 @@ fn count_type_nodes(v: &Value) -> usize {
     }
 }
 
-/// Validation-walk overhead — MEASUREMENT (not a correctness gate):
-/// quantify the archetype-conformance **walk** (pass 3) over the populated IPS
-/// example against its OPT-built `WebTemplate`. Pass 3 is where the bulk of the
-/// per-node cost lives (per-visit `path::parse` of every constraint path, the
-/// per-visit `groups`/sibling-index rebuild, and the per-node path allocations)
-/// — the harness above only times the two template-independent passes.
-/// Times each pass and the full `validate_composition` so the before/after of
-/// the allocation-discipline rewrite is honest. Ignored by default (timing, not
-/// correctness); run:
-/// `cargo nextest run -p openehr-its --run-ignored all \
-///   -E 'test(measure_ips_validation_full_cost)' --no-capture`.
+/// Times each validation pass and `validate_composition` over the populated IPS
+/// example.
 #[test]
 #[ignore = "measurement, not a correctness gate — run with --run-ignored all"]
 fn measure_ips_validation_full_cost() {
@@ -1955,14 +1918,9 @@ fn measure_ips_validation_full_cost() {
 
 // ── non-LOCATABLE structural matching (EVENT_CONTEXT is PATHABLE) ────────────────
 
-/// The archetype-conformance walk must match a non-`LOCATABLE` node STRUCTURALLY
-/// (by attribute position), never by `archetype_node_id`: `EVENT_CONTEXT`
-/// inherits `PATHABLE` (RM `UML/classes/org.openehr.rm.composition.event_context.adoc`
-/// §Inherit), and only `LOCATABLE` carries `archetype_node_id`/`name` (RM common
-/// `UML/classes/org.openehr.rm.common.locatable.adoc`), so no canonical
-/// `EVENT_CONTEXT` bears the at-code a template archetypes `/context[at0001]`
-/// with. A `LOCATABLE` node (SECTION) still REQUIRES its node id — the correction
-/// is toward the RM inheritance graph, not a blanket relaxation.
+/// The walk matches a non-`LOCATABLE` `EVENT_CONTEXT` by attribute position (RM
+/// `event_context.adoc` §Inherit) while a `LOCATABLE` SECTION still needs its
+/// node id.
 #[test]
 fn non_locatable_context_matches_structurally_locatable_still_needs_node_id() {
     let mut root = node("COMPOSITION", "");
@@ -2004,10 +1962,7 @@ fn non_locatable_context_matches_structurally_locatable_still_needs_node_id() {
 
 // ── the template-independent pass on a non-COMPOSITION root ────────────────────
 //
-// `validate_rm_and_terminology` runs the same two passes with a caller-named
-// root RM type. The RM class invariants below are properties of the INSTANCE,
-// not of the resource kind, so they must fire identically under an `EHR_STATUS`
-// or FOLDER root.
+// The RM class invariants fire the same under an `EHR_STATUS` or FOLDER root.
 
 /// A minimal, RM-valid `EHR_STATUS` the tests below perturb.
 fn ehr_status_root() -> Value {
@@ -2052,10 +2007,8 @@ fn valid_non_composition_roots_pass_the_template_independent_passes() {
     }
 }
 
-/// `ARCHETYPED.Rm_version_valid` (`not rm_version.is_empty`, RM common
-/// `org.openehr.rm.common.archetyped.adoc` §Invariants) fires under a
-/// non-COMPOSITION root — the `archetype_details` block is below the root, so
-/// only a whole-instance pass reaches it.
+/// `ARCHETYPED.Rm_version_valid` fires under a non-COMPOSITION root (RM common
+/// `archetyped.adoc` §Invariants).
 #[test]
 fn empty_rm_version_is_refused_under_an_ehr_status_root() {
     let mut bad = ehr_status_root();
@@ -2068,10 +2021,8 @@ fn empty_rm_version_is_refused_under_an_ehr_status_root() {
     );
 }
 
-/// `LINK` types `meaning`, `type` and `target` all 1..1 (RM common
-/// `org.openehr.rm.common.link.adoc` §Attributes), and `target` is a
-/// `DV_EHR_URI` whose `Scheme_valid` fixes the scheme to `ehr`. A LINK on a
-/// FOLDER is judged by the same rules as one inside a COMPOSITION.
+/// A LINK on a FOLDER is judged as one in a COMPOSITION (RM `link.adoc`
+/// §Attributes; `DV_EHR_URI.Scheme_valid`).
 #[test]
 fn folder_link_mandatory_attributes_are_enforced() {
     let with_links = |links: Value| {
@@ -2118,17 +2069,9 @@ fn folder_link_mandatory_attributes_are_enforced() {
     );
 }
 
-/// The COMPOSITION side of the LINK rules: a populated `links` list is accepted
-/// at the COMPOSITION root AND on an interior ENTRY, and a `target` whose scheme
-/// is not `ehr` is refused at BOTH depths.
-///
-/// The interior half is the one that proves the walk reaches there: `content` is
-/// declared `List<CONTENT_ITEM>` (abstract), so the ENTRY carries its own
-/// `_type` and the recursion re-dispatches on it; the ENTRY's `links` are then
-/// judged by the same inherited `LOCATABLE` rules as the root's. The scheme rule
-/// is `DV_EHR_URI.Scheme_valid` (RM `data_types`
-/// `org.openehr.rm.data_types.dv_ehr_uri.adoc` §Invariants); all three LINK
-/// attributes are 1..1 (RM common `org.openehr.rm.common.link.adoc` §Attributes).
+/// A populated `links` list is accepted at the COMPOSITION root and on an
+/// interior ENTRY, and a non-`ehr` `target` is refused at both (RM
+/// `dv_ehr_uri.adoc` §Invariants; `link.adoc` §Attributes).
 #[test]
 fn composition_links_are_judged_at_root_and_entry_depth() {
     let link = |target: &str| {
@@ -2211,10 +2154,7 @@ fn composition_links_are_judged_at_root_and_entry_depth() {
     );
 }
 
-/// `LOCATABLE.Links_valid` (`links /= Void implies not links.is_empty`, RM
-/// common `org.openehr.rm.common.locatable.adoc` §Invariants) fires on a node
-/// NESTED below a non-COMPOSITION root — here a CLUSTER inside
-/// `EHR_STATUS.other_details`.
+/// `LOCATABLE.Links_valid` fires on a CLUSTER inside `EHR_STATUS.other_details`.
 #[test]
 fn nested_empty_links_are_refused_under_an_ehr_status_root() {
     let mut bad = ehr_status_root();

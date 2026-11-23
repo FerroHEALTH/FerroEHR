@@ -7,8 +7,6 @@
 //! (`ITS-REST/specifications/definition.openapi.yaml`), and the derived
 //! [`WebTemplate`] every FLAT and STRUCTURED commit validates against.
 //!
-//! # Spec basis
-//!
 //! - (`AM/docs/OPT2/master02-overview.adoc` §Purpose of the OPT,
 //!   §Types of OPT): the stored artefact is the compiled OPT; "a production
 //!   EHR … can safely run only using guaranteed *validated* templates", hence
@@ -53,11 +51,6 @@ impl FerroEhrService {
     /// Store an OPT 1.4 operational template from its canonical XML, returning
     /// the stored template's metadata descriptor (the ITS-REST template list
     /// shape — the `adl1.4` upload response body).
-    ///
-    /// The XML is parsed to validate it is a well-formed OPT and to pull the
-    /// `template_id` (the unique key), `concept` and root archetype id, then run
-    /// through the standalone-artefact validity catalogue before any row is
-    /// written.
     ///
     /// Operational templates are immutable on the `adl1.4` upload endpoint:
     /// re-uploading an existing `template_id`, a case variant counting as the
@@ -261,10 +254,6 @@ impl FerroEhrService {
     /// [`example_instance`](openehr_sdt::flat::example::example_instance)
     /// at the requested [`DetailLevel`], with a deterministic `uid` for the
     /// `output` ([`ExampleType::Output`]) form.
-    ///
-    /// Existence is probed on every call so a template another replica deleted
-    /// is not served from a stale cache entry, but the probe is `EXISTS`-shaped
-    /// and the stored XML moves only for a cold-cache build.
     ///
     /// # Errors
     ///

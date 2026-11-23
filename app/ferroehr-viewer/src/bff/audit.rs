@@ -10,9 +10,6 @@
 //! view. No openEHR spec governs the viewer — our own design / product
 //! extension; the wire it reads is IHE's (the `RESTful` ATNA supplement's
 //! ITI-81 FHIR search), served by the CDR.
-//!
-//! The CDR answering `404` (the local audit store disabled) is a first-class
-//! rendered state, not an error.
 
 use fhir_types::codec::Json;
 use fhir_types::r4::audit_event::AuditEvent;
@@ -68,9 +65,6 @@ pub struct AuditPage {
 
 /// Retrieve one page of audit records via the ITI-81 FHIR search (`GET
 /// fhir/r4/AuditEvent`), with the supported filter subset.
-///
-/// Empty filter strings are omitted from the query; instants are sent as
-/// `date=ge…`/`date=le…` bounds; values are percent-encoded.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));

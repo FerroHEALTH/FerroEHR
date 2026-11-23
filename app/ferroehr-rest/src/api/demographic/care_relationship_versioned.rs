@@ -3,8 +3,6 @@
 
 //! The versioned care relationship reads: **an extension of ITS-REST**.
 //!
-//! They are the versioned half of [`care_relationship`](super::care_relationship).
-//!
 //! The draft access control package (ITS-REST Resources, Care
 //! Relationships) gives each relationship its versioned object, its revision
 //! history and one version, after the `versioned_` resources of ITS-REST.

@@ -176,7 +176,7 @@ impl FerroEhrService {
     ///
     /// `EHR.ehr_access` is 1..1 (RM ehr `ehr.adoc` invariant
     /// `Ehr_access_valid`); an EHR is left without one only when a migration
-    /// drops settings of a scheme the server no longer keeps, so a boot finds
+    /// drops settings of a scheme the server does not keep, so a boot finds
     /// none on every other occasion.
     ///
     /// # Errors
@@ -529,10 +529,6 @@ struct HeldClosed;
 
 /// Builds the `EHR_ACCESS` committed with every new EHR (RM ehr master04 §EHR
 /// Creation).
-///
-/// `EHR_ACCESS` is a LOCATABLE with only the
-/// optional `settings`; with no access-control scheme configured (Stage 1 has
-/// no RBAC), it is committed with none.
 ///
 /// `archetype_details` is mandatory: `EHR_ACCESS` carries the same
 /// unconditional `Is_archetype_root` invariant as `EHR_STATUS`

@@ -2,10 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! `PARTY.reverse_relationships`, the references a target party carries.
-//!
-//! They point at the `PARTY_RELATIONSHIP`s other parties hold inline, read
-//! through the `party_relationship_target` index
-//! ([`crate::storage::party_reverse`]).
 
 #![expect(
     clippy::disallowed_types,

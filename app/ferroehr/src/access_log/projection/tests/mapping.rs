@@ -4,8 +4,6 @@
 //! The mapping of a stored entry to each projection, row by row: where each
 //! value of the entry is carried, and each value a projection loses
 //! (`website/book/src/audit.md`, "The projections and their losses").
-//!
-//! Each table is one test of named rows, so a failure names the row.
 
 #![expect(
     clippy::disallowed_types,

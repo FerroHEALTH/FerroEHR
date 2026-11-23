@@ -4,17 +4,11 @@
 //! The top bar's search and the find page: what the CDR holds under the words
 //! typed, and where an id can be opened.
 //!
-//! The search posts its words, since an id can name a patient's record, so
-//! they never reach a URL (FerroUI `console-ui.md` §5). An id shaped as a UUID
-//! is read as an EHR id and as a composition's versioned object, and is tried
-//! as a party; any words are matched against the template ids and concepts
-//! and the stored queries' names. A subject id needs its namespace, which the
-//! EHRs list asks for. As you type, the panel under the search box asks the
-//! answer route, which answers with [`find_answer`], and shows the hits
-//! grouped by kind; the
-//! find page lists every hit in the page and the other ways to read the id.
-//! No openEHR spec governs the viewer: our own design; the reads are
-//! ITS-REST.
+//! The search posts its words, since an id can name a patient's record, so they
+//! never reach a URL (FerroUI `console-ui.md` §5). A UUID is tried as an EHR
+//! id, a composition's versioned object and a party; any words match the
+//! template ids and concepts and the stored queries' names. No openEHR spec
+//! governs the viewer: our own design; the reads are ITS-REST.
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;

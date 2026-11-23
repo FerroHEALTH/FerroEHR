@@ -1,20 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Whole-corpus coverage gate.
-//!
-//! Every ADL source file under `tests/corpus/**` (both `.adls` and `.adl`) must
-//! be claimed by exactly one harness category — 100% coverage, no dead fixtures
-//! (a HARD REQUIREMENT: every vendored corpus file is exercised). This gate is the
-//! accounting layer: it walks the whole tree, categorises each file by its path,
-//! and fails if any file is unclaimed (a new or moved fixture breaks CI). It
-//! keys on the FULL PATH (two duplicate basenames exist — `tests/corpus/INVENTORY.md`
-//! §1) and includes a `.adl` walker (the 31 ADL-1.4 files the `.adls`-only lexer/
-//! parser harnesses do not reach).
-//!
-//! Each category names the harness that exercises the file (the oracle is the
-//! in-file `regression` tag, never the filename — INVENTORY §2). The categories
-//! mirror INVENTORY §10 "Harness-category assignment":
+//! Whole-corpus coverage gate: every ADL file under `tests/corpus/**` is claimed
+//! by exactly one harness category, keyed on the full path (INVENTORY §10).
 //!
 //! | Category | Directory selector | Owning harness |
 //! |---|---|---|
@@ -33,10 +21,8 @@
 //! | `Adl14Dadl` | `adl14-dadl/*.adl` | `adl14_dadl_breadth.rs` (accept/refuse per fixture) |
 //! | `Adl14Cadl` | `adl14-cadl/*.adl` | `adl14_cadl_gates.rs` (accept/refuse/invalid per fixture) |
 //!
-//! `adl14-dadl/` and `adl14-cadl/` are the HAND-WRITTEN trees here
-//! (`tests/corpus/PROVENANCE.md`); they are counted separately so the
-//! vendored-corpus size ratchet below stays a statement about the vendored trees
-//! alone.
+//! The hand-written `adl14-dadl/` and `adl14-cadl/` trees are counted apart from
+//! the vendored-corpus size ratchet.
 
 use std::path::{Path, PathBuf};
 
@@ -86,12 +72,8 @@ fn classify(rel: &str, is_adl: bool) -> Option<Category> {
     classify_reference(rel.strip_prefix("adl2-reference/")?, is_adl)
 }
 
-/// The `adl2-reference` sub-tree prefixes and the category each claims.
-///
-/// Order is load-bearing: the first matching prefix wins, so a narrower tree
-/// (`validity/templates/`) precedes the tree that contains it (`validity/`). The
-/// two categories are the ADL 1.4-source and ADL 2-source spellings; a tree that
-/// does not distinguish them repeats one category.
+/// The `adl2-reference` sub-tree prefixes and their categories; the first match
+/// wins, so a narrower tree comes first.
 const REFERENCE_CATEGORIES: &[(&str, Category, Category)] = &[
     (
         "validity/templates/",

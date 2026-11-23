@@ -2,24 +2,11 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM class invariant for `ATTESTATION`.
+//! `ATTESTATION` invariants.
 //!
-//! Spec: RM `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.attestation.adoc`
-//! §Invariants declares two, and `ATTESTATION` inherits the two of
-//! `…org.openehr.rm.common.audit_details.adoc` §Invariants. Each is realized,
-//! but only one of the four is realizable on a typed node:
-//!
-//! - inherited `System_id_valid` (`not system_id.is_empty`) — realized here.
-//! - inherited `Change_type_valid` (`change_type.defining_code` in the openEHR
-//!   `audit change type` group) — terminology-bound, so it needs a bundle
-//!   lookup rather than a typed-node property; realized by the binding table in
-//!   [`crate::v1_2::validate::terminology`].
-//! - `Reason_valid` (a `DV_CODED_TEXT` `reason` must code to the openEHR
-//!   `attestation reason` group) — terminology-bound likewise, and realized in
-//!   the same binding table.
-//! - `Items_valid` (`items /= Void implies not items.is_empty`) — structural:
-//!   `items` is `Option<NonEmptyVec<DvEhrUri>>`, whose `Deserialize` refuses an
-//!   empty list at the door, so a violating value cannot be built or read.
+//! `org.openehr.rm.common.attestation.adoc`, `audit_details.adoc` §Invariants:
+//! `System_id_valid` here; `Change_type_valid` and `Reason_valid` in
+//! [`crate::v1_2::validate::terminology`]; `Items_valid` by the `NonEmptyVec` type.
 
 use crate::v1_2::common::generic::attestation::Attestation;
 use openehr_base::validate::{InvariantViolation, Validate};

@@ -11,9 +11,6 @@
 //! Art. 4(5) and Art. 25(2) make that a duty
 //! (<https://eur-lex.europa.eu/eli/reg/2016/679/oj>). This section is where a
 //! deployment states its side of it.
-//!
-//! A field of the one config tree ([`crate::config::FerroEhrConfig`]); no
-//! loader of its own.
 
 #![allow(
     clippy::disallowed_types,

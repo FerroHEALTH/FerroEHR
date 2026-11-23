@@ -194,16 +194,10 @@ pub enum ServiceError {
     /// The request is malformed at the semantic level (e.g. a stale/invalid
     /// `preceding_version_uid`, or an operation on an already-deleted object) —
     /// ITS-REST `400 Bad Request` (`400_already_deleted.yaml`).
-    ///
-    /// The [`Malformed`] kind is the generic precondition
-    /// ([`ServiceError::precondition`]) or the definition store's id pattern.
     #[error(transparent)]
     BadRequest(Refusal<Malformed>),
     /// The request conflicts with current state (e.g. EHR already exists) —
     /// ITS-REST `409 Conflict`.
-    ///
-    /// The [`Clash`] kind names the state it conflicts with, the generic
-    /// storage-classified one included.
     #[error(transparent)]
     Conflict(Refusal<Clash>),
     /// Optimistic-concurrency precondition (`If-Match`) failed, ITS-REST `412`.
@@ -258,18 +252,10 @@ pub enum ServiceError {
     Signing(String),
     /// The signer failed, with its cause intact as the source (RFC 0201:
     /// `Error::source` is part of the contract).
-    ///
-    /// A signing failure is a key or configuration problem, and the cause is
-    /// what tells them apart. Both bridges below trace the chain and answer
-    /// with `INTERNAL_MESSAGE`.
     #[error("signing a version failed")]
     SigningFailed(#[source] SignError),
     /// Canonicalisation failed on the signing or verification path, with the
     /// canonicaliser's error as the source.
-    ///
-    /// A different cause from a signer failure, and the distinction is the
-    /// point: one is a malformed document, the other a key or configuration
-    /// problem.
     #[error("canonicalising a version for its signature failed")]
     SigningCanonical(
         #[source] openehr_rm::v1_2::common::change_control::version_impl::CanonicalFormError,
@@ -300,10 +286,6 @@ pub enum ServiceError {
     /// durably, so the result is withheld: the wire's `503`, `Retry-After`
     /// set, the same answer the REST layer gives when its own request record
     /// cannot be written.
-    ///
-    /// Carries the refusal
-    /// [`FerroEhrService::record_access`](crate::service::FerroEhrService::record_access)
-    /// produced.
     #[error(transparent)]
     Unrecorded(Refusal),
     /// The object's processing is restricted, the wire's `403` (GDPR Art. 4(3),
@@ -476,9 +458,6 @@ impl ServiceError {
 
     /// A semantic refusal (`422`) of the generic [`Invalid::Content`] kind,
     /// carrying the violated rule as data.
-    ///
-    /// A `422` of a definition kind (an archetype or a template) names its
-    /// `kind` directly.
     #[must_use]
     pub fn content_invalid(violation: Violation) -> Self {
         ServiceError::Unprocessable {

@@ -394,8 +394,8 @@ mod tests {
 
     use super::canonical_text_and_digest;
 
-    /// The digest of the one-pass writer, written the way the two passes it
-    /// replaced wrote it: the compact text with the root `uid` taken out.
+    /// The digest written in two passes: the compact text with the root `uid`
+    /// taken out.
     fn two_pass(canonical: &serde_json::Value) -> (String, [u8; 32]) {
         use sha2::Digest as _;
         let mut without = canonical.clone();

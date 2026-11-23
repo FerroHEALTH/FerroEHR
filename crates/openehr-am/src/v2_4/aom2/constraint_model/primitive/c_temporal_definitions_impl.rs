@@ -20,11 +20,6 @@ use std::collections::BTreeMap;
 
 impl Default for CTemporalDefinitions {
     /// The constant tables `c_temporal_definitions.adoc` §Attributes prints.
-    ///
-    /// NOTE: that page spells two `valid_time_constraint_replacements` keys
-    /// `"HH-??-??"`/`"HH-??-XX"` while its own `valid_time_constraint_patterns`
-    /// list and every other table spell time slots with `':'`; the colon
-    /// spelling is used here, since the hyphen form matches no declared pattern.
     fn default() -> Self {
         Self {
             valid_date_constraint_patterns: non_empty(&[

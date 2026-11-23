@@ -1,54 +1,22 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! OPT2 — operational-template generation (raw + profiled).
+//! OPT2 operational-template generation, raw and profiled
+//! (`AM/docs/OPT2/master02-overview.adoc`, `master03-opt_raw.adoc`,
+//! `master04-opt_profiled.adoc`; `ADL2/master10-templates.adoc`).
 //!
-//! Oracle: `docs/specs/openehr/AM/docs/OPT2/master02-overview.adoc` (the OPT
-//! checklist), `master03-opt_raw.adoc` (§Artefact Structure grammar,
-//! §Archetype References, §Flattening, §Terminology), `master04-opt_profiled.adoc`
-//! (annotations removal, language filtering, binding filtering, node-level
-//! substitution — spec TBD), and `docs/specs/openehr/AM/docs/ADL2/master10-templates.adoc`
-//! (the worked template → OPT example).
+//! [`create_opt`] flattens the template's lineage and applies the OPT extras of
+//! master03 §Flattening: full-version references, inlined fillers and
+//! `use_node` targets, closed slots and `{0}` attributes and objects removed, the
+//! parent kept as `parent_archetype_id` (AOM2 §3.6.6), the constituents'
+//! terminologies under `component_terminologies`, and each overlay's parent
+//! under [`OVERLAY_PARENTS_KEY`] (our own design).
 //!
-//! [`create_opt`] produces the *raw* OPT: it flattens the source template's
-//! specialisation lineage ([`crate::flatten::flat_form`]) and then applies the
-//! OPT-specific extras on top of the plain flat form (OPT2 master03 §Flattening):
+//! [`profile_opt`] removes annotations and filters languages and bindings
+//! (master04); node-level substitution is TBD there and refused.
 //!
-//! * all archetype references resolved to full 3-part-version ids
-//!   (master03 §Archetype References);
-//! * every `use_archetype` filler / external reference inlined as a
-//!   `C_ARCHETYPE_ROOT` carrying the filler's flattened structure;
-//! * every `use_node` internal reference (`C_COMPLEX_OBJECT_PROXY`) replaced by
-//!   an inline copy of its target;
-//! * all `closed` slots removed;
-//! * every `existence matches {0}` attribute and `occurrences matches {0}`
-//!   object removed;
-//! * no sibling-order markers, and no `specialise` section in the printed form
-//!   (a top-level standalone artefact, master02, master03 §Artefact Structure);
-//! * the root template's specialisation parent kept as the OPT's
-//!   `parent_archetype_id`, resolved to its full id (AOM2 §3.6.6: an
-//!   `OPERATIONAL_TEMPLATE` is specialised, invariant `is_specialised`);
-//! * the flat `terminology` of every constituent (other than the root) gathered
-//!   into `component_terminologies` (master03 §Terminology);
-//! * the specialisation parent of every inlined template overlay recorded in
-//!   `other_meta_data` under [`OVERLAY_PARENTS_KEY`], so a consumer can give
-//!   data under an overlay the published archetype's id (ADL2 and AOM2
-//!   §Templates make an overlay the slot filler and say nothing of the id its
-//!   data carries: our own design).
-//!
-//! [`profile_opt`] produces a *profiled* OPT from a raw one (master04):
-//! annotations removal, language filtering (≥1 language remains), and
-//! terminology-binding filtering. Node-level terminology substitution is
-//! explicitly TBD in the spec (master04 §Terminology Substitution) and is not
-//! implemented — a request for it returns
-//! [`OptError::NodeSubstitutionUnsupported`].
-//!
-//! NOTE: master02's "no specialisation statement" bullet governs the printed
-//! form (the printer emits no `specialize` section for an OPT), while the
-//! model keeps the parent AOM2 §3.6.6 requires; the master10 worked-example
-//! listing prints a residual `specialize` line, which contradicts
-//! master02 and master03 §Artefact Structure: the normative checklist wins over
-//! the illustrative listing.
+//! NOTE: master02 and master03 §Artefact Structure print no `specialize` section
+//! for an OPT, and the normative checklist wins over master10's listing.
 
 use std::collections::BTreeMap;
 
@@ -123,25 +91,16 @@ pub enum OptError {
     },
 }
 
-/// The `other_meta_data` key under which [`create_opt`] records the
-/// specialisation parent of each inlined template overlay.
-///
-/// The value lists one `<overlay full id>=<parent full id>` pair per overlay,
-/// separated by `,`, in the order of the overlay ids. ADL2 and AOM2
-/// §Templates make a template overlay the filler of the slot it fills and
-/// leave open which archetype id the data built under it carries; recording
-/// the parent lets a Web Template builder name the node by the published
-/// archetype (our own design). The header prints the value as an ADL2
-/// `meta_data_value` string.
+/// The `other_meta_data` key under which [`create_opt`] records each inlined
+/// overlay's parent, as `,`-separated `<overlay full id>=<parent full id>` pairs
+/// in overlay order (our own design).
 pub const OVERLAY_PARENTS_KEY: &str = "template_overlay_parents";
 
 /// A raw operational template with the attributes its transform removed.
 ///
-/// OPT2 `master03` §Flattening removes every attribute of `existence matches
-/// {0}`, so the OPT alone reads such an attribute at its reference-model
-/// existence (ADL2 `master04.3` §Existence). The paths keep the prohibition
-/// beside the OPT, which keeps its `master03` shape (no specification governs
-/// this: our own design).
+/// OPT2 `master03` §Flattening removes `existence matches {0}` attributes, so
+/// the paths keep the prohibition beside the OPT (no specification governs this:
+/// our own design).
 #[derive(Debug, Clone, PartialEq)]
 pub struct RawOpt {
     /// The raw operational template.
@@ -152,23 +111,12 @@ pub struct RawOpt {
     pub prohibited_attributes: Vec<String>,
 }
 
-/// Generate the raw operational template of a source `root` template (or
-/// archetype), with the attributes it removed ([`RawOpt`]).
+/// Generate the raw operational template of `root` with the attributes it
+/// removed ([`RawOpt`]); `repo` supplies the parent and constituents.
 ///
-/// `repo` supplies the root's specialisation parent and every referenced
-/// constituent archetype.
-///
-/// The root's own `template_overlay` blocks are registered as local
-/// constituents before flattening, so `use_archetype` references to them
-/// resolve (master10 — overlays are local specialised archetypes used as slot
-/// fillers).
-///
-/// A constituent in `repo` may be an ADL2 artefact or an unconverted ADL 1.4
-/// one, whose node codes the OPT keeps as authored so 1.4 paths such as
-/// `/activities[at0001]/description[at0002]` still resolve. Each 1.4 term
-/// constraint is rewritten to the ADL2 form the printer accepts
-/// (`ADL2/master04.5` §Formal Terminology Constraint): an external code to a
-/// minted at-code bound to its URI, a code list to a minted ac-code value set.
+/// The root's `template_overlay` blocks resolve as local constituents (master10).
+/// An ADL 1.4 constituent keeps its node codes, with each term constraint
+/// rewritten to the ADL2 form (`ADL2/master04.5` §Formal Terminology Constraint).
 ///
 /// # Errors
 /// [`OptError::Flatten`] if the lineage cannot be flattened,
@@ -244,14 +192,8 @@ pub fn create_opt(root: &Archetype, repo: &ArchetypeRepository) -> Result<RawOpt
     })
 }
 
-/// The specialisation parent of `root`, as the full id of the archetype it
-/// resolves to in `work`.
-///
-/// AOM2 §3.6.6 makes an `OPERATIONAL_TEMPLATE` specialised (invariant
-/// `is_specialised`), and OPT2 `master02` resolves every archetype reference
-/// to its full version. A reference `work` cannot resolve, as an ADL 1.4
-/// authored flat root may state, stays as written: AOM2 `ARCHETYPE`
-/// `parent_archetype_id` admits the interface form.
+/// The specialisation parent of `root` as its full id (AOM2 §3.6.6; OPT2
+/// `master02`); an unresolvable reference stays as written.
 fn root_parent(root: &Archetype, work: &ArchetypeRepository) -> Option<String> {
     let root_view = view(root);
     let parent_id = root_view.parent_archetype_id?;
@@ -264,17 +206,8 @@ fn root_parent(root: &Archetype, work: &ArchetypeRepository) -> Option<String> {
     )
 }
 
-/// Every archetype the operational template of `root` needs and `repo` does
-/// not hold, sorted and without repeats.
-///
-/// OPT2 `master03` §Archetype References resolves every reference in the
-/// source template and in every archetype it references, and AOM2 VARXR
-/// (`master04.5` §Validity Rules: `C_ARCHETYPE_ROOT`) requires each to be
-/// found in the repository. The walk follows every reference and
-/// specialisation parent that does resolve, from the root and its own
-/// overlays, so one answer names every missing constituent where
-/// [`create_opt`] stops at the first. Each entry is the reference as the
-/// parsed artefact carries it.
+/// Every archetype the operational template of `root` needs and `repo` does not
+/// hold, sorted and deduplicated (OPT2 `master03` §Archetype References; VARXR).
 #[must_use]
 pub fn unresolved_constituents(root: &Archetype, repo: &ArchetypeRepository) -> Vec<String> {
     let mut work = repo.clone();
@@ -448,12 +381,8 @@ impl Transform<'_> {
                 s.sibling_order = None;
                 Ok(Some(CObject::ArchetypeSlot(s)))
             }
-            // A `use_node` proxy is replaced by an inline copy of its target
-            // (master03 §Flattening: "`use_node` internal references are replaced by
-            // an inline copy of the target structure"). The copy re-enters one
-            // level deeper: a target that contains the proxy itself would
-            // otherwise re-inline without end, and the bound turns that into a
-            // refusal.
+            // master03 §Flattening: "`use_node` internal references are replaced by an
+            // inline copy of the target structure"; the depth bound stops a self-cycle.
             CObject::CComplexObjectProxy(p) => {
                 let inlined = inline_proxy(&p, proxy_root)?;
                 let deeper = level
@@ -487,14 +416,9 @@ impl Transform<'_> {
         }
     }
 
-    /// Inline a `C_ARCHETYPE_ROOT` slot-filler / external reference: resolve its
-    /// `archetype_ref` to a constituent, flatten that constituent, and populate
-    /// the root with the constituent's flattened structure and full-version id
-    /// (master03 §Archetype References + §Flattening). The constituent's flat
-    /// terminology is gathered under `components` (master03 §Terminology).
-    ///
-    /// The constituent joins the inlining chain for the duration of its own
-    /// transform: meeting it again below itself is a reference cycle.
+    /// Inline a `C_ARCHETYPE_ROOT` filler with its constituent's flattened structure
+    /// and full-version id, gathering its terminology (master03 §Archetype References,
+    /// §Flattening, §Terminology); meeting it again below itself is a cycle.
     fn inline_filler(
         &mut self,
         mut r: CArchetypeRoot,
@@ -547,11 +471,8 @@ impl Transform<'_> {
             }
         }
 
-        // Gather the constituent's flat terminology (master03 §Terminology: the flat
-        // terminology of every constituent except the root template). The
-        // `component_terminologies` ODIN block carries only the term/binding/value-set
-        // maps keyed by archetype id (master10), not the within-archetype
-        // `concept_code`, so it is normalised away for serialisation fidelity.
+        // Every constituent's flat terminology but the root's (master03 §Terminology),
+        // without `concept_code` (master10).
         if full_id != self.root_id {
             let mut component = terminology;
             component.concept_code = String::new();
@@ -660,11 +581,8 @@ pub enum BindingFilter {
     RemoveAll,
 }
 
-/// The profiling choices applied to a raw OPT (master04).
-///
-/// Node-level terminology substitution (`substitute_nodes`) is not
-/// implemented — the spec leaves it TBD — and a `true` value returns
-/// [`OptError::NodeSubstitutionUnsupported`].
+/// The profiling choices applied to a raw OPT (master04); `substitute_nodes` is
+/// refused with [`OptError::NodeSubstitutionUnsupported`].
 #[derive(Debug, Clone, Default)]
 pub struct ProfileSpec {
     /// Languages to keep. `None` keeps every language; `Some(list)` keeps only

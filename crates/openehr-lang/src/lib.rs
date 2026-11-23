@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! openEHR LANG, generated from the BMM meta-model: one generation per component version. `v1_1` (the 1.1.0 development line, the current generation) carries the version's published specification units side by side — the STABLE, tool-implemented BMM v2.x model (`bmm`, its `bmm_persistence` P_BMM form, the `beom` BEL expression model; on the prelude) and the PAUSED BMM3 model (`bmm3`, full-path only) — plus the hand-written ODIN/BEL/EL readers and the shared lexer for that version's notations. The generator's own BMM reader lives in openehr-codegen (tooling, not spec).
+//! openEHR LANG, generated from the BMM meta-model: one generation per component version. `v1_1` carries the BMM v2.x model (`bmm`, `bmm_persistence`, `beom`) and the paused BMM3 model (`bmm3`, full path only), with the hand-written ODIN, BEL and EL readers.
 //!
 //! The type files are generated; hand-written spec behaviour
 //! lives in sibling `*_impl.rs` files.
@@ -35,11 +35,9 @@ pub mod v1_1;
 /// The BMM generations this crate emits, one variant per version module,
 /// oldest first.
 ///
-/// Generated from the openehr-codegen composition table — the single
-/// authority for which generations exist. [`std::fmt::Display`] and
-/// [`std::str::FromStr`] round-trip the generation-module name (`"v1_0"`). `Generation::default()` is the crate's CURRENT generation — the
-/// one `crate::prelude` re-exports (the composition table's `current`
-/// marker, via the std `#[default]` variant attribute).
+/// [`std::fmt::Display`] and [`std::str::FromStr`] round-trip the
+/// generation-module name (`"v1_0"`). `Generation::default()` is the generation `crate::prelude`
+/// re-exports.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Generation {
     /// The `v1_0` generation — openEHR specification version 1.0.0.

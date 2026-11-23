@@ -4,17 +4,12 @@
 //! The content-addressed blob store, over one shared OpenDAL [`Operator`].
 //!
 //! No openEHR spec governs where externalized `DV_MULTIMEDIA` bytes live: our
-//! own design (#5934). A blob is keyed by the SHA-256 of its unencoded bytes,
-//! which is also the value its record carries as `integrity_check` (RM 1.2.0
-//! `DV_MULTIMEDIA`, algorithm `SHA-256` from the openEHR integrity check
-//! algorithms code set), so identical media is stored once and every read can
-//! prove what it returns.
+//! own design. A blob is keyed by the SHA-256 of its unencoded bytes, the value
+//! its record carries as `integrity_check` (RM 1.2.0 `DV_MULTIMEDIA`, algorithm
+//! `SHA-256`), so identical media is stored once and every read can prove what
+//! it returns.
 //!
-//! The store streams in both directions: a write hands the backend chunks as
-//! they come and a read hands the caller chunks as they arrive, hashing and
-//! counting them on the way, so memory follows the part size rather than the
-//! blob size. Every operation runs in a `multimedia.blob` span that records
-//! the backend, the key, the byte count and the elapsed time, never a body.
+//! Reads and writes stream, so memory follows the part size, not the blob size.
 
 #![expect(
     clippy::doc_markdown,

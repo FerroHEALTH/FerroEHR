@@ -4,19 +4,6 @@
 
 //! The printer's own documented invariant, asserted over every boolean shape:
 //! for any AST the parser produces, `parse(to_aql(ast)) == ast`.
-//!
-//! The shapes here were found by the `aql_query` fuzz harness (`fuzz/`), which
-//! parses arbitrary text and asserts the same invariant. Two defects surfaced,
-//! both about parentheses the printer dropped:
-//!
-//! - `AqlParser.g4` states `AND`/`OR` as binary alternatives of one recursive
-//!   rule, which ANTLR4 resolves LEFT-associatively, so a same-precedence right
-//!   operand must keep its parentheses to survive a re-parse;
-//! - `containsExpr: classExprOperand (NOT? CONTAINS containsExpr)?` makes the
-//!   `CONTAINS` operand a whole `containsExpr`, so an unparenthesised
-//!   `A CONTAINS B` used as a boolean operand absorbs the operator that follows
-//!   it — which moves the operator INTO the CONTAINS scope and changes what the
-//!   query means.
 
 #![allow(
     clippy::panic,

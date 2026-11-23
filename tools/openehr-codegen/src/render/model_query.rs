@@ -1,43 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `model-query` report: for every class attribute the vendored BMM
-//! declares, what the BMM states about it beside the Rust field shape the
-//! emitter currently emits for it.
+//! The `model-query` report: per BMM class attribute, what the BMM states
+//! beside the field shape the emitter writes, computed by calling
+//! [`crate::render::emit::field_type`] and [`crate::plan::decide`].
 //!
-//! Source of truth: the vendored BMM meta-model files under
-//! `tools/openehr-codegen/vendor/bmm/components/<COMPONENT>/json/*.bmm.json` —
-//! the same files [`crate::plan::composition`] feeds to the emitter, loaded
-//! through the same LOAD → ANALYZE → PLAN stages. Nothing here re-derives an
-//! emission decision: the field-shape column is produced by CALLING
-//! [`crate::render::emit::field_type`], the per-class shape by calling
-//! [`crate::plan::decide`], so the report cannot drift from what `emit` writes.
-//!
-//! What the BMM columns mean (the meta-model's own definitions):
-//!
-//! - **existence** — `BMM_PROPERTY.existence()` is "Interval form of `0..1`,
-//!   `1..1` etc, generated from `_is_mandatory_`"
-//!   (`LANG/docs/UML/classes/org.openehr.lang.bmm.bmm_property.adoc`
-//!   §`BMM_PROPERTY` Class), so a mandatory property reports `1..1` and an
-//!   optional one `0..1`.
-//! - **container + cardinality** — `BMM_CONTAINER_PROPERTY` "represents a
-//!   container type based on one of the inbuilt types List <>, Set <>, Array
-//!   <>" and carries an optional `cardinality: Multiplicity_interval`
-//!   (`LANG/docs/UML/classes/org.openehr.lang.bmm.bmm_container_property.adoc`
-//!   §`BMM_CONTAINER_PROPERTY` Class). A single-valued property has neither, and
-//!   a container whose BMM node states no cardinality reports `-` rather than a
-//!   synthesized bound.
-//! - **abstract** — the vendored `*.bmm.json` carries `is_abstract` on class
-//!   and function nodes only; its property nodes carry no abstract/effected
-//!   facet (the `(effected)`/`(redefined)` markers in the spec's UML tables are
-//!   documentation, not serialized meta-data). The report therefore states
-//!   abstractness at the class level, where the BMM has it.
-//!
-//! The field-shape column is computed for the **declaring** class. A concrete
-//! descendant flattens the same property through the same
-//! [`crate::render::emit::field_type`] call with itself as the emitting class
-//! (see [`crate::render::emit`]'s struct renderer), which can differ only where
-//! the self-recursion boxing check resolves differently for that descendant.
+//! Existence is `BMM_PROPERTY.existence()` ("Interval form of `0..1`, `1..1`
+//! etc", LANG `org.openehr.lang.bmm.bmm_property.adoc`); cardinality is the
+//! container property's optional `cardinality`, `-` when absent; abstractness
+//! is reported per class, where the BMM carries it.
 
 #![expect(
     clippy::disallowed_types,
@@ -56,15 +27,11 @@ use std::collections::BTreeSet;
 /// The report's error type (same boxed shape the rest of the CLI uses).
 type Error = Box<dyn std::error::Error>;
 
-/// The value reported in the emission column for a property of a class the plan
-/// stage skips (a mapped/primitive class, or an abstract class with neither
-/// concrete descendants nor any use as a field type): no Rust type is emitted,
-/// so no field shape exists.
+/// The emission column for a property of a class the plan stage skips.
 const NOT_EMITTED: &str = "(class not emitted)";
 
-/// The value reported in the emission column for a designated owner/parent
-/// back-reference: the emitter omits the field from the struct entirely (see
-/// [`crate::plan::overrides::back_reference`]).
+/// The emission column for a back-reference
+/// ([`crate::plan::overrides::back_reference`]).
 const BACK_REFERENCE: &str = "(omitted: back-reference)";
 
 /// The placeholder for a column the BMM states nothing for.
@@ -85,7 +52,7 @@ impl Format {
     /// The accepted `--format` values, for the usage/error text.
     pub(crate) const VALID: &str = "table, tsv, json";
 
-    /// Parse a `--format` value.
+    /// Parses a `--format` value.
     ///
     /// # Errors
     /// Returns an error naming every valid value if `s` is not one of them.
@@ -111,17 +78,8 @@ pub(crate) struct Query<'a> {
     pub class: Option<&'a str>,
     /// Restrict to one attribute name (exact, as the BMM spells it).
     pub attribute: Option<&'a str>,
-    /// Report one row per class × **flattened** attribute (every attribute the
-    /// class carries, inherited ones included) instead of one row per class ×
-    /// DECLARED attribute.
-    ///
-    /// This is the inheritance dimension: an attribute declared on an abstract
-    /// class appears once in the default (declared) view and once per
-    /// descendant here, each with its own emission computed by the same
-    /// [`crate::render::emit::field_type`] call the struct renderer makes for
-    /// that class — so a per-descendant divergence (the self-recursion boxing
-    /// check resolving differently, a redeclared generic parameter) is visible
-    /// instead of assumed absent.
+    /// Reports one row per class and carried attribute, inherited ones included,
+    /// each with the emission computed for that class.
     pub flattened: bool,
 }
 
@@ -143,13 +101,9 @@ struct Row {
     /// The class's planned emission shape (`struct`, `enum`, `poly_enum`,
     /// `enum_literals`, `newtype`, `skip`).
     class_emission: &'static str,
-    /// The attribute's 0-based position in the class's BMM declaration order
-    /// (the canonical-JSON field order), preserved because the report itself is
-    /// sorted by name.
+    /// The attribute's position in BMM declaration order.
     decl: usize,
-    /// The class that DECLARES the attribute. Equal to `class` for an
-    /// attribute the class declares itself; the ancestor's name for an
-    /// inherited one (only ever different in the flattened view).
+    /// The class that declares the attribute.
     declared_on: String,
     /// The BMM attribute name.
     attribute: String,
@@ -221,12 +175,11 @@ impl Row {
     }
 }
 
-/// Render the report for `query` in `format`.
+/// Renders the report for `query` in `format`.
 ///
 /// # Errors
 /// Returns an error if a vendored BMM file cannot be loaded, or if a filter
-/// names a component/class/attribute the loaded model does not have (the error
-/// lists the valid values).
+/// names a component/class/attribute the loaded model does not have.
 pub(crate) fn render(query: &Query<'_>, format: Format) -> Result<String, Error> {
     let scope = collect(query.component, query.flattened)?;
     let mut rows = scope.rows;
@@ -282,12 +235,7 @@ fn collect(component: Option<&str>, flattened: bool) -> Result<Scope, Error> {
         let composed = compose(key)?;
         for generation in &composed.generations {
             for unit in &generation.units {
-                // Project the schema the emitter actually RENDERS this unit
-                // from — its own schema, augmented with the cross-schema
-                // re-emission closure exactly as `cli::cmd_emit` augments
-                // every unit (a unit with an empty closure is unchanged).
-                // Projecting a differently-composed schema would attribute
-                // field shapes to a crate that emits no such class.
+                // The schema the emitter renders: own plus the re-emission closure.
                 let deps: Vec<&BmmSchema> = generation.dep_schemas.iter().collect();
                 let reemit = cross_schema_reemit(&unit.model, &unit.schema);
                 let schema = augment_with_reemit(&unit.schema, &unit.model, &reemit, &deps);
@@ -372,13 +320,8 @@ fn collect_generation(
     }
 }
 
-/// The properties one class contributes to the report, paired with the class
-/// each is declared on.
-///
-/// The DECLARED view is the class's own properties. The FLATTENED view is every
-/// property the class CARRIES, resolved through the same
-/// [`Model::flattened_props`] the struct renderer walks — so the emission column
-/// is computed for the class that actually emits the field.
+/// The properties one class contributes, each with its declaring class: its
+/// own, or every carried one via [`Model::flattened_props`].
 fn view_props<'a>(
     model: &'a Model,
     class: &'a BmmClass,
@@ -423,9 +366,7 @@ fn bmm_stem(file: &str) -> String {
     name.strip_suffix(".bmm.json").unwrap_or(name).to_string()
 }
 
-/// The declared type exactly as the BMM states it: a container property renders
-/// as `<container_type><item>`, a single property as its (possibly generic)
-/// type reference.
+/// The declared type as the BMM states it.
 fn bmm_type_text(prop: &BmmProperty) -> String {
     match &prop.kind {
         BmmPropKind::Single(t) => type_text(t),
@@ -583,7 +524,7 @@ fn render_json(rows: &[Row]) -> Result<String, Error> {
     Ok(out)
 }
 
-/// Parse `model-query`'s options (`--flag value` and `--flag=value` both work).
+/// Parses `model-query`'s options (`--flag value` or `--flag=value`).
 ///
 /// # Errors
 /// Returns an error naming the valid options if an option is unknown, and an

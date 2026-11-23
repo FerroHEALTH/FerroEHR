@@ -1,19 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `emit-rm-model`: emit a **static RM attribute/type model**
-//! into `openehr-rm` (`src/model/`), generated from the same BASE + RM BMM the
-//! `emit` target consumes. This is the AQL planner's oracle — attribute typing,
-//! multiplicity, abstract→concrete descendant sets, and structure classification
-//! — compiled once at build time, with no reflection and no hand-maintained
-//! tables.
-//!
-//! Two generated files under `openehr-rm/src/model/`:
-//! - `mod.rs` — the public API (`RmClass`, `RmAttribute`, `Container`, and the
-//!   `class`/`attribute`/`computed_attribute`/`attributes`/`descendants`/`ancestors`/`is_a`/
-//!   `is_primitive`/`conforms_to_ordered`/`is_structure_root` functions + a
-//!   `LazyLock` name index).
-//! - `data.rs` — the generated `static CLASSES: &[RmClass]` table.
+//! `emit-rm-model`: the static RM attribute/type model in `openehr-rm`
+//! (`src/model/`), the AQL planner's oracle: `mod.rs` holds the API,
+//! `data.rs` the `static CLASSES` table.
 
 use crate::analyze::Model;
 use crate::load::bmm::{BmmClass, BmmEnumValue, BmmPackage, BmmPropKind, BmmSchema, BmmType};
@@ -24,21 +14,8 @@ use crate::render::emit::GenFile;
 use crate::render::emit_rm_model_api::emit_mod;
 use std::collections::{BTreeMap, BTreeSet};
 
-/// Classes the node codec splits into their own `node` row — mirrored **verbatim**
-/// from `ferroehr::storage::codec::STRUCTURE_TYPES` (the codec decompose rule).
-///
-/// This is a hand-picked set, **not** a pure BMM-derivable predicate. It is the
-/// set of LOCATABLE *content* subtypes that occur inside COMPOSITION / `EHR_STATUS`
-/// / FOLDER trees, **plus** `EVENT_CONTEXT` and `FEEDER_AUDIT` — which AQL
-/// addresses although the RM does not make them LOCATABLE. Concretely it differs
-/// from "concrete LOCATABLE descendants" two ways:
-/// - **added** (not LOCATABLE): `EVENT_CONTEXT` (a PATHABLE) and `FEEDER_AUDIT`.
-/// - **excluded** LOCATABLE descendants: the demographic `PARTY` hierarchy
-///   (`PARTY`, `ROLE`, `ACTOR`, `PERSON`, …) and `EHR`/`FOLDER`-external types,
-///   which are never composition content.
-///
-/// Kept in lockstep with `codec.rs`; if either changes, both must change together
-/// (the storage spike owns the canonical list).
+/// The classes the node codec splits into their own `node` row, mirrored from
+/// `ferroehr::storage::codec::STRUCTURE_TYPES`; both change together.
 const STRUCTURE_ROOTS: &[&str] = &[
     "COMPOSITION",
     "EHR_STATUS",
@@ -99,11 +76,8 @@ struct AttrModel {
     declared_type: String,
     container: &'static str,
     is_mandatory: bool,
-    /// The generic type-argument tree of the attribute's declared value type
-    /// (empty when the type is not a generic instantiation), e.g. `[DV_QUANTITY]`
-    /// for `DV_INTERVAL<DV_QUANTITY>` or `[EVENT<ITEM_STRUCTURE>]` for
-    /// `List<EVENT<ITEM_STRUCTURE>>`. Bare parameters are resolved to their bound,
-    /// consistent with `declared_type`.
+    /// The generic type-argument tree of the declared value type (`[DV_QUANTITY]`
+    /// for `DV_INTERVAL<DV_QUANTITY>`).
     type_params: Vec<TypeRefModel>,
     /// The formal generic parameter the attribute's value type is written as
     /// (`T` for `DV_INTERVAL.lower`), `None` when it names a class.
@@ -154,9 +128,8 @@ enum EnumValueModel {
     Str(String),
 }
 
-/// Emit the `model/` files for `openehr-rm` from the merged BASE + RM model;
-/// `schemas` are the generation's verbatim BMM files, which carry the package
-/// each class is declared in.
+/// Emits the `model/` files for `openehr-rm`; `schemas` carry each class's
+/// package.
 ///
 /// # Errors
 /// Returns an error naming the attribute when a reference-typed attribute
@@ -178,15 +151,9 @@ pub(crate) fn emit_files(model: &Model, schemas: &[&BmmSchema]) -> Result<Vec<Ge
     ])
 }
 
-/// The class table of a draft package's own classes, as one file of the
-/// draft's module: each class row in the shape of the RM table
-/// ([`emit_files`]), typed by the RM `model` table, so the archetype
-/// validator can extend the RM with the draft
+/// The class table of a draft package's own classes, in the RM table's shape,
+/// so the archetype validator can extend the RM with the draft
 /// (`AM/docs/AOM2/master11-rm_adaptation.adoc`).
-///
-/// `model` is the draft's merged resolution model, `schemas` its dependency
-/// schemas followed by the draft's own, `own`, and `rm_model` the path of the
-/// RM class table module from the draft's crate.
 ///
 /// # Errors
 /// As [`emit_files`].
@@ -293,9 +260,7 @@ fn build(model: &Model, packages: &BTreeMap<String, String>) -> Result<Vec<Class
     Ok(out)
 }
 
-/// Build the enumeration table: every `BMM_ENUMERATION` class (integer- or
-/// string-based) in the merged model, in name order, with its constants resolved
-/// 1:1 to values.
+/// Builds the enumeration table, in name order.
 fn build_enums(model: &Model) -> Vec<EnumModel> {
     let mut out = Vec::new();
     for (name, class) in model.class_iter() {
@@ -320,10 +285,9 @@ fn build_enums(model: &Model) -> Vec<EnumModel> {
     out
 }
 
-/// The value of the `i`-th enumeration constant. Explicit `item_values` win;
-/// where the BMM supplies none, `BMM_ENUMERATION` states "the integer values
-/// 0, 1, 2, ... are assumed" — applied for an INTEGER underlying type, while a
-/// STRING-underlying named constant takes its own name as its value.
+/// The value of the `i`-th enumeration constant: explicit `item_values` win,
+/// else "the integer values 0, 1, 2, ... are assumed" (`BMM_ENUMERATION`) for
+/// an INTEGER type and the constant's name for a STRING type.
 fn enum_value(
     underlying: &str,
     item_values: Option<&[BmmEnumValue]>,
@@ -445,10 +409,9 @@ fn value_shape(
     }
 }
 
-/// The flattened (own + inherited) computed attributes of `class`,
-/// ancestor-first: every BMM function with no parameters and a result, a
-/// descendant's redefinition replacing the inherited one (AOM2 `master04.2`
-/// §Attribute Nodes). A name `stored` already carries is left out.
+/// The flattened computed attributes of `class`, ancestor first, a
+/// redefinition replacing the inherited one (AOM2 `master04.2` §Attribute
+/// Nodes); a name `stored` carries is left out.
 fn computed_attributes_of(model: &Model, class: &BmmClass, stored: &[AttrModel]) -> Vec<AttrModel> {
     fn gather<'a>(
         model: &'a Model,
@@ -516,20 +479,9 @@ fn type_ref(model: &Model, concrete: &str, t: &BmmType) -> TypeRefModel {
     }
 }
 
-/// The declared spec-type name of an attribute value, resolving a bare generic
-/// parameter (`T`) to its bound in the concrete class's scope (the same
-/// bound-fill `emit` applies), and reducing generic instantiations to their root
-/// (`DV_INTERVAL<T>` → `DV_INTERVAL`; the container column carries multiplicity).
-///
-/// A **monomorphizing** class (`X_VERSIONED_COMPOSITION :
-/// X_VERSIONED_OBJECT<COMPOSITION>`, `Multiplicity_interval : Interval<Integer>`)
-/// binds the parameter its generic ancestor leaves open; that binding
-/// ([`class_binding`], each entry spec-cited) is what `emit` substitutes into the
-/// struct field, so the static model records it too. Without it the model would
-/// contradict the emitted type — reporting the parameter's BOUND (`Any`) where
-/// the struct says `Vec<OriginalVersion<Composition>>` — and any consumer
-/// deriving instances from the model would produce values the codec rightly
-/// refuses.
+/// The declared spec-type name of an attribute value: a bare parameter
+/// resolved to its bound or to its [`class_binding`], an instantiation reduced
+/// to its root (`DV_INTERVAL<T>` → `DV_INTERVAL`).
 fn declared_type(model: &Model, concrete: &str, t: &BmmType) -> String {
     let root = t.root_name();
     if model.is_generic_param(concrete, root) {
@@ -553,8 +505,7 @@ fn value_type(kind: &BmmPropKind) -> &BmmType {
 }
 
 /// The formal generic parameter `t` is written as in `concrete`'s scope, `None`
-/// when `t` names a class or a parameter a monomorphizing class binds
-/// ([`class_binding`]), whose binding [`declared_type`] already records.
+/// when `t` names a class or a bound parameter.
 fn formal_param(model: &Model, concrete: &str, t: &BmmType) -> Option<String> {
     let root = t.root_name();
     (model.is_generic_param(concrete, root) && !class_binding(concrete).contains_key(root))

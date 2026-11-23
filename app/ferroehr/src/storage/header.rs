@@ -4,16 +4,9 @@
 //! The header keys a node repeats, and the columns that hold them instead
 //! (#4525, and the root since #4904).
 //!
-//! Every archetype root repeats its `archetype_node_id` inside
-//! `archetype_details`, with the same `rm_version` throughout a version, and
-//! every entry repeats the same `language` and `encoding`. `slim_header`
-//! moves them to the row's `rm_version`, `language` and `encoding` columns
-//! when the columns rebuild them byte for byte, and `restore` puts them back
-//! where they stood; `ext.node_archetype_node_id`,
-//! `ext.node_archetype_details` and `ext.node_code_phrase` are the SQL twins.
-//! The versioned object's root names its template in the header (RM common
-//! `ARCHETYPED.template_id`), which the version row holds as `template_id`,
-//! so the root's header leaves when the template is the version's.
+//! A key moves to its column only when the column rebuilds it byte for byte;
+//! `ext.node_archetype_node_id`, `ext.node_archetype_details` and
+//! `ext.node_code_phrase` are the SQL twins of `restore`.
 //!
 //! No openEHR spec governs storage layout: our own design (RM common
 //! `master06-change_control_package.adoc` §Overview admits any physical

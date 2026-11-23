@@ -15,11 +15,6 @@
 //! **exhaustive** (wildcard-free) matches and explicit inventory lists, so an
 //! AOM/OPT spec bump that regenerates either side with a new/removed/renamed
 //! constraint type fails here and forces a conscious reconciliation.
-//!
-//! It intentionally does NOT compare field shapes — the field-level divergence
-//! (Interval representation, typed vs `Any` assumed values, domain-type sets)
-//! is the documented reason the models are separate; the inventory is the
-//! drift-prone surface.
 
 /// The opt14 (OPT-XML) polymorphic constraint inventories. Exhaustive matches:
 /// a regeneration that adds or removes an enum variant breaks compilation.
@@ -148,10 +143,8 @@ fn documented_divergence_is_stable() {
     // BMM/v1_4-only constraint types (no OPT-XML counterpart).
     let am_only = ["C_CODED_TEXT", "C_ORDINAL", "C_QUANTITY"];
 
-    // Pin both lists; a regenerated model that gains/loses a type will already
-    // have broken the exhaustive matches above — this assert documents *which*
-    // names are the expected asymmetry so the fix is a conscious edit here +
-    // by design, not a silent drift.
+    // Pins which names are the expected asymmetry, so a change is a conscious
+    // edit.
     assert_eq!(opt_only.len(), 7);
     assert_eq!(am_only.len(), 3);
     assert!(opt_only.is_sorted());

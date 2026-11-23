@@ -3,12 +3,8 @@
 
 //! The connection-level bounds, driven over a real socket.
 //!
-//! These have to be tested at the transport, not through a `Router`, because
-//! that is the whole point of them: every other limit this server has engages
-//! once a request head has been parsed and dispatched — the body limit, the
-//! request timeout, both rate-limit tiers, the in-flight shed. A client that
-//! opens a connection and never finishes writing a request head reaches none of
-//! them, so a test that goes through the router cannot observe the bound at all.
+//! Tested at the transport, since a client that never finishes a request head
+//! reaches none of the limits behind the router.
 //!
 //! No openEHR spec governs connection handling — our own design; the control is
 //! the OWASP Denial of Service Cheat Sheet's "minimum ingress rate threshold".
@@ -50,9 +46,6 @@ async fn serve() -> u16 {
 
 /// A connection that opens and trickles a partial request head is dropped once
 /// the header-read bound elapses, rather than being held indefinitely.
-///
-/// The bound is set to one second so the test is quick; the shape is what
-/// matters, not the number.
 #[tokio::test]
 async fn a_stalled_connection_is_dropped_rather_than_held() {
     let port = serve().await;

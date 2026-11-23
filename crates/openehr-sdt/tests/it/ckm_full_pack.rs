@@ -2,23 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 #![expect(clippy::panic, reason = "test assertions/diagnostics/fixtures")]
-//! Breadth gate over the FULL vendored openEHR CKM template library
-//! (`corpus/templates/ckm/full/`, vendored by
-//! `scripts/vendor/ckm-templates.sh`): every OPT the public CKM publishes
-//! must parse into the generated `opt14::types::OperationalTemplate`, build a
-//! WebTemplate, and generate RM-shape-valid examples at every detail level.
-//!
-//! Why the whole library and not a curated handful: real-world OPTs carry
-//! shapes a hand-written fixture never produces — multi-thousand-node
-//! `CLUSTER` trees, wide repeats, deep `protocol` subtrees, exotic
-//! constraint spellings. The curated journey pack (the parent directory,
-//! gated by `example_rm_validity`) is the measured workload; this pack is
-//! the breadth net.
-//!
-//! Corpus discipline: the pack is exercised 100%, and a file our conformant
-//! reader rejects is either fixed upstream or listed in `ADJUDICATED` below
-//! with the spec clause it violates — never a silent exclusion
-//! (`.claude/rules/vendored-corpora.md`, `.claude/rules/testing.md`).
+//! Breadth gate over the full vendored CKM template library
+//! (`corpus/templates/ckm/full/`): every OPT parses, builds a WebTemplate and
+//! generates RM-valid examples at every detail level, or is listed in
+//! `ADJUDICATED` with the spec clause it violates.
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
@@ -29,12 +16,8 @@ use openehr_sdt::flat::example::{DetailLevel, example_composition};
 use openehr_sdt::flat::webtemplate::builder::build_web_template;
 use serde_json::Value;
 
-/// Templates the conformant reader rejects for a spec-cited reason.
-///
-/// Each entry is `(file name, the spec clause the artefact violates)`. An
-/// entry is an ADJUDICATION, not a skip list: the file stays vendored so the
-/// refusal itself is pinned, and a reader that starts accepting it fails this
-/// gate.
+/// Templates the conformant reader rejects, each with the spec clause it
+/// violates; a reader that starts accepting one fails this gate.
 const ADJUDICATED: &[(&str, &str)] = &[
     (
         "epsos-active-problems-section-1-3-6-1-4-1-19376-1-5-3-1-3-6.opt",

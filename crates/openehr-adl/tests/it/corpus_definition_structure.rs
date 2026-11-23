@@ -1,16 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Structural spot-checks of the cADL parser against real vendored corpus
-//! files: whole `.adls` sources (outer parse + the definition span, exactly
-//! what every caller of the entry points does), with the deep AOM2 tree
-//! asserted against expectations hand-derived by reading each file.
+//! Structural spot-checks of the cADL parser against vendored corpus files.
 //!
-//! These read `tests/corpus/**` through [`include_str!`], which is why they
-//! live here rather than beside the parser: `tests/` is outside the crate's
-//! published package (`include = ["src/**", …]`), so the same code under
-//! `src/` compiles for us and fails for anyone running `cargo test` inside the
-//! published `.crate` (#2385).
+//! They read `tests/corpus/**` through [`include_str!`], which the published
+//! package does not carry, so they live here.
 
 #![allow(
     clippy::expect_used,

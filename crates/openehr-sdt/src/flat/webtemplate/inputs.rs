@@ -1,31 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! RM-type → `inputs` mapping.
+//! RM-type → `inputs` mapping (`simplified_formats master04` §"Web Template
+//! Metadata", §"Attribute Suffixes").
 //!
-//! Each leaf `DATA_VALUE` / PARTY node is given its `inputs` (and, for
-//! `DV_PROPORTION`, the node's `proportionTypes`), the `inputs[]` array of
-//! `ITS-REST simplified_formats master04 §"Web Template Metadata"`. The per-type
-//! suffix set follows master04 §"Attribute Suffixes" and the class sections
-//! (`DV_QUANTITY` → `magnitude`/`unit`, `DV_CODED_TEXT` → `code`/`value`/…), each
-//! input carrying its `type`, coded `list`, and `validation`.
-//!
-//! The `inputs` describe the CONSTRAINT, not resolved runtime values, which
-//! fixes three boundaries:
-//!
-//! * `defaultValue` comes only from an explicit archetype assumed value
-//!   (`assumed_value` on `C_PRIMITIVE`, `C_CODE_PHRASE`, `C_DV_QUANTITY`,
-//!   `C_DV_ORDINAL` and `C_DV_STATE`, AM `UML/classes/org.openehr.am.aom14.*`),
-//!   rendered as the string the released `web_template/Input.yaml` types it
-//!   as. An assumed value outside the constraint's own list or range is not
-//!   offered (AOM 1.4 `Assumed_value_valid`). RM defaults are a
-//!   composition-build concern.
-//! * Only archetype-`local` value sets become coded `list` entries; bindings to
-//!   external terminologies surface as `termBindings`, and validating an
-//!   external code is the terminology service's job.
-//! * Rubrics come from the archetype ontology ([`Labels`]); a code the archetype
-//!   does not define falls back to the code string as its label — no openEHR
-//!   spec governs that fallback (our own design/extension).
+//! The `inputs` describe the constraint: `defaultValue` comes only from an
+//! archetype assumed value inside the constraint (AOM 1.4
+//! `Assumed_value_valid`), only `local` value sets become a coded `list`, and a
+//! code the archetype does not define is labelled by its code string (no
+//! openEHR spec governs that fallback: our own design).
 
 #![expect(
     clippy::disallowed_types,
@@ -57,17 +40,11 @@ pub(crate) trait Labels {
     fn term_bindings(&self, code: &str) -> IndexMap<String, WebTemplateBindingCodedValue>;
 }
 
-/// The openEHR terminology *group* an `openehr`-terminology coded RM attribute
-/// binds to, when the owning RM type fixes one (the `has_code_for_group_id` RM
-/// invariants). Used to resolve a code's display rubric from the **correct**
-/// group: openEHR concept codes are *not* globally unique across groups (TERM
-/// 3.1.0 carries the SPECPR-51 defect — code `532` is `complete` in
-/// `version_lifecycle_state` but `completed` in `instruction_states`; `253` and
-/// `523` collide likewise), so a group-agnostic lookup can pick the wrong
-/// rubric. Spec: the RM invariant tables under
-/// `docs/specs/openehr/RM/docs/UML/classes/` (`ism_transition`, `composition`,
-/// `event_context`, `participation`, `event`, `term_mapping`, `audit_details`,
-/// `attestation`, `party_related`).
+/// The openEHR terminology group an `openehr`-coded RM attribute binds to (the
+/// `has_code_for_group_id` RM invariants).
+///
+/// TERM 3.1.0 codes are not unique across groups (SPECPR-51: `532` is
+/// `complete` and `completed`), so rubrics resolve from the right group.
 pub(crate) fn openehr_group(owning_rm_type: &str, attr: &str) -> Option<&'static str> {
     match (owning_rm_type, attr) {
         ("ISM_TRANSITION", "current_state") => Some("instruction_states"),
@@ -87,10 +64,8 @@ pub(crate) fn openehr_group(owning_rm_type: &str, attr: &str) -> Option<&'static
     }
 }
 
-/// Build the `inputs` (and `proportion_types`) for a leaf node. `group` is the
-/// openEHR terminology group the node's coded value binds to (see
-/// [`openehr_group`]), used only to resolve `openehr`-terminology rubrics from
-/// the correct group.
+/// Build the `inputs` (and `proportion_types`) for a leaf node; `group` is the
+/// coded value's openEHR terminology group ([`openehr_group`]).
 pub(crate) fn build_inputs(
     rm_type: &str,
     co: &CObject,
@@ -123,12 +98,8 @@ pub(crate) fn build_inputs(
             .into_iter()
             .map(|s| text_input(primitive_under(co, s), Some(s)))
             .collect(),
-        // The three PARTY_PROXY subtype tables share the
-        // `|id`/`|id_scheme`/`|id_namespace` rows and the latter two add
-        // `|name` — master05 §§PARTY_SELF, PARTY_IDENTIFIED, PARTY_RELATED. A
-        // PARTY_RELATED's extra `relationship` is a DV_CODED_TEXT sub-path
-        // (master05 §"PARTY_RELATED performer"), never a party suffix, so it
-        // adds no input here.
+        // master05 §§PARTY_SELF, PARTY_IDENTIFIED, PARTY_RELATED; `relationship` is a
+        // sub-path, not a suffix.
         "PARTY_PROXY" | "PARTY_IDENTIFIED" | "PARTY_RELATED" => {
             ["id", "id_scheme", "id_namespace", "name"]
                 .into_iter()
@@ -291,17 +262,9 @@ fn external_terminology_inputs(terminology: Option<&str>) -> Vec<WebTemplateInpu
     vec![code, value]
 }
 
-/// The TERMINOLOGY_ID a `C_CODE_REFERENCE.referenceSetUri` names.
-///
-/// The Web Template `terminology` field carries a terminology identifier
-/// (`ITS-REST/specifications/schemas/web_template/Input3.yaml`, example
-/// `openehr`), so only the identifying part of the URI belongs in it. The
-/// bare form is `terminology:SNOMED-CT`
-/// (`CNF/tests/platform/robot/_resources/test_data_sets/valid_templates/`);
-/// the addressed form carries an authority, a path and a query —
-/// `terminology://snomed-ct/hierarchy?rootConceptId=50043002`
-/// (`QUERY/docs/AQL/master03-syntax.adoc`) — where the terminology is the
-/// authority and the rest selects within it.
+/// The terminology id a `C_CODE_REFERENCE.referenceSetUri` names: the bare
+/// `terminology:SNOMED-CT` form, or the authority of
+/// `terminology://snomed-ct/hierarchy?…` (`QUERY/docs/AQL/master03-syntax.adoc`).
 fn reference_set_uri(uri: &str) -> Option<String> {
     if uri.is_empty() {
         return None;
@@ -340,14 +303,8 @@ fn coded_value(
     labels: &dyn Labels,
     group: Option<&str>,
 ) -> WebTemplateCodedValue {
-    // Label resolution order: the artefact's own term definitions, then — for
-    // `openehr`-terminology codes, which no archetype defines — the TERM 3.1.0
-    // rubric (`433` → `event`); the bare code is the last resort (no openEHR
-    // spec governs the label fallback). `DV_CODED_TEXT.value` is the displayable
-    // text of the defining code, so a code-as-label leaks wrong instance data.
-    // Where the owning RM attribute fixes a terminology group, the rubric
-    // resolves from THAT group — openEHR concept codes are not globally unique
-    // — with the group-agnostic search as the fallback.
+    // The artefact's term definitions, then the TERM 3.1.0 rubric from the
+    // attribute's group, then the bare code (no openEHR spec governs the fallback).
     let label = labels
         .text(terminology, code)
         .or_else(|| {
@@ -470,14 +427,9 @@ fn ordinal_input(co: &CObject, labels: &dyn Labels, scale: bool) -> WebTemplateI
 
 /// The coded values of the generic `C_COMPLEX_OBJECT` ordinal/scale form.
 ///
-/// AOM 1.4 has no `C_DV_SCALE` constrainer (AM
-/// `masterAppA-domain_extension.adoc` defines an integer-valued `C_ORDINAL`
-/// only), so a DV_SCALE constrains its coded `symbol` through
-/// `symbol.defining_code` as a `C_CODE_PHRASE` `code_list` (RM `data_types`
-/// §`DV_SCALE`). That code set surfaces as the coded `list` so the walk
-/// enforces symbol membership; the numeric `value` set is captured separately.
-/// No paired `(symbol, value)` numeric is recorded — the generic form loses
-/// the pairing — so the coded values carry no `ordinal`/`scale`.
+/// AOM 1.4 has no `C_DV_SCALE` (AM `masterAppA-domain_extension.adoc`), so a
+/// DV_SCALE's `symbol.defining_code` code list becomes the coded `list`, with
+/// no paired numeric.
 fn push_generic_ordinal_codes(co: &CObject, labels: &dyn Labels, input: &mut WebTemplateInput) {
     for symbol_child in attr_children(co, "symbol") {
         for dc_child in attr_children(symbol_child, "defining_code") {

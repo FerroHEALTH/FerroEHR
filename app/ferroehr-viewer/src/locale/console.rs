@@ -2,10 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The words of the console group, in the catalogs under `locales/console/`.
-//!
-//! Only code of the console group looks them up, so their catalog travels
-//! with that code: the browser loads it with the group's chunks, never with
-//! the entry WebAssembly (`crate::locale`).
 
 crate::locale::messages! {
     /// A string the console group draws, by its message in its catalog.

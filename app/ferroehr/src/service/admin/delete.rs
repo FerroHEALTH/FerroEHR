@@ -91,9 +91,6 @@ impl FerroEhrService {
 
     /// Physically delete one EHR and every trace of it.
     ///
-    /// The sequence, in order, is the erasure reach: one clinical transaction,
-    /// then the object store.
-    ///
     /// 1. `DELETE FROM ehr` deletes the versions' `node` rows in the same
     ///    statement and cascades through `vo_head`, `version` (both tier
     ///    partitions), `vo_attestation`, `contribution`,
@@ -113,9 +110,6 @@ impl FerroEhrService {
     /// The access records naming the EHR stay: Art. 17(3)(b) withholds erasure
     /// where processing is necessary "for compliance with a legal obligation",
     /// and the logging periods are that obligation.
-    ///
-    /// Row-count 0 on the EHR delete means the EHR did not exist →
-    /// [`ServiceError::NotFound`].
     ///
     /// NOTE: ITS-REST `operations/admin_ehr_delete.yaml` answers `404` for an
     /// unknown id, so `ehr_id_does_not_exist` maps to `NotFound`.
@@ -156,9 +150,6 @@ impl FerroEhrService {
     /// Physically delete a set of EHRs, each with the full erasure reach of
     /// [`Self::admin_ehr_delete`]. Missing ids are skipped (idempotent bulk delete);
     /// the count of EHRs actually deleted is returned.
-    ///
-    /// The reach is the same, chunked: one transaction per chunk carries the
-    /// cascade and the erasure tombstones.
     ///
     /// NOTE: the idempotent skip-missing semantics + returned count are
     /// our own design (no openEHR spec governs bulk-delete internals); a
@@ -216,14 +207,6 @@ impl FerroEhrService {
 
     /// Erase `ehr_ids` on `tx` and return the ids that existed.
     ///
-    /// 1. The audit ids the EHRs' versions and contributions reference are
-    ///    captured over both storage tiers, before the cascade deletes the
-    ///    rows that name them.
-    /// 2. `DELETE FROM ehr` deletes the node rows and cascades through the
-    ///    foreign-key graph, across both tier partitions.
-    /// 3. The captured audit rows, now unreferenced, are removed.
-    /// 4. One erasure tombstone per erased EHR is appended.
-    ///
     /// # Errors
     /// [`ServiceError::Storage`] when a statement fails.
     async fn erase_ehrs(
@@ -241,12 +224,9 @@ impl FerroEhrService {
     /// The externalized blob URIs the given EHRs' versions reference, read
     /// from `blob_ref` before the delete removes those rows.
     ///
-    /// The index is the whole point: the question "which blobs does this EHR
-    /// reference" used to pull every node body of the EHR into the process and
-    /// walk it, and it is now one index read over the reference rows the write
-    /// path maintains. Empty when no object store is reachable, because
-    /// nothing could then be collected. Our own extension — no openEHR spec
-    /// governs multimedia offload.
+    /// Read from the `blob_ref` index the write path maintains. Empty when no
+    /// object store is reachable, since nothing could then be collected. Our
+    /// own extension: no openEHR spec governs multimedia offload.
     ///
     /// NOTE: reachability, not `multimedia.enabled` — a deployment that stopped
     /// externalizing still has blobs to collect, and skipping them here would
@@ -288,12 +268,8 @@ impl FerroEhrService {
 
     /// Delete each candidate blob no surviving version still references.
     ///
-    /// The candidates are the URIs the erased versions referenced, read from
-    /// `blob_ref` before they went; the survivors are the rows of that same
-    /// index still standing. A blob is content-addressed, so one blob may be
-    /// referenced by several versions and by both pseudonymisation domains —
-    /// both are asked, because a party may be the only thing still holding a
-    /// blob a clinical version also had.
+    /// A blob is content-addressed and may be shared by several versions and by
+    /// both pseudonymisation domains, so both domains are asked.
     ///
     /// A blob-store failure is logged, not fatal: the delete has committed, and
     /// an orphaned blob is a storage cost rather than a correctness problem. A
@@ -348,16 +324,10 @@ impl FerroEhrService {
     /// PARTY "along with related Party relationships", in one transaction —
     /// mirroring [`Self::admin_ehr_delete`]'s capture-then-cascade approach.
     ///
-    /// The target must be a demographic PARTY root (any version, ehr-less); a
-    /// `PARTY_RELATIONSHIP` or a non-party/unknown id is `party_id_does_not_exist`
-    /// → [`ServiceError::NotFound`] (→ HTTP `404`). Deleted physically: the party
-    /// VO + every `PARTY_RELATIONSHIP` VO whose stored canonical `source`/`target`
-    /// `PARTY_REF` references the party (see `service/demographic/`), with their
-    /// `version` rows (which cascade `node` + `vo_attestation` via the
-    /// `(vo_id, sys_version)` FKs), the CONTRIBUTIONs/audit rows they orphan
-    /// (guarded — a row shared with a survivor is kept), the head rows
-    /// markers. `audit` has no FK from `version` (NO ACTION), so those rows
-    /// are swept explicitly, as in the EHR delete.
+    /// The target must be a demographic PARTY root. Every `PARTY_RELATIONSHIP`
+    /// whose `source` or `target` references it is deleted with it, with the
+    /// contributions and audit rows they orphan; a row shared with a survivor
+    /// is kept.
     ///
     /// # Errors
     /// - `versioned_object_does_not_exist` (`404`) — the id names no

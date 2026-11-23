@@ -23,13 +23,6 @@
 //! End-to-end journeys over the EHR detail's **compositions filters** and the
 //! **EHR header identity**:
 //!
-//! - the filter form writes the URL and narrows the rows (template, composer),
-//!   and a row opens the composition on its Reading tab;
-//! - a shared filter URL reproduces the view, and a one-day window INCLUDES the
-//!   compositions recorded during that day;
-//! - the header names the EHR's subject, masked until revealed, and its
-//!   queryable and modifiable badges on every tab.
-//!
 //! Isolation: each journey creates its OWN subject-bound EHR over ITS-REST and
 //! commits two compositions into it — different templates, different composers,
 //! different context start times — so none of them touches the fixtures the
@@ -90,10 +83,6 @@ fn basic_credentials() -> (String, String) {
 }
 
 /// A run-unique suffix, so a shared stack can hold several runs' subjects.
-///
-/// The process id distinguishes runs and the counter distinguishes calls within
-/// one — the harness needs distinctness, not entropy, and no clock (the
-/// wall-clock reads a `disallowed-methods` ban anyway).
 fn unique_suffix() -> String {
     static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
     let seq = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -129,10 +118,6 @@ async fn ensure_template(http: &reqwest::Client, v1: &str, fixture: &str) {
 }
 
 /// Create an EHR bound to an external subject and return `(ehr_id, subject_id)`.
-///
-/// The subject travels in the `EHR_STATUS`'s `PARTY_SELF.external_ref`, which is
-/// the only place an outside identity appears on an EHR — so this is what the
-/// header's identity line has to render.
 ///
 /// # Panics
 /// When the CDR refuses the create.

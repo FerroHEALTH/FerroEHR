@@ -3,12 +3,6 @@
 
 //! Lean metadata-only reads over `version`.
 //!
-//! Joined with `audit` where the commit instant is needed: the
-//! `ETag`/`If-Match` identity reads, revision-history enumeration, and the
-//! existence, kind, ownership and count lookups. None of them pays the node
-//! reassembly or attestation aggregation the full
-//! [`crate::storage::version_repo::read::read_one`] does.
-//!
 //! No openEHR spec governs the SQL — our own design. The version identity these
 //! reads serve is RM common master06 §Version Identification and the commit
 //! instant is §Committal and Audits.
@@ -67,10 +61,6 @@ pub const CURRENT_VERSION_META_SCOPED_SQL: &str = "SELECT v.vo_id, v.trunk_versi
 // ── revision-history enumeration ──────────────────────────────────────────────
 
 /// One version's metadata row (`version` ⋈ `audit`).
-///
-/// No canonical body and no attestations — the lean list shape for
-/// `REVISION_HISTORY` and version enumeration, where reassembling every body
-/// would be wasted work.
 #[derive(Debug, Clone)]
 pub struct VersionMeta {
     /// The owning EHR, or `None` for a demographic versioned object.
@@ -215,9 +205,8 @@ pub async fn commit_bounds(
 /// The stored `template_id` of one version of an object — the current open
 /// trunk version when `tree` is `None`, else the addressed `VERSION_TREE_ID`.
 ///
-/// A scalar `version` read: the column is promoted at commit, so resolving
-/// a version's template never needs node reassembly. Outer `None` = no such
-/// version; inner `None` = the version carries no template (non-COMPOSITION).
+/// Outer `None`: no such version; inner `None`: the version carries no template
+/// (non-COMPOSITION).
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
@@ -308,10 +297,8 @@ pub async fn vo_owner(pool: &PgPool, vo_id: VoId) -> Result<Option<Option<EhrId>
 
 /// A versioned object's owning EHR **and its RM kind**.
 ///
-/// The owning EHR is `None` for the ehr-less demographic store. This serves
-/// callers that must verify a route family against the addressed object (a
-/// COMPOSITION route must not act on an `EHR_STATUS` container). `None` when no
-/// such versioned object exists.
+/// The owning EHR is `None` for a demographic object; `None` when no such
+/// versioned object exists.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
@@ -358,9 +345,6 @@ const EXISTS_SQL: &str = "SELECT EXISTS(SELECT 1 FROM version WHERE vo_id = $1 \
 /// The current version of an EHR-owned object of one kind: its `vo_id` and
 /// `VERSION_TREE_ID` column ints, from the current open trunk row
 /// (the head row's `trunk_head_sys_version`).
-///
-/// `None` when the EHR has no such object. Mapping the ints to a `TreeId` is
-/// the caller's.
 #[derive(Debug, Clone)]
 pub struct CurrentVoRow {
     /// The versioned object's id.
@@ -443,11 +427,6 @@ fn current_meta_row(row: &PgRow) -> Result<CurrentMeta, StorageError> {
 }
 
 /// The current trunk version's metadata for an EHR's object of `kind`.
-///
-/// Resolved and read in **one** `version`⋈`audit` statement (no
-/// node/attestation reads) — the metadata-only replacement for [`current_vo`] +
-/// [`crate::storage::version_repo::read::read_one`] on the `ETag`/`If-Match`
-/// path.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.

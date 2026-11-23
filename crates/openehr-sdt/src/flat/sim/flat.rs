@@ -1,14 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The FLAT wire codec: `path[:i][|suffix]` key/value map ↔ [`SimNode`].
-//!
-//! Syntax per ITS-REST `simplified_formats/master04-basic_concepts.adoc`
-//! §Flat format: single-level JSON object, fully-qualified keys, zero-based
-//! instance indices, pipe suffixes, `ctx/` context keys, `_`-prefixed RM
-//! attributes. The nesting/unnesting logic is the algorithm pair in
-//! `master04 §Conversion Between Formats`, expressed against the shared
-//! [`SimNode`] tree instead of a second ad-hoc structure.
+//! The FLAT wire codec: `path[:i][|suffix]` key/value map ↔ [`SimNode`]
+//! (`simplified_formats/master04-basic_concepts.adoc` §Flat format, §Conversion
+//! Between Formats).
 
 #![expect(
     clippy::disallowed_types,
@@ -26,10 +21,8 @@ use crate::flat::path::FlatKey;
 use crate::flat::sim::{RawDatum, SimDocument, SimNode, is_present};
 use serde_json::value::RawValue;
 
-/// Parse a FLAT document into the simplified tree.
-///
-/// Absent-valued entries (`null`, `""`, `[]`, `{}`) are skipped; index gaps
-/// are compacted (see [`SimNode::prune_empty`]).
+/// Parse a FLAT document into the simplified tree; absent-valued entries are
+/// skipped.
 ///
 /// # Errors
 /// [`FlatError::MalformedPath`] for a syntactically invalid key.
@@ -72,13 +65,8 @@ fn chain_of(suffixes: Option<&str>) -> String {
     }
 }
 
-/// Parse FLAT JSON text straight into the simplified tree, in one pass and
-/// with no JSON value of the document (#6003).
-///
-/// The parse follows [`parse_flat`] key by key. A `|raw` datum keeps its
-/// canonical JSON text, which the build reads once into its class. The outer
-/// error is text that is no JSON object; the inner one is the FLAT refusal
-/// of a key, which the caller raises where it raises the build's.
+/// Parse FLAT JSON text straight into the simplified tree, key by key as
+/// [`parse_flat`]. The inner error is a key's FLAT refusal.
 ///
 /// # Errors
 /// The [`serde_json::Error`] of text that is no JSON object.
@@ -181,12 +169,8 @@ fn print_raw_suffix_chain(suffixes: &str) -> String {
     chain
 }
 
-/// Serialize the simplified tree as a FLAT document.
-///
-/// Children emit in tree order, a node's datum parts before its children.
-/// A child marked `indexed` (repeating) always prints its `:i` index —
-/// including a sole `:0` — matching `master04 §Instance Indexing`; an
-/// unindexed child prints none.
+/// Serialize the simplified tree as a FLAT document; an indexed child always
+/// prints its `:i` (`master04 §Instance Indexing`).
 #[must_use]
 pub fn emit_flat(doc: &SimDocument) -> Map<String, Value> {
     let mut out = Map::new();
@@ -206,9 +190,7 @@ pub fn emit_flat(doc: &SimDocument) -> Map<String, Value> {
     out
 }
 
-/// The FLAT JSON text of `doc`, written straight from the tree in the order
-/// [`emit_flat`] gives its keys, with no intermediate map and a `|raw`
-/// object written from its typed form (#6003).
+/// The FLAT JSON text of `doc`, in the order [`emit_flat`] gives its keys.
 ///
 /// # Errors
 /// The serializer's refusal, which a JSON datum never raises.
@@ -242,11 +224,9 @@ enum Datum<'a> {
     Raw(&'a RawDatum),
 }
 
-/// Calls `f` with the FLAT key and the datum of every entry of `doc`, in the
-/// FLAT form's order: children in tree order, a node's `|raw` datum and its
-/// datum parts before its children. A child marked `indexed` (repeating)
-/// always prints its `:i` index, including a sole `:0` (`master04 §Instance
-/// Indexing`); an unindexed child prints none.
+/// Calls `f` with the FLAT key and datum of every entry of `doc`: children in
+/// tree order, a node's `|raw` and datum parts first (`master04 §Instance
+/// Indexing`).
 fn each_datum<E>(
     doc: &SimDocument,
     f: &mut impl FnMut(String, Datum<'_>) -> Result<(), E>,
@@ -303,18 +283,9 @@ fn each_node_datum<E>(
     })
 }
 
-/// Whether `value` is an explicitly-present **empty** `DV_QUANTITY` `|unit`
-/// datum, which — unlike other empty datum values — must survive the parse.
-///
-/// `DV_QUANTITY.units` is a mandatory RM attribute (RM data_types
-/// `master06-quantity_package.adoc` §DV_QUANTITY — "a real number magnitude,
-/// precision, units and accuracy"), and an empty units string is the legitimate
-/// value of a *dimensionless* quantity. The general absent-value rule
-/// (`master04 §Structured format` rule 6 — empty datum values are omitted) would
-/// otherwise drop the empty `|unit` (master05 §DV_QUANTITY: `units` → the
-/// `|unit` suffix), leaving the rebuilt `DV_QUANTITY` with no `units` field and
-/// violating the RM invariant. Only an empty `|unit` is rescued; every other
-/// empty datum still drops.
+/// Whether `value` is an explicitly present empty `DV_QUANTITY` `|unit`, which
+/// survives the parse: an empty `units` is a dimensionless quantity's value
+/// (RM `master06-quantity_package.adoc` §DV_QUANTITY).
 fn is_empty_unit_datum(key: &str, value: &Value) -> bool {
     matches!(value, Value::String(s) if s.is_empty())
         && FlatKey::parse(key).is_ok_and(|k| k.suffixes.last().is_some_and(|s| s.name == "unit"))

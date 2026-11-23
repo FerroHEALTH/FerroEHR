@@ -2,23 +2,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `DV_ORDINAL`.
+//! `DV_ORDINAL` invariants.
 //!
-//! Spec: RM 1.2.0
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_ordinal.adoc`.
-//! `DV_ORDINAL` declares no own invariants; it inherits the DV_ORDERED
-//! `Normal_range_and_status_consistency` (checked via the ordered-magnitude
-//! machinery in `dv_ordered_impl`). The comparison functions
-//! (`less_than` / `is_strictly_comparable_to`) live in `dv_ordered_impl`.
-//!
-//! Of the remaining DV_ORDERED invariants
-//! (`…org.openehr.rm.data_types.dv_ordered.adoc` §Invariants),
-//! `Normal_status_validity` is code-set-bound and is enforced in the
-//! terminology-aware path (`validate::terminology`) against the `openehr-term`
-//! bundle; `Other_reference_ranges_validity` is unrepresentable against an
-//! `Option<NonEmptyVec<…>>` field (`openehr_base::containers`); and
-//! `Is_simple_validity` restates the §Functions definition of `is_simple`, which
-//! this crate computes from the same two attributes.
+//! RM 1.2.0 `org.openehr.rm.data_types.dv_ordinal.adoc`: the inherited
+//! `Normal_range_and_status_consistency`. `Normal_status_validity` is in
+//! `validate::terminology`, `Other_reference_ranges_validity` holds by the
+//! `NonEmptyVec` type, and `Is_simple_validity` is the definition of `is_simple`.
 
 use crate::v1_1::data_types::quantity::dv_ordered::DvOrdered;
 use crate::v1_1::data_types::quantity::dv_ordered_impl::push_normal_range_consistency;

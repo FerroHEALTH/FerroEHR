@@ -24,14 +24,6 @@
 // the screenshots. Gated behind UI_E2E_DOCS_SHOTS so the normal E2E run (and
 // plain `cargo nextest`) skips it.
 //! Documentation-screenshot capture.
-//!
-//! Every console route at 1440 and 390 px, light and dark, under
-//! `{UI_E2E_SHOTS_DIR}/routes/` for the family screenshot review (#3910), and
-//! the book's screenshots under `website/book/src/viewer/img/`: each route at
-//! 1440 px light, a few in dark beside it, and the states a reader only
-//! reaches by a click (the user menu, a dialog, a run). Run via
-//! `scripts/ui-e2e.sh` with `UI_E2E_DOCS_SHOTS` set; skips with a printed
-//! reason when the harness environment or the gate flag is absent.
 
 use crate::common;
 

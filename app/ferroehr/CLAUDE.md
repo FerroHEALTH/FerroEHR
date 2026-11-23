@@ -79,6 +79,12 @@ module.**
   `docs/specs/openehr/` (`/spec-lookup`) — never from memory or EHRbase
   behaviour. Cite spec file + section in comments; the only citable references
   are the vendored specs and official external docs — NEVER an internal doc.
+- **Comments are lean and current** (owner rule, 2026-11-23): write one only
+  where the code cannot speak, for a spec citation, a non-obvious why or a
+  constraint. Most items need one summary line or none. A comment never
+  describes the old way, past figures or how the code got here; when code
+  changes, rewrite its comment whole. History belongs in the PR and in git
+  (`.claude/rules/comments.md`).
 - **Storage is greenfield PG19, second generation:** an APPEND-ONLY `version`
   table (no validity interval, no close-out statement — validity is derived
   from `committed_at`; a version whose content equals the preceding tip's

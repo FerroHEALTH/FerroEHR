@@ -4,23 +4,11 @@
 //! Path analysis + typing against the generated RM model
 //! (`openehr_rm::v1_2::model`) — the AQL planner's oracle.
 //!
-//! The central operation is the **path split**: every identified path deterministically splits into
-//!
-//! 1. a sequence of **structure hops** — attribute steps whose resolved node is
-//!    a structure type (its own `node` row per
-//!    [`crate::storage::structure::is_structure_type`], the node codec's own
-//!    predicate, which adds the demographic party roots and containers to the
-//!    RM model's composition-content set), ending at the deepest node-row
-//!    anchor; and
-//! 2. a **fragment suffix** — the first non-structure step onward, addressed
-//!    inside the anchor node's `data` JSONB.
-//!
-//! The split is unambiguous because the node codec prunes *all* structure-typed
-//! children out of a node's fragment: once a step resolves to a non-structure
-//! type, no structure root can appear below it. Along the way the analyzer
-//! resolves the candidate leaf [`TypeSet`] (abstract slots expanded to concrete
-//! descendants), the multiplicity (any list/set step ⇒ multi-valued), and the
-//! typed [`Coercion`].
+//! Every identified path splits into structure hops, attribute steps whose node
+//! is a structure type ([`crate::storage::structure::is_structure_type`])
+//! ending at the deepest node-row anchor, and a fragment suffix inside that
+//! anchor's `data`. The split is unambiguous because the node codec prunes
+//! every structure-typed child out of a fragment.
 
 use openehr_query::ast::{
     ArchetypePredicate,
@@ -290,9 +278,6 @@ fn resolve_attribute(
 
 /// Does the ACTIVE profile's RM generation define `attr` on `ty` (or on any
 /// ancestor `ty` inherits it from)?
-///
-/// Only booleans cross this seam — the planner keeps working over the
-/// current (superset) model's types, so no cross-generation type ever leaks.
 fn profile_defines_attribute(
     profile: crate::config::profile::SpecProfile,
     ty: &str,

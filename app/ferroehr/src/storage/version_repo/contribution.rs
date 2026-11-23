@@ -155,8 +155,6 @@ pub struct ContributionSummary {
 /// An EHR's CONTRIBUTIONs, newest-first (audit `time_committed`, then id),
 /// flattened to the list-surface fields, paged by `offset`/`limit`.
 ///
-/// This is the storage half of the EHR contribution-list extension.
-///
 /// No openEHR spec governs the SQL — our own design; the ITS-REST contract
 /// defines only the by-uid CONTRIBUTION GET, so the paged list is an extension.
 ///

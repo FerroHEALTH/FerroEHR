@@ -11,15 +11,6 @@
 )]
 //! Deserialization dispatch of abstract/polymorphic openEHR slots on the
 //! canonical-JSON `_type` discriminator.
-//!
-//! These tests pin the behaviour of the hand-rolled `Deserialize` impls the
-//! `openehr-codegen` emitter now generates for abstract-slot enums (replacing
-//! `#[serde(untagged)]`'s structural guessing). The governing contract is the
-//! vendored ITS-JSON schema
-//! (`crates/openehr-its/schemas/json/openehr_rm_1.1.0_all.json`): `_type` is
-//! `required` on an abstract polymorphic slot (`DATA_VALUE`, `UID`, …) and
-//! optional on a concrete polymorphic slot (`DV_TEXT`), defaulting a
-//! `_type`-less value to the base concrete type.
 
 use openehr_base::prelude::Uid;
 use openehr_rm::prelude::{DataValue, DvText, PartySelf};
@@ -118,10 +109,8 @@ fn deep_descendant_type_routes_in_uid_slot() {
 
 #[test]
 fn concrete_poly_slot_missing_type_defaults_to_base() {
-    // A `name` field (DV_TEXT) frequently omits `_type` in real openEHR data;
-    // the schema's `if not required _type then DV_TEXT` construction defaults it
-    // to the base concrete type. This must NOT be rejected (it would break the
-    // corpus round-trip).
+    // A DV_TEXT `name` often omits `_type`, which the schema defaults to the
+    // base concrete type.
     let t: DvText = openehr_its::json::from_canonical_json(r#"{"value":"systolic"}"#)
         .expect("a _type-less DV_TEXT must default to the base DvText");
     assert!(
@@ -159,11 +148,8 @@ fn concrete_poly_slot_unknown_type_is_rejected() {
 
 // ── Monomorphic struct slot: a foreign `_type` is rejected (EHR_STATUS.subject) ─
 
-// `EHR_STATUS.subject : PARTY_SELF` is a *monomorphic* slot — `PARTY_SELF` has no
-// subtypes — so the generated `PartySelf` struct's `#[derive(OpenEhrType)]`
-// `Deserialize` must reject any non-`PARTY_SELF` `_type` (a `PARTY_IDENTIFIED`
-// payload in that slot is invalid canonical JSON), while tolerating an absent
-// `_type` (defaults to the declared type). RM ehr master04 §EHR Status.
+// `EHR_STATUS.subject : PARTY_SELF` is monomorphic: any other `_type` is
+// refused, an absent one defaults (RM ehr master04 §EHR Status).
 
 #[test]
 fn monomorphic_struct_slot_rejects_foreign_type() {
@@ -196,13 +182,9 @@ fn monomorphic_struct_slot_accepts_matching_and_absent_type() {
 
 #[test]
 fn unknown_keys_are_refused_on_deserialize() {
-    // The strict reader is closed over the generated RM model: a key the
-    // class does not declare is refused, naming the key (ITS-REST
-    // Resources.md L87 — canonical JSON "SHOULD validate against" the
-    // ITS-JSON schemas, which close their objects by design; the former
-    // tolerant read was retired in the foundation phase). Dispatch through
-    // the untagged DataValue enum must surface the refusal, not fall through
-    // to "no variant matched".
+    // The strict reader refuses an undeclared key by name (ITS-REST
+    // Resources.md L87; the ITS-JSON schemas close their objects), and
+    // DataValue dispatch surfaces it.
     let err = openehr_its::json::from_canonical_json::<DataValue>(
         r#"{"_type":"DV_COUNT","magnitude":3,"an_unknown_extension_key":true}"#,
     )

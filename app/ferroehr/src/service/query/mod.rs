@@ -4,8 +4,6 @@
 //! The QUERY component of the platform crate — the openEHR **Query** service
 //! seam behind the ITS-REST Query API, over QUERY/AQL. Our own design.
 //!
-//! Module tree, one file per concern:
-//!
 //! - [`request`] — the normalized execute-call request/outcome pair
 //!   (`ADHOC_QUERY_EXECUTE_SPEC` / `STORED_QUERY_EXECUTE_SPEC` +
 //!   the execute-call parameters).

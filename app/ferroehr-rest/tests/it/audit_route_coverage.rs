@@ -45,10 +45,6 @@ const AUDIENCE: &str = "ferroehr";
 const PROBE_PARAM: &str = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 
 /// The routes that write no access record by design, each with its reason.
-///
-/// None of them serves or changes patient data: they are the surfaces reachable
-/// without a credential, and the operator's management surface, which records
-/// under its own `management_*` operation ids rather than the document's.
 const EXEMPT: &[(&str, &str, &str)] = &[
     (
         "GET",
@@ -374,9 +370,6 @@ fn every_audited_route_has_an_audit_classification() {
 /// The exempt and divergent tables name only mounted routes, and every other
 /// mounted route writes exactly one access record carrying its operation id,
 /// or the released id a divergent route's record keeps.
-///
-/// Each route is driven by its own principal, which the record carries, so a
-/// record is attributed to the probe that caused it.
 #[tokio::test]
 async fn every_route_writes_exactly_one_access_record() {
     let cfg = config();

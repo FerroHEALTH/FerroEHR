@@ -1,11 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `Hash<K, V>` attributes whose entry order the vendored text fixes, and
-//! the field-type decision they drive.
-//!
-//! `tests/emitter_invariants.rs` checks every entry against the loaded schemas
-//! through [`crate::testsupport::decision_checks`].
+//! The `Hash<K, V>` attributes whose entry order the vendored text fixes.
 
 use crate::analyze::Model;
 use crate::load::bmm::BmmClass;
@@ -22,13 +18,9 @@ pub(crate) struct OrderedHash {
     pub reason: &'static str,
 }
 
-/// The `Hash<K, V>` attributes emitted as an insertion-ordered
-/// `indexmap::IndexMap<K, V>` instead of the key-sorted `BTreeMap<K, V>`.
-///
-/// `Hash` is "a table of values of any type V, keyed by values of any `Ordered`
-/// descendant K" (BASE `foundation_types/master04-structure_types.adoc`), so key
-/// order is the default. An entry exists only where the vendored text requires
-/// the entries in declaration order; the readers keep document order.
+/// The `Hash<K, V>` attributes emitted as an `indexmap::IndexMap`, since the
+/// text requires declaration order; others are key-sorted (BASE
+/// `master04-structure_types.adoc`).
 pub(crate) const ORDERED_HASHES: &[OrderedHash] = &[
     OrderedHash {
         owner: "P_BMM_GENERIC_TYPE",
@@ -61,10 +53,8 @@ pub(crate) const ORDERED_HASHES: &[OrderedHash] = &[
     },
 ];
 
-/// `rendered`, the Rust type of `field` on `class`, with its key-sorted
-/// `BTreeMap` retyped as an insertion-ordered `IndexMap` when the attribute is
-/// an [`ORDERED_HASHES`] entry declared on `class` or inherited from an
-/// ancestor.
+/// `rendered` with its `BTreeMap` retyped as an `IndexMap` for an
+/// [`ORDERED_HASHES`] entry on `class` or an ancestor.
 pub(crate) fn retype(model: &Model, class: &BmmClass, field: &str, rendered: String) -> String {
     let ordered = ORDERED_HASHES.iter().any(|o| {
         o.field == field && (o.owner == class.name || model.inherits(&class.name, o.owner))

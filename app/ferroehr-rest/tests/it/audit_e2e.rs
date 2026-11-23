@@ -3,22 +3,10 @@
 
 //! End-to-end ATNA audit over the real axum app.
 //!
-//! Drives the assembled router (auth + audit + dispatch) with `tower`'s
-//! `oneshot`, over the **real** `FerroEhrService` (the scripted `Mock`
-//! and its in-memory `AuditSink` are gone). Auditing now runs the real ATNA path: an
-//! [`AuditSender`] ships a DICOM `AuditMessage` (rendered to XML, framed as an
-//! RFC 5424 syslog record) over TLS to a listener the test binds. We assert on
-//! the frame the listener receives — the action code, outcome indicator,
-//! user, object class and object id the HTTP middleware produced.
-//!
-//! Where the old Mock scripted a canned success (a `501` stub or a fixed uid),
-//! the assertion is re-targeted to the **real** behaviour for that scenario:
-//! - the ad-hoc query group is implemented, so an AQL execute succeeds (`0`,
-//!   was a `501`/serious-failure under the stub);
-//! - the demographic person-get on an empty DB is a `404` minor-failure (`4`,
-//!   was a `501`/serious-failure under the stub);
-//! - the composition read/update/delete object ids are the real committed
-//!   version uids (seeded through the service before the audited request).
+//! Drives the assembled router (auth, audit, dispatch) with `tower`'s `oneshot`
+//! over the real `FerroEhrService`: an [`AuditSender`] ships a DICOM
+//! `AuditMessage` (XML in an RFC 5424 syslog record) over TLS to a listener the
+//! test binds, and the tests assert on the frame it receives.
 //!
 //! DICOM codes asserted (`system_log::codes`): action `C`/`R`/`U`/`D`/`E`;
 //! `EventOutcomeIndicator` `0` success / `4` minor / `8` serious;
@@ -197,10 +185,6 @@ struct Expected {
 }
 
 /// Every frame that arrives until each of `expected` has been seen.
-///
-/// Fails naming the records still missing, with the frames seen, when
-/// [`RECORD_DEADLINE`] passes first. A silence window would read a slow record
-/// as an absent one (#3950).
 async fn collect_until(socket: &mut SyslogTlsListener, expected: &[Expected]) -> Vec<String> {
     let deadline = tokio::time::Instant::now() + RECORD_DEADLINE;
     let mut out: Vec<String> = Vec::new();

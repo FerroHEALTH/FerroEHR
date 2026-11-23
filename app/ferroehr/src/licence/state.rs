@@ -26,11 +26,6 @@ use crate::licence::token::{Token, TokenError};
 use crate::licence::verify::{Verified, VerifyError, verify};
 
 /// Why a token was not accepted.
-///
-/// Each variant keeps its cause: the boot log renders the whole chain, and a
-/// caller can walk [`std::error::Error::source`] to the `io`, token or
-/// verification error underneath. The causes sit behind `Arc` because a
-/// [`LicenceState`] is cloned into every service that stamps identifiers.
 #[derive(Debug, Clone)]
 pub enum Reason {
     /// The configured file could not be read.

@@ -7,11 +7,10 @@
 #
 # The committed `appVersion` equals the workspace version in Cargo.toml, bumped
 # in the release PR beside the docker-compose.yml image tags — one sweep, one
-# philosophy for both committed artifacts. The publish lane still injects
+# philosophy for both committed artifacts. The publish lane also injects
 # `--app-version ${TAG#v}` and rewrites the `artifacthub.io/images` tags at
-# package time (#2779); since the tree now carries the same value, the
-# injection is belt-and-braces for the release leg and remains what makes the
-# dispatch-driven `publish-chart.yml` recovery lane correct between releases.
+# package time (#2779), which keeps the dispatch-driven `publish-chart.yml`
+# recovery lane correct between releases.
 #
 # The one accepted cost (adjudicated on #2890, the same window the compose
 # defaults have always accepted): between a release PR's merge and the tag's

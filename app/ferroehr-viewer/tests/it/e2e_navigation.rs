@@ -21,10 +21,6 @@
 //! returns to in that preference, a tree's level folds in place with its
 //! folds kept across a reload, and every page reflows at 320 px with the
 //! scripts loaded and refused.
-//!
-//! A journey marks the window before it acts and asks for the mark after: a
-//! document the browser loaded anew has lost it, and a change a module made
-//! in place keeps it. Read-only towards the CDR.
 
 use crate::common;
 use common::{Harness, login_basic, wait_main_contains};

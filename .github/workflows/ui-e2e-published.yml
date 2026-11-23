@@ -4,24 +4,15 @@
 # The full viewer E2E battery against the PUBLISHED viewer image
 # (issue #2876).
 #
-# scripts/ui-e2e.sh has carried a shipped-artifact mode
-# (UI_E2E_IMAGE/UI_E2E_IMAGE_REF) since the viewer lane was built, and nothing
-# ever called it: every gate ran the battery against a viewer
-# built on the runner. A capability no lane runs is decoration, so this is its
-# caller.
+# scripts/ui-e2e.sh has a shipped-artifact mode
+# (UI_E2E_IMAGE/UI_E2E_IMAGE_REF), and this lane is its caller.
 #
-# WHY WEEKLY AND NOT THE RELEASE PIPELINE. Measured 2026-08-28 against a
-# locally built image on an arm64 host: 139 journeys in 256s, and 7m17s for
-# everything the battery does once the images exist (compose up, Keycloak
-# setup, REST seeding, viewer start, chromedriver, the journeys, teardown).
-# What is NOT cheap is the input it needs — the e2e test binaries, compiled
-# from this checkout. release.yml is a PUBLISHING pipeline, and a publishing
-# lane restores no build cache (.claude/rules/reliability.md), so that compile
-# would be fully cold there; ci.yml budgets 45 minutes for the same compile
-# WITH sccache. Paying that on the critical path of every release buys little:
-# the highest-value slice of this battery — a real browser logging in through
-# the shipped artifact — the release already gates, via
-# docker/viewer/login-smoke.sh. Here the compile caches like any test lane
+# WHY WEEKLY AND NOT THE RELEASE PIPELINE. The battery is cheap once the
+# images exist; its input, the e2e test binaries, is not: release.yml
+# restores no build cache, so that compile would run cold on the critical
+# path of every release. The release already gates the highest-value slice,
+# a real browser logging in through the shipped artifact
+# (docker/viewer/login-smoke.sh). Here the compile caches like any test lane
 # and the wall clock gates nothing.
 #
 # WHAT IT DRIVES. The three images of the latest RELEASE, and the repository

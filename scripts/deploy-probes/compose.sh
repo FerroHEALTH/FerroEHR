@@ -552,12 +552,9 @@ YAML
 # The pseudonymisation domains, and the ONE place every probe below takes its
 # role names, schema names and dump identity from.
 #
-# Four enumerations were spelled out by hand here before a third domain
-# arrived (#3220): the role roll-call, the NOINHERIT set, the roles the
-# boundary reads with, and the schemas it reads into. A probe that enumerates a
-# role set which no longer matches the database reports green about a boundary
-# it is not testing. So the enumeration exists once and every probe derives
-# from it, and a domain is one line here rather than an escape.
+# A probe that enumerates a role set which does not match the database reports
+# green about a boundary it is not testing, so the enumeration exists once
+# (#3220), every probe derives from it, and a domain is one line here.
 #
 # One record per domain, `|`-separated:
 #

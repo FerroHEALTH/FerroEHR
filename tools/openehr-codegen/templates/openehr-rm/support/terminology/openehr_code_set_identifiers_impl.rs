@@ -2,21 +2,12 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM spec functions for `OPENEHR_CODE_SET_IDENTIFIERS`.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.support.openehr_code_set_identifiers.adoc`
-//! §Constants + §Functions.
+//! `OPENEHR_CODE_SET_IDENTIFIERS` (`org.openehr.rm.support.openehr_code_set_identifiers.adoc`).
 
 use crate::v1_2::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiersData;
 
 impl OpenehrCodeSetIdentifiersData {
-    /// Every openEHR code set identifier this class defines, in declaration
-    /// order.
-    ///
-    /// Spec: `org.openehr.rm.support.openehr_code_set_identifiers.adoc`
-    /// §Constants — the seven identifiers, read from the emitted constants so
-    /// there is no second copy of the list to drift.
+    /// The seven code set identifiers, from the emitted constants.
     const ALL: [&str; 7] = [
         Self::CODE_SET_ID_CHARACTER_SETS,
         Self::CODE_SET_ID_COMPRESSION_ALGORITHMS,
@@ -27,16 +18,8 @@ impl OpenehrCodeSetIdentifiersData {
         Self::CODE_SET_ID_NORMAL_STATUSES,
     ];
 
-    /// Returns `true` when `an_id` is one of the openEHR code set identifiers.
-    ///
-    /// Spec: `org.openehr.rm.support.openehr_code_set_identifiers.adoc`
-    /// §Functions `valid_code_set_id` — "Validity function to test if an
-    /// identifier is in the set defined by this class", where "the set defined
-    /// by this class" is its own §Constants. The comparison is exact: these
-    /// identifiers are spec literals, and `TERMINOLOGY_SERVICE.code_set_for_id`
-    /// takes this function as its precondition
-    /// (`org.openehr.rm.support.terminology_service.adoc` §Functions), so a
-    /// looser match would admit an id no code set answers to.
+    /// Whether `an_id` is exactly one of the code set identifiers
+    /// (`valid_code_set_id`).
     #[must_use]
     pub fn valid_code_set_id(an_id: &str) -> bool {
         Self::ALL.contains(&an_id)

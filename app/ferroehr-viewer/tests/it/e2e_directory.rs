@@ -29,10 +29,6 @@
 //! its own EHR (never the seeded one: these journeys change and delete the
 //! directory) and fails on any browser console error.
 //!
-//! The editor is a form the server answers with the tree changed: each add,
-//! rename and remove posts it, and the tree travels in a hidden field until
-//! Save sends it to the CDR.
-//!
 //! The item-picker journey seeds its two compositions over ITS-REST
 //! (`UI_E2E_CDR_URL`) rather than through the UI: the commit form has its own
 //! journey, and what this one is about is which REFERENCE survives a sibling
@@ -169,9 +165,6 @@ async fn seed_picker_composition(
 }
 
 /// The item ids the CDR's own directory read reports, in document order.
-///
-/// The browser half of an assertion can only prove what the SCREEN shows; this
-/// is the other half — what the repository actually holds after the save.
 ///
 /// # Panics
 /// When the CDR refuses the read or answers a body that is not a FOLDER.
@@ -339,10 +332,6 @@ async fn directory_history_and_restore_journey() {
 /// Commit one version of the EHR's directory over ITS-REST and return the new
 /// `OBJECT_VERSION_ID`. `previous` is the `If-Match` precondition — `None`
 /// creates the directory (v1), `Some(uid)` supersedes that version.
-///
-/// Seeding a deep history through the tree editor would be dozens of
-/// click/save cycles; what this journey is about is the READ side of that
-/// history, so the versions arrive at the wire.
 ///
 /// # Panics
 /// When the CDR refuses the write or answers without a `uid.value`.

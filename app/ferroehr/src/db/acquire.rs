@@ -31,22 +31,14 @@
 //! pool's own that is refused or reset marks the database down the same way.
 //!
 //! Inside [`request_scope`], a request keeps the connection it checked out
-//! between its statements: a connection [`acquire`] handed out goes back to
-//! the scope when its guard drops, and the next [`acquire`] of the same pool
-//! takes it from there, so a request queues for the pool once and returns its
-//! connection to the pool once: at [`release_held`], which the HTTP layer calls
-//! when the handler has answered, so the work after its last statement (the
-//! audit record, the response's way out) holds no connection, or else when
-//! the scope ends. A request that turns from one storage domain to the other
-//! gives back what it keeps of the first ([`acquire`]): the party connection
-//! its authentication and access decision read on goes back when its clinical
-//! work begins, instead of staying idle until the handler answers. While the
-//! request waits for a pool or for another task's work ([`handoff`]), the
-//! scope keeps nothing: what it kept goes back before the wait, and a
-//! connection a read beside the wait gives back goes to its pool (#6027). How long the request held each connection is recorded on
+//! between its statements and returns it to the pool once: at [`release_held`],
+//! which the HTTP layer calls when the handler has answered, or when the scope
+//! ends. A request that turns from one storage domain to the other gives back
+//! what it keeps of the first ([`acquire`]). While the request waits for a pool
+//! or for another task's work ([`handoff`]), the scope keeps nothing (#6027).
+//! How long the request held each connection is recorded on
 //! [`DB_POOL_HOLD_DURATION`](crate::telemetry::metrics::DB_POOL_HOLD_DURATION)
-//! (#5774). Outside a scope every guard returns its connection to the pool,
-//! as before.
+//! (#5774). Outside a scope every guard returns its connection to the pool.
 //!
 //! No openEHR spec governs this — our own design.
 //!

@@ -4,22 +4,11 @@
 //! The stored form of a node fragment: what a `node` row keeps of its
 //! canonical JSON fragment once the row's own columns hold the rest.
 //!
-//! A fragment repeats facts its row already carries as columns: `_type`
-//! (`rm_type`), a lowercase `archetype_node_id` (`archetype`), a plain or
-//! simply coded `name` (`name`, `name_code`, `name_terminology`), and on an
-//! `ELEMENT` a `value` of one of the common data value shapes, which the typed
-//! value columns hold instead. The `archetype_details` and
-//! `archetype_node_id` an archetype root repeats, and the `language` and
-//! `encoding` every entry repeats, move to the [`Header`] columns, the root's
-//! template coming back from its version row. A plain `DV_DATE_TIME` `origin`
-//! or `time`, a bare `PARTY_SELF` `subject` and the root's `uid`, which is
-//! the version's `OBJECT_VERSION_ID`, leave under the [`Compact`] markers.
-//! The write path ([`crate::storage::render::nodes`]) removes exactly those
-//! keys, only when the columns rebuild them byte for byte, and keeps
-//! everything else verbatim; [`rebuild`] and its
-//! SQL twins `ext.node_name`, `ext.node_value` and `ext.node_fragment` put
-//! the removed keys back on read. A fragment with nothing left is stored as
-//! SQL `NULL`.
+//! The write path ([`crate::storage::render::nodes`]) removes the keys the
+//! row's columns hold, only when the columns rebuild them byte for byte, and
+//! keeps everything else verbatim; [`rebuild`] and its SQL twins
+//! `ext.node_name`, `ext.node_value` and `ext.node_fragment` put them back on
+//! read. A fragment with nothing left is stored as SQL `NULL`.
 //!
 //! No openEHR spec governs storage layout: our own design (RM common
 //! `master06-change_control_package.adoc` §Overview admits any physical

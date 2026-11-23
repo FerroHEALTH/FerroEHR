@@ -2,10 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The tokens of the filter grammar (RFC 7644 Figure 1).
-//!
-//! A filter is brackets, JSON string literals and words: an attribute path,
-//! an operator, or a JSON literal name or number. A word runs to the next
-//! whitespace, bracket or quote, so `eq"x"` is the word `eq` and a string.
 
 /// One token and the byte offset it starts at.
 #[derive(Debug, Clone, PartialEq)]

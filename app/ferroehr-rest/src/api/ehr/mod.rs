@@ -12,17 +12,6 @@
 //! [`directory`] and [`contribution`]. [`ehr_access`] declares FerroEHR's own
 //! `EHR_ACCESS` reads, which run the `EHR_STATUS` read handlers for the
 //! `EHR_ACCESS` class (`EhrObjectType`).
-//!
-//! Each arm rebuilds the operation's `*Params`, decodes wire strings into the
-//! service's native argument types through [`crate::overview::version_id`],
-//! decodes any body (RM-typed bodies accept JSON or canonical XML), calls the
-//! service methods on the platform service `S`, and rebuilds a
-//! [`ServiceResponse`](ferroehr::service::response::ServiceResponse) from the
-//! result, which the `negotiate::*` helpers render with the spec's
-//! `ETag`/`Location`/`Prefer` behaviour. The shared write, read and committal
-//! helpers below back all seven modules; the `ITEM_TAG`
-//! write-wrapper headers they accept are handled by `crate::api::item_tags`,
-//! the one implementation this group shares with the demographic group.
 
 #![expect(
     clippy::disallowed_types,
@@ -141,11 +130,6 @@ pub(super) fn refuse_unmapped_xml<T: EhrObjectType>(headers: &HeaderMap) -> Resu
 /// Re-inlines externalized `DV_MULTIMEDIA` content when the caller asked for it
 /// with `?expand_multimedia=true`, verifying each blob's integrity.
 ///
-/// Every read that can return externalized content routes through here, because
-/// externalization is applied on the way in by the generic versioning path, so a
-/// read that could not restore it would leave clinical content in the object
-/// store with no API that returns it.
-///
 /// NOTE: no openEHR spec governs this — our own design/extension, so the
 /// parameter is read off the raw query string rather than a generated params
 /// struct.
@@ -164,11 +148,6 @@ pub(super) async fn expand_multimedia_if_requested(
     Ok(body)
 }
 
-/// Decomposes an [`ObjectVersionId`] into the `(versioned-object uuid,
-/// version_tree_id)` pair the service's `*_at_version` reads take.
-///
-/// Branch version ids are first-class (RM common master06 §The 'Virtual Version
-/// Tree').
 /// Verify a version-addressed read served the VERSION the path named: the
 /// addressed `version_uid` must equal the served body's `uid.value` — the
 /// stored full `object_id :: creating_system_id :: version_tree_id` identity

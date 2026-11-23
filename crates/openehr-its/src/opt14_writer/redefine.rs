@@ -66,10 +66,6 @@ pub(super) fn conforms(given: &str, archetype: &str) -> bool {
 }
 
 /// Overlays `given` on the children of `attribute`.
-///
-/// Each object redefines one child (see [`super::Narrowing::Redefine`]); a
-/// child without a node id that no object redefines is removed when any
-/// object has no node id, since those objects restate the alternatives.
 pub(super) fn overlay_children(
     attribute: &mut CAttribute,
     given: &[CObject],

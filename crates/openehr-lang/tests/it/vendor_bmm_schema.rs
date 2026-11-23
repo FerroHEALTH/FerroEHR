@@ -7,22 +7,12 @@
 //! `tests/vendor/**`: ODIN text → `P_BMM_SCHEMA` → inclusion resolution →
 //! `BMM_MODEL`.
 //!
-//! `vendor_bmm_odin.rs` already pins that all 38 `tests/vendor/bmm/**` files
-//! PARSE as ODIN; this module pins what they mean as P_BMM schemas, and adds the
-//! five `.bmm` schemas under `tests/vendor/odin/odin/`.
-//!
 //! **Every file has an adjudicated expected outcome** — either a materialised
 //! `BMM_MODEL` (with its class count) or a typed refusal at a named stage with
 //! the spec ground for the refusal. There are no silent skips. The archie
 //! fixtures under `bmm/org/openehr/bmm/v2/persistence/validation/` are
 //! deliberately defective schemas, and this table records which stage of the
 //! openEHR-specified pipeline each defect surfaces at.
-//!
-//! A defect that breaks no `BMM_*` construction surfaces ABOVE the pipeline
-//! instead, in the collecting model-validity pass
-//! (`openehr_lang::v1_1::bmm_persistence::validate`); its second table
-//! ([`finding_cases`]) is adjudicated the same way, and a schema absent from it
-//! must validate clean.
 //!
 //! A third table ([`pinned_cases`]) covers the openEHR component schemas
 //! `openehr-codegen` vendors — all 18 released generations, read from the json
@@ -140,9 +130,6 @@ struct Case {
 }
 
 /// The complete outcome table for every vendored `.bmm` schema — 43 files.
-///
-/// Class counts are the materialised `BMM_MODEL.class_definitions` size after
-/// inclusion resolution against [`include_map`].
 #[expect(
     clippy::too_many_lines,
     reason = "one row per vendored fixture; splitting the table hides the corpus"
@@ -401,12 +388,6 @@ fn source(path: &str) -> String {
 /// The schemas available for inclusion resolution: every vendored file that
 /// reads cleanly, keyed by its own `schema_id`, FIRST path in table order
 /// winning a collision.
-///
-/// A collision is real in this corpus: `openehr_base_110.bmm` and
-/// `openehr_base_for_aom.bmm` both render `openehr_base_1.1.0`, and the archie
-/// validation fixtures all render `my publisher_duplicate_class_3.1`. Keeping
-/// the first makes the resolution deterministic; the losing files are still
-/// exercised as roots by [`every_vendored_schema_reaches_its_adjudicated_outcome`].
 fn include_map(cases: &[Case]) -> BTreeMap<String, PBmmSchema> {
     let mut out: BTreeMap<String, PBmmSchema> = BTreeMap::new();
     for case in cases {
@@ -431,10 +412,6 @@ struct FindingCase {
 
 /// The adjudicated `validate_schema` findings of every vendored schema that
 /// materialises a model.
-///
-/// A schema that materialises and is ABSENT from this table must validate
-/// clean — [`every_materialising_schema_reaches_its_adjudicated_findings`]
-/// asserts that, so a new finding anywhere in the corpus fails the build.
 fn finding_cases() -> Vec<FindingCase> {
     vec![
         FindingCase {
@@ -930,11 +907,9 @@ fn the_pinned_table_covers_every_vendored_component_schema() {
 
 #[test]
 fn am_2_4_0_is_refused_against_either_published_lang_1_1_0_schema() {
-    // openEHR publishes TWO openehr_lang_1.1.0 schemas — the v2.x BMM and the
-    // v3 line — so AM 2.4.0's `includes = <["openehr_lang_1.1.0"]>` names no
-    // unique schema. Neither choice materialises it, and each is refused for a
-    // class the other file defines: master04-syntax.adoc §Inclusions keys an
-    // include by schema id alone, so no third reading exists.
+    // Two openehr_lang_1.1.0 schemas exist, and an include is keyed by schema
+    // id alone (master04-syntax.adoc §Inclusions), so AM 2.4.0 is refused under
+    // either.
     for (lang, detail) in [
         (
             "LANG/json/openehr_lang_1.1.0.bmm.json",
@@ -1015,14 +990,8 @@ fn collect_files(dir: &Path, root: &Path, suffix: &str, out: &mut Vec<String>) {
 
 #[test]
 fn the_pinned_openehr_component_schemas_read_their_persisted_interfaces() {
-    // master02-overview.adoc §Conceptual Approach: "In addition to ordinary
-    // classes, the model can also represent pure interfaces via
-    // P_BMM_INTERFACE, i.e. class-like definitions that declare only functions
-    // and carry no state" — and the RM and BASE schemas this project pins
-    // (docs/VERSIONS.md: RM 1.2.0, BASE 1.3.0) serialise them as
-    // `P_BMM_INTERFACE`-typed members of `class_definitions`. Those real
-    // artefacts (not a fixture) pin that the reader materialises each one with
-    // its declared functions, and that the whole schema still reads.
+    // Pure interfaces are `P_BMM_INTERFACE` members of `class_definitions`
+    // (master02-overview.adoc §Conceptual Approach), read with their functions.
     for (file, interfaces) in [
         (
             "RM/json/openehr_rm_1.2.0.bmm.json",
@@ -1059,12 +1028,8 @@ fn the_pinned_openehr_component_schemas_read_their_persisted_interfaces() {
 
 #[test]
 fn the_pinned_openehr_component_schemas_materialise_their_interfaces_as_abstract_classes() {
-    // The whole pinned RM 1.2.0 + BASE 1.3.0 pair runs the three stages: the
-    // interfaces are listed in packages and referenced as property types
-    // (`TERMINOLOGY_SERVICE.terminology: TERMINOLOGY_ACCESS`), so the transform
-    // has to resolve those references — which it does by materialising each
-    // interface as an abstract `BMM_CLASS` with no properties (see
-    // `create_model::Builder::build_class`).
+    // Interfaces are referenced as property types, so the transform
+    // materialises each as an abstract `BMM_CLASS`.
     let base = read_pinned("BASE/json/openehr_base_1.3.0.bmm.json");
     let rm = read_pinned("RM/json/openehr_rm_1.2.0.bmm.json");
     let mut available: BTreeMap<String, PBmmSchema> = BTreeMap::new();

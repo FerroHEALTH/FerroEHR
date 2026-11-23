@@ -2,19 +2,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! The RFC 8785 JSON Canonicalization Scheme over a JSON value, the
-//! serialisation `VERSION.canonical_form()` signs.
-//!
-//! RFC 8785 §3.2 fixes the form: no whitespace (§3.2.1), strings with only the
-//! escapes ECMAScript `JSON.stringify` writes (§3.2.2.2), numbers in the
-//! ECMAScript Number-to-String form (§3.2.2.3, written by `ryu-js`), and object
-//! members sorted by the UTF-16 code units of their raw names (§3.2.3). The
-//! writer runs once over the value into one `String`, sorting each object's
-//! members by reference with no per-name allocation, so a large version costs
-//! one pass (#5220). Every object of a run shares one member vector, a
-//! string is scanned by byte and each run with nothing to escape is copied
-//! whole, an integer within 2^53 is written as its digits, and two names whose
-//! first difference is ASCII are ordered by their bytes (#5682). The `serde_json_canonicalizer` crate is its test oracle.
+//! The RFC 8785 JSON Canonicalization Scheme over a JSON value, the form
+//! `VERSION.canonical_form()` signs, in one pass; `serde_json_canonicalizer`
+//! is its test oracle.
 
 #![expect(
     clippy::disallowed_types,
@@ -40,9 +30,6 @@ pub fn canonical_json(value: &Value) -> Result<String, serde_json::Error> {
 /// Returns the RFC 8785 canonical form of the object whose members are
 /// `members`, in any order.
 ///
-/// A caller joins a member by reference this way (a version's `data`) or
-/// leaves one out (its `signature`) without copying the object.
-///
 /// # Errors
 /// As [`canonical_json`].
 pub fn canonical_object<'a>(
@@ -59,9 +46,7 @@ pub fn canonical_object<'a>(
 struct Writer<'a> {
     /// The canonical form written so far.
     out: String,
-    /// The members of every object being written, outermost first: each
-    /// object sorts and walks its own tail and leaves the vector as it found
-    /// it, so a whole document shares one allocation.
+    /// The members of every open object, outermost first, sharing one allocation.
     members: Vec<(&'a str, &'a Value)>,
 }
 
@@ -118,13 +103,8 @@ impl<'a> Writer<'a> {
     }
 }
 
-/// Orders `a` and `b` by their UTF-16 code units (RFC 8785 §3.2.3).
-///
-/// UTF-8 byte order is code point order, which UTF-16 order departs from only
-/// between a supplementary character and one in U+E000 to U+FFFF. When one
-/// name is a prefix of the other, or their first differing bytes are both
-/// ASCII, the byte order is the UTF-16 order; any other pair is compared by
-/// its code units.
+/// Orders `a` and `b` by their UTF-16 code units (RFC 8785 §3.2.3), by bytes
+/// where that order agrees.
 pub(super) fn utf16_order(a: &str, b: &str) -> Ordering {
     match a.bytes().zip(b.bytes()).find(|(x, y)| x != y) {
         None => a.len().cmp(&b.len()),
@@ -185,10 +165,7 @@ fn write_digits(mut value: u64, out: &mut String) {
     out.extend(digits.iter().skip(skip).map(|digit| char::from(*digit)));
 }
 
-/// Whether RFC 8785 §3.2.2.2 writes the byte `byte` as an escape.
-///
-/// Every escaped character is ASCII, and no byte of a multi-byte UTF-8
-/// sequence is, so a byte scan finds each escape at a character boundary.
+/// Whether RFC 8785 §3.2.2.2 escapes `byte`; every escaped character is ASCII.
 const fn escaped(byte: u8) -> bool {
     byte == b'"' || byte == b'\\' || byte < b' '
 }

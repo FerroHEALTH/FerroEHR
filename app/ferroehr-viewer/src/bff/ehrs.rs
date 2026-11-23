@@ -13,10 +13,6 @@
 //! (`docs/specs/openehr/ITS-REST/docs/query/`). User input NEVER concatenates
 //! into the AQL text — the fixed query is a validated const and the caller's
 //! value travels as an AQL `query_parameters` binding.
-//!
-//! Every read guards with
-//! [`require_session`](crate::session::require_session) first, and the CDR
-//! credential never reaches the page.
 
 #![expect(
     clippy::disallowed_types,
@@ -38,8 +34,6 @@ const LIST_EHRS_AQL: &str =
 /// One page of an AQL `RESULT_SET`, flattened for rendering: the column
 /// headers, the raw row cells, and the offset that produced it (so the view
 /// can build prev/next links).
-///
-/// Shared across the EHR browse surfaces.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResultPage {
     /// The result-set column names (falling back to the column path).
@@ -188,9 +182,6 @@ pub(crate) fn parse_ehr_id(body: &str) -> Result<String, ViewerError> {
 /// (`docs/specs/openehr/ITS-REST/specifications/operations/ehr_create_with_id.yaml`
 /// §description), so the viewer requires a UUID and says so — a typed id is
 /// checked before it is sent.
-///
-/// Byte-wise (never `&value[..n]`, which can panic on a non-char boundary — the
-/// `string_slice` reliability lint).
 #[must_use]
 pub(crate) fn is_uuid(value: &str) -> bool {
     let bytes = value.as_bytes();
@@ -208,14 +199,10 @@ pub(crate) fn is_uuid(value: &str) -> bool {
 
 /// Create a new EHR.
 ///
-/// `ehr_id` empty → the CDR mints the id (`POST /ehr`); a client-supplied
-/// `ehr_id` creates that exact EHR (`PUT /ehr/{ehr_id}` —
-/// `ehr_create_with_id`), and an id already in use is the CDR's `409`, which
-/// the caller surfaces verbatim. Both subject fields empty → the CDR mints the
-/// default `EHR_STATUS` (`PARTY_SELF` subject); both filled → a subject-bound
-/// `EHR_STATUS` body (see `subject_ehr_status`). Exactly one filled is a
-/// validation error (both or neither). Sends `Prefer: return=representation`
-/// and returns the new `ehr_id`.
+/// An empty `ehr_id` lets the CDR mint the id (`POST /ehr`); a given one
+/// creates that exact EHR (`PUT /ehr/{ehr_id}`). With both subject fields empty
+/// the CDR mints the default `EHR_STATUS`; with both filled a subject-bound one
+/// is sent. Returns the new `ehr_id`.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -285,8 +272,7 @@ pub async fn create_ehr(
 /// Look up an EHR by `subject_id` + `subject_namespace` (`GET
 /// /ehr?subject_id&subject_namespace`).
 ///
-/// `Ok(Some(ehr_id))` when found, `Ok(None)` on a `404` (no EHR for that
-/// subject — a first-class empty state, not an error).
+/// `Ok(None)` when no EHR has that subject (the CDR's `404`).
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));

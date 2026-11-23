@@ -2,13 +2,8 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM/BASE class invariant + validating construction for
-//! `ISO_OID`.
-//!
-//! Inherited `UID.Value_valid` (`not value.empty`) — BASE
-//! `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.uid.adoc`
-//! §Invariants — surfaced under the concrete type name.
-//! Lexical form: `iso_oid = number, { '.', number }` (BASE `base_types`
+//! The inherited `UID.Value_valid` invariant and validating construction for
+//! `ISO_OID` (`iso_oid = number, { '.', number }`, BASE
 //! `master05-identification_package.adoc` §Syntaxes).
 
 use std::str::FromStr;
@@ -18,9 +13,7 @@ use super::lexical::{IdComponent, IdError, IdProduction, is_iso_oid};
 use crate::validate::{InvariantViolation, Validate};
 
 impl IsoOid {
-    /// Build an `ISO_OID` from its string form, validating the
-    /// `iso_oid = number, { '.', number }` production of BASE
-    /// `master05-identification_package.adoc` §Syntaxes.
+    /// Builds an `ISO_OID` from its string form.
     ///
     /// # Errors
     /// [`IdError::Empty`] for an empty value; [`IdError::Malformed`] when the

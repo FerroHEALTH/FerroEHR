@@ -17,10 +17,8 @@ fn corpus_dir() -> std::path::PathBuf {
 
 #[test]
 fn composition_xml_round_trips() {
-    // Exclusions come from the SINGLE registry (`common::excluded`) — never a
-    // second by-name list here, which is how the three mechanisms drifted apart.
-    // Where the adjudication produced a repo-authored VALID TWIN,
-    // `common::twinned` substitutes it so the exclusion costs no coverage.
+    // Exclusions come from the one registry (`common::excluded`);
+    // `common::twinned` substitutes a valid twin where one exists.
     let (mut ok, mut skipped) = (0, 0);
     let mut failures = Vec::new();
     for entry in std::fs::read_dir(corpus_dir()).expect("corpus dir") {

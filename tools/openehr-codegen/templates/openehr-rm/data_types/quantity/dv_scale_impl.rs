@@ -2,23 +2,12 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM class invariants for `DV_SCALE`.
+//! `DV_SCALE` invariants (RM 1.2.0 `org.openehr.rm.data_types.dv_scale.adoc`):
+//! the inherited `Normal_range_and_status_consistency`;
+//! `Normal_status_validity` is terminology-bound.
 //!
-//! Spec: RM 1.2.0
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_scale.adoc`.
-//! `DV_SCALE` declares no own invariants; it inherits the DV_ORDERED
-//! `Normal_range_and_status_consistency` (checked via the ordered-magnitude
-//! machinery in `dv_ordered_impl`). The comparison functions
-//! (`less_than` / `is_strictly_comparable_to`) live in `dv_ordered_impl`.
-//!
-//! NOTE: the DV_ORDERED `Normal_status_validity` invariant (terminology)
-//! is deferred to the composition validator + `openehr-term`.
-//!
-//! NOTE: `dv_scale.adoc` permits an UNCODED scale point while
-//! `code_phrase.adoc` `Code_string_valid` forbids any empty code string — the
-//! CODE_PHRASE invariant is enforced (strict; no corpus or CNF data set
-//! carries a blank-symbol DV_SCALE, scanned 2026-07-11). Revisit if real
-//! uncoded scale data appears.
+//! NOTE: `dv_scale.adoc` permits an uncoded scale point, while CODE_PHRASE
+//! `Code_string_valid` forbids an empty code; the invariant is enforced.
 
 use crate::v1_2::data_types::quantity::dv_ordered::DvOrdered;
 use crate::v1_2::data_types::quantity::dv_ordered_impl::push_normal_range_consistency;

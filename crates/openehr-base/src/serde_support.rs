@@ -4,15 +4,6 @@
 
 //! The small shared runtime the emitted canonical-JSON `serde` impls call into.
 //!
-//! Hand-written; preserved across `openehr-codegen` regeneration (it carries no
-//! generated-file marker, so `write_crate` keeps it and `lib.rs` auto-declares
-//! `pub mod serde_support;`).
-//!
-//! Every per-class decision — which keys exist, which are mandatory, which
-//! `_type` tags route to which variant — lives in the EMITTED impls
-//! (`openehr-codegen -- emit-json`), where it is auditable next to the class.
-//! This module holds only what cannot be emitted per class:
-//!
 //! - [`ExpectedType`] — the zero-allocation `_type` check a concrete class runs
 //!   when the discriminator is present;
 //! - [`MatchTag`] / [`TagMatch`] — the zero-allocation `_type` read a
@@ -44,9 +35,6 @@ pub const TYPE_KEY: &str = "_type";
 // ── the `_type` check on a concrete class ────────────────────────────────────
 
 /// Reads the `_type` member of a concrete class and checks it names that class.
-///
-/// Used as `map.next_value_seed(ExpectedType("DV_TEXT"))?`: the value never
-/// leaves the visitor, so a matching discriminator costs no allocation.
 #[derive(Debug, Clone, Copy)]
 pub struct ExpectedType(
     /// The canonical class name the discriminator must equal.
@@ -131,11 +119,6 @@ impl Visitor<'_> for MatchTag {
 // ── the polymorphic-object key + the two-path tag read ───────────────────────
 
 /// A member key of a polymorphic object: the discriminator, or anything else.
-///
-/// The `Other` payload is owned because a member seen BEFORE the discriminator
-/// has to be buffered and replayed (the slow path); on the fast path — the
-/// discriminator first, which is what every canonical writer emits — no `Other`
-/// key is ever produced.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SlotKey {
     /// The `_type` discriminator.
@@ -205,14 +188,6 @@ pub fn read_slot_tag<'de, A: MapAccess<'de>>(
 }
 
 /// The remainder of a polymorphic object after its `_type` has been read.
-///
-/// The discriminator itself, the members buffered ahead of it, and the
-/// still-unread tail of the stream are presented as one [`Deserializer`] the
-/// chosen variant deserializes from.
-///
-/// The discriminator is replayed rather than swallowed, because a tag may route
-/// to an INTERMEDIATE variant that is itself polymorphic and has to dispatch on
-/// it again (and because a concrete class verifies its own discriminator).
 #[derive(Debug)]
 pub struct TaggedRest<A> {
     tag: Option<&'static str>,
@@ -464,9 +439,6 @@ impl<'de> serde::Deserialize<'de> for OpenSubtype {
 
 /// Refuse a present-but-empty optional list that ITS-JSON bounds `minItems: 1`.
 ///
-/// The BMM admits the empty list there (the codegen table
-/// `plan::its_json_bounds`); an absent or populated list passes through.
-///
 /// # Errors
 /// An `invalid_length` error naming `attribute` when the list is empty.
 pub fn refuse_empty_list<T, E: serde::de::Error>(
@@ -503,11 +475,6 @@ pub fn missing_type<E: serde::de::Error>(slot: &str, expected: &str) -> E {
 
 /// The refusal for a wire key the class does not declare — serde's own
 /// `unknown_field` wording, plus the CLASS the key was found on.
-///
-/// `serde::de::Error::unknown_field` cannot carry the class (its signature is
-/// field + expected set), and a refusal that does not say WHICH class rejected
-/// the key is materially worse to act on: the same member name is declared by
-/// some RM classes and not others, so the reader names it here.
 ///
 /// The strict reader itself is grounded on the released artifacts:
 /// `docs/specs/openehr/ITS-REST/specifications/docs/overview/Resources.md`

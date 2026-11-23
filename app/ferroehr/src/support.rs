@@ -14,10 +14,6 @@
 //! `## [X.Y.Z] - YYYY-MM-DD` of this package version, embedded at build time
 //! by `build.rs`. A build of a version with no dated heading is not a release
 //! and carries no support period.
-//!
-//! The boot banner, `ferroehr --version`, `GET /management/info` and
-//! `GET {rest root}/status` show the end month; the server logs a `WARN` at
-//! boot and once a day after it has passed.
 
 use std::time::Duration;
 
@@ -33,9 +29,6 @@ pub const SUPPORT_YEARS: i16 = 5;
 const RECHECK_INTERVAL: Duration = Duration::from_hours(24);
 
 /// The support period of one release.
-///
-/// Its [`Serialize`] form is a [`SupportReport`] judged on the day it is
-/// serialized, so a long-running server never reports a stale status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SupportPeriod {
     /// The release date; `None` for a build that is not a release.

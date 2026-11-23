@@ -3,9 +3,6 @@
 
 //! Authorization for the `FerroEHR` CDR.
 //!
-//! The coarse role gate inside the protocol adapter, authorization being an
-//! adapter concern by design, and the per-server handle that carries it.
-//!
 //! No openEHR spec governs this: ITS-REST `Requests_and_responses.md`
 //! §Authentication and authorization mandates no scheme, so everything here is
 //! our own enterprise design. The spec-grounded access authority is the
@@ -14,17 +11,6 @@
 //! and always on when auth is enabled, classifies every generated ITS-REST
 //! operation ([`classify`]) and gates it by a role model ([`roles`]) driven by
 //! `ferroehr::config::authz::AuthzConfig`.
-//!
-//! This module also carries the per-server authorization handle wired onto
-//! [`AppState`](crate::state::AppState), which the binary builds from
-//! `ferroehr::config::authz::AuthzConfig`.
-//!
-//! ## Module map
-//! - `config`: the `ferroehr::config::authz::AuthzConfig` serde struct (the
-//!   `[authz]` section of the one server config tree) and boot validation.
-//! - [`roles`]: the RBAC gate decision over the caller's roles.
-//! - [`classify`]: `operation_id → OperationClass`
-//!   (total-coverage-guarded).
 
 pub mod classify;
 pub mod roles;
@@ -40,10 +26,9 @@ use http::Method;
 
 /// The per-server authorization handle.
 ///
-/// `None` on [`AppState`](crate::state::AppState) means authorization is off
-/// (authentication-only behaviour). Carries the coarse RBAC gate, plus the
-/// `[authz.rbac]` keys the per-EHR `EHR_ACCESS` gate reads whether or not the
-/// RBAC gate is on.
+/// `None` on [`AppState`](crate::state::AppState) means authorization is off.
+/// The handle carries the RBAC gate and the `[authz.rbac]` keys the
+/// `EHR_ACCESS` gate reads.
 #[derive(Debug)]
 pub struct AuthzHandle {
     rbac: Option<RbacGate>,
@@ -56,12 +41,8 @@ pub struct AuthzHandle {
 impl AuthzHandle {
     /// Builds the full handle the binary serves with.
     ///
-    /// The handle carries the RBAC gate when `rbac.enabled`, and the
-    /// configured `[authz.rbac]` keys in every case. It is `None` only when
-    /// there is nothing to enforce: the RBAC gate off and
-    /// `rbac.ehr_access_default` open, so `AppState` stays empty (auth-only).
-    /// A `restricted` default alone yields a handle: the per-EHR default
-    /// applies with the coarse gate off.
+    /// `None` only when the RBAC gate is off and `rbac.ehr_access_default` is
+    /// open; a `restricted` default alone yields a handle.
     #[must_use]
     pub fn build(config: &AuthzConfig, base_path: &str) -> Option<Self> {
         let rbac = config
@@ -124,11 +105,8 @@ pub(crate) struct RbacGate {
 /// counterpart to the `Search` verb of [`Operation::is_write`], for the surfaces
 /// outside the generated ITS-REST tables.
 ///
-/// Matched by method + path SUFFIX so the deployment's configured base path is
-/// irrelevant. Each entry is a POST whose handler provably performs no write —
-/// either a read whose selector is a whole structure and so travels as a
-/// request body (the released ad-hoc AQL read's shape), or a bodyless
-/// computation over held data:
+/// Matched by method and path suffix, so the configured base path is
+/// irrelevant. Each entry is a POST whose handler performs no write:
 ///
 /// - `POST /message/export` — `export_ehr_extracts`, a query over held
 ///   versions whose selector is an `EXTRACT_SPEC` (RM `ehr_extract`
@@ -168,9 +146,8 @@ const EXTENSION_AUTHENTICATED_ROUTES: &[(&str, &str)] = &[("GET", "/access/purpo
 /// Extension routes that are [`OperationClass::Admin`] despite not sitting under
 /// `/admin/` — the destructive half of the shared-definition surface.
 ///
-/// Each deletes a deployment-wide definition artefact every EHR validates
-/// against, and the deletion is physical: this store has no logical tier to
-/// undelete from.
+/// Each physically deletes a deployment-wide definition every EHR validates
+/// against.
 ///
 /// The class is OUR OWN DESIGN, on the blast radius. ITS-REST
 /// `Requests_and_responses.md` §Authentication and authorization "does not

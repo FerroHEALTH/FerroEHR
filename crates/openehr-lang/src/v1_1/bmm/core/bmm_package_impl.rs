@@ -142,9 +142,6 @@ impl BmmPackage {
 
     /// `BMM_PACKAGE_CONTAINER.package_at_path`: "Package at the path `a_path`"
     /// (`org.openehr.lang.bmm.bmm_package_container.adoc` §Functions).
-    ///
-    /// Keys are matched case-insensitively and the longest matching key prefix
-    /// wins at each level (module docs).
     #[must_use]
     pub fn package_at_path(&self, a_path: &str) -> Option<&Self> {
         package_at_path_in(self.packages.as_ref(), a_path)
@@ -182,9 +179,6 @@ impl BmmPackageContainer {
 
     /// `BMM_PACKAGE_CONTAINER.package_at_path`: "Package at the path `a_path`"
     /// (`org.openehr.lang.bmm.bmm_package_container.adoc` §Functions).
-    ///
-    /// Keys are matched case-insensitively and the longest matching key prefix
-    /// wins at each level (module docs).
     #[must_use]
     pub fn package_at_path(&self, a_path: &str) -> Option<&BmmPackage> {
         package_at_path_in(self.packages(), a_path)

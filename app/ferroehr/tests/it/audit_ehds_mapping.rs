@@ -11,11 +11,6 @@
 //! documentation site; this module is what stops that page from becoming a
 //! claim nobody checks.
 //!
-//! All five are recorded; the renderings differ. Where a rendering cannot
-//! carry an element its FORMAT does not define, that absence is pinned as a
-//! test which fails the day the format changes, so the page and the code move
-//! together.
-//!
 //! No openEHR spec governs the read-side access log — our own
 //! design/extension. openEHR specifies the write-side `AUDIT_DETAILS` only
 //! (`docs/specs/openehr/RM/docs/common/` §`AUDIT_DETAILS` Class).
@@ -345,15 +340,14 @@ fn element_a_the_accessing_organisation_is_recorded_and_rendered_in_fhir() {
 
 /// (e) "the origin or origins of data" — recorded (#3212).
 ///
-/// The origin of the DATA is not the origin of the request: the record knows
-/// the client address it was asked from, and it now also carries where the
-/// content it served came from, read from the `FEEDER_AUDIT` provenance
-/// openEHR stamps on content (RM common `master04` §Feeder Audit) as the
-/// commit path derived it onto `version.origins`, with the true distinct
-/// count beside the capped set. The FHIR rendering carries one `origin`
-/// entity per origin, naming its system; the DICOM Audit Message of PS3.15
-/// §A.5 defines no element for it, and a value appearing there would be
-/// invented.
+/// The origin of the data is not the origin of the request: beside the client
+/// address, the record carries where the content it served came from, read from
+/// the `FEEDER_AUDIT` provenance openEHR stamps on content (RM common
+/// `master04` §Feeder Audit) as the commit path derived it onto
+/// `version.origins`, with the true distinct count beside the capped set. The
+/// FHIR rendering carries one `origin` entity per origin, naming its system;
+/// the DICOM Audit Message of PS3.15 §A.5 defines no element for it, and a
+/// value appearing there would be invented.
 #[test]
 fn element_e_the_origin_of_the_data_is_recorded_and_rendered_in_fhir() {
     let event = access_event();

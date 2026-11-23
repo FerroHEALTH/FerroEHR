@@ -12,10 +12,6 @@
 //! (openEHR `Integrity check algorithms` code set, code `SHA-256`) and the
 //! mandatory unencoded `size`. Server-side blob storage is spec-silent — this
 //! is our design, and these tests are its acceptance instrument.
-//!
-//! Each test owns its S3 container (Drop removes it); the PostgreSQL database
-//! comes from the shared testkit harness. Requires Docker. `SeaweedFS` with no credentials runs in unauthenticated
-//! "allow-all" mode (dev/test only).
 
 use ferroehr::service::ehr::object::EhrObject;
 use ferroehr::service::version_update::WriteRequest;
@@ -176,10 +172,6 @@ fn multimedia(n: usize) -> Value {
 }
 
 /// A demographic `PERSON` carrying `media` as the value of an identity ELEMENT.
-///
-/// The party path externalizes exactly as the clinical one does — the
-/// versioning layer is shared — so this is how a blob comes to be referenced
-/// only by a party.
 fn person_with_media(name: &str, media: &Value) -> Value {
     json!({
         "_type": "PERSON",
@@ -686,11 +678,6 @@ async fn the_sweep_deletes_an_orphan_past_the_grace_and_nothing_a_version_refere
 /// `refresh_after`, half the sweep's grace period, so a commit that
 /// deduplicates onto an old blob never loses it to the sweep; a younger blob is
 /// left as it is.
-///
-/// S3 records a write to the whole second, so the young case writes through a
-/// store whose refresh age dwarfs that resolution, and the old case through one
-/// whose age the wait below exceeds wherever the first write fell within its
-/// second; both stores share the bucket (#6193).
 #[tokio::test]
 async fn a_write_of_stored_bytes_renews_a_blob_past_the_refresh_age() {
     let sw = Seaweed::start().await;
@@ -906,11 +893,6 @@ async fn disabled_by_default_stores_inline_verbatim() {
 
 /// With NO store reachable, a record that references an externalized blob makes
 /// `expand_multimedia` fail rather than answer with the compact reference.
-///
-/// The silent version of this was the defect: the caller asked for the bytes,
-/// the server answered `200` with a `s3://` URI instead, and nothing said the
-/// request had not been honoured. Switching an integration off may stop new
-/// offloads; it may not quietly change what clinical content a read returns.
 #[tokio::test]
 async fn unreachable_store_refuses_expansion_instead_of_answering_silently() {
     let (_db, svc) = crate::fixtures::service().await;

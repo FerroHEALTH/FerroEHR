@@ -4,9 +4,6 @@
 
 //! Hand-written AOM 1.4 `CARDINALITY` spec functions.
 //!
-//! `CARDINALITY` states whether a container attribute behaves as a list, set or
-//! bag, from the `is_ordered`/`is_unique` attribute pair.
-//!
 //! Spec source (vendored):
 //! `AM/docs/UML/classes/org.openehr.am.aom14.cardinality.adoc` §Functions.
 

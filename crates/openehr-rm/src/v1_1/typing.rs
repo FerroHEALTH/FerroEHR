@@ -2,34 +2,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Generic RM type names, and the type of an attribute or a path below one.
+//! Generic RM type names (`DV_INTERVAL<DV_QUANTITY>`, BASE
+//! `master04-structure_types.adoc`) and the type of an attribute
+//! ([`attribute_type`]) or a path ([`path_type`], master11 §Basic Syntax).
 //!
-//! An RM type name is a class name with its actual generic parameters,
-//! `DV_INTERVAL<DV_QUANTITY>` or `List<EVENT<ITEM_TREE>>`: BASE
-//! `docs/specs/openehr/BASE/docs/foundation_types/master04-structure_types.adoc`
-//! defines the container generics, and the RM class tables the RM ones
-//! (`DV_INTERVAL<T>`, `REFERENCE_RANGE<T>`, `EVENT<T>`, `HISTORY<T>`,
-//! `VERSION<T>`). [`RmType`] parses and prints that spelling.
-//!
-//! [`attribute_type`] types one attribute of an instantiated class: an attribute
-//! the class table writes as its formal parameter (`DV_INTERVAL.lower: T`) takes
-//! the actual argument, so `lower` of a `DV_INTERVAL<DV_QUANTITY>` is a
-//! `DV_QUANTITY`. [`path_type`] types every step of an [`RmPath`], a sequence of
-//! attribute names (BASE `docs/specs/openehr/BASE/docs/architecture_overview/master11-paths.adoc`
-//! §Basic Syntax), and reports each step's container.
-//!
-//! A path may name an attribute that only a descendant of the step's declared
-//! class carries (`ELEMENT.value` is a `DATA_VALUE`, and `magnitude` belongs to
-//! `DV_QUANTITY`), since a node holds an instance of a descendant of the
-//! declared type. Such a step takes the type every concrete descendant that
-//! declares the attribute agrees on: one that each of them gives or conforms
-//! to (`items` below an `ITEM_STRUCTURE` is a `List<ITEM>`, an `ITEM_LIST`
-//! holding `ELEMENT`s and an `ITEM_TREE` `ITEM`s), and the step is refused as
-//! ambiguous when there is none. No openEHR spec governs that narrowing: our
-//! own design.
-//!
-//! Only stored attributes are typed: a computed attribute (a BMM function) is
-//! never a member of an instance, so no instance path steps through one.
+//! A step naming an attribute only descendants carry takes the type they all
+//! agree on, or is refused as ambiguous. No openEHR spec governs that
+//! narrowing: our own design. Computed attributes are not typed.
 
 use core::fmt;
 use core::str::FromStr;
@@ -37,11 +16,8 @@ use core::str::FromStr;
 use crate::v1_1::model::{self, Container, RmAttribute, RmClass, RmTypeRef};
 use crate::v1_1::paths::RmPath;
 
-/// An RM type name with its generic arguments: `DV_INTERVAL<DV_QUANTITY>`.
-///
-/// Printed with the arguments separated by `", "`, as the RM class tables
-/// write them (`Hash<String, TRANSLATION_DETAILS>`); parsed with any spacing
-/// around the brackets and commas.
+/// An RM type name with its generic arguments, printed with `", "` as the RM
+/// class tables write them.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct RmType {
     name: String,
@@ -100,10 +76,8 @@ impl fmt::Display for RmType {
     }
 }
 
-/// The class name a type name starts with, without its generic arguments or
-/// surrounding space (`DV_INTERVAL` of `DV_INTERVAL<DV_QUANTITY>`).
-///
-/// The borrowed counterpart of [`RmType::name`] for a caller holding the text.
+/// The class name a type name starts with (`DV_INTERVAL` of
+/// `DV_INTERVAL<DV_QUANTITY>`).
 #[must_use]
 pub fn base_name(text: &str) -> &str {
     text.split('<').next().unwrap_or(text).trim()
@@ -308,8 +282,7 @@ fn checked_class(instantiated: &RmType) -> Result<&'static RmClass, TypingError>
 }
 
 /// The argument `instantiated` gives the formal parameter `formal` of `class`,
-/// `None` when it gives none (a type written without arguments, or a
-/// parameter only an ancestor declares).
+/// or `None`.
 fn argument<'t>(class: &RmClass, instantiated: &'t RmType, formal: &str) -> Option<&'t RmType> {
     let index = class.generic_params.iter().position(|p| p.name == formal)?;
     instantiated.params().get(index)
@@ -333,9 +306,9 @@ fn substituted(reference: &RmTypeRef, class: &RmClass, instantiated: &RmType) ->
     )
 }
 
-/// The type of the attribute `attribute` of `instantiated`, with the class's
-/// actual arguments substituted (`lower` of `DV_INTERVAL<DV_QUANTITY>` is a
-/// `DV_QUANTITY`; of a bare `DV_INTERVAL`, the bound `DV_ORDERED`).
+/// The type of `attribute` of `instantiated`, its arguments substituted
+/// (`lower` of `DV_INTERVAL<DV_QUANTITY>` is `DV_QUANTITY`; of a bare
+/// `DV_INTERVAL`, the bound `DV_ORDERED`).
 ///
 /// # Errors
 ///
@@ -398,9 +371,7 @@ impl PathStep {
     }
 }
 
-/// The arguments `holder` gives the parameters of its descendant `descendant`,
-/// matched by name as the RM reuses a parameter's name down a family
-/// (`EVENT<T>`, `POINT_EVENT<T>`).
+/// The arguments `holder` gives its descendant's parameters, matched by name.
 fn carried(holder: &RmClass, args: &[RmType], descendant: &RmClass) -> Vec<RmType> {
     if args.is_empty() {
         return Vec::new();
@@ -428,11 +399,8 @@ fn conforms(sub: &AttributeType, sup: &AttributeType) -> bool {
         && (sup.item.params().is_empty() || sub.item.params() == sup.item.params())
 }
 
-/// The type `holder` takes as an instance of its descendant `class`.
-///
-/// The arguments are carried by parameter name, so a value declared
-/// `EVENT<ITEM_TREE>` that is a `POINT_EVENT` is a `POINT_EVENT<ITEM_TREE>`;
-/// `holder` itself is returned when `class` is its own class.
+/// The type `holder` takes as an instance of its descendant `class`, arguments
+/// carried by parameter name (`EVENT<ITEM_TREE>` → `POINT_EVENT<ITEM_TREE>`).
 ///
 /// # Errors
 ///
@@ -456,9 +424,8 @@ pub fn narrowed(holder: &RmType, class: &str) -> Result<RmType, TypingError> {
     ))
 }
 
-/// Types the attribute `attribute` of a value of type `holder`: on the
-/// holder's class where it declares the attribute, else on the concrete
-/// descendants that do (see the module documentation).
+/// Types `attribute` of a value of type `holder`, on the holder's class or on
+/// the concrete descendants that declare it.
 ///
 /// # Errors
 ///
@@ -505,11 +472,8 @@ pub fn step_type(holder: &RmType, attribute: &str) -> Result<PathStep, TypingErr
     })
 }
 
-/// Types every step of `path` below a value of type `class`, outermost first.
-///
-/// Each step starts from the item type of the step before, so a container
-/// step (`items`) is followed by a step on one of its items. Predicates select
-/// instances and do not change a step's type.
+/// Types every step of `path` below a value of type `class`, outermost
+/// first, each from the item type of the step before.
 ///
 /// # Errors
 ///

@@ -2,31 +2,14 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Writing at a path into a canonical-JSON instance.
+//! Writing at a path into a canonical-JSON instance: [`item_at_path_mut`], and
+//! [`set_at_path`], which creates the members a path names.
 //!
-//! [`item_at_path_mut`] is the mutable twin of
-//! [`item_at_path`](super::item_at_path): the first item the path selects, in
-//! document order, by the same selection rules (BASE
-//! `docs/specs/openehr/BASE/docs/architecture_overview/master11-paths.adoc`
-//! §Predicate Expressions, and §Using Positional Parameters for `[n]`, the
-//! nth member of a container).
-//!
-//! [`set_at_path`] writes one value at a path, creating the members the path
-//! names that the instance lacks. The RM defines no write at a path (RM
-//! `common.pathable.adoc` gives `PATHABLE` read functions only), so the rules
-//! are our own design: each step must select exactly one member or name one
-//! to create; a member is created only where nothing in the path asks for more
-//! than it can carry (an archetype node id, name or uid predicate is refused
-//! on a member that does not exist yet, and `[n]` appends only at the end of a
-//! container); the written value must satisfy the last segment's predicate; and
-//! nothing is changed unless the whole write succeeds. Each step is typed with
-//! [`step_type`] from the type of the node it leaves: the root's RM type, or
-//! the step before's item type, narrowed to the `_type` an existing node
-//! carries. The type decides whether a missing member is a container and
-//! whether a created node needs its `_type`: the
-//! ITS-JSON schema requires `_type` where the attribute's declared type is
-//! abstract (`model::declared_concrete_type`), so a node created there is
-//! tagged with the one concrete class the path admits.
+//! The RM defines no write at a path (`common.pathable.adoc`), so the rules are
+//! our own design: each step selects one member or names one to create, no
+//! node/name/uid predicate creates, `[n]` appends only at the end, the value
+//! must satisfy the last predicate, and a failed write changes nothing. A node
+//! created where the declared type is abstract gets its one admitted `_type`.
 
 use serde_json::{Map, Value};
 
@@ -237,13 +220,8 @@ fn constrains(predicate: &Predicate) -> bool {
         || !predicate.comparisons.is_empty()
 }
 
-/// Decides the step `segment` takes on `child`, the attribute's current
-/// value (`None` when the attribute is absent), writing `value` there when the
+/// Decides the step `segment` takes on `child`, writing `value` when the
 /// step is the last.
-///
-/// An existing member is selected as [`item_at_path`](super::item_at_path)
-/// selects it. A written value must satisfy the predicate too, and a member
-/// created on the way must not be asked for anything it lacks.
 fn decide(
     index: usize,
     segment: &PathSegment,
@@ -323,9 +301,8 @@ fn selected(
     }
 }
 
-/// The empty node a write creates for `step`, which `next` steps out of:
-/// tagged with its concrete class where the attribute's declared type is
-/// abstract, which must then be the one concrete class `next` admits.
+/// The empty node a write creates for `step`, tagged where the declared type
+/// is abstract.
 fn new_node(index: usize, step: &PathStep, next: &PathStep) -> Result<Value, SetPathError> {
     let mut node = Map::new();
     let declared_abstract =
@@ -350,14 +327,8 @@ fn new_node(index: usize, step: &PathStep, next: &PathStep) -> Result<Value, Set
     Ok(Value::Object(node))
 }
 
-/// Writes `value` at `path` below `root`, an instance of the RM type
-/// `root_type`, and returns the value it replaces.
-///
-/// Every segment but the last steps into one member, creating it where the
-/// instance lacks it; the last is set to `value`, appended to a container
-/// where it names a new member. See the module documentation for the rules.
-/// `value` is written as given: its own conformance to the step's type is the
-/// caller's (the RM-instance validator checks a finished instance).
+/// Writes `value` at `path` below `root`, an instance of `root_type`, and
+/// returns the value it replaces.
 ///
 /// # Errors
 ///
@@ -554,9 +525,7 @@ mod tests {
 
     #[test]
     fn missing_members_are_created_and_tagged_where_the_declared_type_is_abstract() {
-        // RM `reference_range.adoc`: the range of a quantity's reference range
-        // holds quantities, and `DV_INTERVAL.lower` is declared `T`, bound
-        // `DV_ORDERED`, so the created limit carries its `_type`.
+        // `DV_INTERVAL.lower` is `T`, bound `DV_ORDERED`, so the limit is tagged.
         let mut root = json!({"_type": "DV_QUANTITY", "magnitude": 5.0, "units": "kg"});
         let old = set_at_path(
             &mut root,

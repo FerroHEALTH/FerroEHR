@@ -3,19 +3,14 @@
 
 //! The compact markers of a node row (#4904).
 //!
-//! They are the keys a row leaves out of its fragment beyond what its
-//! columns hold, each announced by one boolean column so the rebuild never
-//! reads an absent key or a JSON shape as a signal.
-//!
-//! A `HISTORY.origin` and an `EVENT.time` or `ACTION.time` of exactly
-//! `_type: DV_DATE_TIME` and a `value` string are stored as that string
-//! (`origin_compact`, `time_compact`); a `subject` of exactly
-//! `{"_type": "PARTY_SELF"}` leaves (`party_self`); and the root row's
-//! `uid`, when it is exactly the `OBJECT_VERSION_ID` of its version row,
-//! leaves (`uid_derived`). `compact` is the write half; `restore` and
-//! `ext.node_fragment`, `ext.node_date_time` and `ext.version_uid` are the
-//! read half. A row written before the markers existed has every marker
-//! `NULL` and reads as it did.
+//! Each key a row leaves out of its fragment beyond its columns is announced by
+//! one boolean column, so the rebuild never reads an absent key as a signal. A
+//! `HISTORY.origin`, `EVENT.time` or `ACTION.time` that is exactly a
+//! `DV_DATE_TIME` with a `value` string is stored as that string
+//! (`origin_compact`, `time_compact`), a `subject` of exactly `{"_type":
+//! "PARTY_SELF"}` leaves (`party_self`), and the root row's `uid` leaves when
+//! it is its version's `OBJECT_VERSION_ID` (`uid_derived`). A row with every
+//! marker `NULL` reads as stored.
 //!
 //! No openEHR spec governs storage layout: our own design (RM common
 //! `master06-change_control_package.adoc` §Overview admits any physical

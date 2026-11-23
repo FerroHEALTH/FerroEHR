@@ -12,21 +12,6 @@
 //! copied from elsewhere") — plus §Version Merging
 //! (`ORIGINAL_VERSION.other_input_version_uids`). BASE `VERSION_TREE_ID`:
 //! `trunk_version [ '.' branch_number '.' branch_version ]`.
-//!
-//! Covers:
-//! 1. modifying an imported version created by ANOTHER system forks a branch
-//!    (`t.1.1`, local `creating_system_id`) while the imported trunk version
-//!    stays the container current;
-//! 2. continuing one's own branch tip advances it (`t.1.2`) and supersedes
-//!    the previous tip; every branch version stays addressable by its full
-//!    `OBJECT_VERSION_ID`, with the true `preceding_version_uid` served;
-//! 3. `other_input_version_uids` is preserved verbatim by the EHR-Extract
-//!    import — the route that legitimately carries merge provenance — and
-//!    served on the `ORIGINAL_VERSION` (the commit wire declares no merge
-//!    shape, so a member carrying it is refused; that twin lives in
-//!    `service_contribution`);
-//! 4. an exported version tree containing branches re-imports whole
-//!    (branch import is first-class).
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::request::AqlQueryRequest;
@@ -258,14 +243,6 @@ async fn modifying_an_imported_foreign_version_forks_a_branch() {
 /// those of the imported `ORIGINAL_VERSION`" (the class description), and the
 /// wrapper's own `signature` "signifies the act of importing" (RM common
 /// master06 §Digital Signature).
-///
-/// NOTE: the released OAS disagrees — its `Version` schema lists `data` under
-/// `required` and `ImportedVersion` inherits it through `allOf`, so a
-/// schema-validating client rejects this body. Emitting a top-level `data`
-/// would duplicate the entire clinical payload with no consistency rule for
-/// the two copies, and would contradict both the RM's `(effected)` typing and
-/// the ITS-XML content model, so the wire follows the model; the omission is
-/// deliberate, which is what this test pins.
 #[tokio::test]
 async fn the_served_imported_version_is_the_wrapper_shape_without_data() {
     let (_source_db, source_svc) = crate::fixtures::service().await;

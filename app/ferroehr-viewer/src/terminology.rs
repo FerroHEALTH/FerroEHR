@@ -3,23 +3,7 @@
 
 //! The CDR's **terminology surface** as the viewer consumes it.
 //!
-//! Six reads — the known terminology ids, one terminology's descriptor, a term
-//! definition, a strict subsumption test, a value set's members, and a
-//! value-set membership test — behind the viewer's own session guard.
-//!
 //! NOTE: no openEHR spec governs this wire shape — the CDR's own extension.
-//!
-//! **Absence is a state, not an error.** The whole group is config-gated on the
-//! CDR side (`[api] terminology`, off by default) and answers `404` as
-//! if unmounted when it is off — the same `404` an unknown terminology, code or
-//! value set produces. Every read below therefore returns `Ok(None)` for a
-//! `404` and lets the screen say what is absent, exactly as
-//! [`crate::management`] does for the management surface; an error is reserved
-//! for a CDR that refused or failed.
-//!
-//! Every read guards with
-//! [`require_session`](crate::session::require_session) first and keeps the
-//! CDR credential server-side.
 
 #![expect(
     clippy::disallowed_types,
@@ -32,12 +16,6 @@ use crate::locale::definitions::DefinitionsMsg;
 use crate::locale::{tr, tr_served, tr_with};
 
 /// One terminology's descriptor, flattened for the descriptor card.
-///
-/// The attributes are the CDR descriptor's own: `publisher` (1..1),
-/// `available_versions` (0..1), `attributes` (0..1) and `uri` (1..1). An
-/// absent optional reads as empty rather than failing the
-/// card, and `name` is carried only because a CDR may publish one — it is
-/// rendered when present and never invented.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct TerminologyDescriptor {
     /// The terminology id the descriptor was read for.
@@ -56,10 +34,6 @@ pub struct TerminologyDescriptor {
 }
 
 /// One term of a `Terminology_extract`, flattened for the terms table.
-///
-/// A `_terms_` entry is either a bare `Term_code` or a fully defined
-/// `Defined_term`; the bare form leaves
-/// [`Self::text`] and [`Self::language`] empty.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TermRow {
     /// `Term_code.code`.
@@ -100,18 +74,12 @@ pub struct TerminologyExtractView {
 
 /// The terminology ids of a `GET /terminology` body
 /// (`{"terminology_ids": [..]}`), in the order the CDR listed them.
-///
-/// Read defensively: a body without the field yields no ids rather than
-/// failing the screen.
 #[must_use]
 pub fn terminology_ids(body: &serde_json::Value) -> Vec<String> {
     string_list(body.get("terminology_ids"))
 }
 
 /// Flatten a `Terminology_description` body into a [`TerminologyDescriptor`].
-///
-/// `terminology_id` comes from the request, not the body: the descriptor
-/// resource is addressed by id and the released shape carries none.
 #[must_use]
 pub fn descriptor_view(terminology_id: &str, body: &serde_json::Value) -> TerminologyDescriptor {
     TerminologyDescriptor {
@@ -125,10 +93,6 @@ pub fn descriptor_view(terminology_id: &str, body: &serde_json::Value) -> Termin
 }
 
 /// Flatten a `Terminology_extract` body into a [`TerminologyExtractView`].
-///
-/// `_terms_` is a code-keyed map whose values are a bare `Term_code` or a
-/// `Defined_term`; both shapes carry `code`, so the row is built from the
-/// value and falls back to the map key when the value omits it.
 #[must_use]
 pub fn extract_view(body: &serde_json::Value) -> TerminologyExtractView {
     let mut terms: Vec<TermRow> = body
@@ -209,9 +173,6 @@ fn string_list(value: Option<&serde_json::Value>) -> Vec<String> {
 /// GET one terminology resource as the session's credential, mapping the CDR's
 /// `404` to `Ok(None)` — the extension being off, and the addressed
 /// terminology/code/value set not existing, are all that one status.
-///
-/// Guards the viewer session first: the pages reading through the reads
-/// below are publicly reachable endpoints, and this is the one place their CDR call is made.
 async fn terminology_get(path: &str) -> Result<Option<serde_json::Value>, ViewerError> {
     let cdr = crate::bff::cdr()?;
     let url = cdr.extensions_v1(path);
@@ -251,9 +212,7 @@ fn require_value(value: &str, what: &str) -> Result<String, ViewerError> {
 
 /// The terminology ids the CDR serves (`GET /terminology`).
 ///
-/// `Ok(None)` is the first-class "the terminology extension is disabled on this
-/// server" state (`[api] terminology` off — the CDR answers `404` as if
-/// the routes were unmounted), not an error.
+/// `Ok(None)` when the terminology extension is off (`404`).
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -288,9 +247,8 @@ pub async fn fetch_terminology_description(
 /// One term's definition
 /// (`GET /terminology/{terminology_id}/term/{code}?at_date=…`).
 ///
-/// `Ok(None)` = unknown terminology OR unknown code, or the extension is
-/// disabled — the screen says which of those it asked for. An empty `at_date`
-/// is omitted from the request, which asks for the current definition.
+/// `Ok(None)` for an unknown terminology or code, or with the extension off. An
+/// empty `at_date` asks for the current definition.
 ///
 /// # Errors
 /// [`ViewerError::Invalid`] for a blank terminology id or code; otherwise as
@@ -320,8 +278,7 @@ pub async fn fetch_term(
 /// The strict subsumption verdict for two codes
 /// (`GET /terminology/{terminology_id}/subsumes?ref_code=…&candidate=…`).
 ///
-/// `Ok(None)` = unknown terminology, or the extension is disabled. Both codes
-/// are required by the wire (`400` otherwise), so both are checked here first.
+/// `Ok(None)` for an unknown terminology, or with the extension off.
 ///
 /// # Errors
 /// [`ViewerError::Invalid`] for a blank terminology id or code; otherwise as
@@ -377,8 +334,7 @@ pub async fn fetch_value_set(
 /// Whether a code is a member of a value set
 /// (`GET /terminology/{terminology_id}/value_set/{value_set_id}/validate?candidate_code=…`).
 ///
-/// `Ok(None)` = the extension is disabled (the membership test itself answers
-/// `false` rather than `404` for a value set the CDR does not know).
+/// `Ok(None)` with the extension off; an unknown value set answers `false`.
 ///
 /// # Errors
 /// [`ViewerError::Invalid`] for a blank terminology id, value-set id or

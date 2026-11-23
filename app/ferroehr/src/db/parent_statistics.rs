@@ -8,10 +8,7 @@
 //! statistics, and "partitioned tables are not processed by autovacuum", so
 //! they come only from a manual `ANALYZE` of the parent, run when it is
 //! populated and again as its partitions change (PostgreSQL 18, §24.1.3
-//! Updating Planner Statistics, and the `ANALYZE` reference page). Left
-//! at the statistics of an empty or freshly seeded store, a revision history
-//! walked the whole commit audit index (#4438) and the population `CONTAINS`
-//! drove from every COMPOSITION root.
+//! Updating Planner Statistics, and the `ANALYZE` reference page; #4438).
 //!
 //! [`refresh`] runs `ANALYZE ONLY` on every partitioned table of the stores,
 //! which collects the parent's statistics and leaves its partitions to

@@ -1,18 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The archetype-conformance pass over an ADL 2 operational template, driven
-//! by the Veredictum catalogue's ADL 2 content cases (`corpus/veredictum/
-//! adl2-content/`, vendored by `scripts/vendor/veredictum-adl2-content.sh`).
-//!
-//! Each case commits one composition against one template and names the
-//! status: `201` where the template admits it, `422` (ITS-REST
-//! `responses/422.yaml`: "the underlying template ... is not validating the
-//! supplied resource") where it breaks one constraint. The compositions record
-//! each inlined archetype by its complete identifier (BASE
-//! `artefact_identification` `master07-referencing.adoc` §Reconstitutability),
-//! and the pass reads them under the template's nodes. One test per constraint
-//! kind, citing AOM2 `master04.5-constraint_model-class_definitions.adoc`.
+//! The archetype-conformance pass over an ADL 2 operational template, driven by
+//! the Veredictum ADL 2 content cases (`corpus/veredictum/adl2-content/`): `201`
+//! where the template admits the composition, `422` where it breaks one
+//! constraint (AOM2 `master04.5-constraint_model-class_definitions.adoc`).
 
 #![expect(
     clippy::panic,
@@ -328,12 +320,9 @@ fn count_case_with(edit: impl FnOnce(&mut Value)) -> (Value, WebTemplate) {
     (body, wt)
 }
 
-/// A `C_INTEGER` or `C_REAL` constraint made of several non-point intervals is
-/// a union of ranges and admits a value inside any one of them (AOM2
-/// `master04.5` §"Conformance semantics: C_ORDERED"; AM
-/// `org.openehr.am.aom2.c_integer.adoc` §`constraint`): the template pass
-/// admits a value inside one range and refuses one between the ranges or
-/// outside them all.
+/// A `C_INTEGER` or `C_REAL` union of ranges admits a value inside any one of
+/// them and refuses one outside all (AOM2 `master04.5` §"Conformance semantics:
+/// C_ORDERED").
 #[test]
 fn a_union_of_ranges_admits_a_value_inside_one_of_them() {
     let sources = sources();
@@ -404,10 +393,8 @@ fn a_union_of_ranges_admits_a_value_inside_one_of_them() {
     }
 }
 
-/// An archetype root the template did not inline is refused: an OPT2 inlines
-/// every slot filler (AM OPT2 `master03-opt_raw.adoc` §Flattening), so a
-/// version of the archetype other than the one the template names is a node
-/// the template does not define.
+/// An archetype root the template did not inline is refused (AM OPT2
+/// `master03-opt_raw.adoc` §Flattening).
 #[test]
 fn an_archetype_root_the_template_does_not_inline_is_refused() {
     let (body, wt) = count_case_with(|obs| {
@@ -510,10 +497,9 @@ fn elements(composition: &Value) -> BTreeMap<String, (Value, Value)> {
     out
 }
 
-/// ITS-REST `simplified_formats/master04-basic_concepts.adoc` §Format variants:
-/// the FLAT and STRUCTURED read of a composition recording its inlined
-/// archetype roots by their complete identifier is the read of the same
-/// content under the interface ids the Web Template names them by.
+/// The FLAT and STRUCTURED read of a composition recording full archetype ids
+/// equals the read under the Web Template's interface ids (master04 §Format
+/// variants).
 #[test]
 fn the_simplified_read_matches_a_full_archetype_reference_to_its_node() {
     let templates = templates();
@@ -602,19 +588,10 @@ fn identities(composition: &Value) -> BTreeMap<String, (Value, Value)> {
     out
 }
 
-/// A composition built from FLAT or STRUCTURED against an ADL 2 template
-/// carries what the catalogue's canonical body carries for every `LOCATABLE`:
-/// - the instance name is the node's term text, and a node the template gives
-///   no term (ADL2 `master04.3-cadl_complex_types.adoc` §"Node Identifiers")
-///   is named for its RM type, never by its bare id-code (RM `LOCATABLE.name`;
-///   ITS-REST `simplified_formats/master04-basic_concepts.adoc` §"Web Template
-///   Metadata");
-/// - an archetype root records the complete identifier the template inlined, in
-///   its `archetype_node_id` and its `archetype_details.archetype_id` (RM
-///   `LOCATABLE.archetype_node_id`; BASE `artefact_identification`
-///   `master07-referencing.adoc` §Reconstitutability);
-/// - `archetype_details.rm_version` is the template's `rm_release` (AOM2
-///   `master03-archetype_package.adoc`; RM `ARCHETYPED.rm_version`).
+/// A composition built from FLAT or STRUCTURED against an ADL 2 template carries
+/// the catalogue's names, full archetype ids and `rm_version` for every
+/// `LOCATABLE` (ADL2 `master04.3` §"Node Identifiers"; BASE
+/// `master07-referencing.adoc` §Reconstitutability; RM `ARCHETYPED.rm_version`).
 #[test]
 fn a_simplified_build_carries_the_names_and_archetype_details_of_the_canonical_body() {
     let templates = templates();
@@ -659,12 +636,8 @@ fn interval_cases() -> Vec<Case> {
     rows
 }
 
-/// Every admitted `DV_INTERVAL` case [`interval_cases`] names reads back in
-/// FLAT and STRUCTURED with its value, whether or not its template constrains
-/// the interval's parts: the composition built back from either form holds the
-/// ELEMENT unchanged. The FLAT format reaches the interval's parts as `/lower`
-/// and `/upper` (ITS-REST `simplified_formats/master05-rm_mapping.adoc`
-/// §DV_INTERVAL).
+/// Every admitted `DV_INTERVAL` case reads back unchanged through FLAT and
+/// STRUCTURED (master05 §DV_INTERVAL).
 #[test]
 fn every_interval_case_reads_back_with_its_value() {
     let templates = templates();
@@ -736,11 +709,8 @@ fn interval_paths(wt: &WebTemplate) -> Vec<(String, String, String)> {
         .collect()
 }
 
-/// The ADL 2 Web Template writes a `DV_INTERVAL` and its parts below their
-/// ELEMENT as the ADL 1.4 one does, `/value`, `/value/lower` and
-/// `/value/upper`: a data value is no `LOCATABLE` (RM `data_types`), so an
-/// `[idN]` predicate (ADL2 `master05-paths.adoc` §"Relationship with W3C
-/// Xpath") cannot select it.
+/// The ADL 2 Web Template writes a `DV_INTERVAL` and its parts as `/value`,
+/// `/value/lower` and `/value/upper`, as the ADL 1.4 one does.
 #[test]
 fn the_interval_aql_paths_match_the_adl14_web_template() {
     let templates = templates();
@@ -774,11 +744,8 @@ fn the_interval_aql_paths_match_the_adl14_web_template() {
     }
 }
 
-/// An ADL 1.4 template that leaves a `DV_INTERVAL<DV_COUNT>`'s parts open gives
-/// the interval node its `lower` and `upper`, each an open `DV_COUNT` (RM
-/// `data_types` §DV_INTERVAL), and a composition holding such an interval reads
-/// back in FLAT and STRUCTURED with its value (ITS-REST
-/// `simplified_formats/master05-rm_mapping.adoc` §DV_INTERVAL).
+/// An ADL 1.4 `DV_INTERVAL<DV_COUNT>` with open parts gets `lower` and `upper`
+/// nodes and reads back unchanged (master05 §DV_INTERVAL).
 #[test]
 fn an_open_adl14_interval_reads_back_with_its_value() {
     let path = corpus().join("../../templates/interval_count_open.opt");
@@ -837,11 +804,8 @@ fn category_code(composition: &Value) -> (Option<&str>, Option<&str>) {
 
 #[test]
 fn the_category_carries_its_openehr_binding() {
-    // Every catalogue template constrains `category` to `[at1]` and binds
-    // `at1` to `http://openehr.org/id/433`; the data carries the bound term
-    // (ADL2 `master08-terminology_integration.adoc` §From Constraints to
-    // Concrete Codes in Data), as RM `COMPOSITION` invariant
-    // `Category_validity` requires.
+    // The data carries the bound term of `category` (ADL2
+    // `master08-terminology_integration.adoc`; RM `Category_validity`).
     for (id, wt) in &templates() {
         let category = wt
             .tree

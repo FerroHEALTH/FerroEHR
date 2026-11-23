@@ -11,10 +11,6 @@
 //! terminology, management,
 //! tenancy, event subscriptions, TLS).
 //!
-//! Most tests drive the real `FerroEhrService` over a fully-migrated `PostgreSQL`
-//! 18 database taken from the shared harness (`testkit::db()`), assembled by the
-//! shared [`common`] fixture module.
-//!
 //! One binary per crate, split into topic modules
 //! (`.claude/rules/testing.md` §One integration-test binary per crate).
 

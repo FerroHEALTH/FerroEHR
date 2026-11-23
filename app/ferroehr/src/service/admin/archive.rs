@@ -8,19 +8,10 @@
 //! NOTE: no openEHR spec governs archiving or storage tiering: the tier and
 //! this movement are our own design.
 //!
-//! Each call moves the named objects' `version` rows to the cold partition —
-//! one `UPDATE` of the partition key, with the `node` and `vo_attestation`
-//! rows carried across by their foreign keys
-//! ([`crate::storage::version_repo::tier`]) — and stamps the head row, in one
-//! transaction. The move is reversible
-//! ([`FerroEhrService::restore_archived_ehrs`],
-//! [`FerroEhrService::restore_archived_parties`]) and invisible on the wire:
-//! an object-addressed read names the parent relation and therefore reaches
-//! either tier in one statement, and a write thaws the object first, so a
-//! versioned object is never split across tiers. An unknown id aborts the
-//! transaction before anything is moved. The AQL engine queries the hot tier
-//! alone, so archived content leaves the queryable store until it is
-//! restored.
+//! The move is reversible and invisible to an object-addressed read, and a
+//! write thaws the object first, so a versioned object never spans tiers. AQL
+//! reads the hot tier alone, so archived content leaves query results until it
+//! is restored.
 
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
@@ -120,9 +111,6 @@ impl FerroEhrService {
     /// the primary tier, dropping its archive marker, all-or-nothing: the exact
     /// reverse of [`Self::archive_parties`].
     ///
-    /// Spec-silent like its EHR twin above; served at
-    /// `POST /admin/archive/parties/restore`, our own extension.
-    ///
     /// # Errors
     /// - `versioned_object_does_not_exist` (`404`) — any id names no
     ///   demographic PARTY root.
@@ -147,10 +135,6 @@ impl FerroEhrService {
 }
 
 /// Refuse the whole operation unless every named EHR exists.
-///
-/// Archive and restore are both all-or-nothing over a list, so the check runs
-/// before either writes anything. One implementation for both: a divergence
-/// here would let one of the two half-apply on an id the other rejects.
 async fn require_ehrs_exist(
     tx: &mut sqlx::PgConnection,
     ehr_ids: &[EhrId],

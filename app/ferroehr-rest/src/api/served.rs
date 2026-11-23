@@ -9,9 +9,6 @@
 //! mandatory on it. Whether a method is served is a property of the resource,
 //! never of the credential, so the RBAC and SMART on openEHR checks judge only
 //! a served method (no openEHR spec orders the checks: our own design).
-//!
-//! The table is read from the API's `OpenAPI` document, which `utoipa-axum`
-//! builds from the same `routes!` registrations that mount each route.
 
 use std::collections::HashMap;
 

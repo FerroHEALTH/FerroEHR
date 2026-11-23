@@ -18,9 +18,6 @@
 //! complete emitted model with data accessors only: an honest maturity
 //! boundary, not a model gap.
 //!
-//! What that boundary defers is exactly one behaviour, named here so a future
-//! evaluator does not have to re-derive it:
-//!
 //! TODO(#1920): implement the `_value_literal_` → `_value_` deserialisation. §General
 //! Model states that `_value_literal_` "is assumed to carry a serialised form of
 //! the value expressed in a syntax known to the model processing environment",

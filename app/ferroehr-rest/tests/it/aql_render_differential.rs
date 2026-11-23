@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The AQL cells the server renders in Rust are byte-identical to the cells
-//! PostgreSQL's jsonb projection served before them (#6004).
+//! The AQL cells the server renders in Rust are byte-identical to the jsonb
+//! cells PostgreSQL builds for the same paths (#6004).
 //!
 //! A debug build selects, in the same statement, the jsonb cell PostgreSQL
 //! builds beside each rendered cell and asserts that the two are the same

@@ -8,11 +8,10 @@
 //! A person asking who accessed their record (GDPR Art. 15(1)(c),
 //! `docs/law/eu/gdpr/text.html`; EHDS Art. 9(2), `docs/law/eu/ehds/text.html`)
 //! is answered by the subject-scoped ITI-81 retrieval, which finds a record
-//! only when it names the EHR. An export names its EHR after `/message/export/`
-//! rather than `/ehr/`, and its Extract record is written by the service layer,
-//! where the user came from no principal; both now name the EHR and the user. A
-//! read of the restriction register names the EHR in a query parameter and is
-//! recorded by the service with the EHR, as the read of its `EHR_ACCESS` settings is.
+//! An export names its EHR after `/message/export/` rather than `/ehr/`, and
+//! its Extract record is written by the service layer; both name the EHR and
+//! the user. A read of the restriction register names the EHR in a query
+//! parameter, and the service records it with the EHR.
 
 use std::time::Duration;
 

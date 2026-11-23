@@ -4,10 +4,6 @@
 
 //! The Expression Language parser and the `BMM_ASSERTION` materialisation it
 //! feeds.
-//!
-//! Two levels are pinned here: the GRAMMAR, over every assertion string the
-//! pinned production schemas carry, and the MATERIALISATION, over a small
-//! self-contained schema that the v3 transform can build.
 
 #![expect(
     clippy::panic_in_result_fn,
@@ -134,14 +130,6 @@ const PINNED_SCHEMAS: &[&str] = &[
 ];
 
 /// How many of the pinned schemas' assertion strings the EL grammar accepts.
-///
-/// The number only ever ratchets UP: a grammar change that accepts fewer is a
-/// regression, one that accepts more updates this line together with
-/// [`UNPARSABLE`]. A change of input moves it too: the component-repo BASE
-/// 1.3.0 file replaces the typographic quotes of three invariants with ASCII
-/// ones and adds three invariants, all of which parse; SPECBASE-35 adds
-/// `ARCHETYPE_ID.Value_valid` (`value.is_valid`), which parses; SPECLANG-16
-/// adds `P_BMM_GENERIC_TYPE.Generic_parameters_valid`, which parses.
 const PARSING_ASSERTIONS: usize = 327;
 
 /// Every DISTINCT assertion string in the pinned schemas that the EL grammar

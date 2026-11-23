@@ -20,9 +20,6 @@
 //! End-to-end journeys over what the viewer says about the CDR itself: the
 //! openEHR System API conformance manifest on About, and the per-family
 //! `OpenAPI` documents on Server's API tab.
-//!
-//! Read-only throughout: nothing here writes to the CDR, so the journeys are
-//! order-independent and leave the stack exactly as they found it.
 
 use crate::common;
 

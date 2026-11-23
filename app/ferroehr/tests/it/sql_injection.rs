@@ -12,62 +12,6 @@
 //! This suite pins both halves: hostile text in a value position reaches the
 //! bound-value vector and never the SQL string, and hostile text in an
 //! identifier position is refused before planning.
-//!
-//! ## The pinned enumeration: every identifier source is a closed set
-//!
-//! Nothing outside this list can produce an identifier, a function name, a cast
-//! type or a sort direction in the emitted SQL. Each entry names the source file
-//! and the item that fixes the set; [`every_quoted_identifier_comes_from_the_closed_set`]
-//! re-derives it from real output over a query corpus, so a new construct that
-//! widens the set fails this suite.
-//!
-//! * **Tables** — `db::iden` (`Node`, `VoVersion`, `Ehr`, `Audit`,
-//!   `VoAttestation`): `sea-query`
-//!   `Iden` enums, one variant per relation, no string path in.
-//! * **Columns** — string literals at every `aql::sql::expr::col` call site,
-//!   plus `storage::promoted::PROMOTED_LEAVES[..].column`, whose fields are
-//!   `&'static str`. `IDENTIFIERS` below pins the whole vocabulary against the
-//!   clinical migrations that define those relations
-//!   (`migrations/clinical/0001_baseline_ehr.sql` through `0004_baseline_node.sql`, and
-//!   the node compact markers of `0004_baseline_node.sql`).
-//! * **Table aliases** — `format!` over an integer source id or the builder's
-//!   own counter, never over query text: `n{sid}`, `v{sid}`, `e{sid}`,
-//!   `x{ctr}`, `xv{ctr}`, `s{ctr}`, `w{ctr}`, `b{ctr}`, `p{ctr}`, `qg{ctr}`,
-//!   `esv{ctr}`, `esn{ctr}`, `a_v{sid}`, the row bindings' inner `b{ctr}_n` /
-//!   `w{ctr}_n` and one-row `b{ctr}_one` / `w{ctr}_one`, the head probe
-//!   `b{ctr}_n_pin_head` of a versioned `OR` branch, the streaming
-//!   source's inner `n{sid}_s` (`aql::sql::from`, `aql::sql::value`,
-//!   `aql::sql::select`), and an anchor `va{ctr}` with its node rows
-//!   `va{ctr}_n` and `va{ctr}_e` (`aql::sql::anchor`).
-//! * **Output-column aliases** — `col{i}` / `col{i}_{vo,sv,num,cap}` from the
-//!   SELECT index (`aql::sql::select`), `access_ehr_{i}` /
-//!   `access_vo_{i}` / `access_sv_{i}` from the same index
-//!   (`aql::sql::select::build_access_ehr_columns` and
-//!   `build_access_version_columns`, the hidden columns the access log reads
-//!   the served EHRs and the served version rows from), and the literal `hit`
-//!   for the streaming `EXISTS` probe (`aql::sql::value`). An AQL `AS <label>`
-//!   is carried on `ColumnSpec::name` for the `RESULT_SET` only and is never a
-//!   SQL identifier — see [`the_select_as_label_never_becomes_a_sql_identifier`].
-//! * **Function names** — the six literals passed to `aql::sql::expr::call`:
-//!   `to_jsonb`, `jsonb_path_query_first`, `jsonb_path_query_array`,
-//!   `openehr_magnitude`, `openehr_timestamp`, `jsonb_build_object`; plus the
-//!   `Expr::cust`/`cust_with_exprs` fragments in
-//!   `aql::sql::predicate` and `aql::sql::value`, whose arguments are all
-//!   positional `$n` expressions.
-//! * **Cast types** — the seven literals passed to `aql::sql::expr::cast`:
-//!   `numeric`, `boolean`, `timestamptz`, `text`, `text[]`, `uuid`, `jsonpath`.
-//! * **Sort direction** — `sea_query::Order::Asc`/`Order::Desc` chosen from the
-//!   IR's `OrderKey::ascending` boolean (`aql::sql::value::build_order_by`); the
-//!   AQL grammar admits only the keywords, so there is no third value.
-//! * **Comparison operators** — `sea_query::BinOper` from the closed
-//!   `openehr_query::lexer::CompOp` enum (`aql::sql::expr::binoper`).
-//!
-//! The jsonpath is the one place a path segment's text travels: it is assembled
-//! into `$.a.b` (`aql::sql::value::fragment_jsonpath`) and then **bound**, as
-//! `jsonb_path_query_first(data, CAST($n AS jsonpath))`. Segment text is also
-//! restricted at the front door — `openehr_query::lexer::Token::Identifier` is
-//! `[a-zA-Z][a-zA-Z0-9_]*`, so a quote, semicolon, comment sequence or jsonpath
-//! metacharacter in a path position is a lex failure, not a payload.
 
 use std::sync::Arc;
 
@@ -551,9 +495,6 @@ const CORPUS: &[&str] = &[
 
 /// The relation and column names the lowering may emit, plus the one `to_char`
 /// format fragment that renders inside double quotes.
-///
-/// The column names are the vocabulary the clinical migrations define
-/// (`migrations/clinical/0001_baseline_ehr.sql` through `0004_baseline_node.sql`).
 const IDENTIFIERS: &[&str] = &[
     // relations
     "node",
@@ -843,16 +784,6 @@ fn hostile_execution_context_values_bind() {
 // ── (8) least privilege: what the application's database role cannot do ──────
 
 /// The privilege posture of the role the running server connects as.
-///
-/// The shipped deployments authenticate as a **non-superuser** login role that
-/// is a member of `ferroehr_clinical` (`deploy/helm/ferroehr/values.yaml`,
-/// `docker/postgres/initdb/10-ferroehr-init.sh`). This test creates such a role
-/// and verifies the negative half first-hand: it is not a superuser, does not
-/// bypass row-level security, cannot create or drop schema objects, and cannot
-/// create roles — while ordinary reads on the clinical tables still work.
-///
-/// Roles are cluster-global on the shared harness server, so the role is named
-/// off the clone database (`<clone>_leastpriv`) for the testkit sweep to reap.
 #[tokio::test]
 async fn the_application_database_role_cannot_run_ddl_or_escalate() {
     let testdb = testkit::db().await.expect("testkit database");

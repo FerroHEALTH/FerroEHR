@@ -103,9 +103,6 @@ impl PBmmEnumeration {
     /// is based on, i.e. the name of type bound to 'T' in a declared use of
     /// this type" (`org.openehr.lang.bmm.bmm_enumeration.adoc` §Attributes).
     ///
-    /// The two concrete forms redefine it to a constant
-    /// ([`INTEGER_UNDERLYING_TYPE_NAME`], [`STRING_UNDERLYING_TYPE_NAME`]).
-    ///
     /// NOTE (adjudicated): for the un-subtyped `P_BMM_ENUMERATION` form the
     /// class docs give no default, so the first declared ancestor is used —
     /// `master04-syntax.adoc` §Enumerated Types writes every example as a

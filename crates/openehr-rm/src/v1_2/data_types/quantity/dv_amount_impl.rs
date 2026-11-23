@@ -2,12 +2,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written `DV_AMOUNT` spec behaviour, shared by its descendants.
-//!
-//! `DV_AMOUNT` is abstract, so the generated `DvAmount` is a subtype enum and
-//! the accuracy rule its `add`/`subtract` declare has no single struct to live
-//! on. It is realized once here and called by every descendant that implements
-//! the arithmetic.
+//! The `DV_AMOUNT` accuracy rule and arithmetic, shared by its descendants.
 
 use crate::v1_2::data_types::quantity::dv_amount::DvAmount;
 use crate::v1_2::data_types::quantity::dv_ordered::DvOrdered;
@@ -16,24 +11,12 @@ use core::cmp::Ordering;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 
-/// The `accuracy` value that records "accuracy was not recorded".
-///
-/// Spec: `master06-quantity_package.adoc` §Accuracy and Uncertainty — "a value
-/// of -1 for the accuracy attribute is used for this purpose, and the constant
-/// `unknown_accuracy_value` = -1 is provided within the class".
+/// The `accuracy` recording "not recorded": "`unknown_accuracy_value` = -1"
+/// (`master06-quantity_package.adoc` §Accuracy and Uncertainty).
 pub const UNKNOWN_ACCURACY_VALUE: f64 = -1.0;
 
-/// One operand of a `DV_AMOUNT` addition, subtraction or scaling.
-///
-/// The magnitude travels with the accuracy because the two forms the spec
-/// allows are not interchangeable without it: a percentage is a proportion of
-/// the magnitude it was recorded against, an absolute value is a half-range in
-/// the amount's own units.
-///
-/// It is carried as a [`Decimal`] so that converting between those forms is
-/// exact for every descendant: an integer magnitude converts without loss, and
-/// a real one converts without a widening cast whose error would land inside a
-/// clinical half-range.
+/// One operand of a `DV_AMOUNT` operation: its accuracy with the magnitude a
+/// percentage is relative to, as an exact [`Decimal`].
 #[derive(Debug, Clone, Copy)]
 pub struct AmountAccuracy {
     /// The operand's magnitude, absent when it has no decimal form — which
@@ -70,9 +53,7 @@ impl AmountAccuracy {
         accuracy_is_percent: Option<bool>,
     ) -> Self {
         Self {
-            // `from_f64` recovers the decimal the float DENOTES, dropping the
-            // excess bits past IEEE-754's guarantee — 0.1_f64 becomes 0.1, not
-            // its binary approximation.
+            // The decimal the float denotes: 0.1_f64 is 0.1.
             magnitude: Decimal::from_f64(magnitude),
             accuracy,
             accuracy_is_percent,
@@ -100,12 +81,8 @@ pub enum CombinedAccuracy {
 }
 
 impl AmountAccuracy {
-    /// This operand's recorded accuracy and its form, or `None` when accuracy
-    /// was not recorded.
-    ///
-    /// A negative value is read as unrecorded rather than only the exact
-    /// sentinel: `accuracy` is a half-range, which cannot be negative, so
-    /// `unknown_accuracy_value` is the only meaning a negative can carry.
+    /// This operand's accuracy and form, or `None` when unrecorded; any negative
+    /// value reads as unrecorded.
     fn recorded(self) -> Option<(f64, bool)> {
         let value = self.accuracy?;
         (value >= 0.0).then(|| (value, self.accuracy_is_percent == Some(true)))
@@ -122,9 +99,7 @@ impl AmountAccuracy {
         if is_percent {
             return value.checked_mul(magnitude)?.checked_div(hundred());
         }
-        // A zero magnitude has no percentage form: every percentage of it is
-        // the same zero, so the operand's half-range cannot be recovered from
-        // one.
+        // A zero magnitude has no percentage form.
         if magnitude.is_zero() {
             return None;
         }
@@ -137,12 +112,8 @@ fn hundred() -> Decimal {
     Decimal::from(100_u8)
 }
 
-/// Whether two magnitudes are the same value.
-///
-/// Exact, in `Decimal`: these are `Real`s in the model, and the question "are
-/// these the same quantity" is about the decimals they denote, not about the
-/// binary approximations carrying them. An unavailable magnitude — a malformed
-/// value — is not equal to anything, including another malformed one.
+/// Whether two magnitudes are the same decimal; an unavailable one equals
+/// nothing.
 fn equal_magnitudes(left: Option<f64>, right: Option<f64>) -> bool {
     let (Some(left), Some(right)) = (left, right) else {
         return false;
@@ -155,23 +126,12 @@ fn equal_magnitudes(left: Option<f64>, right: Option<f64>) -> bool {
 
 /// The accuracy of the sum or difference of `left` and `right`.
 ///
-/// Spec: `master06-quantity_package.adoc` §Accuracy and Uncertainty — "if
-/// accuracies are present in both quantities, they are added in the result, for
-/// both addition and subtraction operations; if either or both quantities has
-/// an unknown accuracy, the accuracy of the result is also unknown; if two
-/// `DV_AMOUNT` descendants are added or subtracted, and only one has
-/// `accuracy_is_percent` = True, accuracy is expressed in the result in the form
-/// used in the larger of the two quantities."
+/// Added when both are present, unknown otherwise, in "the form used in the
+/// larger of the two quantities" (`master06-quantity_package.adoc` §Accuracy
+/// and Uncertainty).
 ///
-/// The spec says to add the two values but not to convert them, and adding a
-/// percentage to an absolute half-range is not a number. Converting the operand
-/// whose form loses into the winning form is the only reading under which the
-/// sum it prescribes exists at all.
-///
-/// Equal magnitudes are the one gap: "the larger of the two" then names neither
-/// operand. The result takes the absolute form, because an absolute half-range
-/// is interpretable on its own while a percentage is only interpretable against
-/// a magnitude. No openEHR spec governs that tie — our own design.
+/// On equal magnitudes the absolute form wins: no openEHR spec governs the
+/// tie, our own design.
 #[must_use]
 pub fn combine(left: AmountAccuracy, right: AmountAccuracy) -> CombinedAccuracy {
     let (Some((left_value, left_percent)), Some((right_value, right_percent))) =
@@ -208,13 +168,9 @@ pub fn combine(left: AmountAccuracy, right: AmountAccuracy) -> CombinedAccuracy 
     settle(sum, as_percent)
 }
 
-/// The accuracy of this amount scaled by `factor`.
-///
-/// The spec defines accuracy propagation for `add` and `subtract` only, and is
-/// silent on `multiply` — no openEHR spec governs this, so the rule is our own:
-/// a percentage of a magnitude is unchanged when the magnitude is scaled, and
-/// an absolute half-range, being in the amount's own units, scales with it.
-/// Dropping accuracy instead would make `multiply(1.0)` lose it.
+/// The accuracy of this amount scaled by `factor`: a percentage unchanged, an
+/// absolute half-range scaled. No openEHR spec governs `multiply`: our own
+/// design.
 #[must_use]
 pub fn scale(amount: AmountAccuracy, factor: f64) -> CombinedAccuracy {
     let Some((value, is_percent)) = amount.recorded() else {
@@ -249,14 +205,9 @@ fn settle(accuracy: Decimal, is_percent: bool) -> CombinedAccuracy {
 }
 
 impl DvAmount {
-    /// Sum of this amount and `other`, or `None` when they are not the same
-    /// kind of amount or the sum is one no valid amount can carry.
-    ///
-    /// Spec: `dv_amount.adoc` §Functions `add`, whose `Pre_comparable`
-    /// pre-condition is `is_strictly_comparable_to (other)`. Two amounts of
-    /// DIFFERENT concrete types are never strictly comparable — `DV_ORDERED`
-    /// compares only like with like — so a count plus a quantity is refused
-    /// here rather than in each descendant.
+    /// The sum of this amount and `other` (`dv_amount.adoc` `add`), or `None`
+    /// when they differ in concrete type (`Pre_comparable`) or no valid amount
+    /// carries the sum.
     #[must_use]
     pub fn add(&self, other: &Self) -> Option<Self> {
         match (self, other) {
@@ -274,10 +225,8 @@ impl DvAmount {
         }
     }
 
-    /// Difference of this amount and `other`, under the same conditions as
-    /// [`Self::add`].
-    ///
-    /// Spec: `dv_amount.adoc` §Functions `subtract`.
+    /// The difference of this amount and `other` (`subtract`), under the
+    /// conditions of [`Self::add`].
     #[must_use]
     pub fn subtract(&self, other: &Self) -> Option<Self> {
         match (self, other) {
@@ -295,9 +244,7 @@ impl DvAmount {
         }
     }
 
-    /// Product of this amount and `factor`.
-    ///
-    /// Spec: `dv_amount.adoc` §Functions `multiply`.
+    /// This amount times `factor` (`multiply`).
     #[must_use]
     pub fn multiply(&self, factor: f64) -> Option<Self> {
         match self {
@@ -308,13 +255,7 @@ impl DvAmount {
         }
     }
 
-    /// Negated version of this amount, "such as used for representing a
-    /// difference, e.g. a weight loss".
-    ///
-    /// Spec: `dv_amount.adoc` §Functions `negative`. `DV_DURATION` redefines it
-    /// over the ISO-8601 value; the others negate their magnitude, which is
-    /// scaling by -1 and is expressed that way so the accuracy rule stays in
-    /// one place.
+    /// This amount negated (`negative`), "e.g. a weight loss".
     #[must_use]
     pub fn negative(&self) -> Option<Self> {
         match self {
@@ -323,21 +264,8 @@ impl DvAmount {
         }
     }
 
-    /// Returns `true` when this amount is considered equal to `other`.
-    ///
-    /// Spec: `dv_amount.adoc` §Functions `is_equal`, which the class declares
-    /// ABSTRACT — but abstract is not undefined. It is inherited from BASE
-    /// `any.adoc` §Functions `is_equal`: "return True if `this` and `other` are
-    /// attached to objects considered to be equal in VALUE."
-    ///
-    /// So equality is of the quantity, not of the record that carries it.
-    /// Comparing every field instead made `PT60M` and `PT1H` unequal while
-    /// neither was less than the other — an order in which two values are
-    /// simultaneously not-less, not-greater and not-equal, which `Ordered`
-    /// cannot mean.
-    ///
-    /// Two amounts of different concrete types are never equal: `DV_ORDERED`
-    /// compares only like with like.
+    /// Whether this amount equals `other` in value (`is_equal`, from BASE
+    /// `any.adoc`), so `PT60M` equals `PT1H`; different concrete types never do.
     #[must_use]
     pub fn is_equal(&self, other: &Self) -> bool {
         match (self, other) {
@@ -356,13 +284,9 @@ impl DvAmount {
         }
     }
 
-    /// Returns `true` when this amount is less than `other`, `None` when they
-    /// are not strictly comparable or a magnitude is unavailable.
-    ///
-    /// Spec: `dv_amount.adoc` §Functions `less_than`, whose `Post_result` is
-    /// `Result = magnitude < other.magnitude` — the ordering `DV_ORDERED`
-    /// already defines, reached through the same machinery so a `DV_AMOUNT`
-    /// cannot order differently from the `DV_ORDERED` it is.
+    /// Whether this amount is less than `other` (`less_than`:
+    /// `magnitude < other.magnitude`), or `None` when not strictly comparable or
+    /// a magnitude is unavailable.
     #[must_use]
     pub fn less_than(&self, other: &Self) -> Option<bool> {
         self.as_ordered().less_than(&other.as_ordered())
@@ -378,22 +302,13 @@ impl DvAmount {
         }
     }
 
-    /// Returns `true` when `number` is a valid percentage, i.e. between 0
-    /// and 100.
-    ///
-    /// Spec: `dv_amount.adoc` §Functions `valid_percentage`.
+    /// Whether `number` is between 0 and 100 (`valid_percentage`).
     #[must_use]
     pub fn valid_percentage(number: f64) -> bool {
         valid_percentage(number)
     }
 
-    /// Returns `true` when accuracy is not known, e.g. because it was not
-    /// recorded or is not discernable.
-    ///
-    /// Spec: `dv_quantified.adoc` §Functions `accuracy_unknown`, effected for
-    /// `DV_AMOUNT` by `master06-quantity_package.adoc` §Accuracy and
-    /// Uncertainty — "in `DV_AMOUNT`, a value of -1 for the accuracy attribute
-    /// is used for this purpose".
+    /// Whether accuracy is unknown: the `-1` sentinel (`accuracy_unknown`).
     #[must_use]
     pub fn accuracy_unknown(&self) -> bool {
         let accuracy = match self {
@@ -428,9 +343,7 @@ mod tests {
         }
     }
 
-    /// "If accuracies are present in both quantities, they are added in the
-    /// result" — the spec adds the recorded values, and this asserts exactly
-    /// that rather than the physically-combined error.
+    /// Recorded accuracies are added.
     #[test]
     fn two_recorded_accuracies_are_added() {
         let (value, is_percent) = known(combine(
@@ -456,10 +369,8 @@ mod tests {
         );
     }
 
-    /// "Accuracy is expressed in the result in the form used in the larger of
-    /// the two quantities" — here the larger operand is the percentage one, so
-    /// the absolute half-range of the smaller is converted into a percentage of
-    /// its own magnitude before the addition.
+    /// The smaller operand's half-range becomes a percentage of its magnitude when
+    /// the larger is a percentage.
     #[test]
     fn the_larger_operand_names_the_form() {
         let (value, is_percent) = known(combine(
@@ -477,9 +388,7 @@ mod tests {
         assert!((value - 15.0).abs() < 1e-9);
     }
 
-    /// Equal magnitudes name neither operand as "the larger". The absolute form
-    /// wins because it is interpretable without a magnitude — our own tie rule,
-    /// asserted so a future spec answer shows up here as a failing test.
+    /// On equal magnitudes the absolute form wins.
     #[test]
     fn equal_magnitudes_settle_on_the_absolute_form() {
         let (value, is_percent) = known(combine(
@@ -490,9 +399,7 @@ mod tests {
         assert!((value - 7.0).abs() < 1e-9);
     }
 
-    /// A percentage sum past 100 violates the `Accuracy_validity` invariant, so
-    /// no valid amount can carry it and the operation refuses rather than
-    /// producing one that fails its own class.
+    /// A percentage sum past 100 is refused (`Accuracy_validity`).
     #[test]
     fn a_percentage_past_one_hundred_is_unrepresentable() {
         assert_eq!(
@@ -511,9 +418,7 @@ mod tests {
         );
     }
 
-    /// `Accuracy_is_percent_validity` — "accuracy = 0 implies not
-    /// accuracy_is_percent" — so a zero result is recorded as absolute even
-    /// when both operands were percentages.
+    /// A zero result is absolute (`Accuracy_is_percent_validity`).
     #[test]
     fn a_zero_result_is_never_a_percentage() {
         let (value, is_percent) = known(combine(
@@ -539,11 +444,7 @@ mod tests {
         assert_eq!(scale(unrecorded(50.0), 3.0), CombinedAccuracy::Unknown);
     }
 
-    /// `is_equal` is inherited from BASE `Any` as equality of VALUE, so two
-    /// spellings of one duration are equal. Comparing every field instead made
-    /// `PT60M` and `PT1H` unequal while neither was less than the other — an
-    /// order in which two values are at once not-less, not-greater and
-    /// not-equal, which `Ordered` cannot mean.
+    /// Two spellings of one duration are equal.
     #[test]
     fn equality_is_of_the_value_not_the_record() {
         use crate::v1_2::data_types::quantity::date_time::dv_duration::DvDuration;

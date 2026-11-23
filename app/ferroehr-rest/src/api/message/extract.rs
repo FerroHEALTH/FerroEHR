@@ -4,15 +4,6 @@
 //! EHR-Extract export and import over the MESSAGE extension wire — **our own
 //! extension** (see [`super`] for the whole group's spec-silence flag).
 //!
-//! The four operations and their routes:
-//!
-//! | operation | route |
-//! |---|---|
-//! | `export_ehrs(an_ehr_id)` | `GET /message/export/{ehr_id}` |
-//! | `export_ehr_extracts(extract_spec)` | `POST /message/export` |
-//! | `import_ehr(an_ehr_id[0..1], an_extract)` | `POST /message/import{?ehr_id}` |
-//! | `import_ehr_extract(an_ehr_id, an_extract)` | `POST /message/import/{ehr_id}` |
-//!
 //! Both exports return `List<EXTRACT>`, so both answer `200` with a JSON array
 //! of canonical `EXTRACT`s (RM `ehr_extract` `master05` — the array IS the
 //! resource; no spec defines an envelope, so none is invented). `import_ehr`

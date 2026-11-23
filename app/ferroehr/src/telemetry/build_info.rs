@@ -35,10 +35,6 @@ static BUILT_AT: LazyLock<String> = LazyLock::new(|| {
 });
 
 /// The build facts of this binary in the family's shape.
-///
-/// The name, the version, the commit, the build instant and the compiler
-/// `build.rs` captured. The boot banner reads them, and [`BuildInfo`] carries
-/// the same facts on `/management/info`.
 #[must_use]
 pub fn build() -> ferrohealth_server::build_info::BuildInfo {
     ferrohealth_server::build_info::BuildInfo::new(

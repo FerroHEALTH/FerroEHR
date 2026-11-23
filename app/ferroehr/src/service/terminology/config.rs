@@ -79,9 +79,9 @@ mod tests {
         );
     }
 
-    /// The section a release before the one-server shape carried is refused
-    /// by name, never ignored: a deployment that still names it would
-    /// otherwise lose its terminology server without a word.
+    /// A `[terminology.external]` section is refused as an unknown key, never
+    /// ignored, so a deployment naming it does not lose its terminology server
+    /// unseen.
     #[test]
     fn the_retired_external_section_is_refused() {
         let err = toml::from_str::<TerminologyServerConfig>(

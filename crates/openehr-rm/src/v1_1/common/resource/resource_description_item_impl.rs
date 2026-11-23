@@ -2,14 +2,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `RESOURCE_DESCRIPTION_ITEM`.
-//!
-//! Spec: RM 1.2.0
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.resource_description_item.adoc`
-//! §Invariants — `Purpose_valid` plus the present-implies-non-empty string
-//! rules `Use_valid`, `misuse_valid`, `copyright_valid` (the generated core).
-//! `Language_valid` is terminology-backed (the language code set) and stays
-//! with the terminology binding table.
+//! `RESOURCE_DESCRIPTION_ITEM` invariants (RM 1.2.0
+//! `org.openehr.rm.common.resource_description_item.adoc`), in the generated
+//! core; `Language_valid` is terminology-bound.
 
 use crate::v1_1::common::resource::resource_description_item::ResourceDescriptionItem;
 use openehr_base::validate::{InvariantViolation, Validate};

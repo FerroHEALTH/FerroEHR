@@ -5,8 +5,6 @@
 //! AOM2 **model-form** archetype XML codec gate — the `Archetype.xsd`
 //! counterpart of the persistent-form gate in `aom2_xml`.
 //!
-//! # Corpus ceiling (stated, not implied)
-//!
 //! There is NO upstream instance corpus for this serialization. All 8 documents
 //! openEHR ships in the vendored ITS-XML bundle
 //! (`schemas/xml/its-xml-1.0.2-nsv1/AOM2/examples/`) declare
@@ -16,22 +14,6 @@
 //! `openEHR/specifications-ITS-XML` has just three branches — `Release-1.0.2`,
 //! `Release-2.0.0` and `master`, the last two identical and both already pinned
 //! here. So no further upstream corpus exists to vendor.
-//!
-//! The gate is therefore **self-consistency**, which is what is provable without
-//! a corpus: construct a minimal conforming `AUTHORED_ARCHETYPE` in Rust,
-//! serialize it, parse the result back, and require the value to be equal — the
-//! codec must be symmetric, not merely lenient on input. The wire envelope (root
-//! element name + the ITS-XML v1 namespace) is asserted on the serialized text.
-//!
-//! # Why the root is `AUTHORED_ARCHETYPE`
-//!
-//! `Archetype.xsd` declares the entry point as
-//! `<xs:element name="archetype" type="ARCHETYPE"/>`, but `ARCHETYPE` is
-//! `abstract="true"` and nothing in the closure derives from it —
-//! `AUTHORED_ARCHETYPE` extends `AUTHORED_RESOURCE` (`Resource.xsd`) and re-uses
-//! the archetype body through `<xs:group ref="ARCHETYPE"/>` rather than extending
-//! the type. `AUTHORED_ARCHETYPE` is thus the only instantiable archetype root
-//! the schema offers, and the generated entry points are typed to it.
 
 #![expect(
     clippy::panic_in_result_fn,
@@ -179,11 +161,6 @@ fn model_form_wire_envelope() -> Result<(), XmlError> {
 
 /// The archetype body reached through `<xs:group ref="ARCHETYPE"/>` survives the
 /// round trip with its content intact.
-///
-/// This is the load-bearing assertion of this gate: the whole model-form
-/// archetype body (`archetype_id`, `definition`, `terminology`, …) is declared
-/// behind an `xs:group` reference, so a codec that ignored group references would
-/// still round-trip — vacuously, over an empty envelope.
 #[test]
 fn model_form_group_body_survives() -> Result<(), XmlError> {
     let xml = openehr_its::aom2_model::to_xml(&minimal_archetype())?;

@@ -517,9 +517,6 @@ fn operator_of(token: &Token) -> Result<ElOperator, ElError> {
 
 /// Decodes a double-quoted EL string literal (strip delimiters, decode the
 /// `master03` escapes).
-///
-/// The lexer has already run [`crate::v1_1::escape::validate`] over the same text,
-/// so the decode cannot fail here.
 #[expect(
     clippy::expect_used,
     reason = "`Token::String` only exists when the lexer's validate_string ran crate::v1_1::escape::validate over the same body and it succeeded, so this decode of that body cannot fail"
@@ -530,10 +527,6 @@ fn decode_string(raw: &str) -> String {
 }
 
 /// Decodes a single-quoted character literal to a `char`.
-///
-/// The lexer admits only the six quoted forms in a character literal, so the
-/// decode cannot fail here, and its token regex admits exactly one body
-/// character, so the decoded literal is never empty.
 #[expect(
     clippy::expect_used,
     reason = "`Token::Character` only exists when the lexer's validate_char admitted the body, which restricts an escape to the six quoted forms none of which can fail to decode; the same token regex admits one body character or one two-character escape, each decoding to exactly one char, so the literal is never empty"
