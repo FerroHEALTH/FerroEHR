@@ -1,0 +1,1 @@
+- The connections of each database pool no longer all retire in the same second 30 minutes after a start: a connection past its 30-minute lifetime retires on a release one at a time, paced so a full pool's connections retire across 10 minutes, and every connection retires by 50 minutes. The requests after the 30-minute mark no longer each wait for a new connection to open.
