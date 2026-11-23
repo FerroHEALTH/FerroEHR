@@ -275,7 +275,7 @@ ferrohealth-smart = { version = "=0.33.1", default-features = false, features = 
 # the release on ferrohealth-smart 0.31, 0.27 the release on 0.32, and 0.28
 # the release on 0.33, on ferrohealth-server 0.12 (#6213).
 # Verified on crates.io 2026-11-21.
-ferrohealth-session = { version = "=0.28.0", default-features = false }
+ferrohealth-session = { version = "=0.28.1", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
