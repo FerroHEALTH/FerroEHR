@@ -10,13 +10,6 @@
 //! contained within exactly one package", and — because package paths "are not
 //! used as namespaces as in UML" — "all classes in a BMM model should be
 //! uniquely named".
-//!
-//! The pass COLLECTS: it returns every finding rather than stopping at the
-//! first, because a validity report is only useful whole. It is distinct from
-//! the typed refusals of
-//! [`crate::v1_1::bmm_persistence::error::PBmmReadError`], which stay fail-fast
-//! because each of them names a condition under which no `BMM_*` object can be
-//! constructed at all.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -31,19 +24,12 @@ use crate::v1_1::bmm_persistence::p_bmm_package::PBmmPackage;
 use crate::v1_1::bmm_persistence::p_bmm_schema::PBmmSchema;
 
 /// One violation of BMM model validity found by [`validate_schema`].
-///
-/// Every variant is a discriminant a caller can branch on; the display text is
-/// never a decision input.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum PBmmValidityFinding {
     /// A class is not contained within exactly one package — "A model validity
     /// checker ensures that every class is contained within exactly one
     /// package" (`LANG/docs/bmm3/master05-core-model.adoc` §Packages).
-    ///
-    /// In practice this reports the DUPLICATE direction: a class listed in no
-    /// package cannot be materialised at all, so it is already the fail-fast
-    /// [`crate::v1_1::bmm_persistence::error::PBmmReadError::ClassNotInAnyPackage`].
     ClassNotInExactlyOnePackage {
         /// The class's name as the schema defines it.
         class: String,
@@ -209,17 +195,6 @@ impl fmt::Display for PBmmValidityFinding {
 /// Checks `schema` and the `model` materialised from it for BMM model
 /// validity, returning every finding.
 ///
-/// Both forms are needed and neither is redundant: a duplicate package listing
-/// and a case-variant name collision are visible only in the PERSISTED schema
-/// (`BMM_CLASS.package` is `1..1` and `BMM_MODEL.class_definitions` is a
-/// name-keyed map, so both collapse on materialisation), while property
-/// conformance needs the model's resolved type graph
-/// ([`BmmModel::type_conforms_to`]).
-///
-/// `model` must be the model
-/// [`crate::v1_1::bmm_persistence::create_model::create_bmm_model`] produced from
-/// `schema`; the findings are otherwise about two unrelated artefacts.
-///
 /// # Examples
 /// ```
 /// use openehr_lang::v1_1::bmm_persistence::create_model::create_bmm_model;
@@ -262,9 +237,6 @@ pub fn validate_schema(schema: &PBmmSchema, model: &BmmModel) -> Vec<PBmmValidit
 /// Types: primitive types "are just normal class definitions within a
 /// `primitive_types` block … otherwise are processed in the same way as types
 /// defined in the main `class_definitions` group".
-///
-/// Both lists are keyed by class name, so schema order is recovered from
-/// `P_BMM_CLASS.uid`, which the reader numbers in document order.
 fn schema_classes(schema: &PBmmSchema) -> impl Iterator<Item = &PBmmClass> {
     in_document_order(schema.primitive_types.as_ref())
         .into_iter()
@@ -367,9 +339,6 @@ fn check_overridden_property_conformance(
 
 /// The nearest ancestor of `class` that declares `property` itself, with that
 /// declaration.
-///
-/// `BMM_MODEL.all_ancestor_classes` walks breadth-first from the class, so the
-/// first hit is the nearest declaring ancestor.
 fn nearest_overridden<'a>(
     model: &'a BmmModel,
     class: &BmmClass,

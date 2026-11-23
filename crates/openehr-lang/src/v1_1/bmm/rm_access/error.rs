@@ -12,9 +12,6 @@
 //! repository-level ones the pipeline cannot see (an unreadable directory or
 //! file, a duplicate schema id, a load-list entry naming no schema, a lifecycle
 //! step run out of order).
-//!
-//! Every variant is a discriminant a caller can branch on; the display text is
-//! never a decision input.
 
 /// A BMM schema repository could not be scanned, a schema file could not be
 /// read, or a schema descriptor's lifecycle step failed.
