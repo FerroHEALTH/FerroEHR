@@ -118,14 +118,13 @@ pub struct FerroEhrConfig {
 }
 
 impl Default for FerroEhrConfig {
-    /// Every section's own default, except FerroEHR's `[server]`: the
-    /// listener on every interface at port 8080, the port the images expose,
-    /// a 64 MiB body ceiling, since the largest operational template in the
-    /// vendored CKM corpus is 5.4 MB, and gzip and Brotli request bodies
-    /// decoded, since compressing a commit is the client's choice (an IPS
-    /// commit is 128,474 B, 8,483 B in gzip). The loader layers this section
-    /// under the file ([`loader::loader`]), so a partial `[server]` table
-    /// keeps both. No openEHR spec governs configuration: our own design.
+    /// Every section's own default, except FerroEHR's `[server]`: the listener
+    /// on every interface at port 8080, the port the images expose, a 64 MiB
+    /// body ceiling above the largest operational template of the vendored CKM
+    /// corpus (5.4 MB), and gzip and Brotli request bodies decoded. The loader
+    /// layers this section under the file ([`loader::loader`]), so a partial
+    /// `[server]` table keeps both. No openEHR spec governs configuration: our
+    /// own design.
     fn default() -> Self {
         Self {
             deployment: profile::DeploymentConfig::default(),
@@ -194,9 +193,6 @@ impl FerroEhrConfig {
     /// Returns the redacted configuration as a TOML table, the tree
     /// `ferroehr report` records.
     ///
-    /// The table is [`Self::to_redacted_json`]'s tree, so every rendering
-    /// masks the same leaves the same way.
-    ///
     /// # Errors
     /// [`ConfigError`] if the tree cannot be serialized to TOML.
     pub fn to_redacted_table(&self) -> Result<toml::Table, ConfigError> {
@@ -211,16 +207,10 @@ impl FerroEhrConfig {
     /// snapshot with it; [`Self::to_redacted_table`] renders it. No openEHR spec governs
     /// configuration — our own design/extension.
     ///
-    /// Redaction is a property of the leaf type alone: every secret-bearing
-    /// field is typed `ferrohealth-secret`'s `Secret`, whose [`Serialize`]
-    /// writes `ferrohealth_secret::REDACTED`, or `SecretUrl`, whose
-    /// [`Serialize`] masks the URL `userinfo` and query. Every URL key that may
-    /// carry `userinfo` is a `SecretUrl`, and no pass over the tree or key-name
-    /// scan follows the types. An issuer is an identifier, refused at boot when
-    /// it carries `userinfo`. The `redacted_json_masks_every_secret_field` and
-    /// `url_userinfo_reaches_no_rendering` tests enumerate the secret and URL
-    /// keys. Non-secret identifiers, such as a Basic user's `user` and
-    /// `scopes`, an `issuer`, or `auth.jwks_file` (a path), stay visible.
+    /// Redaction is a property of the leaf type alone: every secret field is a
+    /// `ferrohealth-secret` `Secret`, whose [`Serialize`] writes
+    /// `ferrohealth_secret::REDACTED`, or a `SecretUrl`, which masks the URL
+    /// `userinfo` and query. Non-secret identifiers stay visible.
     ///
     /// # Errors
     /// [`ConfigError`] if the tree cannot be serialized to JSON.
@@ -232,9 +222,6 @@ impl FerroEhrConfig {
 
 /// Assemble the configuration from explicit inputs — the seam every test
 /// drives.
-///
-/// Reads the file, the environment map and the overrides through
-/// [`loader::loader`], then resolves every `*_file` secret sibling.
 ///
 /// # Errors
 /// [`ConfigErrors`] for an unreadable file, any refusal of the loader, and
@@ -578,16 +565,9 @@ mod tests {
     /// EVERY `Vec`-typed key an operator can set through the environment parses
     /// as a list.
     ///
-    /// A list-typed key missing from `alias::LIST_KEYS` is not mis-split — it is
-    /// REFUSED, `invalid type: string …, expected a sequence`, so its documented
-    /// env spelling is dead on arrival. Two shipped keys were in exactly that
-    /// state (`signing.retired_key_files`, the former `smart.endpoints.capabilities`) and
-    /// neither was noticed until a live deployment probe hit the boot refusal:
-    /// the value that carries a whole feature is only reachable from a TOML
-    /// file, which no test asserted and no reader could tell.
-    ///
-    /// Single-element values matter as much as multi-element ones: the refusal
-    /// fires on the TYPE, so even one path fails.
+    /// A list-typed key missing from `alias::LIST_KEYS` is refused as `invalid
+    /// type: string …, expected a sequence`, even with one element, so its
+    /// documented environment spelling would be dead.
     #[test]
     fn every_list_typed_key_parses_from_a_single_env_value() {
         let c = assemble_ok(

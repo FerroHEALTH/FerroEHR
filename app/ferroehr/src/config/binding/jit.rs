@@ -4,9 +4,6 @@
 //! `[[authz.party_binding.issuer]]`: how a `persons` issuer's tokens are
 //! read when a first login creates a provisional `PERSON`.
 //!
-//! The table names the claim the `userName` comes from and the one naming
-//! the identity provider.
-//!
 //! Whether a login is created is policy, held in the CDR: a
 //! `create_at_login` grant of the draft access terminology names the issuer and
 //! its admission conditions

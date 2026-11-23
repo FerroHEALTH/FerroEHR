@@ -3,22 +3,11 @@
 
 //! The strict check every `ACCESS_POLICY` passes before it is stored.
 //!
-//! It runs the canonical-JSON reader of the generated draft type, which refuses an
-//! undeclared, missing or duplicate member and an empty optional list, then
-//! the class invariants of the draft BMM
-//! ([`check_policy`]), the root rules of a
-//! `LOCATABLE` and of the `controller`, and that each sensitivity and
-//! category a classification names, each role, purpose, sensitivity,
-//! category and legal ground a controller rule names, each role and
-//! organisation type a conflict rule names, each legal ground
-//! of a restriction of the access log's subject view, each provision of
-//! the access log retention, and each care role, organisation type and actor
-//! scope of the bounds on care relationships, comes from the jurisdiction's
-//! terminology ([`ForeignCode`]), as do each care role an actor scope names
-//! and each of `care_purposes`; that `time_zone` names a zone of the IANA
-//! time zone database; that each period of `relationship_validity` adds to a
-//! date and `team_targets` does not name the controller; and that the access
-//! log retention is one the audit trail keeps records under
+//! It runs the strict canonical-JSON reader of the draft type, the class
+//! invariants of the draft BMM ([`check_policy`]) and the root rules, and
+//! requires every coded value a rule names to come from the jurisdiction's
+//! terminology ([`ForeignCode`]), `time_zone` to name an IANA zone, and the
+//! access log retention to be one the audit trail keeps records under
 //! ([`crate::access_policy::retention`]).
 //!
 //! The draft package is FerroEHR's change proposal and no openEHR release:

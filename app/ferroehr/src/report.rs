@@ -9,23 +9,6 @@
 //! market surveillance authority pass on "the data necessary for the
 //! identification of the EHR system concerned"; this document is that data for
 //! one deployment. No openEHR spec governs it — our own design.
-//!
-//! The parts are the build provenance with the manufacturer
-//! ([`BuildInfo`]), the platform the binary was built for, the enabled cargo
-//! features, the `openehr-*` crate versions linked, the licence summary
-//! `GET /management/status` serves, the deployment posture, the migration level of
-//! every schema, and the effective configuration. The [`Report::manifest`]
-//! names every part with its state, so a part that could not be read carries
-//! its reason rather than an empty value.
-//!
-//! **Nothing in it identifies a person.** It reads the build, the
-//! configuration, the cluster identities and the migration bookkeeping, never
-//! a clinical, demographic or audit relation. The configuration is the
-//! type-redacted tree
-//! ([`FerroEhrConfig::to_redacted_table`]), every URL `userinfo` masked by
-//! [`RedactedUrl`]; a database error quoted in a reason
-//! has every configured DSN's user name and password masked too, since a
-//! refused authentication names the role it tried.
 
 use std::time::Duration;
 
@@ -194,11 +177,6 @@ impl ManifestEntry {
 
 impl Report {
     /// Assembles the report for a loaded, validated configuration.
-    ///
-    /// Never fails: a part that cannot be read is named in the manifest with
-    /// its reason. The databases are read through the configured DSNs, the two
-    /// reads side by side and each bounded by 15 seconds, and nothing is
-    /// written.
     pub async fn gather(config: &FerroEhrConfig) -> Self {
         let scrubber = Scrubber::from_config(config);
         let mut manifest = vec![
@@ -357,13 +335,6 @@ enum DatabaseFailure {
 
 impl DatabaseFailure {
     /// The reason as the manifest states it, with every credential masked.
-    ///
-    /// A read is `unreachable` when no connection was ever made: a failure
-    /// only opening a connection produces
-    /// ([`crate::storage::error::session::is_connect_failure`], the storage bridge's own
-    /// connect-phase classifier), or a pool that handed out none within its
-    /// acquire timeout. Anything else failed on a connection that worked, so
-    /// the database is `unreadable`.
     fn describe(&self, scrubber: &Scrubber) -> String {
         match self {
             Self::TimedOut => format!(
@@ -490,9 +461,6 @@ impl Scrubber {
 
 /// Replaces every occurrence of `needle` in `text` that no identifier
 /// character adjoins with [`REDACTED`].
-///
-/// The adjacency rule keeps a runtime role such as `ferroehr_clinical` legible
-/// when the login user is `ferroehr`.
 fn mask_word(text: &str, needle: &str) -> String {
     if needle.is_empty() {
         return text.to_owned();

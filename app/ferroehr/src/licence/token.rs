@@ -4,8 +4,6 @@
 //! The token file: a cleartext-signed licence followed by the public
 //! certificate that signed it.
 //!
-//! One armored file, two blocks, in this order:
-//!
 //! 1. `-----BEGIN PGP SIGNED MESSAGE-----` … `-----END PGP SIGNATURE-----`:
 //!    the canonical licence JSON, signed by the issuer's primary key (RFC 9580
 //!    §7, the cleartext signature framework).
