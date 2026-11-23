@@ -18,8 +18,6 @@
 //! `specifications/docs/overview/Resources.md` §"XML Format" requires those
 //! documents to conform to the published XSDs.
 //!
-//! ## The schemas each profile is judged by
-//!
 //! - **nsv2:** `its-xml-2.0.0-nsv2/RM/latest/Demographic.xsd` for the
 //!   development profile and `RM/Release-1.1.0/Demographic.xsd` for the stable
 //!   one, each with the `BASE/latest/BaseTypes.xsd` its `DataTypes.xsd`
@@ -34,8 +32,6 @@
 //!   another root `xmlns`, which `the_nsv1_document_differs_only_by_the_namespace`
 //!   pins, so the nsv2 verdict is the only schema verdict a v1 demographic
 //!   document can have.
-//!
-//! ## The nsv2 `archetypeNodeId` facet
 //!
 //! The verbatim nsv2 bundle cannot be compiled (the pinned
 //! `nsv2_lineage_is_uncompilable_by_a_conformant_xsd_processor`): its

@@ -169,9 +169,6 @@ pub enum XmlError {
 
 impl XmlError {
     /// A parse failure that carries its underlying cause.
-    ///
-    /// `message` says what was being read; the cause stays reachable through
-    /// [`std::error::Error::source`] rather than being flattened into the text.
     pub fn parse_source(
         message: impl Into<String>,
         source: impl std::error::Error + Send + Sync + 'static,
@@ -278,9 +275,6 @@ impl XmlWriter {
     }
 
     /// Write a bare character-data node (XML-escaped by quick-xml).
-    ///
-    /// The mixed-content half of [`XmlAny`]: an element that carries both text
-    /// and children cannot go through [`XmlWriter::write_text_element`].
     ///
     /// # Errors
     /// Propagates the underlying writer error.
@@ -438,13 +432,6 @@ impl_to_xml_display!(bool, i32, i64, u8, char, f32);
 /// — e.g. `DV_QUANTITY/magnitude`), whose lexical space is defined by XML
 /// Schema Part 2 §3.2.5 (<https://www.w3.org/TR/xmlschema-2/#double>):
 ///
-/// * finite values are the `decimal`/scientific forms — the mantissa carries a
-///   decimal point, which is why a whole Real is written `120.0` and not `120`
-///   (Rust's `f64` `Display` drops the point);
-/// * the three special values have EXACTLY the spellings `INF`, `-INF` and
-///   `NaN` — `inf`/`-inf`/`NAN`, which `f64::to_string` produces, are not in
-///   the lexical space at all.
-///
 /// NOTE: the non-finite spellings are unreachable from canonical JSON
 /// (RFC 8259 admits no infinity/NaN literal) but reachable from a Rust-built
 /// RM value, where `f64::to_string` would emit a schema-invalid document —
@@ -487,12 +474,9 @@ impl ToXml for uuid::Uuid {
 }
 
 impl ToXml for serde_json::Value {
-    // SCOPE: the BMM-`Any` monomorphization the RM model keeps untyped —
-    // `OPENEHR_CONTENT_ITEM.item: X_VERSIONED_OBJECT<Any>`. It is not a
-    // concrete openEHR type and has no spec-defined canonical-XML shape, so
-    // the JSON value is emitted as element text rather than guessing one. The
-    // schema-declared open slots (`xs:anyType`) do NOT come here — they carry
-    // their subtree in [`XmlAny`].
+    // The BMM-`Any` monomorphization (`OPENEHR_CONTENT_ITEM.item`) has no
+    // canonical-XML shape, so its value is element text; `xs:anyType` slots use
+    // [`XmlAny`].
     fn write_xml(&self, w: &mut XmlWriter, tag: &str, _d: Option<&str>) -> Result<(), XmlError> {
         w.write_text_element(tag, &self.to_string())
     }
@@ -510,9 +494,6 @@ impl ToXml for serde_json::Value {
 /// (`xsi:type` among them), character data, and child elements in document
 /// order. `ToXml` writes the subtree back, so an `xs:anyType` payload survives
 /// a parse → serialize → parse cycle unchanged.
-///
-/// Element names arrive with any namespace prefix stripped, as everywhere else
-/// in this reader; attribute keys keep theirs.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct XmlAny {
     attrs: Vec<(String, String)>,
@@ -546,8 +527,6 @@ impl XmlAny {
 
     /// The `xsi:type` discriminator, if present, with any namespace prefix on
     /// the *value* stripped (`xsd:string` → `string`, `C_STRING` → `C_STRING`).
-    ///
-    /// The raw spelling stays reachable through [`XmlAny::attr`].
     #[must_use]
     pub fn xsi_type(&self) -> Option<&str> {
         self.attrs
@@ -727,10 +706,6 @@ pub enum XmlEvent {
 }
 
 /// Where an element sits in the document being read.
-///
-/// Its start tag as the author wrote it (name and `xsi:type`), its 1-based
-/// line and column, and its path from the root with 1-based sibling ordinals
-/// per element name.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Location {
     /// The element name.
@@ -761,15 +736,6 @@ impl std::fmt::Display for Location {
 
 /// The fix for an absent mandatory child the document's author can act on,
 /// appended to the refusal, or the empty string where there is none.
-///
-/// One absent element has such a fix: the `<value>` of a `DV_CODED_TEXT` under
-/// a `<symbol>`. The ITS-XML profile schema types `C_DV_ORDINAL.list` as the RM
-/// `DV_ORDINAL` (`its-xml-2.0.0-nsv2/AM/Release-1.4/OpenehrProfile.xsd`), whose `symbol`
-/// is a `DV_CODED_TEXT` with a mandatory `value`, so a symbol without the
-/// element is not a document the format admits. The value itself carries
-/// nothing: AOM 1.4 models the symbol as a `CODE_PHRASE` and the rubric is
-/// resolved from `term_definitions`, which is why an empty element is the
-/// remedy.
 fn missing_child_remedy(location: &Location, owner: &str, child: &str) -> &'static str {
     if location.element == "symbol" && owner == "DV_CODED_TEXT" && child == "value" {
         ". Add <value/> (empty is valid; the rubric is resolved from term_definitions; \
@@ -794,12 +760,6 @@ struct Frame {
 
 /// The element the reader closed most recently, kept as the facts a
 /// [`Location`] is derived from rather than as the `Location` itself.
-///
-/// The line, column and root path are computed in [`XmlReader::located`],
-/// because a refusal aborts the parse: at most one location is ever read, and
-/// resolving a byte offset to a line number costs a scan from the start of the
-/// document. Doing that on every close made a large document quadratic — a
-/// 1.9 MB operational template took 10 s to parse.
 struct ClosedElement {
     element: String,
     xsi_type: Option<String>,
@@ -813,11 +773,6 @@ struct ClosedElement {
 
 /// Reads canonical openEHR XML, yielding owned [`XmlEvent`]s. Empty elements are
 /// expanded to Start+End so callers only handle those four cases.
-///
-/// The reader keeps the stack of open elements and remembers the element it
-/// closed most recently, so a `FromXml` impl that finds a mandatory child
-/// absent once its element is fully read can say WHICH element, where, and
-/// under which class ([`XmlReader::missing_child`]).
 pub struct XmlReader<'a> {
     r: Reader<&'a [u8]>,
     src: &'a str,
@@ -829,31 +784,6 @@ pub struct XmlReader<'a> {
 }
 
 /// The deepest element nesting a document may reach.
-///
-/// This is a memory-safety bound, not a style preference. The generated
-/// `FromXml` impls descend one Rust stack frame per nesting level, and the RM is
-/// genuinely recursive — `CLUSTER.items` holds `Item`, which includes `CLUSTER`;
-/// `FOLDER` holds folders; `SECTION` holds sections — so a document of nested
-/// `<items xsi:type="CLUSTER">` elements recurses without bound. Depth was
-/// otherwise limited only by the accepted body size, which admits hundreds of
-/// thousands of levels: far past any thread stack.
-///
-/// A stack overflow in Rust is a guard-page fault that **aborts the process**.
-/// It is not an unwind, so `std::panic::catch_unwind` — and therefore the
-/// `tower-http` catch-panic layer this server relies on for its clean `500` —
-/// cannot intercept it. One request would take the process down for every
-/// caller. That is what makes a bound obligatory rather than defensive.
-///
-/// 256 is chosen against the model rather than picked: the deepest structure the
-/// RM composes — COMPOSITION → CONTENT_ITEM → SECTION → ENTRY → ITEM_STRUCTURE →
-/// CLUSTER → ELEMENT → DATA_VALUE, plus nested clusters — is tens of levels in
-/// the most elaborate real templates, and the canonical-JSON reader's own
-/// equivalent bound (`serde_json`'s 128) sits in the same order of magnitude.
-///
-/// An RM document meets the RM readers' own, lower limit first
-/// ([`openehr_base::nesting::MAX_RM_NESTING`], counted in RM objects by the
-/// generated `FromXml` impls); this element bound also covers the archetype
-/// and template documents this reader parses.
 ///
 /// No openEHR spec bounds document nesting — our own design.
 pub const MAX_DEPTH: u32 = 256;
@@ -1031,10 +961,8 @@ impl<'a> XmlReader<'a> {
                     };
                     return Ok(XmlEvent::Text(resolved.to_string()));
                 }
-                // A DOCTYPE is REFUSED, not skipped. It is inert today only
-                // because quick-xml parses no DTDs — a property of a dependency's
-                // current behaviour, which is the kind that changes silently.
-                // Canonical openEHR XML has no use for one.
+                // A DOCTYPE is refused: quick-xml parsing no DTDs is a
+                // dependency's behaviour, and canonical openEHR XML needs none.
                 Event::DocType(_) => {
                     return Err(XmlError::Parse(
                         "a DOCTYPE declaration is not accepted".into(),
@@ -1065,11 +993,8 @@ impl<'a> XmlReader<'a> {
 }
 
 fn to_start_tag(e: &BytesStart<'_>) -> Result<StartTag, XmlError> {
-    // Strip any namespace prefix on the *element* name (`ns2:language` →
-    // `language`) so name-based child dispatch matches regardless of a
-    // document's prefix convention (some OPT exports qualify every element).
-    // Attribute keys are left intact, since `xsi:type` dispatch keys on the
-    // `xsi:` prefix. A default-namespace (unprefixed) name is unaffected.
+    // Element names drop their namespace prefix so child dispatch ignores a
+    // document's prefix convention; attribute keys keep theirs for `xsi:type`.
     let qname = e.name();
     let raw = qname.as_ref();
     let name = raw.rsplit(':').next().unwrap_or(raw).to_string();
@@ -1110,11 +1035,6 @@ fn root_start(reader: &mut XmlReader<'_>) -> Result<StartTag, XmlError> {
 
 /// Deserialize a value from a document whose root element must be `root`.
 ///
-/// `root` is the global element the schema publishes for the type: for an
-/// operational template `<template>` of type `OPERATIONAL_TEMPLATE` (ITS-XML
-/// `components/AM/Release-1.4/Template.xsd`). The root is compared by local
-/// name, as every element is.
-///
 /// # Errors
 /// [`XmlError::UnexpectedRoot`] for another root element, and the parse
 /// errors of [`from_xml`].
@@ -1133,11 +1053,6 @@ pub fn from_xml_rooted<T: FromXml>(xml: &str, root: &str) -> Result<T, XmlError>
 
 /// Write a model `String` in the `OBJECT_ID` shape its schema slot names:
 /// `<tag><value>text</value></tag>`.
-///
-/// The generated writers call it for the fields the emitter's value-wrapped
-/// table names: a BASE 1.3.0 `TERMINOLOGY_CODE.terminology_id` is a `String`,
-/// while ITS-XML 1.0.2 types the slot `CODE_PHRASE`, whose `terminology_id` is
-/// a `TERMINOLOGY_ID` with one `value` element (BaseTypes.xsd).
 ///
 /// # Errors
 /// Propagates writer errors.
@@ -1176,11 +1091,6 @@ pub fn read_value_wrapped(reader: &mut XmlReader, start: &StartTag) -> Result<St
 }
 
 /// Read a tool-emitted extension element whose only accepted value is `false`.
-///
-/// The generated readers call it for the elements the emitter's extension
-/// allowlist names (`match_negated` on the C_ATTRIBUTE subtypes): no vendored
-/// ITS-XML schema declares them, and a `false` states the default, so it is
-/// read and dropped.
 ///
 /// # Errors
 /// [`XmlError::UnsupportedExtension`] for any value other than `false`, and the

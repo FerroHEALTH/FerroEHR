@@ -69,16 +69,6 @@ fn reserialize(ty: &str, json: &str) -> Result<serde_json::Value, String> {
 /// Compare re-serialized `output` against the original `input` for **semantic
 /// equality** (no data loss), tolerating the three deliberate, information-
 /// preserving differences between archie/EHRbase canonical JSON and ours:
-///
-/// 1. object key order (compared structurally, not textually);
-/// 2. fields we omit that the input stated as empty (`null` / `[]`) — our
-///    `OpenEhrType` serialize drops `None`/empty, which is equivalent;
-/// 3. fields we materialize that the input left implicit — the always-present
-///    `_type`, and the `Interval` `*_included`/`*_unbounded` flags at their
-///    canonical defaults.
-///
-/// Anything else — an input value we dropped, or a genuine value mismatch — is a
-/// real fidelity defect and is reported with its JSON path.
 fn semantic_eq(
     input: &serde_json::Value,
     output: &serde_json::Value,
@@ -183,10 +173,8 @@ fn generated_rm_reads_the_openehr_sdk_corpus() {
             excluded_count += 1;
             continue;
         }
-        // Only canonical single-RM-object roots (a top-level `_type`). A file
-        // that is NOT one is a registry decision, never a silent shape skip:
-        // absorbing it here is how an exclusion stops applying with no gate
-        // noticing (the drift this gate is unified against).
+        // Only canonical single-RM-object roots; any other file is a registry
+        // decision, never a silent skip.
         let Ok(serde_json::Value::Object(map)) = serde_json::from_str::<serde_json::Value>(&txt)
         else {
             failures.push((
@@ -197,10 +185,8 @@ fn generated_rm_reads_the_openehr_sdk_corpus() {
             ));
             continue;
         };
-        // A `_type`-less root is LEGAL when the declared slot is concrete; the
-        // class then comes from the corpus context, derived by
-        // `declared_root_type`. Neither present nor derivable = a gap to
-        // adjudicate, never a silent skip.
+        // A `_type`-less root is legal under a concrete slot, its class derived
+        // by `declared_root_type`; otherwise it is a gap to adjudicate.
         let Some(ty) = map
             .get("_type")
             .and_then(|v| v.as_str())

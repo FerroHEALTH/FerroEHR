@@ -108,13 +108,6 @@ impl Flattener<'_> {
 
     /// Applies a template's fills and narrowings to the attributes of a
     /// complex object of `archetype_id` whose type is `root_type`.
-    ///
-    /// The steps run in a fixed order: clones copied from the archetype's
-    /// node, then the attribute constraints the template adds, then the
-    /// redefinitions, then the placements, then the occurrence and existence
-    /// narrowings, then every removal, then the clones placed after their
-    /// node, so a slot can be filled and closed in one use and a clone never
-    /// makes a path of the node's own narrowings ambiguous.
     fn apply(
         &mut self,
         attributes: &mut Vec<CAttribute>,
@@ -748,10 +741,6 @@ struct Inlining<'a> {
 
 /// Replaces every `ARCHETYPE_INTERNAL_REF` below `attributes` by an inline
 /// copy of its target (OPT2 `master03-opt_raw.adoc` §Flattening).
-///
-/// `location` is where the attributes' owner sits now and `origin` where its
-/// content comes from in the archetype; `active` holds the targets being
-/// copied, so a reference that would copy itself forever is refused.
 fn inline_internal_refs(
     attributes: &mut [CAttribute],
     inlining: &Inlining<'_>,

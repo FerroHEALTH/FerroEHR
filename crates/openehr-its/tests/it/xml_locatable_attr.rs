@@ -89,8 +89,7 @@ fn ehr_access_archetype_node_id_is_attribute() {
 
 #[test]
 fn demographic_person_archetype_node_id_is_attribute() {
-    // PERSON → ACTOR → PARTY → LOCATABLE (v2 Demographic.xsd); previously
-    // uncovered by the v1 bundle (no demographic schema).
+    // PERSON → ACTOR → PARTY → LOCATABLE (v2 Demographic.xsd).
     // `PARTY.identities` is `1..*`
     // (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.party.adoc`
     // §Attributes), so a PERSON states at least one identity.
