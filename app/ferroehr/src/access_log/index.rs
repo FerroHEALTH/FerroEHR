@@ -45,6 +45,7 @@ pub(crate) const CURSOR: &str =
 
 /// The entries of the batch `($1, $2]`, as the renderer reads them, with the
 /// digest of the render policy an indexed entry is written under.
+#[cfg(feature = "fhir")]
 pub(crate) const ROWS: &str = "SELECT e.id AS chain_seq, e.content AS row_part, \
        sh.content AS shared_part, e.record_type AS entry_type, e.uid AS entry_uid, \
        e.time_recorded AS recorded_at, e.ehr_id AS entry_ehr, e.request_id, e.resource_id, \

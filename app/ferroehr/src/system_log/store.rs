@@ -891,20 +891,6 @@ impl AuditPage {
     }
 }
 
-impl AuditSearchFilter {
-    /// Whether a criterion of the filter is matched against the search
-    /// tokens of a record: `address` and the token parameters.
-    #[must_use]
-    pub fn names_tokens(&self) -> bool {
-        self.criteria.iter().any(|criterion| {
-            matches!(
-                criterion,
-                AuditCriterion::Address(_) | AuditCriterion::Element(..)
-            )
-        })
-    }
-}
-
 /// The ITI-81 retrieval the REST layer resolved: the `date` window, the
 /// criteria (every one must match, any of a criterion's values matches) and
 /// the page (`RESTful` ATNA §3.81.4.1.2.2).

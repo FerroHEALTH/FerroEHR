@@ -11,18 +11,21 @@
 //! `crate::access_log::index`'s. No specification governs audit storage: our
 //! own design.
 
-use std::collections::BTreeMap;
 #[cfg(feature = "fhir")]
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 #[cfg(feature = "fhir")]
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use sqlx::{Connection, PgConnection, Row};
+#[cfg(feature = "fhir")]
+use sqlx::Row;
+use sqlx::{Connection, PgConnection};
 
 use super::AuditStore;
-use crate::access_log::index::{BATCH, BOUNDS, COPY, CURSOR, LOCK, POLICIES, ROWS};
+#[cfg(feature = "fhir")]
+use crate::access_log::index::ROWS;
+use crate::access_log::index::{BATCH, BOUNDS, COPY, CURSOR, LOCK, POLICIES};
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
 #[cfg(feature = "fhir")]
@@ -47,9 +50,14 @@ pub(crate) struct CatchUp {
 #[cfg(feature = "fhir")]
 type Policies = BTreeMap<Vec<u8>, Arc<CompiledPolicy>>;
 
-/// A slim build renders no projection, so it keeps no policy.
+/// A slim build renders no projection, so it keeps the policies' digests
+/// alone.
 #[cfg(not(feature = "fhir"))]
-type Policies = BTreeMap<Vec<u8>, ()>;
+type Policies = std::collections::BTreeSet<Vec<u8>>;
+
+/// The ids of a batch's indexed entries and the text of each one's search
+/// tokens.
+type BatchTokens = (Vec<i64>, Vec<String>);
 
 impl AuditStore {
     /// Copy the entries past the index's cursor up to `upto`, the access
@@ -91,10 +99,12 @@ impl AuditStore {
         let mut policies = Policies::new();
         for digest in digests {
             #[cfg(feature = "fhir")]
-            let policy = self.policy(after, &digest).await?;
+            {
+                let policy = self.policy(after, &digest).await?;
+                policies.insert(digest, policy);
+            }
             #[cfg(not(feature = "fhir"))]
-            let policy = ();
-            policies.insert(digest, policy);
+            policies.insert(digest);
         }
         Ok(policies)
     }
@@ -124,14 +134,9 @@ impl AuditStore {
         if last <= after {
             return Ok(after);
         }
-        let rows = sqlx::query(ROWS)
-            .bind(after)
-            .bind(last)
-            .fetch_all(&mut *tx)
-            .await?;
         // NOTE: our own design (#6322), an entry whose policy the batch did not compile is never
         // indexed without its tokens: the batch is left uncommitted and read again.
-        let Some((ids, tokens)) = self.batch_tokens_of(&mut tx, &rows, policies).await? else {
+        let Some((ids, tokens)) = self.index_tokens(&mut tx, (after, last), policies).await? else {
             return Ok(after);
         };
         sqlx::query(COPY)
@@ -146,19 +151,25 @@ impl AuditStore {
         Ok(last)
     }
 
-    /// The ids of the indexed entries of `rows` and the text of the
-    /// `integer[]` of each one's search tokens, stored or found on `conn`;
-    /// `None` when an entry names a policy `policies` does not hold.
+    /// The ids of the indexed entries of the batch `(after, last]` and the
+    /// text of the `integer[]` of each one's search tokens, stored or found
+    /// on `conn`; `None` when an entry names a policy `policies` does not
+    /// hold.
     #[cfg(feature = "fhir")]
-    async fn batch_tokens_of(
+    async fn index_tokens(
         &self,
         conn: &mut PgConnection,
-        rows: &[sqlx::postgres::PgRow],
+        (after, last): (i64, i64),
         policies: &Policies,
-    ) -> Result<Option<(Vec<i64>, Vec<String>)>, AuditError> {
+    ) -> Result<Option<BatchTokens>, AuditError> {
+        let rows = sqlx::query(ROWS)
+            .bind(after)
+            .bind(last)
+            .fetch_all(&mut *conn)
+            .await?;
         let mut ids = Vec::with_capacity(rows.len());
         let mut tokens = Vec::with_capacity(rows.len());
-        for row in rows {
+        for row in &rows {
             let digest: Option<Vec<u8>> = row.try_get("render_policy")?;
             let Some(digest) = digest else {
                 continue;
@@ -181,13 +192,14 @@ impl AuditStore {
 
     /// A slim build renders no projection, so it indexes no search token.
     #[cfg(not(feature = "fhir"))]
-    async fn batch_tokens_of(
+    fn index_tokens(
         &self,
         _conn: &mut PgConnection,
-        _rows: &[sqlx::postgres::PgRow],
+        _batch: (i64, i64),
         _policies: &Policies,
-    ) -> Result<Option<(Vec<i64>, Vec<String>)>, AuditError> {
-        Ok(Some((Vec::new(), Vec::new())))
+    ) -> std::future::Ready<Result<Option<BatchTokens>, AuditError>> {
+        let _: &Self = self;
+        std::future::ready(Ok(Some((Vec::new(), Vec::new()))))
     }
 
     /// Moves the frontier and the search index past every access-log entry
@@ -243,6 +255,20 @@ impl AuditStore {
     #[must_use]
     pub fn catch_up_rounds(&self) -> u64 {
         self.catch_up.rounds.load(Ordering::Relaxed)
+    }
+}
+
+impl super::AuditSearchFilter {
+    /// Whether a criterion of the filter is matched against the search
+    /// tokens of a record: `address` and the token parameters.
+    #[must_use]
+    pub fn names_tokens(&self) -> bool {
+        self.criteria.iter().any(|criterion| {
+            matches!(
+                criterion,
+                super::AuditCriterion::Address(_) | super::AuditCriterion::Element(..)
+            )
+        })
     }
 }
 
