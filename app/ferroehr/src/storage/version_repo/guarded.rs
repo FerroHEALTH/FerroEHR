@@ -40,9 +40,12 @@ pub struct Guard {
     /// The promoted `ehr` columns an `EHR_STATUS` commit writes beside its
     /// version (#6257); `None` for any other write.
     pub status: Option<Box<StatusSync>>,
-    /// Whether the version is a new FOLDER hierarchy, which joins
-    /// `EHR.folders` in the same statement (RM ehr master04 §Folders, #6257).
-    pub folder: bool,
+    /// The rank a new FOLDER hierarchy takes in `EHR.folders`, the next after
+    /// the highest the gate read found, when the version is one; it joins in
+    /// the same statement (RM ehr master04 §Folders, #6257), and a hierarchy
+    /// another write added since takes that rank first, so `pk_ehr_folder`
+    /// refuses this one (#6318). `None` for any other write.
+    pub folder: Option<i32>,
     /// What a party commit's statement takes and writes beside its version
     /// (#6257); `None` for a write in the clinical domain.
     pub party: Option<Box<PartySync>>,
@@ -400,15 +403,14 @@ fn status_ctes(ehr: &str, first: usize) -> String {
 }
 
 /// The `ehr_folder` row of a new FOLDER hierarchy `vo` in EHR `ehr`, written
-/// once its version is, at the next rank as
-/// `commit::insert_ehr_folder_rank` writes it: two hierarchies that take one
-/// rank at once are refused by `pk_ehr_folder`.
-fn folder_cte(ehr: &str, vo: &str) -> String {
+/// once its version is, at `rank`, the rank its gate read judged next: a
+/// hierarchy committed since took that rank, so `pk_ehr_folder` refuses this
+/// one and the write is judged again (#6318).
+fn folder_cte(ehr: &str, vo: &str, rank: &str) -> String {
     format!(
         ", fm AS ( \
              INSERT INTO ehr_folder (ehr_id, rank, vo_id) \
-             SELECT {ehr}, (SELECT COALESCE(MAX(f.rank), 0) + 1 FROM ehr_folder f \
-                            WHERE f.ehr_id = {ehr}), {vo} FROM v \
+             SELECT {ehr}, {rank}::int, {vo} FROM v \
          )"
     )
 }
@@ -437,9 +439,9 @@ fn audit_cte(name: &str, first: usize, time: &str, from: &str) -> String {
 /// `$28` the expected head ordinal, `$29` the policy revision, `$30` the
 /// definition revision, `$31` the outbox envelope and `$32` the audit
 /// reservation, and the node arrays from `$33`, then for a `status` commit
-/// the columns of [`status_ctes`], and for a party commit the key-space gate
-/// flag and the reverse targets of [`party_ctes`]; `beside` names what else
-/// it writes. The
+/// the columns of [`status_ctes`], for a new FOLDER hierarchy its rank, and
+/// for a party commit the key-space gate flag and the reverse targets of
+/// [`party_ctes`]; `beside` names what else it writes. The
 /// audit insert reads from `g`, and every later insert from the audit's, so
 /// nothing is written unless every requirement holds; the last row names a
 /// flag per requirement.
@@ -450,7 +452,7 @@ pub(super) fn statement(beside: Beside) -> String {
             status_ctes("$7", after_nodes),
             ", (SELECT count(*) FROM en) AS notified",
         ),
-        Beside::Folder => (folder_cte("$7", "$8"), ""),
+        Beside::Folder => (folder_cte("$7", "$8", &format!("${after_nodes}")), ""),
         Beside::Party => (party_ctes("$8", "$22", after_nodes + 1, "v"), ""),
         Beside::Nothing => (String::new(), ""),
     };

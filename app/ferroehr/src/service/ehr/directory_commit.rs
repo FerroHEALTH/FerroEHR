@@ -20,6 +20,7 @@ use crate::service::response::ServiceResponse;
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Materials, Resolved, first_attempt};
 use crate::storage::version_repo::gate::{self, Ask, Gate, Shape, Target};
+use crate::storage::version_repo::guarded::Guard;
 use crate::validation::versioned::{item_ref_roots, judge_folder_item_refs, local_item_refs};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
@@ -92,6 +93,11 @@ impl FerroEhrService {
                             "EHR {ehr_id} already has a directory"
                         )));
                     }
+                    // NOTE: our own design (#6318), the hierarchy takes the rank after the gate
+                    // read's highest, so one committed since clashes on `pk_ehr_folder`.
+                    let rank = gate.folder_rank.checked_add(1).ok_or_else(|| {
+                        ServiceError::exception("the EHR's folder ranks are exhausted")
+                    })?;
                     let (folder, audit, envelope) = materials.take()?;
                     Ok(Write::new(
                         Some(ehr_id),
@@ -100,7 +106,10 @@ impl FerroEhrService {
                     )
                     .at(gate.now)
                     .gated(gate.restriction.clone())
-                    .guarded(guard_of(&gate, None)))
+                    .guarded(Guard {
+                        folder: Some(rank),
+                        ..guard_of(&gate, None)
+                    }))
                 }
             })
             .await?;
