@@ -220,11 +220,11 @@ pub fn serving(op: &'static str) {
 
 /// Counts `count` now, or, inside a ride, once its run is answered.
 pub fn defer(count: impl FnOnce() + Send + 'static) {
-    let mut count: Option<Deferred> = Some(Box::new(count));
+    let mut count = Some(count);
     // NOTE: tokio LocalKey::try_with, outside a ride every count is made at once.
     let _outside = RIDE.try_with(|ride| {
         if let Some(count) = count.take() {
-            ride.deferred.borrow_mut().push(count);
+            ride.deferred.borrow_mut().push(Box::new(count));
         }
     });
     if let Some(count) = count {

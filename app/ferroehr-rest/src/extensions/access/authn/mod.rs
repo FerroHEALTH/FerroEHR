@@ -599,37 +599,76 @@ pub fn current_principal() -> Option<Arc<Principal>> {
 
 /// The authentication and RBAC middleware, attached to the API router; the
 /// public endpoints are mounted outside it.
-pub(crate) async fn middleware(
+///
+/// A request that may ride (#6320) and one that may not each run in an
+/// allocation of their own size: the state of a ride never enlarges the
+/// request that cannot ride.
+pub(crate) fn middleware(
     State(layer): State<AuthLayer>,
     req: Request,
     next: Next,
-) -> Response {
+) -> std::pin::Pin<Box<dyn Future<Output = Response> + Send>> {
+    let bodiless = axum::body::HttpBody::size_hint(req.body()).exact() == Some(0);
+    if layer.authenticator.enabled() && req.method() == http::Method::GET && bodiless {
+        let f = riding(layer, req, next);
+        eprintln!("DBGSZ riding={}", std::mem::size_of_val(&f));
+        Box::pin(f)
+    } else {
+        let f = served(layer, req, next);
+        eprintln!("DBGSZ served={}", std::mem::size_of_val(&f));
+        Box::pin(f)
+    }
+}
+
+/// The request `req` authenticated and served once.
+async fn served(layer: AuthLayer, req: Request, mut next: Next) -> Response {
     let auth = &layer.authenticator;
     if !auth.enabled() {
         return REQUEST_PRINCIPAL.scope(None, next.run(req)).await;
     }
+    // Each part of the request is moved into the run before it is awaited, so this future keeps
+    // no second copy of any.
+    let run = {
+        let (parts, body) = req.into_parts();
+        let access = match auth.verify(&parts).await {
+            Ok(access) => access,
+            Err(e) => return refusal::refusal_of(auth, &parts.headers, &e),
+        };
+        decided(&layer, access, Request::from_parts(parts, body), &mut next)
+    };
+    run.await
+}
+
+/// The bodiless `GET` `req` authenticated once and, on a service whose
+/// clinical statements can read the party store's revisions, served as a
+/// ride, so it can run again whole.
+async fn riding(layer: AuthLayer, req: Request, mut next: Next) -> Response {
+    let auth = &layer.authenticator;
     let (parts, body) = req.into_parts();
     let access = match auth.verify(&parts).await {
         Ok(access) => access,
         Err(e) => return refusal::refusal_of(auth, &parts.headers, &e),
     };
-    let bodiless = axum::body::HttpBody::size_hint(&body).exact() == Some(0);
-    if !rides(&layer, &parts, bodiless).await {
-        return Box::pin(decided(&layer, access, Request::from_parts(parts, body), next)).await;
+    if !matches!(layer.service.party_door_open().await, Ok(true)) {
+        return Box::pin(decided(&layer, access, Request::from_parts(parts, body), &mut next)).await;
     }
     // NOTE: our own design (#6320), a ride decides on the party copies as they stand, and its
     // answer leaves only once they held the store's revisions its clinical statement read.
+    // The rerun keeps the request's extensions (its matched route and request id), never a body.
     let again = parts.clone();
-    // Boxed, as each run of `decided` is: the run is large, so this future holds none of it.
-    let (resp, ridden) = Box::pin(ferroehr::party_binding::request::ride(decided(
+    let rf = ferroehr::party_binding::request::ride(Box::pin(decided(
         &layer,
         access.clone(),
         Request::from_parts(parts, body),
-        next.clone(),
-    )))
-    .await;
-    let op = ridden.op().unwrap_or("unnamed");
-    if matches!(layer.service.ride_held(ridden).await, Ok(true)) {
+        &mut next,
+    )));
+    eprintln!("DBGSZ ride={} access={} parts={}", std::mem::size_of_val(&rf), std::mem::size_of_val(&access), std::mem::size_of_val(&again));
+    let (resp, ridden) = rf.await;
+    let hf = layer.service.ride_held(ridden);
+    eprintln!("DBGSZ held={}", std::mem::size_of_val(&hf));
+    let ridden = hf;
+    let op = "x";
+    if matches!(ridden.await, Ok(true)) {
         return resp;
     }
     // NOTE: our own design (#6320), the run the store overtook leaves nothing: its answer and
@@ -641,23 +680,15 @@ pub(crate) async fn middleware(
         &layer,
         access,
         Request::from_parts(again, axum::body::Body::empty()),
-        next,
+        &mut next,
     ))
     .await
 }
 
-/// Whether the request of `parts` rides (#6320): a `GET` without a body, on a
-/// service whose clinical statements can read the party store's revisions,
-/// so it can run again whole.
-async fn rides(layer: &AuthLayer, parts: &Parts, bodiless: bool) -> bool {
-    parts.method == http::Method::GET
-        && bodiless
-        && matches!(layer.service.party_door_open().await, Ok(true))
-}
 
 /// The request of the verified `access` bound, granted, gated and served:
 /// everything of it that rests on the party copies.
-async fn decided(layer: &AuthLayer, access: Access, mut req: Request, next: Next) -> Response {
+async fn decided(layer: &AuthLayer, access: Access, mut req: Request, next: &mut Next) -> Response {
     let (auth, live) = (&layer.authenticator, layer.service.grants());
     match auth.bind(access).await {
         Ok(Authenticated { principal, fresh }) => {
@@ -741,7 +772,7 @@ async fn decided(layer: &AuthLayer, access: Access, mut req: Request, next: Next
                                 Some(committer),
                                 Box::pin(portal::as_patient(
                                     patient,
-                                    grants::scoped(live, granted, next.run(req)),
+                                    grants::scoped(live, granted, onward(next, req)),
                                 )),
                             ),
                         ),
@@ -756,6 +787,15 @@ async fn decided(layer: &AuthLayer, access: Access, mut req: Request, next: Next
             resp
         }
         Err(e) => refusal::refusal_of(auth, req.headers(), &e),
+    }
+}
+
+/// The rest of the stack run on `req`, through `next` without spending it,
+/// so a ride's rerun takes the same `next` (#6320).
+async fn onward(next: &mut Next, req: Request) -> Response {
+    match tower::Service::call(next, req).await {
+        Ok(resp) => resp,
+        Err(never) => match never {},
     }
 }
 
