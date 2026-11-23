@@ -2337,3 +2337,88 @@ async fn a_placed_commit_costs_its_projection_alone() {
     assert!(head(&placed) <= head(&twin) + 64, "{report}");
     assert!(placed_allocations <= twin_allocations + 4, "{report}");
 }
+
+/// A read under an episode scope selects the head's episodes in the
+/// statement it already runs (#6416): no round trip and no nested statement
+/// more, the one column's value on the wire, at most 16 bytes, and at most
+/// two allocations more. Each side is judged on its second window.
+#[tokio::test]
+async fn a_read_under_an_episode_scope_selects_one_column_more() {
+    let counter = Counter::default();
+    let _guard =
+        tracing::subscriber::set_default(tracing_subscriber::registry().with(counter.clone()));
+    ferroehr::aql::sql::without_reference_cells();
+    let (_db, pool, _svc, app, pools, wire) = Box::pin(super::wired()).await;
+    for extension in ["pg_stat_statements", "pg_walinspect"] {
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "CREATE EXTENSION IF NOT EXISTS {extension}"
+        )))
+        .execute(&pool)
+        .await
+        .expect("the extension");
+    }
+    super::wal::kept(&pool).await;
+    let world = World::build(&app).await;
+    let window = |path| {
+        Box::pin(measure(
+            &app,
+            &pool,
+            &pools,
+            Some(&wire),
+            &world,
+            &counter,
+            path,
+        ))
+    };
+    let mut plain = Measure::default();
+    for _ in 0..2 {
+        plain = window(Path::ReadJson).await;
+    }
+    let scope: openehr_rm::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings =
+        serde_json::from_value(serde_json::json!({
+            "_type": "ACCESS_DIRECTIVE_SETTINGS",
+            "default_access": { "_type": "DV_CODED_TEXT", "value": "open",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
+                    "code_string": "open" } },
+            "directives": [{
+                "_type": "ACCESS_DIRECTIVE",
+                "name": { "_type": "DV_TEXT", "value": "an episode" },
+                "archetype_node_id": "at0001",
+                "kind": { "_type": "DV_CODED_TEXT", "value": "restriction",
+                    "defining_code": { "_type": "CODE_PHRASE",
+                        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
+                        "code_string": "restriction" } },
+                "effect": { "_type": "DV_CODED_TEXT", "value": "deny",
+                    "defining_code": { "_type": "CODE_PHRASE",
+                        "terminology_id": { "_type": "TERMINOLOGY_ID",
+                            "value": "HL7_ConsentProvisionType" },
+                        "code_string": "deny" } },
+                "emergency_override": false,
+                "data": [{ "_type": "ACCESS_DATA_SCOPE", "episodes": [{
+                    "_type": "DV_IDENTIFIER", "issuer": "urn:example:hospital", "id": "D-4" }] }]
+            }]
+        }))
+        .expect("the settings decode");
+    ferroehr::access_eval::episodes::note_settings(&scope);
+    assert!(ferroehr::access_eval::episodes::selected());
+    let mut scoped = Measure::default();
+    for _ in 0..2 {
+        scoped = window(Path::ReadJson).await;
+    }
+    let (plain_wire, scoped_wire) = (median(&plain.wire_each), median(&scoped.wire_each));
+    let (plain_allocations, scoped_allocations) = (plain.low(|a| a.count), scoped.low(|a| a.count));
+    let report = format!(
+        "plain: {} round trips, {} nested, {plain_wire} wire B, {plain_allocations} allocations\n\
+         scoped: {} round trips, {} nested, {scoped_wire} wire B, {scoped_allocations} allocations",
+        plain.round_trips, plain.nested, scoped.round_trips, scoped.nested,
+    );
+    eprintln!("{report}");
+    assert_eq!(scoped.round_trips, plain.round_trips, "{report}");
+    assert_eq!(scoped.nested, plain.nested, "{report}");
+    assert!(
+        scoped_wire > plain_wire && scoped_wire <= plain_wire + 16,
+        "{report}"
+    );
+    assert!(scoped_allocations <= plain_allocations + 2, "{report}");
+}
