@@ -73,10 +73,13 @@ const COMMITS_AFTER: [&str; 8] = [
 
 /// The reads that confirm their policy copies after they ran: each one's
 /// clinical statement selects the policy and definition revisions beside its
-/// rows, the version read of an EHR object and the AQL statement of a query
-/// a request judges, and a party read's party statement selects them through
-/// the clinical door where the two domains share a database (#6320).
-const READS_AFTER: [&str; 15] = [
+/// rows, the version read of an EHR object, the AQL statement of a query a
+/// request judges and the page of an ITI-81 search where the audit store
+/// shares the clinical database, and a party read's party statement selects
+/// them through the clinical door where the two domains share a database
+/// (#6320).
+const READS_AFTER: [&str; 16] = [
+    "audit_event_search",
     "person_get",
     "agent_get",
     "group_get",

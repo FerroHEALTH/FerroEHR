@@ -12,9 +12,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use ferroehr::access_log::frontier::Frontier;
-use ferroehr::access_log::intake::{
-    GroupWriter, IndexRow, IntakeEntry, IntakeToken, Named, take_in,
-};
+use ferroehr::access_log::intake::{IntakeEntry, take_in};
 use sqlx::{Connection, PgPool};
 
 use crate::access_log_checkpoint::{checkpoints, entry, generate_key, keyring};
@@ -35,16 +33,9 @@ pub(crate) async fn write(pool: &PgPool, numbers: impl Iterator<Item = u32>) {
         let mut conn = pool.acquire().await.expect("a connection");
         let mut tx = conn.begin().await.expect("begin");
         let intake = IntakeEntry::of(&mut entry(n, SYSTEM, EHR), None).expect("a stored form");
-        take_in(
-            &mut tx,
-            &[intake],
-            &[],
-            None,
-            &BTreeSet::new(),
-            &Named::default(),
-        )
-        .await
-        .expect("the intake write");
+        take_in(&mut tx, &[intake], None, &BTreeSet::new())
+            .await
+            .expect("the intake write");
         tx.commit().await.expect("commit");
     }
 }
@@ -242,120 +233,4 @@ async fn a_seal_written_past_the_sealer_is_found() {
         .await
         .expect("the verifier");
     assert!(!findings.is_empty(), "the stray seal is found");
-}
-
-/// An entry `n` with an index row under the render policy `policy`, and its
-/// one search token.
-fn indexed(n: u32, policy: &[u8]) -> (IntakeEntry, Vec<IntakeToken>) {
-    let index = IndexRow {
-        action: "R",
-        outcome: 0,
-        principal: None,
-        patient_id: None,
-        resource_id: None,
-        request_id: None,
-        client_ip: None,
-        ehr_id: None,
-        search_tokens: String::new(),
-        render_policy: policy.to_vec(),
-    };
-    let intake = IntakeEntry::of(&mut entry(n, SYSTEM, EHR), Some(index)).expect("a stored form");
-    let token = IntakeToken {
-        parameter: "purpose",
-        system: Some("urn:example:generation".to_owned()),
-        code: Some("TREAT".to_owned()),
-        shares: false,
-    };
-    (intake, vec![token])
-}
-
-/// The search token ids the entry `n` names.
-async fn named_tokens(pool: &PgPool, n: u32) -> Vec<i32> {
-    sqlx::query_scalar(
-        "SELECT search_tokens FROM audit.access_log_entry \
-         WHERE uid = $1::uuid",
-    )
-    .bind(entry(n, SYSTEM, EHR).uid.value().to_owned())
-    .fetch_one(pool)
-    .await
-    .expect("the entry")
-}
-
-/// The gathered writer names a known token by id with no lookup, and when
-/// retention has moved the store's generation the plain write is refused
-/// (`FE001`), the writer forgets every id, and the entry is written once with
-/// the token the store holds (#6242).
-#[tokio::test]
-async fn a_write_naming_ids_of_an_old_generation_is_written_again() {
-    let testdb = testkit::db().await.expect("testkit database");
-    let pool = testdb.pool();
-    let policy: Vec<u8> = sqlx::query_scalar("SELECT audit.register_render_policy('{}'::jsonb)")
-        .fetch_one(&pool)
-        .await
-        .expect("a render policy");
-    let writer = GroupWriter::spawn(&pool);
-    for n in [1, 2] {
-        let (intake, tokens) = indexed(n, &policy);
-        writer
-            .write(vec![intake], vec![tokens])
-            .await
-            .expect("the entry is written");
-    }
-    let first = named_tokens(&pool, 1).await;
-    assert_eq!(first.len(), 1, "the entry names its one token");
-    assert_eq!(
-        named_tokens(&pool, 2).await,
-        first,
-        "the second names it by id"
-    );
-
-    let refused = sqlx::query("SELECT audit.access_log_token_generation_holds(-1)")
-        .execute(&pool)
-        .await
-        .expect_err("an old generation is refused");
-    assert_eq!(
-        refused
-            .as_database_error()
-            .and_then(|error| error.code().map(std::borrow::Cow::into_owned)),
-        Some("FE001".to_owned())
-    );
-
-    owner_moves_the_generation(&pool).await;
-    let (intake, tokens) = indexed(3, &policy);
-    writer
-        .write(vec![intake], vec![tokens])
-        .await
-        .expect("the entry is written after the generation moved");
-    assert_eq!(
-        named_tokens(&pool, 3).await,
-        first,
-        "the token the store holds"
-    );
-    let entries: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_entry")
-        .fetch_one(&pool)
-        .await
-        .expect("the count");
-    assert_eq!(entries, 3, "each entry once");
-}
-
-/// Moves the store's token generation, as retention does when it deletes a
-/// token.
-#[expect(
-    clippy::disallowed_methods,
-    reason = "a test moves the generation on a raw pool connection, as only the owner can"
-)]
-async fn owner_moves_the_generation(pool: &PgPool) {
-    let mut conn = pool.acquire().await.expect("connection");
-    let mut tx = conn.begin().await.expect("begin");
-    for statement in [
-        "ALTER TABLE audit.audit_search_token_generation DISABLE TRIGGER USER",
-        "UPDATE audit.audit_search_token_generation SET generation = generation + 1",
-        "ALTER TABLE audit.audit_search_token_generation ENABLE TRIGGER USER",
-    ] {
-        sqlx::query(statement)
-            .execute(&mut *tx)
-            .await
-            .expect("the generation moves");
-    }
-    tx.commit().await.expect("commit");
 }

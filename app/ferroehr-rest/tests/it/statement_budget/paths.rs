@@ -24,8 +24,12 @@
 //! one, and the server records the changes it makes itself
 //! (`ferroehr::telemetry::conversion`). The allocations are counted on the
 //! thread that polls the request, so the audit runtime's threads do not
-//! count; the peak is the most the request held at once. Both are judged on
-//! the lower-quartile request of the measured ones ([`Measure::low`]).
+//! count; the peak is the most the request held at once. The allocations
+//! are judged per request over the measured window
+//! ([`Measure::per_request`]), the peak on the lower-quartile request
+//! ([`Measure::low`]). The domain pools hold one warm connection each and
+//! every request starts past the caches' upkeep interval ([`settle`]), so
+//! each request meets the same state.
 //!
 //! The bytes a request moves over the database wire are counted on their own
 //! run, through a relay that splits the protocol messages by statement
@@ -55,6 +59,8 @@ use tracing::field::{Field, Visit};
 use tracing_subscriber::layer::{Context, SubscriberExt as _};
 use tracing_subscriber::registry::LookupSpan;
 
+use ferroehr::db::domain::{Domain, DomainPools};
+
 use super::{CHAINER_RELEASE, calls, counted, drained};
 use crate::access_evaluator_http::{credential, ehr_with_composition};
 use crate::common::{self, BASE, FHIR};
@@ -67,6 +73,16 @@ pub(super) const WARM: u64 = 3;
 
 /// The EHRs the paths spread over, each with one IPS composition.
 const EHRS: usize = 5;
+
+/// The pages [`World::page`] reads before the records [`Path::Iti81`] serves
+/// end, each writing one of them.
+const PAGE_OWN: usize = 10;
+
+/// The pause before each measured request, past the 300 ms after which a
+/// `moka` cache runs its pending tasks on its next read (moka 0.12
+/// `LOG_SYNC_INTERVAL_MILLIS`), so every request meets each cache in that
+/// one state.
+const SETTLE: std::time::Duration = std::time::Duration::from_millis(400);
 
 /// The span each measured request runs in.
 const PATH_SPAN: &str = "hot_path_budget_request";
@@ -479,292 +495,292 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
-        allocations: 18_029,
+        allocations: 17_017,
         peak_bytes: 1_530_778,
         round_trips: 4,
-        nested: 9,
+        nested: 0,
         notifies: 0,
-        wal: 187_300,
+        wal: 187_262,
     },
     Budget {
         path: Path::CommitXml,
         conversions: 5,
-        allocations: 39_451,
+        allocations: 39_104,
         peak_bytes: 1_533_031,
         round_trips: 4,
-        nested: 10,
+        nested: 0,
         notifies: 0,
-        wal: 187_629,
+        wal: 187_591,
     },
     Budget {
         path: Path::CommitFlat,
         conversions: 5,
-        allocations: 32_612,
+        allocations: 31_314,
         peak_bytes: 1_528_525,
         round_trips: 4,
-        nested: 9,
+        nested: 0,
         notifies: 0,
-        wal: 188_099,
+        wal: 188_061,
     },
     Budget {
         path: Path::ReadJson,
         conversions: 0,
-        allocations: 1318,
+        allocations: 907,
         peak_bytes: 617_268,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 858,
+        wal: 775,
     },
     Budget {
         path: Path::ReadXml,
         conversions: 2,
-        allocations: 10_795,
+        allocations: 10_196,
         peak_bytes: 1_017_140,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 858,
+        wal: 775,
     },
     Budget {
         path: Path::ReadFlat,
         conversions: 2,
-        allocations: 15_512,
+        allocations: 14_835,
         peak_bytes: 1_634_407,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 858,
+        wal: 775,
     },
     Budget {
         path: Path::EhrRead,
         conversions: 1,
-        allocations: 1113,
-        peak_bytes: 100_250,
+        allocations: 780,
+        peak_bytes: 79_269,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 642,
+        wal: 575,
     },
     Budget {
         path: Path::AqlSingle,
         conversions: 2,
-        allocations: 2443,
+        allocations: 1786,
         peak_bytes: 118_273,
-        round_trips: 2,
-        nested: 1,
+        round_trips: 3,
+        nested: 0,
         notifies: 0,
-        wal: 1881,
+        wal: 1758,
     },
     Budget {
         path: Path::AqlPopulation,
         conversions: 2,
-        allocations: 3295,
+        allocations: 2436,
         peak_bytes: 158_823,
-        round_trips: 1,
-        nested: 1,
+        round_trips: 2,
+        nested: 0,
         notifies: 0,
-        wal: 5178,
+        wal: 4762,
     },
     Budget {
         path: Path::Iti81,
         conversions: 0,
-        allocations: 8962,
+        allocations: 8856,
         peak_bytes: 624_026,
-        round_trips: 3,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
-        wal: 617,
+        wal: 567,
     },
     Budget {
         path: Path::PartyRead,
         conversions: 0,
         allocations: 1058,
         peak_bytes: 78_848,
-        round_trips: 6,
-        nested: 2,
+        round_trips: 7,
+        nested: 1,
         notifies: 0,
-        wal: 1055,
+        wal: 1035,
     },
     Budget {
         path: Path::CommitContribution,
         conversions: 6,
-        allocations: 18_282,
-        peak_bytes: 1_649_934,
+        allocations: 17_275,
+        peak_bytes: 1_509_372,
         round_trips: 4,
-        nested: 10,
+        nested: 0,
         notifies: 0,
-        wal: 188_738,
+        wal: 188_700,
     },
     Budget {
         path: Path::ReadAtTime,
         conversions: 0,
-        allocations: 1329,
+        allocations: 1002,
         peak_bytes: 701_748,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 858,
+        wal: 775,
     },
     Budget {
         path: Path::CommitStatus,
         conversions: 4,
-        allocations: 1529,
+        allocations: 1217,
         peak_bytes: 147_242,
-        round_trips: 5,
-        nested: 7,
+        round_trips: 4,
+        nested: 0,
         notifies: 1,
-        wal: 4773,
+        wal: 4725,
     },
     Budget {
         path: Path::ReadStatus,
         conversions: 0,
-        allocations: 1182,
-        peak_bytes: 102_503,
+        allocations: 838,
+        peak_bytes: 80_973,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 763,
+        wal: 703,
     },
     Budget {
         path: Path::CommitParty,
         conversions: 8,
         allocations: 1713,
         peak_bytes: 125_972,
-        round_trips: 14,
-        nested: 10,
+        round_trips: 12,
+        nested: 3,
         notifies: 1,
-        wal: 6622,
+        wal: 6511,
     },
     Budget {
         path: Path::AqlMatches,
         conversions: 2,
-        allocations: 5703,
+        allocations: 3867,
         peak_bytes: 192_267,
-        round_trips: 2,
-        nested: 1,
+        round_trips: 3,
+        nested: 0,
         notifies: 0,
-        wal: 5638,
+        wal: 5274,
     },
     Budget {
         path: Path::AqlParty,
         conversions: 2,
         allocations: 2626,
         peak_bytes: 107_199,
-        round_trips: 6,
-        nested: 2,
+        round_trips: 8,
+        nested: 0,
         notifies: 0,
-        wal: 1064,
+        wal: 1027,
     },
     Budget {
         path: Path::CommitPartyScored,
         conversions: 8,
         allocations: 2200,
         peak_bytes: 140_901,
-        round_trips: 14,
-        nested: 11,
+        round_trips: 12,
+        nested: 3,
         notifies: 1,
-        wal: 9191,
+        wal: 9062,
     },
     Budget {
         path: Path::ReadVersion,
         conversions: 0,
-        allocations: 1324,
+        allocations: 997,
         peak_bytes: 162_800,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 842,
+        wal: 775,
     },
     Budget {
         path: Path::CommitUpdate,
         conversions: 5,
-        allocations: 17_758,
+        allocations: 17_058,
         peak_bytes: 1_525_458,
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 186_794,
+        wal: 186_756,
     },
     Budget {
         path: Path::CommitDelete,
         conversions: 2,
-        allocations: 1544,
-        peak_bytes: 150_537,
+        allocations: 1163,
+        peak_bytes: 135_002,
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 4357,
+        wal: 4205,
     },
     Budget {
         path: Path::DirectoryCreate,
         conversions: 5,
-        allocations: 1576,
+        allocations: 1264,
         peak_bytes: 150_606,
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 5882,
+        wal: 5645,
     },
     Budget {
         path: Path::DirectoryUpdate,
         conversions: 4,
-        allocations: 1551,
+        allocations: 1238,
         peak_bytes: 152_696,
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 4788,
+        wal: 4740,
     },
     Budget {
         path: Path::DirectoryDelete,
         conversions: 2,
-        allocations: 1418,
+        allocations: 1116,
         peak_bytes: 144_129,
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 4201,
+        wal: 4013,
     },
     Budget {
         path: Path::PartyUpdate,
         conversions: 8,
-        allocations: 1954,
+        allocations: 1962,
         peak_bytes: 129_641,
         round_trips: 12,
-        nested: 4,
+        nested: 3,
         notifies: 1,
-        wal: 6599,
+        wal: 6407,
     },
     Budget {
         path: Path::PartyDelete,
         conversions: 2,
-        allocations: 1568,
+        allocations: 1588,
         peak_bytes: 112_950,
         round_trips: 12,
-        nested: 4,
+        nested: 3,
         notifies: 1,
-        wal: 4316,
+        wal: 4191,
     },
     Budget {
         path: Path::CommitOrganisation,
         conversions: 8,
-        allocations: 1566,
+        allocations: 1571,
         peak_bytes: 126_183,
         round_trips: 10,
-        nested: 1,
+        nested: 0,
         notifies: 0,
-        wal: 6710,
+        wal: 6691,
     },
     Budget {
         path: Path::CommitGroup,
         conversions: 8,
-        allocations: 1565,
-        peak_bytes: 126_027,
+        allocations: 1566,
+        peak_bytes: 125_084,
         round_trips: 10,
-        nested: 1,
+        nested: 0,
         notifies: 0,
-        wal: 6689,
+        wal: 6495,
     },
     Budget {
         path: Path::CommitRole,
@@ -772,17 +788,17 @@ const BUDGETS: [Budget; 31] = [
         allocations: 2139,
         peak_bytes: 126_256,
         round_trips: 19,
-        nested: 6,
+        nested: 5,
         notifies: 0,
-        wal: 7012,
+        wal: 6808,
     },
     Budget {
         path: Path::CommitAgent,
         conversions: 8,
-        allocations: 1550,
+        allocations: 1557,
         peak_bytes: 126_026,
         round_trips: 10,
-        nested: 1,
+        nested: 0,
         notifies: 0,
         wal: 6582,
     },
@@ -835,37 +851,37 @@ pub(super) fn order() -> impl Iterator<Item = Path> {
 /// matches query and 587 on a read, measured beside the merge base, and each
 /// of those ceilings fell by its path's figure.
 const WIRE_BUDGETS: [(Path, u64); 31] = [
-    (Path::CommitJson, 201_836),
-    (Path::CommitXml, 201_979),
-    (Path::CommitFlat, 201_974),
-    (Path::ReadJson, 131_081),
-    (Path::ReadXml, 131_081),
-    (Path::ReadFlat, 131_081),
-    (Path::EhrRead, 1802),
-    (Path::AqlSingle, 4821),
-    (Path::AqlPopulation, 6487),
-    (Path::Iti81, 27_438),
-    (Path::PartyRead, 5524),
-    (Path::CommitContribution, 202_796),
-    (Path::ReadAtTime, 131_111),
-    (Path::CommitStatus, 5543),
-    (Path::ReadStatus, 3113),
-    (Path::CommitParty, 8513),
-    (Path::AqlMatches, 15_992),
-    (Path::AqlParty, 11_509),
-    (Path::CommitPartyScored, 10_861),
-    (Path::ReadVersion, 2748),
-    (Path::CommitUpdate, 202_260),
-    (Path::CommitDelete, 4563),
-    (Path::DirectoryCreate, 4955),
-    (Path::DirectoryUpdate, 4765),
-    (Path::DirectoryDelete, 4122),
-    (Path::PartyUpdate, 9406),
-    (Path::PartyDelete, 7957),
-    (Path::CommitOrganisation, 7778),
-    (Path::CommitGroup, 7608),
-    (Path::CommitRole, 11_481),
-    (Path::CommitAgent, 7586),
+    (Path::CommitJson, 201_604),
+    (Path::CommitXml, 201_604),
+    (Path::CommitFlat, 201_600),
+    (Path::ReadJson, 130_833),
+    (Path::ReadXml, 130_833),
+    (Path::ReadFlat, 130_833),
+    (Path::EhrRead, 1554),
+    (Path::AqlSingle, 4525),
+    (Path::AqlPopulation, 6137),
+    (Path::Iti81, 26_758),
+    (Path::PartyRead, 5290),
+    (Path::CommitContribution, 202_061),
+    (Path::ReadAtTime, 130_864),
+    (Path::CommitStatus, 4498),
+    (Path::ReadStatus, 2759),
+    (Path::CommitParty, 8251),
+    (Path::AqlMatches, 15_636),
+    (Path::AqlParty, 11_338),
+    (Path::CommitPartyScored, 10_603),
+    (Path::ReadVersion, 1683),
+    (Path::CommitUpdate, 201_885),
+    (Path::CommitDelete, 4076),
+    (Path::DirectoryCreate, 4783),
+    (Path::DirectoryUpdate, 4594),
+    (Path::DirectoryDelete, 3951),
+    (Path::PartyUpdate, 9179),
+    (Path::PartyDelete, 7730),
+    (Path::CommitOrganisation, 7569),
+    (Path::CommitGroup, 7398),
+    (Path::CommitRole, 11_193),
+    (Path::CommitAgent, 7378),
 ];
 
 /// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round
@@ -1058,8 +1074,11 @@ pub(super) struct World {
     person: String,
     /// The PERSON with two ordinals and two scales in its details.
     scored: String,
-    /// An instant after every fixture commit.
+    /// An instant after every fixture commit, at microsecond width.
     at: String,
+    /// The instant the records [`Path::Iti81`] pages through end at, set
+    /// right before its requests ([`Self::page`]).
+    page_at: Mutex<String>,
     /// The `EHR_STATUS` a status commit writes, without its `uid`.
     status: String,
     /// The current `EHR_STATUS` version uid of each EHR, which the next status
@@ -1178,7 +1197,7 @@ impl World {
             party: object_id(&headers),
             scored: scored(&person),
             person,
-            at: jiff::Timestamp::now().to_string(),
+            at: ferroehr::system_log::content_digest::instant(jiff::Timestamp::now()),
             update_uids: Mutex::new(
                 ehrs.iter()
                     .map(|(_, vo)| format!("{vo}::{}::1", system_id(&status_uids)))
@@ -1188,6 +1207,7 @@ impl World {
             status: status_body,
             status_uids: Mutex::new(status_uids),
             judged: Mutex::new(Vec::new()),
+            page_at: Mutex::new(String::new()),
             deletable: Mutex::new(Vec::new()),
             directories: Mutex::new(Vec::new()),
             parties: Mutex::new(Vec::new()),
@@ -1271,6 +1291,7 @@ impl World {
         path: Path,
     ) {
         match path {
+            Path::Iti81 => self.page(app).await,
             Path::ReadVersion => self.judge_on_objects(app, svc).await,
             Path::CommitDelete => self.deletable(app).await,
             Path::DirectoryCreate => self.directories(app).await,
@@ -1286,6 +1307,31 @@ impl World {
             let (status, headers, body) = plain(app, &self.call(path, n)).await;
             assert!(status.is_success(), "{}: {status} {body}", path.name());
             self.observe(path, n, &headers);
+        }
+    }
+
+    /// Writes the records of [`PAGE_OWN`] pages, and ends the records
+    /// [`Path::Iti81`] serves there: its own ten and the population query's
+    /// ten newest, the same twenty on every request.
+    async fn page(&self, app: &Router) {
+        for _ in 0..PAGE_OWN {
+            let (status, _, body) = plain(app, &Self::iti81(None)).await;
+            assert_eq!(status, StatusCode::OK, "a page: {body}");
+        }
+        *self.page_at.lock().unwrap() =
+            ferroehr::system_log::content_digest::instant(jiff::Timestamp::now());
+    }
+
+    /// An ITI-81 page of the records up to `upto`, or of every record.
+    fn iti81(upto: Option<&str>) -> Call {
+        let upto = upto.map_or_else(String::new, |at| format!("&date=le{at}"));
+        Call {
+            method: "GET",
+            uri: format!("{FHIR}/AuditEvent?date=ge2026-01-01{upto}&_count=20"),
+            user: "root",
+            accept: "application/fhir+json",
+            headers: Vec::new(),
+            body: None,
         }
     }
 
@@ -1337,7 +1383,7 @@ impl World {
     /// Builds the EHRs of [`Path::ReadVersion`]: each restricts an object it
     /// does not hold, so its settings name an object and a read of its
     /// composition by version id is judged on the object's own row (#5959)
-    /// and read from the version copy (#5778).
+    /// and read from the version copy (#5778), which one read of each fills.
     async fn judge_on_objects(&self, app: &Router, svc: &ferroehr::service::FerroEhrService) {
         let mut judged = Vec::new();
         for _ in 0..EHRS {
@@ -1354,6 +1400,10 @@ impl World {
             judged.push((ehr, version));
         }
         *self.judged.lock().unwrap() = judged;
+        for n in 0..EHRS {
+            let (status, _, body) = plain(app, &self.read_version(n)).await;
+            assert_eq!(status, StatusCode::OK, "a read that fills the copy: {body}");
+        }
     }
 
     /// The system id the server stamps into the version uids it writes.
@@ -1523,11 +1573,7 @@ impl World {
             Path::AqlParty => aql(serde_json::json!({
                 "q": "SELECT p/uid/value, p/name/value FROM PERSON p LIMIT 20",
             })),
-            Path::Iti81 => get(
-                format!("{FHIR}/AuditEvent?date=ge2026-01-01&_count=20"),
-                "root",
-                "application/fhir+json",
-            ),
+            Path::Iti81 => Self::iti81(Some(&self.page_at.lock().unwrap())),
             Path::PartyRead => get(
                 format!("{BASE}/demographic/person/{}", self.party),
                 "root",
@@ -1683,6 +1729,16 @@ struct Measure {
 }
 
 impl Measure {
+    /// The window's `figure` per request: a buffer or block one request
+    /// grows serves the next, so the window's sum is what each request owes.
+    fn per_request(&self, figure: impl Fn(&Allocated) -> u64) -> u64 {
+        self.each
+            .iter()
+            .map(figure)
+            .sum::<u64>()
+            .div_euclid(REQUESTS)
+    }
+
     /// The lower-quartile request's `figure`, the third smallest of ten.
     ///
     /// A request handed a pool connection whose buffers have not grown to
@@ -1836,10 +1892,26 @@ async fn updates_in_place(pool: &PgPool, from: &str, to: &str) -> u64 {
     u64::try_from(updates).expect("a count")
 }
 
+/// Waits [`SETTLE`], then takes and returns the connection of each domain
+/// pool, so the measured request meets it idle for less than the pool's
+/// idle probe (`ferroehr::db::pool::IDLE_PROBE`) and sends no probe of its
+/// own.
+async fn settle(pools: &DomainPools) {
+    tokio::time::sleep(SETTLE).await;
+    for domain in Domain::ALL {
+        drop(
+            ferroehr::db::acquire::acquire(pools.get(domain))
+                .await
+                .expect("the kept connection"),
+        );
+    }
+}
+
 /// Measures [`REQUESTS`] requests of `path`.
 async fn measure(
     app: &Router,
     pool: &PgPool,
+    pools: &DomainPools,
     wire: Option<&super::wire::Wire>,
     world: &World,
     counter: &Counter,
@@ -1859,6 +1931,7 @@ async fn measure(
     for n in 0..REQUESTS {
         let n = usize::try_from(WARM + n).unwrap();
         let call = world.call(path, n);
+        settle(pools).await;
         let mut allocated = Allocated::default();
         let (status, headers, body) = Measured {
             inner: Box::pin(
@@ -1980,12 +2053,12 @@ fn judged(measured: u64, ceiling: u64) -> (bool, String) {
     (measured <= ceiling, format!("{measured} (<= {ceiling})"))
 }
 
-/// Whether the allocation ceilings gate this build: they are the figures
-/// Linux CI measures, and the same paths allocate a few more times elsewhere.
+/// Whether the allocation and peak ceilings gate this build: they are the
+/// figures Linux CI measures, and another allocator counts and holds more.
 // NOTE: #6338 chose Linux-only allocation gates; other platforms print the figures.
-const ALLOCATIONS_GATED: bool = cfg!(target_os = "linux");
+pub(super) const ALLOCATIONS_GATED: bool = cfg!(target_os = "linux");
 
-/// [`judged`] for an allocation count, which passes off Linux and reports
+/// [`judged`] for an allocation count or a peak, which passes off Linux and reports
 /// the measured figure beside its ceiling there.
 fn judged_allocations(measured: u64, ceiling: u64) -> (bool, String) {
     if ALLOCATIONS_GATED {
@@ -2003,6 +2076,7 @@ fn judged_allocations(measured: u64, ceiling: u64) -> (bool, String) {
 async fn measure_all(
     app: &Router,
     pool: &PgPool,
+    pools: &DomainPools,
     svc: &ferroehr::service::FerroEhrService,
     wire: Option<&super::wire::Wire>,
     counter: &Counter,
@@ -2021,7 +2095,7 @@ async fn measure_all(
     for budget in &BUDGETS {
         let path = budget.path;
         world.prepare(app, svc, path).await;
-        let m = Box::pin(measure(app, pool, wire, &world, counter, path)).await;
+        let m = Box::pin(measure(app, pool, pools, wire, &world, counter, path)).await;
         measured.push((budget, m));
     }
     measured
@@ -2036,8 +2110,8 @@ async fn every_hot_path_stays_within_its_budget() {
         tracing::subscriber::set_default(tracing_subscriber::registry().with(counter.clone()));
     // The budgets count what a release build does, without the debug reference cells.
     ferroehr::aql::sql::without_reference_cells();
-    let (_db, pool, svc, app) = Box::pin(super::served()).await;
-    let measured = Box::pin(measure_all(&app, &pool, &svc, None, &counter)).await;
+    let (_db, pool, svc, app, pools) = Box::pin(super::steady()).await;
+    let measured = Box::pin(measure_all(&app, &pool, &pools, &svc, None, &counter)).await;
     let mut report = String::from(
         "path | conversions | audit renders | allocations | alloc KiB | peak KiB | round trips | nested | notifies | WAL B\n",
     );
@@ -2046,8 +2120,8 @@ async fn every_hot_path_stays_within_its_budget() {
     let mut over = Vec::new();
     for (budget, m) in &measured {
         let path = budget.path;
-        let allocations = m.low(|a| a.count);
-        let kib = m.low(|a| a.bytes).div_euclid(1024);
+        let allocations = m.per_request(|a| a.count);
+        let kib = m.per_request(|a| a.bytes).div_euclid(1024);
         let peak = m.low(|a| u64::try_from(a.peak.max(0)).unwrap());
         let cells = [
             ("conversions", judged(m.conversions(), budget.conversions)),
@@ -2055,7 +2129,7 @@ async fn every_hot_path_stays_within_its_budget() {
                 "allocations",
                 judged_allocations(allocations, budget.allocations),
             ),
-            ("peak bytes", judged(peak, budget.peak_bytes)),
+            ("peak bytes", judged_allocations(peak, budget.peak_bytes)),
             ("round trips", judged(m.round_trips, budget.round_trips)),
             ("nested statements", judged(m.nested, budget.nested)),
             ("notifies", judged(m.notifies, budget.notifies)),
@@ -2121,8 +2195,16 @@ async fn every_hot_path_stays_within_its_wire_budget() {
     let _guard =
         tracing::subscriber::set_default(tracing_subscriber::registry().with(counter.clone()));
     ferroehr::aql::sql::without_reference_cells();
-    let (_db, pool, svc, app, wire) = Box::pin(super::wired()).await;
-    let measured = Box::pin(measure_all(&app, &pool, &svc, Some(&wire), &counter)).await;
+    let (_db, pool, svc, app, pools, wire) = Box::pin(super::wired()).await;
+    let measured = Box::pin(measure_all(
+        &app,
+        &pool,
+        &pools,
+        &svc,
+        Some(&wire),
+        &counter,
+    ))
+    .await;
     let mut report = String::from("path | wire B | sent B | received B\n");
     let mut ledgers = String::new();
     let mut over = Vec::new();

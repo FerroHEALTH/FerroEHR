@@ -11,7 +11,7 @@ use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
 /// The default and maximum period of the care relationships one entry covers.
 ///
-/// A relationship written without an end takes the default period from its start; one longer than the maximum is refused. An entry with neither period lets the relationships it covers stay open.
+/// A relationship written without an end takes the default period from its start; one longer than the maximum is refused. An entry with neither period lets the relationships it covers stay open. An entry may also require the relationships it covers to name an episode of care.
 #[doc(alias = "ACCESS_RELATIONSHIP_VALIDITY")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AccessRelationshipValidity {
@@ -23,4 +23,6 @@ pub struct AccessRelationshipValidity {
     pub default_period: Option<DvDuration>,
     /// The longest period a relationship may have.
     pub max_period: Option<DvDuration>,
+    /// Whether a relationship the entry covers must name an `episode`; one written without it is refused. Void means false.
+    pub episode_required: Option<bool>,
 }

@@ -35,10 +35,9 @@ REVOKE ALL ON FUNCTION
     fold_access_log_imported(p_now timestamp with time zone, p_limit integer),
     access_log_intake_unknown(p_what text, p_digest text, p_removed boolean),
     access_log_intake_part_gone(p_digest text),
-    access_log_token_generation_holds(p_generation bigint),
-    access_log_intake_take(p_record_types text[], p_uids text[], p_times text[], p_contents text[], p_shared text[], p_digests text[], p_ehr_ids text[], p_party_ids text[], p_retain_until text[], p_action_terminologies text[], p_action_codes text[], p_result_terminologies text[], p_result_codes text[], p_actions text[], p_outcomes smallint[], p_principals text[], p_patient_ids text[], p_resource_ids text[], p_request_ids text[], p_client_ips text[], p_index_ehr_ids text[], p_search_tokens text[], p_policies bytea[], p_shared_digests text[], p_shared_contents text[], p_token_entries integer[], p_token_parameters text[], p_token_systems text[], p_token_codes text[], p_token_shares boolean[], p_reserved_by uuid, p_token_digests bytea[], p_token_generation bigint),
     audit_intake_release(p_ids uuid[]),
-    audit_intake_discard(p_ids uuid[])
+    audit_intake_discard(p_ids uuid[]),
+    access_log_search(p_cursor bigint)
     FROM PUBLIC;
 
 DO $$
@@ -69,9 +68,9 @@ BEGIN
             delivery_frontier,
             delivery_cursor,
             delivery_parked,
-            access_log_search,
             system_search,
             audit_record,
+            access_log_by_key,
             access_trail
             TO ferroehr_clinical_reader;
         GRANT SELECT, INSERT ON TABLE
@@ -84,9 +83,9 @@ BEGIN
             access_log_imported_record,
             access_log_imported_bundle,
             access_log_imported_folded,
-            access_log_search,
             system_search,
             audit_record,
+            access_log_by_key,
             access_trail
             TO ferroehr_clinical;
         GRANT EXECUTE ON FUNCTION
@@ -100,12 +99,12 @@ BEGIN
             fold_access_log_imported(p_now timestamp with time zone, p_limit integer),
             access_log_intake_unknown(p_what text, p_digest text, p_removed boolean),
             access_log_intake_part_gone(p_digest text),
-            access_log_token_generation_holds(p_generation bigint),
             delivery_park_undelivered(p_chain text, p_records bigint[], p_reason text),
-            access_log_intake_take(p_record_types text[], p_uids text[], p_times text[], p_contents text[], p_shared text[], p_digests text[], p_ehr_ids text[], p_party_ids text[], p_retain_until text[], p_action_terminologies text[], p_action_codes text[], p_result_terminologies text[], p_result_codes text[], p_actions text[], p_outcomes smallint[], p_principals text[], p_patient_ids text[], p_resource_ids text[], p_request_ids text[], p_client_ips text[], p_index_ehr_ids text[], p_search_tokens text[], p_policies bytea[], p_shared_digests text[], p_shared_contents text[], p_token_entries integer[], p_token_parameters text[], p_token_systems text[], p_token_codes text[], p_token_shares boolean[], p_reserved_by uuid, p_token_digests bytea[], p_token_generation bigint),
             audit_intake_release(p_ids uuid[]),
             audit_intake_discard(p_ids uuid[])
             TO ferroehr_clinical;
+        GRANT EXECUTE ON FUNCTION access_log_search(p_cursor bigint)
+            TO ferroehr_clinical, ferroehr_clinical_reader;
         GRANT SELECT, UPDATE ON TABLE delivery_frontier TO ferroehr_clinical;
         GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE delivery_cursor, delivery_parked
             TO ferroehr_clinical;

@@ -42,6 +42,7 @@ schema = [
 ]
 
 [dependencies]
+futures.workspace = true
 ferrohealth-secret = { workspace = true }
 schemars = { workspace = true, optional = true }
 ferrohealth-server = { workspace = true, features = ["otlp", "platform-verifier", "reqwest"] }
@@ -180,9 +181,6 @@ fhir-types.workspace = true
 # report v2 JSON Schema (`corpus/ferropulse/`).
 jsonschema.workspace = true
 testcontainers.workspace = true
-# `futures` drives the bounded-concurrency seeding streams of the benches and
-# the stream doubles of the decommission tests.
-futures.workspace = true
 tokio.workspace = true
 axum.workspace = true
 tower.workspace = true

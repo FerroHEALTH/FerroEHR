@@ -39,11 +39,15 @@ h|*0..1*
 a|The systems the data came from, as `FEEDER_AUDIT_DETAILS._system_id_` or the committing system's `_system_id_` records them.
 
 h|*0..1*
+|*episodes*: `xref:{class_list}[List]<xref:data_types:basic_package.adoc#_dv_identifier_class[DV_IDENTIFIER]>`
+a|The episodes of care the data are placed in, each the `DV_IDENTIFIER` (`_issuer_` and `_id_`) of an `episode` element in the `_other_context_` of a composition's `EVENT_CONTEXT`, compared by issuer and id. Data placed in no episode match no entry.
+
+h|*0..1*
 |*recorded*: `xref:data_types:quantity_package.adoc#_dv_interval_class[DV_INTERVAL]<xref:data_types:date_time_package.adoc#_dv_date_time_class[DV_DATE_TIME]>`
 a|When the data were committed.
 
 h|*Invariants*
-2+a|__Not_empty__: `objects /= Void or templates /= Void or archetypes /= Void or categories /= Void or sensitivities /= Void or confidentialities /= Void or origins /= Void or recorded /= Void`
+2+a|__Not_empty__: `objects /= Void or templates /= Void or archetypes /= Void or categories /= Void or sensitivities /= Void or confidentialities /= Void or origins /= Void or episodes /= Void or recorded /= Void`
 
 h|
 2+a|__Objects_valid__: `objects /= Void implies not objects.is_empty`
@@ -65,5 +69,8 @@ h|
 
 h|
 2+a|__Origins_valid__: `origins /= Void implies not origins.is_empty`
+
+h|
+2+a|__Episodes_valid__: `episodes /= Void implies not episodes.is_empty`
 
 |===

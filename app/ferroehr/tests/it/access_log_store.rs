@@ -89,6 +89,15 @@ async fn tamper(pool: &PgPool, statements: &[&str]) {
         .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
         .await
         .expect("sealed before the change");
+    let sealed: i64 =
+        sqlx::query_scalar("SELECT last_id FROM audit.access_log_seal_state WHERE singleton")
+            .fetch_one(pool)
+            .await
+            .expect("the seal state");
+    AuditStore::new(pool.clone())
+        .index_access_log(sealed)
+        .await
+        .expect("indexed before the change");
     let mut conn = pool.acquire().await.expect("connection");
     let mut tx = conn.begin().await.expect("begin");
     for table in ["access_log_entry"] {

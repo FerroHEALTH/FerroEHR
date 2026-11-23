@@ -416,9 +416,6 @@ impl AccessLogStore {
             AuditChain::AccessLog => reached.access_log,
             AuditChain::System => reached.system,
         };
-        if log.chain == AuditChain::AccessLog {
-            self.index_to(upto).await?;
-        }
         loop {
             match self.seal_to(log, upto).await? {
                 SealRound::Busy => tokio::time::sleep(std::time::Duration::from_millis(2)).await,

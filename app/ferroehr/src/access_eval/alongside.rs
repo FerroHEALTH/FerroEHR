@@ -39,8 +39,8 @@ tokio::task_local! {
 }
 
 /// Runs `body` with a slot for one registered read.
-pub async fn scope<F: Future>(body: F) -> F::Output {
-    READ.scope(RefCell::new(None), body).await
+pub fn scope<F: Future>(body: F) -> impl Future<Output = F::Output> {
+    READ.scope(RefCell::new(None), body)
 }
 
 /// Registers `read`, used as `uses` says, for the decision to run beside its

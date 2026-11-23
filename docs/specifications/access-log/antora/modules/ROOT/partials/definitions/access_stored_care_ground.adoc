@@ -4,7 +4,7 @@ h|*Class*
 2+^h|*ACCESS_STORED_CARE_GROUND*
 
 h|*Description*
-2+a|A stored care relationship an access rested on: its carer, the version that holds it, whether the grace after its end admitted the access, the carer it covers for and the provider in whose care it is.
+2+a|A stored care relationship an access rested on: its carer, the version that holds it, whether the grace after its end admitted the access, the carer it covers for, the provider in whose care it is and the episode it is scoped to.
 
 h|*Inherit*
 2+|`xref:access_log:access_log_package.adoc#_access_care_ground_class[ACCESS_CARE_GROUND]`
@@ -32,6 +32,10 @@ a|The carer the relationship's target replaces, as its `covers_for` element name
 h|*1..1*
 |*provider*: `xref:data_types:basic_package.adoc#_dv_identifier_class[DV_IDENTIFIER]`
 a|The healthcare provider in whose care the relationship is, as its `provider` element names it.
+
+h|*0..1*
+|*episode*: `xref:data_types:basic_package.adoc#_dv_identifier_class[DV_IDENTIFIER]`
+a|The episode of care the relationship is scoped to, as its `episode` element names it. Void when it names none.
 
 h|*Invariants*
 2+a|__Path_valid__: `terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_care_path, path.defining_code) and not path.defining_code.code_string.is_equal ("attested")`

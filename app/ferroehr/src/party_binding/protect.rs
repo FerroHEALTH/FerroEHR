@@ -79,22 +79,22 @@ pub struct Rekey {
 
 /// Runs `fut` as the administrator re-key `change`: a commit inside it may
 /// change that one `PERSON`'s binding key from `change.from` to `change.to`.
-pub async fn rekey<F: Future>(change: Rekey, fut: F) -> F::Output {
-    REKEY.scope(change, fut).await
+pub fn rekey<F: Future>(change: Rekey, fut: F) -> impl Future<Output = F::Output> {
+    REKEY.scope(change, fut)
 }
 
 /// Runs `fut` as a request of the SCIM client whose `binding_issuer` is
 /// `binding_issuer`: a commit inside it may write the protected parties that
 /// client owns.
-pub async fn provisioning<F: Future>(binding_issuer: String, fut: F) -> F::Output {
-    PROVISIONER.scope(binding_issuer, fut).await
+pub fn provisioning<F: Future>(binding_issuer: String, fut: F) -> impl Future<Output = F::Output> {
+    PROVISIONER.scope(binding_issuer, fut)
 }
 
 /// Runs `fut` as a request of the patient whose `PERSON` is `subject`: a
 /// commit inside it may write a standalone representation of that `PERSON`,
 /// the authorisation of a proxy, and no other relationship.
-pub async fn patient<F: Future>(subject: Uuid, fut: F) -> F::Output {
-    PATIENT.scope(subject, fut).await
+pub fn patient<F: Future>(subject: Uuid, fut: F) -> impl Future<Output = F::Output> {
+    PATIENT.scope(subject, fut)
 }
 
 /// The `PERSON` the running request's patient is ([`patient`]), `None`
