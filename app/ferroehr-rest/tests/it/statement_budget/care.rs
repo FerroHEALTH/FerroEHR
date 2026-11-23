@@ -88,9 +88,11 @@ const COMMIT: Ceiling = Ceiling {
 /// the team's census and its patients' record subjects again; the commit
 /// now applies the stamped parties' facts it reads anyway to the copy, with
 /// the care relationships read in place of the stamped teams, so the pair
-/// takes 50. The other counts are the commit's.
+/// takes 50. The other counts are the commit's. With the commit judged on
+/// one gate read and committed behind one guarded statement (#6257), the
+/// pair takes 35, measured twice.
 const RECARE: Ceiling = Ceiling {
-    round_trips: 50,
+    round_trips: 35,
     nested: COMMIT.nested + CASELOAD.nested,
     notifies: COMMIT.notifies + CASELOAD.notifies,
     wal: COMMIT.wal + CASELOAD.wal,
