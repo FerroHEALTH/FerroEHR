@@ -113,6 +113,23 @@ impl Builder<'_> {
         aliases
     }
 
+    /// Append the hidden policy and definition revisions, read from the
+    /// view `request_revisions` at the statement's snapshot, so a request
+    /// that confirms its policy copies after it ran checks them against the
+    /// revisions in force beside the rows it was served (#6320). Each is an
+    /// uncorrelated scalar subquery, the same on every row, so it changes
+    /// neither a `DISTINCT` nor a grouping.
+    pub(super) fn build_revision_columns(&mut self) {
+        self.q.expr_as(
+            Expr::cust("(SELECT rr.policy FROM request_revisions rr)"),
+            Alias::new(super::POLICY_REVISION_COL),
+        );
+        self.q.expr_as(
+            Expr::cust("(SELECT rr.definitions FROM request_revisions rr)"),
+            Alias::new(super::DEFINITION_REVISION_COL),
+        );
+    }
+
     fn emit_select_column(&mut self, i: usize, col: &SelectColumn) -> Result<ColumnSpec, AqlError> {
         let name = col.alias.clone().unwrap_or_else(|| format!("#{i}"));
         match &col.value {

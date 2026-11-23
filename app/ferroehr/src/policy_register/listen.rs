@@ -161,6 +161,7 @@ impl Listened {
         self.drop_all().await;
         self.mark_stale();
         self.listening.store(true, Ordering::Release);
+        self.wake.notify_waiters();
     }
 
     /// A notification of `payload` arrived on the channel.
@@ -243,6 +244,12 @@ impl Listened {
         self.listening.load(Ordering::Acquire)
     }
 
+    /// Wait until the listener is connected, at most `within`; whether it
+    /// is.
+    pub async fn listening_within(&self, within: Duration) -> bool {
+        self.woken_until(within, Self::is_listening).await
+    }
+
     /// The notifications this replica has received.
     #[must_use]
     pub fn notifications(&self) -> u64 {
@@ -252,10 +259,17 @@ impl Listened {
     /// Wait until this replica has received more than `seen` notifications,
     /// at most `within`; whether it has.
     pub async fn notified_after(&self, seen: u64, within: Duration) -> bool {
+        self.woken_until(within, |listened| listened.notifications() > seen)
+            .await
+    }
+
+    /// Wait until `holds` of this listener, looking again at each wake, at
+    /// most `within`; whether it holds.
+    async fn woken_until(&self, within: Duration, holds: impl Fn(&Self) -> bool) -> bool {
         tokio::time::timeout(within, async {
             loop {
                 let woken = self.wake.notified();
-                if self.notifications() > seen {
+                if holds(self) {
                     return;
                 }
                 woken.await;
