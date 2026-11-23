@@ -56,9 +56,6 @@ pub const REPRESENTS: &str = "represents";
 pub const CLIENT_ID: &str = "client_id";
 
 /// The SQL/JSON path that holds exactly when `policy_content` finds content.
-///
-/// `mark_stored` tests each version's body with it, and a test runs it and
-/// the content test over one set of bodies.
 pub const POLICY_PATH: &str = "$ ? (\
 exists($.**?(@._type == \"CAPABILITY\").credentials.**?(@._type == \"DV_CODED_TEXT\" \
 && @.defining_code.terminology_id.value == \"openehr_access\")) \
