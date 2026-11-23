@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! The `master03` string-escape decoder (`LANG/docs/odin/master03-basics.adoc`):
-//! `\uHHHH` and `\uHHHHHHHH` (§File Encoding) and `\r \n \t \\ \" \'`
-//! (§Special Character Sequences); "Any other character combination starting
-//! with a backslash is illegal".
+//! The `master03` string-escape decoder.
+//!
+//! `LANG/docs/odin/master03-basics.adoc`: `\uHHHH` and `\uHHHHHHHH` (§File
+//! Encoding) and `\r \n \t \\ \" \'` (§Special Character Sequences); "Any other
+//! character combination starting with a backslash is illegal".
 //!
 //! NOTE: §Special Character Sequences' closing sentence would ban the `\u`
 //! forms §File Encoding sanctions; the specific rule governs.

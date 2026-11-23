@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! `COMPOSITION` invariants
-//! (`org.openehr.rm.composition.composition.adoc` §Invariants):
-//! `Is_archetype_root` and `Archetype_node_id_valid` in `composition_core`;
-//! `Content_valid` by the `NonEmptyVec` type; `Category_validity`,
-//! `Territory_valid` and `Language_valid` in `validate::terminology`.
+//! `COMPOSITION` invariants.
+//!
+//! `org.openehr.rm.composition.composition.adoc` §Invariants: `Is_archetype_root`
+//! and `Archetype_node_id_valid` in `composition_core`; `Content_valid` by the
+//! `NonEmptyVec` type; `Category_validity`, `Territory_valid` and
+//! `Language_valid` in `validate::terminology`.
 
 use crate::v1_2::composition::composition::Composition;
 use openehr_base::validate::{InvariantViolation, Validate};

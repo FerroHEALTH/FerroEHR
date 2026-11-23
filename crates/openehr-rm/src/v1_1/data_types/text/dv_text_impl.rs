@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! `DV_TEXT` and `DV_CODED_TEXT` invariants (RM 1.2.0
-//! `org.openehr.rm.data_types.dv_text.adoc`): `Valid_value` and
+//! `DV_TEXT` and `DV_CODED_TEXT` invariants.
+//!
+//! RM 1.2.0 `org.openehr.rm.data_types.dv_text.adoc`: `Valid_value` and
 //! `Formatting_valid`. `Mappings_valid` is checked on the JSON body;
 //! `Language_valid` and `Encoding_valid` are terminology-bound.
 

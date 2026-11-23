@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! `EXTRACT_UPDATE_SPEC` invariants (RM 1.2.0
-//! `org.openehr.rm.ehr_extract.extract_update_spec.adoc`): `Overall_validity`
-//! in the generated core; `Trigger_events_validity` by the `NonEmptyVec` type.
-//! `Send_changes_only_validity` names an attribute the class does not declare
-//! and is excluded in the register.
+//! `EXTRACT_UPDATE_SPEC` invariants.
+//!
+//! RM 1.2.0 `org.openehr.rm.ehr_extract.extract_update_spec.adoc`:
+//! `Overall_validity` in the generated core; `Trigger_events_validity` by the
+//! `NonEmptyVec` type. `Send_changes_only_validity` names an attribute the class
+//! does not declare and is excluded in the register.
 
 use crate::v1_1::ehr_extract::common::extract_update_spec::ExtractUpdateSpec;
 use openehr_base::validate::{InvariantViolation, Validate};

@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! `Iso8601_duration` behaviour: accessors, `add`/`subtract`/`multiply`/
-//! `divide`/`negative`, and a `PartialOrd` by total seconds
-//! (`org.openehr.base.foundation_types.iso8601_duration.adoc`,
-//! `time_definitions.adoc`, `master06-time_types.adoc`).
+//! `Iso8601_duration` accessors, arithmetic and a `PartialOrd` by total seconds.
+//!
+//! `org.openehr.base.foundation_types.iso8601_duration.adoc`,
+//! `time_definitions.adoc`, `master06-time_types.adoc`.
 //!
 //! The eight component invariants hold by the reader;
 //! `Value_lexical_form_valid` is our own name for a value outside the

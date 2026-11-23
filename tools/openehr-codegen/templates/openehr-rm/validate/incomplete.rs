@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! The `553|incomplete|` relaxation as two predicates: "In the `incomplete`
-//! state … mandatory attributes may be absent … data may be missing, but it
-//! may not be wrong" (RM `master06-change_control_package.adoc` §Incomplete
-//! Content).
+//! The `553|incomplete|` relaxation as two predicates.
+//!
+//! "In the `incomplete` state … mandatory attributes may be absent … data may
+//! be missing, but it may not be wrong" (RM `master06-change_control_package.adoc`
+//! §Incomplete Content).
 //!
 //! [`mandatory_data_present`] answers whether anything is missing, deep;
 //! [`contradicts_rm_type`] whether anything is wrong, one level. The strict

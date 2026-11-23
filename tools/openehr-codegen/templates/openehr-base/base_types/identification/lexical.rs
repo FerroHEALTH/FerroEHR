@@ -2,10 +2,9 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Lexical-form parsing shared by the BASE identification types: the error
-//! type, the `UID` subtype builder, digit predicates and the
-//! composite-identifier case rule (BASE
-//! `master05-identification_package.adoc`).
+//! Lexical-form parsing shared by the BASE identification types.
+//!
+//! BASE `master05-identification_package.adoc`.
 
 use crate::v1_3::base_types::identification::internet_id::InternetId;
 use crate::v1_3::base_types::identification::iso_oid::IsoOid;

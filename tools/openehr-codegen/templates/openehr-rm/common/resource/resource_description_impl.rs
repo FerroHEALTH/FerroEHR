@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! `RESOURCE_DESCRIPTION` invariants (RM 1.2.0
-//! `org.openehr.rm.common.resource_description.adoc`): the own non-empty rules
-//! in the generated core. `Language_valid` and `Parent_resource_valid` read the
-//! owning back-reference, so they live in the complex-invariant register.
+//! `RESOURCE_DESCRIPTION` invariants.
+//!
+//! RM 1.2.0 `org.openehr.rm.common.resource_description.adoc`: the non-empty
+//! rules in the generated core. `Language_valid` and `Parent_resource_valid`
+//! read the owning back-reference, so they live in the complex-invariant register.
 
 use crate::v1_2::common::resource::resource_description::ResourceDescription;
 use openehr_base::validate::{InvariantViolation, Validate};

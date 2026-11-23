@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! `AUTHORED_RESOURCE` invariants (RM 1.2.0
-//! `org.openehr.rm.common.authored_resource.adoc` §Invariants):
-//! `Revision_history_valid` in the generated core, only when `is_controlled`
-//! is present. The other rows live in the generated complex-invariant
-//! register.
+//! `AUTHORED_RESOURCE` invariants.
+//!
+//! RM 1.2.0 `org.openehr.rm.common.authored_resource.adoc` §Invariants:
+//! `Revision_history_valid` in the generated core, only when `is_controlled` is
+//! present; the other rows in the generated complex-invariant register.
 //!
 //! NOTE: the `v1_1` override; RM 1.1.0 spells `TRANSLATION_DETAILS.accreditaton`
 //! (`translation_details.adoc` §Attributes), so the fixtures differ.

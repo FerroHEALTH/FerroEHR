@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! The RFC 8785 canonical form written from a value's `Serialize` impl, with no
-//! `serde_json::Value` in between (#5849); the bytes equal
-//! `canonical_json(&serde_json::to_value(x))`. A name given twice keeps its
-//! last value.
+//! The RFC 8785 canonical form written straight from a value's `Serialize` impl.
+//!
+//! The bytes equal `canonical_json(&serde_json::to_value(x))`. A name given
+//! twice keeps its last value.
 
 use std::cmp::Ordering;
 use std::ops::Range;

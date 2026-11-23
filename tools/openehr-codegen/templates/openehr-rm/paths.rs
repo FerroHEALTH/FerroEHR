@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! openEHR path navigation over the canonical-JSON tree: the `PATHABLE`
-//! functions (RM `org.openehr.rm.common.pathable.adoc`), the `LOCATABLE`
-//! node-id predicates, and the [`EhrUri`] parser, over the BASE
+//! openEHR path navigation over the canonical-JSON tree.
+//!
+//! The `PATHABLE` functions (RM `org.openehr.rm.common.pathable.adoc`), the
+//! `LOCATABLE` node-id predicates, and the [`EhrUri`] parser, over the BASE
 //! `master11-paths.adoc` grammar and the `ehr:` scheme (RM
 //! `data_types/master10-uri_package` §"DV_EHR_URI Syntax").
 //!
@@ -877,8 +878,9 @@ pub fn archetype_node_id_is_term_code(node_id: &str) -> bool {
             .all(|seg| !seg.is_empty() && seg.bytes().all(|b| b.is_ascii_digit()))
 }
 
-/// RM `LOCATABLE.is_archetype_root()` from `archetype_node_id` alone: an
-/// `ARCHETYPE_ID`-form node id is a root ("At an archetype root point, the
+/// RM `LOCATABLE.is_archetype_root()` from `archetype_node_id` alone.
+///
+/// An `ARCHETYPE_ID`-form node id is a root ("At an archetype root point, the
 /// value of this attribute is always the stringified form of the
 /// `archetype_id`", `locatable.adoc` §Attributes).
 ///

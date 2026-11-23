@@ -2,10 +2,9 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! The BASE `Interval<T>` functions `has`, `intersects`, `contains` and
-//! `is_equal`, with boundary accessors, on the generated enum and both
-//! concrete variants (`org.openehr.base.foundation_types.interval.adoc`,
-//! `master05-interval.adoc`).
+//! The BASE `Interval<T>` functions and boundary accessors.
+//!
+//! `org.openehr.base.foundation_types.interval.adoc`, `master05-interval.adoc`.
 
 use std::cmp::Ordering;
 

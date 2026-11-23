@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Validating construction for `HIER_OBJECT_ID` (BASE 1.3.0
-//! `master05-identification_package.adoc` §Syntaxes:
+//! Validating construction for `HIER_OBJECT_ID`.
+//!
+//! BASE 1.3.0 `master05-identification_package.adoc` §Syntaxes:
 //! `hier_object_id = uid_based_id`, `uid_based_id = root, [ '::', extension ]`,
-//! `root = uid`). The accessors live in
+//! `root = uid`. The accessors live in
 //! [`uid_based_id_impl`](super::uid_based_id_impl).
 
 use std::str::FromStr;

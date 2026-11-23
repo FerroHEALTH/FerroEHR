@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! `ELEMENT` invariants (`org.openehr.rm.data_structures.element.adoc`):
-//! `Inv_null_flavour_indicated`, `Inv_null_reason_valid` and the inherited
-//! `Archetype_node_id_valid`. `Inv_is_null_valid` is the definition of
-//! [`Element::is_null`]; `Inv_null_flavour_valid` is in
-//! `validate::terminology`.
+//! `ELEMENT` invariants.
+//!
+//! `org.openehr.rm.data_structures.element.adoc`: `Inv_null_flavour_indicated`,
+//! `Inv_null_reason_valid` and the inherited `Archetype_node_id_valid`.
+//! `Inv_is_null_valid` is the definition of [`Element::is_null`];
+//! `Inv_null_flavour_valid` is in `validate::terminology`.
 
 use crate::v1_2::data_structures::representation::element::Element;
 use openehr_base::validate::{InvariantViolation, Validate};

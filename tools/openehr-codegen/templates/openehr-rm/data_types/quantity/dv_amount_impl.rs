@@ -124,10 +124,11 @@ fn equal_magnitudes(left: Option<f64>, right: Option<f64>) -> bool {
     left == right
 }
 
-/// The accuracy of the sum or difference of `left` and `right`: added when
-/// both are present, unknown otherwise, in "the form used in the larger of the
-/// two quantities" (`master06-quantity_package.adoc` §Accuracy and
-/// Uncertainty).
+/// The accuracy of the sum or difference of `left` and `right`.
+///
+/// Added when both are present, unknown otherwise, in "the form used in the
+/// larger of the two quantities" (`master06-quantity_package.adoc` §Accuracy
+/// and Uncertainty).
 ///
 /// On equal magnitudes the absolute form wins: no openEHR spec governs the
 /// tie, our own design.

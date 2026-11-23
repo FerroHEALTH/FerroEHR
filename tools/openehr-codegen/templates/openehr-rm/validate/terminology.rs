@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! The terminology-backed RM class invariants: openEHR group membership
-//! (`has_code_for_group_id`, `terminology_id = "openehr"` only) and code-set
-//! membership (`code_set (id).has_code`), against [`openehr_term::bundle`]
-//! (TERM 3.1.0).
+//! The terminology-backed RM class invariants.
+//!
+//! openEHR group membership (`has_code_for_group_id`, `terminology_id =
+//! "openehr"` only) and code-set membership (`code_set (id).has_code`), against
+//! [`openehr_term::bundle`] (TERM 3.1.0).
 //!
 //! [`slots_for`] is the one binding table; [`validate_rm_terminology`] and the
 //! `openehr-its` terminology pass both read it. Each entry cites its

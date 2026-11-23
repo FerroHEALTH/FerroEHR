@@ -2,10 +2,9 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! The BASE `Multiplicity_interval` functions `is_open`, `is_optional`,
-//! `is_mandatory` and `is_prohibited`, and its inherited `Interval` algebra
-//! and invariants (`org.openehr.base.foundation_types.multiplicity_interval.adoc`,
-//! `interval.adoc`).
+//! The BASE `Multiplicity_interval` functions and invariants.
+//!
+//! `org.openehr.base.foundation_types.multiplicity_interval.adoc`, `interval.adoc`.
 
 use super::interval_impl::BoundaryView;
 use super::multiplicity_interval::MultiplicityInterval;

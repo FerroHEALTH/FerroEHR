@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! `EVENT_CONTEXT` invariants
-//! (`org.openehr.rm.composition.event_context.adoc` §Invariants):
-//! `location_valid` in `event_context_core`; `Participations_validity` by the
-//! `NonEmptyVec` type; `Setting_valid` in `validate::terminology`.
+//! `EVENT_CONTEXT` invariants.
+//!
+//! `org.openehr.rm.composition.event_context.adoc` §Invariants: `location_valid`
+//! in `event_context_core`; `Participations_validity` by the `NonEmptyVec`
+//! type; `Setting_valid` in `validate::terminology`.
 
 use crate::v1_2::composition::event_context::EventContext;
 use openehr_base::validate::{InvariantViolation, Validate};

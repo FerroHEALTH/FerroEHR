@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Validating construction and invariants for `ITEM_TAG` (RM 1.2.0
-//! `org.openehr.rm.common.item_tag.adoc`): `Inv_key_valid` and
-//! `Inv_value_valid`, enforced at [`ItemTag::new`], which every reader uses.
-//! Whether `target` exists stays a service-layer check.
+//! Validating construction and invariants for `ITEM_TAG`.
+//!
+//! RM 1.2.0 `org.openehr.rm.common.item_tag.adoc`: `Inv_key_valid` and
+//! `Inv_value_valid`, enforced at [`ItemTag::new`]. Whether `target` exists
+//! stays a service-layer check.
 
 use crate::v1_2::common::tags::item_tag::ItemTag;
 use openehr_base::v1_3::prelude::{ObjectRef, UidBasedId};

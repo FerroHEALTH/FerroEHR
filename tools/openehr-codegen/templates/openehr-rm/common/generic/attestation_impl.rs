@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! `ATTESTATION` invariants (`org.openehr.rm.common.attestation.adoc`,
-//! `audit_details.adoc` §Invariants): `System_id_valid` here; `Change_type_valid`
-//! and `Reason_valid` in [`crate::v1_2::validate::terminology`]; `Items_valid`
-//! by the `NonEmptyVec` type.
+//! `ATTESTATION` invariants.
+//!
+//! `org.openehr.rm.common.attestation.adoc`, `audit_details.adoc` §Invariants:
+//! `System_id_valid` here; `Change_type_valid` and `Reason_valid` in
+//! [`crate::v1_2::validate::terminology`]; `Items_valid` by the `NonEmptyVec` type.
 
 use crate::v1_2::common::generic::attestation::Attestation;
 use openehr_base::validate::{InvariantViolation, Validate};

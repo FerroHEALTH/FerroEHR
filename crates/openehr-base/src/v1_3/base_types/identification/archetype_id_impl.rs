@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Accessors and the `Value_valid` grammar for `ARCHETYPE_ID` (BASE 1.3.0
-//! `org.openehr.base.base_types.archetype_id.adoc`,
-//! `master05-identification_package.adoc` §Syntaxes), in the ADL 1.4 form
+//! Accessors and the `Value_valid` grammar for `ARCHETYPE_ID`.
+//!
+//! BASE 1.3.0 `org.openehr.base.base_types.archetype_id.adoc`,
+//! `master05-identification_package.adoc` §Syntaxes, in the ADL 1.4 form
 //! (`openEHR-EHR-OBSERVATION.blood_pressure-cuff.v1`) and the ADL 2 form
 //! (`org.openehr::openEHR-EHR-OBSERVATION.blood_pressure.v2.1.4`).
 

@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! `HISTORY` invariants and functions (RM 1.2.0
-//! `org.openehr.rm.data_structures.history.adoc`): `Events_valid`,
+//! `HISTORY` invariants and functions.
+//!
+//! RM 1.2.0 `org.openehr.rm.data_structures.history.adoc`: `Events_valid`,
 //! `Period_consistency` (over well-formed times only), `is_periodic`, and the
-//! inherited `Archetype_node_id_valid`. `Periodic_validity` holds by
-//! construction.
+//! inherited `Archetype_node_id_valid`. `Periodic_validity` holds by construction.
 
 use crate::v1_2::data_structures::history::event_impl::offset_seconds;
 use crate::v1_2::data_structures::history::history::History;

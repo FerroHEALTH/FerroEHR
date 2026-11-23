@@ -2,10 +2,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! RM-instance validation over a typed tree (#6002): the class invariants
-//! (each class's [`Validate`] by [`super::typed_dispatch::dispatch_typed`]),
-//! [`super::check_archetyped_valid`], the HISTORY shape duty and the
-//! [`super::terminology::slots_for`] bindings, over the generated walk.
+//! RM-instance validation over a typed tree.
+//!
+//! The class invariants (each class's [`Validate`] by
+//! [`super::typed_dispatch::dispatch_typed`]), [`super::check_archetyped_valid`],
+//! the HISTORY shape duty and the [`super::terminology::slots_for`] bindings,
+//! over the generated walk.
 //!
 //! What the reader refuses is not re-checked. Messages come in canonical
 //! attribute order; no openEHR specification orders them: our own design.

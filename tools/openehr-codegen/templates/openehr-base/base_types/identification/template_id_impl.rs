@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Accessors for `TEMPLATE_ID` (BASE 1.3.0
-//! `org.openehr.base.base_types.template_id.adoc`, master05 §Template
-//! Identifiers): `namespace '::' rm_publisher '-' rm_package '-' rm_class '.'
-//! concept_id '.v' version_id`. A legacy free-text name is valid, and every
-//! accessor answers the empty string for it.
+//! Accessors for `TEMPLATE_ID`.
+//!
+//! BASE 1.3.0 `org.openehr.base.base_types.template_id.adoc`, master05
+//! §Template Identifiers: `namespace '::' rm_publisher '-' rm_package '-'
+//! rm_class '.' concept_id '.v' version_id`. A free-text name is valid, and
+//! every accessor answers the empty string for it.
 
 use super::template_id::TemplateId;
 

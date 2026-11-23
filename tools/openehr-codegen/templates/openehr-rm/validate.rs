@@ -2,12 +2,12 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! RM validation over a canonical-JSON node as a value: the fast path
-//! ([`try_fast_validate`]) and the invariant helpers the `*_impl.rs` files
-//! share; the per-node checks the typed model cannot express
-//! ([`check_mandatory_containers`], [`check_archetyped_valid`],
-//! [`check_data_structure_shapes`]); and the [`terminology`], [`incomplete`]
-//! and [`typed_dispatch`] tiers.
+//! RM validation over a canonical-JSON node as a value.
+//!
+//! The fast path ([`try_fast_validate`]) and the shared invariant helpers; the
+//! per-node checks the typed model cannot express ([`check_mandatory_containers`],
+//! [`check_archetyped_valid`], [`check_data_structure_shapes`]); and the
+//! [`terminology`], [`incomplete`] and [`typed_dispatch`] tiers.
 //!
 //! Violations read `Invariant <Name> failed on type <RM_TYPE>`, `<Name>` the
 //! class-table name (`RM/docs/UML/classes/*.adoc` §Invariants). No openEHR spec
@@ -103,10 +103,11 @@ pub fn check_mandatory_containers(ty: &str, value: &Value, out: &mut Vec<Invaria
     }
 }
 
-/// The declared-slot-type rule: a child's `_type` names the attribute's
-/// declared type or a subtype, never relaxed ("data may be missing, but it may
-/// not be wrong", RM `master06-change_control_package.adoc` §Incomplete
-/// Content).
+/// The declared-slot-type rule, never relaxed.
+///
+/// A child's `_type` names the attribute's declared type or a subtype ("data
+/// may be missing, but it may not be wrong", RM
+/// `master06-change_control_package.adoc` §Incomplete Content).
 ///
 /// `None` for an unknown slot, a primitive type, or a `Hash`.
 #[must_use]
@@ -147,10 +148,10 @@ pub fn check_slot_member_is_object(parent_type: &str, field: &str) -> Option<Inv
     )))
 }
 
-/// `LOCATABLE.Archetyped_valid` (`is_archetype_root xor archetype_details =
-/// Void`, `org.openehr.rm.common.locatable.adoc` §Invariants): a term-code node
-/// must not carry `archetype_details`, and a node carrying it must have the
-/// archetype id as its `archetype_node_id` (§Attributes).
+/// `LOCATABLE.Archetyped_valid` (`org.openehr.rm.common.locatable.adoc` §Invariants).
+///
+/// A term-code node must not carry `archetype_details`, and a node carrying it
+/// must have the archetype id as its `archetype_node_id` (§Attributes).
 ///
 /// NOTE: `locatable.adoc` §Functions gives `is_archetype_root` no derivation,
 /// so the converse arm is not enforced.

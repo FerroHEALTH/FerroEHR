@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! The construction door for `UUID` (BASE 1.3.0 master05 §Syntaxes, the
-//! `8-4-4-4-12` form, [`super::lexical::is_uuid`]). [`Uuid::new`] is total over
-//! a parsed `uuid::Uuid`; `FromStr` refuses the braced, URN and simple
-//! spellings.
+//! The construction door for `UUID`.
+//!
+//! BASE 1.3.0 master05 §Syntaxes, the `8-4-4-4-12` form. `FromStr` refuses the
+//! braced, URN and simple spellings.
 
 use std::str::FromStr;
 

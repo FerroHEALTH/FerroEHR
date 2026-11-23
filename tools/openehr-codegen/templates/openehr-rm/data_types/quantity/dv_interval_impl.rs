@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! `DV_INTERVAL` invariants and `has` (RM 1.2.0
-//! `org.openehr.rm.data_types.dv_interval.adoc`): the inherited
+//! `DV_INTERVAL` invariants and `has`.
+//!
+//! RM 1.2.0 `org.openehr.rm.data_types.dv_interval.adoc`: the inherited
 //! `Lower_included_valid` and `Upper_included_valid`, and the redefined
-//! `Limits_consistent` through [`OrderedLimit`], an undecidable comparison
-//! not reported. All violations name `DV_INTERVAL`.
+//! `Limits_consistent` through [`OrderedLimit`], an undecidable comparison not
+//! reported. All violations name `DV_INTERVAL`.
 
 #![allow(
     clippy::disallowed_types,

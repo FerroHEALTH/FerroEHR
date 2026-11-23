@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! `Point_interval` invariants: its own `Inv_point` under `POINT_INTERVAL`
-//! (`org.openehr.base.foundation_types.point_interval.adoc`), and the inherited
-//! `Interval` invariants under `INTERVAL`, `Limits_comparable` excepted.
+//! `Point_interval` invariants.
+//!
+//! Its own `Inv_point` (`org.openehr.base.foundation_types.point_interval.adoc`)
+//! and the inherited `Interval` invariants, `Limits_comparable` excepted.
 
 use super::point_interval::PointInterval;
 use crate::validate::{InvariantViolation, Validate};

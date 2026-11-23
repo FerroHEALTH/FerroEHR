@@ -2,10 +2,12 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! `OBSERVATION` invariants (`org.openehr.rm.composition.entry.adoc`):
-//! `Is_archetype_root` and `Archetype_node_id_valid`. `Language_valid` and
-//! `Encoding_valid` are in `validate::terminology`;
-//! `Other_participations_valid` holds by the `NonEmptyVec` type.
+//! `OBSERVATION` invariants.
+//!
+//! `org.openehr.rm.composition.entry.adoc`: `Is_archetype_root` and
+//! `Archetype_node_id_valid`. `Language_valid` and `Encoding_valid` are in
+//! `validate::terminology`; `Other_participations_valid` holds by the
+//! `NonEmptyVec` type.
 
 use crate::v1_2::composition::content::entry::observation::Observation;
 use openehr_base::validate::{InvariantViolation, Validate};

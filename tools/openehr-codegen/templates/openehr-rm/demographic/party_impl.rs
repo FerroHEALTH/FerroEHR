@@ -2,9 +2,11 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! `PARTY.type` (`org.openehr.rm.demographic.party.adoc`), dispatched over the
-//! five party types. `reverse_relationships` reads the demographic repository
-//! (`Post_reverse_relationships_validity`), so the service realizes it.
+//! `PARTY.type`, dispatched over the five party types.
+//!
+//! `org.openehr.rm.demographic.party.adoc`: `reverse_relationships` reads the
+//! demographic repository (`Post_reverse_relationships_validity`), so the
+//! service realizes it.
 
 use crate::v1_2::data_types::text::dv_text::DvText;
 use crate::v1_2::demographic::party::Party;

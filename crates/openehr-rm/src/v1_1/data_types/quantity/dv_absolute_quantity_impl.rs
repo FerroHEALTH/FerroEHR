@@ -12,10 +12,10 @@ use crate::v1_1::data_types::quantity::dv_amount_impl::AmountAccuracy;
 use crate::v1_1::data_types::quantity::dv_amount_impl::{CombinedAccuracy, combine};
 use openehr_base::v1_2::foundation_types::time::iso8601_duration::Iso8601Duration;
 
-/// The accuracy of a quantity displaced by a differential amount: "the sum of
-/// the accuracies of the operands, if both present, or unknown"
-/// (`dv_absolute_quantity.adoc` `add`); the amount's half-range counts as
-/// seconds.
+/// The accuracy of a quantity displaced by a differential amount.
+///
+/// "the sum of the accuracies of the operands, if both present, or unknown"
+/// (`dv_absolute_quantity.adoc` `add`); the amount's half-range counts as seconds.
 #[must_use]
 pub fn displaced_accuracy(
     accuracy: Option<&DvDuration>,

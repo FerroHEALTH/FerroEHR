@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! The typed dispatch tier: `_type` → the concrete RM type, decoded through
-//! the emitted serde impls, then its [`Validate`] impl. An unnamed class falls
-//! through to `openehr_its::json_codec::generated::structural`.
+//! The typed dispatch tier: `_type` to the concrete RM type's [`Validate`] impl.
+//!
+//! An unnamed class falls through to
+//! `openehr_its::json_codec::generated::structural`.
 
 #![expect(
     clippy::disallowed_types,
@@ -111,9 +112,10 @@ fn prune_child_nodes(value: &Value) -> Value {
     Value::Object(out)
 }
 
-/// The `_type` → concrete-RM-type table, `false` for the fallthrough. Covers
-/// the types carrying a non-terminology class invariant; the caller closes out
-/// `LOCATABLE.Archetype_node_id_valid` with
+/// The `_type` to concrete-RM-type table, `false` for the fallthrough.
+///
+/// Covers the types carrying a non-terminology class invariant; the caller
+/// closes out `LOCATABLE.Archetype_node_id_valid` with
 /// [`super::locatable_node_id_violation`].
 #[must_use]
 #[expect(

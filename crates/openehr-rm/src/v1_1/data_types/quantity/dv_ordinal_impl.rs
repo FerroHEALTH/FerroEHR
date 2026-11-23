@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! `DV_ORDINAL` invariants (RM 1.2.0 `org.openehr.rm.data_types.dv_ordinal.adoc`):
-//! the inherited `Normal_range_and_status_consistency`.
-//! `Normal_status_validity` is in `validate::terminology`,
-//! `Other_reference_ranges_validity` holds by the `NonEmptyVec` type, and
-//! `Is_simple_validity` is the definition of `is_simple`.
+//! `DV_ORDINAL` invariants.
+//!
+//! RM 1.2.0 `org.openehr.rm.data_types.dv_ordinal.adoc`: the inherited
+//! `Normal_range_and_status_consistency`. `Normal_status_validity` is in
+//! `validate::terminology`, `Other_reference_ranges_validity` holds by the
+//! `NonEmptyVec` type, and `Is_simple_validity` is the definition of `is_simple`.
 
 use crate::v1_1::data_types::quantity::dv_ordered::DvOrdered;
 use crate::v1_1::data_types::quantity::dv_ordered_impl::push_normal_range_consistency;
