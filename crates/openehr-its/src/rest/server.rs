@@ -9,13 +9,6 @@
 //! finishes it with [`with_fallbacks`], which gives an unserved path a `404` and
 //! an unserved method a `405` with `Allow`, both with the ITS-REST `Error` body.
 //!
-//! The generated handlers own everything the OpenAPI declares per operation
-//! (which parameter sits where, its name and type, the body type, the
-//! documented answers and their headers); this module owns what every handler
-//! shares: reading a path capture, a query pair, a header and a body into a
-//! typed value, refusing one that is missing or unparseable with a `400` that
-//! names it, and writing an answer.
-//!
 //! A query parameter is read as the generated client writes it: one
 //! `name=value` pair per scalar, one pair per array item, and one pair per
 //! member of a form-exploded object (`style: form, explode: true`). Both the
@@ -148,12 +141,6 @@ pub(crate) fn respond(
 
 /// The axum router serving every operation of every API group over `api`,
 /// finished with the fallbacks of [`with_fallbacks`].
-///
-/// It merges the six generated group routers
-/// (`rest::generated::<group>::server::router`); mount it at the API base with
-/// `axum::Router::nest` (`Router::new().nest("/openehr/v1", router(api))`). A
-/// server that implements only some groups merges their routers itself and
-/// finishes them with [`with_fallbacks`].
 pub fn router<S>(api: Arc<S>) -> axum::Router
 where
     S: AdminApi + DefinitionApi + DemographicApi + EhrApi + QueryApi + SystemApi,
@@ -177,13 +164,6 @@ where
 /// ([`super::routes::lookup`]); both carry the ITS-REST `Error` body
 /// (`ITS-REST/specifications/docs/overview/Requests_and_responses.md` §HTTP
 /// status codes lists both statuses).
-///
-/// Call it once, after the last merge: axum applies the `405` fallback to the
-/// routes registered so far, and refuses (panics on) a merge of two routers
-/// that both carry a fallback, which is why the group routers carry none. The
-/// fallbacks read the request path as the router sees it, so mount the
-/// finished router at the API base with `axum::Router::nest`, or serve it at
-/// the root of a server whose API base is `/`.
 pub fn with_fallbacks(router: axum::Router) -> axum::Router {
     router
         .fallback(not_found)

@@ -43,10 +43,6 @@ impl CAttributeTuple {
     /// `c_congruent_to` (`master04.5` §Conformance semantics: C_SECOND_ORDER):
     /// `for_all t: tuples | there_exists ot: other.tuples | t.c_congruent_to
     /// (ot)`.
-    ///
-    /// NOTE: the BMM declares the parameter as `C_SECOND_ORDER` (the inherited
-    /// signature) while `master04.5` states the body over `C_ATTRIBUTE_TUPLE`,
-    /// and the docs text is the oracle.
     #[must_use]
     pub fn c_congruent_to(&self, other: &CAttributeTuple) -> bool {
         let other_rows = other.tuples.as_deref().unwrap_or_default();

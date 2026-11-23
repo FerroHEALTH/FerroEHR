@@ -12,10 +12,6 @@
 //! [`ast::SelectQuery`] with `chumsky`. [`visit`] walks and rewrites the tree,
 //! [`bind`] substitutes ITS-REST `query_parameters` into it, and [`printer`]
 //! renders it back to AQL text. Query execution lives in the application.
-//!
-//! The `federation` feature adds `federation`, which separates the
-//! federation-only `FROM ENDPOINT` / `ORGANISATION` directive from a query
-//! before the strict AQL 1.1.0 parse.
 
 // Doctests are copy-paste templates: they must use `?`, never unwrap
 // (C-QUESTION-MARK, https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark).
@@ -30,8 +26,4 @@ pub mod printer;
 pub mod visit;
 
 /// The openEHR specification version this crate implements.
-///
-/// The pin is deliberately independent of the crates.io package version,
-/// which is the crate's own `SemVer` line and moves only with this
-/// implementation's code.
 pub const SPEC_VERSION: &str = "1.1.0";

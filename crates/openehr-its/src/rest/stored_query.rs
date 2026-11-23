@@ -26,11 +26,6 @@ const RESERVED: &str = "aql";
 /// of characters, matched by the pattern `[a-zA-Z0-9_.-]`" and "must not be
 /// `aql` (case-insensitive), as that is a reserved name"; the optional
 /// namespace is "a reverse domain name", which takes the same characters.
-///
-/// A reserved name reads, because a request that names one addresses a
-/// stored query that cannot exist, which `responses/404_Query.yaml` answers;
-/// [`QualifiedQueryName::check_registrable`] refuses it where a query is
-/// stored.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct QualifiedQueryName {
     namespace: Option<String>,

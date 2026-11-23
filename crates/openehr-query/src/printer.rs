@@ -67,10 +67,6 @@ fn order_by_clause(out: &mut String, query: &SelectQuery) {
 
 /// Escapes a raw string for embedding in an AQL single-quoted literal, per
 /// `AqlLexer.g4 ESCAPE_SEQ`.
-///
-/// The parser decodes escapes into the AST, so every printer site emitting
-/// stored string content passes it back through here: emitting the decoded
-/// bytes verbatim re-decodes them on reparse and drifts the AST.
 #[must_use]
 pub fn escape_string(raw: &str) -> String {
     let mut out = String::with_capacity(raw.len());
@@ -201,12 +197,6 @@ fn identified_path(out: &mut String, path: &IdentifiedPath) {
 }
 
 /// Where a contains expression sits, for parenthesisation.
-///
-/// The SIDE matters, not just the enclosing operator: `AqlParser.g4`
-/// `containsExpr` states `AND`/`OR` as binary alternatives of one recursive
-/// rule, which ANTLR4 resolves left-associatively, so a same-precedence child
-/// re-parses unchanged on the LEFT and re-associates on the RIGHT. A right
-/// operand therefore needs parentheses where a left operand does not.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ContainsCtx {
     /// Directly after `FROM` — no parens needed at any operator.
@@ -224,12 +214,6 @@ enum ContainsCtx {
 }
 
 /// One class operand and its optional `[NOT] CONTAINS` constraint.
-///
-/// `containsExpr: classExprOperand (NOT? CONTAINS containsExpr)?` makes the
-/// CONTAINS operand a whole `containsExpr`, so it absorbs any `AND`/`OR` that
-/// follows it: an unparenthesised `A CONTAINS B` used as a boolean operand
-/// would re-parse with the operator moved INSIDE its scope, which changes what
-/// the query means — hence the parens.
 fn contained_expr(
     out: &mut String,
     operand: &ClassExprOperand,
@@ -330,11 +314,6 @@ fn class_operand(out: &mut String, operand: &ClassExprOperand) {
 }
 
 /// Precedence and associativity context inside a WHERE tree.
-///
-/// The SIDE matters, not just the enclosing operator: `AqlParser.g4`
-/// `whereExpr` states `AND`/`OR` as binary alternatives of one recursive rule,
-/// which ANTLR4 resolves left-associatively, so a same-precedence child
-/// re-parses unchanged on the LEFT and re-associates on the RIGHT.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum WhereCtx {
     /// Top level — nothing needs parens.

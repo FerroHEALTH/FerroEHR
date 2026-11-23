@@ -24,9 +24,6 @@ impl CDateTime {
     /// the second `-`-separated slot of the date half of `pattern_constraint`,
     /// under the `master04.2-constraint_model-semantics.adoc` §Date/Time
     /// Constraints mapping.
-    ///
-    /// NOTE: the vendored AM text defines this result only over a pattern, and
-    /// `pattern_constraint` is `0..1`, so a range-only constraint yields `None`.
     #[must_use]
     pub fn month_validity(&self) -> Option<ValidityKind> {
         self.date_slot(1)
