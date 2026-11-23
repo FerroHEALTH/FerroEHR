@@ -2,13 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The typed FLAT and STRUCTURED build and flatten agree with their
-//! canonical-JSON forms (#6003), on the examples of every operational
-//! template in the repository at each detail level, on every canonical
-//! COMPOSITION the corpora hold, and on the FLAT document each of those
-//! flattens to: the typed build equals the strict reading of its unchecked
-//! projection (a refusal on one side is a refusal on the other), the typed
-//! flatten equals the flatten of the canonical JSON of the same value, and
-//! the streamed FLAT text equals the text of the FLAT map.
+//! canonical-JSON forms on every repository template and corpus composition.
 
 #![expect(
     clippy::disallowed_types,

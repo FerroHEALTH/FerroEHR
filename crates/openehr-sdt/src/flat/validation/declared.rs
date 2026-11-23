@@ -4,16 +4,9 @@
 //! Which attribute names the reference model the walk validates against
 //! declares.
 
-/// Does the generated RM model, or a class of FerroEHR's draft packages that
-/// extend it, declare an attribute named `attr` on ANY class?
-///
-/// Name-only by design: an OPT constrains attributes at several RM levels and
-/// the walker does not carry the declaring class here, while the defect this
-/// answers — a constraint on an attribute NO RM class declares — is fully
-/// decided by the name. With the `draft` feature, a template of a draft
-/// class, such as an `ACCESS_POLICY` profile, constrains the draft's
-/// attributes, which the RM adapted by the draft class tables declares (AOM2
-/// `master11-rm_adaptation.adoc`).
+/// Whether the RM model, or a FerroEHR draft class extending it, declares an
+/// attribute named `attr` on any class; the name alone decides
+/// (AOM2 `master11-rm_adaptation.adoc` for the draft classes).
 pub(super) fn rm_declares_attribute(attr: &str) -> bool {
     static DECLARED: std::sync::LazyLock<std::collections::BTreeSet<&str>> =
         std::sync::LazyLock::new(|| {

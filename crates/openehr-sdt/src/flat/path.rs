@@ -1,22 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The simplified-path (FLAT key) model.
-//!
-//! A FLAT key is a hierarchical field identifier (ITS-REST
-//! `simplified_formats/master04-basic_concepts.adoc` §Field Identifiers):
-//! `/`-separated segments, zero-based `:i` instance indices on repeating
-//! segments, and pipe-separated attribute suffixes on the final segment —
-//! `vital_signs/body_temperature:0/any_event:0/temperature|magnitude`.
-//! Optional RM attributes not constrained in the template appear as
-//! `_`-prefixed segments (§RM Attributes prefix), and suffixes may
-//! themselves chain and carry indices (§RM Attributes prefix example:
-//! `path/observation:0/_link:0|meaning|code`; master06 participation
-//! identifiers: `ctx/participation_identifiers:1|issuer:0`).
-//!
-//! This module is pure syntax: parsing and printing. What a path *means*
-//! (template resolution, `ctx/` interpretation, suffix semantics) belongs to
-//! the layers above.
+//! The simplified-path (FLAT key) model: parsing and printing only
+//! (`simplified_formats/master04-basic_concepts.adoc` §Field Identifiers, §RM
+//! Attributes prefix), e.g. `vital_signs/body_temperature:0/any_event:0/temperature|magnitude`.
 
 use std::fmt::{Display, Formatter};
 
@@ -132,19 +119,12 @@ impl Display for FlatKey {
     }
 }
 
-/// The largest accepted `:i` instance index.
-///
-/// The spec sets no bound; an unbounded index would let one tiny key allocate
-/// billions of placeholder occurrences, so the parser rejects anything above
-/// this (no openEHR spec governs this — our own resource-safety bound).
+/// The largest accepted `:i` instance index (no openEHR spec governs this: our
+/// own resource bound).
 pub const MAX_INSTANCE_INDEX: u32 = 65_535;
 
-/// Split a trailing `:<digits>` index off a segment or suffix part. A colon
-/// followed by anything non-numeric is malformed — node ids cannot contain
-/// `:` (`master04 §Node ID Generation Rules` limits ids to alphabetics,
-/// digits, `_`, `.`, `-`).
-/// The name and index of one `name[:i]` part as [`split_index`] reads it, or
-/// `None` where [`split_index`] refuses it; allocates nothing.
+/// The name of one `name[:i]` part as [`split_index`] reads it, or `None` where
+/// [`split_index`] refuses it.
 pub(crate) fn name_of(raw: &str) -> Option<&str> {
     if raw.is_empty() {
         return None;
@@ -175,6 +155,8 @@ pub(crate) fn well_formed(key: &str) -> bool {
         && pipe_parts.all(|raw| name_of(raw).is_some())
 }
 
+/// Split a trailing `:<digits>` index off a segment or suffix part; node ids
+/// cannot contain `:` (`master04 §Node ID Generation Rules`).
 fn split_index<'a>(raw: &'a str, whole_key: &str) -> Result<(&'a str, Option<u32>), FlatError> {
     match raw.split_once(':') {
         None => Ok((raw, None)),
