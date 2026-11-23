@@ -421,6 +421,16 @@ struct Budget {
 /// 115,228 and 130,009 bytes to 124,725 and 139,506, and each peak ceiling of
 /// those paths is the figure measured plus 1%, the rise the orchestrator
 /// approved as the price of the records-first order.
+/// A COMPOSITION read, by version id, at an instant or from the version
+/// copy, and an EHR read have since read the party store's revisions in
+/// their one clinical statement through `party_door.party_revisions()`,
+/// where the two domains share a database, in place of a read of
+/// `binding_grant_revision` on the party pool (#6320): 1 round trip where
+/// they sent 2, measured beside the merge base, and each of those round-trip
+/// ceilings fell by one. The function runs as its owner, so `PostgreSQL`
+/// never inlines it, and its one-row primary-key read counts as a nested
+/// statement: those paths' nested ceilings rose from 0 to 1, the trade the
+/// orchestrator approved for a round trip and a transaction.
 const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
@@ -457,8 +467,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 0,
         allocations: 1327,
         peak_bytes: 617_268,
-        round_trips: 2,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
         wal: 2064,
     },
@@ -467,8 +477,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 2,
         allocations: 10_804,
         peak_bytes: 1_017_140,
-        round_trips: 2,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
         wal: 2064,
     },
@@ -477,8 +487,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 2,
         allocations: 15_521,
         peak_bytes: 1_634_407,
-        round_trips: 2,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
         wal: 2064,
     },
@@ -487,8 +497,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 1,
         allocations: 1113,
         peak_bytes: 100_250,
-        round_trips: 2,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
         wal: 1264,
     },
@@ -547,8 +557,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 0,
         allocations: 1338,
         peak_bytes: 701_748,
-        round_trips: 2,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
         wal: 2064,
     },
@@ -617,8 +627,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 0,
         allocations: 1333,
         peak_bytes: 162_800,
-        round_trips: 2,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
         wal: 2048,
     },

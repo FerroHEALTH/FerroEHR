@@ -136,6 +136,11 @@ BEGIN
             TO ferroehr_party, ferroehr_party_reader;
         ALTER DEFAULT PRIVILEGES IN SCHEMA party GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO ferroehr_party;
         ALTER DEFAULT PRIVILEGES IN SCHEMA party GRANT SELECT ON TABLES TO ferroehr_party_reader;
+        -- The party roles read the same revisions through the door, so a statement
+        -- of a ride selects them on either pool (#6320).
+        GRANT USAGE ON SCHEMA party_door TO ferroehr_party, ferroehr_party_reader;
+        GRANT EXECUTE ON FUNCTION party_door.party_revisions()
+            TO ferroehr_party, ferroehr_party_reader;
         -- The one door the clinical roles may pass (#6320): USAGE on the door's
         -- schema and EXECUTE on its one function, nothing of the party schema.
         IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'ferroehr_clinical') THEN

@@ -98,8 +98,13 @@ macro_rules! audit_of_version {
 /// §Logical Deletion).
 macro_rules! version_select {
     ($tail:literal) => {
+        version_select!(""; $tail)
+    };
+    ($head:expr; $tail:literal) => {
         concat!(
-            "SELECT v.vo_id, v.kind, v.ehr_id, v.sys_version, v.trunk_version, v.branch_number, ",
+            "SELECT ",
+            $head,
+            "v.vo_id, v.kind, v.ehr_id, v.sys_version, v.trunk_version, v.branch_number, ",
             "v.branch_version, v.lifecycle_state, v.creating_system_id, v.preceding_version_uid, ",
             "v.other_input_version_uids, v.contribution_id, v.template_id, v.signature, ",
             "v.signature_client_supplied, v.wrapped_original, v.stable_compatible, v.origins, ",

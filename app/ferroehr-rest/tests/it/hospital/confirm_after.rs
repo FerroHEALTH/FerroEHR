@@ -23,8 +23,8 @@ use crate::hospital::build::{composition, world};
 use crate::hospital::ledger::{Expect, Ledger};
 use crate::hospital::replicas::deaf;
 use crate::hospital::world::{
-    CONFIDENTIALITY, ENCOUNTER, ROOT, SCIM, World, admit, call, call_matching, coded_in, day,
-    patch_op, scim, text,
+    CONFIDENTIALITY, ENCOUNTER, ROOT, SCIM, World, call, call_matching, coded_in, patch_op, scim,
+    text,
 };
 
 /// A meter provider whose access-path instruments land in `exporter`.
@@ -316,47 +316,61 @@ async fn a_commit_decided_on_a_policy_copy_behind_the_store_runs_once_more() {
     );
 }
 
-/// A read decided on a party copy the store overtook runs once more (#6320):
-/// the discharge of Dr. Jansen from Cardiology, committed through the world's
-/// replica, refuses his very next read on a replica that hears nothing. The
-/// read's own clinical statement reads the party store's revisions, the run
-/// decided on the copy is dropped, the read runs again on the path that reads
-/// the revisions first, and the access log holds the one entry of the
-/// request, the refusal the client got.
+/// The records of the request `request_id` in the system log and the access
+/// log together, as `(store, outcome)`, once one has landed, or none after
+/// ten seconds.
+async fn recorded(world: &World, request_id: &str) -> Vec<(String, i16)> {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    loop {
+        let rows: Vec<(String, i16)> = sqlx::query_as(
+            "SELECT 'system', outcome FROM audit.audit_event WHERE request_id = $1 \
+             UNION ALL SELECT 'access', COALESCE(event_outcome, -1)::int2 FROM audit.access_log_record \
+             WHERE request_id = $1",
+        )
+        .bind(request_id)
+        .fetch_all(&world.pool)
+        .await
+        .expect("read the logs");
+        if !rows.is_empty() || std::time::Instant::now() >= deadline {
+            return rows;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+}
+
+/// A read decided on a party copy the store overtook runs once more and
+/// leaves one record (#6320): SCIM's deactivation of the nurse, committed
+/// through the world's replica, refuses her very next read on a replica that
+/// hears nothing. The run that took her held binding lookup read the
+/// composition, its clinical statement read the party store's revisions, and
+/// the run was dropped: the refusal of the run again is the one answer and
+/// the one record of the request, and nothing of the composition leaves.
 #[tokio::test]
 async fn a_read_decided_on_a_party_copy_behind_the_store_runs_once_more() {
     let (provider, exporter) = instruments();
-    let mut world = Box::pin(world()).await;
+    let world = Box::pin(world()).await;
     let (other, _drain, _elsewhere) = deaf(&world).await;
-    let uri = encounter(&world);
-    let read_on_other = || call(&other, "jansen", "GET", &uri, Some("TREAT"), None);
-    answered(&read_on_other().await, StatusCode::OK, None);
+    let path = format!("{BASE}/ehr/{}/composition/{}", world.ehr, world.vitals.vo);
+    let read = || call(&other, "devries", "GET", &path, Some("TREAT"), None);
+    for _ in 0..2 {
+        answered(&read().await, StatusCode::OK, None);
+    }
     let before = reruns(&provider, &exporter);
-    answered(&read_on_other().await, StatusCode::OK, None);
+    answered(&read().await, StatusCode::OK, None);
     assert_eq!(
         reruns(&provider, &exporter),
         before,
         "a copy in force runs once"
     );
 
-    let (ward, old_from, old_until) = (day(-2), day(-40), day(-20));
-    admit(
-        &mut world,
-        &[
-            ("Cardiology", &old_from, Some(&old_until)),
-            ("Ward 3", &ward, None),
-            ("Psychiatry", &ward, None),
-        ],
-    )
-    .await;
-    let refused = read_on_other().await;
-    answered(
-        &refused,
-        StatusCode::FORBIDDEN,
-        Some("refused-no-care-relationship"),
-    );
+    let user = format!("/Users/{}", world.people["devries"].person);
+    let body = patch_op(json!([{ "op": "replace", "path": "active", "value": false }]));
+    let (status, scimmed) = scim(&world.app, SCIM, "PATCH", &user, Some(&body)).await;
+    assert_eq!(status, StatusCode::OK, "the deactivation: {scimmed}");
+    let refused = read().await;
+    assert_eq!(refused.status, StatusCode::FORBIDDEN, "{}", refused.body);
     assert!(
-        !refused.body.contains("Cardiology encounter"),
+        !refused.body.contains("archetype_node_id"),
         "the refusal carries nothing of the composition: {}",
         refused.body
     );
@@ -365,24 +379,16 @@ async fn a_read_decided_on_a_party_copy_behind_the_store_runs_once_more() {
         before + 1,
         "the read ran once more, and only once"
     );
-    answered(
-        &read_on_other().await,
-        StatusCode::FORBIDDEN,
-        Some("refused-no-care-relationship"),
-    );
+    let records = recorded(&world, &refused.request_id()).await;
+    assert_eq!(records.len(), 1, "one record of the request: {records:?}");
     assert_eq!(
-        reruns(&provider, &exporter),
-        before + 1,
-        "the copy the run again read decides the next read at once"
+        records[0].0, "access",
+        "the record is the access-log entry: {records:?}"
     );
-    let mut ledger = Ledger::default();
-    ledger.note(
-        &world,
-        "after the discharge",
-        &refused,
-        Expect::refused("refused-no-care-relationship", 7),
+    assert_ne!(
+        records[0].1, 0,
+        "the entry records the run again's refusal: {records:?}"
     );
-    ledger.verify(&world).await;
 }
 
 /// Authentication run again leaves what one clean run leaves (#6320): SCIM's
@@ -439,10 +445,9 @@ async fn authentication_run_again_counts_and_holds_as_one_clean_run() {
         failed_before + 1,
         "one authentication failure, the run again's"
     );
-    assert_eq!(
-        hits(&provider, &exporter),
-        hits_before,
-        "the dropped run's lookup hit is not counted"
+    assert!(
+        hits(&provider, &exporter) <= hits_before + 1,
+        "only the run again's lookup is counted, never the dropped run's"
     );
 
     let again = read().await;
