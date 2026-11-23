@@ -2,35 +2,17 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants + functions for `INTERVAL_EVENT`.
-//!
-//! Spec: RM 1.2.0
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_structures.interval_event.adoc`.
-//!
-//! - `interval_start_time()`: start time of the interval of this event —
-//!   `time - width` (per the `Interval_start_time_valid` invariant, which the
-//!   computed function satisfies by construction).
-//! - Inherited LOCATABLE `Archetype_node_id_valid`.
-//!
-//! NOTE: `Math_function_validity` (the `math_function` code must belong
-//! to the openEHR `event math function` group) is terminology-bound and is
-//! deferred to the composition validator + `openehr-term` (this crate has no
-//! terminology dependency), consistent with the crate-wide policy in
-//! `crate::v1_1::validate`.
+//! `INTERVAL_EVENT.interval_start_time` (RM 1.2.0
+//! `org.openehr.rm.data_structures.interval_event.adoc`) and the inherited
+//! `Archetype_node_id_valid`; `Math_function_validity` is terminology-bound.
 
 use crate::v1_1::data_structures::history::interval_event::IntervalEvent;
 use crate::v1_1::data_types::quantity::date_time::dv_date_time::DvDateTime;
 use openehr_base::validate::{InvariantViolation, Validate};
 
 impl<T> IntervalEvent<T> {
-    /// RM `INTERVAL_EVENT.interval_start_time()`: the start time of the
-    /// interval, `time - width` (`Interval_start_time_valid`), or `None` when
-    /// `time` or `width` is not a valid ISO-8601 value.
-    ///
-    /// `DV_DATE_TIME.subtract` is that operation, so this is that call. The
-    /// calendar belongs to the BASE ISO-8601 types; computing it here in
-    /// floating-point seconds meant carrying a day count and a sub-second
-    /// fraction in one `f64` and casting twice to get there.
+    /// RM `INTERVAL_EVENT.interval_start_time()`: `time - width`, or `None` when
+    /// either is not a valid ISO 8601 value.
     #[must_use]
     pub fn interval_start_time(&self) -> Option<DvDateTime> {
         self.time.subtract(&self.width)

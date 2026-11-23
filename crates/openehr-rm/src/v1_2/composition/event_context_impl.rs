@@ -2,24 +2,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariant for `EVENT_CONTEXT`.
-//!
-//! The class page
-//! (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.event_context.adoc`
-//! §Invariants) declares three invariants; every one is enforced, each at the
-//! layer its inputs live at:
-//!
-//! - `location_valid` (`location /= Void implies not location.is_empty`) —
-//!   here, via the generated `event_context_core`.
-//! - `Participations_validity` — by construction: the field emits
-//!   `Option<NonEmptyVec<PARTICIPATION>>`, so a present-but-empty list is
-//!   unrepresentable and the strict readers refuse `[]` at parse.
-//! - `Setting_valid` — terminology-bound, enforced in `validate::terminology`
-//!   against the `openehr-term` bundle (it needs the openEHR terminology
-//!   group, which this layer does not hold).
-//!
-//! `start_time` presence is structural: the attribute is `1..1`, so it emits
-//! a mandatory field.
+//! `EVENT_CONTEXT` invariants
+//! (`org.openehr.rm.composition.event_context.adoc` §Invariants):
+//! `location_valid` in `event_context_core`; `Participations_validity` by the
+//! `NonEmptyVec` type; `Setting_valid` in `validate::terminology`.
 
 use crate::v1_2::composition::event_context::EventContext;
 use openehr_base::validate::{InvariantViolation, Validate};

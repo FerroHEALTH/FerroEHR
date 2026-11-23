@@ -2,26 +2,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `OBSERVATION`.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.entry.adoc`
-//! §Invariants (`OBSERVATION` declares no invariant of its own) +
-//! `…org.openehr.rm.common.locatable.adoc` §Invariants. Enforced here:
-//! - `Is_archetype_root` (`is_archetype_root`): an ENTRY is an archetype root,
-//!   so `archetype_details` must be present.
-//! - the inherited LOCATABLE `Archetype_node_id_valid`: `archetype_node_id`
-//!   non-empty.
-//!
-//! The other three ENTRY invariants need no check in this crate:
-//! `Language_valid` / `Encoding_valid` are code-set-bound and are enforced in
-//! the terminology-aware path (`validate::terminology`, the ENTRY-subtype
-//! slots) against the `openehr-term` bundle; `Other_participations_valid`
-//! (`other_participations /= Void implies not …is_empty`) is unrepresentable
-//! against an `Option<NonEmptyVec<…>>` field (`openehr_base::containers`); and
-//! `Subject_validity` restates the §Functions post-condition of
-//! `subject_is_self`, whose only ground here is `subject`'s own variant, so
-//! there is nothing independent left to compare.
+//! `OBSERVATION` invariants (`org.openehr.rm.composition.entry.adoc`):
+//! `Is_archetype_root` and `Archetype_node_id_valid`. `Language_valid` and
+//! `Encoding_valid` are in `validate::terminology`;
+//! `Other_participations_valid` holds by the `NonEmptyVec` type.
 
 use crate::v1_1::composition::content::entry::observation::Observation;
 use openehr_base::validate::{InvariantViolation, Validate};

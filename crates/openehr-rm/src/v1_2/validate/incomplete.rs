@@ -2,40 +2,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! The `553|incomplete|` presence relaxation, expressed as two pure
-//! model-driven predicates over a canonical-JSON node.
+//! The `553|incomplete|` relaxation as two predicates: "In the `incomplete`
+//! state … mandatory attributes may be absent … data may be missing, but it
+//! may not be wrong" (RM `master06-change_control_package.adoc` §Incomplete
+//! Content).
 //!
-//! RM common `master06-change_control_package.adoc` §Incomplete Content
-//! (NOTE): "In the `incomplete` state, a limited form of invalidity is
-//! allowed: mandatory attributes may be absent. Concretely, single-valued
-//! attributes may have null values and container attributes may be empty,
-//! even though they may have minimum existence and cardinality respectively
-//! of one. All other validity requirements must be satisfied. In other words,
-//! in an `incomplete` commit, data may be missing, but it may not be wrong."
-//!
-//! That sentence splits the structural judgement of a node in two, and this
-//! module realizes exactly that split:
-//!
-//! * [`mandatory_data_present`] answers "is anything MISSING?" — the half the
-//!   `incomplete` state relaxes. A node it answers `false` for is one whose
-//!   *typed construction* would fail on presence alone, so the caller does not
-//!   drive that tier for it (the generated RM types make existence and
-//!   cardinality lower bounds structural — a mandatory attribute is a plain
-//!   field and a `1..*` container is a
-//!   [`NonEmptyVec`](openehr_base::containers::NonEmptyVec) — which is
-//!   precisely the refusal §Incomplete Content lifts).
-//! * [`contradicts_rm_type`] answers "is anything WRONG?" — the half that
-//!   stays at full strength: a JSON kind the declared type cannot hold, or a
-//!   slot payload whose `_type` is not a descendant of the declared class.
-//!
-//! Both are **shallow by design on the wrongness side and deep on the presence
-//! side**, because the callers differ: the presence predicate must mirror what
-//! a typed decode of the whole node would touch (single-valued nested nodes
-//! and container members are decoded with it), while the wrongness predicate is
-//! invoked once per node by a walker that visits every child in turn.
-//!
-//! Neither predicate is used by the strict (`532|complete|`) path, which is
-//! byte-for-byte unchanged.
+//! [`mandatory_data_present`] answers whether anything is missing, deep;
+//! [`contradicts_rm_type`] whether anything is wrong, one level. The strict
+//! path uses neither.
 
 #![expect(
     clippy::disallowed_types,
@@ -47,16 +21,13 @@ use serde_json::Value;
 
 use crate::v1_2::model::{Container, RmAttribute, class};
 
-/// The `POINT_EVENT`/`INTERVAL_EVENT` `data` slot, whose generic parameter the
-/// validation dispatcher erases to `serde_json::Value` — so any non-absent
-/// payload decodes. Mirrors the same exemption in the fast path.
+/// The generic `data` slot of `POINT_EVENT` and `INTERVAL_EVENT`.
 fn generic_any_slot(ty: &str, attr: &str) -> bool {
     attr == "data" && matches!(ty, "POINT_EVENT" | "INTERVAL_EVENT")
 }
 
-/// The effective RM type of a nested node: its own wire `_type`, else the
-/// declared attribute type when that names a CONCRETE class (canonical JSON
-/// requires `_type` only on polymorphic slots).
+/// The effective type of a nested node: its `_type`, else a concrete declared
+/// type.
 fn effective_type<'a>(node: &'a Value, declared: &'a str) -> Option<&'a str> {
     if let Some(tag) = node.get("_type").and_then(Value::as_str) {
         return Some(tag);
@@ -67,27 +38,11 @@ fn effective_type<'a>(node: &'a Value, declared: &'a str) -> Option<&'a str> {
         .or(None)
 }
 
-/// Whether `value` carries every attribute the RM model declares MANDATORY.
+/// Whether `value` carries every mandatory attribute and non-empty `1..*`
+/// container, recursively.
 ///
-/// No container with a cardinality lower bound of 1 may be empty either, and
-/// the check recurses through the nested nodes a typed decode of `value` would
-/// itself decode.
-///
-/// `true` means "nothing is missing", so the strict tiers apply to this node
-/// unchanged. `false` means the node is missing data the RM declares
-/// mandatory — exactly the state RM common master06 §Incomplete Content admits
-/// for a `553|incomplete|` commit ("mandatory attributes may be absent …
-/// container attributes may be empty, even though they may have minimum
-/// existence and cardinality respectively of one").
-///
-/// The predicate is deliberately biased toward `false`: it recurses into every
-/// nested object and every container member, which is at least as much as any
-/// decode touches. An over-eager `false` only routes the node onto the
-/// presence-tolerant path (which still judges wrongness); a false `true` would
-/// refuse a commit the spec admits, and is what this bias rules out.
-///
-/// A class the model does not know is not judged (`true`) — an unrecognised
-/// `_type` is not a presence claim this layer can adjudicate.
+/// Biased toward `false`, which only routes the node to the
+/// presence-tolerant path; an unknown class is `true`.
 #[must_use]
 pub fn mandatory_data_present(ty: &str, value: &Value) -> bool {
     let Some(spec) = class(ty) else { return true };
@@ -144,23 +99,9 @@ fn list_members_present(member: &Value, attr: &RmAttribute) -> bool {
     items.iter().all(|item| single_member_present(item, attr))
 }
 
-/// Whether `value` positively CONTRADICTS its declared RM type `ty`.
-///
-/// A contradiction is a member whose JSON kind the declared type cannot hold, a
-/// container member that is not an array, or a slot payload whose `_type` is not
-/// a concrete descendant of the declared class.
-///
-/// This is the "may not be wrong" half of RM common master06 §Incomplete
-/// Content, and it ignores presence entirely: an absent or `null` member is
-/// never a contradiction here (that is [`mandatory_data_present`]'s question).
-///
-/// Only the node's OWN members are judged — a walker visits each nested node
-/// with its own effective type — so the check is one level deep by design.
-///
-/// `false` is also the answer for anything this layer cannot adjudicate (an
-/// unknown class, an undeclared member, a declared type outside the model);
-/// the undeclared-member refusal and the terminology, pattern and archetype
-/// passes are separate layers that keep running at full strength.
+/// Whether one of `value`'s own members contradicts its declared type: a
+/// wrong JSON kind, or a `_type` that is not a concrete descendant. Absence
+/// is never a contradiction; anything unknown is `false`.
 #[must_use]
 pub fn contradicts_rm_type(ty: &str, value: &Value) -> bool {
     let Some(spec) = class(ty) else { return false };
@@ -201,10 +142,8 @@ pub fn contradicts_rm_type(ty: &str, value: &Value) -> bool {
     false
 }
 
-/// Whether one member value contradicts its declared spec type. Mirrors the
-/// primitive acceptance of the canonical-JSON readers (`String` → JSON string,
-/// `Integer` → an integral number in `i32` range, …); a declared class demands
-/// an object whose `_type`, when present, names a concrete descendant.
+/// Whether one member contradicts its declared spec type, by the readers'
+/// primitive acceptance.
 fn value_contradicts(member: &Value, declared: &str) -> bool {
     match declared {
         "String" => !member.is_string(),
@@ -256,12 +195,7 @@ mod tests {
         assert!(!contradicts_rm_type("CLUSTER", &cluster));
     }
 
-    /// `CLUSTER.items` is `1..*`
-    /// (`RM/docs/UML/classes/org.openehr.rm.data_structures.cluster.adoc`
-    /// §Attributes), so an EMPTY `items` is missing data — the shape master06
-    /// §Incomplete Content names verbatim ("container attributes may be empty,
-    /// even though they may have minimum … cardinality … of one") — and is
-    /// not wrong.
+    /// An empty `CLUSTER.items` is missing, not wrong.
     #[test]
     fn an_empty_one_or_more_container_is_missing_not_wrong() {
         let cluster = json!({
@@ -287,9 +221,7 @@ mod tests {
         assert!(!contradicts_rm_type("ELEMENT", &element));
     }
 
-    /// Missing data NESTED inside a present node is still missing: the typed
-    /// decode of the outer node would fail on it, so the outer node must route
-    /// onto the presence-tolerant path too.
+    /// Missing data nested in a present node is missing.
     #[test]
     fn missing_data_inside_a_nested_node_is_seen_from_the_parent() {
         let cluster = json!({
@@ -305,9 +237,7 @@ mod tests {
         assert!(!mandatory_data_present("CLUSTER", &cluster));
     }
 
-    /// The twin of the two above: WRONG data is wrong whether or not anything
-    /// is missing — a JSON kind the declared type cannot hold, and a slot
-    /// payload whose `_type` is not a descendant of the declared class.
+    /// Wrong data is wrong whether or not anything is missing.
     #[test]
     fn wrong_kinds_and_foreign_slot_types_contradict() {
         // DV_QUANTITY.magnitude is Real: a string cannot hold it.

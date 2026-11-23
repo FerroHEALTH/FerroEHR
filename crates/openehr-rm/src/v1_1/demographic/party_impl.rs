@@ -2,43 +2,18 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM spec functions for `PARTY`.
+//! `PARTY.type` (`org.openehr.rm.demographic.party.adoc`), dispatched over the
+//! five party types. `reverse_relationships` reads the demographic repository
+//! (`Post_reverse_relationships_validity`), so the service realizes it.
 //!
-//! NOTE: this is the `v1_1` OVERRIDE — RM 1.1.0 declares `PARTY.reverse_relationships`
-//! (`…demographic.party.adoc` §Attributes) and RM 1.2.0 does not, so the test
-//! fixtures differ by that one field.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.party.adoc`
-//! §Functions + §Invariants. `PARTY` is abstract, so the generated `Party` is
-//! the closed subtype enum and its one value-realizable function dispatches
-//! over the five concrete party types.
-//!
-//! `reverse_relationships()` is NOT realized here, and cannot be: its own
-//! post-condition (§Functions
-//! `Post_reverse_relationships_validity`) reads
-//! `repository ("demographics").all_party_relationships`, i.e. every
-//! relationship held by the demographic repository whose `target` is this
-//! party. A party value carries only the relationships it is the SOURCE of
-//! (§Attributes `relationships`), so the inverse direction is a repository
-//! query, not a function of the value — a demographic service realizes it over
-//! stored relationships, and answering `[]` from an in-memory party would be a
-//! wrong answer rather than an unavailable one.
+//! NOTE: the `v1_1` override; RM 1.1.0 declares `PARTY.reverse_relationships`
+//! (`party.adoc` §Attributes), so the fixtures differ.
 
 use crate::v1_1::data_types::text::dv_text::DvText;
 use crate::v1_1::demographic::party::Party;
 
 impl Party {
-    /// Returns the type of this party, e.g. `PERSON`, `ORGANISATION`, or a
-    /// role name such as general practitioner.
-    ///
-    /// Spec: `org.openehr.rm.demographic.party.adoc` §Functions `type` — "Type
-    /// of party, such as `PERSON`, `ORGANISATION`, etc. Role name, e.g.
-    /// general practitioner, nurse, private citizen. Taken from inherited
-    /// `name` attribute", with §Invariants `Type_valid: type = name` making the
-    /// identity exact. §Description says the same from the other side: "The
-    /// `name` attribute inherited from `LOCATABLE` is used to indicate the
-    /// actual type of party".
+    /// The type of this party: its `name` (`Type_valid: type = name`).
     #[must_use]
     pub fn r#type(&self) -> &DvText {
         match self {

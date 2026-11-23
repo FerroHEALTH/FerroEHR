@@ -2,17 +2,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written accessor functions for `TEMPLATE_ID`.
-//!
-//! Spec: BASE 1.3.0
-//! `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.template_id.adoc`
-//! and `docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc`
-//! §Template Identifiers. A template identifier in the human-readable (HRID)
-//! form is `namespace '::' rm_publisher '-' rm_package '-' rm_class '.'
-//! concept_id '.v' version_id` (e.g.
-//! `org.example::openEHR-EHR-COMPOSITION.discharge_summary.v1.0.0`); a legacy
-//! free-text template name stays a valid `TEMPLATE_ID`, and every accessor
-//! answers the empty string for it.
+//! Accessors for `TEMPLATE_ID` (BASE 1.3.0
+//! `org.openehr.base.base_types.template_id.adoc`, master05 §Template
+//! Identifiers): `namespace '::' rm_publisher '-' rm_package '-' rm_class '.'
+//! concept_id '.v' version_id`. A legacy free-text name is valid, and every
+//! accessor answers the empty string for it.
 
 use super::template_id::TemplateId;
 

@@ -2,23 +2,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written accessor functions for the `UID_BASED_ID` family
-//! (`HIER_OBJECT_ID`, `OBJECT_VERSION_ID`) and the abstract enum.
+//! Accessors for the `UID_BASED_ID` family (BASE 1.3.0
+//! `org.openehr.base.base_types.uid_based_id.adoc`): `root '::' extension`.
 //!
-//! Spec: BASE 1.3.0
-//! `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.uid_based_id.adoc`.
-//! Lexical form: `root '::' extension`.
-//! - `root()`  — the part left of the first `::`, or the whole string.
-//! - `extension()` — the part right of the first `::`, or the empty string.
-//! - `has_extension()` — `not extension.is_empty()`.
-//!
-//! Invariant `Has_extension_valid` (`extension.is_empty xor has_extension`) is
-//! unfalsifiable in this representation: the same page defines
-//! `has_extension(): True if not extension.is_empty()`, so computing it from
-//! `extension()` makes the invariant a tautology with nothing to check at
-//! runtime. It is therefore not surfaced as a runnable `Validate` check.
-//! `OBJECT_VERSION_ID` well-formedness is checked by its own sibling
-//! (`object_version_id_impl`).
+//! `Has_extension_valid` is a tautology here, since `has_extension` is computed
+//! from `extension`.
 
 use super::hier_object_id::HierObjectId;
 use super::lexical::{composite_ids_equal, make_uid};
@@ -45,16 +33,13 @@ pub(crate) fn extension_str(value: &str) -> &str {
 macro_rules! uid_based_id_accessors {
     ($ty:ty) => {
         impl $ty {
-            /// The conceptual-namespace identifier: the part of `value` left of
-            /// the first `::` separator, as a typed [`Uid`] (BASE
-            /// `UID_BASED_ID.root`).
+            /// The part left of the first `::`, as a [`Uid`] (BASE `UID_BASED_ID.root`).
             #[must_use]
             pub fn root(&self) -> Uid {
                 make_uid(root_str(&self.value))
             }
 
-            /// The optional local identifier within the root namespace: the part
-            /// right of the first `::`, or the empty string (BASE
+            /// The part right of the first `::`, or the empty string (BASE
             /// `UID_BASED_ID.extension`).
             #[must_use]
             pub fn extension(&self) -> &str {
@@ -68,17 +53,8 @@ macro_rules! uid_based_id_accessors {
                 !self.extension().is_empty()
             }
 
-            /// Case-**insensitive** identity: `true` iff this identifier and
-            /// `other` are equal apart from letter case — the shared
-            /// composite-identifier rule
-            /// ([`composite_ids_equal`](super::lexical::composite_ids_equal),
-            /// BASE `master05-identification_package.adoc` §"Composite
-            /// Identifiers and Case").
-            ///
-            /// The stored `value` is left byte-for-byte intact (the sibling
-            /// case-**preserving** rule); only the *comparison* folds case, so a
-            /// UUID `object_id` differing only in hex case (`…4E3D…` vs
-            /// `…4e3d…`) is recognised as the same version.
+            /// Whether this identifier equals `other` apart from case
+            /// ([`composite_ids_equal`](super::lexical::composite_ids_equal)).
             #[must_use]
             pub fn is_equal(&self, other: &Self) -> bool {
                 composite_ids_equal(&self.value, &other.value)
@@ -120,11 +96,8 @@ impl UidBasedId {
         !self.extension().is_empty()
     }
 
-    /// Case-**insensitive** identity across the `UID_BASED_ID` value, regardless
-    /// of which concrete variant either side is — the shared
-    /// composite-identifier rule
-    /// ([`composite_ids_equal`], BASE
-    /// `master05-identification_package.adoc` §"Composite Identifiers and Case").
+    /// Whether the two values are equal apart from case, whichever variant each
+    /// is ([`composite_ids_equal`]).
     #[must_use]
     pub fn is_equal(&self, other: &Self) -> bool {
         composite_ids_equal(self.value(), other.value())

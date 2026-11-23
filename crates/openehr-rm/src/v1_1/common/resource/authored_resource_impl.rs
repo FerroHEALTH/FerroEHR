@@ -2,60 +2,27 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `AUTHORED_RESOURCE`.
+//! `AUTHORED_RESOURCE` invariants (RM 1.2.0
+//! `org.openehr.rm.common.authored_resource.adoc` §Invariants):
+//! `Revision_history_valid` in the generated core, only when `is_controlled`
+//! is present. The other rows live in the generated complex-invariant
+//! register.
 //!
-//! NOTE: this is the `v1_1` OVERRIDE: the RM 1.1.0 BMM spells `TRANSLATION_DETAILS.accreditaton`
-//! and the RM 1.2.0 BMM `accreditation` (`…common.translation_details.adoc` §Attributes), so the test
-//! fixtures differ by that one field.
-//!
-//! Spec: RM 1.2.0
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.authored_resource.adoc`
-//! §Invariants — `Revision_history_valid`
-//! (`is_controlled xor revision_history = Void`), evaluated by the generated
-//! core only when `is_controlled` is PRESENT: the attribute is `0..1` and an
-//! `xor` against a Void operand is not evaluable, so an absent flag asserts
-//! nothing (refusing there would invent a prohibition the released text does
-//! not contain). `Current_revision_valid` constrains the DERIVED
-//! `current_revision()` function (§Functions), not stored data — adjudicated
-//! in the generated register. The terminology-backed
-//! `Original_language_valid` stays with the terminology binding table;
-//! `Translations_valid`/`Description_valid` are cross-member map rules over
-//! `translations`, realized where a whole authored resource is ingested —
-//! the OPT 1.4 template upload's resource-meta pass
-//! (`app/ferroehr/src/validation/opt/resource.rs`) and the ADL 1.4 source
-//! catalogue (`openehr-adl` `validate/resource_meta.rs`); their rows live in
-//! the generated complex-invariant register. `Languages_available_valid`
-//! (`languages_available.has (original_language)`) constrains the derived
-//! `languages_available()` function, which builds its result from
-//! `original_language` — so it holds by that function's own definition, the
-//! same venue as `Current_revision_valid` (register-adjudicated).
+//! NOTE: the `v1_1` override; RM 1.1.0 spells `TRANSLATION_DETAILS.accreditaton`
+//! (`translation_details.adoc` §Attributes), so the fixtures differ.
 
 use crate::v1_1::common::resource::authored_resource::AuthoredResource;
 use openehr_base::validate::{InvariantViolation, Validate};
 
-/// The `current_revision` of a resource that is not under change control.
-///
-/// Spec: `org.openehr.rm.common.authored_resource.adoc` §Functions
-/// `current_revision` ("… if `is_controlled` else `(uncontrolled)`") and
-/// §Invariants `Current_revision_valid`, which pins the literal:
-/// `(current_revision /= Void and not is_controlled) implies
-/// current_revision.is_equal ("(uncontrolled)")`.
+/// The `current_revision` of an uncontrolled resource
+/// (`Current_revision_valid`).
 pub const UNCONTROLLED_REVISION: &str = "(uncontrolled)";
 
 impl AuthoredResource {
-    /// Returns the most recent revision of this resource.
+    /// Returns the most recent revision of this resource (`current_revision`).
     ///
-    /// Spec: `org.openehr.rm.common.authored_resource.adoc` §Functions
-    /// `current_revision` — "Most recent revision in `revision_history` if
-    /// `is_controlled` else `(uncontrolled)`", with
-    /// `Post: Result = revision_history.most_recent_version`.
-    ///
-    /// `None` is the one state neither branch answers: a resource that
-    /// declares itself controlled while carrying no revision history, which
-    /// §Invariants `Revision_history_valid` (`is_controlled xor
-    /// revision_history = Void`) forbids. Reporting it is how a caller sees
-    /// that violation instead of receiving a revision the resource does not
-    /// have.
+    /// `None` for a controlled resource without a revision history, which
+    /// `Revision_history_valid` forbids.
     #[must_use]
     pub fn current_revision(&self) -> Option<&str> {
         if self.is_controlled == Some(true) {
@@ -67,21 +34,8 @@ impl AuthoredResource {
         Some(UNCONTROLLED_REVISION)
     }
 
-    /// Returns every language this resource is available in, original language
-    /// first.
-    ///
-    /// Spec: `org.openehr.rm.common.authored_resource.adoc` §Functions
-    /// `languages_available` — "Total list of languages available in this
-    /// resource, derived from `original_language` and `translations`" — with
-    /// §Invariants `Languages_available_valid` (`languages_available.has
-    /// (original_language)`) making the original language's membership
-    /// unconditional, which is why it leads the list.
-    ///
-    /// The remaining languages are the `translations` keys, which the same
-    /// section says are keyed by language and never include the original
-    /// (§Invariants `Translations_valid`: `not translations.has
-    /// (orginal_language.code_string)`). A translation keyed by the original
-    /// language anyway is not listed twice.
+    /// Returns every language of this resource, the original first, then the
+    /// `translations` keys without repeats (`languages_available`).
     #[must_use]
     pub fn languages_available(&self) -> Vec<String> {
         let original = self.original_language.code_string.as_str();

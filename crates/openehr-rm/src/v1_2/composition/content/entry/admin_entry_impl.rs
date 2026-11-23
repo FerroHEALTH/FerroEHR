@@ -2,10 +2,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `ADMIN_ENTRY`.
-//!
-//! Inherited `Entry` + LOCATABLE invariants (`Is_archetype_root`,
-//! `Archetype_node_id_valid`). See `observation_impl` for the NOTE.
+//! `ADMIN_ENTRY` invariants: the inherited `Is_archetype_root` and
+//! `Archetype_node_id_valid`.
 
 use crate::v1_2::composition::content::entry::admin_entry::AdminEntry;
 use openehr_base::validate::{InvariantViolation, Validate};

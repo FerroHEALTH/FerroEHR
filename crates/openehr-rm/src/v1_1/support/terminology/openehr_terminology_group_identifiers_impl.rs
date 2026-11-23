@@ -2,29 +2,17 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM spec functions for `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`.
+//! `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`
+//! (`org.openehr.rm.support.openehr_terminology_group_identifiers.adoc`).
 //!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.support.openehr_terminology_group_identifiers.adoc`
-//! §Constants + §Functions.
-//!
-//! NOTE: the released text and the vendored BMM both type
-//! `valid_terminology_group_id`'s `an_id` parameter as `Boolean` while its own
-//! documentation calls it an identifier and the set it tests against is
-//! fourteen `String` constants, so the parameter is realized as the string the
-//! function's meaning requires.
+//! NOTE: the class types `valid_terminology_group_id`'s `an_id` as `Boolean`;
+//! it is a string here, as its meaning requires.
 
 use crate::v1_1::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiersData;
 
 impl OpenehrTerminologyGroupIdentifiersData {
-    /// Every openEHR terminology group identifier this class defines, in
-    /// declaration order.
-    ///
-    /// Spec:
-    /// `org.openehr.rm.support.openehr_terminology_group_identifiers.adoc`
-    /// §Constants. `Terminology_id_openehr` is deliberately absent: it names
-    /// openEHR's own TERMINOLOGY, not a group within it, which is why
-    /// `TERMINOLOGY_SERVICE.terminology` takes it and this predicate does not.
+    /// The fourteen group identifiers; `Terminology_id_openehr` names the
+    /// terminology, not a group.
     const ALL: [&str; 14] = [
         Self::GROUP_ID_AUDIT_CHANGE_TYPE,
         Self::GROUP_ID_ATTESTATION_REASON,
@@ -42,14 +30,8 @@ impl OpenehrTerminologyGroupIdentifiersData {
         Self::GROUP_ID_VERSION_LIFE_CYCLE_STATE,
     ];
 
-    /// Returns `true` when `an_id` is one of the openEHR terminology group
-    /// identifiers.
-    ///
-    /// Spec:
-    /// `org.openehr.rm.support.openehr_terminology_group_identifiers.adoc`
-    /// §Functions `valid_terminology_group_id` — "Validity function to test if
-    /// an identifier is in the set defined by this class", where "the set
-    /// defined by this class" is its own §Constants.
+    /// Whether `an_id` is one of the group identifiers
+    /// (`valid_terminology_group_id`).
     #[must_use]
     pub fn valid_terminology_group_id(an_id: &str) -> bool {
         Self::ALL.contains(&an_id)

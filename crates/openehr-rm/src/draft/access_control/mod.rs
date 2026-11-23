@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! The draft openEHR access control (`org.openehr.rm.access_control` 0.1.0), generated from its FerroEHR-local BMM `tools/openehr-codegen/draft/bmm/openehr_access_control_0.1.0.bmm.json`.
 //!
-//! The package is a draft change proposal and no openEHR release, so it is emitted under `draft`, behind the `draft` feature, rather than as a generation of the RM; if openEHR adopts it, it moves into an RM generation. Its classes resolve against RM 1.2.0 and BASE 1.3.0, the schemas the draft includes, and read and write the canonical JSON form with `_type` through the same strict runtime as the spec crates.
+//! A draft change proposal, no openEHR release. Its classes resolve against RM 1.2.0 and BASE 1.3.0.
 
 #![allow(
     clippy::doc_markdown,
