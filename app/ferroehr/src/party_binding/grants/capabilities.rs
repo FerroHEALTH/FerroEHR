@@ -477,8 +477,11 @@ impl<'a> SubjectScope<'a> {
 
 /// Runs `fut` as a request whose caller has `capabilities`, which
 /// [`Capabilities::current`] reads.
-pub async fn with_capabilities<F: Future>(capabilities: Arc<Capabilities>, fut: F) -> F::Output {
-    CURRENT.scope(capabilities, fut).await
+pub fn with_capabilities<F: Future>(
+    capabilities: Arc<Capabilities>,
+    fut: F,
+) -> impl Future<Output = F::Output> {
+    CURRENT.scope(capabilities, fut)
 }
 
 #[cfg(test)]
