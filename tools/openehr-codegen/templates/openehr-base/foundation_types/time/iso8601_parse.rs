@@ -2,57 +2,23 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written ISO 8601 parsing, arithmetic and completion-range machinery
-//! shared by the four `Iso8601_*` `*_impl.rs` siblings.
+//! ISO 8601 parsing, arithmetic and completion ranges shared by the four
+//! `Iso8601_*` siblings (`time_definitions.adoc`, `master06-time_types.adoc`).
+//! A malformed value parses to `None`.
 //!
-//! The generated `Iso8601_*` types hold their value as a single `String`
-//! (BMM: `Iso8601_type.value`). Ordering, the spec-declared accessor
-//! functions, duration reduction, and the computational functions
-//! (`add`/`subtract`/`diff`/`add_nominal`/`subtract_nominal`) all need the
-//! value decomposed into typed components, so this module parses the
-//! documented lexical forms into plain component structs, computes on them,
-//! and renders results back to a string. A malformed string parses to `None`,
-//! which every caller turns into an undecidable (`None`) comparison or an
-//! uncomputable (`None`) result — the generated types admit any `String`, so
-//! parsing can always fail and must never panic.
+//! NOTE: the types are `Ordered` but no class gives a comparison algorithm, so
+//! partial ordering, zone normalisation and duration comparison are our own
+//! design over the completion ranges.
 //!
-//! Spec sources (vendored):
-//! - `BASE/docs/UML/classes/org.openehr.base.foundation_types.time_definitions.adoc`
-//!   (§Constants: the average-length constants used verbatim below; §Functions:
-//!   `valid_iso8601_date`/`_time`/`_date_time`/`_duration`, `valid_second`,
-//!   `valid_hour`, `valid_year`).
-//! - `BASE/docs/foundation_types/master06-time_types.adoc` (§Overview,
-//!   §Primitive Time Types: the accepted forms and openEHR's deviations —
-//!   week dates `YYYY-Www` excluded, `24:00:00` disallowed anywhere, the `W`
-//!   duration designator mixable, negative durations, 4-digit years only;
-//!   §Computational Functions: the definite/nominal split).
-//!
-//! NOTE: the openEHR specs define THAT these types are `Ordered` (via the
-//! `Ordered` ancestry of `Iso8601_type`) but give NO comparison algorithm —
-//! `Ordered.less_than` is abstract and none of the four classes effect it, and
-//! there is no `magnitude`. Partial-value ordering, timezone normalisation, and
-//! duration comparison are therefore spec-silent: the algorithms here are our
-//! own design/extension, grounded only in the range/completion semantics of
-//! partial ISO 8601 values (see each `*_impl.rs`).
-//!
-//! NOTE: `Interval.Limits_comparable`
-//! (`org.openehr.base.foundation_types.interval.adoc`) is stated in terms of
-//! `lower.strictly_comparable_to(upper)`, but `strictly_comparable_to` is
-//! referenced nowhere-else and defined by no class in the vendored BASE spec
-//! (a spec defect). Our operational comparability predicate for the temporal
-//! value spaces is exactly `PartialOrd::partial_cmp(..).is_some()` — two values
-//! are comparable when their completion intervals are order-separated.
+//! NOTE: `Interval.Limits_comparable` names `strictly_comparable_to`, which no
+//! BASE class defines; comparability here is `partial_cmp(..).is_some()`.
 
 use std::cmp::Ordering;
 // `write!` into a `String` is infallible; the `let _ =` discards of its
 // `Result` below are the standard `std::fmt` idiom, not dropped guards.
 use std::fmt::Write;
 
-// ── Time_Definitions constants (verbatim; §Constants) ────────────────────────
-// The BMM `Time_Definitions` class is not emitted as a generated type (it
-// carries only constants + validity functions), so its constants are mirrored
-// here verbatim from
-// `org.openehr.base.foundation_types.time_definitions.adoc` §Constants.
+// Time_Definitions constants, verbatim from `time_definitions.adoc` §Constants.
 
 /// `Time_Definitions.Seconds_in_minute` = 60.
 pub(crate) const SECONDS_IN_MINUTE: f64 = 60.0;
@@ -66,9 +32,8 @@ pub(crate) const DAYS_IN_WEEK: f64 = 7.0;
 pub(crate) const AVERAGE_DAYS_IN_MONTH: f64 = 30.42;
 /// `Time_Definitions.Average_days_in_year` = 365.24.
 pub(crate) const AVERAGE_DAYS_IN_YEAR: f64 = 365.24;
-/// `Time_Definitions.Min_timezone_hour` = 12 — "minimum hour value of a
-/// timezone according to ISO 8601 (note that the -ve sign is supplied in the
-/// `ISO8601_TIMEZONE` class)".
+/// `Time_Definitions.Min_timezone_hour` = 12; the sign lives in
+/// `ISO8601_TIMEZONE`.
 pub(crate) const MIN_TIMEZONE_HOUR: u32 = 12;
 /// `Time_Definitions.Max_timezone_hour` = 14.
 pub(crate) const MAX_TIMEZONE_HOUR: u32 = 14;
@@ -78,15 +43,9 @@ pub(crate) const SECONDS_IN_HOUR: f64 = MINUTES_IN_HOUR * SECONDS_IN_MINUTE;
 /// Seconds in one clock day (`Hours_in_day * Minutes_in_hour * Seconds_in_minute`).
 pub(crate) const SECONDS_IN_DAY: f64 = HOURS_IN_DAY * SECONDS_IN_HOUR;
 
-// ── Integer-second forms of the same constants ───────────────────────────────
-// No openEHR spec governs the arithmetic's internal representation — our own
-// design. Both average lengths are a whole number of seconds (`365.24 × 86400 =
-// 31_556_736`, `30.42 × 86400 = 2_628_288`, pinned by the
-// `average_constants_are_whole_seconds` test below), so the `i64`-seconds plus
-// separate fractional part stays faithful to the spec constants.
-// NOTE: the definite computational functions (§Computational Functions) reduce
-// a duration to seconds; doing that on `f64` would corrupt sub-second
-// precision, so the arithmetic runs on exact whole seconds ([`ExactSeconds`]).
+// The same constants in whole seconds (`365.24 × 86400 = 31_556_736`), so the
+// arithmetic runs on exact seconds; no openEHR spec governs this, our own
+// design.
 
 /// `Time_Definitions.Seconds_in_minute` as exact seconds.
 pub(crate) const EXACT_SECONDS_IN_MINUTE: i64 = 60;
@@ -101,18 +60,13 @@ pub(crate) const EXACT_SECONDS_IN_AVERAGE_MONTH: i64 = 2_628_288;
 /// `Time_Definitions.Average_days_in_year` (365.24) in exact seconds.
 pub(crate) const EXACT_SECONDS_IN_AVERAGE_YEAR: i64 = 31_556_736;
 
-/// The inclusive year range the openEHR time types can represent: `valid_year`
-/// requires `y >= 0` (`time_definitions.adoc` §Functions) and `master06`
-/// §Primitive Time Types excludes 'expanded' (>4-digit) years, so an arithmetic
-/// result outside `0000`..=`9999` is not representable.
+/// The representable years: `valid_year` needs `y >= 0` and `master06`
+/// excludes expanded years.
 const REPRESENTABLE_YEARS: std::ops::RangeInclusive<i64> = 0..=9999;
 
 // ── Parsed component structs ─────────────────────────────────────────────────
 
-/// A parsed ISO 8601 date. `year` is always present (the openEHR types have no
-/// sensible value without it); `month`/`day` are absent for the partial forms
-/// `YYYY` and `YYYY-MM`. `extended` records the lexical form
-/// (`Iso8601_date.is_extended`).
+/// A parsed ISO 8601 date; `month`/`day` are absent for `YYYY` and `YYYY-MM`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct ParsedDate {
     pub(crate) year: u32,
@@ -121,12 +75,8 @@ pub(crate) struct ParsedDate {
     pub(crate) extended: bool,
 }
 
-/// A parsed ISO 8601 time. `hour` is always present; `minute`/`second` are
-/// absent for the partial forms `hh` and `hh:mm`. `fractional_second` is only
-/// meaningful when `second` is present. `timezone` is the offset in signed
-/// minutes (`Z` → `Some(0)`, absent → `None`). `extended` and
-/// `decimal_sign_comma` record the lexical form (`Iso8601_time.is_extended`,
-/// `is_decimal_sign_comma`).
+/// A parsed ISO 8601 time; `timezone` is the offset in signed minutes
+/// (`Z` → `Some(0)`).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct ParsedTime {
     pub(crate) hour: u32,
@@ -138,10 +88,7 @@ pub(crate) struct ParsedTime {
     pub(crate) decimal_sign_comma: bool,
 }
 
-/// A parsed ISO 8601 timezone designator (`Iso8601_timezone`): `sign` is `+1`
-/// or `-1`, `hour` is the offset hours, `minute` is absent for the partial
-/// `±hh` form, and `extended` records whether the value writes its `':'`
-/// separator (`Iso8601_timezone.is_extended`).
+/// A parsed ISO 8601 timezone designator; `minute` is absent for `±hh`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct ParsedTimezone {
     pub(crate) sign: i32,
@@ -151,9 +98,7 @@ pub(crate) struct ParsedTimezone {
 }
 
 impl ParsedTimezone {
-    /// The offset as signed minutes east of UTC — the form
-    /// [`ParsedTime::timezone`] carries. A partial `±hh` counts its absent
-    /// minute part as zero.
+    /// The offset in signed minutes east of UTC; `±hh` counts zero minutes.
     pub(crate) fn offset_minutes(self) -> i32 {
         #[expect(
             clippy::as_conversions,
@@ -173,10 +118,8 @@ pub(crate) struct ParsedDateTime {
     pub(crate) time: Option<ParsedTime>,
 }
 
-/// A parsed ISO 8601 duration. Integer designator counts plus fractional
-/// seconds, a sign flag (openEHR allows a leading `-` and mixing `W` with
-/// other designators) and the decimal-sign lexeme
-/// (`Iso8601_duration.is_decimal_sign_comma`).
+/// A parsed ISO 8601 duration: designator counts, fractional seconds, sign and
+/// decimal sign.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct ParsedDuration {
     pub(crate) negative: bool,
@@ -197,9 +140,7 @@ type TimeParts = (u32, Option<u32>, Option<u32>, Option<f64>);
 
 // ── Small lexical helpers (no panicking indexing/slicing) ─────────────────────
 
-/// Parse `tok` as a `width`-digit zero-filled unsigned integer, rejecting any
-/// token whose length differs or that contains a non-digit (so `"1"` is not a
-/// valid two-digit month and `"+02"`/whitespace are rejected).
+/// Parses `tok` as exactly `width` ASCII digits.
 fn parse_fixed(tok: &str, width: usize) -> Option<u32> {
     if tok.len() != width || !tok.bytes().all(|b| b.is_ascii_digit()) {
         return None;
@@ -207,10 +148,8 @@ fn parse_fixed(tok: &str, width: usize) -> Option<u32> {
     tok.parse::<u32>().ok()
 }
 
-/// The digits a valid time-of-day writes after its decimal sign, as written
-/// (`500` of `10:00:00.500`, `05` of `100000,05+0100`), `None` when it writes
-/// no fraction. The digits are text: a `Real` holds neither their count nor a
-/// value past its precision.
+/// The fractional-second digits as written (`500` of `10:00:00.500`), `None`
+/// without a fraction.
 pub(crate) fn fraction_digits(time: &str) -> Option<&str> {
     let start = time.find(['.', ','])?.checked_add(1)?;
     let rest = time.get(start..)?;
@@ -239,11 +178,8 @@ pub(crate) fn days_in_month(year: u32, month: u32) -> Option<u32> {
     Some(d)
 }
 
-/// Days since 1970-01-01 for a proleptic-Gregorian `(year, month, day)`
-/// (Howard Hinnant's `days_from_civil`, a standard branch-free algorithm). Used
-/// to place date/times on a common absolute-seconds axis, both for timezone
-/// normalisation and for the definite computational functions. Inputs are
-/// validated dates, so the result is well-defined.
+/// Days since 1970-01-01 for a proleptic Gregorian date (Howard Hinnant's
+/// `days_from_civil`).
 #[expect(
     clippy::integer_division,
     reason = "days_from_civil is defined in terms of truncating integer division (era/leap-cycle counting); the discarded remainders are the algorithm"
@@ -262,25 +198,16 @@ pub(crate) fn days_from_civil(year: u32, month: u32, day: u32) -> i64 {
 
 // ── Date parsing ──────────────────────────────────────────────────────────────
 
-/// Parse an ISO 8601 date in extended (`YYYY-MM-DD`, `YYYY-MM`, `YYYY`) or
-/// compact (`YYYYMMDD`, `YYYYMM`, `YYYY`) form. Week dates (`YYYY-Www`) and
-/// expanded (>4-digit / signed) years are rejected (`master06` §Primitive Time
-/// Types); component combinations must be calendar-valid
-/// (`Time_definitions.valid_iso8601_date`).
+/// Parses an ISO 8601 date in extended or compact form; week dates and
+/// expanded years are refused (`master06` §Primitive Time Types).
 pub(crate) fn parse_date(s: &str) -> Option<ParsedDate> {
     let d = scan_date(s)?;
     validate_date(d.year, d.month, d.day)?;
     Some(d)
 }
 
-/// Decompose a date LEXICALLY, without the calendar-validity checks: the same
-/// accepted spellings as [`parse_date`], but `2021-02-29` still yields its
-/// three components.
-///
-/// The invariant reporting in `iso8601_date_impl.rs` needs the components of an
-/// INVALID value to name the rule that value breaks (`Month_valid` versus
-/// `Day_valid`); a form that is not the production at all (a week date, an
-/// expanded year) has no components to report and is refused here.
+/// Decomposes a date lexically, without the calendar checks, so an invalid
+/// value can name the rule it breaks.
 pub(crate) fn scan_date(s: &str) -> Option<ParsedDate> {
     if s.is_empty() || s.bytes().any(|b| b == b'W' || b == b'w') {
         return None;
@@ -316,10 +243,8 @@ pub(crate) fn scan_date(s: &str) -> Option<ParsedDate> {
             _ => return None,
         }
     };
-    // `Iso8601_date.is_extended`: "True if this date uses '-' separators".
-    // NOTE: the spec does not say what a form with NO separator position
-    // (`YYYY`) reports; we report it extended, keeping `as_string() == value`
-    // exactly when `is_extended` — our own design, no spec governs it.
+    // NOTE: no openEHR spec says whether `YYYY` is extended; we say yes, so
+    // `as_string() == value` exactly when `is_extended`.
     let extended = s.contains('-') || s.len() == 4;
     Some(ParsedDate {
         year,
@@ -329,9 +254,7 @@ pub(crate) fn scan_date(s: &str) -> Option<ParsedDate> {
     })
 }
 
-/// Enforce the `Iso8601_date` validity invariants: a day requires a month
-/// (`Partial_validity`), and present components must be calendar-valid
-/// (`Month_valid`/`Day_valid`).
+/// Checks `Partial_validity`, `Month_valid` and `Day_valid`.
 fn validate_date(year: u32, month: Option<u32>, day: Option<u32>) -> Option<()> {
     if let Some(m) = month {
         if !(1..=12).contains(&m) {
@@ -351,25 +274,16 @@ fn validate_date(year: u32, month: Option<u32>, day: Option<u32>) -> Option<()> 
 
 // ── Time parsing ──────────────────────────────────────────────────────────────
 
-/// Parse an ISO 8601 time (`hh[:mm[:ss[(.|,)fff]]][Z|±hh[:mm]]` extended or the
-/// compact form). Rejects `24:00:00` anywhere and a `60` (leap) second
-/// (`master06`; `Time_definitions.valid_second` Post `s < Seconds_in_minute`),
-/// see the leap-second NOTE in `iso8601_time_impl.rs`.
+/// Parses an ISO 8601 time, refusing `24:00:00` and a leap second (`master06`;
+/// `Time_definitions.valid_second`).
 pub(crate) fn parse_time(s: &str) -> Option<ParsedTime> {
     let t = scan_time(s)?;
     validate_time(t.hour, t.minute, t.second, t.fractional_second)?;
     Some(t)
 }
 
-/// Decompose a time LEXICALLY, without the component-validity checks: the same
-/// accepted spellings as [`parse_time`], but `24:00:00` and `12:00:60` still
-/// yield their components, and a fractional part is kept even where no second
-/// carries it (`12:00.5`).
-///
-/// The invariant reporting in `iso8601_time_impl.rs` needs those components to
-/// name the rule the value breaks. The timezone lexeme is still range-checked
-/// by [`parse_timezone`]: its bounds are `Iso8601_timezone`'s own invariants,
-/// which this class does not declare.
+/// Decomposes a time lexically, without the component checks; the timezone is
+/// still range-checked by [`parse_timezone`].
 pub(crate) fn scan_time(s: &str) -> Option<ParsedTime> {
     let (main, tz) = split_timezone_lexeme(s)?;
     let timezone = if tz.is_empty() {
@@ -378,10 +292,7 @@ pub(crate) fn scan_time(s: &str) -> Option<ParsedTime> {
         Some(parse_timezone(tz)?)
     };
     let (hour, minute, second, fractional_second) = scan_time_main(main)?;
-    // `Iso8601_time.is_extended`: "True if this time uses '-', ':' separators".
-    // A value counts as extended when every separator position it actually has
-    // is written with a separator (so `hh`, `Z` and `±hh`, which have none, do
-    // not disqualify it) — see the `scan_date` is_extended NOTE.
+    // Extended when every separator position it has is written.
     let extended = body_is_extended(split_fraction_lexeme(main).0) && timezone_is_extended(tz);
     Some(ParsedTime {
         hour,
@@ -405,9 +316,7 @@ pub(crate) fn split_timezone_lexeme(s: &str) -> Option<(&str, &str)> {
     }
 }
 
-/// True when a time-of-day body (fraction already split off) is in extended
-/// form: it either writes its `':'` separators or has no separator position
-/// (the `hh` partial).
+/// Whether a time-of-day body writes its `':'` separators or has none.
 fn body_is_extended(body: &str) -> bool {
     body.contains(':') || body.len() <= 2
 }
@@ -457,9 +366,8 @@ fn scan_time_main(main: &str) -> Option<TimeParts> {
     Some((hour, minute, second, frac))
 }
 
-/// Split a trailing `(.|,)digits` fractional part off the time body, returning
-/// the body and the parsed fraction (a value in `[0.0, 1.0)`), or `(main, None)`
-/// when absent. A malformed fraction makes the whole time unparseable.
+/// Splits a trailing fraction off the time body; a malformed fraction makes
+/// the time unparseable.
 fn split_fraction(main: &str) -> (&str, Option<f64>) {
     if let Some(i) = main.bytes().position(|b| b == b'.' || b == b',') {
         match (main.get(0..i), main.get(i + 1..)) {
@@ -542,14 +450,8 @@ pub(crate) fn parse_timezone(tz: &str) -> Option<i32> {
     Some(scan_timezone(tz)?.offset_minutes())
 }
 
-/// Decompose a timezone designator into the parts `Iso8601_timezone` publishes.
-///
-/// `Z` decomposes as `+00:00`, the equivalence the class description states
-/// ("`Z` is a literal meaning UTC (modern replacement for GMT), i.e. timezone
-/// `+0000`",
-/// `BASE/docs/UML/classes/org.openehr.base.foundation_types.iso8601_timezone.adoc`
-/// §Description). The `±hh` form leaves `minute` absent — the partial case
-/// `Iso8601_timezone.is_partial` names.
+/// Decomposes a timezone designator; `Z` as `+00:00` ("timezone `+0000`",
+/// `iso8601_timezone.adoc` §Description), `±hh` with no minute.
 pub(crate) fn scan_timezone(tz: &str) -> Option<ParsedTimezone> {
     if tz == "Z" {
         return Some(ParsedTimezone {
@@ -612,9 +514,7 @@ pub(crate) fn parse_date_time(s: &str) -> Option<ParsedDateTime> {
     }
 }
 
-/// Decompose a date/time LEXICALLY, without the component-validity checks — see
-/// [`scan_date`] and [`scan_time`], which it composes on the same `T` split as
-/// [`parse_date_time`].
+/// Decomposes a date/time lexically through [`scan_date`] and [`scan_time`].
 pub(crate) fn scan_date_time(s: &str) -> Option<ParsedDateTime> {
     if let Some((d, t)) = s.split_once('T') {
         Some(ParsedDateTime {
@@ -631,19 +531,9 @@ pub(crate) fn scan_date_time(s: &str) -> Option<ParsedDateTime> {
 
 // ── Duration parsing ────────────────────────────────────────────────────────────
 
-/// Parse an ISO 8601 duration `[-]P[nY][nM][nW][nD][T[nH][nM][nS(.f)]]`
-/// (`Time_definitions.valid_iso8601_duration`, with the openEHR deviations: a
-/// leading `-` and `W` mixable with other designators). Requires at least one
-/// component; only the seconds field may carry a fraction.
-/// Store one duration component on `d` and return its slot in the production
-/// `P[nnY][nnM][nnW][nnD][T[nnH][nnM][nnS]]`, or `None` for a designator that
-/// production does not admit in this position.
-///
-/// The slot is what makes the production ORDERED and each designator
-/// at-most-once: the caller requires it to advance strictly. Without that,
-/// `P1D1M` parsed out of order and `P2Y1Y` parsed with the second `Y`
-/// OVERWRITING the first — one duration silently becoming a different one,
-/// which every `to_seconds`/`add_nominal` downstream then computed from.
+/// Stores one duration component on `d` and returns its slot in
+/// `P[nnY][nnM][nnW][nnD][T[nnH][nnM][nnS]]`, or `None` for a designator not
+/// admitted here; the caller requires the slot to advance strictly.
 fn apply_duration_component(
     d: &mut ParsedDuration,
     in_time: bool,
@@ -685,10 +575,8 @@ fn apply_duration_component(
     }
 }
 
-/// One duration component's number: its integer part, its fractional part,
-/// and whether a fraction was written at all.
-///
-/// A decimal sign with no digits after it is refused (`P1.D`).
+/// One duration component's number: integer part, fraction, and whether a
+/// fraction was written; `P1.D` is refused.
 fn read_duration_number(
     it: &mut std::iter::Peekable<std::str::Chars<'_>>,
 ) -> Option<(u64, f64, bool)> {
@@ -799,11 +687,8 @@ impl Default for DurationScan {
     }
 }
 
-/// Reads one `<number><designator>` duration component and folds it into `d`.
-///
-/// `None` on any violation of the production: a designator out of the fixed
-/// slot order (which also rejects a repeated one), or a fraction on any field
-/// but the seconds.
+/// Reads one `<number><designator>` component into `d`; `None` for an
+/// out-of-order designator or a fraction outside the seconds.
 fn read_duration_component(
     it: &mut std::iter::Peekable<std::str::Chars<'_>>,
     d: &mut ParsedDuration,
@@ -827,9 +712,8 @@ fn read_duration_component(
 }
 
 impl ParsedDuration {
-    /// Total seconds equivalent, sign applied
-    /// (`Iso8601_duration.to_seconds`): non-definite years/months reduce via
-    /// the `Time_definitions` average-length constants.
+    /// Total seconds, signed (`Iso8601_duration.to_seconds`), years and months by
+    /// the `Time_definitions` averages.
     #[expect(
         clippy::as_conversions,
         clippy::cast_precision_loss,
@@ -850,12 +734,8 @@ impl ParsedDuration {
 
 // ── Completion-range comparison (range semantics over partials) ──────────────────
 
-/// The set of instants a (possibly partial) time value denotes, as a half-open
-/// second interval `[lo, hi)` when `upper_open` (a partial spans a range) or a
-/// degenerate point `[lo, lo]` when not (a fully-specified instant). `lo`/`hi`
-/// share whatever axis the builder chose (seconds-of-day for `Iso8601_time`,
-/// absolute seconds for `Iso8601_date_time`); comparison only ever happens
-/// between ranges on the same axis.
+/// The instants a possibly partial value denotes: `[lo, hi)` when
+/// `upper_open`, else the point `[lo, lo]`.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct CompletionRange {
     pub(crate) lo: f64,
@@ -863,11 +743,7 @@ pub(crate) struct CompletionRange {
     pub(crate) upper_open: bool,
 }
 
-/// True if every instant of `x` precedes every instant of `y` — the
-/// range-semantics `<` (our own design; see the module NOTE). The lower bound
-/// is always inclusive; `x`'s upper bound is exclusive exactly when `x` is a
-/// partial (open) range, so two ranges meeting at a single boundary value are
-/// separated only if the boundary is not actually attained by `x`.
+/// Whether every instant of `x` precedes every instant of `y`.
 pub(crate) fn range_before(x: &CompletionRange, y: &CompletionRange) -> bool {
     match x.hi.partial_cmp(&y.lo) {
         Some(Ordering::Less) => true,
@@ -876,10 +752,8 @@ pub(crate) fn range_before(x: &CompletionRange, y: &CompletionRange) -> bool {
     }
 }
 
-/// The completion range of a time-of-day, on the seconds-of-day axis, shifted
-/// to UTC when the value is zoned (a uniform shift preserves ordering; a bare
-/// zoned time may land outside `[0, 86400)`, which is fine as a comparison
-/// key). See `iso8601_time_impl.rs` for the timezone-compatibility rule.
+/// The completion range of a time of day in seconds, shifted to UTC when
+/// zoned.
 pub(crate) fn time_completion_range(t: &ParsedTime) -> CompletionRange {
     let base = f64::from(t.hour) * SECONDS_IN_HOUR;
     let (lo, hi, upper_open) = match (t.minute, t.second) {
@@ -906,17 +780,11 @@ pub(crate) fn time_completion_range(t: &ParsedTime) -> CompletionRange {
     }
 }
 
-/// The completion range of a date/time on the absolute-seconds axis (days from
-/// the civil epoch × 86400 + time-of-day), shifted to UTC when zoned. The
-/// coarsest unknown component sets the range width — an unknown month spans the
-/// year, an unknown day spans the month, a missing time spans the day — so a
-/// timezone shift that crosses midnight rolls the date automatically (it is
-/// plain arithmetic on the absolute axis). The definite-calendar day counts use
-/// real month lengths + leap years.
+/// The completion range of a date/time on the absolute-seconds axis, shifted
+/// to UTC when zoned; the coarsest unknown component sets the width.
 ///
-/// NOTE: representing a zoned date/time on a single absolute-seconds axis so a
-/// timezone offset can roll the calendar date is our own design/extension — no
-/// openEHR spec governs partial-temporal ordering or timezone normalisation.
+/// NOTE: no openEHR spec governs partial-temporal ordering or zone
+/// normalisation: our own design.
 #[expect(
     clippy::cast_precision_loss,
     reason = "day counts and clock components are bounded by the representable calendar; f64 represents them exactly"
@@ -1006,17 +874,11 @@ fn intraday_range(day_start: f64, t: &ParsedTime) -> (f64, f64, bool) {
 
 // ── Exact second quantities (the arithmetic axis) ────────────────────────────
 
-/// An exact second quantity: an integer second count plus a fractional part in
-/// `[0.0, 1.0)`, denoting `whole + frac`. The representation is a *floor* one —
-/// a negative quantity has `whole` one below its truncation and a positive
-/// remainder (`-0.5` is `whole = -1, frac = 0.5`) — which is what makes
-/// `div_euclid`/`rem_euclid` decomposition into date + time-of-day correct in
-/// both directions without special-casing the sign.
+/// An exact second quantity `whole + frac`, `frac` in `[0.0, 1.0)`, floored
+/// so `-0.5` is `whole = -1, frac = 0.5`.
 ///
-/// NOTE: no openEHR spec governs the internal representation of the
-/// computational functions — our own design/extension, chosen because `f64`
-/// alone loses sub-second precision at absolute-time magnitudes (see the
-/// integer-constant NOTE above).
+/// NOTE: no openEHR spec governs the representation: our own design, since
+/// `f64` loses sub-second precision at these magnitudes.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct ExactSeconds {
     pub(crate) whole: i64,
@@ -1024,9 +886,8 @@ pub(crate) struct ExactSeconds {
 }
 
 impl ExactSeconds {
-    /// Normalising constructor: rejects a non-finite or negative `frac` and
-    /// carries a `frac` of `1.0` or more (which is all that summing two
-    /// normalised fractions can produce) into `whole`. `None` on overflow.
+    /// Normalising constructor: refuses a non-finite or negative `frac` and
+    /// carries `frac >= 1.0` into `whole`; `None` on overflow.
     pub(crate) fn new(whole: i64, frac: f64) -> Option<Self> {
         if !frac.is_finite() || !(0.0..2.0).contains(&frac) {
             return None;
@@ -1076,10 +937,8 @@ impl ExactSeconds {
         self.whole as f64 + self.frac
     }
 
-    /// An exact quantity from an `f64` total, `None` when the value is
-    /// non-finite or so large that the `f64` no longer carries whole seconds
-    /// (beyond 2^53 s ≈ 285 million years, far outside the representable
-    /// 0000–9999 calendar).
+    /// An exact quantity from an `f64` total, `None` when non-finite or beyond
+    /// 2^53 seconds.
     pub(crate) fn from_f64(total: f64) -> Option<Self> {
         const EXACT_INTEGER_LIMIT: f64 = 9_007_199_254_740_992.0; // 2^53
         if !total.is_finite() || total.abs() >= EXACT_INTEGER_LIMIT {
@@ -1095,14 +954,9 @@ impl ExactSeconds {
         Self::new(whole, total - floor)
     }
 
-    /// The quantity with its fraction rounded to nanosecond precision, carrying
-    /// a fraction that rounds up to a whole second into `whole`.
+    /// The quantity with its fraction rounded to nanoseconds.
     ///
-    /// NOTE: the openEHR specs bound a fractional second only by
-    /// `valid_fractional_second` (`0.0 <= fs < 1.0`) and say nothing about the
-    /// precision of a computed result, so the rendering precision is our own
-    /// design/extension: nanoseconds, which covers every precision ISO 8601
-    /// data carries in practice and keeps `f64` round-off out of the output.
+    /// NOTE: no openEHR spec bounds a computed result's precision: our own design.
     pub(crate) fn rounded_to_nanos(self) -> Option<Self> {
         let nanos = (self.frac * NANOS_PER_SECOND).round();
         if nanos >= NANOS_PER_SECOND {
@@ -1129,10 +983,8 @@ impl ExactSeconds {
 const NANOS_PER_SECOND: f64 = 1_000_000_000.0;
 
 impl ParsedDuration {
-    /// The duration as an exact signed second quantity — the definite
-    /// (`§Computational Functions`) reduction `Iso8601_duration.to_seconds`
-    /// performs, with years/months at their `Time_definitions` average lengths,
-    /// computed in whole seconds so no precision is lost. `None` on overflow.
+    /// The duration in exact signed seconds, years and months at their
+    /// `Time_definitions` averages; `None` on overflow.
     pub(crate) fn to_exact_seconds(self) -> Option<ExactSeconds> {
         let mut whole: i64 = 0;
         for (count, unit) in [
@@ -1155,11 +1007,8 @@ impl ParsedDuration {
         }
     }
 
-    /// The NOMINAL split for calendrical arithmetic (`Iso8601_date.add_nominal`):
-    /// a signed month count (`years × Months_in_year + months`) applied with
-    /// day-clamping, plus the exact-second remainder (weeks, days and the time
-    /// components) applied as a plain calendar shift. Both carry the duration's
-    /// own sign, flipped when `subtract`. `None` on overflow.
+    /// The nominal split (`Iso8601_date.add_nominal`): a signed month count
+    /// applied with clamping, and the exact-second remainder; `None` on overflow.
     pub(crate) fn to_nominal_parts(self, subtract: bool) -> Option<(i64, ExactSeconds)> {
         let months = i64::try_from(self.years)
             .ok()?
@@ -1193,10 +1042,8 @@ impl ParsedDuration {
 
 // ── Calendar arithmetic (nominal rules) ──────────────────────────────────────
 
-/// The proleptic-Gregorian `(year, month, day)` for a day count since
-/// 1970-01-01 (Howard Hinnant's `civil_from_days`, the inverse of
-/// [`days_from_civil`]). `None` when the result falls outside the representable
-/// 0000–9999 year range.
+/// The proleptic Gregorian date for a day count since 1970-01-01 (Howard
+/// Hinnant's `civil_from_days`), or `None` outside `0000`–`9999`.
 #[expect(
     clippy::integer_division,
     reason = "civil_from_days is defined in terms of truncating integer division (era/leap-cycle counting); the discarded remainders are the algorithm"
@@ -1227,11 +1074,8 @@ pub(crate) fn civil_from_days(days: i64) -> Option<(u32, u32, u32)> {
     ))
 }
 
-/// Shift a calendar date by a signed number of months under the NOMINAL rules
-/// of `Iso8601_date.add_nominal`: the same day in the target month, clamped
-/// down when that month is shorter (31 Jan `+ P1M` → 28/29 Feb, 29 Feb
-/// `+ P1Y` → 28 Feb). `None` when the result leaves the representable year
-/// range.
+/// Shifts a date by a signed number of months, clamped to a shorter month
+/// (`Iso8601_date.add_nominal`); `None` outside the year range.
 pub(crate) fn shift_months(
     year: u32,
     month: u32,
@@ -1269,10 +1113,8 @@ pub(crate) fn hms_from_seconds_of_day(seconds: i64) -> Option<(u32, u32, u32)> {
     ))
 }
 
-// ── Rendering (extended form) ────────────────────────────────────────────────
-// NOTE: every computed result is rendered in the EXTENDED form, `master06`
-// §Primitive Time Types calling it "strongly recommended"; the spec prescribes
-// no output spelling otherwise, so the remaining choices are our own design.
+// NOTE: `master06` §Primitive Time Types calls the extended form "strongly
+// recommended", so every computed result is rendered in it.
 
 /// Render a date in extended form, omitting the components the value does not
 /// have (`YYYY-MM-DD`, `YYYY-MM`, `YYYY`).
@@ -1284,9 +1126,8 @@ pub(crate) fn render_date_extended(year: u32, month: Option<u32>, day: Option<u3
     }
 }
 
-/// Render a complete time of day in extended form
-/// (`hh:mm:ss[.fff][Z|±hh:mm]`). `frac` must already be rounded
-/// ([`ExactSeconds::rounded_to_nanos`]).
+/// Renders a complete time of day in extended form; `frac` is already
+/// rounded.
 pub(crate) fn render_time_extended(
     hour: u32,
     minute: u32,
@@ -1320,10 +1161,8 @@ fn render_timezone_extended(timezone: Option<i32>) -> String {
     }
 }
 
-/// The fractional-second lexeme for an already-rounded fraction: `""` when
-/// zero, otherwise `'.'` followed by up to nine digits with trailing zeros
-/// trimmed. The decimal sign is the period, the form `master06` §Primitive
-/// Time Types recommends for written data.
+/// The fraction lexeme: `""` for zero, else `'.'` and up to nine digits,
+/// trailing zeros trimmed.
 fn fraction_lexeme_of(frac: f64) -> String {
     let nanos = (frac * NANOS_PER_SECOND).round();
     if nanos <= 0.0 {
@@ -1339,17 +1178,11 @@ fn fraction_lexeme_of(frac: f64) -> String {
     format!(".{}", format!("{nanos:09}").trim_end_matches('0'))
 }
 
-/// Render a signed second quantity as an ISO 8601 duration in the canonical
-/// form `[-]P[nD][T[nH][nM][n[.f]S]]`, `PT0S` for zero. `None` on overflow.
+/// Renders signed seconds as `[-]P[nD][T[nH][nM][n[.f]S]]`, `PT0S` for zero;
+/// `None` on overflow.
 ///
-/// NOTE: only the DEFINITE designators (days and below) are emitted. A computed
-/// result has passed through the `to_seconds` reduction the class doc mandates
-/// for `add`/`subtract`, which collapses years and months into their
-/// `Time_definitions` average lengths — re-deriving a `Y`/`M` component from
-/// that scalar would invent calendar structure the result no longer has. The
-/// leading `-` is the openEHR negative-duration deviation (`master06`
-/// §Primitive Time Types). No openEHR spec prescribes the output spelling —
-/// our own design/extension.
+/// NOTE: only definite designators, since the `to_seconds` reduction has
+/// already folded years and months; the spelling is our own design.
 #[expect(
     clippy::integer_division,
     reason = "whole days/hours/minutes are the truncated quotients; each leftover is taken by the paired `%`"
@@ -1400,18 +1233,15 @@ pub(crate) fn render_duration(total: ExactSeconds) -> Option<String> {
 
 // ── Extended-form re-spelling of a stored value (`as_string`) ────────────────
 
-/// The extended-form spelling of a stored date value (`Iso8601_date.as_string`:
-/// "Return string value in extended format"), or `None` when the value is not a
-/// valid date.
+/// The extended spelling of a date value (`Iso8601_date.as_string`), or
+/// `None` when invalid.
 pub(crate) fn as_extended_date(s: &str) -> Option<String> {
     let d = parse_date(s)?;
     Some(render_date_extended(d.year, d.month, d.day))
 }
 
-/// The extended-form spelling of a stored time value (`Iso8601_time.as_string`),
-/// or `None` when the value is not a valid time. Re-spelled LEXICALLY — only
-/// separators are inserted — so a partial time, the fractional-second precision
-/// and its decimal sign all survive verbatim.
+/// The extended spelling of a time value (`Iso8601_time.as_string`), only
+/// separators inserted, or `None` when invalid.
 pub(crate) fn as_extended_time(s: &str) -> Option<String> {
     parse_time(s)?; // validity gate
     let (main, tz) = split_timezone_lexeme(s)?;
@@ -1429,9 +1259,7 @@ pub(crate) fn as_extended_time(s: &str) -> Option<String> {
     Some(format!("{body}{fraction}{tz}"))
 }
 
-/// The extended-form spelling of a stored date/time value
-/// (`Iso8601_date_time.as_string`), or `None` when the value is not a valid
-/// date/time.
+/// The extended spelling of a date/time value, or `None` when invalid.
 pub(crate) fn as_extended_date_time(s: &str) -> Option<String> {
     parse_date_time(s)?; // validity gate
     match s.split_once('T') {
@@ -1444,9 +1272,8 @@ pub(crate) fn as_extended_date_time(s: &str) -> Option<String> {
     }
 }
 
-/// Insert `separator` between every pair of characters of a compact
-/// fixed-width-pair lexeme (`hhmmss` → `hh:mm:ss`). `None` when the length is
-/// not a multiple of two.
+/// Inserts `separator` between each character pair (`hhmmss` → `hh:mm:ss`);
+/// `None` for an odd length.
 fn insert_separators(compact: &str, separator: char) -> Option<String> {
     let mut out = String::new();
     let mut at = 0;
@@ -1481,9 +1308,8 @@ mod tests {
         assert_eq!(EXACT_SECONDS_IN_AVERAGE_MONTH, 2_628_288);
     }
 
-    /// The lenient scanners accept EXACTLY what the strict parsers accept, plus
-    /// the values whose only defect is a class invariant — which is what lets
-    /// the `*_impl.rs` validators name the rule a bad value breaks.
+    /// The lenient scanners accept what the strict parsers accept plus the values
+    /// whose only defect is a class invariant.
     #[test]
     fn the_scanners_extend_the_parsers_only_where_an_invariant_decides() {
         for good in ["2020", "2020-06", "2020-06-15", "20200615", "202006"] {
@@ -1560,9 +1386,8 @@ mod tests {
         );
     }
 
-    /// `P[nnY][nnM][nnW][nnD][T[nnH][nnM][nnS]]` is ORDERED and each designator
-    /// appears at most once. A repeat used to parse and OVERWRITE — `P2Y1Y`
-    /// became `P1Y`, a different duration, with no error anywhere downstream.
+    /// The duration production is ordered and each designator appears at most
+    /// once.
     #[test]
     fn a_repeated_or_misordered_designator_is_not_a_duration() {
         // The silent-loss case: the first count vanished.

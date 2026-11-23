@@ -1,25 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! ODIN interval and term-code `_default` values, end to end: source → AOM2 → printed ADL →
-//! source again.
+//! ODIN interval and term-code `_default` values, source → AOM2 → printed ADL →
+//! source (`ADL2/master06-default_values.adoc` §Syntax; `master07-leaf_data.adoc`).
 //!
-//! `ADL2/master06-default_values.adoc` §Syntax states that a default value is
-//! "expressed in any regular object instance syntax, including ODIN syntax",
-//! and `LANG/docs/odin/master07-leaf_data.adoc` §Intervals of Ordered Primitive
-//! Types lists intervals among ODIN's leaf DATA forms — so an interval is a
-//! legal `_default` datum, at the top of the block or under an attribute of it.
-//!
-//! The intermediate canonical-JSON object it lands in is our own
-//! design/extension (no openEHR spec governs the intermediate shape); it
-//! mirrors the emitted `Point_interval`/`Proper_interval` encoding of
-//! `crates/openehr-its/src/json_codec/generated/impls.rs`, so a stored default
-//! reads back with the same field set the codec would have written.
-//!
-//! The ADL 1.4 twin of this behaviour is the refusal fixture
-//! `tests/corpus/adl14-cadl/openEHR-EHR-OBSERVATION.SCOAT_adl2_default_value.v1.adl`
-//! — `_default` is an ADL2-only construct (`ADL1.4/master05-cadl.adoc`
-//! §Keywords), so the accepting cases below are ADL2 sources.
+//! NOTE: no openEHR spec governs the intermediate JSON shape: our own design,
+//! matching the codec's `Point_interval`/`Proper_interval` encoding.
 
 #![allow(
     clippy::expect_used,

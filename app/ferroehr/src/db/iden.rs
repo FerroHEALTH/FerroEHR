@@ -4,19 +4,8 @@
 //! `sea-query` identifier vocabulary for the relations the AQL SQL generator
 //! builds against.
 //!
-//! They are `migrations/clinical/`, the party domain rendered from the same
-//! DDL template, and the party domain's relationship index.
-//!
 //! No openEHR spec governs the SQL schema — this is our own PG19-native
 //! design.
-//!
-//! One enum per table, in the official `sea-query` derive shape: the `Table`
-//! variant carries an explicit `#[iden = "..."]` and renders the table name,
-//! and every other variant renders its `snake_cased` column name. This is the
-//! typed name catalog the generator reaches for instead of writing a column as
-//! a string, and its tests hold both ends of that: every name here is declared
-//! by the clinical migration set, or the party set for a party relation, and
-//! nothing under `aql/sql/` names a column any other way.
 //!
 //! It covers the relations the generator reads and nothing else. A
 //! relation reached only through a static, compile-time-checked `sqlx::query!`

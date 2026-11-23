@@ -112,12 +112,9 @@ impl FerroEhrService {
     /// (`OBJECT_VERSION_ID`, RM common master06 §Version Identification) so a
     /// bare read serves its wire identity.
     ///
-    /// The write path already stamps the uid into the stored body
-    /// (`crate::versioning::change` — `stamp_version_uid` runs before
-    /// decomposition), so on a locally committed version this is a no-op:
-    /// when the stored `uid` is an `OBJECT_VERSION_ID` whose value matches,
-    /// the body passes through untouched. Only a body that lacks or mismatches
-    /// it (e.g. a verbatim-imported foreign version) pays the re-stamp.
+    /// A locally committed version already carries its uid, so its body passes
+    /// through untouched; only a body that lacks or mismatches it, such as a
+    /// verbatim-imported foreign version, is re-stamped.
     #[expect(
         clippy::unused_self,
         reason = "call-site ergonomics: every caller already holds the service, \
@@ -375,8 +372,7 @@ pub(in crate::service) fn container_meta(
 /// the JSON read can serve it verbatim (#5755).
 ///
 /// It reads only the root members the codec writes before the uid (`_type`,
-/// `name`, `archetype_node_id`; RM BMM LOCATABLE), so the cost is that short
-/// prefix (#6198). A root uid elsewhere, or any other shape, answers `false`
+/// `name`, `archetype_node_id`; #6198). A root uid elsewhere answers `false`
 /// and takes the parse path, which serves the same document.
 fn carries_version_uid(text: &str, uid: &str) -> bool {
     const LEADING: [&[u8]; 3] = [b"_type", b"name", b"archetype_node_id"];

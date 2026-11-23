@@ -18,18 +18,11 @@ use crate::Cli;
 
 /// The stack of every runtime thread, workers and the blocking pool alike.
 ///
-/// Tokio's default is 2 MiB, which the AOM engine's recursive walks over a
-/// well-stocked archetype repository crossed in a debug build (#3062). The
-/// reservation is virtual: pages are committed only as a stack actually grows.
+/// The AOM engine's recursive walks overflow Tokio's 2 MiB default (#3062).
 const RUNTIME_THREAD_STACK_BYTES: usize = 16 * 1024 * 1024;
 
 /// Runs the `ferroehr` binary with the command line `args`, the program name
 /// included, and returns the process exit code.
-///
-/// The family's run path (`ferrohealth_server::run::Run`) parses `args`,
-/// answers help, the version and a usage error with clap's exit code, starts
-/// the runtime and runs [`run`] on it. A failure is written to stderr with its
-/// whole cause chain.
 #[must_use]
 pub fn main<I, T>(args: I) -> ExitCode
 where

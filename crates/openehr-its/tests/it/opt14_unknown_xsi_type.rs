@@ -4,13 +4,6 @@
 
 //! An OPT 1.4 constraint node whose `xsi:type` the OPT schemas do not define is
 //! refused, and the refusal names the schemas it was read against.
-//!
-//! The `C_OBJECT` subtypes of an OPT 1.4 document are the closed set
-//! `its-xml-1.0.2-nsv1/ALL/Template.xsd`, `OpenehrProfile.xsd` and
-//! `Archetype.xsd` define (the same set as
-//! `its-xml-2.0.0-nsv2/AM/Release-1.4/Template.xsd`): an archetype root inside
-//! a definition is a `C_ARCHETYPE_ROOT`, and no `T_ARCHETYPE_ROOT` exists in
-//! any of them (#3892).
 
 #![expect(
     clippy::expect_used,

@@ -180,11 +180,6 @@ where
 /// master06 §Logical Deletion) reassembles to [`Value::Null`], so callers need
 /// no separate deleted-version guard before calling.
 ///
-/// The rebuild writes a version's node rows and then re-derives the version
-/// from them BEFORE committing, so it must read its own uncommitted rows; a
-/// pool-typed read runs on another connection and would see the rows the
-/// rebuild is replacing.
-///
 /// # Errors
 ///
 /// Returns [`StorageError`] on a DB error or if a non-empty row set does not
@@ -235,10 +230,6 @@ pub async fn unshare_content(
 /// Deletes every primary-tier `node` row of one stored version, returning how
 /// many were removed.
 ///
-/// The rebuild's first write: the row set is replaced wholesale rather than
-/// reconciled, because a nested-set numbering is only meaningful as a whole
-/// (`crate::storage::codec`).
-///
 /// # Errors
 ///
 /// Returns [`StorageError::Database`] on any driver/statement failure.
@@ -263,13 +254,9 @@ pub async fn delete_version_nodes(
 /// version. A version with no stored nodes (a logical delete, RM common
 /// master06 §Logical Deletion) is absent from the map.
 ///
-/// It returns rows rather than reassembled values on purpose. Its caller is the
-/// storage-parity sweep, for which a set of rows that does not form a tree is a
-/// REPORTED defect rather than a failure: reassembling here would turn one
-/// damaged record into an error that aborts the sweep that found it. For the
-/// same reason it never shortcuts to the materialized `version.body` the way
-/// [`read_subtrees_canonical`] does for a root anchor — the sweep exists to
-/// compare the node rows against that body.
+/// It returns rows: for the storage-parity sweep a row set that forms no tree
+/// is a reported defect, and the sweep compares the rows with `version.body`,
+/// so it never reads the body in their place.
 ///
 /// No openEHR spec governs the `node` store — our own decomposed design.
 ///
@@ -347,11 +334,6 @@ pub struct SubtreeAnchor {
 /// Each anchor's subtree is re-based so the anchor node becomes the fragment
 /// root (the codec requires `num == 0` and an empty path at the root).
 ///
-/// This closes the AQL result-assembly N+1: a P-row whole-object projection page
-/// would otherwise issue P separate subtree SELECTs. The rows of every anchor's
-/// subtree are fetched by a single `unnest`-array join over the anchors, tagged
-/// by anchor index, then reassembled per anchor in memory.
-///
 /// Anchors are de-duplicated, so a page projecting the same version more than
 /// once reassembles each distinct subtree exactly once. An anchor with no stored
 /// nodes (a logical delete, RM common master06 §Logical Deletion) is absent from
@@ -417,8 +399,8 @@ pub async fn read_subtrees_canonical(
     let acaps: Vec<i32> = distinct.iter().map(|a| a.num_cap).collect();
 
     // One interval join: each anchor row contributes its subtree's node rows,
-    // tagged by `idx`. `num BETWEEN anum AND acap` is the nested-set containment
-    // predicate the single-row read also uses, now driven by the anchor set.
+    // tagged by `idx`; `num BETWEEN anum AND acap` is the nested-set
+    // containment predicate.
     let db_rows = sqlx::query(sqlx::AssertSqlSafe(SQL.as_str()))
         .bind(&idx)
         .bind(&vo_ids)

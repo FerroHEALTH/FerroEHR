@@ -14,12 +14,6 @@
 //! refusals, so the guarantee stops depending on an upstream implementation
 //! detail.
 //!
-//! The depth bound is different in kind: without it, the recursive descent in
-//! the generated `FromXml` impls overflows the stack, and a Rust stack overflow
-//! ABORTS the process instead of unwinding — so the catch-panic layer that
-//! renders this server's clean `500` cannot intercept it, and one request would
-//! take the process down for every caller.
-//!
 //! No openEHR spec governs these bounds — our own design.
 
 #![expect(clippy::panic_in_result_fn, reason = "test assertions and fixtures")]
@@ -72,9 +66,6 @@ fn an_external_dtd_reference_is_refused() {
 
 /// An entity outside the five XML predefined names does not resolve — it is an
 /// error, never an empty string or a silently dropped node.
-///
-/// This is the second half of the XXE defence: even if a declaration were ever
-/// parsed, the reference could not resolve to anything.
 #[test]
 fn an_undeclared_entity_reference_is_refused() {
     let err = drain("<composition><name>&secret;</name></composition>")
@@ -106,10 +97,6 @@ fn the_predefined_entities_still_resolve() -> Result<(), XmlError> {
 }
 
 /// Nesting past the limit is refused.
-///
-/// Built from the RM's own recursion (`CLUSTER.items` holds `Item`, which
-/// includes `CLUSTER`), because that is the shape an attacker has available —
-/// unknown element names are skipped iteratively and never recurse.
 #[test]
 fn nesting_past_the_limit_is_refused() {
     let depth = usize::try_from(MAX_DEPTH).unwrap() + 8;

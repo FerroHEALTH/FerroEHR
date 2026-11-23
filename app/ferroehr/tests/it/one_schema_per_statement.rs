@@ -3,20 +3,6 @@
 
 //! No SQL statement this crate emits names relations of two storage domains.
 //!
-//! The domains are separated by schema, and the ONLY thing that selects one is
-//! the pool's `search_path` ([`ferroehr::db::domain::Domain::search_path`]), on
-//! which no other domain's schema ever appears. A statement can therefore reach
-//! across the boundary in exactly one way: by schema-qualifying a relation of a
-//! domain other than the pool's. That is what this suite refuses.
-//!
-//! It reads the crate's own sources rather than a running database, because the
-//! property is about the statements that EXIST, not about the ones a particular
-//! test happens to execute: a cross-domain join written into a rarely-taken
-//! branch would pass every behavioural test and still be the defect. Once a
-//! domain is relocated to a database of its own the statement would fail at
-//! runtime, and a failure at that point is a served request that errors rather
-//! than a build that refuses.
-//!
 //! NOTE: no openEHR spec governs schemas or database roles — our own
 //! design/extension (GDPR Art. 4(5) and Art. 32(1)(a);
 //! <https://eur-lex.europa.eu/eli/reg/2016/679/oj>).
@@ -54,13 +40,6 @@ struct Literal {
 
 /// Every string literal in `source`, with line comments removed first and
 /// adjacent literals joined.
-///
-/// Comments are dropped because prose about the boundary names several schemas
-/// by design — this module's own documentation does. Raw strings (`r"…"`,
-/// `r#"…"#`) are read as literals too, since SQL is often written that way. Two
-/// literals separated by nothing but whitespace are ONE literal to the compiler,
-/// so they are one statement here: measuring them apart would let a two-domain
-/// join pass by being split across a line break.
 fn literals(source: &str) -> Vec<Literal> {
     let chars: Vec<char> = source.chars().collect();
     let mut out: Vec<Literal> = Vec::new();
@@ -197,10 +176,6 @@ fn qualified_domains(text: &str) -> Vec<Domain> {
 
 /// Every SQL string literal in the crate names relations of at most one storage
 /// domain.
-///
-/// Adjacent literals are joined before the check, because Rust concatenates
-/// them and a long statement is usually written as several: measuring them
-/// apart would let a two-domain join pass by being split across a line break.
 #[test]
 fn no_emitted_statement_names_two_domains() {
     let mut files = Vec::new();

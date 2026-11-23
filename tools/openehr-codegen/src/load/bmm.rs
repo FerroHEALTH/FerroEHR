@@ -15,17 +15,8 @@
               per-item expectation"
 )]
 //!
-//! Loads a vendored `*.bmm.json` schema (the canonical JSON serialization of
-//! the openEHR BMM meta-model) into a typed [`BmmSchema`]: packages (the module
-//! tree), classes (with ancestors, abstractness, generic parameters), and each
-//! class's ordered properties (single / generic / container, with cardinality
-//! and mandatory-ness).
-//!
-//! The JSON form is read rather than the ODIN one: it serializes the identical
-//! meta-model with real arrays, structured `cardinality` and explicit `_type`
-//! tags. BMM captures structure; function bodies and invariant logic stay
-//! hand-written, though the invariant EL text and function signatures are
-//! present in the JSON.
+//! Loads a vendored `*.bmm.json` schema into a typed [`BmmSchema`]: packages,
+//! classes, and each class's ordered properties.
 
 #![expect(
     clippy::disallowed_types,
@@ -83,23 +74,16 @@ pub(crate) struct BmmClass {
     /// Enumeration definition when the class is a `P_BMM_ENUMERATION_*`
     /// (`BMM_ENUMERATION`: an underlying basic type + a set of named constants).
     pub enumeration: Option<BmmEnumeration>,
-    /// Class constants (`BMM_CLASS.constants`: named literal values, e.g. the
-    /// openEHR terminology-group / code-set identifier strings), in declaration
-    /// order. Verbatim — the render stage decodes the literal `value`.
+    /// Class constants (`BMM_CLASS.constants`), in declaration order, verbatim.
     pub constants: Vec<BmmConstant>,
     /// Declared functions (`BMM_CLASS.functions`) in file order, by signature
     /// ([`BmmFunction`]).
     pub functions: Vec<BmmFunction>,
-    /// Class invariants (`BMM_CLASS.invariants`): a map from invariant name to
-    /// its assertion-expression text (the Eiffel/UML assertion dialect), verbatim.
-    /// The `analyze` stage parses + classifies these; the loader keeps them raw.
+    /// Class invariants (`BMM_CLASS.invariants`): name → assertion text, verbatim.
     pub invariants: BTreeMap<String, String>,
 }
 
-/// One `BMM_CLASS.constants` entry: a named literal value on the class. The
-/// `value` is kept as the raw BMM JSON scalar (a JSON number, or a JSON string
-/// carrying a quoted `"..."` / `'...'` literal or a bareword cross-reference to
-/// another constant); the render stage decodes it to a Rust literal.
+/// One `BMM_CLASS.constants` entry, its `value` the raw BMM JSON scalar.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct BmmConstant {
     /// The verbatim BMM constant name (`Terminology_id_openehr`).
@@ -112,9 +96,8 @@ pub(crate) struct BmmConstant {
     pub value: Value,
 }
 
-/// A BMM enumeration definition (`BMM_ENUMERATION` / persisted
-/// `P_BMM_ENUMERATION_INTEGER` | `P_BMM_ENUMERATION_STRING`): an underlying
-/// basic type plus a 1:1 `item_names` / `item_values` pair of named constants.
+/// A BMM enumeration definition: an underlying basic type plus 1:1
+/// `item_names` / `item_values`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct BmmEnumeration {
     /// `underlying_type_name` — `"INTEGER"` for `P_BMM_ENUMERATION_INTEGER`,
@@ -123,8 +106,7 @@ pub(crate) struct BmmEnumeration {
     /// The constant names, in declaration order (`BMM_ENUMERATION.item_names`).
     pub item_names: Vec<String>,
     /// The explicit constant values, 1:1 with `item_names`, when the BMM supplies
-    /// them (`BMM_ENUMERATION.item_values`, optional). Absence is preserved as
-    /// `None`; the default-value rule is applied by the consumer, not here.
+    /// them.
     pub item_values: Option<Vec<BmmEnumValue>>,
 }
 
@@ -156,18 +138,10 @@ pub(crate) struct BmmProperty {
     pub documentation: Option<String>,
     /// `is_mandatory = true` → an obligatory attribute (else optional/`Option`).
     pub is_mandatory: bool,
-    /// The vendored `default` facet, verbatim, if the schema carries one.
+    /// The vendored `default` facet, verbatim (`<False>` arrives as `"False"`).
     ///
-    /// The value is the schema's own text for the attribute's initial value —
-    /// ODIN `default = <False>` / `<"Boolean">` arrives here as `"False"` /
-    /// `"\"Boolean\""`. It is kept unparsed because the facet is NOT part of the
-    /// released persistence model: LANG
-    /// `docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_property.adoc`
-    /// §Attributes lists `name`, `is_mandatory`, `is_computed`,
-    /// `is_im_infrastructure`, `is_im_runtime`, `type_def` and `bmm_property`
-    /// and no `default`, so every vendored occurrence is an undeclared extension
-    /// whose meaning is adjudicated in `plan::overrides`, not assumed here. The
-    /// loader's job is only to stop dropping it.
+    /// LANG `p_bmm_property.adoc` §Attributes declares no `default`, so
+    /// `plan::overrides` decides what each occurrence means.
     pub default: Option<String>,
     /// The property's shape and type.
     pub kind: BmmPropKind,
@@ -225,7 +199,7 @@ impl BmmType {
 }
 
 impl BmmSchema {
-    /// Parse a BMM schema from its JSON serialization.
+    /// Parses a BMM schema from its JSON serialization.
     ///
     /// # Errors
     /// Returns [`serde_json::Error`] if the JSON does not parse.
@@ -260,11 +234,8 @@ impl BmmSchema {
             .map(|m| m.values().map(parse_package).collect())
             .unwrap_or_default();
 
-        // Classes come from two sibling sections: `class_definitions` (the
-        // model's own classes) and `primitive_types` (foundation built-ins —
-        // primitives, containers, `Interval`, ISO 8601, terminology). Both are
-        // needed so ancestor flattening and type resolution work; the emitter
-        // decides which to actually emit.
+        // `class_definitions` and `primitive_types` both, for ancestor flattening and
+        // type resolution.
         let mut classes = BTreeMap::new();
         for section in ["primitive_types", "class_definitions"] {
             if let Some(defs) = doc.get(section).and_then(Value::as_object) {
@@ -285,26 +256,11 @@ impl BmmSchema {
         }
     }
 
-    /// Fold another schema into this one to form a crate's **dependency view**:
-    /// the union of every BMM generation composing the crate, resolving a
-    /// class-name collision **last-wins** (the later-declared generation's
-    /// definition survives).
+    /// Folds another schema into this one, a class-name collision resolved
+    /// last-wins.
     ///
-    /// openEHR ships some components as several vendored BMM files describing
-    /// **two generations of the same meta-model** — LANG publishes the stable
-    /// v2.x BMM (`LANG/docs/bmm/master01-preface.adoc` §History: "This document
-    /// describes the stable v2.x form of BMM … the normative, tool-implemented
-    /// version") beside the v3 development line
-    /// (`LANG/docs/bmm3/master01-preface.adoc` §Previous Versions) — and both
-    /// generations are emitted COMPLETELY, each from its own schema at its own
-    /// source-package path.
-    ///
-    /// This view is therefore **never an emission input**: it exists only so a
-    /// downstream crate and the crate prelude see exactly one type per Rust
-    /// name (see [`crate::plan::composition::Composed::generations`] for the
-    /// per-generation schemas the emitter actually renders). Because every
-    /// generation is emitted in full, nothing a losing definition declares is
-    /// dropped — the collision is resolved for *naming*, never for *shape*.
+    /// The result is a naming view for downstream crates and the prelude, never an
+    /// emission input: every generation is emitted in full from its own schema.
     #[must_use]
     pub(crate) fn dependency_view(mut self, other: &BmmSchema) -> Self {
         for (name, class) in &other.classes {
@@ -427,9 +383,8 @@ fn parse_class(node: &Value) -> BmmClass {
     }
 }
 
-/// Parse the class's `constants` object (name → `{type, value, documentation}`)
-/// into declaration-ordered [`BmmConstant`]s (`serde_json`'s `preserve_order`
-/// keeps file order). Absent → empty.
+/// Parses the class's `constants` object into declaration-ordered
+/// [`BmmConstant`]s.
 fn parse_constants(node: &Value) -> Vec<BmmConstant> {
     node.get("constants")
         .and_then(Value::as_object)
@@ -470,9 +425,8 @@ fn parse_invariants(node: &Value) -> BTreeMap<String, String> {
         .unwrap_or_default()
 }
 
-/// Parse the enumeration facet of a class node, if its `_type` marks it a
-/// `P_BMM_ENUMERATION_INTEGER` / `P_BMM_ENUMERATION_STRING` (both carry
-/// `item_names` + optional `item_values`; the underlying type distinguishes them).
+/// Parses the enumeration facet of a `P_BMM_ENUMERATION_INTEGER` or
+/// `P_BMM_ENUMERATION_STRING` class node.
 fn parse_enumeration(node: &Value) -> Option<BmmEnumeration> {
     let ptype = node.get("_type").and_then(Value::as_str).unwrap_or("");
     let underlying_type = match ptype {
@@ -482,9 +436,7 @@ fn parse_enumeration(node: &Value) -> Option<BmmEnumeration> {
     }
     .to_string();
     let item_names = str_vec(node.get("item_names"));
-    // `item_values` is `List<Any>`; each element is a JSON integer (INTEGER
-    // enum) or JSON string (STRING enum). Missing → `None` (default applied
-    // downstream per `BMM_ENUMERATION`).
+    // A JSON integer or string per element; the default rule applies downstream.
     let item_values = node
         .get("item_values")
         .and_then(Value::as_array)
@@ -519,10 +471,8 @@ fn parse_property(node: &Value) -> BmmProperty {
         .get("is_mandatory")
         .and_then(Value::as_bool)
         .unwrap_or(false);
-    // The `default` facet, verbatim. The JSON export stringifies every ODIN
-    // literal (`<False>` → `"False"`, `<"Boolean">` → `"\"Boolean\""`), but a
-    // schema that writes a real JSON scalar is read too, so the value is
-    // normalized to its text rather than required to be a string.
+    // The JSON export stringifies ODIN literals; a real JSON scalar is read as
+    // its text too.
     let default = node.get("default").and_then(|v| match v {
         Value::String(s) => Some(s.clone()),
         Value::Bool(_) | Value::Number(_) => Some(v.to_string()),
@@ -598,11 +548,8 @@ pub(super) fn parse_container_item(td: &Value) -> BmmType {
     }
 }
 
-/// A `type_def` with `root_type` → a generic type; otherwise a simple `type`.
-/// The generic arguments come either as `generic_parameters` (a list, whose
-/// entries may be bare type names *or* nested `type_def`s) or as
-/// `generic_parameter_defs` (an ordered map of named params, used for
-/// `Hash<K,V>`; `serde_json`'s `preserve_order` keeps K before V).
+/// A `type_def` with `root_type` → a generic type, else a simple `type`; the
+/// arguments come as `generic_parameters` or `generic_parameter_defs`.
 pub(super) fn parse_type_def(td: &Value) -> BmmType {
     if let Some(root) = td.get("root_type").and_then(Value::as_str) {
         let params: Vec<BmmType> =

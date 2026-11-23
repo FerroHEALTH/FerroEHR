@@ -17,18 +17,10 @@
 //! longest-match end and the same failure extent, so the token stream and its
 //! spans are unchanged. No openEHR specification governs this: it is our own
 //! implementation of the vendored `base_lexer.g4` patterns.
-//!
-//! The scanners work on bytes. Every delimiter and escape they look for is
-//! ASCII and a UTF-8 continuation byte is never ASCII, so a byte scan ends
-//! only on a character boundary.
 
 use logos::{Lexer, Logos, Skip};
 
 /// The rest of a `STRING` after its opening `"`, as `"([^"\\]|\\.)*"`.
-///
-/// Returns the length through the closing quote, or, when the literal never
-/// closes, the length the DFA consumed before it stuck: to the end of the
-/// input, or up to a line feed that follows a backslash (`.` excludes it).
 fn string_rest(rest: &[u8]) -> Result<usize, usize> {
     let mut at = 0;
     loop {
@@ -45,12 +37,6 @@ fn string_rest(rest: &[u8]) -> Result<usize, usize> {
 }
 
 /// The rest of a plug-in block after its `<`, as `#([^#]|#[^>])*#*#>`.
-///
-/// Returns the length of the longest match, or `None` when there is none.
-/// The loop is the minimal DFA of that expression: `Hash` follows a `#` that
-/// opens a unit, `HashHash` a `#` that could also close one; `#>` read from
-/// `Hash` ends every match, while from `HashHash` it is one match the block
-/// may still extend past.
 pub(crate) fn plug_in_rest(rest: &[u8]) -> Option<usize> {
     #[derive(Clone, Copy)]
     enum State {
@@ -86,10 +72,6 @@ fn skip_blanks(rest: &[u8], mut at: usize) -> usize {
 
 /// The rest of an `EMBEDDED_URI` after its `<`, as
 /// `[ \t\r\n]*[a-zA-Z][a-zA-Z0-9+.\-]*:[^>]*>`.
-///
-/// Returns the length through the first `>`, or `None` when the text is no
-/// embedded URI. The expression has one parse, so its only match is the
-/// longest.
 pub(crate) fn embedded_uri_rest(rest: &[u8]) -> Option<usize> {
     let mut at = 0;
     while matches!(rest.get(at), Some(b' ' | b'\t' | b'\r' | b'\n')) {
@@ -114,10 +96,6 @@ pub(crate) fn embedded_uri_rest(rest: &[u8]) -> Option<usize> {
 
 /// The rest of a `CONTAINED_REGEXP` after its `{`, as
 /// `[ \t\r]*(/([^/\r\n\\]|\\.)+/|\^([^\^\r\n\\]|\\.)+\^)[ \t\r]*(;[ \t\r]*"([^"\\]|\\.)*")?[ \t\r]*\}`.
-///
-/// Returns the length through the closing `}`, or `None` when the text is
-/// no contained regexp. The expression has one parse, so its only match is
-/// the longest.
 pub(crate) fn contained_regexp_rest(rest: &[u8]) -> Option<usize> {
     let mut at = skip_blanks(rest, 0);
     let delimiter = *rest.get(at).filter(|byte| matches!(byte, b'/' | b'^'))?;

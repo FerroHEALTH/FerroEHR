@@ -5,7 +5,7 @@
 //! real `PostgreSQL` 18 (the shared `testkit` harness), driven through the
 //! assembled `ferroehr-rest` router (auth disabled) with `tower`'s `oneshot`.
 //!
-//! Covers the spec-mandated write semantics fixed in the W1-C audit wave:
+//! Covers the spec-mandated write semantics:
 //! - a versioned store returns `200 OK` + a `Location` header
 //!   (`responses/200_StoredQuery_stored.yaml` + `headers/Location_Query.yaml`),
 //!   not `204`;

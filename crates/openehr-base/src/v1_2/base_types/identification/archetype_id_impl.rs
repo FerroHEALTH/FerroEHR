@@ -2,13 +2,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written accessor functions for `ARCHETYPE_ID`.
-//!
-//! Spec: BASE 1.3.0
-//! `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.archetype_id.adoc`.
-//! Lexical form:
-//! `rm_originator '-' rm_name '-' rm_entity '.' concept_name {'-' specialisation}* '.v' version_id`
-//! e.g. `openEHR-EHR-OBSERVATION.blood_pressure-cuff.v1`.
+//! Accessors for `ARCHETYPE_ID` (BASE
+//! `org.openehr.base.base_types.archetype_id.adoc`), e.g.
+//! `openEHR-EHR-OBSERVATION.blood_pressure-cuff.v1`.
 
 use super::archetype_id::ArchetypeId;
 use super::lexical::IdError;
@@ -45,8 +41,7 @@ impl ArchetypeId {
         parse(&self.value).map_or("", |p| p.qualified)
     }
 
-    /// Concept name including any specialisations, e.g. `blood_pressure-cuff` —
-    /// the part between the first `.` and the trailing `.vN` (BASE
+    /// The concept name with any specialisations, e.g. `blood_pressure-cuff` (BASE
     /// `domain_concept`).
     #[must_use]
     pub fn domain_concept(&self) -> &str {
@@ -69,9 +64,7 @@ impl ArchetypeId {
     /// and remaining `-`-delimited segments of the RM qualifier.
     #[must_use]
     pub fn rm_entity(&self) -> &str {
-        // rm_originator '-' rm_name '-' rm_entity: take everything after the
-        // second '-'. `splitn(3, ..)` leaves any further '-' inside the third
-        // segment, which is exactly the `rm_entity` remainder.
+        // Everything after the second `-` is `rm_entity`.
         let q = self.qualified_rm_entity();
         let mut segments = q.splitn(3, '-');
         match (segments.next(), segments.next(), segments.next()) {
@@ -80,9 +73,7 @@ impl ArchetypeId {
         }
     }
 
-    /// Name of the concept specialisation, if any, e.g. `cuff` for
-    /// `blood_pressure-cuff` — the last `-`-delimited segment of the domain
-    /// concept when it is specialised, else the empty string (BASE
+    /// The concept specialisation, e.g. `cuff`, else the empty string (BASE
     /// `specialisation`).
     #[must_use]
     pub fn specialisation(&self) -> &str {
@@ -100,16 +91,9 @@ impl ArchetypeId {
         parse(&self.value).map_or("", |p| p.version)
     }
 
-    /// Major version number, e.g. `1` for both `.v1` and `.v1.2.3` — the leading
-    /// numeric segment of `version_id`.
-    ///
-    /// BASE base_types master05 §Syntaxes defines only the single-part form
-    /// (`version_id = '0' | non-zero-digit, [ number ]`); the three-part
-    /// `major.minor.patch` belongs to the AM archetype HRID
-    /// (`docs/specs/openehr/BASE/docs/artefact_identification/`), and only the major is
-    /// significant to interface-reference matching (BASE artefact_identification master07 §Referencing:
-    /// an `ihrid_ref` carries the major version only, and a differing major is
-    /// a hard boundary).
+    /// The major version, e.g. `1` for `.v1` and `.v1.2.3`; only the major is
+    /// significant to reference matching (BASE artefact_identification master07
+    /// §Referencing).
     #[must_use]
     pub fn major_version(&self) -> &str {
         self.version_id().split('.').next().unwrap_or("")
@@ -119,15 +103,8 @@ impl ArchetypeId {
 impl FromStr for ArchetypeId {
     type Err = IdError;
 
-    /// Parse an `ARCHETYPE_ID` against the master05 §Syntaxes `archetype_id`
-    /// production.
-    ///
-    /// The door is the SAME check the class's `Validate` impl runs. It used to
-    /// be weaker — a `.v` anywhere, a `.` before it, three `-` segments — so
-    /// `"1-2-3.@@@.vXYZ"` constructed and then failed its own invariants, and
-    /// the "well-formed by construction" guarantee every sibling here
-    /// establishes (`HierObjectId::new` calls `is_uid`, `VersionTreeId::new`
-    /// calls `is_valid_version_tree`) did not hold for this type.
+    /// Parses an `ARCHETYPE_ID` against the master05 §Syntaxes production, the
+    /// same check its `Validate` impl runs.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.is_empty() {
             return Err(IdError::Empty);
@@ -176,9 +153,7 @@ mod tests {
 
     #[test]
     fn major_version_ignores_minor_and_patch() {
-        // A full hrid_ref (major.minor.patch) still yields the major only — the
-        // significant part for interface-reference matching (BASE Artefact
-        // Identification §Referencing).
+        // A full hrid_ref yields the major only.
         let a = aid("openEHR-EHR-OBSERVATION.pulse.v1.2.3");
         assert_eq!(a.version_id(), "1.2.3");
         assert_eq!(a.major_version(), "1");
@@ -274,10 +249,7 @@ mod validity_tests {
         }
     }
 
-    /// The construction door and the class's own invariants must agree, or the
-    /// type's well-formed-by-construction guarantee is not one. They did not:
-    /// the door checked for a `.v`, a `.` before it and three `-` segments, so
-    /// these constructed and then failed `Validate`.
+    /// The construction door and the class's invariants agree.
     #[test]
     fn construction_admits_exactly_what_the_invariants_accept() {
         for value in [

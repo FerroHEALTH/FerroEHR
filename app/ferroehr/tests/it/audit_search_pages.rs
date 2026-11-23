@@ -139,9 +139,9 @@ fn cases() -> Vec<Case> {
     ]
 }
 
-/// The total and the positions of the page `where` selects, read as the
-/// retrieval read them before #5646: the union view counted, and ordered
-/// newest first with the page's limit and offset.
+/// The total and the positions of the page `where` selects, read by the
+/// reference retrieval: the union view counted, and ordered newest first with
+/// the page's limit and offset (#5646).
 async fn reference(
     pool: &sqlx::PgPool,
     r#where: &str,

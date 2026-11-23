@@ -308,9 +308,6 @@ async fn the_audit_table_refuses_mutation_deletion_and_truncation() {
 /// audit trail specifically: it can record an event and seal it, and it can
 /// do nothing else — no DDL, no rewrite, no deletion, and no disabling
 /// of the triggers that enforce that.
-///
-/// Roles are cluster-global on the shared harness server, so the login role is
-/// named off the clone database for the testkit sweep to reap.
 #[tokio::test]
 #[expect(
     clippy::disallowed_methods,

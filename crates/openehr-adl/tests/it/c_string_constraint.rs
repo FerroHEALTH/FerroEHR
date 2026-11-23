@@ -1,15 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `C_STRING.constraint`: a string constraint is either a list of fixed Strings
-//! or a single regular expression, never a mixture
-//! (`docs/specs/openehr/AM/docs/ADL2/master04.5-cadl_primitive_types.adoc`
-//! §Constraints on String; the AOM2 `C_STRING` class table, which stores a
-//! regular expression with its `/` or `^` delimiters).
+//! `C_STRING.constraint` is a list of fixed strings or one regex, never both
+//! (`ADL2/master04.5-cadl_primitive_types.adoc` §Constraints on String).
 //!
-//! The ADL 2 grammar cannot spell a mixture, so the refusing cases build the
-//! constraint on a parsed model, the shape an AOM2 XML, JSON or OPT 1.4 input
-//! reaches the validator in.
+//! ADL 2 cannot spell a mixture, so the refusing cases build it on a parsed model.
 
 #![allow(
     clippy::panic,

@@ -298,20 +298,16 @@ impl FerroEhrService {
     /// bytes are then the generated canonical-JSON encoding of this instance,
     /// produced at the protocol edge.
     ///
-    /// NOTE: `_type: "ITEM_TAG"` IS on the wire — the released `ItemTag.yaml` is
-    /// `additionalProperties: false` without declaring `_type` while the same
-    /// group's `discriminator.propertyName` names that member, and that
-    /// contradiction resolves in favour of the discriminator, since an `ITEM_TAG`
-    /// carries no `uid` and no archetype id to identify itself by. `target` is a
-    /// BARE `UID_BASED_ID`, the RM's shape, not the OAS's `OBJECT_REF` wrapper:
-    /// where a wire projection disagrees with the released model it projects
-    /// about what an attribute IS, the model decides.
+    /// NOTE: `_type: "ITEM_TAG"` is on the wire, since the released
+    /// `ItemTag.yaml` discriminator names it, and `target` is the RM's bare
+    /// `UID_BASED_ID`, not the OAS's `OBJECT_REF` wrapper: where the wire
+    /// projection and the released model disagree, the model decides.
     fn stored_item_tag(
         ehr_id: EhrId,
         row: &crate::storage::tag_repo::TagRow,
     ) -> Result<ItemTag, ServiceError> {
-        // A stored row that no longer constructs is storage corruption, not a
-        // client fault — fail loud as the 500 class.
+        // A stored row that does not construct is storage corruption, not a
+        // client fault.
         ItemTag::new(
             row.key.clone(),
             row.value.clone(),
@@ -370,21 +366,16 @@ fn ehr_owner_ref(ehr_id: EhrId) -> ObjectRef {
 
 /// `target_path: ""` normalizes to ABSENT — one identity, not two.
 ///
-/// RM models `target_path` 0..1 (absent = no path) with no non-empty
-/// invariant, while six of the seven released `ItemTagOf<T>` examples write
-/// `target_path: ""`; under the (`key`, `target_path`) identity those would be
-/// two distinct tags, so the normalization is our own — and this is the ONE
-/// function that applies it: the EHR and demographic families both call it, so
-/// applying it identically across the two families is a structural fact rather
-/// than a claim.
+/// RM `target_path` is 0..1 with no non-empty invariant, while the released
+/// `ItemTagOf<T>` examples write `""`; under the (`key`, `target_path`)
+/// identity those would be two tags. Our own normalization, shared by the EHR
+/// and demographic families.
 pub(in crate::service) fn normalized_target_path(raw: Option<&str>) -> Option<&str> {
     raw.filter(|p| !p.is_empty())
 }
-/// Refuse an [`ItemTagError`](openehr_rm::v1_2::common::tags::item_tag_impl::ItemTagError)
-/// as the ITS-REST 422 shape (the same
-/// `Violation` the pre-constructor `validate_item_tag` produced): the typed
-/// constructor IS the invariant check now (construction =
-/// validation), so the service seam only maps the refusal onto the wire.
+/// Maps an
+/// [`ItemTagError`](openehr_rm::v1_2::common::tags::item_tag_impl::ItemTagError)
+/// to the ITS-REST 422 shape.
 pub(in crate::service) fn item_tag_refusal(
     err: &openehr_rm::v1_2::common::tags::item_tag_impl::ItemTagError,
 ) -> ServiceError {

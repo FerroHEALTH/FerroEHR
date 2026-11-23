@@ -3,10 +3,6 @@
 
 //! Archetype / template artefact validation (the ingestion surface).
 //!
-//! The platform crate has three validation surfaces; this module owns the
-//! artefact validators and the commit-time rules over stored state, and names
-//! the seams to the other two surfaces.
-//!
 //! - Surface A, artefact validity (owned here): the AOM 1.4/2.4 constraint
 //!   catalogue applied to an uploaded artefact before it becomes an operational
 //!   template. `opt` carries OPT 1.4 artefact validity, the AOM2/08 catalogue
@@ -31,12 +27,6 @@
 //!   the `FOLDER` local item-reference check and the declared template id,
 //!   which the service and the CONTRIBUTION path in `versioning` both run;
 //!   `category` names the `composition_category` codes they read.
-//!
-//! The files under `opt` follow the AM constraint taxonomy (structural
-//! invariant, RM conformance, primitive, terminology, interval), the axis the
-//! AOM2/08 catalogue itself uses, so a file traces to a catalogue section. The
-//! functions below are the crate-facing contract (`crate::validation::<fn>`);
-//! the machinery behind them is module-private.
 //!
 //! NOTE: AOM 1.4 defines only the positive `valid_value` cascade and is silent
 //! on present-but-unmatched nodes, so surface B's closed-world check follows the
@@ -64,8 +54,6 @@ use crate::error::ServiceError;
 /// standalone-artefact validity rules
 /// (`AM/docs/AOM2/master08-validation.adoc`; rule map in the `opt` module
 /// doc).
-///
-/// A fully valid artefact returns `Ok`.
 ///
 /// # Errors
 ///

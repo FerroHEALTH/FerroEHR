@@ -3,17 +3,10 @@
 
 //! End-to-end RBAC gate over the real axum app.
 //!
-//! Drives the assembled router (auth + RBAC + dispatch) with `tower`'s
-//! `oneshot`, over the **real** `FerroEhrService` (the scripted `Mock`
-//! is gone), and asserts the coarse role gate: an Admin-class operation is 403
-//! for a `USER` and clears the gate for an `ADMIN`; a clinical operation needs a
-//! role; disabling RBAC restores today's behaviour; a deny is attributed to the
-//! caller and audited by the ATNA layer; and scope→role extraction
-//! clears the admin gate (a `scope` named `ADMIN` surfaces as role `ADMIN`).
-//!
-//! These assert only that the gate did not reject (`!= 403`): the concrete
-//! post-gate status is real-backend behaviour, not the gate's, so pinning it
-//! here would couple an authorization test to unrelated handler outcomes.
+//! Drives the assembled router with `tower`'s `oneshot` over the real
+//! `FerroEhrService` and asserts the coarse role gate. A request the gate lets
+//! through is asserted as `!= 403`, since the post-gate status is the
+//! handler's, not the gate's.
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -276,10 +269,8 @@ async fn rbac_disabled_restores_admin_access() {
 /// A ROLE clears the admin gate; a SCOPE never does.
 ///
 /// An OAuth2 scope grants a client delegated authority (RFC 6749 §3.3) and
-/// asserts nothing about the subject's roles. Mining `scope` for roles made the
-/// gate satisfiable by any caller who could name it — and made the
-/// at-least-one-role check vacuous for every OIDC token, since `openid` alone
-/// passed it. Roles come from the RFC 9068 §2.2.3.1 carriers instead.
+/// asserts nothing about the subject's roles, so roles come only from the RFC
+/// 9068 §2.2.3.1 carriers.
 #[tokio::test]
 async fn a_scope_never_clears_the_admin_gate_but_a_role_does() {
     let (_pg, app) = app(true, None).await;
@@ -642,8 +633,6 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
             ..ferroehr::service::terminology::config::TerminologyServerConfig::default()
         },
     );
-    // URL 4 was the usage report endpoint, whose type now refuses userinfo;
-    // URL 5 was the removed remote policy decision point.
     cfg.telemetry.otlp = Some(ferrohealth_telemetry::section::OtlpSection {
         endpoint: leaky(6),
         ..ferrohealth_telemetry::section::OtlpSection::default()

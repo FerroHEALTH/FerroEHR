@@ -309,14 +309,12 @@ fn tolerance_concrete_poly_slot_defaults_type() {
     assert!(matches!(a, DvText::DvText(_)));
 }
 
-/// Tolerance rule 6 — **optional-attribute defaulting** and the **`Interval`
-/// literal flag defaults** are reproduced (minimal input, defaults
-/// materialized).
+/// Tolerance rule 6: optional-attribute defaulting and the `Interval` literal
+/// flag defaults are reproduced.
 ///
-/// An OPTIONAL container reads absent as `None`; one carrying a
-/// present-implies-non-empty invariant (`dv_text.adoc` §Invariants,
-/// `Mappings_valid`) is `Option<NonEmptyVec<T>>` since #1730, so `[]` refuses
-/// at parse.
+/// An optional container reads absent as `None`; one carrying a
+/// present-implies-non-empty invariant (`dv_text.adoc` `Mappings_valid`) is
+/// `Option<NonEmptyVec<T>>`, so `[]` refuses at parse.
 #[test]
 fn tolerance_option_vec_and_interval_defaults() {
     // Both an optional single attribute and an optional container read absent

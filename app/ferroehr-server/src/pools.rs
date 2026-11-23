@@ -28,14 +28,6 @@ pub(crate) enum Opening {
 /// schema one. The domain split is our own deployment extension; no openEHR
 /// spec governs it.
 ///
-/// Schema preparation is [`ferroehr::db::prepare`], which spans every schema of
-/// each database on that database's migration DSN (`[database] migrate_url` for every
-/// domain reaching the database it reaches, `[database.<domain>] migrate_url`
-/// for a database of its own, the domain's own DSN when that is unset) and then
-/// measures the runtime pools' own reach with
-/// [`ferroehr::db::verify_domain_isolation`], refusing to boot a database whose
-/// grants let one runtime role read another domain.
-///
 /// # Errors
 /// A connection, migration or domain-isolation failure, contextualized for the
 /// operator.

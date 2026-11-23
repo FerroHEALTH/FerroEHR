@@ -4,28 +4,14 @@
 //! Statement shapes: the SQL text of a plan rendered once per shape, and its
 //! values bound from numbered slots.
 //!
-//! A cached plan ([`crate::service::query`]) spares a repeated query its parse
-//! and lowering, but [`super::build`] still builds the whole `sea-query` tree
-//! and renders it on every request. The text depends on more than the plan:
-//! the parameters, the scope, the paging and the access condition shape it.
-//! What varies between the requests of one caller, or of callers that share a
-//! verdict, are values: the EHR a single-EHR query names, the request's
-//! moment and day, the caller's parties and care teams, the EHRs it is cared
-//! for or confined to, the pinned EHR's revision, the `ehr_ids` scope and the
-//! paging bounds. A `Live` source names each of them.
-//!
-//! [`Shapes`] holds, per plan, the shapes the plan has been executed in. A
-//! request whose `Key` matches a shape binds the shape's slots from its own
-//! values and renders nothing; a request that matches none is built as before.
-//! The second request of a key derives its shape from two builds over
-//! `Sentinels`: every `Live` source carries a fresh random value in each,
-//! the two texts must be equal, and every value either agrees in both (a fixed
-//! value of the shape) or is the image of one `Live` source in each (a slot).
-//! A value that depends on a source any other way, or a text that does, leaves
-//! the key unshaped, and the shape must reproduce the request's own build
-//! exactly before it is kept. The dataflow is thus observed rather than
-//! declared, so a value the emitter derives in a way this module does not know
-//! costs the cache, never a wrong statement.
+//! A plan's SQL text depends on its parameters, scope, paging and access
+//! condition, but between the requests of one caller, or of callers that share
+//! a verdict, only values vary, each named by a `Live` source. [`Shapes`]
+//! holds, per plan, the shapes it has run in: a request whose `Key` matches
+//! binds the shape's slots and renders nothing. A shape is derived from two
+//! builds over random `Sentinels` and kept only when it reproduces the
+//! request's own build exactly, so a dataflow this module does not know costs
+//! the cache, never a wrong statement.
 //!
 //! No openEHR spec governs the SQL build: our own design (#5783).
 

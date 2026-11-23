@@ -1,43 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Slot-topic validity: `ARCHETYPE_SLOT` and its fillers.
+//! `ARCHETYPE_SLOT` redefinition and filling.
 //!
-//! Covers redefining an inherited `ARCHETYPE_SLOT`, filling one with a
-//! `C_ARCHETYPE_ROOT`, and the template/`use_archetype` filler checks that
-//! resolve those references against a supplier repository.
-//!
-//! Rule texts:
-//! `docs/specs/openehr/AM/docs/AOM2/master04.5-constraint_model-class_definitions.adoc`
-//! §Validity Rules — `ARCHETYPE_SLOT` (VDSSID L462 / VDSSM / VDSSP L468 /
-//! VDSSC L471) and `C_ARCHETYPE_ROOT` (VARXR L419 / VARXS L424 / VARXID L427) —
-//! plus `master03-archetype_package.adoc` §Validity Rules VTPL and
-//! `master08-validation.adoc` §Phase 2 → Validate Specialised Definition.
-//!
-//! The first half is the slot arm of the specialisation walk: a second
-//! `impl` block on `ParentScan`, reached from
-//! `ParentScan::check_object_pair` in `super::specialisation` in unchanged
-//! invocation order.
-//!
-//! The second half ([`validate_fillers`]) is the repository-dependent pass. VTPL
-//! and VARXR both need the supplier repository (a filler is resolved,
-//! flattened, and inspected), so they run only when a repository is available —
-//! separately from the standalone integrity / parent-conformance passes. They
-//! un-defer:
-//!
-//! * **VTPL** — template/filler language consistency (`master03` §Validity
-//!   Rules, VTPL): every filler flattened into a *template* must support the
-//!   template's `original_language`, so the flattened OPT can carry a common
-//!   language (`OPT2/master03` §Terminology). Only templates are subject to
-//!   VTPL — a plain archetype that merely references a mono-lingual filler is
-//!   still valid, since it is not (yet) being flattened into an OPT.
-//! * **VARXR** — external reference resolution (`master08` §Phase 2 → Validate
-//!   Specialised Definition; `master04.5` §`C_ARCHETYPE_ROOT`): every
-//!   `use_archetype` external reference / slot-filler must resolve to an
-//!   archetype in the repository.
-//!
-//! Both walk the *flattened* artefact (`crate::flatten::flat_form`) so fillers
-//! inherited from a specialisation parent are seen.
+//! `AOM2/master04.5` §Validity Rules: `ARCHETYPE_SLOT`, `C_ARCHETYPE_ROOT`; and
+//! the repository-dependent filler checks of [`validate_fillers`]: VTPL for
+//! templates (`master03`; `OPT2/master03` §Terminology) and VARXR (`master08`
+//! §Phase 2), over the flattened artefact.
 
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::constraint_model::archetype_slot::ArchetypeSlot;
@@ -119,12 +88,10 @@ impl<'a> ParentScan<'a> {
     }
 
     /// The identity and closure rules of a specialised slot (`master04.5`
-    /// §`ARCHETYPE_SLOT`): VDSSID (identical node id), VDSSP (the parent slot
-    /// must not already be closed), VDSSC (closed OR narrowed, never both).
+    /// §`ARCHETYPE_SLOT`): VDSSID, VDSSP and VDSSC.
     ///
-    /// NOTE: the vendored `masterAppB` slot grammar admits `closed` XOR a
-    /// `matches` body, so the VDSSC guard can only fire for AOM input that was
-    /// not parsed from ADL2 source.
+    /// NOTE: the `masterAppB` grammar admits `closed` or a body, so VDSSC fires only
+    /// for AOM input not parsed from ADL2.
     fn check_slot_identity(
         &mut self,
         child_slot: &ArchetypeSlot,
@@ -221,24 +188,14 @@ impl<'a> ParentScan<'a> {
     }
 }
 
-/// True if two slot-assertion lists are structurally identical, used by VDSSM to
-/// detect a restatement (not a proper narrowing) of the parent slot.
-///
-/// Every assertion counts, whatever its shape: the comparison key is the
-/// assertion's own string form rendered from its expression tree
-/// ([`crate::print::assertion_text`]), so an assertion the regex reading cannot
-/// express still distinguishes the two lists.
-///
-/// An assertion the printer refuses has no comparison key, so the two lists are
-/// reported as different: VDSSM fires only on a proven restatement, and an
-/// unrenderable assertion proves nothing.
-/// Whether a slot states any narrowing at all — an `includes` or `excludes`
-/// assertion.
+/// Whether a slot states any narrowing, an `includes` or `excludes` assertion.
 fn slot_narrows(slot: &ArchetypeSlot) -> bool {
     !slot.includes.as_ref().is_none_or(Vec::is_empty)
         || !slot.excludes.as_ref().is_none_or(Vec::is_empty)
 }
 
+/// Whether two slot-assertion lists are identical by their printed forms
+/// ([`crate::print::assertion_text`]); an unprintable assertion makes them differ.
 fn slot_assertions_equal(a: &[Assertion], b: &[Assertion]) -> bool {
     let rendered = |list: &[Assertion]| {
         list.iter()
@@ -253,21 +210,12 @@ fn slot_assertions_equal(a: &[Assertion], b: &[Assertion]) -> bool {
     as_ == bs
 }
 
-/// VDSSM widening check: if any `include` in the child slot names a **literal**
-/// archetype id (a regex body with no meta-characters) that the parent slot does
-/// not admit, the child admits an archetype outside the parent's set — a
-/// widening, not a subset. Returns the first such literal id.
+/// The first literal archetype id a child `include` names that the parent slot
+/// does not admit, a VDSSM widening (`master04.5` §Validity Rules:
+/// `ARCHETYPE_SLOT`; `ADL2/master04.3` §Archetype Slots).
 ///
-/// VDSSM is a proper-subset test over the archetype sets the two slot
-/// definitions match (`master04.5` §Validity Rules: `ARCHETYPE_SLOT`), and a
-/// slot's set is the union over its `include` assertions
-/// (`ADL2/master04.3` §Archetype Slots). So each include is judged on its own:
-/// one whose constraint is not a readable archetype-id regex (the
-/// §Slots based on other Constraints form) contributes an unknown share and is
-/// SKIPPED, while the remaining literals are still judged — an unreadable
-/// assertion is undecidable, never a violation. The parent side is all-or-
-/// nothing for the same reason: if any parent `include` is unreadable the
-/// admitted superset is unknown, and an unknown superset can refute nothing.
+/// An unreadable child include is skipped; any unreadable parent include makes
+/// the parent set unknown, refuting nothing.
 fn slot_widens_by_literal(
     child_slot: &ArchetypeSlot,
     parent_slot: &ArchetypeSlot,
@@ -358,18 +306,8 @@ fn assertion_regex(a: &Assertion) -> Option<String> {
 
 /// Validates an archetype's `use_archetype` fillers against `repo`.
 ///
-/// The checks are VARXR (a reference that does not resolve) and — for templates
-/// only — VTPL (a filler that does not support the template's
-/// `original_language`).
-///
-/// A template's own `template_overlay` sections are local constituents
-/// (`ADL2/master10-templates.adoc` §Overview), so they resolve as
-/// fillers and their own fillers are checked too, against the same
-/// repository and the template's language.
-///
-/// The artefact is flattened first so inherited fillers are seen; a flatten
-/// failure yields no filler issues (the flattener's own errors surface through
-/// the specialisation validator).
+/// VARXR, and VTPL for templates, whose `template_overlay` sections are local
+/// constituents (`ADL2/master10-templates.adoc`). A flatten failure yields none.
 #[must_use]
 pub fn validate_fillers(archetype: &Archetype, repo: &ArchetypeRepository) -> Vec<ValidationIssue> {
     let overlays = crate::opt::root_overlays(archetype);

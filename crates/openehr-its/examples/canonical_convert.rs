@@ -7,13 +7,6 @@
 //! fixtures), so every committed fixture is produced by the same gate-proven
 //! codec that serves the wire.
 //!
-//! Usage: `cargo run -p openehr-its --example canonical_convert -- <in.json> <out.{xml,json}>`
-//!
-//! The output form follows the output path's extension: `.xml` emits canonical
-//! XML, `.json` emits canonical JSON (the codec's own attribute order and
-//! `_type` self-tagging — the normalizing pass that turns a hand-authored
-//! payload into the exact bytes the wire carries).
-//!
 //! The concrete RM type is dispatched on the document's `_type`
 //! (ITS-JSON: the `_type` self-tag names the RM class); the XML root element
 //! is the lower-snake class name and the namespace is the canonical

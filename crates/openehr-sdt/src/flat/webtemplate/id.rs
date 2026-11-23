@@ -1,32 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Web-template node `id` generation and sibling de-duplication.
+//! Web-template node `id` generation and sibling de-duplication
+//! (`simplified_formats master04-basic_concepts.adoc` §"Node ID Generation
+//! Rules"): steps 1 to 6 are [`generate_node_id`], step 7 is [`Deduplicator`].
 //!
-//! Implements the node-id algorithm of the openEHR Simplified Formats
-//! specification (`ITS-REST simplified_formats master04-basic_concepts.adoc`
-//! §"Node ID Generation Rules") — the seven ordered steps that turn an archetype
-//! node name into the `id` segment used to build FLAT/STRUCTURED paths
-//! (master04 §"Field Identifiers", §"Path Construction"):
-//!
-//! 1. character normalisation — replace every char that is not
-//!    `\p{Alphabetic}`, `0-9`, `_`, `.` or `-` with `_`;
-//! 2. underscore consolidation — collapse runs of `_` to one;
-//! 3. case normalisation — lowercase;
-//! 4. trim leading/trailing `_`;
-//! 5. empty result → `"id"`;
-//! 6. a leading digit → prepend `"a"`;
-//! 7. sibling uniqueness — append an `_`-separated numeric suffix (`blood_pressure`,
-//!    `blood_pressure_1`, …) counting from 1.
-//!
-//! Steps 1–6 are [`generate_node_id`]; step 7 is [`Deduplicator`].
-//!
-//! Beyond those seven steps, [`build_ids`] derives the BASE NAME a node's id is
-//! generated from, orders a polymorphic `ELEMENT`'s alternative `DV_*` children,
-//! and resolves the `cardinalities`/`dependsOn` child-id references. The spec
-//! defines only the name→id transform, so those mechanics are our own
-//! design/extension; the base-name fallback mirrors the metadata example
-//! (master04 §"Web Template Metadata").
+//! NOTE: the spec defines only the name-to-id transform; the base name, the
+//! choice ordering and the `cardinalities`/`dependsOn` references are our own
+//! design.
 
 use std::collections::{HashMap, HashSet};
 
@@ -36,11 +17,7 @@ use super::model::WebTemplateNode;
 /// §"Node ID Generation Rules"`): turn an archetype node `name` into an `id`
 /// (sibling uniqueness — step 7 — is then applied by [`Deduplicator`]).
 fn generate_node_id(name: &str) -> String {
-    // Step 1 (character normalisation) folded with step 3 (case normalisation):
-    // keep `\p{Alphabetic}` / `0-9` / `_` / `.` / `-`, lowercasing the survivors;
-    // replace everything else with `_`. Lowercasing an alphabetic char never adds
-    // or removes an `_`, so folding step 3 into this pass leaves steps 2 and 4
-    // unaffected. `char::is_alphabetic` is the Unicode `Alphabetic` property.
+    // Steps 1 and 3 in one pass: lowercasing never adds or removes an `_`.
     let mut normalised = String::with_capacity(name.len());
     for ch in name.chars() {
         if ch.is_alphabetic() || ch.is_ascii_digit() || ch == '_' || ch == '.' || ch == '-' {
@@ -77,11 +54,8 @@ fn generate_node_id(name: &str) -> String {
     }
 }
 
-/// Step 7 (sibling uniqueness) of the node-id algorithm (`ITS-REST
-/// simplified_formats master04 §"Node ID Generation Rules"`): append an
-/// `_`-separated numeric suffix, counting from 1, so an `id` is unique among its
-/// siblings (a duplicate `blood_pressure` → `blood_pressure_1`,
-/// `blood_pressure_2`, …). Uniqueness is scoped per parent id.
+/// Step 7 (sibling uniqueness, master04 §"Node ID Generation Rules"): append
+/// `_1`, `_2`, … per parent id.
 #[derive(Default)]
 struct Deduplicator {
     used: HashMap<String, HashSet<String>>,
@@ -107,10 +81,8 @@ impl Deduplicator {
     }
 }
 
-/// The typed id for a polymorphic (choice) `ELEMENT`'s `DV_*` alternative
-/// (`DV_QUANTITY` → `quantity_value`, `DV_INTERVAL<DV_QUANTITY>` →
-/// `interval_of_quantity_value`). No openEHR spec governs how a choice ELEMENT's
-/// alternatives are named at the FLAT level — our own design/extension.
+/// The typed id for a choice `ELEMENT`'s `DV_*` alternative
+/// (`DV_QUANTITY` → `quantity_value`); no openEHR spec governs it: our own design.
 fn typed_id(rm_type: &str) -> String {
     if let Some(rest) = rm_type
         .strip_prefix("DV_INTERVAL<DV_")
@@ -124,14 +96,10 @@ fn typed_id(rm_type: &str) -> String {
     }
 }
 
-/// The base *name* a node's id is generated from: the node rubric `name` when
-/// present; otherwise `"value"` for a leaf under an `ELEMENT` (master04
-/// §"Flat format": "there is no distinction between ELEMENT and its value —
-/// elements ARE their values"), except a `DV_INTERVAL` value which keeps its own
-/// name; otherwise the last RM attribute path segment (the metadata example's
-/// `context`/`category`/`language` shape). The name→id transform is applied by
-/// [`generate_node_id`]. No openEHR spec governs this fallback source — our own
-/// design/extension.
+/// The base name a node's id is generated from: the rubric, else `"value"` under
+/// an `ELEMENT` (master04 §"Flat format": "elements ARE their values") unless a
+/// `DV_INTERVAL`, else the last RM attribute segment. No openEHR spec governs
+/// this fallback: our own design.
 fn base_name(node: &WebTemplateNode, parent_rm_type: Option<&str>) -> String {
     match &node.name {
         Some(n) if !n.trim().is_empty() => n.clone(),
@@ -152,10 +120,8 @@ fn last_path_segment(path: &str) -> String {
     }
 }
 
-/// Order a choice `ELEMENT`'s children so `DV_CODED_TEXT` precedes `DV_TEXT`, so
-/// the coded alternative takes the primary `value` id and the free-text one the
-/// `value2` alternate. No openEHR spec governs choice-ELEMENT rendering — our own
-/// design/extension.
+/// Order a choice `ELEMENT`'s children so `DV_CODED_TEXT` takes `value` and
+/// `DV_TEXT` `value2` (no openEHR spec governs it: our own design).
 fn fix_polymorphic_order(children: &mut Vec<WebTemplateNode>) {
     let coded = children.iter().position(|c| c.rm_type == "DV_CODED_TEXT");
     let text = children.iter().position(|c| c.rm_type == "DV_TEXT");
@@ -214,11 +180,8 @@ fn assign(
     resolve_depends_on(node);
 }
 
-/// Fill each cardinality's `ids` from the child json-ids whose aql path is under
-/// the cardinality attribute path; drop cardinalities that match nothing. The
-/// `cardinalities` field carries container `{min, max, ids}` bounds; no openEHR
-/// spec governs this id back-reference — our own design/extension (consumed by
-/// interop consumers and the validation walk).
+/// Fill each cardinality's `ids` from the child json-ids under its attribute
+/// path, dropping those that match nothing (our own design).
 fn resolve_cardinalities(node: &mut WebTemplateNode) {
     if node.cardinalities.is_empty() {
         return;
@@ -243,11 +206,9 @@ fn resolve_cardinalities(node: &mut WebTemplateNode) {
     });
 }
 
-/// Resolve each child's `dependsOn` RM paths to sibling json-ids: a dependency
-/// resolves to the ids of non-`inContext` siblings whose aql path starts with the
-/// dependency path. `dependsOn` is part of the metadata document shape (master04
-/// §"Web Template Metadata": the `position`/`method` nodes carry a `dependsOn`
-/// list); the RM-path→sibling-id resolution itself is our own design/extension.
+/// Resolve each child's `dependsOn` RM paths to the ids of non-`inContext`
+/// siblings under them (master04 §"Web Template Metadata"; the resolution is our
+/// own design).
 fn resolve_depends_on(node: &mut WebTemplateNode) {
     let siblings: Vec<(String, String, bool)> = node
         .children

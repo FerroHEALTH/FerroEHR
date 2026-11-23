@@ -3,15 +3,6 @@
 
 //! The shared party mapping on the server.
 //!
-//! It is installed on the service and judged against its templates at boot;
-//! the binding side table is filled or checked under its digest, with this
-//! replica's lease renewed and the key spaces tended while it runs;
-//! `ferroehr party-binding refill` is the one path by which the templates,
-//! selectors, role, group or membership of a deployment change;
-//! `ferroehr party-binding check` is the read-only pre-flight of a migration
-//! to binding, the provisional persons just-in-time creation left
-//! incomplete among what it reports.
-//!
 //! A change to those is a stop-the-world step: every replica stops, the
 //! refill runs, and replicas with the new mapping start. A key issuer added
 //! or removed is no such change: each is a key space the replicas add,
@@ -173,11 +164,6 @@ pub struct CheckArgs {
 /// (`[authz.grants] allowed`), the trust the federation agreements are
 /// judged against and the configured party mapping installed.
 ///
-/// The mapping is the templates a mapped party is validated against and the
-/// mapping the side table is derived under: the shipped default definitions
-/// unless the configuration names its own; the policy parties are
-/// recognised by archetype either way.
-///
 /// # Errors
 /// A selector path that does not compile, which the configuration check
 /// reports first.
@@ -217,14 +203,6 @@ pub fn install(
 }
 
 /// Prepares this replica's party store before it takes traffic.
-///
-/// Seeds the default policy, demographic and `EHR_ACCESS` definitions,
-/// commits the default `EHR_ACCESS` of every EHR without one, fills the
-/// `EHR_ACCESS` projection once, reads the policy grants and logs the
-/// federation agreements in force, judges the mapping against its
-/// templates, prepares the side table and takes this replica's lease,
-/// renewed in the background with the key spaces tended
-/// ([`Lease::tend`]) until it is released.
 ///
 /// # Errors
 /// A default definition the definition store refuses, two `AGENT`s naming

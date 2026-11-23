@@ -6,8 +6,8 @@
 # changelog, as a fragment under changelog.d/ (any file there but the README).
 # scripts/release/changelog.sh --check judges the fragment's form; this guard
 # asks whether there is one, and refuses a change that writes an entry under
-# [Unreleased] in CHANGELOG.md, since that section is what two open pull
-# requests used to conflict on.
+# [Unreleased] in CHANGELOG.md, the section two open pull requests would
+# conflict on.
 #
 #   changelog-guard.sh [--waived] <base-ref> [head-ref]
 #   changelog-guard.sh --self-test

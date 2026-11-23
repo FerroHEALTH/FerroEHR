@@ -3,12 +3,6 @@
 
 //! The database's own line of defence for the subject pseudonym (#3241), and
 //! the cluster identity the deployment profile reads (#3226).
-//!
-//! The service refuses a non-UUID subject once namespaces are declared; the
-//! trigger `ehr_subject_pseudonym_guard` refuses it at the row, whichever code
-//! path writes, keyed on the posture the server stamps at boot. These tests
-//! drive the stamp and the row directly, so the guard is proven without the
-//! service's rule in the way.
 
 use sqlx::PgPool;
 use uuid::Uuid;

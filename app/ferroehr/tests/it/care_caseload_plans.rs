@@ -133,12 +133,6 @@ fn clone_statements() -> [String; 3] {
 
 /// Seeds the EHRs, their compositions and the care projection, and takes
 /// the statistics.
-///
-/// The patients of each scale are in the care of its team, the others
-/// spread over the other teams, each subject digested as the projector
-/// digests it (`ferroehr::storage::access_care::subject_key`). Each
-/// composition is a clone of one committed through the service. The seed
-/// writes [`CHUNK`] EHRs at a time.
 async fn seed(svc: &FerroEhrService, pool: &PgPool) {
     let prototype_ehr = create_ehr(svc).await;
     let prototype = svc

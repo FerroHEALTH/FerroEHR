@@ -2,15 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! `LINK`, `FEEDER_AUDIT`, `FEEDER_AUDIT_DETAILS`, `ISM_TRANSITION`,
-//! `INSTRUCTION_DETAILS`, and the `_`-prefixed optional RM-attribute families.
-//!
-//! Covers ITS-REST `simplified_formats/master05-rm_mapping.adoc` §§LINK,
-//! FEEDER_AUDIT, FEEDER_AUDIT_DETAILS, ISM_TRANSITION, INSTRUCTION_DETAILS, plus
-//! the `_`-rows of the LOCATABLE / ENTRY / ELEMENT / EVENT_CONTEXT / PARTY /
-//! DV_ORDERED / DV_TEXT tables (master04 §"RM Attributes prefix"). The
-//! value-internal families (`_normal_range`, `_mapping`, …) reuse the builders in
-//! [`super::data_values`]; the party / participation / reference shapes reuse
-//! [`super::parties`].
+//! `INSTRUCTION_DETAILS` and the `_`-prefixed optional RM-attribute families
+//! (`simplified_formats/master05-rm_mapping.adoc`; master04 §"RM Attributes
+//! prefix").
 
 #![expect(
     clippy::disallowed_types,
@@ -181,9 +175,8 @@ fn code_phrase_family(occurrence: Option<&SimNode>) -> Result<Option<Attr>, Flat
     })
 }
 
-/// The `PARTICIPATION` of each non-empty occurrence, in order, each taken
-/// whole from `|raw` (master04 §Raw canonical JSON) or built from the
-/// master05 §PARTICIPATION suffixes.
+/// The `PARTICIPATION` of each non-empty occurrence, taken from `|raw` or built
+/// from the master05 §PARTICIPATION suffixes.
 ///
 /// # Errors
 /// [`FlatError::InvalidRaw`] for a `|raw` value that is no lone
@@ -222,18 +215,9 @@ fn uid_value(v: &str, path: &str) -> Result<Obj, FlatError> {
     }
 }
 
-/// LINK (master05 §LINK): `type`/`meaning` are DV_TEXT, `target` is DV_EHR_URI.
-///
-/// All three suffixes are `Required: yes` in the master05 §LINK mapping table,
-/// mirroring the RM's own 1..1 multiplicities
-/// (`RM/docs/UML/classes/org.openehr.rm.common.link.adoc` §Attributes), so an
-/// omitted one is reported as [`FlatError::MissingRequiredSuffix`] naming the
-/// exact key rather than defaulted to an empty value: a fabricated empty
-/// `meaning` would satisfy the RM's cardinality with data the client never
-/// sent.
-///
-/// `index` is the `:i` occurrence index of the `_link` family, so the reported
-/// key is the one the client can find in its own document.
+/// LINK (master05 §LINK): `type`/`meaning` are DV_TEXT, `target` is DV_EHR_URI,
+/// each `Required: yes` (RM `org.openehr.rm.common.link.adoc` §Attributes).
+/// `index` is the `_link` occurrence, for the reported key.
 fn build_link(node: &SimNode, path: &str, index: usize) -> Result<Obj, FlatError> {
     let required = |suffix: &str| -> Result<&str, FlatError> {
         node.attrs
@@ -326,23 +310,12 @@ fn build_audit_details(node: &SimNode) -> Result<Obj, FlatError> {
     Ok(d)
 }
 
-/// INSTRUCTION_DETAILS (master05 §INSTRUCTION_DETAILS): `|composition_uid` +
-/// `|path` rebuild the mandatory `instruction_id` LOCATABLE_REF,
-/// `|activity_id` the sibling String attribute.
+/// INSTRUCTION_DETAILS (master05 §INSTRUCTION_DETAILS): `|composition_uid` and
+/// `|path` rebuild `instruction_id`, `|activity_id` the sibling attribute.
 ///
-/// `LOCATABLE_REF` inherits OBJECT_REF's mandatory `namespace` and `type`
-/// (BASE base_types `LOCATABLE_REF`/`OBJECT_REF` classes: `namespace` 1..1,
-/// `type` 1..1), but master05 defines **no** flat suffix for either — they are
-/// derived here, not carried on the wire:
-///
-/// - `namespace` is `EHR` (the local EHR system context; OBJECT_REF's legal
-///   values are `local`, `unknown`, or any `[a-zA-Z][a-zA-Z0-9_.:/&?=+-]*`
-///   string — the same default `parties::build_object_ref` uses);
-/// - `id` is an `OBJECT_VERSION_ID` when the uid carries the
-///   `object_id::creating_system_id::version_tree_id` form (BASE
-///   `master09-identification`), else a `HIER_OBJECT_ID`;
-/// - `type` follows from that: a version uid names one `COMPOSITION`, a bare
-///   object uid names the `VERSIONED_COMPOSITION`.
+/// master05 gives `LOCATABLE_REF`'s mandatory `namespace` and `type` no suffix,
+/// so `namespace` is `EHR` and `type` is `COMPOSITION` for a version uid (BASE
+/// `master09-identification`) or `VERSIONED_COMPOSITION` for an object uid.
 fn build_instruction_details(node: &SimNode, path: &str) -> Result<Obj, FlatError> {
     let uid = node
         .attrs
@@ -431,11 +404,7 @@ mod tests {
         node
     }
 
-    // master05 §LINK marks `|type`, `|meaning` and `|target` all
-    // `Required: yes`, mirroring the RM's 1..1 multiplicities
-    // (`org.openehr.rm.common.link.adoc` §Attributes). A complete `_link:0`
-    // builds; each partial input names the one key the client omitted rather
-    // than silently defaulting it to an empty DV_TEXT/DV_EHR_URI.
+    // master05 §LINK: each partial input names the one key the client omitted.
     #[test]
     fn link_requires_all_three_suffixes() {
         let complete = link_occurrence(&[
@@ -563,10 +532,7 @@ mod tests {
         ));
     }
 
-    // master05 §INSTRUCTION_DETAILS: the three flat suffixes sit on the
-    // `_instruction_details` node itself (`|path`, `|composition_uid`,
-    // `|activity_id`) — there is no nested `instruction_id` node and no
-    // OBJECT_REF suffix.
+    // master05 §INSTRUCTION_DETAILS: the three suffixes sit on the node itself.
     #[test]
     fn instruction_details_roundtrip() {
         let rm = json!({

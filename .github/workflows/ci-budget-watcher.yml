@@ -3,25 +3,18 @@
 #
 # The pipeline's wall clock, watched (#3131).
 #
-# Sharding a lane fixes it for the suite it was measured against and no longer.
-# The CI test job was split at three shards when the suite was 4600 tests; the
-# coverage lane the same. Tests only ever grow, so a fixed shard count is a
-# cliff someone walks off later — and the way that is noticed today is a person
-# waiting on a pull request and saying so, which is not a mechanism.
+# A fixed shard count fits the suite it was sized for, and tests only grow.
 #
-# This is the mechanism. scripts/watch/ci-budget.sh reads the recent SUCCESSFUL
-# main runs, takes per lane the median JOB time of its slowest job, and when one
-# crosses its budget this files or updates ONE tracking issue naming the lane,
-# the figure and the remedy. It measures job time, not the run's wall clock,
-# because the wall clock also counts the time jobs wait for a runner (up to 49
-# minutes per job on main in #3490), which no shard count can shorten. The run
-# stays GREEN: a lane that got slower is actionable, not broken. It goes RED
-# only when the PROBE fails — the API unreachable, or an answer jq cannot read.
+# scripts/watch/ci-budget.sh reads the recent successful main runs, takes per
+# lane the median job time of its slowest job, and when one crosses its budget
+# files or updates ONE tracking issue naming the lane, the figure and the
+# remedy. It measures job time, not wall clock, since the wall clock also
+# counts runner queueing, which no shard count shortens. The run stays GREEN;
+# it goes RED only when the probe fails (the API unreachable, or an answer jq
+# cannot read).
 #
-# The budgets are deliberately loose. They are not a target to optimise toward;
-# they are the line past which someone should look. Measured on main for #3490:
-# test shards a 414 s median, ui-e2e shards 303 s, coverage shards 533 s. A 900 s
-# line leaves real headroom and still catches a lane that has doubled.
+# The budgets are loose: the line past which someone should look, about twice
+# each lane's median (#3490).
 name: CI budget watcher
 
 on:

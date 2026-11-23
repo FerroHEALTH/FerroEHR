@@ -8,11 +8,6 @@
 //! traces are our own extensions and ATNA is IHE's, so the rule is ours:
 //! GDPR Art. 4(5) makes the pseudonymisation worthless if the identity leaves
 //! through a side channel (<https://eur-lex.europa.eu/eli/reg/2016/679/oj>).
-//!
-//! The tests are written so they FAIL on a regression rather than passing
-//! vacuously: the fixture deliberately carries identifying values that the
-//! policy must strip or refuse, and each sink is asserted to be non-empty
-//! before it is scanned for the fixture's own values.
 
 use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
@@ -61,9 +56,6 @@ fn audit_context() -> AuditContext {
 }
 
 /// Refuses any of the fixture's deliberately-identifying strings.
-///
-/// The gate is EXACT: the values are known up front, so only a real leak can
-/// trigger it, and it therefore runs over every sink verbatim.
 fn assert_no_forbidden_literal(sink: &str, text: &str) {
     for forbidden in FORBIDDEN {
         assert!(

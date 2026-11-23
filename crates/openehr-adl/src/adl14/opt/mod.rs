@@ -1,25 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! OPT 1.4 → ADL 2 conversion: the front end that feeds a parsed ADL 1.4
-//! operational template to the archetype converter.
+//! OPT 1.4 → ADL 2 conversion.
 //!
-//! A 1.4 operational template is a specialisation-flattened artefact whose
-//! `definition` embeds each component archetype as a nested `C_ARCHETYPE_ROOT`
-//! with its own at-code space, so the component code spaces collide if the
-//! whole is fed to [`convert`], which takes one source archetype. This front
-//! end decomposes the OPT into one 1.4-shaped `openehr_am::v2_4` source
-//! archetype per embedded root, replacing each child by an `ARCHETYPE_SLOT`
-//! whose `include` assertion names it and recording the parent-to-child fill
-//! edge in [`OptConversion::structure`]. Anything a decomposed root cannot
-//! express is reported in `RESOURCE_DESCRIPTION.conversion_details`.
+//! A parsed `openehr_its::opt14` OPT decomposes into one 1.4-shaped source
+//! archetype per embedded root for [`convert`], children replaced by slots and
+//! the fill edges in [`OptConversion::structure`].
 //!
-//! The input is the `openehr_its::opt14` model, so the caller parses the OPT
-//! 1.4 XML with `openehr_its::opt14::from_xml` first.
-//!
-//! NOTE: no openEHR spec governs 1.4 → 2 conversion; the decomposition, slot
-//! substitution and code allocation here are our own design, as is the whole
-//! [`crate::adl14`] module.
+//! NOTE: no openEHR spec governs 1.4 → 2 conversion: our own design.
 
 mod decompose;
 mod primitive;
@@ -124,15 +112,9 @@ pub struct OptConversion {
     pub structure: Vec<FillEdge>,
 }
 
-/// Converts a parsed 1.4 operational template into one ADL 2 source per
-/// embedded archetype root.
-///
-/// Each embedded `C_ARCHETYPE_ROOT` is decomposed into a scoped 1.4-shaped
-/// `v2_4` source archetype and run through [`convert`]; embedded children are
-/// replaced by open slots in their parent and the fill edges recorded in
-/// [`OptConversion::structure`]. `time` is the moment every root's conversion
-/// record names (`AOM2/master01-preface.adoc` §Release 2.3 changes), passed in
-/// so that one conversion can be reproduced exactly.
+/// Converts a parsed 1.4 operational template into one ADL 2 source per embedded
+/// root. `time` is the moment every conversion record names
+/// (`AOM2/master01-preface.adoc` §Release 2.3 changes).
 ///
 /// # Errors
 ///
@@ -177,12 +159,8 @@ struct ConvertedArchetype {
     log: ConversionLog,
 }
 
-/// The minimal valid `RESOURCE_DESCRIPTION` for a decomposed OPT root.
-///
-/// VARD (`master03` §Validity Rules) requires a description; the lifecycle
-/// state uses the 1.4→2 converter's own mapping (`unmanaged`). The
-/// conversion-report entries land in `conversion_details`, the AOM2
-/// `RESOURCE_DESCRIPTION` field for conversion provenance.
+/// The minimal valid `RESOURCE_DESCRIPTION` (VARD, `master03` §Validity Rules)
+/// for a decomposed OPT root, lifecycle `unmanaged`.
 fn minimal_description(conversion_details: BTreeMap<String, String>) -> ResourceDescription {
     ResourceDescription {
         title: None,
@@ -289,11 +267,6 @@ struct RawUnit {
 }
 
 /// Per-root working state threaded through the definition walk.
-///
-/// It holds the slot at-code allocator, the ac-code allocator with the ac codes
-/// the root's flattened ontology defines (for `CONSTRAINT_REF` resolution), the
-/// terminology entries minted en route (reference-set ac definitions and
-/// bindings), and the conversion-report notes.
 struct RootCx {
     slot_num: i64,
     next_ac: i64,

@@ -3,26 +3,15 @@
 
 //! `DV_MULTIMEDIA` externalization to S3-compatible object storage.
 //!
-//! No openEHR spec governs server-side blob storage — our own design/extension,
-//! gated by the platform's `multimedia.enabled` switch and this crate's
-//! `multimedia` cargo feature. Off by default: with the switch disabled nothing
-//! here is constructed and the commit and read paths are byte-identical to
-//! inline behaviour.
+//! No openEHR spec governs server-side blob storage: our own design, gated by
+//! the platform's `multimedia.enabled` switch and the `multimedia` cargo
+//! feature. With the switch off nothing here is constructed.
 //!
-//! On commit, an inline `DV_MULTIMEDIA.data` larger than a configured threshold
-//! is written to a content-addressed blob store keyed by its SHA-256, and the
-//! canonical JSON is rewritten to reference it by `uri`, carrying the RM
-//! integrity fields and the mandatory unencoded `size`. On read it can be
-//! re-inlined (`?expand_multimedia=true`), verifying the SHA-256 first. The data
-//! shape it rewrites is RM 1.2.0 `DV_MULTIMEDIA`: `uri`/`data` alternatives
-//! under `is_inline or is_external`, `integrity_check` implying
-//! `integrity_check_algorithm`, and the mandatory unencoded `size`.
-//!
-//! This module owns only the engine and its transforms, built from
-//! [`BlobStoreParams`]; the platform attaches it through its `with_multimedia`
-//! seam and calls it on the commit and read paths. `blob` is the
-//! content-addressed [`BlobStore`] over one `OpenDAL` operator, `offload` the
-//! canonical-JSON transforms.
+//! On commit, an inline `DV_MULTIMEDIA.data` larger than the threshold goes to
+//! a content-addressed blob store keyed by its SHA-256, and the canonical JSON
+//! references it by `uri` with the RM integrity fields and the mandatory
+//! unencoded `size` (RM 1.2.0 `DV_MULTIMEDIA`). On read it can be re-inlined
+//! (`?expand_multimedia=true`) after its SHA-256 is verified.
 
 #![expect(
     clippy::disallowed_types,
@@ -93,13 +82,10 @@ pub enum MultimediaError {
     NotExternalized,
 }
 
-/// Whether the tree references ANY externalized blob (`s3://…`), regardless of
-/// bucket.
+/// Whether the tree references any externalized blob (`s3://…`), in any bucket.
 ///
-/// Deliberately bucket-blind, because its caller has no store to compare
-/// against: it answers "would an expansion request have had work to do here?"
-/// when no engine exists at all. A foreign `https://` reference is not
-/// included — that was never expandable, so its presence is not a failure.
+/// Bucket-blind because its caller has no store to compare against. A foreign
+/// `https://` reference was never expandable, so it does not count.
 #[must_use]
 pub fn references_external_blob(root: &Value) -> bool {
     match root {
@@ -120,14 +106,11 @@ pub fn references_external_blob(root: &Value) -> bool {
     }
 }
 
-/// The runtime engine bundling the blob store with its offload threshold.
+/// The runtime engine: the blob store with its offload threshold.
 ///
-/// Held by the service whenever a store is REACHABLE, which is not the same as
-/// "externalization is on": `offload_enabled` governs whether new blobs leave
-/// the database, while the expand path stays available either way. A record
-/// that already references a blob is clinical content this server put there,
-/// and refusing to serve it back because a switch was flipped is data loss
-/// dressed as a setting.
+/// Held whenever a store is reachable. `offload_enabled` governs only whether
+/// new blobs leave the database; expansion stays available, so a record that
+/// already references a blob is always served.
 #[derive(Debug, Clone)]
 pub struct MultimediaEngine {
     store: BlobStore,

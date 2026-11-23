@@ -2,12 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The raw OPT names, beside itself, every attribute it removed for
-//! `existence matches {0}` (#5154).
-//!
-//! AM `OPT2/master03-opt_raw.adoc` §Flattening removes such an attribute from
-//! the raw OPT, and ADL2 `master04.3-cadl_complex_types.adoc` §Existence then
-//! reads the missing attribute at its reference-model existence, so the list
-//! is what keeps the prohibition (no specification governs it: our own
+//! `existence matches {0}` (`OPT2/master03-opt_raw.adoc` §Flattening; our own
 //! design).
 
 #![expect(

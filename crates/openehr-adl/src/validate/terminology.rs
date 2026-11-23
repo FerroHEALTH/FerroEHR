@@ -1,23 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Phase-1 terminology topic: the archetype's own `term_definitions`,
-//! `constraint_definitions` and `value_sets`, and the codes the definition
-//! references against them — definedness, specialisation level, code form,
-//! language coverage, value-set integrity and the unused-code warning.
+//! Phase-1 terminology: the archetype's own terms, constraint codes and value
+//! sets, and the codes the definition references (`AOM2/master07` and
+//! `master03` §Validity Rules; `master08` §Phase 1). It runs only on clean
+//! identification and a sound terminology structure (`master08` §Overview).
 //!
-//! Rule texts:
-//! `docs/specs/openehr/AM/docs/AOM2/master07-terminology_package.adoc`
-//! §Validity Rules (VTSD, VTLC, VTVSID, VTVSMD, VTVSUQ),
-//! `master03-archetype_package.adoc` §Validity Rules (VATDF, VACDF, VATDA,
-//! VATCD, VOTM) and `master08-validation.adoc` §Phase 1 - Basic Integrity
-//! (VATID, VATCV). WOUC appears nowhere in the vendored spec text — our own
-//! design/extension, flagged at its check site.
-//!
-//! The pass is gated by `super::run`: it runs only when the basic
-//! identification checks are clean and the terminology structure is sound
-//! (`master08` §Overview, "more basic kinds of errors being checked first" — a
-//! code cannot be judged against a missing or inconsistent terminology).
+//! NOTE: WOUC appears in no vendored spec text: our own design.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -117,15 +106,10 @@ fn check_constituents<'o>(
     first
 }
 
-/// The rules that judge a terminology on its own, run on each
-/// `component_terminologies` entry of an operational template
-/// (`OPT2/master03-opt_raw.adoc`), each violation naming the component.
+/// The standalone terminology rules on each `component_terminologies` entry of
+/// an operational template (`OPT2/master03-opt_raw.adoc`), naming the component.
 ///
-/// The entry is the constituent's flat terminology, so the flat-form halves
-/// (VTSD `<=`, VTVSMD) apply. VTSD needs the constituent's level, which only a
-/// carried `concept_code` gives. A binding path key resolves against the first
-/// root that includes the constituent. VOTM and WOUC do not run: a component
-/// carries no description and its use spans every root that includes it.
+/// The entry is flat, so VTSD's flat half and VTVSMD apply; VOTM and WOUC do not.
 fn check_component_terminologies(
     v: &ArchetypeView<'_>,
     first_roots: &FirstRoots<'_>,
@@ -151,12 +135,8 @@ fn check_component_terminologies(
     }
 }
 
-/// VATID: the root concept code must be defined in the terminology (master08
-/// §Code Validation; NOTE-flagged, no full vendored text).
-///
-/// NOTE: the per-node id-code definedness half is a reference-model check
-/// (master07 §Overview: a term definition is optional for children of a
-/// single-valued attribute), so it runs in [`super::rm`].
+/// VATID: the root concept code must be defined (master08 §Code Validation); the
+/// per-node half runs in [`super::rm`].
 fn check_root_concept_code(
     v: &ArchetypeView<'_>,
     defined: &BTreeSet<&str>,
@@ -175,16 +155,9 @@ fn check_root_concept_code(
     }
 }
 
-/// VATDF (ADL 1.4, node-id half): in ADL 1.4 EVERY at-code used as a node
-/// identifier in the definition must be defined in the ontology's
-/// `term_definitions` (ADL1.4 master08 §Validity Rules VATDF; AOM1.4
+/// VATDF (ADL 1.4, node-id half): every node at-code must be defined in the
+/// ontology (ADL1.4 master08 §Validity Rules VATDF; AOM1.4
 /// `ARCHETYPE.node_ids_valid`).
-///
-/// ADL2 defers interior-node-id definedness to the RM phase, but the 1.4
-/// formalism has no such optionality for a code that IS present — "each
-/// archetype term used as a node identifier … must be defined". A
-/// non-specialised 1.4 archetype is its own flat form, so the phase-1 subset
-/// closes VATDF's interior half for a 1.4 upload.
 fn check_node_id_definedness(
     v: &ArchetypeView<'_>,
     dialect: Dialect,
@@ -205,15 +178,9 @@ fn check_node_id_definedness(
     }
 }
 
-/// The definedness and level rules over the codes the definition references.
-///
-/// VATDF: at-codes used in term constraints defined in the terminology of the
-/// flattened form (master03 §Validity Rules). For a specialised archetype the
-/// flat form is not available here, so this runs only when the archetype is
-/// its own flat form (non-specialised); the specialised flat-form half runs in
-/// [`super::flat`]. VACDF: ac-codes defined in the current archetype (master03
-/// — "current", not flattened; runs for all). VATCD: at/id codes at a level
-/// greater than the archetype level, when `level` is known.
+/// The definedness and level rules over the referenced codes (master03
+/// §Validity Rules): VATDF against the flat form (own-flat only here, else
+/// [`super::flat`]), VACDF against the current archetype, and VATCD over level.
 fn check_referenced_codes(
     level: Option<usize>,
     flat_self: bool,
@@ -275,18 +242,9 @@ fn check_assumed_values(
     }
 }
 
-/// VTSD: every defined term/constraint code is at the archetype's
-/// specialisation level (differential) or the same-or-less (flat) (master07
-/// §Validity Rules).
-///
-/// ac-codes are a flat code space (master07 §Specialisation Depth), so only an
-/// over-level ac-code is invalid, never the strict differential-equality test.
-/// A 1.4 specialised archetype is a FLAT artefact (its ontology legitimately
-/// carries inherited codes at lower levels alongside the level-N additions),
-/// even though the 1.4-shaped model is marked `is_differential` for the
-/// converter's re-differentiation pass — so the 1.4 dialect always uses the
-/// flat-form rule (`d <= level`), never the differential `d == level` (AOM1.4
-/// master07 §Specialisation Depth).
+/// VTSD: every defined code is at the archetype's level (differential) or at
+/// most it (flat) (master07 §Validity Rules); ac-codes are flat, and a 1.4
+/// archetype always takes the flat rule (AOM1.4 master07 §Specialisation Depth).
 fn check_defined_code_levels(
     v: &ArchetypeView<'_>,
     dialect: Dialect,
@@ -361,11 +319,8 @@ fn check_declared_languages(
 
 /// WOUC: a defined at/ac code never used in the definition.
 ///
-/// NOTE: no openEHR spec governs WOUC — our own design/extension. It is
-/// suppressed in the 1.4 dialect: 1.4 value codes are carried inside the
-/// verbatim terminology-constraint strings (not recognised as ADL2 code
-/// usage), so the "unused" heuristic is unreliable on a 1.4-shaped model and
-/// would flag legitimately-used codes.
+/// NOTE: no openEHR spec governs WOUC: our own design, off in the 1.4 dialect,
+/// whose value codes sit inside verbatim constraint strings.
 fn check_unused_codes(
     v: &ArchetypeView<'_>,
     dialect: Dialect,
@@ -442,13 +397,9 @@ fn check_value_sets(
     }
 }
 
-/// One value set's integrity rules (master07 §Validity Rules).
-///
-/// VTVSID: the id must be defined in the terminology of the current archetype
-/// ("current", runs for all). VTVSUQ: members must be unique within the set.
-/// VTVSMD: members must be defined in the terminology of the *flattened* form,
-/// which runs only when the archetype is its own flat form — the specialised
-/// flat-form half runs in [`super::flat`].
+/// One value set's integrity rules (master07 §Validity Rules): VTVSID against
+/// the current archetype, VTVSUQ, and VTVSMD against the flat form (own-flat
+/// only here, else [`super::flat`]).
 fn check_value_set(
     set: &openehr_am::v2_4::aom2::terminology::value_set::ValueSet,
     defined: &BTreeSet<&str>,
@@ -537,11 +488,7 @@ pub(super) fn collect_usage_at<'o>(
     }
 }
 
-/// Walks a complex object's attribute children and its second-order tuples.
-///
-/// The tuples (e.g. ordinals) carry primitive constraints outside the normal
-/// attribute tree (master04.4), so their terminology-code values are collected
-/// too.
+/// Walks a complex object's attributes and its second-order tuples (master04.4).
 fn collect_complex_usage<'o>(
     cco: &'o CComplexObject,
     path: &str,
@@ -566,25 +513,12 @@ fn collect_complex_usage<'o>(
     }
 }
 
-/// The ARCHETYPE-LOCAL codes a `C_TERMINOLOGY_CODE.constraint` string names.
+/// The archetype-local codes a `C_TERMINOLOGY_CODE.constraint` names: an ADL 2
+/// code with an optional `@terminology` binding, or the ADL 1.4
+/// `terminology::code[,code]*[;assumed]` form (`master09-customising_adl.adoc`).
 ///
-/// Two spellings reach this function, because the constraint string is the
-/// verbatim carrier for both dialects:
-///
-/// - **ADL 2** — a single `at`/`ac` code, optionally suffixed with an operational
-///   binding `@terminology` (`ADL2/master08-terminology_integration.adoc`).
-/// - **ADL 1.4** — the qualified/listed custom-syntax form
-///   `terminology::code[,code]*[;assumed]` of
-///   `ADL1.4/master09-customising_adl.adoc` §Custom Syntax, which the 1.4 dialect
-///   preserves verbatim. This is the DOMINANT 1.4 spelling of a coded value set,
-///   so without decomposing it here the definedness rules never see its codes.
-///
-/// Only `local::` codes are archetype terms: VATDF/VACDF
-/// (`ADL1.4/master08-adl.adoc` §Validity Rules) judge definedness against the
-/// archetype's OWN `term_definitions`/`constraint_definitions`, and a code of an
-/// external terminology (`[openehr::127]`, `[ISO_639-1::en]`) is not an archetype
-/// term — its resolution is a terminology-service question (VETDF), not this one.
-/// The ADL 1.4 assumed code (after `;`) IS an archetype term and is included.
+/// Only `local::` codes and the assumed code count; an external code is VETDF's
+/// question (`ADL1.4/master08-adl.adoc` §Validity Rules).
 fn constraint_codes(constraint: &str) -> Vec<String> {
     // Drop any ADL2 operational-binding suffix first.
     let body = constraint.split('@').next().unwrap_or(constraint).trim();

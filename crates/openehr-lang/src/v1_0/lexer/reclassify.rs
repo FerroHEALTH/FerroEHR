@@ -3,31 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! The ODIN reclassification table of the LANG 1.0.0 generation.
-//!
-//! [`reclassify`] answers exactly one question: *given a token the shared DFA
-//! produced for the source slice `slice`, what would the Release-1.0.0 ODIN
-//! lexer (`vendor/grammar/v1_0/{odin.g4, odin_values.g4, base_patterns.g4,
-//! base_lexer.g4}`) have produced for that same slice?* — `Some(token)` when
-//! ODIN admits the slice as one token (possibly re-tagged), `None` when it
-//! does not. `None` sends the caller into [`super::narrow`], which retries
-//! shorter prefixes; a slice no prefix of which ODIN admits is an ODIN
-//! lexical error.
-//!
-//! The shared DFA is the workspace token superset (the union the v1_1
-//! generation reads under four languages), so a `None` here is never
-//! "unsupported": it is always the statement that the Release-1.0.0 ODIN
-//! production set does not reach this text. ODIN is the ONE machine-readable
-//! syntax LANG 1.0.0 publishes — its EL is DEVELOPMENT prose with no grammar
-//! and BEL first appears in 1.1.0 — so this generation carries exactly one
-//! reading.
 
 use super::token::Token;
 
 /// What the Release-1.0.0 ODIN lexer would produce for `slice`, or `None`
 /// when it admits no single token spanning exactly `slice`.
-///
-/// `src`/`start` locate the slice in the original source; only the string
-/// reading needs them (the multi-line leader budget is a column measurement).
 #[expect(
     clippy::match_same_arms,
     reason = "the arms are grouped by lexical family so each carries the grammar production and citation its reading comes from; collapsing equal bodies would erase which production a refusal belongs to"
@@ -37,11 +17,9 @@ pub(super) fn reclassify(token: &Token, slice: &str, src: &str, start: usize) ->
         // The BOM is tolerated (and dropped).
         Token::Bom => Some(Token::Bom),
 
-        // ── keywords of the OTHER readings of the shared token superset ──
-        // `LANG/docs/odin/master03-basics.adoc` §Keywords: "ODIN has no
-        // keywords of its own" — every cADL/BEL/EL keyword the union DFA
-        // recognises is an ordinary ODIN identifier, so each is demoted to
-        // the identifier its spelling gives.
+        // ── ODIN has no keywords of its own
+        // (`LANG/docs/odin/master03-basics.adoc` §Keywords), so each foreign
+        // keyword is demoted to an identifier ──
         Token::SymMatches
         | Token::SymAnd
         | Token::SymOr
@@ -164,11 +142,9 @@ pub(super) fn reclassify(token: &Token, slice: &str, src: &str, start: usize) ->
         // `odin.g4` has neither an assignment nor a bare colon, and no
         // arithmetic/binding operators.
         Token::SymAssignment | Token::SymColon | Token::SymPercent | Token::SymCarat => None,
-        // `@` opens the optional document prefix `schema_identifier ::= '@'
-        // schema '=' URI` (`LANG/docs/odin/master04-odin_artefacts` intro),
-        // so the ODIN reading admits it — a misplaced `@` is the parser's
-        // refusal, not the lexer's. (The vendored `odin.g4` start rule lacks
-        // the production; the docs text wins.)
+        // `@` opens the ODIN schema identifier
+        // (`LANG/docs/odin/master04-odin_artefacts`; the docs text wins over
+        // `odin.g4`); a misplaced `@` is the parser's refusal.
         Token::SymAt => Some(token.clone()),
         // `<>` is the ADL 1.4 assertion spelling of `SYM_NE`; under ODIN the
         // two characters are the separate `SYM_LT` `SYM_GT` an empty ODIN
@@ -186,10 +162,6 @@ pub(super) fn reclassify(token: &Token, slice: &str, src: &str, start: usize) ->
 
 /// Read `slice` back as the identifier the Release-1.0.0 ODIN lexer would
 /// have produced, or `None` when it is not a 1.0.0 identifier.
-///
-/// The 1.0.0 identifier classes are `ALPHA_UC_ID` and `ALPHA_LC_ID` alone —
-/// `base_patterns.g4` `identifier : ALPHA_UC_ID | ALPHA_LC_ID`, and the
-/// era's `base_lexer.g4` declares no `_`-initial class.
 fn demote_word(slice: &str) -> Option<Token> {
     let mut chars = slice.chars();
     let head = chars.next()?;
@@ -206,11 +178,6 @@ fn demote_word(slice: &str) -> Option<Token> {
 /// Whether the Release-1.0.0 `ADL_PATH` production admits `text`: absolute
 /// `(/seg)+` or relative `seg(/seg)+`, every segment head an `ALPHA_LC_ID`
 /// (`base_lexer.g4` `PATH_SEGMENT : ALPHA_LC_ID ('[' PATH_ATTRIBUTE ']')?`).
-///
-/// The v1_1 reading widens the segment head to either case on the ground of
-/// its `odin_object_key` production; that production does not exist in this
-/// generation (`attribute_id : ALPHA_LC_ID`), so the widening's ground is
-/// absent and the lexer rule stands as written.
 fn odin_path(text: &str) -> bool {
     let bytes = text.as_bytes();
     let mut at = 0usize;
@@ -278,11 +245,6 @@ fn leader_budget(src: &str, start: usize) -> usize {
 /// Remove up to `budget` leading white-space characters from every line of
 /// `raw` after the first (see [`leader_budget`]). Single-line strings are
 /// returned untouched.
-///
-/// NOTE: The stripping runs AFTER the shared lexer has validated the raw
-/// literal's `master03` escapes, and cannot change that verdict: the removed
-/// run always begins immediately after a newline, so the character preceding
-/// it is never a backslash and no escape sequence can be created or destroyed.
 fn strip_line_leaders(raw: &str, budget: usize) -> String {
     if !raw.contains('\n') {
         return raw.to_owned();

@@ -2,49 +2,22 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written spec functions of `REVISION_HISTORY`.
-//!
-//! Spec: RM
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.revision_history.adoc`
-//! §Functions declares two, each pinned by a postcondition over `items`:
-//!
-//! - `most_recent_version ()`: "The version id of the most recent item, as a
-//!   String" — `Post: Result.is_equal (items.last.version_id.value)`.
-//! - `most_recent_version_time_committed ()`: "The commit date/time of the most
-//!   recent item, as a String" —
-//!   `Post: Result.is_equal (items.last.audits.first.time_committed.value)`.
-//!
-//! Both read the LAST item, because `items` is "The items in this history in
-//! most-recent-last order" (§Attributes), and the second reads the FIRST audit
-//! of that item, because `REVISION_HISTORY_ITEM.audits` holds "the commit audit
-//! … there may also be further attestations"
-//! (`…org.openehr.rm.common.revision_history_item.adoc` §Attributes).
-//!
-//! NOTE: both functions are `1..1` and stay total — `items` and
-//! `REVISION_HISTORY_ITEM.audits` are `NonEmptyVec`, so the empty cases the
-//! spec model forbids are unrepresentable rather than merely rejected.
+//! The `REVISION_HISTORY` functions
+//! (`org.openehr.rm.common.revision_history.adoc` §Functions): both read the
+//! last item, its first audit for the time.
 
 use crate::v1_1::common::generic::audit_details::AuditDetails;
 use crate::v1_1::common::generic::revision_history::RevisionHistory;
 
 impl RevisionHistory {
-    /// `REVISION_HISTORY.most_recent_version`: the version id of the most
-    /// recent item (the last one — `items` is in most-recent-last order), as
-    /// its `String` value.
-    ///
-    /// Returns `None` when the history holds no items, a state the spec model
-    /// cannot express (see the module docs).
+    /// `REVISION_HISTORY.most_recent_version`: the last item's version id.
     #[must_use]
     pub fn most_recent_version(&self) -> Option<&str> {
         self.items.last().map(|i| i.version_id.value())
     }
 
-    /// `REVISION_HISTORY.most_recent_version_time_committed`: the commit
-    /// date/time of the most recent item — the `time_committed` of that item's
-    /// FIRST audit, which is its commit audit — as its `String` value.
-    ///
-    /// Returns `None` only when `items` has no last element — `NonEmptyVec`
-    /// offers no total `last`, unlike the `head` the audits are read through.
+    /// `REVISION_HISTORY.most_recent_version_time_committed`: the last item's
+    /// first audit's `time_committed`.
     #[must_use]
     pub fn most_recent_version_time_committed(&self) -> Option<&str> {
         Some(match self.items.last()?.audits.head() {
@@ -111,10 +84,8 @@ mod tests {
         })
     }
 
-    /// An ATTESTATION appended AFTER the commit audit — the second audit of an
-    /// item (`revision_history_item.adoc` §Attributes: "there may also be
-    /// further attestations"), whose later `time_committed` must NOT be the
-    /// value the function reports.
+    /// An attestation after the commit audit, whose later time must not be
+    /// reported.
     fn attestation(time: &str) -> AuditDetails {
         AuditDetails::Attestation(Box::new(Attestation {
             system_id: "ferroehr.local".to_owned(),
@@ -197,14 +168,7 @@ mod tests {
         );
     }
 
-    /// The states this used to construct — an empty `items` and an item with no
-    /// `audits` — are now UNREPRESENTABLE rather than merely reported as
-    /// absent: `REVISION_HISTORY.items` and `REVISION_HISTORY_ITEM.audits` are
-    /// both `1..*`
-    /// (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.revision_history.adoc`
-    /// and `…revision_history_item.adoc` §Attributes), and the emission shape
-    /// carries those bounds. Refusal at construction is strictly stronger than
-    /// reporting `None`, so the assertions move to the refusal.
+    /// An empty `items` or `audits` cannot be constructed: both are `1..*`.
     #[test]
     fn the_spec_unrepresentable_shapes_are_refused_at_construction() {
         assert!(

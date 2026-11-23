@@ -2,12 +2,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `DV_COUNT`.
-//!
-//! `DV_COUNT` inherits the DV_AMOUNT / DV_QUANTIFIED invariants
-//! (`Accuracy_is_percent_validity`, `Accuracy_valid`, `Magnitude_status_valid`)
-//! plus the DV_ORDERED `Normal_range_and_status_consistency` (via the
-//! ordered-magnitude machinery in `dv_ordered_impl`).
+//! `DV_COUNT` invariants: the inherited `DV_AMOUNT`, `DV_QUANTIFIED` and
+//! `DV_ORDERED` ones.
 
 use crate::v1_1::data_types::quantity::dv_amount_impl::{
     AmountAccuracy, CombinedAccuracy, combine, scale,
@@ -19,70 +15,33 @@ use rust_decimal::Decimal;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 
 impl DvCount {
-    // NOTE: `less_than` and `is_strictly_comparable_to` are realized for every
-    // DV_ORDERED descendant by the `ordered_limit!` macro in `dv_ordered_impl`,
-    // which is why they are not written here.
+    // `less_than` and `is_strictly_comparable_to` come from `ordered_limit!`.
 
-    /// Sum of this count and `other`, or `None` on overflow.
-    ///
-    /// Spec: `dv_count.adoc` §Functions `add` — "Sum of this `DV_COUNT` and
-    /// `other`."
-    ///
-    /// The spec types the result as a `DV_COUNT`, not as a fallible one, but
-    /// `magnitude` is an `Integer64` and the sum of two of them need not be
-    /// one. Returning `Option` rather than wrapping or panicking follows the
-    /// project's arithmetic rule: a load-bearing computation says so at the
-    /// type level instead of producing a silently wrong clinical value.
-    ///
-    /// `normal_range` and the reference ranges are NOT carried over: they
-    /// describe the measurement THIS value came from, and the spec gives no
-    /// rule for combining them. `accuracy` is carried, because `DV_AMOUNT`
-    /// does give one — see [`combine`].
+    /// The sum of this count and `other` (`dv_count.adoc` `add`), or `None` on
+    /// overflow; the ranges are not carried, the accuracy is ([`combine`]).
     #[must_use]
     pub fn add(&self, other: &Self) -> Option<Self> {
         self.combined(other, self.magnitude.checked_add(other.magnitude)?)
     }
 
-    /// Difference of this count and `other`, or `None` on overflow.
-    ///
-    /// Spec: `dv_count.adoc` §Functions `subtract`, redefining
-    /// `dv_amount.adoc` §Functions `subtract`. A negative result is NOT
-    /// refused: `magnitude` is a signed `Integer64` and the class declares no
-    /// invariant bounding it below.
+    /// The difference of this count and `other` (`subtract`), or `None` on
+    /// overflow; a negative result is valid.
     #[must_use]
     pub fn subtract(&self, other: &Self) -> Option<Self> {
         self.combined(other, self.magnitude.checked_sub(other.magnitude)?)
     }
 
-    /// Product of this count and `factor`, or `None` when the result is not a
-    /// representable whole number.
-    ///
-    /// Spec: `dv_count.adoc` §Functions `multiply` — the factor is a `Real`
-    /// while `magnitude` is an `Integer64`, and the spec says nothing about how
-    /// a fractional product becomes a count. Rather than pick a rounding rule
-    /// and present it as normative, a product that is not already whole is
-    /// refused: `count * 2.5` is an answer openEHR does not define, and
-    /// inventing one would be a silent wrong value in a clinical record.
-    ///
-    /// The arithmetic runs in [`Decimal`], not in binary floating point. The
-    /// question "is this product exactly a whole count" is a decimal question,
-    /// and asking it of an `f64` means casting and then guessing from a
-    /// round-trip whether the answer survived. `Decimal` answers it directly:
-    /// `is_integer` and `to_i64` are exact, and each step that can fail says so.
+    /// This count times `factor` (`multiply`), or `None` when the product is not
+    /// a whole number: no openEHR spec defines a rounding.
     #[must_use]
     pub fn multiply(&self, factor: f64) -> Option<Self> {
-        // `from_f64` recovers the decimal the float DENOTES: 0.1_f64 is the
-        // one tenth its author wrote, so `count * 0.1` is a whole count. It
-        // returns `None` for NaN and the infinities.
+        // The decimal the float denotes; `None` for NaN and the infinities.
         let product = Decimal::from(self.magnitude).checked_mul(Decimal::from_f64(factor)?)?;
         let magnitude = product.is_integer().then(|| product.to_i64())??;
         Self::of_magnitude(magnitude, scale(self.amount_accuracy(), factor))
     }
 
-    /// Returns `true` when this count's accuracy was not recorded.
-    ///
-    /// Spec: `dv_quantified.adoc` §Functions `accuracy_unknown`, effected for
-    /// `DV_AMOUNT` by the `unknown_accuracy_value` sentinel.
+    /// Whether this count's accuracy was not recorded (`accuracy_unknown`).
     #[must_use]
     pub fn accuracy_unknown(&self) -> bool {
         self.accuracy.is_none_or(|value| value < 0.0)
@@ -158,9 +117,7 @@ mod tests {
         }
     }
 
-    /// `dv_count.adoc` §Functions: add/subtract are magnitude arithmetic. The
-    /// ranges are not carried — they describe the measurement each operand came
-    /// from — but `accuracy` is, because `dv_amount.adoc` specifies it.
+    /// The ranges are not carried; the accuracy is.
     #[test]
     fn add_and_subtract_are_magnitude_arithmetic() {
         let a = count();
@@ -180,9 +137,7 @@ mod tests {
         );
     }
 
-    /// "If accuracies are present in both quantities, they are added in the
-    /// result" — `DV_COUNT` is a `DV_AMOUNT`, so its arithmetic carries the
-    /// same accuracy rule as every other descendant.
+    /// Recorded accuracies are added.
     #[test]
     fn accuracy_follows_the_dv_amount_rule() {
         let mut a = count();
@@ -203,9 +158,7 @@ mod tests {
         assert!((scaled.accuracy.expect("scaled") - 1.0).abs() < f64::EPSILON);
     }
 
-    /// A factor whose float carries binary error still means the decimal its
-    /// author wrote: 10 counts scaled by a tenth is one count. Reading the
-    /// float's approximation instead would refuse this as "not whole".
+    /// Ten counts times a tenth is one count.
     #[test]
     fn a_decimal_factor_means_the_decimal_not_its_binary_approximation() {
         let mut ten = count();
@@ -226,9 +179,7 @@ mod tests {
         assert!(!c.accuracy_unknown(), "0 means 100% accurate, not unknown");
     }
 
-    /// Overflow is refused rather than wrapped. `magnitude` is an Integer64 and
-    /// the sum of two need not be one; a wrapped count is a silently wrong
-    /// clinical value.
+    /// Overflow is refused.
     #[test]
     fn overflow_is_refused_not_wrapped() {
         let mut a = count();
@@ -241,10 +192,7 @@ mod tests {
         assert!(a.subtract(&b).is_none());
     }
 
-    /// `multiply` takes a Real while `magnitude` is an Integer64, and the spec
-    /// says nothing about how a fractional product becomes a count. A whole
-    /// product is returned; a fractional one is REFUSED rather than rounded by
-    /// a rule this implementation would be inventing.
+    /// A fractional product is refused.
     #[test]
     fn multiply_returns_whole_products_and_refuses_the_rest() {
         let mut a = count();

@@ -33,11 +33,8 @@ use ferroehr::telemetry::stage::{self, Stage};
 /// The API families that carry no patient data, as paths relative to the API
 /// base path; every other matched route is a patient-data route.
 ///
-/// Definitions (templates, archetypes, stored-query texts), terminology, the
-/// aggregate counts of `/admin/report`, and the admin surfaces that manage
-/// configuration, the retention policy, templates and
-/// stored queries hold no record of a person. The list is closed on purpose: an
-/// unlisted route, including any route added later, is judged patient data.
+/// The list is closed: an unlisted route, any route added later included, is
+/// judged patient data.
 const NO_PATIENT_DATA: &[&str] = &[
     "/definition",
     "/terminology",
@@ -50,9 +47,6 @@ const NO_PATIENT_DATA: &[&str] = &[
 
 /// Whether a matched route, relative to the API base path, serves patient
 /// data.
-///
-/// The base-path root (the System API manifest) carries none; every family in
-/// [`NO_PATIENT_DATA`] carries none; everything else does.
 #[must_use]
 pub(crate) fn is_patient_data_path(relative: &str) -> bool {
     if relative.is_empty() || relative == "/" {

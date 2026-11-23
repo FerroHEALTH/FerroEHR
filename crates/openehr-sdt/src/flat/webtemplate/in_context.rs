@@ -1,11 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The in-context children of the Web Template (`ITS-REST simplified_formats
-//! master04-basic_concepts.adoc` §"Web Template Metadata", the `inContext`
-//! marker): the RM attributes an operational template commonly leaves
-//! unconstrained, synthesized so the simplified path keys that address them
-//! resolve. Both front ends run this pass after [`super::shape::compact`].
+//! The in-context children of the Web Template (master04 §"Web Template
+//! Metadata", the `inContext` marker), run after [`super::shape::compact`].
 
 use super::model::{WebTemplateInput, WebTemplateInputType, WebTemplateNode};
 
@@ -20,29 +17,14 @@ fn is_event_family(rm_type: &str) -> bool {
     matches!(rm_type, "EVENT" | "POINT_EVENT" | "INTERVAL_EVENT")
 }
 
-/// Synthesize the in-context RM children the `ITS-REST simplified_formats
-/// master04-basic_concepts.adoc` §"Web Template Metadata" example carries for
-/// the RM-mandatory (or RM-defaulted) structural attributes an operational
-/// template commonly leaves unconstrained, so the simplified path keys that
-/// address them (`…/any_event:0/time`, `…/category|code`, per-ENTRY
-/// `language|code`, …) resolve to real web-template nodes instead of being
-/// rejected as unknown paths:
+/// Synthesize the in-context RM children the master04 §"Web Template Metadata"
+/// example carries and an OPT commonly leaves unconstrained, so their simplified
+/// path keys resolve: COMPOSITION `context`, `category`, `language`,
+/// `territory`, `composer`; ENTRY `language`, `encoding`, `subject`; EVENT
+/// `time`. An existing child at the same `aqlPath` wins.
 ///
-/// * **COMPOSITION**: `context` (EVENT_CONTEXT) with `start_time` + `setting`;
-///   `category`; `language`; `territory`; `composer`.
-/// * **ENTRY** (`OBSERVATION`/`EVALUATION`/`INSTRUCTION`/`ACTION`/`ADMIN_ENTRY`
-///   /`GENERIC_ENTRY`): `language`; `encoding`; `subject`.
-/// * **EVENT** family (`POINT_EVENT`/`INTERVAL_EVENT`/`EVENT`): `time`.
-///
-/// A synthesized child is added only where the OPT did not already produce an
-/// equivalent child at the same `aqlPath` (matched by `aqlPath`), so an OPT that
-/// constrains e.g. `EVENT.time` or `COMPOSITION.category` yields the real node
-/// and is never duplicated.
-///
-/// NOTE: no normative Web-Template document spec exists — the master04 example
-/// is the shape oracle. The example marks the leaf in-context children with
-/// `"inContext": true` (and the `context`/`category` nodes with `"nodeId": ""`)
-/// but leaves the `context` wrapper itself unmarked; that is reproduced verbatim.
+/// NOTE: the master04 example is the shape oracle; its unmarked `context`
+/// wrapper is reproduced.
 pub(super) fn synthesize_in_context(node: &mut WebTemplateNode) {
     for child in &mut node.children {
         synthesize_in_context(child);
@@ -57,12 +39,8 @@ pub(super) fn synthesize_in_context(node: &mut WebTemplateNode) {
     }
 }
 
-/// The COMPOSITION-level in-context children (master04 §"Web Template Metadata"):
-/// the `context` wrapper (with `start_time`/`setting`), then `category`,
-/// `language`, `territory`, `composer` in the example's order.
-///
-/// A template that prohibits `context` (RM `COMPOSITION.context` is `0..1`)
-/// gets no `/context` node and none of its leaves.
+/// The COMPOSITION-level in-context children, in the example's order; a
+/// template that prohibits `context` gets none of them.
 fn synth_composition(node: &mut WebTemplateNode) {
     if node.prohibited_attributes.iter().any(|a| a == "context") {
         node.children.retain(|c| c.aql_path != "/context");
@@ -103,18 +81,11 @@ fn synth_composition(node: &mut WebTemplateNode) {
     );
 }
 
-/// The COMPOSITION `context` (EVENT_CONTEXT) node with its `start_time` and
-/// `setting` in-context leaves. The wrapper is found-or-created (an OPT that
-/// constrains `other_context` already yields a `/context` node) and prepended so
-/// it leads the children, as in the master04 example; the leaves are then
-/// ensured under it.
+/// The COMPOSITION `context` node, found or created and placed first, with its
+/// `start_time` and `setting` leaves.
 ///
-/// A created wrapper takes its `min` from the template's existence on
-/// `context` where one is declared, and otherwise from the RM, where
-/// `COMPOSITION.context` is `0..1` (RM `UML/classes/org.openehr.rm.composition.composition.adoc`
-/// §Attributes): an archetype's existence only overrides the RM's
-/// (AM `ADL2/master04.3-cadl_complex_types.adoc` §Existence, AM
-/// `AOM2/master04.2-constraint_model-semantics.adoc`).
+/// A created wrapper's `min` is the template's existence, else the RM's `0..1`
+/// (`org.openehr.rm.composition.composition.adoc`; ADL2 `master04.3` §Existence).
 fn ensure_context(node: &mut WebTemplateNode) {
     let idx = if let Some(i) = node.children.iter().position(|c| c.aql_path == "/context") {
         i
@@ -183,11 +154,9 @@ fn synth_entry(node: &mut WebTemplateNode) {
     );
 }
 
-/// The EVENT-level in-context child (master04 §"Web Template Metadata": every
-/// retained EVENT-family node carries a `time`).
-// NOTE: master04 §"Web Template Metadata" renders an EVENT with exactly one
-// inContext child, so only `time` is synthesized; an INTERVAL_EVENT's `width`,
-// `math_function` and `|sample_count` stay addressable as master05 datum paths.
+/// The EVENT-level in-context `time`.
+// NOTE: master04 §"Web Template Metadata" renders an EVENT with one inContext
+// child; `width` and the rest stay master05 datum paths.
 fn synth_event(node: &mut WebTemplateNode) {
     let base = node.aql_path.clone();
     ensure_child(
@@ -200,11 +169,8 @@ fn synth_event(node: &mut WebTemplateNode) {
     );
 }
 
-/// The `time` of a single EVENT the compactor collapsed into `node`
-/// (master04 §"Conditionally Collapsed Wrapper Types"): the wrapper goes, its
-/// RM-mandatory `EVENT.time` (RM data_structures, `EVENT.time` 1..1) does not,
-/// so the leaf stays addressable on the node that took the event's children,
-/// at the event's own `aqlPath`.
+/// The `time` of a single EVENT the compactor collapsed into `node` (master04
+/// §"Conditionally Collapsed Wrapper Types"), at the event's own `aqlPath`.
 fn synth_collapsed_event(node: &mut WebTemplateNode) {
     let events: Vec<String> = node
         .slots

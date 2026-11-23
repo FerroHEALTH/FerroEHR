@@ -2,25 +2,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written accessor functions + lexical invariant for
-//! `OBJECT_VERSION_ID`.
+//! Accessors and the lexical check for `OBJECT_VERSION_ID` (BASE 1.3.0
+//! `org.openehr.base.base_types.object_version_id.adoc`):
+//! `object_id '::' creating_system_id '::' version_tree_id`.
 //!
-//! Spec: BASE 1.3.0
-//! `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.object_version_id.adoc`.
-//! Lexical form: `object_id '::' creating_system_id '::' version_tree_id`
-//! (exactly three `::`-delimited parts).
-//! - `object_id()` — the logical object's UID (part 1), with `object_id_str()`
-//!   as its verbatim sibling and `versioned_object_id()` as the verbatim
-//!   `HIER_OBJECT_ID` of the versioned object.
-//! - `creating_system_id()` — the UID of the creating system (part 2), with
-//!   `creating_system_id_str()` as its verbatim (case-preserving) sibling.
-//! - `version_tree_id()` — the `VERSION_TREE_ID` (part 3).
-//! - `is_branch()` — `version_tree_id.is_branch`.
-//!
-//! The BMM lists no invariant for `OBJECT_VERSION_ID`, but the `::`-delimited
-//! well-formedness is required for round-trip (the ITS-REST contract puts this
-//! id in `ETag`/`Location`/version paths); we express it as `Value_format_valid`
-//! in the same spirit as the ISO-8601 `Value_valid` invariants elsewhere.
+//! The BMM lists no invariant; `Value_format_valid` is our own name for the
+//! three-part form.
 
 use super::hier_object_id::HierObjectId;
 use super::lexical::{IdComponent, IdError, IdProduction, is_uid, make_uid};
@@ -43,33 +30,22 @@ fn split3(value: &str) -> Option<[&str; 3]> {
 }
 
 impl ObjectVersionId {
-    /// Unique identifier of the logical object of which this identifies one
-    /// version — the first `::`-delimited part (BASE `object_id`). Falls back to
-    /// the whole value for a malformed id so the accessor is total.
+    /// The logical object's UID, the first part (BASE `object_id`); the whole
+    /// value for a malformed id.
     #[must_use]
     pub fn object_id(&self) -> Uid {
         make_uid(self.object_id_str())
     }
 
-    /// The `object_id` part **verbatim**: the exact text of the first
-    /// `::`-delimited component, borrowed from `value` (the whole value for a
-    /// malformed id, as [`object_id`](Self::object_id) reads it).
-    ///
-    /// [`object_id`](Self::object_id) types the part as a [`Uid`], which
-    /// normalises a `UUID` to lower case; BASE
-    /// `master05-identification_package.adoc` §"Composite Identifiers and Case"
-    /// requires an identifier to keep its case through copying and transfer.
+    /// The `object_id` part verbatim, case preserved (master05 §"Composite
+    /// Identifiers and Case"); the whole value for a malformed id.
     #[must_use]
     pub fn object_id_str(&self) -> &str {
         split3(&self.value).map_or(self.value.as_str(), |p| p[0])
     }
 
-    /// The `HIER_OBJECT_ID` of the versioned object this version belongs to:
-    /// the `object_id` part, verbatim ([`object_id_str`](Self::object_id_str)).
-    ///
-    /// BASE `object_version_id.adoc`: `object_id` is the "unique identifier for
-    /// logical object of which this identifier identifies one version", the
-    /// `uid` of its `VERSIONED_OBJECT` (RM common `versioned_object.adoc`).
+    /// The `HIER_OBJECT_ID` of the versioned object: the `object_id` part,
+    /// verbatim.
     #[must_use]
     pub fn versioned_object_id(&self) -> HierObjectId {
         HierObjectId {
@@ -84,19 +60,8 @@ impl ObjectVersionId {
         make_uid(self.creating_system_id_str())
     }
 
-    /// The `creating_system_id` part **verbatim**: the exact bytes of the
-    /// second `::`-delimited component, borrowed from `value` (empty for a
-    /// malformed id, so the accessor is total like its siblings).
-    ///
-    /// [`creating_system_id`](Self::creating_system_id) types the same part as a
-    /// [`Uid`], which *normalises* a `UUID`-shaped system id to the RFC 4122
-    /// lower-case rendering (see the `uid_impl` module note). A caller bound by
-    /// the case-**PRESERVING** half of BASE
-    /// `master05-identification_package.adoc` §"Composite Identifiers and Case"
-    /// ("not change case due to persistence, copying, transfer or other
-    /// computation processes") — anything that stores, re-serialises or
-    /// round-trips the originating system id — must read it here, not through
-    /// the typed accessor.
+    /// The `creating_system_id` part verbatim, case preserved (master05
+    /// §"Composite Identifiers and Case"); empty for a malformed id.
     #[must_use]
     pub fn creating_system_id_str(&self) -> &str {
         split3(&self.value).map(|p| p[1]).unwrap_or_default()
@@ -120,15 +85,8 @@ impl ObjectVersionId {
 }
 
 impl ObjectVersionId {
-    /// Build an `OBJECT_VERSION_ID` from its string form, validating the BASE
-    /// `master05-identification_package.adoc` §Syntaxes grammar:
-    /// `object_version_id = object_id, '::', creating_system_id, '::',
-    /// version_tree_id` with `object_id = uid`, `creating_system_id = uid` and
-    /// `version_tree_id = trunk_version, [ '.', branch_number, '.',
-    /// branch_version ]`.
-    ///
-    /// The value is stored verbatim — the case-**preserving** half of master05
-    /// §"Composite Identifiers and Case".
+    /// Builds an `OBJECT_VERSION_ID` from its string form, stored verbatim
+    /// (master05 §Syntaxes `object_version_id`).
     ///
     /// # Errors
     /// [`IdError::Empty`] for an empty value; [`IdError::PartCount`] when there
@@ -160,21 +118,8 @@ impl ObjectVersionId {
 }
 
 impl ObjectVersionId {
-    /// Compose an `OBJECT_VERSION_ID` from its three **typed** parts.
-    ///
-    /// Total, and total by grammar rather than by convention: §Syntaxes defines
-    /// `object_version_id = object_id, '::', creating_system_id, '::',
-    /// version_tree_id` with `object_id = uid`, `creating_system_id = uid`, and
-    /// the third part a `VERSION_TREE_ID` — so three values of those types,
-    /// joined by `::`, are a well-formed `object_version_id` with nothing left
-    /// to reject. (`extension = ? any string ?` does not apply here: the
-    /// three-part form has no extension slot, and no part may itself contain
-    /// `::` because [`Uid`] and [`VersionTreeId`] both refuse it.)
-    ///
-    /// This is the door for a version id the CDR **mints** — where the parts are
-    /// already typed and a fallible constructor would force a caller to handle
-    /// an outcome the type system has already excluded. Parsing a version id
-    /// off the wire is [`ObjectVersionId::new`].
+    /// Composes an `OBJECT_VERSION_ID` from its three typed parts, which the
+    /// grammar makes total; parsing is [`ObjectVersionId::new`].
     #[must_use]
     pub fn compose(
         object_id: &Uid,
@@ -192,9 +137,7 @@ impl ObjectVersionId {
     }
 }
 
-/// One `uid`-typed component of an `OBJECT_VERSION_ID`: present, and a legal
-/// `uid` (BASE `master05-identification_package.adoc` §Syntaxes,
-/// `object_id = uid` / `creating_system_id = uid`).
+/// One `uid` component of an `OBJECT_VERSION_ID`: present and a legal `uid`.
 fn check_uid_part(part: &str, component: IdComponent, name: &'static str) -> Result<(), IdError> {
     if part.is_empty() {
         return Err(IdError::EmptyComponent(name));
@@ -354,9 +297,7 @@ mod tests {
         assert_eq!("".parse::<ObjectVersionId>(), Err(IdError::Empty));
     }
 
-    /// `object_id = uid` and `creating_system_id = uid` (BASE `master05`
-    /// §Syntaxes): a part that matches none of `iso_oid | uuid | internet_id`
-    /// is refused, and the error names WHICH part and what was expected.
+    /// A part matching no `uid` production is refused, naming the part.
     #[test]
     fn uid_parts_run_the_master05_grammar() {
         // The three `uid` productions, in both uid positions.

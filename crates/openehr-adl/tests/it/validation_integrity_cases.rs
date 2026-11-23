@@ -1,18 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Hand-written phase-1 validation cases — one per catalogue code that has no
-//! coverage in the vendored corpus (INVENTORY §3b), so every phase-1 code that
-//! the phase-1 validator raises has at least one asserted test.
-//!
-//! Each case cites the spec rule text it encodes. Where the parser structurally
-//! prevents the invalid state (e.g. a differential path in a top-level
-//! archetype is the syntax error SDSF, never the semantic VDIFV), the case
-//! builds the state by mutating a parsed model and calls the model-level
-//! [`validate_integrity`]; otherwise it drives the invalid source through
-//! [`validate_source_integrity`].
-//!
-//! Spec oracle: `docs/specs/openehr/AM/docs/AOM2/`.
+//! Hand-written phase-1 cases for each catalogue code the vendored corpus does
+//! not cover (INVENTORY §3b), each citing its rule (`AM/docs/AOM2/`). A state the
+//! parser cannot produce is built on a parsed model for [`validate_integrity`].
 
 #![allow(
     clippy::panic,

@@ -20,34 +20,6 @@
 //! is a section of master06, so the signer and verifier live inside this module
 //! ([`signature`]) rather than as a standalone sibling.
 //!
-//! # Module tree
-//!
-//! | module | concern |
-//! |---|---|
-//! | `object_version_id` | `OBJECT_VERSION_ID` / `VERSION_TREE_ID` decoding (BASE master05) |
-//! | `lifecycle` | `version_lifecycle_state` codes + the transition state machine |
-//! | `audit` | `AUDIT_DETAILS` values, the `audit_change_type` group, committer invariants |
-//! | [`change`] | the change-set unit, version-tree placement, the shared commit engine |
-//! | `contribution` | CONTRIBUTION classify + commit orchestration + retrieval |
-//! | `attestation` | attaching `ATTESTATION`s at or after committal |
-//! | `read` | loading stored versions (`read::VersionRead` and friends) |
-//! | `wire` | the served canonical-JSON builders (`ORIGINAL_VERSION`, `VERSIONED_*`, `REVISION_HISTORY`) |
-//! | `integrity` | signing policy at commit + verification policy at read |
-//! | `import` | replaying received originals as `IMPORTED_VERSION`s |
-//! | [`signature`] | the digest / `OpenPGP` signature primitives + configuration |
-//!
-//! # Seam with storage (`crate::storage`)
-//!
-//! This module owns the decisions (classify, tree placement, lifecycle
-//! transition, sign, attest, import policy) and the builders
-//! (`ORIGINAL_VERSION` / `VERSIONED_OBJECT` / `REVISION_HISTORY` value
-//! construction). All `sqlx` execution is delegated to a storage-owned
-//! repository: [`crate::storage::version_repo`] for the `version` / `audit` /
-//! `contribution` / `vo_attestation` spine plus the folder-membership and
-//! event-outbox writes, and [`crate::storage::node_repo`] for the `decompose` /
-//! `reassemble` codec and the `node` writes. The per-function docs there are the
-//! authority for each call this module makes.
-//!
 //! NOTE: RM common `master06-change_control_package.adoc` §Overview explicitly
 //! sanctions relational decomposition of a `VERSIONED_OBJECT` ("Other
 //! implementations (e.g. using orthodox relational structures) might use
@@ -90,12 +62,6 @@ pub(crate) mod wire;
 // Re-exports: the versioning API the service layer and its adapters consume.
 
 /// The kind of versioned object (discriminates `version.kind`).
-///
-/// RM common master06 keeps one change-control model for all versioned content;
-/// this CDR realizes it with one unified `version`/`node` machinery, so a
-/// single [`Kind`] discriminates COMPOSITION / `EHR_STATUS` / `EHR_ACCESS` / FOLDER
-/// (EHR-scoped) and the demographic party roots + `PARTY_RELATIONSHIP` (no EHR
-/// scope, RM demographic).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
     /// A COMPOSITION — the clinical content of an EHR.

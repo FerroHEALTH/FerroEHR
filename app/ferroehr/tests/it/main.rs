@@ -9,11 +9,6 @@
 //! quarantined extensions (the outbox feed, multimedia) and the FHIR audit and
 //! terminology clients.
 //!
-//! Most tests take a fully-migrated `PostgreSQL` 18 database from the shared
-//! harness (`testkit::db()`); the blob suite (`multimedia_s3`) additionally
-//! starts a real testcontainer and is serialized by the nextest `containers`
-//! group.
-//!
 //! One binary per crate, split into topic modules
 //! (`.claude/rules/testing.md` §One integration-test binary per crate).
 

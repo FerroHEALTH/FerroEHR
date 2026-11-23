@@ -3,23 +3,12 @@
 
 //! Per-route-family request-body limits.
 //!
-//! The family stack's `server.body_limit` is a single ceiling for the
-//! whole tree. This module adds the tier the ceiling cannot express: the
-//! routes that accept bulk by design (operational-template upload and EHR-Extract
-//! import) accept the ceiling, while the ordinary clinical surface
-//! accepts the narrower
+//! The ceiling `server.body_limit` stays outermost at the bulk tier, and this
+//! middleware applies the narrower
 //! [`ApiConfig::body_limit`](ferroehr::config::rest::ApiConfig::body_limit)
-//! when one is set. Nesting cannot do this: an outer layer's tighter limit
-//! would already have refused the request before an inner, more permissive one
-//! saw it. So the ceiling stays outermost at the widest tier, and this
-//! middleware applies the narrower tier per matched path.
-//!
-//! It also buffers. Buffering here rather than at the extractor is what makes
-//! the refusal a real `413`: an over-limit body without a `Content-Length` (a
-//! chunked upload) can only be detected while reading it, and the dispatcher
-//! that reads it downstream has no seam to answer a status from. Nothing is
-//! paid for this — every group dispatcher already collects the whole body into
-//! `Bytes` before handling it.
+//! everywhere else, since an outer, tighter limit would refuse a body before an
+//! inner, wider one saw it. It buffers, so a chunked upload over the limit is a
+//! real `413`.
 //!
 //! No openEHR spec bounds a request body — our own design. The status is
 //! RFC 9110 §15.5.14's, admitted by ITS-REST
@@ -39,10 +28,6 @@ use crate::state::AppState;
 
 /// The path fragments that select the bulk tier, matched against the request
 /// path after the ITS-REST base path.
-///
-/// Template upload is included because an operational template is authored
-/// per deployment and the published corpus is only evidence of typical size,
-/// not a bound; `/message/import` imports a whole EHR.
 const BULK_PATH_FRAGMENTS: [&str; 2] = ["/definition/template", "/message/import"];
 
 /// Returns the body limit that applies to `path`: the `ceiling` on a bulk
@@ -58,11 +43,6 @@ fn limit_for(path: &str, clinical: Option<usize>, ceiling: usize) -> usize {
 }
 
 /// Refuses a request whose body exceeds its route family's limit.
-///
-/// A declared `Content-Length` over the limit is refused without reading a
-/// byte. Otherwise the body is collected under the limit and handed on already
-/// buffered, so an over-limit chunked upload is refused here instead of
-/// arriving downstream as a silently truncated body.
 pub(crate) async fn middleware(
     State(state): State<AppState>,
     request: Request,

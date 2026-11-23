@@ -34,10 +34,7 @@ impl Builder<'_> {
     /// [`Builder::value_anchors`] makes an anchor of: the flat FROM then reads
     /// each contained node inside its object (`from::Builder::emit_rm`).
     ///
-    /// On statistics older than the rows they missed, the anchor and the
-    /// contained node were both estimated at one row, and the planner nested
-    /// the whole of one entry, unparameterised, inside the rows of the other:
-    /// with the contained node read inside its object the anchor is the one
+    /// With the contained node read inside its object, the anchor is the one
     /// entry from the population (#6243, #6263).
     pub(super) fn takes_anchor(&self) -> bool {
         self.ir

@@ -7,11 +7,9 @@
 #
 # It reads the changed-path list on stdin, whole, and prints one `lane=true`
 # or `lane=false` line per lane of the named workflow, the form
-# $GITHUB_OUTPUT takes. Every match runs against a here-string. The
-# classifiers used to pipe the list into `grep -q` under pipefail: once the
-# list topped the 64 KiB pipe buffer, grep exited at an early match, the echo
-# died of SIGPIPE, the pipeline returned 141, and the `if` read the match as a
-# miss, so a large pull request skipped the lanes it needed.
+# $GITHUB_OUTPUT takes. Every match runs against a here-string: a list past
+# the 64 KiB pipe buffer piped into `grep -q` under pipefail dies of
+# SIGPIPE at an early match and reads the match as a miss.
 #
 # An empty list answers false for every lane. The caller keeps its own
 # fallback, every lane true, for a base it cannot diff against.
@@ -171,7 +169,7 @@ self_test() {
     echo "self-test: the filler is ${#big} bytes, not past the 64 KiB pipe buffer" >&2
     return 1
   fi
-  # The old form, run on the same list: the match comes first, grep -q exits
+  # The pipe form, run on the same list: the match comes first, grep -q exits
   # on it, and the producer is left writing into a closed pipe.
   if (set -o pipefail; printf '%s\n' "Cargo.toml" "$big" | grep -qx 'Cargo.toml'); then # pipe-early-exit: deliberate
     echo "self-test: the pipe form did not fail on a match first in a large list; the list does not exercise SIGPIPE" >&2

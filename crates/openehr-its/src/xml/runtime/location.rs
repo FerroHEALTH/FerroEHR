@@ -47,9 +47,6 @@ impl XmlReader<'_> {
     }
 
     /// The [`Location`] of an element under the first `ancestors` open frames.
-    ///
-    /// This is where the line, column and root path are resolved, on the one
-    /// path that reads them.
     fn location_of(
         &self,
         element: &str,

@@ -15,26 +15,6 @@
 //! routine pre- and post-conditions are always in the form of an
 //! `BMM_ASSERTION`" (`LANG/docs/bmm3/master10-expressions.adoc` §Usage in BMM
 //! Models).
-//!
-//! # The composition seam
-//!
-//! The parser is generic over an [`ElBuilder`], the same seam the BEL parser
-//! uses ([`crate::v1_1::bel::BelBuilder`]): the grammar lives here once and the tree
-//! is supplied by the builder. EL is NOT a BEL extension — `ElParser.g4`
-//! imports `Cadl2Parser`, not `base_expressions.g4`, renames every production,
-//! adds scoped feature references, tuples and decision tables, and takes its
-//! operator precedence from a table that CONTRADICTS the BEL one (see
-//! [`parse_boolean_expression_with`]) — so the two parsers share the lexical
-//! layer and nothing else.
-//!
-//! # Boundaries of this reader
-//!
-//! Decision tables (`ElParser.g4` `dlDecisionTable` and its `dlBinaryChoice`/
-//! `dlCaseTable`/`dlConditionTable` alternatives) are refused with
-//! [`ElError::Unsupported`]; their `BLOCK_DELIM` and `?` lexical forms have no
-//! union production. The `matches { … }` right-hand side is handed to the
-//! builder verbatim, because `cInlineOrderedObject`/`cObjectMatcher` come from
-//! the unvendored `Cadl2Parser`.
 
 mod parser;
 
@@ -205,12 +185,6 @@ impl ElOperator {
 }
 
 /// The seam between the EL grammar and the tree it builds.
-///
-/// The parser drives `ElParser.g4`'s productions and calls these constructors;
-/// an implementor decides the concrete node types. Every method is fallible
-/// because the target meta-model's reference leaves carry mandatory
-/// definitions (`EL_PROPERTY_REF.definition`, `EL_STATIC_REF.definition`,
-/// `EL_LITERAL.value.type`), which only the builder can resolve.
 pub trait ElBuilder {
     /// The expression node type this builder produces.
     type Expr;
@@ -322,8 +296,6 @@ pub trait ElBuilder {
 
 /// Parses `src` as one EL `elBooleanExpr`, driving `builder`, and requires the
 /// whole input to be consumed.
-///
-/// # Operator precedence
 ///
 /// Taken from the EL operator tables, NOT from the vendored parser grammar.
 /// `LANG/docs/EL/master05-expressions.adoc` §Primitive Operators lists the

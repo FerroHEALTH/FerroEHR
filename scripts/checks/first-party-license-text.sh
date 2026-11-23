@@ -61,10 +61,9 @@ readonly -a PROSE=(
   # upstream AGPL header — so an AGPL text has to be present for the tree to be
   # compliant at all.
   #
-  # This does not open a hole where the gate used to be: a licence text that
-  # belongs to no file now fails `scripts/checks/licensing-declarations.sh`,
-  # which refuses any text in LICENSES/ that REUSE.toml does not use. The
-  # control moved to the place that can judge it.
+  # A licence text that belongs to no file fails
+  # `scripts/checks/licensing-declarations.sh`, which refuses any text in
+  # LICENSES/ that REUSE.toml does not use.
   ':(exclude)LICENSES/**'
   ':(exclude)REUSE.toml'
   ':(exclude)website/book/src/licensing.md'

@@ -16,13 +16,8 @@ use serde_json::{Value, json};
 use crate::flat::instance::Instance;
 use crate::flat::sim::SimNode;
 
-/// Derive the `ctx/` keys from a canonical COMPOSITION onto `out` (the `ctx`
-/// SimNode). The bidirectional shortcuts (master06 §§"Language and Territory",
-/// Composer, time, setting, location, health_care_facility, Participation) are
-/// symmetric with [`crate::flat::ctx::resolve`]; the per-ENTRY input-only
-/// defaults (provider, workflow id, ISM state, timing, narrative, links) keep
-/// their structural home on output and are not emitted here (master06 frames
-/// them as input shortcuts).
+/// Derives the `ctx/` keys of a COMPOSITION onto `out`; the per-ENTRY input
+/// defaults keep their structural paths.
 pub(crate) fn emit<'a, I: Instance<'a>>(composition: I, out: &mut SimNode) {
     if let Some(code) = composition
         .attr("language")
@@ -73,17 +68,13 @@ pub(crate) fn emit<'a, I: Instance<'a>>(composition: I, out: &mut SimNode) {
     if let Some(loc) = at(&["location"]).and_then(Instance::to_value) {
         set_bare(out, "location", loc);
     }
-    // NOTE: health_care_facility and participations are NOT emitted as ctx/
-    // shortcuts — the master06 shortcut vocabulary is lossy for them, so the
-    // lossless master05 §EVENT_CONTEXT path rows own the output.
+    // NOTE: master06 shortcuts are lossy for health_care_facility and
+    // participations, so the master05 §EVENT_CONTEXT rows carry them.
 }
 
-/// Emit a party's `external_ref` id/namespace/scheme as `ctx/composer_id` +
-/// `ctx/id_namespace`/`ctx/id_scheme` (master06 §Composer). Namespace and
-/// scheme emit only when an id value exists — a ref without an id cannot be
-/// rebuilt from the shortcuts (master06 §Composer: `composer_id` sets
-/// `external_ref.id.value`), so emitting its satellites alone would break
-/// the round-trip.
+/// Emits a party's `external_ref` as `ctx/composer_id`, with
+/// `ctx/id_namespace` and `ctx/id_scheme` only when an id exists (master06
+/// §Composer).
 fn emit_external_ref<'a, I: Instance<'a>>(party: I, out: &mut SimNode) {
     let reference = party.attr("external_ref");
     let at = |steps: &[&str]| {

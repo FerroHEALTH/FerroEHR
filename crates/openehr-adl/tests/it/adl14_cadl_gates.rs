@@ -1,47 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADL 1.4 cADL regression corpus (`tests/corpus/adl14-cadl/`).
+//! The hand-written ADL 1.4 cADL regression corpus (`tests/corpus/adl14-cadl/`),
+//! each expectation cited from `ADL1.4/master05-cadl.adoc` in its fixture.
 //!
-//! Sibling of `adl14-dadl/` (the dADL leaf/structure breadth tree): this one
-//! covers the **cADL** half of an ADL 1.4 text — `master05-cadl.adoc` — where the
-//! vendored `adl2-reference` library gives no coverage because it is an ADL2
-//! corpus. Like its sibling it is **hand-written, not vendored**
-//! (`tests/corpus/PROVENANCE.md` §`adl14-cadl/`), and every expectation is
-//! derived first-hand from the spec text, cited in the fixture beside the
-//! construct it exercises.
-//!
-//! Four families live here:
-//!
-//! 1. **Dialect gates.** ADL 1.4's cADL keyword set is CLOSED
-//!    (`ADL1.4/master05-cadl.adoc` §Keywords L48-53), so a construct ADL 2
-//!    introduced is a syntax error in a 1.4 text, not a tolerated superset. Each
-//!    such construct gets a refusal fixture named for the `S*` code it raises.
-//!    The ACCEPTING twin of every one of them is the vendored ADL2 corpus, which
-//!    exercises the same construct in its own dialect — a parser that stopped
-//!    accepting it there would fail `corpus_definition_parse.rs`.
-//! 2. **Refusals with their accepting twin in-tree** — the inline dADL domain
-//!    lowering (`ADL1.4/master09-customising_adl.adoc`) and the 1.4 term-constraint
-//!    definedness rules (`ADL1.4/master08-adl.adoc` §Validity Rules VATDF/VACDF),
-//!    where the accepted form is itself 1.4-only and so has no ADL2 twin.
-//! 3. **Positive fixtures** for behaviour a lenient OR an over-strict reader would
-//!    get wrong: `before`/`after` sibling order (a 1.4 keyword — L53 — that must
-//!    NOT be gated), the effective occurrences default `{1..1}` (L316), and the
-//!    assumed-value lowering.
-//! 4. **The breadth trio** — `cadl_breadth_{structure,primitives,datetime}` —
-//!    which exercises every construct `master05-cadl.adoc` defines (existence
-//!    and occurrences and cardinality spellings incl. two modifiers and the bare
-//!    star, the whole interval shape set incl. the `infinity` endpoints and both
-//!    exclusive-lower spellings, every string/boolean/character/term-code form,
-//!    every date/time/date-time/duration pattern family incl. the
-//!    literal-substituted and ASCII-timezone variants and the mixed
-//!    `pattern/interval` form, assumed values on every primitive, `use_node`
-//!    with and without occurrences, generic type names, and the bare and
-//!    identified slot forms) plus `cadl_keyword_case`, which repeats a whole
-//!    definition in upper/mixed case because the chapter's own lexical
-//!    specification is case-insensitive (§Symbols L1326-1354).
-//!
-//! Both twins are kept for every refusal (`.claude/rules/testing.md`).
+//! Dialect gates refuse the constructs ADL 2 introduced (§Keywords), whose
+//! accepting twins are the ADL2 corpus; 1.4-only refusals keep their accepting
+//! twins here; positive fixtures pin sibling order, the `{1..1}` default and
+//! assumed values; and the breadth fixtures exercise every construct of the
+//! chapter, case-insensitively (§Symbols).
 
 #![allow(
     clippy::expect_used,
@@ -206,12 +173,7 @@ const FIXTURES: &[(&str, Expect)] = &[
     ("openEHR-EHR-CLUSTER.sibling_order.v1.adl", Expect::Pass),
     ("openEHR-EHR-CLUSTER.cadl_keyword_case.v1.adl", Expect::Pass),
     // ── the accepting twins of the two vendored concept-less 1.4 fixtures ─
-    // `ADL1.4/master08-adl.adoc` §Syntax Specification makes `arch_concept`
-    // mandatory and §Validity Rules VARCN requires its term, so the two
-    // concept-less `legacy_adl_1.4` fixtures are refused (SACO — pinned in
-    // `legacy14_corpus.rs`). These are their concept-carrying twins, so the
-    // constructs they exercise (1.4 inline dADL `C_DV_QUANTITY` blocks; the
-    // `CODE_PHRASE` constraint spellings) keep their accepted coverage.
+    // `ADL1.4/master08-adl.adoc` makes `arch_concept` mandatory (VARCN).
     (
         "openehr-TEST_PKG-SOME_TYPE.c_dv_quantity_concept.v1.adl",
         Expect::Pass,
@@ -228,11 +190,7 @@ const FIXTURES: &[(&str, Expect)] = &[
         Expect::Pass,
     ),
     // ── the `\u` escape twins (`master03-file_encoding.adoc` §File Encoding) ─
-    // The chapter defines BOTH `\uHHHH` (BMP) and `\uHHHHHHHH`
-    // (U+10000-U+10FFFF, "the algorithm is described in IETF RFC 2781"), so a
-    // C_STRING carrying either spelling must decode; an 8-digit spelling of a
-    // code point outside that range denotes nothing the form can carry and is
-    // refused rather than silently substituted.
+    // Both `\uHHHH` and `\uHHHHHHHH` decode; an out-of-range code point is refused.
     (
         "openEHR-EHR-CLUSTER.unicode_escape_8_digit.v1.adl",
         Expect::Pass,
@@ -241,14 +199,9 @@ const FIXTURES: &[(&str, Expect)] = &[
         "openEHR-EHR-CLUSTER.SUNK_unicode_escape_out_of_range.v1.adl",
         Expect::Refuse(SyntaxErrorCode::Sunk),
     ),
-    // The escape set is CLOSED — the six customary quoted forms plus the two
-    // `\u` spellings — because "Any other character combination starting with
-    // a backslash is illegal" (§Special Character Sequences). The accepting
-    // twin of this one is `unicode_escape_8_digit` above, whose three legal
-    // spellings decode; the PERL classes the same section names (`\s`, `\d`)
-    // are legal only inside a regex literal, which is never escape-decoded
-    // (`slot_domain_concept_regex` and `cadl_breadth_primitives` are their
-    // accepting twins).
+    // The escape set is closed: "Any other character combination starting with a
+    // backslash is illegal" (§Special Character Sequences); a regex literal is
+    // never escape-decoded.
     (
         "openEHR-EHR-CLUSTER.SUNK_illegal_string_escape.v1.adl",
         Expect::Refuse(SyntaxErrorCode::Sunk),
@@ -323,11 +276,8 @@ fn every_fixture_meets_its_declared_outcome() {
     }
 }
 
-/// The `\u` escape twins, checked on their CONTENT rather than only their
-/// outcome: the 4-digit BMP form, the RFC 2781 surrogate pair and the
-/// zero-filled 8-digit spelling all decode to the characters
-/// `ADL1.4/master03-file_encoding.adoc` §File Encoding names, and the
-/// out-of-range twin's refusal names the defect.
+/// The `\u` escape twins decode to the characters `ADL1.4/master03-file_encoding.adoc`
+/// §File Encoding names, and the out-of-range refusal names the defect.
 #[test]
 fn the_unicode_escape_twins_decode_and_refuse_on_content() {
     let src = read("openEHR-EHR-CLUSTER.unicode_escape_8_digit.v1.adl");
@@ -352,12 +302,8 @@ fn the_unicode_escape_twins_decode_and_refuse_on_content() {
         "the refusal must name the offending escape, got {messages:?}"
     );
 }
-/// The illegal-escape twin: the escape set is CLOSED at the six customary
-/// quoted forms plus the two `\u` spellings, so a `C_STRING` carrying any
-/// other backslash combination is refused at the lex rather than read as
-/// literal text (`ADL1.4/master03-file_encoding.adoc` §Special Character
-/// Sequences: "Any other character combination starting with a backslash is
-/// illegal"). Its accepting twin is `unicode_escape_8_digit` above.
+/// A `C_STRING` with any other backslash combination is refused at the lex
+/// (`ADL1.4/master03-file_encoding.adoc` §Special Character Sequences).
 #[test]
 fn an_illegal_string_escape_is_refused_naming_the_literal() {
     let src = read("openEHR-EHR-CLUSTER.SUNK_illegal_string_escape.v1.adl");
@@ -412,11 +358,8 @@ fn every_fixture_file_is_in_the_table() {
     assert_eq!(on_disk, listed, "the fixture table and the tree disagree");
 }
 
-/// W14DEP (#1470): the deprecated paren-less domain-block spelling is
-/// ACCEPTED but WARNED, per occurrence, at exactly the deprecation's spec
-/// strength (`master05-cadl` §Symbols `V_C_DOMAIN_TYPE`); the parenthesised
-/// spelling warns nothing. The `empty_domain_block` fixture carries exactly
-/// one of each spelling, so the warning count pins both directions.
+/// W14DEP: the paren-less domain-block spelling warns once per occurrence
+/// (`master05-cadl` §Symbols `V_C_DOMAIN_TYPE`); the parenthesised one does not.
 #[test]
 fn deprecated_paren_less_domain_spelling_warns_once() {
     let src = std::fs::read_to_string(tree().join("openEHR-EHR-CLUSTER.empty_domain_block.v1.adl"))

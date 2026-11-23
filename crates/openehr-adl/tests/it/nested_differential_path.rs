@@ -2,14 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! A differential path on an attribute below the root of a specialised
-//! archetype (#5452).
-//!
-//! AOM2 `C_ATTRIBUTE.differential_path` is the "Path to the parent object of
-//! this attribute", and `C_ATTRIBUTE.path` the "Path of this attribute with
-//! respect to owning `C_OBJECT`, including differential path where
-//! applicable" (`AM/docs/UML/classes/org.openehr.am.aom2.c_attribute.adoc`),
-//! so a nested path reads from the object that owns it. VDIFP requires that
-//! path to exist in the flat parent (`AOM2/master04.5` §`C_ATTRIBUTE`).
+//! archetype reads from its owning object (`org.openehr.am.aom2.c_attribute.adoc`),
+//! and VDIFP requires it in the flat parent (`AOM2/master04.5` §`C_ATTRIBUTE`).
 
 #![allow(
     clippy::expect_used,

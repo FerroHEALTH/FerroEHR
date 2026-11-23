@@ -1,18 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `DATA_VALUE` leaf codecs + the reference-range families.
-//!
-//! Covers the `DV_*` mapping tables of ITS-REST
-//! `simplified_formats/master05-rm_mapping.adoc` (DV_TEXT, DV_CODED_TEXT,
-//! CODE_PHRASE, TERM_MAPPING, DV_ORDINAL, DV_SCALE, DV_BOOLEAN, DV_URI,
-//! DV_EHR_URI, DV_QUANTITY, DV_PROPORTION, DV_COUNT, DV_DATE, DV_DATE_TIME,
-//! DV_TIME, DV_DURATION, DV_PARSABLE, DV_MULTIMEDIA), plus the DV_INTERVAL and
-//! REFERENCE_RANGE tables and the `DV_ORDERED` value-internal reference-range
-//! families (`_normal_range`, `_other_reference_ranges:i`, `_accuracy`).
-//!
-//! `DV_IDENTIFIER` is a `DATA_VALUE` too but clusters with the identifier / party
-//! shapes, so it lives in [`super::parties`]; this module delegates to it.
+//! The `DATA_VALUE` leaf codecs and the reference-range families
+//! (`simplified_formats/master05-rm_mapping.adoc` DV tables, DV_INTERVAL and
+//! REFERENCE_RANGE). `DV_IDENTIFIER` lives in [`super::parties`].
 
 #![expect(
     clippy::disallowed_types,
@@ -237,11 +228,8 @@ fn build_core(
         "DV_DATE_TIME" | "DV_DATE" | "DV_TIME" => build_amount_temporal(node, base, false),
         "DV_URI" | "DV_EHR_URI" => from_bare(node, base, "value"),
         "DV_IDENTIFIER" => parties::build_identifier(node).map(Some),
-        // master05 §PARTY_PROXY → the three subtype tables. `PERSON` is the
-        // `PARTY_REF.type` used when the datum carries an `|id` but no
-        // explicit reference type: the carriers of a PARTY_PROXY leaf
-        // (`ENTRY.subject`, `COMPOSITION.composer`) reference a person, and
-        // the master05 tables define no flat row for `external_ref.type`.
+        // master05 PARTY_PROXY tables; `PERSON` is the `PARTY_REF.type` for an `|id`
+        // with no explicit type, since master05 has no row for it.
         "PARTY_PROXY" | "PARTY_SELF" | "PARTY_IDENTIFIED" | "PARTY_RELATED" => {
             parties::build_party(node, "PERSON").map(Some)
         }
@@ -300,10 +288,8 @@ fn build_text(node: &SimNode, ty: &str) -> Result<Option<Obj>, FlatError> {
     Ok(Some(o))
 }
 
-/// master05 §DV_CODED_TEXT. `|value`/`|terminology` are only required for
-/// external terminologies; a local/openehr code resolves its rubric and the
-/// implicit terminology from the web-template input list when the suffixes are
-/// omitted.
+/// master05 §DV_CODED_TEXT; a local or openehr code takes its rubric and
+/// terminology from the web-template input list when the suffixes are omitted.
 fn build_coded_text(
     node: &SimNode,
     ty: &str,

@@ -169,11 +169,10 @@ async fn admin_delete_all_deletes_present_and_skips_missing() {
     );
 }
 
-/// An **empty** `ehr_id` selector deletes ALL EHRs
-/// (`operations/admin_ehr_delete_all.yaml:5` — "Deletes **all** or multiple
-/// EHRs"; `parameters/query/ehr_id_Admin.yaml` — `ehr_id` is an OPTIONAL subset
-/// selector, so an absent/empty list denotes the full set). This supersedes the
-/// former delete-nothing safety posture.
+/// An empty `ehr_id` selector deletes all EHRs
+/// (`operations/admin_ehr_delete_all.yaml:5`, "Deletes **all** or multiple
+/// EHRs"; `parameters/query/ehr_id_Admin.yaml`: `ehr_id` is an optional subset
+/// selector, so an absent or empty list denotes the full set).
 #[tokio::test]
 async fn admin_delete_all_with_empty_list_deletes_every_ehr() {
     let (_db, _pool, svc) = repository().await;
@@ -1082,13 +1081,6 @@ async fn the_archival_tier_is_a_partition_of_the_relation_it_archives() {
 
 /// Physical erasure leaves no row naming the EHR in any domain, and leaves one
 /// tombstone on the outbox for every registered reader.
-///
-/// The relations are named one by one rather than swept, because the point of
-/// the assertion is that a relation ADDED to the schema has to be added here
-/// too: the cascade is a property of the foreign-key graph, and a new table
-/// that hangs off the EHR without one would pass a sweep that only counts what
-/// it knows. The EHR is archived first, so the delete is asserted to reach the
-/// cold partition as well as the hot one.
 ///
 /// The tombstone is the GDPR Art. 19 notification: a consumer holds what it
 /// derived from this EHR, and its cursor has not reached the tombstone yet, so

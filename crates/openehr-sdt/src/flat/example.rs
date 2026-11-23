@@ -1,42 +1,15 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Example-COMPOSITION generation from a [`WebTemplate`] (the `adl1.4/{id}/example`
-//! endpoint), and the example party of a demographic template
-//! ([`example_party`]; [`example_instance`] picks by the root class).
+//! Example instances of a [`WebTemplate`] (the `adl1.4/{id}/example` endpoint).
 //!
-//! [`example_composition`] walks the web-template tree and produces a canonical
-//! openEHR JSON COMPOSITION populated with **deterministic** placeholder data
-//! (no randomness, no current-time), at one of three [`DetailLevel`]s:
+//! [`example_composition`] at a [`DetailLevel`], [`example_party`] and
+//! [`example_instance`], built through [`composition_from_flat`]. `Required` and
+//! `Medium` are committable; populated leaves grow `required ⊆ medium ⊆ complete`.
 //!
-//! * [`Required`](DetailLevel::Required) — only the mandatory skeleton (nodes on
-//!   a fully-mandatory chain, plus whatever a min-cardinality or a mandatory
-//!   attribute existence forces). Intended to be committable as-is.
-//! * [`Medium`](DetailLevel::Medium) — the fully-populated single-instance
-//!   document: every optional branch descended to its leaves, one occurrence of
-//!   each node, the first alternative of any choice. Intended to be committable
-//!   as-is.
-//! * [`Complete`](DetailLevel::Complete) — everything `medium` emits, plus a
-//!   second occurrence of each repeating node (demonstrating repetition); not
-//!   necessarily committable.
-//!
-//! The set of populated leaves is monotonic across the levels
-//! (`required ⊆ medium ⊆ complete`).
-//!
-//! The generator emits a FLAT map of deterministic example values and hands it
-//! to [`composition_from_flat`], which already materialises the compacted RM
-//! structure and fills every RM-mandatory field FLAT never surfaces. The result
-//! therefore round-trips through
-//! [`composition_to_flat`](crate::flat::convert::composition_to_flat) and
-//! deserialises as an `openehr-rm` `Composition`.
-//!
-//! NOTE: ITS-REST Release-1.1.0 states the example-generation algorithm is
-//! non-normative ("vendors may produce different results"), so the value choices
-//! here are ours; only the `required` level's mandatory-skeleton-is-committable
-//! contract is load-bearing. Reachable `PARTY_*` value leaves are skipped rather
-//! than fabricated — an unset `ENTRY.subject` defaults to PARTY_SELF (master05
-//! §OBSERVATION `/subject` row Note), and an invented party would put a
-//! fictitious identified person into an example document.
+//! NOTE: ITS-REST says example generation is non-normative ("vendors may
+//! produce different results"); `PARTY_*` leaves are skipped rather than
+//! invented.
 
 #![expect(
     clippy::disallowed_types,
@@ -65,12 +38,7 @@ mod interval;
 mod party;
 mod temporal;
 
-/// Fixed example instants used for the RM temporal leaves (deterministic).
-///
-/// [`EXAMPLE_DATE_TIME`] doubles as the `now` supplied to [`composition_from_flat`]
-/// for the `ctx/time` default, so a generated example is reproducible across calls. No
-/// openEHR spec governs an example's timestamps — our own design (examples must
-/// be deterministic).
+/// The fixed example instant, also the `now` of the `ctx/time` default.
 const EXAMPLE_DATE_TIME: &str = "2022-02-03T04:05:06Z";
 const EXAMPLE_DURATION: &str = "PT1H";
 
@@ -88,13 +56,9 @@ pub enum DetailLevel {
 }
 
 impl DetailLevel {
-    /// Parse the `detail_level` query value, absent meaning
-    /// [`Required`](Self::Required).
-    ///
-    /// The enum is closed and matched exactly — a present value that is not
-    /// one of its tokens (the empty string and padded spellings included) is
-    /// refused, since the declared default applies only to an absent
-    /// parameter (ITS-REST `parameters/query/example_detail_level.yaml`).
+    /// Parses the `detail_level` query value, absent meaning
+    /// [`Required`](Self::Required); any other present value is refused
+    /// (ITS-REST `parameters/query/example_detail_level.yaml`).
     ///
     /// # Errors
     /// A message (→ ITS-REST `400`) for a value outside `required|medium|complete`.
@@ -120,12 +84,8 @@ pub enum ExampleType {
 }
 
 impl ExampleType {
-    /// Parse the `type` query value, absent meaning [`Input`](Self::Input).
-    ///
-    /// The enum is closed and matched exactly — a present value that is not
-    /// one of its tokens (the empty string and padded spellings included) is
-    /// refused, since the declared default applies only to an absent
-    /// parameter (ITS-REST `parameters/query/example_type.yaml`).
+    /// Parses the `type` query value, absent meaning [`Input`](Self::Input)
+    /// (ITS-REST `parameters/query/example_type.yaml`).
     ///
     /// # Errors
     /// A message (→ ITS-REST `400`) for a value outside `input|output`.
@@ -140,20 +100,8 @@ impl ExampleType {
     }
 }
 
-/// Generates an example (input-form) COMPOSITION from `wt` at `level`.
-///
-/// The result is canonical openEHR JSON that deserialises as an `openehr-rm`
-/// `Composition`. Every attribute the template makes mandatory is present: a
-/// leaf-bearing one through the forced walk, a content-less structural one (an
-/// EVENT `state`, an ENTRY `protocol`) as the empty node its structural stub
-/// constrains (AOM 1.4 `master04-constraint_model_package.adoc` §existence).
-/// For the `output` form, additionally call [`apply_output_uid`].
-///
-/// Only a COMPOSITION-rooted template has a COMPOSITION example: the ITS-REST
-/// example operation answers one of the versioned-object classes
-/// (`responses/200_Template_example_retrieved.yaml` lists COMPOSITION,
-/// EHR_STATUS, FOLDER and the five parties), and a template rooted at an
-/// ENTRY or a SECTION admits none of them.
+/// Generates an example input-form COMPOSITION from `wt` at `level`, every
+/// mandatory attribute present; [`apply_output_uid`] gives the output form.
 ///
 /// # Errors
 ///
@@ -178,9 +126,7 @@ pub fn example_composition(wt: &WebTemplate, level: DetailLevel) -> Result<Value
 pub(crate) fn example_composition_flat(wt: &WebTemplate, level: DetailLevel) -> Map<String, Value> {
     let mut flat: Map<String, Value> = Map::new();
 
-    // Composition-level housekeeping the tree does not carry as data leaves:
-    // `from_flat` turns these into language, territory, composer and, when the
-    // template has a `/context` node (RM `COMPOSITION.context` 0..1), the context.
+    // The context the tree does not carry as leaves.
     flat.insert("ctx/language".to_owned(), json!(wt.default_language));
     flat.insert("ctx/territory".to_owned(), json!("US"));
     flat.insert("ctx/composer_name".to_owned(), json!("Example composer"));
@@ -204,21 +150,13 @@ pub(crate) fn example_composition_flat(wt: &WebTemplate, level: DetailLevel) -> 
         }
     }
 
-    // Walk the tree from the root (COMPOSITION); the root is never forced empty —
-    // an empty-content composition is valid RM, and a real content cardinality is
-    // honoured by the per-container cardinality pass in `walk`.
+    // The root is never forced empty.
     walk(&wt.tree, &wt.tree.id, 0, level, false, &mut flat);
     flat
 }
 
-/// Generates an example instance of a non-COMPOSITION template's root class.
-///
-/// The root is an ENTRY, a SECTION or a CLUSTER, for example; the instance is
-/// built from `wt` at `level` by [`crate::flat::build::build_root`] without any
-/// COMPOSITION member.
-///
-/// The ITS-REST example operation serves [`example_composition`]; this is the
-/// library form for validating or exercising a non-COMPOSITION template.
+/// Generates an example instance of a non-COMPOSITION template's root class
+/// through [`crate::flat::build::build_root`].
 ///
 /// # Errors
 ///
@@ -238,16 +176,8 @@ pub fn example_root_instance(wt: &WebTemplate, level: DetailLevel) -> Result<Val
     Ok(value)
 }
 
-/// Generates an example party from a demographic template at `level`.
-///
-/// The template root is a party class (`PERSON`, `ORGANISATION`, `GROUP`,
-/// `AGENT` or `ROLE`, RM demographic `master02-demographic_package.adoc`); the
-/// result is canonical openEHR JSON that decodes as that class, built through
-/// the same template walk as [`example_composition`] and the root builder
-/// [`crate::flat::build::build_root`]. A `ROLE` gets a placeholder `performer`
-/// reference, because the RM makes that attribute mandatory
-/// (`UML/classes/org.openehr.rm.demographic.role.adoc`, `performer` 1..1) and a
-/// template does not constrain it.
+/// Generates an example party from a demographic template at `level`; a
+/// `ROLE` gets a placeholder `performer` (1..1, `role.adoc`).
 ///
 /// # Errors
 ///
@@ -280,11 +210,8 @@ pub fn example_party(wt: &WebTemplate, level: DetailLevel) -> Result<Value, Flat
     Ok(value)
 }
 
-/// Generates the example instance the template's root class admits.
-///
-/// A COMPOSITION-rooted template gets [`example_composition`] and a party
-/// template [`example_party`]: both are versioned-object classes the ITS-REST
-/// example operation answers (`responses/200_Template_example_retrieved.yaml`).
+/// Generates the example the template's root class admits: a COMPOSITION or a
+/// party (`responses/200_Template_example_retrieved.yaml`).
 ///
 /// # Errors
 ///
@@ -298,11 +225,8 @@ pub fn example_instance(wt: &WebTemplate, level: DetailLevel) -> Result<Value, F
     }
 }
 
-/// Populate a deterministic `uid` (an `OBJECT_VERSION_ID`) on an example
-/// composition — the `type=output` form (as retrieved from the repository).
-///
-/// The version-object UUID is derived deterministically from `template_id` (no
-/// randomness), so repeated calls yield an identical example.
+/// Sets a `uid` derived from `template_id` on an example composition, the
+/// `type=output` form.
 pub fn apply_output_uid(composition: &mut Value, template_id: &str) {
     if let Value::Object(map) = composition {
         map.insert(
@@ -317,18 +241,10 @@ pub fn apply_output_uid(composition: &mut Value, template_id: &str) {
 
 // ── the tree walk ──────────────────────────────────────────────────────────────
 
-/// Walks a container node, emitting the flat entries for its included leaves,
-/// and returns whether anything was emitted under this node.
-///
-/// `opt_depth` is the number of optional (`min < 1`) nodes on the path to this
-/// node inclusive; it drives which optional branches each level includes.
-/// `force` requests that a (mandatory) container not be left empty. A child
-/// under a mandatory container cardinality or a mandatory attribute existence
-/// is walked even where the level would skip it. An ELEMENT's `null_flavour`
-/// is emitted only when its `value` is not: RM `data_structures` §ELEMENT
-/// `Inv_null_flavour_indicated` (`is_null() xor null_flavour = Void`) makes the
-/// two mutually exclusive, and requires the null flavour on a value-less
-/// ELEMENT.
+/// Walks a container node, emitting the flat entries of its included leaves,
+/// and returns whether it emitted any; `opt_depth` counts optional nodes on
+/// the path, `force` keeps a mandatory container non-empty. A null flavour is
+/// emitted only without a value (`Inv_null_flavour_indicated`).
 fn walk(
     node: &WebTemplateNode,
     prefix: &str,
@@ -398,21 +314,12 @@ fn walk_children<'a>(
 ) -> (bool, Vec<&'a str>) {
     let mut emitted = false;
     let mut included: Vec<&str> = Vec::new();
-    // Materialised instances per container cardinality (`max != -1`), so the
-    // populated levels never overrun a container's upper bound — an *optional*
-    // child is skipped once its cardinality is full (a mandatory one still
-    // materialises; a template whose mandatory children alone exceed the bound
-    // is contradictory and the validator's job to report).
+    // Instances per container cardinality, so an optional child stops at the
+    // upper bound.
     let mut card_counts = vec![0usize; node.cardinalities.len()];
     for child in groups {
-        // A template may constrain an attribute the RM does not declare — the
-        // deployed OPT 1.4 corpus carries `ELEMENT.null_flavor` (the US
-        // archetype-tooling spelling of RM `null_flavour`,
-        // `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_structures.element.adoc`
-        // §Attributes) and other RM-1.0.x leftovers. Such a constraint is
-        // tolerated when VALIDATING a template, but materializing it here would
-        // author an example that is not a conformant RM instance, so the
-        // example generator skips it. The generated RM model is the oracle.
+        // An attribute the RM does not declare (`ELEMENT.null_flavor` in the OPT 1.4
+        // corpus) is not materialised.
         if !rm_declares(&child.aql_path) {
             continue;
         }
@@ -434,17 +341,8 @@ fn walk_children<'a>(
     (emitted, included)
 }
 
-/// Whether an OPTIONAL child is omitted from the example.
-///
-/// A node whose coded-name constraint is display/rubric-incoherent (see
-/// `CodedName::incoherent`) or whose leaf is unsatisfiable has no instance
-/// form every conforming consumer accepts, and an example exists to be
-/// committable everywhere. A node whose name must be a `DV_CODED_TEXT` from a
-/// value set the template names no code of is left out of the `required` and
-/// `medium` examples, which ITS-REST says are committable, rather than given
-/// an invented code; the `complete` example, "not expected to be committable",
-/// still shows it. A MANDATORY node is always emitted in our spec-faithful
-/// form.
+/// Whether an optional child is left out: one with no conforming instance
+/// form, or a coded name with no code, except at `complete`.
 fn skips_optional(child: &WebTemplateNode, level: DetailLevel) -> bool {
     let uncoded_name = level != DetailLevel::Complete
         && child.name_rm_type.as_deref() == Some("DV_CODED_TEXT")
@@ -509,11 +407,7 @@ fn walk_child(
     emitted
 }
 
-/// Cardinality satisfaction: for every container attribute constrained to
-/// `min >= 1`, ensures that many distinct children under it are materialised (a
-/// committable skeleton), even where the level would otherwise skip them.
-///
-/// A child walked here joins `included`.
+/// Materialises the children a `min >= 1` container cardinality requires.
 fn satisfy_cardinalities<'a>(
     node: &WebTemplateNode,
     groups: &[&'a WebTemplateNode],
@@ -544,13 +438,8 @@ fn satisfy_cardinalities<'a>(
     emitted
 }
 
-/// Existence satisfaction: for every attribute the template makes mandatory
-/// (AOM 1.4 `master04-constraint_model_package.adoc` §existence, `min >= 1`),
-/// ensures a child under it is materialised when one is reachable.
-///
-/// A mandatory attribute with no reachable child (a structural node carrying no
-/// leaf content) is filled from its structural stub by
-/// [`fill_mandatory_structures`] instead. A child walked here joins `included`.
+/// Materialises a child under each mandatory attribute (AOM 1.4
+/// `master04-constraint_model_package.adoc` §existence) where one is reachable.
 fn satisfy_existence<'a>(
     node: &WebTemplateNode,
     groups: &[&'a WebTemplateNode],
@@ -615,16 +504,8 @@ fn walk_null_flavour(
         })
 }
 
-/// Fills every mandatory structural attribute the FLAT build left absent with
-/// the empty node its structural stub constrains.
-///
-/// An attribute the template makes mandatory (AOM 1.4
-/// `master04-constraint_model_package.adoc` §existence) whose structural child
-/// carries no leaf content has no web-template node to walk, so the FLAT map
-/// cannot express it. The stub records the constrained identity (RM type,
-/// archetype node id, rubric), the value the closed-archetype walk admits
-/// (§`Valid_value`); stubs and existence constraints meet on the attribute's
-/// absolute archetype path.
+/// Fills each absent mandatory structural attribute with the empty node its
+/// stub constrains (AOM 1.4 §existence, §`Valid_value`).
 fn fill_mandatory_structures(
     composition: &mut Value,
     tree: &WebTemplateNode,
@@ -669,14 +550,8 @@ fn fill_mandatory_structures(
     Ok(())
 }
 
-/// Adds the occurrences a content-less mandatory SECTION is short of.
-///
-/// A SECTION the template constrains by its name alone has no leaf, so the FLAT
-/// map cannot express it. `SECTION.items` is optional
-/// (`RM/docs/UML/classes/org.openehr.rm.composition.section.adoc` §Attributes),
-/// so the empty node is a conforming instance, inserted up to its occurrences
-/// lower bound (AOM 1.4 `master04-constraint_model_package.adoc`
-/// §occurrences).
+/// Adds the occurrences a content-less mandatory SECTION is short of, up to
+/// its lower bound (`SECTION.items` is optional).
 fn fill_content_less_sections(
     composition: &mut Value,
     node: &WebTemplateNode,
@@ -766,12 +641,8 @@ fn collect_mandatory_structures<'a>(
     }
 }
 
-/// Applies `f` to every canonical-JSON node `segments` reach from `node`.
-///
-/// Each step selects the values under the segment's attribute whose
-/// archetype-node-id and name conjuncts the segment predicate matches (BASE
-/// `master11-paths` §"Predicate Expressions"), descending into every element
-/// of a container attribute.
+/// Applies `f` to every node `segments` reach from `node` (BASE
+/// `master11-paths` §"Predicate Expressions").
 fn for_each_at_mut(node: &mut Value, segments: &[PathSegment], f: &mut dyn FnMut(&mut Value)) {
     let Some((segment, rest)) = segments.split_first() else {
         f(node);
@@ -796,11 +667,8 @@ fn for_each_at_mut(node: &mut Value, segments: &[PathSegment], f: &mut dyn FnMut
     }
 }
 
-/// The children to consider under a container: one per distinct `aql_path` (the
-/// first alternative of any polymorphic choice). Under an `EVENT_CONTEXT` only
-/// the archetyped `other_context` content is walked; its standard fields are
-/// rebuilt from the `ctx/…` context keys by `from_flat` (Simplified Formats
-/// master06).
+/// The children to consider under a container, one per `aql_path`; under an
+/// `EVENT_CONTEXT`, only `other_context` (master06).
 fn child_groups(node: &WebTemplateNode) -> Vec<&WebTemplateNode> {
     let mut seen: HashSet<&str> = HashSet::new();
     let context = node.rm_type == "EVENT_CONTEXT";
@@ -821,14 +689,8 @@ fn is_repeating(node: &WebTemplateNode) -> bool {
     node.max == -1 || node.max > 1
 }
 
-/// Does the generated RM model declare the attribute `aql_path` ends in?
-///
-/// The tail of an AQL path is the RM attribute the node sits under (predicates
-/// stripped). An attribute name no RM class declares cannot be materialized
-/// into a conformant instance — see the call site for the `null_flavor` case.
-/// The check is name-only, deliberately: FLAT level removal means a Web
-/// Template child may sit several RM levels below its Web Template parent, so
-/// the parent's class is not the right scope to resolve against.
+/// Whether some RM class declares the attribute `aql_path` ends in, by name,
+/// since a template child may sit several RM levels down.
 fn rm_declares(aql_path: &str) -> bool {
     static DECLARED: std::sync::LazyLock<BTreeSet<&str>> = std::sync::LazyLock::new(|| {
         openehr_rm::v1_2::model::classes()
@@ -839,10 +701,8 @@ fn rm_declares(aql_path: &str) -> bool {
     attr.is_empty() || DECLARED.contains(attr)
 }
 
-/// The flat path segment for a node: `id:0` for a repeating node (`max == -1 ||
-/// max > 1`), else the bare `id` — matching
-/// [`composition_to_flat`](crate::flat::convert::composition_to_flat) so the example
-/// round-trips.
+/// The flat segment for a node: `id:0` when it repeats, else `id`, as
+/// [`composition_to_flat`](crate::flat::convert::composition_to_flat) writes.
 fn seg_for(node: &WebTemplateNode) -> String {
     if is_repeating(node) {
         format!("{}:0", node.id)
@@ -862,9 +722,8 @@ fn emit_leaf(node: &WebTemplateNode, base: &str, out: &mut Map<String, Value>) -
             put(out, base, "", json!(example_text(node)));
         }
         "DV_URI" => {
-            // Honour a C_STRING value pattern (master05 §DV_URI: bare value) and
-            // any closed value list before the type default, so the example
-            // satisfies the leaf's AOM 1.4 `C_STRING.valid_value`.
+            // A C_STRING pattern or value list first, so the leaf satisfies
+            // `C_STRING.valid_value`.
             let value = first_input(node)
                 .and_then(|i| i.validation.as_ref())
                 .and_then(|v| v.pattern.as_deref())

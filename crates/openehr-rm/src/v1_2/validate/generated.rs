@@ -59,11 +59,8 @@
 //!
 //! # Emittable-invariant realization register
 //!
-//! Every RM class invariant the assertion-dialect classifier judges
-//! mechanically evaluable, with the venue that actually realizes it. A
-//! `Core` row is realized by a core below; the other venues are realized
-//! (or adjudicated) outside this file, and are listed so the emitted
-//! bucket is accounted for in full rather than assumed.
+//! Every mechanically evaluable RM class invariant, with the venue that
+//! realizes it. A `Core` row is realized by a core below.
 //!
 //! ## Realized by a generated core in this file
 //!
@@ -130,40 +127,40 @@
 //!
 //! ## Adjudicated out of the per-node invariant layer
 //!
-//! - `ACTOR.Roles_valid`: the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.actor.adoc §Invariants).
+//! - `ACTOR.Roles_valid`: the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.actor.adoc §Invariants).
 //! - `ADDRESS.Type_valid`: `type = name`: the invariant DEFINES the derived `type` function as the class's own `name` (§Functions), so nothing about an instance's data can violate it. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.address.adoc §Invariants).
-//! - `ATTESTATION.Items_valid`: the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.attestation.adoc §Invariants).
+//! - `ATTESTATION.Items_valid`: the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.attestation.adoc §Invariants).
 //! - `AUTHORED_RESOURCE.Current_revision_valid`: constrains the DERIVED `current_revision()` function (§Functions: the most recent revision when controlled, else `(uncontrolled)`) — no stored attribute exists for the rule to refuse; the function's own definition satisfies it by construction (the ORIGINAL_VERSION.Is_merged_validity precedent). (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.authored_resource.adoc §Invariants).
-//! - `COMPOSITION.Content_valid`: the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.composition.adoc §Invariants).
+//! - `COMPOSITION.Content_valid`: the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.composition.adoc §Invariants).
 //! - `CONTACT.Purpose_valid`: `purpose = name`: the invariant DEFINES the derived `purpose` function as the class's own `name` (§Functions), so nothing about an instance's data can violate it. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.contact.adoc §Invariants).
 //! - `DV_ORDERED.Is_simple_validity`: vacuous on stored data: `is_simple ()` is defined as `True if this quantity has no reference ranges` (§Functions), i.e. exactly the antecedent. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_ordered.adoc §Invariants).
-//! - `DV_ORDERED.Other_reference_ranges_validity`: the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_ordered.adoc §Invariants).
+//! - `DV_ORDERED.Other_reference_ranges_validity`: the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_ordered.adoc §Invariants).
 //! - `DV_PARAGRAPH.Items_valid`: `not items.is_empty`: `items` is a mandatory `1..*` list, emitted as `NonEmptyVec<DvText>`, so a present-but-empty value is unrepresentable and the strict reader refuses an empty wire list — the invariant holds by construction. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_paragraph.adoc §Invariants).
 //! - `DV_PARSABLE.Size_valid`: `size >= 0`: `size` is the DERIVED function `size in bytes of value` (§Functions), realized as the Rust byte length (`dv_parsable_impl.rs::size`, a `usize`), so it cannot be negative — unlike DV_MULTIMEDIA, where `size` is a STORED attribute a wire value can contradict, nothing stored exists for this rule to constrain. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_parsable.adoc §Invariants).
-//! - `DV_TEXT.Mappings_valid`: the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_text.adoc §Invariants).
+//! - `DV_TEXT.Mappings_valid`: the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_text.adoc §Invariants).
 //! - `EHR.Directory_valid`: a cross-object reference resolved by the EHR service against the store, not a property of the value being validated. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.ehr.ehr.adoc §Invariants).
 //! - `EHR.Ehr_access_valid`: a cross-object reference resolved by the EHR service against the store, not a property of the value being validated. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.ehr.ehr.adoc §Invariants).
 //! - `EHR.Ehr_status_valid`: a cross-object reference resolved by the EHR service against the store, not a property of the value being validated. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.ehr.ehr.adoc §Invariants).
-//! - `ENTRY.Other_participations_valid`: the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.entry.adoc §Invariants).
-//! - `EVENT_CONTEXT.Participations_validity`: the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.event_context.adoc §Invariants).
+//! - `ENTRY.Other_participations_valid`: the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.entry.adoc §Invariants).
+//! - `EVENT_CONTEXT.Participations_validity`: the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.event_context.adoc §Invariants).
 //! - `EXTRACT_UPDATE_SPEC.Send_changes_only_validity`: invokes `send_changes_only`, an attribute the class does NOT declare (its table carries `update_method: CODE_PHRASE`; only the intro prose speaks of the flag) — an invariant over a nonexistent attribute is unevaluable; upstream defect, reported. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.ehr_extract.extract_update_spec.adoc §Invariants).
-//! - `EXTRACT_UPDATE_SPEC.Trigger_events_validity`: the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.ehr_extract.extract_update_spec.adoc §Invariants).
+//! - `EXTRACT_UPDATE_SPEC.Trigger_events_validity`: the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.ehr_extract.extract_update_spec.adoc §Invariants).
 //! - `HISTORY.Periodic_validity`: vacuous on stored data: `is_periodic ()` is a derived function (§Functions) with no wire representation; the stored node carries only `period`. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_structures.history.adoc §Invariants).
-//! - `INSTRUCTION.Activities_valid`: the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.instruction.adoc §Invariants).
-//! - `LOCATABLE.Links_valid`: the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.locatable.adoc §Invariants).
-//! - `ORIGINAL_VERSION.Attestations_valid`: the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.original_version.adoc §Invariants).
+//! - `INSTRUCTION.Activities_valid`: the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.instruction.adoc §Invariants).
+//! - `LOCATABLE.Links_valid`: the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.locatable.adoc §Invariants).
+//! - `ORIGINAL_VERSION.Attestations_valid`: the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.original_version.adoc §Invariants).
 //! - `ORIGINAL_VERSION.Is_merged_validity`: `other_input_version_ids = Void xor is_merged`: `is_merged` is the DERIVED function `True if this Version was created from more than just the preceding (checked out) version` (§Functions), i.e. exactly the emptiness of `other_input_version_uids` — the invariant defines it rather than constraining stored data. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.original_version.adoc §Invariants).
-//! - `ORIGINAL_VERSION.Other_input_version_uids_valid`: the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.original_version.adoc §Invariants).
-//! - `PARTY.Contacts_valid`: the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.party.adoc §Invariants).
+//! - `ORIGINAL_VERSION.Other_input_version_uids_valid`: the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.original_version.adoc §Invariants).
+//! - `PARTY.Contacts_valid`: the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.party.adoc §Invariants).
 //! - `PARTY.Identities_valid`: `not identities.is_empty`: holds BY CONSTRUCTION — `identities` is a mandatory `1..*` list emitted as `NonEmptyVec<PartyIdentity>`, so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse (pinned by `demographic/validate.rs` `identities_valid_is_enforced`). (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.party.adoc §Invariants).
 //! - `PARTY.Type_valid`: `type = name`: the invariant DEFINES the derived `type` function as the class's own `name` (§Functions), so nothing about an instance's data can violate it. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.party.adoc §Invariants).
 //! - `PARTY.Uid_mandatory`: `uid /= Void`: satisfied by construction, not by a check — a demographic party's `uid` is the version container's, which the server injects at the storage/read boundary (`app/ferroehr/src/service/demographic/support.rs`), so an inbound body legitimately carries none (`app/ferroehr/src/service/demographic/validate.rs`). (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.party.adoc §Invariants).
-//! - `PARTY_IDENTIFIED.Identifiers_valid`: the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.party_identified.adoc §Invariants).
+//! - `PARTY_IDENTIFIED.Identifiers_valid`: the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.party_identified.adoc §Invariants).
 //! - `PARTY_IDENTITY.Purpose_valid`: `purpose = name`: the invariant DEFINES the derived `purpose` function as the class's own `name` (§Functions), so nothing about an instance's data can violate it. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.party_identity.adoc §Invariants).
 //! - `PARTY_RELATIONSHIP.Type_validity`: `type = name`: the invariant DEFINES the derived `type` function as the class's own `name` (§Functions), so nothing about an instance's data can violate it. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.party_relationship.adoc §Invariants).
 //! - `REVISION_HISTORY_ITEM.Audit_valid`: `not audits.is_empty`: satisfied by construction — `audits` emits as `NonEmptyVec<AuditDetails>`, so BOTH ingestion paths refuse an empty list at parse: the REST read side never accepts one as a request body (every builder pushes the commit audit first), and the OPT 1.4 template upload — the one real client-supplied REVISION_HISTORY carrier (Template.xsd) — constructs items through `NonEmptyVec::new` in the generated XML reader, pinned by the opt14 refusal twin (#1648). (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.revision_history_item.adoc §Invariants).
 //! - `ROLE.Capabilities_valid`: the `x /= Void implies not x.empty` family (Eiffel spelling): holds BY CONSTRUCTION — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.role.adoc §Invariants).
-//! - `SECTION.Items_valid`: the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.section.adoc §Invariants).
+//! - `SECTION.Items_valid`: the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.section.adoc §Invariants).
 //! - `VERSION.Preceding_version_uid_validity`: the version chain, owned by the versioning layer's commit path. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.version.adoc §Invariants).
 //! - `VERSIONED_OBJECT.Uid_validity`: the versioning aggregate, owned by the versioning layer's commit path. (docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.versioned_object.adoc §Invariants).
 //!
@@ -189,11 +186,8 @@
 //!
 //! # Complex-invariant realization register
 //!
-//! Every RM class invariant the assertion-dialect classifier judges NOT
-//! mechanically evaluable (quantifiers, lambdas, cross-object
-//! navigation), with the venue that realizes it or the citation-pinned
-//! adjudication that excludes it — the complex bucket is accounted for
-//! in full, exactly like the emitted bucket above.
+//! Every RM class invariant that is not mechanically evaluable, with the
+//! venue that realizes it or the cited adjudication that excludes it.
 //!
 //! ## Realized in hand-written `openehr-rm` code
 //!
@@ -253,15 +247,9 @@
 //!
 //! # Terminology-backed invariants (enforced in `validate::terminology`)
 //!
-//! These BMM class invariants bind a coded value to an openEHR terminology
-//! group (`has_code_for_group_id`) or a code set (`code_set (id).has_code`),
-//! so no generated core below can evaluate them mechanically. They are
-//! realized instead by the sibling binding table —
-//! `super::terminology::validate_rm_terminology`, over the openEHR
-//! terminology bundle (TERM 3.1.0) — which the `openehr-its` wire-boundary
-//! dispatcher runs as a post-core check. Enforcement was audited clean
-//! against the whole corpus first, so none newly rejects previously-accepted
-//! data:
+//! These BMM class invariants bind a coded value to a terminology group or
+//! code set, so `super::terminology::validate_rm_terminology` realizes them
+//! over the TERM 3.1.0 bundle:
 //!
 //! - `ATTESTATION.Reason_valid` — enforced in `validate::terminology` (openEHR terminology service).
 //! - `AUDIT_DETAILS.Change_type_valid` — enforced in `validate::terminology` (openEHR terminology service).
@@ -296,12 +284,9 @@
 //!
 //! # Pending adjudication (runtime-hook-missing)
 //!
-//! The VERSIONED_OBJECT aggregate invariants quantify over the whole
-//! version container (`all_versions`, `all_version_ids`, `version_count`,
-//! `latest_version`) — a property of the versioning/service layer, not of
-//! any single stored value node — so no per-node core can honestly
-//! evaluate them (RM `common versioned_object.adoc` §Invariants). They stay
-//! unrealized here:
+//! The VERSIONED_OBJECT aggregate invariants quantify over the whole version
+//! container, so no per-node core evaluates them (RM `common
+//! versioned_object.adoc` §Invariants):
 //!
 //! - `VERSIONED_OBJECT.All_version_ids_valid` — versioned-object aggregate model.
 //! - `VERSIONED_OBJECT.All_versions_valid` — versioned-object aggregate model.
@@ -334,9 +319,7 @@ pub(crate) fn code_phrase_core(code_string: &str, out: &mut Vec<InvariantViolati
     }
 }
 
-/// DV_TEXT / DV_CODED_TEXT `Valid_value` (non-empty rubric) and
-/// `Formatting_valid` (present ⇒ non-empty). `ty` is `DV_TEXT` or
-/// `DV_CODED_TEXT` (which inherits both).
+/// DV_TEXT / DV_CODED_TEXT `Valid_value` and `Formatting_valid`.
 pub(crate) fn dv_text_core(
     ty: &str,
     value: &str,
@@ -405,10 +388,8 @@ pub(crate) fn magnitude_status_core(
     }
 }
 
-/// The DV_AMOUNT invariants (`Accuracy_is_percent_validity`, `Accuracy_validity`)
-/// plus the inherited DV_QUANTIFIED `Magnitude_status_valid`. Shared by every
-/// concrete DV_AMOUNT descendant (DV_QUANTITY, DV_COUNT, DV_DURATION,
-/// DV_PROPORTION).
+/// The DV_AMOUNT invariants plus the inherited DV_QUANTIFIED
+/// `Magnitude_status_valid`, shared by every concrete DV_AMOUNT descendant.
 pub(crate) fn dv_amount_core(
     ty: &str,
     accuracy: Option<f64>,
@@ -430,21 +411,16 @@ pub(crate) fn dv_amount_core(
     magnitude_status_core(ty, magnitude_status, out);
 }
 
-/// The temporal `Value_valid` invariant: the string value must be a
-/// well-formed ISO-8601 date/time/date-time/duration (caller supplies the
-/// verdict via the ISO-8601 validators).
+/// The temporal `Value_valid` invariant over the caller's ISO 8601 verdict.
 pub(crate) fn temporal_value_core(ty: &str, valid: bool, out: &mut Vec<InvariantViolation>) {
     if !valid {
         out.push(invariant_failed("Value_valid", ty));
     }
 }
 
-/// The DV_PROPORTION own invariants. The inherited DV_AMOUNT / DV_ORDERED
-/// invariants are pushed by the callers.
-// The released invariants compare the denominator against the exact values
-// 0/1/100 (RM `dv_proportion.adoc` §Invariants: `Valid_denominator`,
-// `Unitary_validity`, `Percent_validity` — `denominator = 1`, `= 100`,
-// `<> 0`), so exact float comparison IS the spec semantics.
+/// The DV_PROPORTION own invariants; callers push the inherited ones.
+// RM `dv_proportion.adoc` §Invariants compares the denominator with exact 0,
+// 1 and 100.
 #[expect(
     clippy::float_cmp,
     reason = "the released invariants compare the denominator against exact 0/1/100 values"
@@ -476,16 +452,8 @@ pub(crate) fn dv_proportion_core(
             "Invariant Precision_validity failed on type DV_PROPORTION",
         ));
     }
-    // Fraction_validity: `(type = pk_fraction or type = pk_integer_fraction)
-    // implies is_integral`, where `is_integral()` is "True … if precision is 0"
-    // (RM dv_proportion.adoc §Functions). A fraction / integer_fraction is
-    // therefore invalid when its numerator/denominator are non-integral OR its
-    // precision is a present, non-zero value. (Precision 0 or absent keeps a
-    // whole-numerator/denominator fraction valid.)
-    //
-    // NOTE: `Is_integral_validity` (`is_integral implies …`) needs no separate
-    // push — `is_integral()` IS "precision is 0" (§Functions), so the
-    // invariant is extensionally the `Precision_validity` check above.
+    // Fraction_validity: `is_integral()` is "True … if precision is 0" (RM
+    // dv_proportion.adoc §Functions), so `Is_integral_validity` is this check.
     if (kind == PK_FRACTION || kind == PK_INTEGER_FRACTION)
         && (!integral || precision.is_some_and(|p| p != 0))
     {
@@ -518,9 +486,8 @@ pub(crate) fn archetype_node_id_core(
     }
 }
 
-/// The non-periodic HISTORY invariants: `Events_valid` (at least one event or a
-/// summary) + inherited `Archetype_node_id_valid`. `Period_consistency` stays
-/// typed-only (the fast path declines periodic histories).
+/// The non-periodic HISTORY invariants: `Events_valid` and the inherited
+/// `Archetype_node_id_valid`.
 pub(crate) fn history_basic_core(
     events_empty: bool,
     has_summary: bool,
@@ -550,9 +517,8 @@ pub(crate) fn composition_core(
     archetype_node_id_core("COMPOSITION", node_id, out);
 }
 
-/// The shared ENTRY-root invariants: `Is_archetype_root` (an ENTRY is an
-/// archetype root, so `archetype_details` must be present) + inherited
-/// `Archetype_node_id_valid`. `ty` is the concrete ENTRY subtype.
+/// The ENTRY-root invariants: `Is_archetype_root` and the inherited
+/// `Archetype_node_id_valid`.
 pub(crate) fn entry_root_core(
     ty: &str,
     has_archetype_details: bool,
@@ -598,9 +564,7 @@ pub(crate) fn archetyped_core(rm_version: &str, out: &mut Vec<InvariantViolation
     }
 }
 
-/// PARTY_IDENTIFIED / PARTY_RELATED `Basic_validity` (at least one of `name`,
-/// `identifiers`, `external_ref`) and `Name_valid` (present ⇒ non-empty). `ty`
-/// is `PARTY_IDENTIFIED` or `PARTY_RELATED` (which inherits both).
+/// PARTY_IDENTIFIED / PARTY_RELATED `Basic_validity` and `Name_valid`.
 pub(crate) fn party_identified_core(
     ty: &str,
     name: Option<&str>,
@@ -645,9 +609,8 @@ pub(crate) fn resource_description_core(
     }
 }
 
-/// RESOURCE_DESCRIPTION_ITEM `Purpose_valid` (`not purpose.is_empty`) plus the
-/// three present-implies-non-empty string rules (`Use_valid`, `misuse_valid`,
-/// `copyright_valid`).
+/// RESOURCE_DESCRIPTION_ITEM `Purpose_valid`, `Use_valid`, `misuse_valid` and
+/// `copyright_valid`.
 pub(crate) fn resource_description_item_core(
     purpose: &str,
     use_: Option<&str>,
@@ -672,11 +635,8 @@ pub(crate) fn resource_description_item_core(
 }
 
 /// AUTHORED_RESOURCE `Revision_history_valid`
-/// (`is_controlled xor revision_history = Void`): a controlled resource
-/// carries a revision history and an uncontrolled one does not. Evaluated
-/// only when `is_controlled` is PRESENT — the attribute is `0..1` and an
-/// `xor` against a Void operand is not evaluable, so an absent flag asserts
-/// nothing (never an invented prohibition).
+/// (`is_controlled xor revision_history = Void`), checked only when
+/// `is_controlled` is present.
 pub(crate) fn authored_resource_core(
     is_controlled: Option<bool>,
     has_revision_history: bool,
@@ -701,8 +661,7 @@ pub(crate) fn extract_core(sequence_nr: i32, out: &mut Vec<InvariantViolation>) 
 }
 
 /// EXTRACT_UPDATE_SPEC `Overall_validity`
-/// (`repeat_period /= Void or trigger_events /= Void`): an update
-/// specification names at least one update mode.
+/// (`repeat_period /= Void or trigger_events /= Void`).
 pub(crate) fn extract_update_spec_core(
     has_repeat_period: bool,
     has_trigger_events: bool,

@@ -2,12 +2,8 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM class invariants for `DV_DURATION`.
-//!
-//! `Value_valid`: `value` is a valid ISO-8601 duration (openEHR permits a
-//! leading sign and a `W` designator mixed with the others). Plus the inherited
-//! DV_AMOUNT / DV_QUANTIFIED invariants (`DV_DURATION` extends `DV_AMOUNT`). See
-//! `dv_date_impl` for the NOTE on why value well-formedness is explicit.
+//! `DV_DURATION` invariants: `Value_valid` and the inherited `DV_AMOUNT` and
+//! `DV_QUANTIFIED` ones.
 
 use crate::v1_2::data_types::quantity::date_time::dv_duration::DvDuration;
 use crate::v1_2::data_types::quantity::dv_amount_impl::{
@@ -20,18 +16,9 @@ use openehr_base::v1_3::foundation_types::time::iso8601_duration::Iso8601Duratio
 use openehr_base::validate::{InvariantViolation, Validate};
 
 impl DvDuration {
-    /// Sum of this duration and `other`, or `None` when either value is not a
-    /// valid ISO-8601 duration or the result is one no valid duration can
-    /// carry.
-    ///
-    /// Spec: `dv_duration.adoc` §Functions `add` — "Sum of this Duration and
-    /// `other`" — redefining `dv_amount.adoc` §Functions `add`. `DV_DURATION`
-    /// effects `is_strictly_comparable_to` as "True, for any two Durations", so
-    /// the inherited pre-condition never refuses a pair.
-    ///
-    /// The arithmetic is BASE's — `Iso8601_duration.add` — so the result stays
-    /// a duration STRING with its designators intact, rather than a second of
-    /// seconds this crate would have to render back.
+    /// The sum of this duration and `other` (`dv_duration.adoc` `add`, through
+    /// `Iso8601_duration.add`), or `None` when either is invalid or the result is
+    /// not a valid duration.
     #[must_use]
     pub fn add(&self, other: &Self) -> Option<Self> {
         Self::carrying(
@@ -40,10 +27,8 @@ impl DvDuration {
         )
     }
 
-    /// Difference of this duration and `other`, under the same conditions as
-    /// [`Self::add`].
-    ///
-    /// Spec: `dv_duration.adoc` §Functions `subtract`.
+    /// The difference of this duration and `other` (`subtract`), under the
+    /// conditions of [`Self::add`].
     #[must_use]
     pub fn subtract(&self, other: &Self) -> Option<Self> {
         Self::carrying(
@@ -52,10 +37,7 @@ impl DvDuration {
         )
     }
 
-    /// Product of this duration and `factor`.
-    ///
-    /// Spec: `dv_duration.adoc` §Functions `multiply` — "Product of this
-    /// Duration and `factor`."
+    /// This duration times `factor` (`multiply`).
     #[must_use]
     pub fn multiply(&self, factor: f64) -> Option<Self> {
         Self::carrying(
@@ -64,16 +46,7 @@ impl DvDuration {
         )
     }
 
-    /// Negated version of this duration.
-    ///
-    /// Spec: `dv_duration.adoc` §Functions `negative` — "Assuming the current
-    /// duration is positive, the negated version represents a time prior to
-    /// some origin point, or a negative age (e.g. so-called 'adjusted age' of
-    /// premature infant)."
-    ///
-    /// Negation changes the sign of the magnitude, not how well it was
-    /// measured, so the accuracy is carried through unchanged — the one
-    /// arithmetic function here for which that is a fact rather than a rule.
+    /// This duration negated (`negative`), the accuracy unchanged.
     #[must_use]
     pub fn negative(&self) -> Option<Self> {
         let mut negated = self.clone();
@@ -85,10 +58,7 @@ impl DvDuration {
         Some(negated)
     }
 
-    /// Returns `true` when this duration's accuracy was not recorded.
-    ///
-    /// Spec: `dv_quantified.adoc` §Functions `accuracy_unknown`, effected for
-    /// `DV_AMOUNT` by the `unknown_accuracy_value` sentinel.
+    /// Whether this duration's accuracy was not recorded (`accuracy_unknown`).
     #[must_use]
     pub fn accuracy_unknown(&self) -> bool {
         self.accuracy.is_none_or(|value| value < 0.0)
@@ -196,9 +166,7 @@ mod tests {
         );
     }
 
-    /// `is_strictly_comparable_to` is "True, for any two Durations", so unlike
-    /// `DV_QUANTITY` no pair is refused for incomparability — the arithmetic
-    /// runs on the ISO-8601 values themselves.
+    /// Any two durations are comparable: "True, for any two Durations".
     #[test]
     fn arithmetic_runs_on_the_iso_value() {
         let a = duration("PT2H");
@@ -210,9 +178,7 @@ mod tests {
         assert_eq!(a.negative().expect("valid").magnitude(), Some(-7200.0));
     }
 
-    /// A value that is not a valid ISO-8601 duration has no arithmetic: BASE
-    /// refuses to parse it, and the refusal is propagated rather than turned
-    /// into a zero.
+    /// An invalid duration has no arithmetic.
     #[test]
     fn an_invalid_value_has_no_arithmetic() {
         let bad = duration("10 hours");
@@ -223,10 +189,8 @@ mod tests {
         assert!(bad.negative().is_none());
     }
 
-    /// `DV_DURATION` is a `DV_AMOUNT`, so its arithmetic carries the same
-    /// accuracy rule — summed for add and subtract, scaled for multiply, and
-    /// unchanged by negation, which alters the sign rather than the
-    /// measurement.
+    /// The `DV_AMOUNT` accuracy rule applies: summed, scaled, unchanged by
+    /// negation.
     #[test]
     fn accuracy_follows_the_dv_amount_rule() {
         let mut a = duration("PT2H");

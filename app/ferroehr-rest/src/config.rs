@@ -2,10 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The REST adapter's runtime configuration view.
-//!
-//! The configuration *data* lives in the platform tree
-//! (`ferroehr::config` — one TOML, one schema); this module holds only the
-//! adapter-side assembly the router consumes.
 
 use ferroehr::config::auth_section::AuthConfig;
 use ferroehr::config::authz::RbacConfig;
@@ -16,9 +12,6 @@ use ferrohealth_smart::assurance::AssuranceSection;
 
 /// The REST adapter's runtime configuration view, assembled by the binary
 /// from the root [`ferroehr::config::FerroEhrConfig`].
-///
-/// Not a serde root — it is built in code, holding the tables the router
-/// reads under their names in the tree.
 #[derive(Debug, Clone, Default)]
 pub struct AppConfig {
     /// `[server]` — the listener and the stack around the routes: the

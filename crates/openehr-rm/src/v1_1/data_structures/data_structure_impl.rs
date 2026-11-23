@@ -2,45 +2,19 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM spec functions for `DATA_STRUCTURE`.
-//!
-//! `DATA_STRUCTURE` is abstract, so the generated `DataStructure` is the
-//! closed subtype enum and the one function it declares is realized here as
-//! the dispatch across it. The hierarchies themselves are not re-derived: each
-//! `ITEM_STRUCTURE` subtype effects `as_hierarchy` in its own module, which is
-//! where the per-shape rules ("a single `CLUSTER` containing the `ELEMENTs` of
-//! this list", the table's column transpose, …) live.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_structures.data_structure.adoc`
-//! §Functions + §Description — "Includes the `as_hierarchy` function which can
-//! generate the equivalent CEN EN13606 single hierarchy for each subtype's
-//! physical representation."
+//! `DATA_STRUCTURE.as_hierarchy`
+//! (`org.openehr.rm.data_structures.data_structure.adoc`), dispatched to each
+//! subtype.
 
 use crate::v1_1::data_structures::data_structure::DataStructure;
 use crate::v1_1::data_structures::representation::item::Item;
 
 impl DataStructure {
-    /// Returns the CEN EN13606-compatible hierarchy of this structure's
-    /// physical representation, or `None` when there is none to build.
+    /// Returns the CEN EN13606-compatible hierarchy of this structure
+    /// (`as_hierarchy`).
     ///
-    /// Spec: `org.openehr.rm.data_structures.data_structure.adoc` §Functions
-    /// `as_hierarchy` — "Hierarchical equivalent of the physical
-    /// representation of each subtype, compatible with CEN EN 13606
-    /// structures."
-    ///
-    /// Two distinct absences answer `None`, and neither is a defect:
-    ///
-    /// - an EMPTY `ITEM_LIST` / `ITEM_TABLE` / `ITEM_TREE`, whose hierarchy
-    ///   would be a `CLUSTER` over no items while `CLUSTER.items` is `1..*`
-    ///   (`org.openehr.rm.data_structures.cluster.adoc` §Attributes);
-    /// - a `HISTORY`, which is a `DATA_STRUCTURE` that provides no effecting
-    ///   definition of this function: its own class page
-    ///   (`org.openehr.rm.data_structures.history.adoc` §Functions) declares
-    ///   only `is_periodic`, and the released text states no hierarchy for a
-    ///   series of events. Answering `None` reports that the specification
-    ///   gives no hierarchy here; inventing one would put a shape into
-    ///   clinical data that no openEHR text defines.
+    /// `None` for an empty list, table or tree, since `CLUSTER.items` is `1..*`,
+    /// and for a `HISTORY`, for which the spec defines no hierarchy.
     #[must_use]
     pub fn as_hierarchy(&self) -> Option<Item> {
         match self {

@@ -2,25 +2,11 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written accessor for the abstract `UID` class.
+//! The `UID.value` accessor on the generated [`Uid`] enum (BASE 1.3.0
+//! `org.openehr.base.base_types.uid.adoc`).
 //!
-//! Spec: BASE 1.3.0
-//! `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.uid.adoc`
-//! — `UID` declares exactly one attribute, `value: String` [1..1] ("The value
-//! of the id."), and one invariant, `Value_valid: not value.empty`. The
-//! generator emits `UID` as the closed subtype enum
-//! ([`Uid`]) and puts the `value` field on each concrete
-//! subtype, so the inherited attribute has no accessor on the parent; this
-//! sibling supplies it.
-//!
-//! NOTE: `UUID.value` emits as `uuid::Uuid`, so the spec's `String` view is
-//! RENDERED (a [`Cow`], owned for `UUID`) in the RFC 4122 lower-case
-//! hyphenated form BASE `master05-identification_package.adoc` §Syntaxes
-//! gives — a legal but NORMALISED rendering: an upper-case-written `UUID`
-//! does not round-trip byte-for-byte, so callers honouring master05
-//! §"Composite Identifiers and Case" (verbatim storage) must keep the
-//! original string; this accessor reads the value, never re-serialises a
-//! stored one.
+//! NOTE: master05 §Syntaxes; `UUID.value` is a `uuid::Uuid`, so it renders in
+//! lower case and a stored upper-case value must be kept by the caller.
 
 use std::borrow::Cow;
 use std::str::FromStr;
@@ -29,11 +15,7 @@ use super::lexical::{IdComponent, IdError, IdProduction, is_uid, make_uid};
 use super::uid::Uid;
 
 impl Uid {
-    /// Build a `UID` from its string form, validating the
-    /// `uid = iso_oid | uuid | internet_id` production of BASE
-    /// `master05-identification_package.adoc` §Syntaxes and choosing the
-    /// concrete subtype by lexical form (the same dispatch the `UID_BASED_ID`
-    /// accessors use — one classification, one grammar).
+    /// Builds a `UID`, the subtype chosen by lexical form.
     ///
     /// # Errors
     /// [`IdError::Empty`] for an empty value; [`IdError::Malformed`] when the
@@ -72,13 +54,8 @@ impl TryFrom<&str> for Uid {
 }
 
 impl Uid {
-    /// The `UID.value` string of whichever subtype this is — BASE
-    /// `org.openehr.base.base_types.uid.adoc` §Attributes (`value: String`
-    /// [1..1], "The value of the id.").
-    ///
-    /// Borrowed for the two string-backed subtypes (`INTERNET_ID`, `ISO_OID`)
-    /// and owned for `UUID`, whose `value` is a typed `uuid::Uuid` rendered in
-    /// the RFC 4122 lower-case hyphenated form (see the module note).
+    /// The `UID.value` string: borrowed for `INTERNET_ID` and `ISO_OID`, owned and
+    /// lower-case for `UUID`.
     #[must_use]
     pub fn value(&self) -> Cow<'_, str> {
         match self {
@@ -170,9 +147,7 @@ mod tests {
         }
     }
 
-    /// `value()` round-trips the two string-backed lexical forms verbatim; the
-    /// `UUID` form is NORMALISED to lower case (see the module note), which is
-    /// why it is not a byte-for-byte round trip.
+    /// `value()` round-trips the string-backed forms; `UUID` is lower-cased.
     #[test]
     fn round_trip_is_verbatim_except_for_the_normalised_uuid_rendering() {
         assert_eq!(make_uid("openEHR.org").value(), "openEHR.org");

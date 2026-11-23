@@ -11,11 +11,6 @@
 //! write came first; the history lists every version. A change applies on the
 //! next request on every replica, with no restart. No openEHR ITS-REST
 //! operation governs any of it.
-//!
-//! Gating: mounted under `/admin/`, so every route inherits the group's RBAC
-//! Admin class (`admin_role`, `401`/`403`) and the `AppConfig::api.admin`
-//! config gate (`405` with an empty `Allow` when off) unchanged, and the
-//! audit trail records every read and write.
 
 #![expect(
     clippy::disallowed_types,

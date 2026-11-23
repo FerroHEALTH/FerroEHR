@@ -351,9 +351,8 @@ mod tests {
         }
     }
 
-    /// The reported case (#3129): a hand-written OPT that left `use` and
-    /// `misuse` empty took two uploads of a 1.7 MB file to find both, because
-    /// the check returned at the first. Both come back together now.
+    /// A hand-written OPT that left `use` and `misuse` empty reports both at
+    /// once (#3129).
     #[test]
     fn an_empty_use_and_an_empty_misuse_are_reported_together() {
         let mut detail = item("en", "testing");

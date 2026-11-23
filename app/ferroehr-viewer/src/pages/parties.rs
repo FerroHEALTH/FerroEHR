@@ -3,10 +3,6 @@
 
 //! Parties, their relationships and their contributions.
 //!
-//! Open a party by its id and the demographic tag index, New party, one party
-//! with its tabs, its editor and delete, relationships, and the demographic
-//! contribution (FerroUI `design/consoles/ferroehr/`, pages 15.1 to 15.18).
-//!
 //! The Demographic API publishes no listing of parties, so the page opens a
 //! party by kind and id, and lists the one collection the release does
 //! publish, the demographic tags (ITS-REST `demographic_tags_get`). The API

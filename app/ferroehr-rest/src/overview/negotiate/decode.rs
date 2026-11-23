@@ -38,13 +38,8 @@ pub(crate) fn json_value(headers: &HeaderMap, body: &Bytes) -> Result<serde_json
 
 /// The text of a CONTRIBUTION commit body, which the service reads once.
 ///
-/// The door refuses what [`json_value`] refuses, with its words: text that is
-/// not JSON, and a `_type`-tagged node carrying a key its class does not
-/// declare. It also refuses a member name written twice in one object, at any
-/// depth, as the direct commit routes do through the strict reader
-/// ([`refuse_repeated_names`], #6043). A body with no such defect is found so
-/// in one pass over its text that builds no value (#6038) and goes on as its
-/// text.
+/// It also refuses a member name written twice at any depth
+/// ([`refuse_repeated_names`]).
 ///
 /// # Errors
 /// As [`json_value`], and [`ApiError::BadRequest`] for a repeated member
@@ -72,9 +67,6 @@ pub(crate) fn contribution_text(
 /// NOTE: RFC 8259 §4 leaves the behaviour on a repeated name "unpredictable" and RFC 8785 §3.1
 /// (I-JSON, RFC 7493 §2.3) forbids one, so the body "could not be parsed or is invalid" (400).
 ///
-/// A body that is not JSON text is left to the reader that follows, which
-/// words that refusal.
-///
 /// # Errors
 /// [`ApiError::BadRequest`] naming the repeated member and the path to its
 /// object.
@@ -97,13 +89,8 @@ fn refused_repeat(repeated: Option<JsonParseError>) -> Result<(), ApiError> {
 /// Decode a required JSON body into the typed DTO `T`, strictly, with a
 /// refusal that names the offending member by its JSON path.
 ///
-/// The generated DTOs carry `#[serde(deny_unknown_fields)]` wherever the OAS
-/// schema declares `additionalProperties: false`, so a member the schema does
-/// not define is REFUSED here rather than silently dropped, and a member of the
-/// wrong JSON type is refused rather than silently read as absent. The refusal
-/// names the member by its JSON PATH (`[0].value`): `serde_json` alone reports
-/// only a line/column, which tells a client nothing about which member it must
-/// fix. `what` names the body in that refusal (`JSON body`, `JSON array body`).
+/// A member the schema does not define, or one of the wrong JSON type, is
+/// refused and named by its JSON path (`[0].value`).
 ///
 /// The `ITEM_TAG` PUT (`schemas/common/UpdateItemTag.yaml`: required `key`,
 /// optional `value`/`target_path`, `additionalProperties: false`) decodes a
@@ -510,9 +497,8 @@ mod tests {
         assert_eq!(ferroehr::versioning::audit::text_value(&from_json), "hello");
     }
 
-    /// The OPT 1.4 upload reads its XML body verbatim; the retired
-    /// `lenient_value` JSON-or-string wrapper (which let a JSON-declared
-    /// payload reach the parser and fail `400` instead of `415`) is gone.
+    /// The OPT 1.4 upload reads its XML body verbatim, so a JSON-declared
+    /// payload is a `415`.
     #[test]
     fn text_body_reads_an_xml_payload_verbatim() {
         assert_eq!(

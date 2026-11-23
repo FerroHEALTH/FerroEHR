@@ -300,11 +300,8 @@ fn ordinal_offers_a_listed_assumed_symbol() {
     assert_eq!(defaults("DV_ORDINAL", &co), vec![some(None, Some("at2"))]);
 }
 
-/// An externally bound coded text with an assumed code serializes the
-/// string `defaultValue` the released `web_template/Input.yaml` declares;
-/// the vendored EHRbase node vector
-/// (`corpus/fixtures/service/webtemplate_nodes`, prior art only) carries the
-/// same shape.
+/// An externally bound coded text with an assumed code serializes the string
+/// `defaultValue` `web_template/Input.yaml` declares.
 #[test]
 fn external_coded_text_default_matches_the_vendored_node_vector() {
     let co = complex(

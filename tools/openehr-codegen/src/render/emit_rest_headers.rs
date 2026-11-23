@@ -1,17 +1,15 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The impls emitted on each generated response-headers struct: the
-//! `ResponseHeaders` seam the server half writes through, and the typed
-//! `ETag` accessor the client half reads through.
+//! The `ResponseHeaders` impl and typed `ETag` accessor of each generated
+//! response-headers struct.
 
 use std::fmt::Write as _;
 
 use crate::render::emit_rest::{LIST_HEADERS, field_id};
 
-/// The `ResponseHeaders` impl of one headers struct (a `Some` value is one
-/// field, every item of a list header one field line), and, where the struct
-/// carries an `ETag`, its typed accessor.
+/// Emits the `ResponseHeaders` impl of one headers struct, with its `ETag`
+/// accessor where it has one.
 pub(crate) fn emit_response_headers_impl(b: &mut String, name: &str, headers: &[String]) {
     let _ = write!(
         b,

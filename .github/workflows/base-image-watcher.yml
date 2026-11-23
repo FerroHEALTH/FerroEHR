@@ -9,8 +9,8 @@
 # job below, with the same run colour). Two staleness classes, both
 # invisible to the vulnerability scans until they surface as findings:
 #
-#   * a NEWER PATCH TAG on the pinned major (PostgreSQL quarterly/security
-#     releases — 18.4 → 18.6 sat unnoticed for days before #2408/#2409);
+#  * a NEWER PATCH TAG on the pinned major (PostgreSQL quarterly and
+#    security releases, #2408);
 #   * the PINNED TAG RE-POINTED upstream (a same-version respin — how
 #     docker-library ships base refreshes between PG releases; our build-time
 #     apt upgrade covers Debian packages, but a respin also carries rebuilt
@@ -31,9 +31,8 @@ name: Base image watcher
 
 on:
   schedule:
-    # Mondays 08:13 UTC — off the hour (GitHub delays on-the-hour runs under
-    # load) and in a slot of its own: it shared 07:43 with the toolchain watcher
-    # until #2778. Read the estate's slots with
+    # Mondays 08:13 UTC, off the hour (GitHub delays on-the-hour runs under
+    # load) and in a slot of its own (#2778). Read the estate's slots with
     # `grep -rE '^ +- cron:' .github/workflows/`.
     - cron: "13 8 * * 1"
   workflow_dispatch: {}

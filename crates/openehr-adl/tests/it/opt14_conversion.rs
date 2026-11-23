@@ -1,12 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! OPT 1.4 → ADL 2 conversion through the public entry,
-//! `openehr_adl::adl14::opt::convert_opt_to_adl2`, over the vendored OPT corpus
-//! under `corpus/fixtures/`.
+//! OPT 1.4 → ADL 2 conversion through `convert_opt_to_adl2` over the vendored
+//! OPT corpus.
 //!
-//! NOTE: no openEHR spec governs 1.4→2 conversion; the claim asserted here is
-//! self-consistency (convert → print → re-read) and the result's own shape.
+//! NOTE: no openEHR spec governs 1.4→2 conversion: the claim is self-consistency.
 
 #![allow(
     clippy::expect_used,
@@ -94,12 +92,9 @@ fn filled_slots_carry_include_assertions() {
     );
 }
 
-/// The `C_DV_ORDINAL` domain constrainer becomes the AOM2
-/// `[value, symbol]` attribute tuple (`master04.4-cadl_second_order.adoc`
-/// §Tuple Constraints) — visible on the printed ADL2 surface of the
-/// Vital Signs conversion. (Its quantities are magnitude-less, so they
-/// widen to plain `units` lists — the reference-corpus form; the tuple
-/// path is pinned by the unit test `quantity_tuple_emitted_when_magnitudes_present`.)
+/// The `C_DV_ORDINAL` constrainer becomes the `[value, symbol]` tuple
+/// (`master04.4-cadl_second_order.adoc` §Tuple Constraints) in the printed Vital
+/// Signs conversion.
 #[test]
 fn domain_types_become_attribute_tuples() {
     let opt = parse_opt(VITAL_SIGNS);
@@ -248,11 +243,9 @@ fn extra_languages_are_recorded_in_conversion_details() {
     );
 }
 
-/// Every root converted from the Better template validates without an error:
-/// each slot that replaced an embedded root is defined in every language of
-/// its parent's terminology, a term keyed by no local code (the `°C` and `°F`
-/// unit labels) is dropped with a `conversion_details` entry, and so is the
-/// `C_DV_QUANTITY` property, which no RM `DV_QUANTITY` attribute holds (VCARM).
+/// Every root of the Better template validates: replacing slots are defined in
+/// every language, and unit-label terms and the `C_DV_QUANTITY` property (VCARM)
+/// are dropped with a `conversion_details` entry.
 #[test]
 fn converted_roots_validate_without_errors() {
     let path = format!("{}/{DEMO_VITALS}", env!("CARGO_MANIFEST_DIR"));

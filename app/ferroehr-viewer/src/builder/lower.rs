@@ -3,11 +3,6 @@
 
 //! Lowering [`crate::builder::model::BuilderQuery`] into the `openehr_query`
 //! AST.
-//!
-//! Paths are parsed by the real AQL grammar (a probe `SELECT` through
-//! `openehr_query::parser`), constraints become typed `WHERE` fragments, and
-//! the result renders via `openehr_query::printer::to_aql` — invalid input is
-//! a typed [`BuilderError`], never a malformed query string.
 
 use openehr_query::ast::{
     ClassExprOperand, ColumnExpr, CompareOperand, ContainsConstraint, ContainsExpr, IdentifiedExpr,

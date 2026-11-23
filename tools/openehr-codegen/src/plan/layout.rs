@@ -1,27 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The by-size boxing decision for the RM: which single-valued fields and which
-//! enum variants the emitter puts behind a `Box`, so the RM types a request
-//! reads and moves stay small.
+//! The by-size boxing decision for the RM: which single-valued fields and enum
+//! variants are emitted behind a `Box`, from a size estimate over the same
+//! rendered field types. RM classes only.
 //!
-//! No openEHR specification governs this: our own design (#6002, #5997). A
-//! by-value RM node is moved several times while it is read (the visitor's
-//! field buffer, the `Option`, the parent's buffer, the `Vec` push and its
-//! growth), and every level of a nested read keeps its field buffers on the
-//! stack. With every subtree inline, `CONTENT_ITEM` was 5,808 bytes and a
-//! typed read spent a third of its time in `memmove`.
-//!
-//! The decision reads an estimate of each type's size, computed here from the
-//! same rendered field types the struct emitter writes, so the estimate and
-//! the emitted layout share one source. The estimate follows the Rust layout
-//! rules closely enough for a threshold (`String`, `Vec` and `Box` sizes, the
-//! `Option` niche, an enum's tag word); `openehr-rm`'s own layout test holds
-//! the real sizes of the hot types under their budget.
-//!
-//! The policy applies to the classes of the RM schemas only. The other
-//! components keep the by-value layout: an archetype or a BMM schema is read
-//! once and held, never read per request.
+//! No openEHR specification governs this: our own design (#6002, #5997).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -31,19 +15,13 @@ use crate::plan::overrides::class_binding;
 use crate::plan::{Emission, decide};
 use crate::render::naming;
 
-/// The largest optional field payload kept inline, in bytes. Above it the
-/// field is `Option<Box<T>>`: an absent field then costs one word, and a
-/// present one one allocation.
+/// The largest optional field payload kept inline, in bytes.
 pub(crate) const OPTIONAL_INLINE_MAX: usize = 64;
 
-/// The largest mandatory field payload kept inline, in bytes. A mandatory
-/// field is always present, so boxing it always costs an allocation; the bar
-/// is higher than for an optional field.
+/// The largest mandatory field payload kept inline, in bytes.
 pub(crate) const MANDATORY_INLINE_MAX: usize = 256;
 
-/// The largest enum variant payload kept inline, in bytes. Above it the
-/// variant is `Variant(Box<T>)`, so a list of the enum stays a list of small
-/// values.
+/// The largest enum variant payload kept inline, in bytes.
 pub(crate) const VARIANT_INLINE_MAX: usize = 256;
 
 /// The RM schema name (`BmmSchema::schema_name`) the policy applies to.

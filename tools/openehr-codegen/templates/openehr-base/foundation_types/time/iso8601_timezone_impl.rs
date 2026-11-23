@@ -2,34 +2,15 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written `Iso8601_timezone` spec behaviour.
+//! The eight `Iso8601_timezone` functions
+//! (`org.openehr.base.foundation_types.iso8601_timezone.adoc`); each answers
+//! `None` for a value outside the production.
 //!
-//! Covers the eight functions the class declares (`hour`, `minute`, `sign`,
-//! `minute_unknown`, `is_partial`, `is_extended`, `is_gmt`, `as_string`).
+//! NOTE: `Min_hour_valid`/`Max_hour_valid` require `hour > 0`, which would
+//! refuse `+00:00` while `is_gmt` is "timezone `+0000`"; `is_gmt` governs.
 //!
-//! Spec sources (vendored):
-//! - `BASE/docs/UML/classes/org.openehr.base.foundation_types.iso8601_timezone.adoc`
-//!   (§Description: the accepted forms `Z | ±hh[mm]` and the `Z` ≡ `+0000`
-//!   equivalence; §Functions: all eight; §Invariants).
-//! - `BASE/docs/UML/classes/org.openehr.base.foundation_types.iso8601_type.adoc`
-//!   (§Attributes `value`: "Representation of all descendants is a single
-//!   String").
-//!
-//! NOTE: an accessor answers `None` for a value that is not the accepted
-//! production at all, the reading the sibling
-//! [`Iso8601Date`](super::iso8601_date::Iso8601Date) accessors already take: a
-//! value with no components has no hour, minute or sign to report.
-//!
-//! NOTE: `Min_hour_valid`/`Max_hour_valid` also require `hour > 0`, which would
-//! refuse `+00:00` while the same class defines `is_gmt` as "timezone `+0000`"
-//! — a released-text contradiction, adjudicated in `iso8601_parse.rs` in favour
-//! of `is_gmt`, so the offset bounds enforced here are
-//! `hour <= Min_timezone_hour` (west) and `hour <= Max_timezone_hour` (east).
-//!
-//! NOTE: the class doc's §Functions entry for `minute` reads "Extract the hour
-//! part of timezone, as an Integer, usually either 0 or 30" — the leading noun
-//! contradicts the function's own name, its neighbours and its stated values,
-//! so it is read as an editorial slip for "the minute part".
+//! NOTE: §Functions `minute` says "Extract the hour part", read as a slip for
+//! the minute part.
 
 use super::iso8601_parse::{ParsedTimezone, insert_timezone_colon, scan_timezone};
 use super::iso8601_timezone::Iso8601Timezone;
@@ -40,33 +21,27 @@ impl Iso8601Timezone {
         scan_timezone(&self.value)
     }
 
-    /// `Iso8601_timezone.hour`: "Extract the hour part of timezone, as an
-    /// Integer in the range `00 - 14`" (class doc §Functions), or `None` when
-    /// the value does not parse. `Z` reports `0`, its `+0000` equivalent.
+    /// `Iso8601_timezone.hour`: "in the range `00 - 14`", `Z` as `0`; `None`
+    /// when unparseable.
     #[must_use]
     pub fn hour(&self) -> Option<u32> {
         self.parsed().map(|tz| tz.hour)
     }
 
-    /// `Iso8601_timezone.minute`: the minute part, "usually either 0 or 30"
-    /// (class doc §Functions), or `None` when the minute part is absent (the
-    /// `±hh` form) or the value does not parse.
+    /// `Iso8601_timezone.minute`, or `None` for `±hh` or when unparseable.
     #[must_use]
     pub fn minute(&self) -> Option<u32> {
         self.parsed().and_then(|tz| tz.minute)
     }
 
-    /// `Iso8601_timezone.sign`: "Direction of timezone expresssed as +1 or -1"
-    /// (class doc §Functions), or `None` when the value does not parse. `Z`
-    /// reports `+1`, its `+0000` equivalent.
+    /// `Iso8601_timezone.sign`: +1 or -1, `Z` as +1; `None` when unparseable.
     #[must_use]
     pub fn sign(&self) -> Option<i32> {
         self.parsed().map(|tz| tz.sign)
     }
 
-    /// `Iso8601_timezone.minute_unknown`: "Indicates whether minute part known"
-    /// (class doc §Functions) — true for the `±hh` form (and for a value that
-    /// does not parse, which knows nothing).
+    /// `Iso8601_timezone.minute_unknown`: true for `±hh` and for an unparseable
+    /// value.
     #[must_use]
     pub fn minute_unknown(&self) -> bool {
         self.parsed().is_none_or(|tz| tz.minute.is_none())
@@ -79,36 +54,21 @@ impl Iso8601Timezone {
         self.minute_unknown()
     }
 
-    /// `Iso8601_timezone.is_extended`: "True if this time-zone uses ':'
-    /// separators" (class doc §Functions).
-    ///
-    /// A form with no separator POSITION (`Z`, `±hh`) counts as extended — the
-    /// same reading `Iso8601_date.is_extended` takes for the separator-less
-    /// `YYYY`; only the compact `±hhmm`, which has a position and omits it, is
-    /// not. A value that does not parse is not extended.
+    /// `Iso8601_timezone.is_extended`: false only for the compact `±hhmm` and an
+    /// unparseable value.
     #[must_use]
     pub fn is_extended(&self) -> bool {
         self.parsed().is_some_and(|tz| tz.extended)
     }
 
-    /// `Iso8601_timezone.is_gmt`: "True if timezone is UTC, i.e. `+0000`"
-    /// (class doc §Functions) — a zero offset however it is written (`Z`,
-    /// `+00:00`, `-0000`, `+00`), since the class description makes `Z` and
-    /// `+0000` the same timezone.
+    /// `Iso8601_timezone.is_gmt`: a zero offset however written.
     #[must_use]
     pub fn is_gmt(&self) -> bool {
         self.parsed().is_some_and(|tz| tz.offset_minutes() == 0)
     }
 
-    /// `Iso8601_timezone.as_string`: "Return timezone string in extended
-    /// format" (class doc §Functions) — the compact `±hhmm` is re-spelled
-    /// `±hh:mm`; `Z` and `±hh` have no separator position and are returned
-    /// unchanged.
-    ///
-    /// NOTE: the spec does not say what a value that is not a valid timezone
-    /// returns. It is returned verbatim, since `Iso8601_type.value` is the only
-    /// representation there is — our own design/extension, the same answer
-    /// `Iso8601_date.as_string` gives.
+    /// `Iso8601_timezone.as_string`: `±hhmm` re-spelled `±hh:mm`; an unparseable
+    /// value is returned verbatim, our own design.
     #[must_use]
     pub fn as_string(&self) -> String {
         if self.parsed().is_none() {

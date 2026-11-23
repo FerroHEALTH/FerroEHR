@@ -2,13 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The RM-instance validation applies the BASE 1.3.0 `ARCHETYPE_ID`
-//! `Value_valid` grammar to `archetype_details.archetype_id` (#3835, #3845).
-//!
-//! BASE `docs/base_types/master05-identification_package.adoc` §Syntaxes: the
-//! legacy ADL 1.4 form and the namespaced ADL 2 form are valid, with the
-//! recorded relaxation for a namespaceless full-version identifier (AM 2.4.0
-//! `ARCHETYPE_HRID.namespace` is optional, upstream conflict #3844); anything
-//! else the grammar refuses is reported at the attribute that carries it.
+//! `Value_valid` grammar to `archetype_details.archetype_id` (BASE
+//! `master05-identification_package.adoc` §Syntaxes).
 
 use openehr_sdt::rm_instance::validate_rm_and_terminology;
 use serde_json::{Value, json};

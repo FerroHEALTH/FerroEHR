@@ -2,10 +2,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! ITS-REST contract, shared component schemas: DTOs that appear in more
-//! than one API group's OAS bundle with identical definitions, hoisted so
-//! one Rust type serves every group (the per-group bundles duplicate
-//! shared schemas verbatim).
+//! ITS-REST contract: the component schemas several API groups share.
 
 #![allow(
     clippy::all,

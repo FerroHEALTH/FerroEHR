@@ -3,9 +3,6 @@
 
 //! The reads of `EHR_STATUS` and `EHR_ACCESS`, the objects an EHR holds one of.
 //!
-//! Each serves the object current at an instant or at a version, its
-//! versioned object, its revision history and its VERSION envelopes.
-//!
 //! Spec: RM ehr `master04-ehr_package.adoc` §EHR Status and §EHR Access (the
 //! EHR class holds `ehr_status` 1..1 and `ehr_access` 1..1, each versioned
 //! "via the normal mechanism"); the versioned-object mechanics are RM common

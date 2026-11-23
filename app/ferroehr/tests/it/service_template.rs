@@ -544,9 +544,8 @@ fn without_inferable_types(composition: &mut Value, declared: Option<&str>) {
 
 /// A node whose `_type` the client left out is judged against the template as
 /// the type the RM infers for it (#6003): the commit validates the typed
-/// COMPOSITION, so a constraint the canonical-JSON pass skipped on an untyped
-/// node now refuses the commit. Here the template's `items` existence `1..*`
-/// on the `ITEM_TREE`s of `state` and `protocol` holds the complete example.
+/// COMPOSITION. Here the template's `items` existence `1..*` on the
+/// `ITEM_TREE`s of `state` and `protocol` holds the complete example.
 #[tokio::test]
 async fn an_untyped_node_is_judged_as_its_inferred_type() {
     let (_db, svc) = crate::fixtures::service().await;

@@ -2,13 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The one integration-test binary of `ferroehr-ext`: one module per
-//! feature-gated integration, each compiled only under its feature, so
-//! `--all-features` runs everything and a slim build compiles nothing here.
-//!
-//! These are behaviour tests over the crate's public seams: the multimedia
-//! engine over a real (in-memory) blob store. The wiremock-backed journeys
-//! stay in `app/ferroehr/tests/it`, where the platform wires the integrations
-//! in; nothing here repeats them.
+//! feature-gated integration, each compiled only under its feature.
 
 #![allow(
     clippy::expect_used,

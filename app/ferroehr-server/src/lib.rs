@@ -3,17 +3,10 @@
 
 //! `FerroEHR` server wiring — the binary's testable library half.
 //!
-//! Boots the `ferroehr-rest` ITS-REST server backed by the DB-backed
-//! [`FerroEhrService`]: loads the one
-//! configuration tree ([`ferroehr::config`]), initialises tracing, connects the
-//! `PostgreSQL` pool, runs migrations, boots the ATNA audit sender, and serves.
-//! On shutdown the audit queue is drained before exit.
-//!
-//! `main.rs` is a thin shell over [`process::main`] so the whole boot path is reachable
-//! from tests — "you can't test the `main` function directly"
+//! Boots the `ferroehr-rest` ITS-REST server over the DB-backed
+//! [`FerroEhrService`]. `main.rs` is a thin shell over [`process::main`], so
+//! the whole boot path is reachable from tests
 //! (<https://doc.rust-lang.org/book/ch12-03-improving-error-handling-and-modularity.html>).
-//! `anyhow` is fine here: this lib target IS the binary's own logic half,
-//! not a consumable library.
 
 use std::io::IsTerminal as _;
 use std::path::Path;
@@ -240,11 +233,6 @@ async fn run_report(
 /// stdout for `-`, or to `ferroehr-report-<UTC time>.json` in the working
 /// directory, then names the file on stderr.
 ///
-/// Telemetry is not initialised, so stdout carries the report alone when it is
-/// the destination. The databases are read, never written. This is the seam
-/// `ferroehr report` runs after loading, so a test drives it with a
-/// configuration assembled away from the process environment.
-///
 /// # Errors
 /// The configuration does not validate, or the report cannot be serialized or
 /// written.
@@ -291,12 +279,8 @@ fn load_licence(
 /// `ferroehr db verify`: the recorded schema state, then the pseudonymisation
 /// boundary.
 ///
-/// The two checks deliberately authenticate as different credentials, exactly
-/// as [`ferroehr::db::prepare`] does at boot. The schema state is read on the
-/// migration DSN of each database the domains reach; the isolation check runs
-/// on the RUNTIME pools, because what it measures is what the serving
-/// credentials can reach — asked of the migration credential it would report
-/// on a role that holds every domain by design.
+/// The isolation check runs on the runtime pools, since it measures what the
+/// serving credentials reach.
 ///
 /// # Errors
 /// A schema divergence, an unreadable migration set, a breached domain
@@ -363,12 +347,6 @@ pub async fn healthcheck(section: &ServerSection) -> Outcome {
 
 /// Summarizes which management endpoints are mounted, and at which access
 /// level, as `info=admin_only, prometheus=public`.
-///
-/// Worth a boot line of its own: every endpoint defaults to `off`, so what an
-/// operator needs to see is exactly which ones a configuration turned on and how
-/// exposed each one is — `env` renders the effective configuration and
-/// `flamegraph` starts a profiler on request, so neither should ever be a
-/// surprise. `none` when the surface is mounted with nothing enabled.
 fn mounted_management_endpoints(levels: EndpointLevels) -> String {
     let described = [
         ("info", levels.info),
@@ -393,11 +371,6 @@ fn mounted_management_endpoints(levels: EndpointLevels) -> String {
 }
 
 /// Assembles the platform service from the resolved config tree.
-///
-/// Every optional collaborator is attached here: the audit sender, the local
-/// Audit Record Repository read side (wired only when auditing and the store are
-/// both on), terminology, the subject proxy, the multimedia store, and the
-/// EHR index provider the caller built and checked.
 ///
 /// # Errors
 /// Any collaborator whose configuration is enabled but unbuildable — a slim
@@ -450,10 +423,6 @@ fn assemble_service(
 
 /// Wires authorization, active only when authentication is enabled: the RBAC
 /// gate and the per-EHR access default.
-///
-/// `None` when authentication is off, or when the RBAC gate is off and the
-/// per-EHR default is `open`. The boot line names which of the two caused the
-/// handle, so a `restricted` default alone reads as the reason.
 fn wire_authz(config: &ferroehr::config::FerroEhrConfig) -> Option<Arc<AuthzHandle>> {
     if !config.auth.shared.enabled {
         return None;
@@ -476,10 +445,6 @@ fn wire_authz(config: &ferroehr::config::FerroEhrConfig) -> Option<Arc<AuthzHand
 
 /// Logs the resolved runtime posture, one line per subsystem, immediately
 /// before the listener starts.
-///
-/// Each line carries that subsystem's own facts, so the listener line stays
-/// about the listener: authorization already logged its own line when it was
-/// built, and auditing and the management surface get theirs here.
 fn log_resolved_posture(
     app_config: &AppConfig,
     audit_enabled: bool,
@@ -699,10 +664,6 @@ pub(crate) fn attach_terminology(
 /// Wires the opt-in `DV_MULTIMEDIA` externalization behind the `multimedia`
 /// cargo feature; a slim build refuses an enabled config loudly.
 ///
-/// A store kept only to read back already-offloaded blobs must never stop the
-/// server starting, so an unbuildable store is fatal only when the integration
-/// is enabled.
-///
 /// # Errors
 /// An unbuildable object store while the integration is enabled, or an enabled
 /// configuration in a build without the feature.
@@ -799,7 +760,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     let pools = pools::connect(&config, pools::Opening::Serving).await?;
     let pool = pools.clinical.clone();
     // The partitioned parents' planner statistics, which autovacuum never
-    // collects: now and then hourly (#4453).
+    // collects: at boot, then hourly (#4453).
     let parent_statistics = tokio::spawn(db::parent_statistics::scheduled(pools.clone()));
 
     // The declared deployment posture, over the clusters the pools actually

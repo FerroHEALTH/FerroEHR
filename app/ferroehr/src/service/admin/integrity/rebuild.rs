@@ -1,21 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The node rebuild: the repair the storage-parity sweep had no counterpart
-//! for.
+//! The node rebuild: the repair of what the storage-parity sweep reports.
 //!
 //! NOTE: no openEHR spec governs storage mechanics — our own design/extension;
 //! the storage keeps a version's content twice, as `version.body` and as the
 //! decomposed `node` rows, and the sweep ([`super`]) reports where the two
 //! disagree — in content, or in the shape the rows were decomposed into.
 //!
-//! Every defect the sweep reports but one is repaired the same way: the rows
-//! are written again from the body. A [`StorageParityDefect::OrphanNodes`]
-//! set has no body, so its repair deletes it. That covers a
-//! [`StorageParityDefect::StaleDecomposition`] exactly as it covers damage,
-//! since writing the rows again is what re-decomposing an old shape into the
-//! current one takes. A release that changes the decomposition is therefore an
-//! upgrade an operator performs and verifies.
+//! Every defect but [`StorageParityDefect::OrphanNodes`] is repaired by writing
+//! the rows again from the body, a [`StorageParityDefect::StaleDecomposition`]
+//! included; an orphan set has no body, so its repair deletes it.
 //!
 //! Which copy is authoritative is not a choice this module makes, it is a
 //! property of the storage: `body` is the version's canonical serialized form,
@@ -25,11 +20,6 @@
 //! `crate::storage::codec::decompose`. So a disagreement is repaired in one
 //! direction only — the rows are re-derived from the body — and a version whose
 //! BODY is the damaged copy is refused rather than propagated into the index.
-//!
-//! Dump and load re-decomposes too, but cannot serve as the repair: its dump
-//! side reads each version through `node_repo::read_version_canonical`, from
-//! the node rows themselves, so it would reproduce exactly the damage it is
-//! asked to fix. It is also a whole-repository round trip.
 
 #![expect(
     clippy::disallowed_types,
@@ -55,10 +45,6 @@ use crate::storage::node_write::write_nodes;
 use crate::storage::version_repo::tier;
 
 /// How many rebuild records the returned report carries in full.
-///
-/// The same cap the sweep applies to its mismatches, for the same reason:
-/// every record is also logged, so nothing is lost when a repair of a badly
-/// damaged store passes it.
 const MAX_REPORTED_RECORDS: usize = 1000;
 
 /// What happened to one version the rebuild reached.
@@ -70,7 +56,7 @@ pub enum NodeRebuildOutcome {
     /// from the new rows equals that body. The count is how many rows the
     /// rebuild wrote, which is zero for a logical delete.
     Rebuilt {
-        /// How many `node` rows the version now has.
+        /// How many `node` rows the version has after the rebuild.
         node_rows: u32,
     },
     /// Nothing was written. The version's own body is the damaged copy, so
@@ -132,8 +118,6 @@ pub struct NodeRebuildReport {
 
 impl NodeRebuildReport {
     /// Returns `true` when the rebuild repaired everything it found.
-    ///
-    /// A run that found nothing is complete: the scope was already clean.
     #[must_use]
     pub fn is_complete(&self) -> bool {
         self.versions_refused == 0
@@ -159,23 +143,12 @@ impl FerroEhrService {
     /// Re-derives the `node` rows of every damaged version in `scope` from its
     /// `version.body`, one transaction per version.
     ///
-    /// The scope is the sweep's own ([`StorageParityScope`]): the whole
-    /// repository, one EHR, one versioned object, one version of it, or
-    /// everything committed since an instant. Whatever the scope covers, only
-    /// the versions the sweep reports are written — a clean version is read and
-    /// left alone, so running this over a healthy repository writes nothing.
-    /// That includes a version reported
-    /// [`StorageParityDefect::StaleDecomposition`], whose rows are intact but
-    /// in the shape an older decomposition wrote: writing them again from the
-    /// body is what brings it to the current one.
+    /// Only the versions the sweep reports are written, so a healthy scope is
+    /// left untouched.
     ///
-    /// Each version is repaired in its own transaction: the body is read under
-    /// a row lock, decomposed, the old rows deleted, the new set inserted, and
-    /// the version re-derived from what was just written and compared with the
-    /// body BEFORE the commit. A body that does not decompose, or that the
-    /// rebuilt rows do not reproduce, rolls that transaction back, so the
-    /// version's rows are left exactly as they were and the refusal is
-    /// reported. One refused version never stops the rebuild that found it.
+    /// Each version is repaired in its own transaction and re-derived from the
+    /// new rows before the commit. A body that does not decompose or reproduce
+    /// rolls its transaction back and is reported; the rebuild goes on.
     ///
     /// An ARCHIVED object is thawed into the primary tier for the repair and
     /// re-frozen with its archive marker in the same transaction, because the

@@ -1,14 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Integration tests for `openehr-adl`: the ADL 2.4 engine — the ADL2/cADL/ODIN
-//! parser, AOM2 validation (basic integrity, parent + RM conformance, flat
-//! form), the flattener, OPT2 generation, ADL 1.4 reading and 1.4→2 conversion
-//! — driven by the vendored reference corpora under `tests/corpus/**` and their
-//! coverage gate.
-//!
-//! One binary per crate, split into topic modules
-//! (`.claude/rules/testing.md` §One integration-test binary per crate).
+//! Integration tests for `openehr-adl` over the vendored corpora, one binary
+//! split into topic modules.
 
 #![expect(
     clippy::disallowed_types,

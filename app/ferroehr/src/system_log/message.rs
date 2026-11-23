@@ -4,10 +4,6 @@
 //! The DICOM audit message (DICOM PS3.15 §A.5) of one audit record, built on
 //! `ihe-atna`'s message model, which writes the XML (ITI TF-2 §3.20.4.1.2).
 //!
-//! FerroEHR decides what the message says: the event id per resource class,
-//! the participants and their data-flow roles, the participant objects. The
-//! shared crate holds the model and the writer.
-//!
 //! The record's EHDS categories, the accessing organisation, the purpose of
 //! use, the authentication assurance level and the emergency mark have no
 //! element in the PS3.15 §A.5 schema, so this rendering omits them; the local

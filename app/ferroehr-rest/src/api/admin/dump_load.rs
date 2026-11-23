@@ -13,8 +13,6 @@
 //! These routes are **excluded from ITS-REST wire conformance**: they gate the
 //! `EhrDumpLoad` CAPABILITY verdict only.
 //!
-//! ## What the bodies carry
-//!
 //! The dump body is the export spec (`logical_format`, `compression_format`,
 //! the mandatory `segment_split_size` in kb) plus the `file_sys_loc`
 //! location; the format values are `openehr_canonical_xml` /
@@ -27,11 +25,6 @@
 //! `dump_status`, `error [0..1]`), so both answer `200` with a JSON array —
 //! empty when every entity succeeded. The array is the resource; there is no
 //! envelope, because no spec defines one.
-//!
-//! Gating: mounted under `/admin/`, so they inherit the group's RBAC Admin
-//! class (`401`/`403`, our own authorization design — the released admin
-//! operations carry `security: []`) and the `AppConfig::api.admin` config
-//! gate (`405` with an empty `Allow` when off) unchanged.
 
 #![expect(
     clippy::disallowed_types,
@@ -245,8 +238,6 @@ fn file_sys_loc(body: &Value) -> Result<String, RestError> {
 }
 
 /// The default `segment_split_size` in kb.
-///
-/// Build the [`ExportSpec`] from the request body.
 fn export_spec(body: &Value) -> Result<ExportSpec, RestError> {
     // No encoding is defined, so no value a client can send names one.
     if body.get("encoding").is_some() {

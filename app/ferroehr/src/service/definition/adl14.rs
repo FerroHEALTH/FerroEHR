@@ -16,11 +16,6 @@
 //! A 1.4 source is never validated post-conversion, which would change what is
 //! being judged.
 //!
-//! A stored 1.4 archetype or operational template converts to ADL 2
-//! ([`FerroEhrService::adl14_convert_to_adl2`],
-//! [`FerroEhrService::adl14_convert_opt_to_adl2`]) through the
-//! `openehr_adl::adl14` converter, which two read-only extension routes serve.
-//!
 //! NOTE: no openEHR spec governs 1.4 to 2 conversion and the vendored ITS-REST
 //! OAS declares no conversion operation, so the conversion is our own design.
 
@@ -110,7 +105,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// - No archetype with that id → `artefact_does_not_exist` (`404`).
-    /// - The stored source no longer converts (parse / unsupported kind), a
+    /// - The stored source does not convert (parse / unsupported kind), a
     ///   specialised source introduces a term code without the dots its depth
     ///   requires, or the conversion result carries a node with no ADL2
     ///   syntax → `content_invalid` (`422`).
@@ -163,7 +158,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// - The check refuses the child, or the stored parent no longer parses →
+    /// - The check refuses the child, or the stored parent does not parse →
     ///   `content_invalid` (`422`).
     /// - A database failure (`500`).
     async fn check_codes_against_stored_parent(
@@ -197,7 +192,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// - No OPT with that `template_id` → `template_does_not_exist` (`404`).
-    /// - The stored OPT no longer parses or does not convert → `content_invalid`
+    /// - The stored OPT does not parse or does not convert → `content_invalid`
     ///   (`422`).
     /// - A database failure (`exception` → `500`).
     pub async fn adl14_convert_opt_to_adl2(
