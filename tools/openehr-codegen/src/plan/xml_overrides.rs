@@ -5,13 +5,9 @@
 //! from the plain match of BMM fields to the vendored ITS-XML schemas, as
 //! checked-in const tables, each entry with its spec citation.
 
-// ─────────────────────────────────────────────────────────────────────────────
-// emit-xml BMM-only field allowlist (RM/BASE model vs vendored ITS-XML skew)
-// ─────────────────────────────────────────────────────────────────────────────
+// emit-xml BMM-only field allowlist.
 
-/// One allowlisted BMM-only field: the owning concrete type's spec name, the
-/// field's wire name, the governing spec-version skew, and a one-line reason
-/// bucket.
+/// One allowlisted BMM-only field with its spec-version skew and reason.
 pub(crate) struct XmlBmmOnlyField {
     /// The owning concrete type's spec name.
     pub spec: &'static str,
@@ -24,22 +20,12 @@ pub(crate) struct XmlBmmOnlyField {
     pub reason: &'static str,
 }
 
-/// Allowlist of BMM fields that have **no** matching element or attribute in any
-/// vendored ITS-XML XSD (the RM/BASE model outran the vendored ITS-XML schemas).
-/// Each accepted `(spec, wire_name)` pair is emitted as a **deterministic
-/// trailing element** in BMM field order (so it is never silently dropped), and
-/// carries the spec delta that justifies it. Any XSD-covered struct with a BMM
-/// field NOT on this list fails codegen (the `check_bmm_field_coverage` guard in
-/// `render::emit_xml`), forcing an explicit decision instead of a silent drop.
+/// BMM fields with no slot in any vendored ITS-XML XSD, each written as a
+/// trailing element in BMM order; any other such field fails codegen
+/// (`check_bmm_field_coverage`).
 ///
-/// The governing spec citation for every entry is the pinned-version delta: the
-/// emitted models are RM 1.1.0 and 1.2.0 over BASE 1.2.0 and 1.3.0, while the
-/// vendored canonical-XML schemas are ITS-XML 1.0.2 (namespace `.../v1`) and, for
-/// the EHR/demographic/extract closure, ITS-XML 2.0.0 (RM 1.1.0). Where the model
-/// added or renamed a field after those XSDs were cut, no XSD slot exists.
-///
-/// Empty is the desired state: it means every RM-1.2.0 BMM field of an
-/// XSD-covered type maps to a vendored-XSD slot.
+/// The emitted models are RM 1.1.0 and 1.2.0; the vendored XSDs are ITS-XML
+/// 1.0.2 and 2.0.0.
 pub(crate) const XML_BMM_ONLY_ALLOWLIST: &[XmlBmmOnlyField] = &[
     // ── BASE 1.3.0 resource-class growth (ITS-XML 1.0.2 Resource.xsd predates it) ──
     XmlBmmOnlyField {
@@ -226,13 +212,8 @@ pub(crate) const XML_BMM_ONLY_ALLOWLIST: &[XmlBmmOnlyField] = &[
         citation: "RM 1.2.0 renamed EXTRACT_VERSION_SPEC.includes_data → include_data; ITS-XML 2.0.0 EhrExtract.xsd still declares includes_data.",
         reason: "RM 1.2.0 EhrExtract includes_* → include_* rename vs ITS-XML 2.0.0.",
     },
-    // ── VERSIONED_OBJECT base fields on the VERSIONED_* container types ──
-    // uid/owner_id/time_created come from VERSIONED_OBJECT, defined ONLY in the
-    // v2 Common.xsd (RM 1.1.0), which the emit-xml input deliberately does not
-    // merge: v1 Version.xsd omits VERSIONED_OBJECT, and pulling in v2 Common.xsd
-    // would re-shape the served VERSION-family types. These container types are
-    // not served as canonical XML (406 at the REST edge); the base fields are
-    // appended in canonical VERSIONED_OBJECT order so nothing is lost.
+    // VERSIONED_OBJECT's base fields: only v2 Common.xsd declares it, which the
+    // input does not merge; these types are not served as XML.
     XmlBmmOnlyField {
         spec: "VERSIONED_COMPOSITION",
         wire_name: "uid",
@@ -314,9 +295,7 @@ pub(crate) fn xml_bmm_only_allowed(spec: &str, wire_name: &str) -> bool {
         .any(|e| e.spec == spec && e.wire_name == wire_name)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// emit-xml element names the ITS-XML schemas spell apart from the BMM
-// ─────────────────────────────────────────────────────────────────────────────
+// emit-xml element names the ITS-XML schemas spell apart from the BMM.
 
 /// One BMM property whose canonical-XML element the ITS-XML schema names
 /// differently.
@@ -349,27 +328,19 @@ pub(crate) fn xml_wire_rename(owner: &str, bmm_name: &str) -> Option<&'static st
         .map(|e| e.element)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// emit-xml classes no vendored ITS-XML schema declares
-// ─────────────────────────────────────────────────────────────────────────────
+// emit-xml classes no vendored ITS-XML schema declares.
 
 /// One class that no vendored ITS-XML schema declares, written in the shape of
 /// its nearest XSD-declared BMM ancestor.
 pub(crate) struct XmlAncestorShape {
     /// The class's spec name.
     pub spec: &'static str,
-    /// The nearest BMM ancestor an ITS-XML schema declares, whose attribute and
-    /// element split the class takes; the class's own fields follow in BMM
-    /// order.
+    /// The nearest XSD-declared ancestor whose shape the class takes.
     pub ancestor: &'static str,
 }
 
-/// The classes the canonical-XML codec writes in their nearest XSD-declared
-/// ancestor's shape, so `archetype_node_id` stays the attribute `LOCATABLE`
-/// requires. Every other class no XSD declares still fails the generation
-/// (the LOCATABLE-attribute guard in `render::emit_xml`).
-// NOTE: no ITS-XML schema governs these, our own design: ITS-XML RM Release-1.1.0
-// declares neither RM 1.1.0 BMM class (`composition.content.view`), reported in #4843.
+/// The classes written in their nearest XSD-declared ancestor's shape, so
+/// `archetype_node_id` stays an attribute.
 pub(crate) const XML_ANCESTOR_SHAPES: &[XmlAncestorShape] = &[
     XmlAncestorShape {
         spec: "CITATION",
@@ -390,9 +361,7 @@ pub(crate) fn xml_ancestor_shape(spec: &str) -> Option<&'static str> {
         .map(|e| e.ancestor)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// emit-xml tool-emitted extension elements (outside every vendored ITS-XML XSD)
-// ─────────────────────────────────────────────────────────────────────────────
+// emit-xml tool-emitted extension elements.
 
 /// One element modelling tools write into a type's content although no vendored
 /// ITS-XML schema declares it there.
@@ -405,11 +374,9 @@ pub(crate) struct XmlToolExtension {
     pub citation: &'static str,
 }
 
-/// The tool-emitted extension elements the generated XML readers accept, each
-/// only with the boolean value `false`: a `true` would change the constraint's
-/// meaning in a way no schema defines, so it is refused
-/// (`XmlError::UnsupportedExtension`). Every other element outside a type's
-/// closed `xs:sequence` is refused (XML Schema 1.1 Part 1 §3.4.4.2).
+/// The tool-emitted extension elements the generated readers accept, each
+/// only as `false`; any other element outside the closed sequence is refused
+/// (XML Schema 1.1 Part 1 §3.4.4.2).
 pub(crate) const XML_TOOL_EXTENSIONS: &[XmlToolExtension] = &[
     XmlToolExtension {
         spec: "C_SINGLE_ATTRIBUTE",
@@ -433,9 +400,8 @@ pub(crate) fn xml_tool_extensions(
     XML_TOOL_EXTENSIONS.iter().filter(move |e| e.spec == spec)
 }
 
-/// One model `String` field the canonical-XML wire carries in the `OBJECT_ID`
-/// shape (`<field><value>text</value></field>`): the owning type's spec name,
-/// the field's wire name, and the schema delta that makes it so.
+/// One model `String` field the XML wire carries in the `OBJECT_ID` shape
+/// (`<field><value>text</value></field>`).
 pub(crate) struct XmlValueWrapped {
     /// The owning concrete type's spec name.
     pub spec: &'static str,

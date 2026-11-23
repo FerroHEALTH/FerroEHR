@@ -1,36 +1,18 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The **crate → generation table**: declarative data recording, per emitted
-//! spec crate, the BMM GENERATIONS it carries — vendored input file, emitted
-//! generation-module name, per-generation spec version, which generation is
-//! CURRENT, and the dependency GENERATIONS each one resolves against. Each
-//! entry carries the `includes` citation that justifies its composition.
+//! The crate → generation table: per emitted spec crate, the BMM generations
+//! it carries (vendored files, module name, spec version, which is current,
+//! dependency generations), each entry citing its `includes`. [`compose`]
+//! resolves an entry into loaded schemas, models and the [`External`] index.
 //!
-//! This is the single source of truth for what the generator emits. [`compose`]
-//! resolves an entry into per-generation loaded schemas + resolution models +
-//! the [`External`] full-path index the render stage consumes, so `cli.rs`
-//! never hand-merges schemas — the membership is data, not control flow.
+//! A generation is one component version under its own version-named module;
+//! its specification units are emitted side by side, never merged.
 //!
-//! One generation is one COMPONENT VERSION, emitted completely at its own
-//! version-named top module (`v1_2`, `v2_4`, …) mirroring its source package
-//! structure. A component version can publish several specification units
-//! (LANG 1.1.0 publishes BMM v2.x beside BMM3); each unit is emitted completely
-//! inside the one generation module and units are never merged into one class
-//! map, because a merge picks one shape per colliding name and discards the
-//! other's attributes. The prelude carries the CURRENT generation's stable
-//! units; older generations are reached by full module path.
-//!
-//! NOTE: five classes are declared by BOTH the RM 1.2.0 and BASE 1.3.0 BMM with
-//! different shapes, and both twins are emitted, because RM
-//! `docs/common/master08-resource_package.adoc` retains its Resource package
-//! "only while needed by AOM 1.4 based archetypes and tools" and BASE
-//! `docs/foundation_types/master00-amendment_record.adoc` records SPECAM-82
-//! adding a legacy `CODE_PHRASE` for the same reason.
-//!
-//! The RM twin's `TRANSLATION_DETAILS.accreditaton` spelling survives in the
-//! released RM 1.1.0 BMM, so `v1_1` reproduces it; the RM 1.2.0 BMM carries
-//! the SPECPUB-6 spelling `accreditation` that BASE already had.
+//! NOTE: RM 1.2.0 and BASE 1.3.0 both declare five resource-package classes
+//! with different shapes, and both are emitted: RM
+//! `docs/common/master08-resource_package.adoc` retains them "only while needed
+//! by AOM 1.4 based archetypes and tools".
 
 use crate::analyze::{External, Model, emittable_specs};
 use crate::load::bmm::BmmSchema;
@@ -38,9 +20,8 @@ use crate::plan::elided_arguments::restore_elided_arguments;
 use std::collections::BTreeMap;
 use std::path::Path;
 
-/// The vendored BMM root. Paths below mirror the upstream ITS-BMM layout
-/// (`components/<COMPONENT>/json/…`); the JSON forms are the codegen input for
-/// our pinned versions (each schema's pin is recorded in its `PROVENANCE.md`).
+/// The vendored BMM root, mirroring the ITS-BMM `components/<COMPONENT>/json/`
+/// layout.
 const VENDOR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/vendor/bmm");
 
 pub(crate) const BASE_BMM: &str = "components/BASE/json/openehr_base_1.3.0.bmm.json";
@@ -54,25 +35,13 @@ pub(crate) const RM11_BMM: &str = "components/RM/json/openehr_rm_1.1.0.bmm.json"
 pub(crate) const TERM_BMM: &str = "components/TERM/json/openehr_term_3.1.0.bmm.json";
 pub(crate) const AM14_BMM: &str = "components/AM/json/openehr_am_1.4.0.bmm.json";
 pub(crate) const AM24_BMM: &str = "components/AM/json/openehr_am_2.4.0.bmm.json";
-/// LANG's **v2.x generation**: the stable BMM object model (`org.openehr.lang.bmm`),
-/// its `P_BMM` persistence form (`…bmm_persistence`) and the beom expression model
-/// (`…beom`, with `EXPR_*` and `STATEMENT_SET`/`ASSERTION`, which AM's rules/slots
-/// reference). `LANG/docs/bmm/master01-preface.adoc` §History calls this "the
-/// normative, tool-implemented version".
-/// LANG's released 1.0.0 machine-readable BMM, emitted FAITHFULLY despite its
-/// published defects: it declares no `includes`, so its BASE references stay
-/// open slots, and BMM is TRIAL in that release.
+/// LANG's released 1.0.0 BMM, emitted as published: it declares no
+/// `includes`, so its BASE references stay open slots.
 pub(crate) const LANG10_BMM: &str = "components/LANG/json/openehr_lang_1.0.0.bmm.json";
 pub(crate) const LANG_BMM: &str = "components/LANG/json/openehr_lang_1.1.0.bmm.json";
-/// LANG's **v3 generation** (`org.openehr.lang.bmm3`): the evolved `BMM_*` object
-/// model with the `EL_*` expression language and the `BMM_STATEMENT*` family,
-/// specified separately per `LANG/docs/bmm3/master00-amendment_record.adoc`
-/// (SPECLANG-14, "Formalise the BMM v2/v3 split"). It is a second GENERATION of
-/// the same meta-model, not a second part of one model: 18 class names exist in
-/// both files with materially different shapes, so the two are emitted side by
-/// side (the AM precedent —
-/// `BASE/docs/architecture_overview/master05-package_structure.adoc` §AM
-/// Component, "Both versions are maintained side by side").
+/// LANG's v3 generation (`org.openehr.lang.bmm3`, SPECLANG-14 in
+/// `LANG/docs/bmm3/master00-amendment_record.adoc`), emitted beside v2.x since
+/// 18 class names differ in shape.
 pub(crate) const LANG_BMM3: &str = "components/LANG/json/openehr_lang_1.1.0-bmm3.bmm.json";
 
 const BASE_DOC: &str = "openEHR BASE (foundation + base types), generated from the BMM meta-model.";
@@ -100,19 +69,13 @@ pub(crate) struct DepGeneration {
     pub generation: &'static str,
 }
 
-/// One vendored spec file composing a generation — a COMPONENT VERSION can
-/// publish several machine-readable specifications side by side (LANG 1.1.0
-/// publishes the BMM v2.x model AND the paused BMM3 model), each emitted
-/// completely at its own package paths inside the one generation module.
+/// One vendored spec file composing a generation, emitted at its own package
+/// paths inside the generation module.
 pub(crate) struct GenerationUnit {
     /// The vendored BMM file (relative to the vendor root).
     pub file: &'static str,
-    /// Whether the generation's prelude (and the crate prelude, when this
-    /// generation is current) re-exports this unit's types. The stable
-    /// specifications of a component version are on the prelude; a paused /
-    /// trial sibling specification (LANG's BMM3) is reachable by full module
-    /// path only, which also keeps the prelude collision-free where two
-    /// units of one version declare the same class names.
+    /// Whether the generation's prelude re-exports this unit's types; a trial
+    /// unit (LANG's BMM3) is reached by full path only.
     pub in_prelude: bool,
 }
 
@@ -122,27 +85,20 @@ pub(crate) struct GenerationSpec {
     /// The emitted generation-module name (`v1_2`), derived from the
     /// component version the generation's files self-identify as.
     pub module: &'static str,
-    /// The openEHR specification version this generation implements (the
-    /// vendored files pin), emitted as the crate `Generation` enum variant's
-    /// `spec_version()` value — the only place it appears.
+    /// The openEHR spec version this generation implements, emitted as its
+    /// `Generation` variant's `spec_version()`.
     pub spec_version: &'static str,
-    /// The vendored spec files composing this component version, in
-    /// declaration order. Their emitted package paths must be disjoint
-    /// (the emitter asserts it); for cross-crate reference resolution the
-    /// LAST unit declaring a name wins (mirrors the retired merged-view
-    /// semantics AM 2.4's LANG closure was built against).
+    /// The vendored spec files of this component version, in declaration order;
+    /// their package paths are disjoint, and the last unit declaring a name wins
+    /// cross-crate resolution.
     pub units: &'static [GenerationUnit],
-    /// Whether this is the crate's CURRENT generation: the one the crate
-    /// prelude re-exports and the emitted `Generation` enum's derived
-    /// `Default` variant marks.
-    /// Exactly one generation per crate is current ([`compose`] asserts it).
+    /// Whether this is the crate's current generation, the prelude and `Default`;
+    /// exactly one per crate ([`compose`] asserts it).
     pub current: bool,
     /// Dependency generations merged (in order, before this generation's own
     /// schema) into the resolution model — last-wins on name collision.
     pub model_deps: &'static [DepGeneration],
-    /// Dependency generations whose exported names resolve this generation's
-    /// cross-crate references, consulted in order (FIRST match wins — listing
-    /// two generations of one dependency decides collisions by list order).
+    /// Dependency generations resolving cross-crate references, first match wins.
     pub prelude_deps: &'static [DepGeneration],
 }
 
@@ -411,10 +367,10 @@ pub(crate) const COMPOSITIONS: &[CrateComposition] = &[
     },
 ];
 
-/// Look up a composition entry by key.
+/// Looks up a composition entry by key.
 ///
 /// # Errors
-/// Returns an error if `key` names no composition entry (a codegen bug).
+/// Returns an error if `key` names no composition entry.
 pub(crate) fn lookup(key: &str) -> Result<&'static CrateComposition, Box<dyn std::error::Error>> {
     COMPOSITIONS
         .iter()
@@ -422,9 +378,9 @@ pub(crate) fn lookup(key: &str) -> Result<&'static CrateComposition, Box<dyn std
         .ok_or_else(|| format!("unknown composition key {key:?}").into())
 }
 
-/// Load and parse one vendored BMM file (relative to [`VENDOR`]), with the
-/// generic arguments
-/// [`ELIDED_ARGUMENTS`](crate::plan::elided_arguments::ELIDED_ARGUMENTS) restores.
+/// Loads one vendored BMM file (relative to [`VENDOR`]), restoring the generic
+/// arguments [`ELIDED_ARGUMENTS`](crate::plan::elided_arguments::ELIDED_ARGUMENTS)
+/// lists.
 ///
 /// # Errors
 /// Returns an error if the file cannot be read or parsed, or declares an
@@ -437,20 +393,15 @@ pub(crate) fn load_bmm(file: &str) -> Result<BmmSchema, Box<dyn std::error::Erro
     Ok(schema)
 }
 
-/// One resolved specification unit of a composed generation: its loaded
-/// schema and its resolution model (paired dependency generations below,
-/// this unit's own schema on top).
+/// One resolved specification unit: its schema and its resolution model.
 pub(crate) struct ComposedUnit {
     /// The table row this unit was resolved from.
     pub spec: &'static GenerationUnit,
     /// This unit's own schema: one vendored file, with the elided generic
     /// arguments `plan::elided_arguments::ELIDED_ARGUMENTS` restores.
     pub schema: BmmSchema,
-    /// The merged resolution model (the generation's dependency schemas,
-    /// then this unit alone) — a class of one unit never resolves an
-    /// ancestor, field type or subtype against a sibling unit's definitions
-    /// (LANG's BMM and BMM3 units declare 18 colliding names with different
-    /// shapes).
+    /// The resolution model: the dependency schemas, then this unit alone, never a
+    /// sibling unit.
     pub model: Model,
 }
 
@@ -475,12 +426,11 @@ pub(crate) struct Composed {
 }
 
 impl Composed {
-    /// The crate's CURRENT generation — the prelude/default surface.
+    /// The crate's current generation.
     ///
     /// # Panics
-    /// Panics if the table declares no current generation for the crate
-    /// ([`compose`] validates exactly-one-current first, so this is
-    /// unreachable on a composed value).
+    /// Panics if the table declares no current generation, which [`compose`]
+    /// rules out.
     #[must_use]
     #[expect(
         clippy::expect_used,
@@ -498,11 +448,6 @@ impl Composed {
 impl ComposedGeneration {
     /// Returns the generation's single specification unit.
     ///
-    /// Most component versions publish exactly one machine-readable unit;
-    /// a caller that can only consume one (the XML/REST/OPT emits over the
-    /// current RM/BASE) uses this and fails loudly on a multi-unit
-    /// generation instead of silently picking a unit.
-    ///
     /// # Errors
     /// Returns an error when the generation carries several units (LANG).
     pub(crate) fn unit(&self) -> Result<&ComposedUnit, Box<dyn std::error::Error>> {
@@ -519,9 +464,7 @@ impl ComposedGeneration {
     }
 }
 
-/// The full Rust path of the module a dependency generation emits `spec` at
-/// (`openehr_base::v1_3::base_types::identification::uid`) — the path the
-/// [`External`] index hands the render stage.
+/// The full Rust module path a dependency generation emits `spec` at.
 fn generation_module_path(
     comp: &CrateComposition,
     generation: &str,
@@ -536,10 +479,10 @@ fn generation_module_path(
     )
 }
 
-/// Find a generation row inside a composition entry.
+/// Finds a generation row inside a composition entry.
 ///
 /// # Errors
-/// Returns an error if `generation` names no row of `comp` (a table bug).
+/// Returns an error if `generation` names no row of `comp`.
 fn generation_spec(
     comp: &'static CrateComposition,
     generation: &str,
@@ -557,8 +500,7 @@ fn generation_spec(
         })
 }
 
-/// Load the schemas of the dependency generations a generation's resolution
-/// model merges, in table order, every unit of each.
+/// Loads the schemas of a generation's dependency generations, in table order.
 ///
 /// # Errors
 /// Returns an error if a dependency names a missing key or generation, or one
@@ -577,14 +519,8 @@ pub(crate) fn generation_dep_schemas(
     Ok(dep_schemas)
 }
 
-/// The [`External`] index over `deps`: each dependency generation's emittable
-/// specs mapped to full generation-module paths, consulted first-wins across
-/// dependencies in table order, for references made from `crate_name`.
-///
-/// Within one dependency generation the units fold LAST-wins (a later unit's
-/// twin shadows an earlier one's, the retired merged-view semantics AM 2.4's
-/// LANG closure was built against), realized by one folded map per dependency
-/// generation.
+/// The [`External`] index over `deps`, first-wins across dependencies; within
+/// one dependency generation the units fold last-wins.
 ///
 /// # Errors
 /// Returns an error if a dependency names a missing key or generation, or one
@@ -617,8 +553,7 @@ pub(crate) fn external_index(
     Ok(external)
 }
 
-/// Load one generation's units plus each unit's merged resolution model
-/// (paired dependency generations below, the unit's own schema on top).
+/// Loads one generation's units, each with its resolution model.
 ///
 /// # Errors
 /// Returns an error if any involved BMM file cannot be loaded, a dependency
@@ -645,8 +580,8 @@ fn generation_units(
     Ok((units, dep_schemas))
 }
 
-/// Resolve a composition entry into its per-generation schemas, models, and
-/// full-path [`External`] indexes.
+/// Resolves a composition entry into its per-generation schemas, models and
+/// [`External`] indexes.
 ///
 /// # Errors
 /// Returns an error if the table row is malformed (zero or several `current`
@@ -688,10 +623,8 @@ pub(crate) fn compose(key: &str) -> Result<Composed, Box<dyn std::error::Error>>
     Ok(Composed { comp, generations })
 }
 
-/// The Rust identifier of a generation's `Generation`-enum variant
-/// (`v1_2` → `V1_2`) — the module token upper-cased with its underscores
-/// KEPT: collapsing them (`V12`) would make `v1_2` and a future `v12`
-/// indistinguishable.
+/// The `Generation` variant ident of a module token (`v1_2` → `V1_2`); the
+/// underscores keep `v1_2` and `v12` apart.
 pub(crate) fn generation_variant(module: &str) -> String {
     module.to_uppercase()
 }

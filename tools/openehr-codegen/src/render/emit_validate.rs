@@ -1,29 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `emit-validate`: emit the **RM class-invariant cores** into `openehr-rm`
-//! (`src/validate/generated.rs`), the single source both the typed `Validate`
-//! impls (`*_impl.rs`) and the allocation-free fast path (`validate::fast`)
-//! call for every mechanically-shaped RM class invariant.
+//! `emit-validate`: the RM class-invariant cores in `openehr-rm`
+//! (`src/validate/generated.rs`), which the typed `Validate` impls and
+//! `validate::fast` both call.
 //!
-//! The cores' bodies are fixed spec logic (one `pub(crate) fn <name>_core` per
-//! invariant group, each emitting the workspace's uniform violation message
-//! shape verbatim — see [`CORES`]); what the emitter derives from the vendored
-//! inputs is (a)
-//! the `PROPORTION_KIND` codes, read from the RM BMM enumeration, (b) the
-//! **emittable-invariant realization register** — every invariant the
-//! assertion-dialect classifier ([`crate::analyze::invariants`]) marks
-//! `emitted`, paired with the venue that realizes it (a core here, a hand-written
-//! `*_impl.rs`, the `openehr-its` wire boundary, an adjudicated exclusion, or
-//! nothing yet) — and (c) the **pending-adjudication register** — every
-//! invariant the classifier marks `runtime-hook-missing`. Both registers render
-//! as doc notes so the generated file honestly accounts for every classified
-//! invariant, realized or not (nothing silently dropped).
-//!
-//! One generated file under `openehr-rm/src/validate/`; the hand-written
-//! `validate.rs` declares `pub(crate) mod generated;` and keeps the runtime
-//! helpers the cores call (`invariant_failed`, the ISO-8601 validators, the
-//! dialect predicates).
+//! The core bodies are fixed ([`CORES`]); the emitter derives the
+//! `PROPORTION_KIND` codes from the BMM and renders the realization,
+//! complex and pending registers of every classified invariant as doc notes.
 
 use crate::analyze::Model;
 use crate::analyze::invariants::{Bucket, classify};
@@ -31,9 +15,7 @@ use crate::load::bmm::{BmmEnumValue, BmmSchema};
 use crate::plan::overrides::{InvariantVenue, account_complex, account_emitted};
 use crate::render::emit::GenFile;
 
-/// Emit the `validate/generated.rs` file for `openehr-rm` from the merged
-/// BASE + RM model (for the `PROPORTION_KIND` codes) and the RM own schema (for
-/// the class-invariant classification register).
+/// Emits `validate/generated.rs` for `openehr-rm`.
 #[must_use]
 pub(crate) fn emit_files(model: &Model, own_schema: &BmmSchema) -> Vec<GenFile> {
     let mut body = String::new();
@@ -53,9 +35,7 @@ pub(crate) fn emit_files(model: &Model, own_schema: &BmmSchema) -> Vec<GenFile> 
     }]
 }
 
-/// The `PROPORTION_KIND` code constants, read from the RM BMM enumeration
-/// (`pk_ratio = 0 … pk_integer_fraction = 4`). The `DV_PROPORTION` core compares
-/// `kind` against the named codes rather than magic numbers.
+/// The `PROPORTION_KIND` code constants, read from the RM BMM enumeration.
 fn proportion_kind_consts(model: &Model) -> String {
     let mut b = String::from(
         "// `PROPORTION_KIND` codes, generated from the RM BMM enumeration\n\
@@ -86,20 +66,10 @@ fn proportion_kind_consts(model: &Model) -> String {
     b
 }
 
-/// The **emittable-invariant realization register**: every RM class invariant
-/// the assertion-dialect classifier marks [`Bucket::Emitted`], paired with the
-/// venue that realizes it (`plan::overrides::INVARIANT_REALIZATIONS`), grouped
-/// by venue and sorted `(class, name)`.
-///
-/// The `Emitted` verdict says an expression *can* be evaluated mechanically —
-/// not that anything evaluates it. Without this register an emittable invariant
-/// realized nowhere reads exactly like one a core enforces, so it vanishes
-/// silently (LOCATABLE `Links_valid` and `Archetyped_valid` did: both are
-/// realized at the wire boundary, neither appears in any core). Rendering the
-/// venue of every emittable invariant — including the two non-realizing
-/// verdicts — makes the generated file account for the whole bucket, and an
-/// invariant with no register row is rendered under an explicit
-/// `UNACCOUNTED` heading (the emitter-invariant suite fails on a non-empty one).
+/// The emittable-invariant realization register: every [`Bucket::Emitted`] RM
+/// class invariant with its venue (`plan::overrides::INVARIANT_REALIZATIONS`),
+/// grouped by venue and sorted `(class, name)`; an invariant with no row
+/// renders under `UNACCOUNTED`.
 fn realization_register(own_schema: &BmmSchema) -> String {
     let rows = account_emitted(own_schema.classes.iter().flat_map(|(class, def)| {
         def.invariants
@@ -126,8 +96,7 @@ fn realization_register(own_schema: &BmmSchema) -> String {
 }
 
 /// Renders one accounted-invariant row set: the venue-grouped sections plus
-/// the explicit unaccounted heading — the ONE rendering both registers share,
-/// so the emitted and complex buckets can never drift apart in shape.
+/// the unaccounted heading.
 fn render_register_rows(
     rows: &[crate::plan::overrides::AccountedInvariant],
     unaccounted_heading: &str,
@@ -175,14 +144,9 @@ fn render_register_rows(
     b
 }
 
-/// The complex-bucket register: every invariant the classifier judges NOT
-/// mechanically evaluable, with its adjudicated venue.
-///
-/// A complex rule is still normative — it is realized at a hand-written or
-/// application venue, or carries an adjudicated exclusion; one with no row
-/// renders under an explicit `UNACCOUNTED-COMPLEX` heading (the
-/// emitter-invariant suite fails on a non-empty one, the same discipline
-/// extended to the whole tripartition).
+/// The complex-bucket register: every invariant the classifier judges not
+/// mechanically evaluable, with its venue; one with no row renders under
+/// `UNACCOUNTED-COMPLEX`.
 fn complex_register(own_schema: &BmmSchema) -> String {
     let rows = account_complex(own_schema.classes.iter().flat_map(|(class, def)| {
         def.invariants
@@ -206,27 +170,16 @@ fn complex_register(own_schema: &BmmSchema) -> String {
     b
 }
 
-/// The class-invariant runtime-hook register, split by adjudication verdict.
-///
-/// Every RM class invariant the assertion-dialect classifier marks
-/// `runtime-hook-missing` needs a runtime lookup no generated core can express
-/// mechanically. The terminology/code-set family is **enforced by the sibling
-/// binding table** (`openehr-rm` `validate::terminology::validate_rm_terminology`,
-/// over the openEHR terminology bundle, TERM 3.1.0), which the `openehr-its`
-/// wire-boundary dispatcher runs as a post-core check — audited clean against
-/// the whole corpus before enforcement. Only the versioned-object aggregate
-/// invariants stay unrealized (they are a versioning/service-layer concern, not
-/// a property of one node). Both groups are named here so nothing the classifier
-/// flagged is silently dropped, sorted `(class, name)`.
+/// The runtime-hook register, sorted `(class, name)`: the terminology and
+/// code-set invariants `validate::terminology` enforces, and the
+/// versioned-object aggregates that stay unrealized.
 fn pending_register(own_schema: &BmmSchema) -> String {
     let mut enforced: Vec<(String, String, &'static str)> = Vec::new();
     let mut aggregate: Vec<(String, String, &'static str)> = Vec::new();
     for (class, def) in &own_schema.classes {
         for (name, expr) in &def.invariants {
             if let Bucket::RuntimeHookMissing(reason) = classify(expr) {
-                // The versioned-object aggregate invariants stay pending; the
-                // terminology-service / code-set family is enforced by the
-                // sibling `validate::terminology` binding table.
+                // The versioned-object aggregates stay pending.
                 if reason == "versioned-object aggregate model" {
                     aggregate.push((class.clone(), name.clone(), reason));
                 } else {
@@ -354,9 +307,7 @@ pub(crate) fn code_phrase_core(code_string: &str, out: &mut Vec<InvariantViolati
     }
 }
 
-/// DV_TEXT / DV_CODED_TEXT `Valid_value` (non-empty rubric) and
-/// `Formatting_valid` (present ⇒ non-empty). `ty` is `DV_TEXT` or
-/// `DV_CODED_TEXT` (which inherits both).
+/// DV_TEXT / DV_CODED_TEXT `Valid_value` and `Formatting_valid`.
 pub(crate) fn dv_text_core(
     ty: &str,
     value: &str,
@@ -425,10 +376,8 @@ pub(crate) fn magnitude_status_core(
     }
 }
 
-/// The DV_AMOUNT invariants (`Accuracy_is_percent_validity`, `Accuracy_validity`)
-/// plus the inherited DV_QUANTIFIED `Magnitude_status_valid`. Shared by every
-/// concrete DV_AMOUNT descendant (DV_QUANTITY, DV_COUNT, DV_DURATION,
-/// DV_PROPORTION).
+/// The DV_AMOUNT invariants plus the inherited DV_QUANTIFIED
+/// `Magnitude_status_valid`, shared by every concrete DV_AMOUNT descendant.
 pub(crate) fn dv_amount_core(
     ty: &str,
     accuracy: Option<f64>,
@@ -450,21 +399,16 @@ pub(crate) fn dv_amount_core(
     magnitude_status_core(ty, magnitude_status, out);
 }
 
-/// The temporal `Value_valid` invariant: the string value must be a
-/// well-formed ISO-8601 date/time/date-time/duration (caller supplies the
-/// verdict via the ISO-8601 validators).
+/// The temporal `Value_valid` invariant over the caller's ISO 8601 verdict.
 pub(crate) fn temporal_value_core(ty: &str, valid: bool, out: &mut Vec<InvariantViolation>) {
     if !valid {
         out.push(invariant_failed("Value_valid", ty));
     }
 }
 
-/// The DV_PROPORTION own invariants. The inherited DV_AMOUNT / DV_ORDERED
-/// invariants are pushed by the callers.
-// The released invariants compare the denominator against the exact values
-// 0/1/100 (RM `dv_proportion.adoc` §Invariants: `Valid_denominator`,
-// `Unitary_validity`, `Percent_validity` — `denominator = 1`, `= 100`,
-// `<> 0`), so exact float comparison IS the spec semantics.
+/// The DV_PROPORTION own invariants; callers push the inherited ones.
+// RM `dv_proportion.adoc` §Invariants compares the denominator with exact 0,
+// 1 and 100.
 #[expect(
     clippy::float_cmp,
     reason = "the released invariants compare the denominator against exact 0/1/100 values"
@@ -496,16 +440,8 @@ pub(crate) fn dv_proportion_core(
             "Invariant Precision_validity failed on type DV_PROPORTION",
         ));
     }
-    // Fraction_validity: `(type = pk_fraction or type = pk_integer_fraction)
-    // implies is_integral`, where `is_integral()` is "True … if precision is 0"
-    // (RM dv_proportion.adoc §Functions). A fraction / integer_fraction is
-    // therefore invalid when its numerator/denominator are non-integral OR its
-    // precision is a present, non-zero value. (Precision 0 or absent keeps a
-    // whole-numerator/denominator fraction valid.)
-    //
-    // NOTE: `Is_integral_validity` (`is_integral implies …`) needs no separate
-    // push — `is_integral()` IS "precision is 0" (§Functions), so the
-    // invariant is extensionally the `Precision_validity` check above.
+    // Fraction_validity: `is_integral()` is "True … if precision is 0" (RM
+    // dv_proportion.adoc §Functions), so `Is_integral_validity` is this check.
     if (kind == PK_FRACTION || kind == PK_INTEGER_FRACTION)
         && (!integral || precision.is_some_and(|p| p != 0))
     {
@@ -538,9 +474,8 @@ pub(crate) fn archetype_node_id_core(
     }
 }
 
-/// The non-periodic HISTORY invariants: `Events_valid` (at least one event or a
-/// summary) + inherited `Archetype_node_id_valid`. `Period_consistency` stays
-/// typed-only (the fast path declines periodic histories).
+/// The non-periodic HISTORY invariants: `Events_valid` and the inherited
+/// `Archetype_node_id_valid`.
 pub(crate) fn history_basic_core(
     events_empty: bool,
     has_summary: bool,
@@ -570,9 +505,8 @@ pub(crate) fn composition_core(
     archetype_node_id_core("COMPOSITION", node_id, out);
 }
 
-/// The shared ENTRY-root invariants: `Is_archetype_root` (an ENTRY is an
-/// archetype root, so `archetype_details` must be present) + inherited
-/// `Archetype_node_id_valid`. `ty` is the concrete ENTRY subtype.
+/// The ENTRY-root invariants: `Is_archetype_root` and the inherited
+/// `Archetype_node_id_valid`.
 pub(crate) fn entry_root_core(
     ty: &str,
     has_archetype_details: bool,
@@ -618,9 +552,7 @@ pub(crate) fn archetyped_core(rm_version: &str, out: &mut Vec<InvariantViolation
     }
 }
 
-/// PARTY_IDENTIFIED / PARTY_RELATED `Basic_validity` (at least one of `name`,
-/// `identifiers`, `external_ref`) and `Name_valid` (present ⇒ non-empty). `ty`
-/// is `PARTY_IDENTIFIED` or `PARTY_RELATED` (which inherits both).
+/// PARTY_IDENTIFIED / PARTY_RELATED `Basic_validity` and `Name_valid`.
 pub(crate) fn party_identified_core(
     ty: &str,
     name: Option<&str>,
@@ -665,9 +597,8 @@ pub(crate) fn resource_description_core(
     }
 }
 
-/// RESOURCE_DESCRIPTION_ITEM `Purpose_valid` (`not purpose.is_empty`) plus the
-/// three present-implies-non-empty string rules (`Use_valid`, `misuse_valid`,
-/// `copyright_valid`).
+/// RESOURCE_DESCRIPTION_ITEM `Purpose_valid`, `Use_valid`, `misuse_valid` and
+/// `copyright_valid`.
 pub(crate) fn resource_description_item_core(
     purpose: &str,
     use_: Option<&str>,
@@ -692,11 +623,8 @@ pub(crate) fn resource_description_item_core(
 }
 
 /// AUTHORED_RESOURCE `Revision_history_valid`
-/// (`is_controlled xor revision_history = Void`): a controlled resource
-/// carries a revision history and an uncontrolled one does not. Evaluated
-/// only when `is_controlled` is PRESENT — the attribute is `0..1` and an
-/// `xor` against a Void operand is not evaluable, so an absent flag asserts
-/// nothing (never an invented prohibition).
+/// (`is_controlled xor revision_history = Void`), checked only when
+/// `is_controlled` is present.
 pub(crate) fn authored_resource_core(
     is_controlled: Option<bool>,
     has_revision_history: bool,
@@ -721,8 +649,7 @@ pub(crate) fn extract_core(sequence_nr: i32, out: &mut Vec<InvariantViolation>) 
 }
 
 /// EXTRACT_UPDATE_SPEC `Overall_validity`
-/// (`repeat_period /= Void or trigger_events /= Void`): an update
-/// specification names at least one update mode.
+/// (`repeat_period /= Void or trigger_events /= Void`).
 pub(crate) fn extract_update_spec_core(
     has_repeat_period: bool,
     has_trigger_events: bool,
