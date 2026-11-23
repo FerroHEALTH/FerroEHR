@@ -2,16 +2,8 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM spec functions for `ITEM_TREE`.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_structures.item_tree.adoc`
-//! §Functions. `items` is `0..1` and §Description says "The tree may be
-//! empty", so every accessor treats an absent list and an empty one alike.
-//!
-//! The two path functions run over the canonical-JSON value tree through
-//! [`crate::v1_2::paths`], the crate's one path engine — a leaf path means the
-//! same thing here as it does on the wire.
+//! The `ITEM_TREE` functions (`org.openehr.rm.data_structures.item_tree.adoc`)
+//! through [`crate::v1_2::paths`]; an absent list reads as empty.
 
 use crate::v1_2::data_structures::item_structure::item_tree::ItemTree;
 use crate::v1_2::data_structures::representation::cluster::Cluster;
@@ -19,11 +11,8 @@ use crate::v1_2::data_structures::representation::element::Element;
 use crate::v1_2::paths::{RmPath, TypedPathError, canonical_value};
 
 impl ItemTree {
-    /// Returns the leaf element at `a_path`, or `None` when the path resolves
-    /// to nothing or to something that is not an `ELEMENT`.
-    ///
-    /// Spec: `org.openehr.rm.data_structures.item_tree.adoc` §Functions
-    /// `element_at_path` — "Return the leaf element at the path `a_path`".
+    /// Returns the leaf element at `a_path` (`element_at_path`), or `None` when
+    /// the path reaches no `ELEMENT`.
     ///
     /// # Errors
     /// Returns [`TypedPathError::Path`] when `a_path` is not a well-formed
@@ -32,9 +21,7 @@ impl ItemTree {
     pub fn element_at_path(&self, a_path: &str) -> Result<Option<Element>, TypedPathError> {
         let path: RmPath = a_path.parse()?;
         let root = canonical_value(self)?;
-        // NOTE: a node that does not decode as an `ELEMENT` is a legitimately
-        // absent leaf, not a defect — an interior `CLUSTER` is a perfectly
-        // valid node at a path that is simply not a leaf path.
+        // NOTE: a node that is not an `ELEMENT` is a non-leaf path, not a defect.
         Ok(crate::v1_2::paths::item_at_path(&root, &path)
             .and_then(|node| serde_json::from_value::<Element>(node.clone()).ok()))
     }

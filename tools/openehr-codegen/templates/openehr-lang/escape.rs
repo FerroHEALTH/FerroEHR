@@ -2,56 +2,22 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! The `master03` string-escape decoder — one home for this generation.
+//! The `master03` string-escape decoder (`LANG/docs/odin/master03-basics.adoc`):
+//! `\uHHHH` and `\uHHHHHHHH` (§File Encoding) and `\r \n \t \\ \" \'`
+//! (§Special Character Sequences); "Any other character combination starting
+//! with a backslash is illegal".
 //!
-//! `LANG/docs/odin/master03-basics.adoc` §File Encoding (verbatim twin:
-//! `AM/docs/ADL2/master03-file_encoding.adoc` §File Encoding) defines the
-//! ASCII encoding of unicode as "`\u` escaped UTF-16" in two spellings:
+//! NOTE: §Special Character Sequences' closing sentence would ban the `\u`
+//! forms §File Encoding sanctions; the specific rule governs.
 //!
-//! - `\uHHHH` — "4 hex digits which will be the same (possibly 0-filled on the
-//!   left) as the unicode code-point number expressed in hexadecimal; this
-//!   applies to unicode codepoints in the range `U+0000` - `U+FFFF` (the 'base
-//!   multi-lingual plane', BMP)";
-//! - `\uHHHHHHHH` — "8 hex digits to encode unicode code-points in the range
-//!   `U+10000` through `U+10FFFF` (non-BMP planes); the algorithm is described
-//!   in IETF RFC 2781".
-//!
-//! plus the six customary quoted forms `\r \n \t \\ \" \'` of §Special
-//! Character Sequences.
-//!
-//! Those eight forms are the whole set: §Special Character Sequences closes it
-//! with "Any other character combination starting with a backslash is illegal",
-//! so every other backslash sequence is a typed decode defect here. Regular
-//! expressions never reach this decoder — a cADL string constraint's PERL
-//! classes "should not be treated as anything other than literal strings"
-//! (same §), so `openehr-adl` decodes only the `;"assumed"` suffix.
-//!
-//! NOTE: the released text contradicts itself — §File Encoding sanctions the
-//! two `\u` spellings while §Special Character Sequences' closing sentence bans
-//! them — adjudicated for §File Encoding, the specific rule, since the general
-//! sentence would make that whole provision dead text.
-//!
-//! NOTE: no openEHR spec governs which UTF-16 spelling the eight digits carry —
-//! our own design/extension: both the RFC 2781 surrogate-pair and the
-//! zero-filled scalar readings decode, disambiguated by the first four digits
-//! (`D800`-`DBFF` against `0000`-`0001`, disjoint by construction).
-//!
-//! NOTE: `master03-basics.adoc` is byte-identical in Release-1.0.0, so one
-//! decoder is correct for every generation.
+//! NOTE: no openEHR spec says which UTF-16 spelling the eight digits carry, our
+//! own design: both the surrogate pair and the zero-filled scalar decode,
+//! told apart by the first four digits.
 
 /// A `master03` escape-sequence defect.
-///
-/// Every variant is a decode failure with no sound fallback: the alternative
-/// would be to emit a replacement character or pass the escape through
-/// verbatim, both of which turn an authoring defect into silently wrong text.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum EscapeError {
-    /// A backslash sequence outside the sanctioned set — the six customary
-    /// quoted forms of §Special Character Sequences plus the two `\u`
-    /// spellings of §File Encoding. "Any other character combination starting
-    /// with a backslash is illegal; to get the effect of a literal backslash,
-    /// the `\\` sequence should always be used" (§Special Character
-    /// Sequences).
+    /// A backslash sequence outside the eight sanctioned forms.
     #[error(
         "the escape sequence '{sequence}' at byte {at} is illegal; the legal forms are \\r \\n \\t \\\\ \\\" \\' and \\u"
     )]
@@ -61,9 +27,7 @@ pub enum EscapeError {
         /// Its byte offset in the undelimited string body.
         at: usize,
     },
-    /// A string body ending in an unpaired backslash. A backslash carries no
-    /// meaning on its own: "to get the effect of a literal backslash, the
-    /// `\\` sequence should always be used" (§Special Character Sequences).
+    /// A string body ending in an unpaired backslash.
     #[error(
         "the string body ends with an unpaired backslash at byte {at}; a literal backslash is written \\\\"
     )]
@@ -82,9 +46,7 @@ pub enum EscapeError {
         /// The byte offset of the backslash opening the escape.
         at: usize,
     },
-    /// A `\uHHHHHHHH` escape read as a zero-filled scalar whose code point
-    /// falls outside `U+10000`-`U+10FFFF`, the only range the 8-digit form
-    /// encodes (§File Encoding).
+    /// An 8-digit scalar escape outside `U+10000`-`U+10FFFF` (§File Encoding).
     #[error(
         "the 8-digit unicode escape '\\u{escape}' denotes U+{code_point:04X}, outside the U+10000-U+10FFFF range the 8-digit form encodes"
     )]
@@ -103,9 +65,7 @@ pub enum EscapeError {
         /// The eight hex digits, as authored.
         escape: String,
     },
-    /// A `\uHHHH` escape naming a UTF-16 surrogate code point. A surrogate is
-    /// not a Unicode scalar value and appears only as half of a pair
-    /// (RFC 2781 §2.1), so on its own it denotes no character.
+    /// A `\uHHHH` escape naming a lone surrogate (RFC 2781 §2.1).
     #[error(
         "the unicode escape '\\u{escape}' names the surrogate code point U+{code_point:04X}, which is not a character"
     )]
@@ -130,14 +90,12 @@ const NON_BMP_FIRST: u32 = 0x0001_0000;
 /// The last Unicode code point — the high end of the 8-digit form's range.
 const NON_BMP_LAST: u32 = 0x0010_FFFF;
 
-/// Decode the `master03` escape sequences of an undelimited string body.
+/// Decodes the `master03` escape sequences of an undelimited string body.
 ///
 /// # Errors
-/// [`EscapeError`] for any backslash sequence the two chapters do not
-/// sanction — an unknown letter after the backslash, an unpaired trailing
-/// backslash, a `\u` with neither 4 nor 8 hex digits — and for a `\u` escape
-/// that denotes no character: an 8-digit form outside `U+10000`-`U+10FFFF`, a
-/// malformed surrogate pair, or a lone surrogate.
+/// [`EscapeError`] for an illegal backslash sequence, an unpaired trailing
+/// backslash, a `\u` with neither 4 nor 8 hex digits, an 8-digit form outside
+/// `U+10000`-`U+10FFFF`, a malformed surrogate pair, or a lone surrogate.
 pub fn decode(inner: &str) -> Result<String, EscapeError> {
     if !inner.contains('\\') {
         return Ok(inner.to_owned());
@@ -163,9 +121,7 @@ pub fn decode(inner: &str) -> Result<String, EscapeError> {
             // The `\u` arm consumes its own hex digits on top of the two bytes
             // the backslash and the `u` take.
             Some('u') => at += decode_unicode(&mut chars, &mut out, at)?,
-            // "Any other character combination starting with a backslash is
-            // illegal" (§Special Character Sequences). Passing it through
-            // verbatim would make an authoring defect silently readable text.
+            // "Any other character combination starting with a backslash is illegal".
             Some(other) => {
                 return Err(EscapeError::IllegalEscape {
                     sequence: format!("\\{other}"),
@@ -180,11 +136,7 @@ pub fn decode(inner: &str) -> Result<String, EscapeError> {
     Ok(out)
 }
 
-/// Check that every `master03` escape sequence of an undelimited string body
-/// decodes, discarding the decoded text.
-///
-/// The lexers call this so a semantically-unsound `\u` fails the LEX, next to
-/// the structural escape check, rather than surfacing later.
+/// Checks that every escape of an undelimited string body decodes.
 ///
 /// # Errors
 /// As [`decode`].
@@ -192,14 +144,8 @@ pub fn validate(inner: &str) -> Result<(), EscapeError> {
     decode(inner).map(|_| ())
 }
 
-/// Decode a double-quoted `STRING` literal — strip the `"` delimiters, then
-/// decode the body with [`decode`].
-///
-/// The delimiters are `master03`'s (`LANG/docs/odin/master03-basics` §Special
-/// Character Sequences: `\"` is the escape *because* `"` delimits), and every
-/// reader of a `master03` string literal strips them the same way — whichever
-/// readers this generation carries — so the rule lives here once. A slice that
-/// is not delimited is decoded as-is rather than losing a character.
+/// Decodes a double-quoted `STRING` literal; an undelimited slice is decoded
+/// as is.
 ///
 /// # Errors
 /// As [`decode`].
@@ -207,12 +153,8 @@ pub fn decode_string_literal(raw: &str) -> Result<String, EscapeError> {
     decode(strip_delimiters(raw, '"'))
 }
 
-/// Decode a single-quoted `CHARACTER` literal — strip the `'` delimiters, then
-/// decode the body with [`decode`].
-///
-/// Returns a `String` rather than a `char` because the caller decides what an
-/// empty literal means; the grammars admit exactly one character, so a
-/// well-formed literal yields exactly one.
+/// Decodes a single-quoted `CHARACTER` literal; the caller decides what an
+/// empty one means.
 ///
 /// # Errors
 /// As [`decode`].
@@ -227,13 +169,8 @@ fn strip_delimiters(raw: &str, delimiter: char) -> &str {
         .and_then(|s| s.strip_suffix(delimiter))
         .unwrap_or(raw)
 }
-/// Decode one `\u…` escape, whose `\u` prefix `chars` has already yielded, and
-/// report how many bytes of hex digits it consumed (4 or 8 — every digit is
-/// ASCII, so the byte and character counts coincide).
-///
-/// Consumes exactly the hex digits the chosen spelling uses, so any trailing
-/// hex text stays literal. `at` is the byte offset of the backslash that opens
-/// the escape, carried only so a defect can name its position.
+/// Decodes one `\u…` escape after its prefix, returning the hex digits
+/// consumed (4 or 8); `at` is the backslash's byte offset.
 fn decode_unicode(
     chars: &mut std::str::Chars<'_>,
     out: &mut String,
@@ -428,9 +365,7 @@ mod tests {
         assert_eq!(decoded(r"\u00410042"), "A0042");
     }
 
-    /// "Any other character combination starting with a backslash is illegal"
-    /// (§Special Character Sequences) — including the PERL regex classes that
-    /// are legal only INSIDE a cADL regex literal, which is never decoded.
+    /// Any other backslash sequence is illegal, PERL regex classes included.
     #[test]
     fn a_backslash_sequence_outside_the_sanctioned_set_is_refused() {
         for (body, sequence, at) in [
@@ -452,10 +387,7 @@ mod tests {
         }
     }
 
-    /// The offset an illegal escape reports counts BYTES of the AUTHORED body,
-    /// so multi-byte text before it does not shift the position it names, and a
-    /// preceding escape counts its two authored characters rather than the one
-    /// it decodes to.
+    /// An illegal escape's offset counts bytes of the authored body.
     #[test]
     fn the_illegal_escape_offset_counts_authored_bytes() {
         assert_eq!(

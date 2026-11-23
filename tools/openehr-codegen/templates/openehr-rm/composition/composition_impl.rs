@@ -2,50 +2,21 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM class invariants for `COMPOSITION`.
-//!
-//! The class page
-//! (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.composition.adoc`
-//! §Invariants) declares five invariants; every one is enforced, each at the
-//! layer its inputs live at:
-//!
-//! - `Is_archetype_root` + inherited `Archetype_node_id_valid` — here, via
-//!   the generated `composition_core` (the machine-classified mechanical
-//!   invariants).
-//! - `Content_valid` (`content /= Void implies not content.is_empty`) — by
-//!   construction: the field emits `Option<NonEmptyVec<CONTENT_ITEM>>`, so a
-//!   present-but-empty list is unrepresentable and the strict readers refuse
-//!   `[]` at parse.
-//! - `Category_validity`, `Territory_valid`, `Language_valid` — terminology-
-//!   bound, enforced in `validate::terminology` against the `openehr-term`
-//!   bundle (they need the code sets, which this layer does not hold).
-//!
-//! Beyond the invariant table: `composer` presence is structural (a `1..1`
-//! attribute emits a mandatory field), and content typing is structural (the
-//! `ContentItem` enum admits only the CONTENT_ITEM family).
-//!
-//! NOTE: the released text declares NO persistent-category context rule —
-//! SPECRM-52 removed the old "no context on persistent Compositions"
-//! invariant (`RM/docs/ehr/master05-composition_package.adoc` §The
-//! Composition Package NOTE: relaxed after release 1.0.3).
+//! `COMPOSITION` invariants
+//! (`org.openehr.rm.composition.composition.adoc` §Invariants):
+//! `Is_archetype_root` and `Archetype_node_id_valid` in `composition_core`;
+//! `Content_valid` by the `NonEmptyVec` type; `Category_validity`,
+//! `Territory_valid` and `Language_valid` in `validate::terminology`.
 
 use crate::v1_2::composition::composition::Composition;
 use openehr_base::validate::{InvariantViolation, Validate};
 
 impl Composition {
-    /// The `composition_category` code for persistent content.
-    ///
-    /// Spec: `composition.adoc` §Functions gives the code NUMERICALLY —
-    /// "True if category is `431|persistent|`" — so `431` is normative here,
-    /// not a local convention. The rubric is a rendering of it and is resolved
-    /// from the terminology bundle, never compared against.
+    /// The `composition_category` code for persistent content, "`431|persistent|`"
+    /// (`composition.adoc` §Functions).
     const PERSISTENT_CATEGORY: &str = "431";
 
-    /// Returns `true` when this composition's category is `431|persistent|`.
-    ///
-    /// Spec: `composition.adoc` §Functions — "True if category is
-    /// `431|persistent|`, False otherwise. Useful for finding Compositions in
-    /// an EHR which are guaranteed to be of interest to most users."
+    /// Whether this composition's category is `431|persistent|`.
     #[must_use]
     pub fn is_persistent(&self) -> bool {
         self.category.defining_code.code_string == Self::PERSISTENT_CATEGORY
@@ -129,11 +100,7 @@ mod tests {
         }
     }
 
-    /// `composition.adoc` §Functions: `is_persistent` is true for `431` and
-    /// FALSE OTHERWISE — asserted against a real other member of the same
-    /// group (`433|event|`, the fixture's own category) rather than against an
-    /// absent or nonsense code, since "not persistent" has to hold for the
-    /// categories that actually occur.
+    /// `is_persistent` is false for `433|event|`.
     #[test]
     fn is_persistent_is_the_431_category_and_nothing_else() {
         let mut c = composition();

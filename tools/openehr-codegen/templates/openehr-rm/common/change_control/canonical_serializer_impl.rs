@@ -2,18 +2,10 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! The RFC 8785 canonical form written straight from a value's `Serialize`
-//! impl, with no `serde_json::Value` built on the way (#5849).
-//!
-//! The bytes are those of `canonical_json(&serde_json::to_value(x))`: every
-//! serde shape is written as `serde_json`'s value serializer would build it,
-//! and then as `canonical_form_impl`'s writer writes that value, through the
-//! same string, number and name-order routines. Each object's members are
-//! written one after another into the output, then sorted by the UTF-16 code
-//! units of their names (RFC 8785 §3.2.3) and rewritten in place through one
-//! scratch buffer the whole run shares; a name given twice keeps its last
-//! value, as a JSON object map does. No specification governs how the form is
-//! computed, only its bytes: our own design.
+//! The RFC 8785 canonical form written from a value's `Serialize` impl, with no
+//! `serde_json::Value` in between (#5849); the bytes equal
+//! `canonical_json(&serde_json::to_value(x))`. A name given twice keeps its
+//! last value.
 
 use std::cmp::Ordering;
 use std::ops::Range;
@@ -34,11 +26,8 @@ pub fn canonical_to_string<T: Serialize + ?Sized>(value: &T) -> Result<String, s
     canonical_object_without(value, &[])
 }
 
-/// Returns the RFC 8785 canonical form of `value`, leaving out the members of
-/// its top-level object named in `skip`.
-///
-/// A record's link or proof is left out this way without copying the record.
-/// A `value` that is no object is written whole.
+/// Returns the RFC 8785 canonical form of `value` without the top-level
+/// members named in `skip`; a non-object is written whole.
 ///
 /// # Errors
 /// As [`canonical_to_string`].
@@ -58,11 +47,7 @@ pub fn canonical_object_without<T: Serialize + ?Sized>(
     Ok(canonical.out)
 }
 
-/// An RFC 8785 object assembled member by member, in any order: each member
-/// from a value, or from a canonical form written before.
-///
-/// A caller that splits one value's members among several objects writes
-/// each member once this way. A name given twice keeps its last value.
+/// An RFC 8785 object assembled member by member, in any order.
 #[derive(Debug)]
 pub struct CanonicalObject {
     /// The writer the members are written into, at depth one.
@@ -331,9 +316,8 @@ impl Object<'_, '_> {
         self.value(value)
     }
 
-    /// Closes the object: when its members were written in name order, each
-    /// name once, it is closed in place; otherwise its members are sorted by
-    /// name, the last of each name kept, and rewritten between its braces.
+    /// Closes the object, sorting and deduplicating its members when they were
+    /// not written in name order.
     #[expect(
         clippy::expect_used,
         reason = "`first` is the member count when the object opened and members are only \
