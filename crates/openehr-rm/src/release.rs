@@ -4,9 +4,6 @@
 
 //! The earliest RM release a canonical-JSON composition decodes as.
 //!
-//! Hand-written; preserved across `openehr-codegen` regeneration (it carries no
-//! generated-file marker, so `lib.rs` auto-declares `pub mod release;`).
-//!
 //! RM `docs/UML/classes/org.openehr.rm.common.archetyped.adoc` defines
 //! `ARCHETYPED.rm_version` as the "Version of the openEHR reference model used
 //! to create this object". A builder that names it needs the oldest release

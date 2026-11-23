@@ -4,10 +4,6 @@
 
 //! The report of a broken class invariant of a draft package.
 //!
-//! The invariant checks of each generated draft module share it
-//! ([`crate::draft::access_log::invariants`],
-//! [`crate::draft::access_control::invariants`]).
-//!
 //! A draft is FerroEHR's change proposal and no openEHR release, so these
 //! checks are our own design over our own model (#5124).
 

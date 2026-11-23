@@ -57,11 +57,6 @@ impl CTerminologyCode {
     /// `required (0) → extensible (1) → preferred (2) → example (3)`, child
     /// numerically `<=` parent); a non-`required` parent "automatically
     /// conforms"; otherwise the codes must be `codes_conformant`.
-    ///
-    /// NOTE: the value-set half of the both-`required` branch compares
-    /// `value_set_expanded` of the two nodes, which is resolved against the
-    /// owning archetype's terminology and so is applied by the caller holding
-    /// both flattened terminologies, not here.
     #[must_use]
     pub fn c_value_conforms_to(&self, other: &CTerminologyCode) -> bool {
         if other.any_allowed() {

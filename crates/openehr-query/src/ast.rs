@@ -4,31 +4,12 @@
 
 //! AQL abstract syntax tree, transcribed from `AqlParser.g4` (vendored at
 //! `vendor/grammar/`).
-//!
-//! Each grammar rule maps to a type here; [`crate::parser`] builds these from
-//! the [`crate::lexer`] token stream. This is the SYNTACTIC tree only —
-//! resolving paths and typing quoted temporal literals are semantic concerns.
-//!
-//! Every [`IdentifiedPath`] and every WHERE condition carries a [`Span`]: where
-//! it was written in the source, so a diagnostic can name a position instead of
-//! echoing the text there. Spans never take part in equality.
 
 use std::ops::Range;
 
 use crate::lexer::CompOp;
 
 /// Where a node was written: a half-open byte range into the AQL source.
-///
-/// A span is position metadata, not syntax, so equality ignores it: two nodes
-/// are equal when their syntax is, wherever each was written. That keeps the
-/// printer's round-trip invariant (`parse(to_aql(ast)) == ast`) a statement
-/// about syntax alone. A node built in code, or parsed from a bare token slice
-/// ([`crate::parser::parse`]), has no source position and carries the
-/// [`Span::default`] unknown span.
-///
-/// Offsets are held as `u32`, which keeps a span small enough to ride on every
-/// path; a position past 4 GiB of source is not representable and reads as
-/// unknown.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Span {
     bytes: Option<(u32, u32)>,
@@ -508,10 +489,6 @@ impl FunctionCall {
 }
 
 /// An AQL built-in single-row function (QUERY master03 §Functions), by group.
-///
-/// The aggregates and `TERMINOLOGY` are not here: their argument grammar
-/// differs, so the AST carries them as [`AggregateCall`] and
-/// [`TerminologyFunction`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BuiltinFunction {
     /// A string function (`STRING_FUNCTION_ID`).
@@ -690,11 +667,8 @@ pub enum Primitive {
     Null,
 }
 
-// ── path text rendering (RESULT_SET column `path`) ─────────────────────────────
-//
-// ITS-REST 1.1.0 RESULT_SET columns carry the SELECT expression's path
-// (`{"name": "#0", "path": "/ehr_id/value"}`) exactly as written in the query,
-// minus the root variable, rather than a normalized reconstruction.
+// ── path text rendering: an ITS-REST 1.1.0 RESULT_SET column `path` is the
+// SELECT path as written, minus the root variable ──
 
 use std::fmt;
 
