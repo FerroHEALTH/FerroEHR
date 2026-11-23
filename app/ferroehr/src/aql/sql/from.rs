@@ -799,6 +799,9 @@ impl Builder<'_> {
             (Some(EdgeKind::Structural), Some(parent)) => Some(parent),
             _ => None,
         };
+        // A node read inside its object with the source's conditions keeps
+        // only the rows they admit, so the statement states none of them again.
+        let mut kept_inside = false;
         match structural {
             Some(parent) if self.ctx.names_ehrs() => {
                 self.q.from_function(
@@ -806,28 +809,33 @@ impl Builder<'_> {
                     Alias::new(node.as_str()),
                 );
             }
-            // NOTE: our own design (#6263), with an anchor on a leaf no SELECT column binds the
-            // anchor is the entry and a contained node is read inside its object.
-            Some(parent) if !self.streaming && self.anchors_an_unbound_leaf() => {
+            // NOTE: our own design (#6243, #6263), with an anchor the anchor is the entry and a
+            // contained node is read inside its object.
+            Some(parent) if !self.streaming && self.takes_anchor() => {
                 let inner = format!("{node}_s");
                 let conds = self.rm_conds(&inner, r)?;
                 self.q.from_function(
                     contained_rows(&node, &parent.node, conds),
                     Alias::new(node.as_str()),
                 );
+                kept_inside = true;
             }
             _ => {
                 self.q.from_as(Node::Table, Alias::new(node.as_str()));
             }
         }
-        self.q.and_where(hot(&node, Node::Tier));
+        if !kept_inside {
+            self.q.and_where(hot(&node, Node::Tier));
+        }
         self.node_alias.insert(sid, node.clone());
         if let Some(parent) = structural {
-            for cond in self.rm_conds(&node, r)? {
-                self.q.and_where(cond);
+            if !kept_inside {
+                for cond in self.rm_conds(&node, r)? {
+                    self.q.and_where(cond);
+                }
+                self.q
+                    .and_where(descendant_in_from(&node, &parent.node, &parent.types));
             }
-            self.q
-                .and_where(descendant_in_from(&node, &parent.node, &parent.types));
             Ok(VoGroup {
                 node,
                 vo: parent.vo.clone(),

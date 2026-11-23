@@ -21,7 +21,7 @@ use super::{
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::ehr::access_projection::AccessCommit;
-use crate::storage::version_repo::guarded::{Guard, PartySync};
+use crate::storage::version_repo::guarded::{DirectorySlot, Guard, PartySync};
 use crate::versioning::SigningCtx;
 use crate::versioning::audit::AuditInput;
 
@@ -117,12 +117,12 @@ pub(crate) async fn prepare_write(
     let mut prepared = prepare(ctx, &audit, ctx.stamp.mint(), resolved)?;
     prepared.committed.deleted = deleted;
     // A new FOLDER hierarchy joins `EHR.folders` in the guarded statement itself, at the
-    // rank its gate read judged next, and a party version on its trunk brings its
-    // reverse-relationship index there too.
-    let folder = match guard.folder {
-        Some(rank) if prepared.take_first_folder() => Some(rank),
-        _ => None,
-    };
+    // rank after the highest its gate read found, and a party version on its trunk brings
+    // its reverse-relationship index there too.
+    let directory = guard.directory.map(|slot| DirectorySlot {
+        new: slot.new && prepared.take_first_folder(),
+        ..slot
+    });
     let party = guard.party.map(|sync| {
         let reverse = prepared.on_trunk().then(|| {
             party_facts
@@ -132,7 +132,7 @@ pub(crate) async fn prepare_write(
         Box::new(PartySync { reverse, ..*sync })
     });
     let guard = Guard {
-        folder,
+        directory,
         party,
         ..guard
     };

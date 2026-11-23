@@ -390,8 +390,8 @@ pub(super) async fn window_records(
 impl AccessLogStore {
     /// Seal every record of `log` committed before the call and held by no
     /// write: the frontier moved until it reaches the id sequence's value
-    /// read first, then every window up to it sealed, waiting out another
-    /// replica's sealer.
+    /// read first, the access log's search index moved to it, then every
+    /// window up to it sealed, waiting out another replica's sealer.
     ///
     /// # Errors
     /// As [`Self::seal_to`].
@@ -416,6 +416,9 @@ impl AccessLogStore {
             AuditChain::AccessLog => reached.access_log,
             AuditChain::System => reached.system,
         };
+        if log.chain == AuditChain::AccessLog {
+            self.index_to(upto).await?;
+        }
         loop {
             match self.seal_to(log, upto).await? {
                 SealRound::Busy => tokio::time::sleep(std::time::Duration::from_millis(2)).await,

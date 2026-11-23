@@ -618,7 +618,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   columns (the search columns, the search tokens of the projection and the
   render policy) sit on the entry's own row and are emptied with its content
   when a tombstone replaces it, and `access_log_search` is the view of them
-  the ITI-81 search reads (#5784). An ITI-81 page reads each chain's first
+  the ITI-81 search reads (#5784). The request's commit maintains only the
+  entry's key: the chainer's frontier round copies the columns the readers
+  filter and order on into `access_log_index` in one batch each second, with
+  a cursor that commits with the rows, and both views read the indexed
+  entries through it and the entries past the cursor by a key range, in one
+  statement and so one snapshot (#6319). An ITI-81 page reads each chain's first
   `offset + count` records through its time index, the access log's
   candidates from `access_log_search` with the records tied on the last
   instant, and takes the page from their union by the records' keys alone;
@@ -810,13 +815,17 @@ per outer row. The probe for an earlier row states its conditions as
 anchor whose leaf the SELECT already binds is tied to that bound row and
 needs no probe; otherwise the probe joins the statement beside the anchor,
 correlated to the leaf's source row, so it runs for the rows the containment
-keeps (#6249). A flat statement that anchors a leaf no SELECT column binds
-reads each node a CONTAINS step finds inside its object, behind an `OFFSET 0`
-fence, as a query scoped to named EHRs does (#4487): the anchor or the version
-spine is the entry, and no contained node can be rescanned with the WHERE
-clause's `EXISTS` per outer row on statistics a growing store has outgrown.
-A rare archetype under a broad range then costs one probe per anchored
-version, which is linear where the rescan was quadratic (#6263).
+keeps (#6249). A flat statement with an anchor reads each node a CONTAINS
+step finds inside its object, behind an `OFFSET 0` fence, as a query scoped
+to named EHRs does (#4487): the anchor or the version spine is the entry, and
+no contained node can be rescanned with the WHERE clause's `EXISTS` per outer
+row on statistics a growing store has outgrown (#6263). This holds whether a
+SELECT column binds the anchored leaf or not: on a store filling from empty
+the archetype's OBSERVATIONs and the anchor's rows were both estimated at one
+row, and the planner nested the archetype-index entry, unparameterised,
+inside the anchor's rows (#6243). A rare archetype under a broad range then
+costs one probe per anchored version, which is linear where the rescan was
+quadratic.
 `event_time` is a stored copy of a `STABLE` function's value: it equals the
 comparison's reading because every session runs under `TimeZone = UTC`,
 which the driver sets at connection start. The feature envelope is
