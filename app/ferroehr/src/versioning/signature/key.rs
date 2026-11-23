@@ -250,10 +250,6 @@ impl PgpKey {
     /// Returns the signing algorithm of this key when it is one whose
     /// PRIVATE-key operations carry the Marvin timing sidechannel, `None` for a
     /// key that keeps `rsa` off the signing path.
-    ///
-    /// The classification is a pure seam over [`Self::signing_algorithm`]; the
-    /// boot loader turns a `Some` into the operator-facing warning
-    /// ([`warn_rsa_signing_key`]).
     pub(crate) fn key_algorithm_warning(&self) -> Option<PublicKeyAlgorithm> {
         let algorithm = self.signing_algorithm();
         rsa_family(algorithm).then_some(algorithm)
