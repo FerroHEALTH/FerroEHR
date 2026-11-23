@@ -89,6 +89,7 @@ mod codec_corpus;
 mod cohort_bench;
 mod cohort_query;
 mod cohort_subjects;
+mod commit_audit_golden;
 mod commit_contention;
 mod commit_directory_contention;
 mod commit_held_records;
