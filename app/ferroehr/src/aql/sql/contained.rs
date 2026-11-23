@@ -13,8 +13,8 @@ use super::from::strict_descendant;
 
 /// The `LATERAL` FROM item of the content node `alias` contained in the node
 /// `parent` on a query scoped to EHRs its caller named, or on a flat
-/// statement whose WHERE clause anchors a leaf no SELECT column binds: the
-/// strict descendants of `parent`, behind the `OFFSET 0` fence.
+/// statement whose WHERE clause has an anchor: the strict descendants of
+/// `parent`, behind the `OFFSET 0` fence.
 ///
 /// The fence holds the join order whatever the statistics: the planner reads
 /// the named EHRs' objects first and each object's own nodes after them
@@ -26,8 +26,9 @@ use super::from::strict_descendant;
 /// times its pages in the rounds that sampled so (#4487). With such an anchor
 /// the anchor is the entry, and a contained node estimated at one row was
 /// rescanned with the WHERE clause's `EXISTS` once per anchor version, 32.7 M
-/// buffers for 500 rows (#6263). No openEHR spec governs the join mechanics:
-/// our own design.
+/// buffers for 500 rows (#6263), or walked from the archetype index once per
+/// anchor row, 30 M buffers (#6243). No openEHR spec governs the join
+/// mechanics: our own design.
 ///
 /// `conds`, over the alias `<alias>_s`, keep only the rows the source admits.
 /// Each is stated as `(…) IS TRUE`, which holds exactly when it does and

@@ -783,13 +783,17 @@ per outer row. The probe for an earlier row states its conditions as
 anchor whose leaf the SELECT already binds is tied to that bound row and
 needs no probe; otherwise the probe joins the statement beside the anchor,
 correlated to the leaf's source row, so it runs for the rows the containment
-keeps (#6249). A flat statement that anchors a leaf no SELECT column binds
-reads each node a CONTAINS step finds inside its object, behind an `OFFSET 0`
-fence, as a query scoped to named EHRs does (#4487): the anchor or the version
-spine is the entry, and no contained node can be rescanned with the WHERE
-clause's `EXISTS` per outer row on statistics a growing store has outgrown.
-A rare archetype under a broad range then costs one probe per anchored
-version, which is linear where the rescan was quadratic (#6263).
+keeps (#6249). A flat statement with an anchor reads each node a CONTAINS
+step finds inside its object, behind an `OFFSET 0` fence, as a query scoped
+to named EHRs does (#4487): the anchor or the version spine is the entry, and
+no contained node can be rescanned with the WHERE clause's `EXISTS` per outer
+row on statistics a growing store has outgrown (#6263). This holds whether a
+SELECT column binds the anchored leaf or not: on a store filling from empty
+the archetype's OBSERVATIONs and the anchor's rows were both estimated at one
+row, and the planner nested the archetype-index entry, unparameterised,
+inside the anchor's rows (#6243). A rare archetype under a broad range then
+costs one probe per anchored version, which is linear where the rescan was
+quadratic.
 `event_time` is a stored copy of a `STABLE` function's value: it equals the
 comparison's reading because every session runs under `TimeZone = UTC`,
 which the driver sets at connection start. The feature envelope is

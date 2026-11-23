@@ -806,9 +806,9 @@ impl Builder<'_> {
                     Alias::new(node.as_str()),
                 );
             }
-            // NOTE: our own design (#6263), with an anchor on a leaf no SELECT column binds the
-            // anchor is the entry and a contained node is read inside its object.
-            Some(parent) if !self.streaming && self.anchors_an_unbound_leaf() => {
+            // NOTE: our own design (#6243, #6263), with an anchor the anchor is the entry and a
+            // contained node is read inside its object.
+            Some(parent) if !self.streaming && self.takes_anchor() => {
                 let inner = format!("{node}_s");
                 let conds = self.rm_conds(&inner, r)?;
                 self.q.from_function(
