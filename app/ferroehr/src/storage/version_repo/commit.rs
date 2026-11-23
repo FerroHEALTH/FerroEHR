@@ -507,7 +507,7 @@ pub async fn commit_folded(
         Folded::Guarded { id, version, guard } if guard.status.is_some() => {
             (&STATUS, id, version.ehr_id, Some(version), Some(guard))
         }
-        Folded::Guarded { id, version, guard } if guard.folder.is_some() => {
+        Folded::Guarded { id, version, guard } if guard.directory.is_some() => {
             (&FOLDER, id, version.ehr_id, Some(version), Some(guard))
         }
         Folded::Guarded { id, version, guard } if guard.party.is_some() => {
@@ -566,7 +566,8 @@ pub async fn commit_folded(
 
 /// Run a folded statement `query`, binding first what a guarded one takes
 /// after its node arrays: an `EHR_STATUS` commit's columns, a party commit's
-/// key-space gate and reverse targets, or a new FOLDER hierarchy's rank.
+/// key-space gate and reverse targets, or a directory write's slot
+/// ([`super::guarded::DirectorySlot`]).
 ///
 /// # Errors
 /// [`StorageError::SubjectInUse`] when a status commit's subject is in use,
@@ -596,8 +597,16 @@ async fn fetch_beside(
             .fetch_one(&mut *tx)
             .await
             .map_err(|e| subject_in_use(e, status))?,
-        (None, None) => match guard.and_then(|guard| guard.folder) {
-            Some(rank) => query.bind(rank).fetch_one(&mut *tx).await?,
+        (None, None) => match guard.and_then(|guard| guard.directory) {
+            Some(slot) => {
+                query
+                    .bind(slot.highest)
+                    .bind(slot.tip.map(|(vo, _)| vo))
+                    .bind(slot.tip.and_then(|(_, head)| head))
+                    .bind(slot.new)
+                    .fetch_one(&mut *tx)
+                    .await?
+            }
             None => query.fetch_one(&mut *tx).await?,
         },
     })
