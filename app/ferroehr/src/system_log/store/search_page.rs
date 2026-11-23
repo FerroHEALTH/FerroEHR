@@ -155,7 +155,7 @@ pub(super) fn build_search_statements(
 /// `pool`; `None` when a token criterion names no stored token.
 ///
 /// # Errors
-/// [`AuditError`] when the token resolution fails.
+/// [`crate::system_log::AuditError`] when the token resolution fails.
 pub async fn page_statement(
     pool: &sqlx::PgPool,
     filter: &AuditSearchFilter,

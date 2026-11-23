@@ -149,7 +149,8 @@ async fn seed(entries: u32) -> Seeded {
             .expect("the reads are recorded");
     }
     let expected = i64::from(entries);
-    let deadline = std::time::Instant::now() + Duration::from_secs(120 * u64::from(entries.div_ceil(ENTRIES)));
+    let deadline =
+        std::time::Instant::now() + Duration::from_secs(120 * u64::from(entries.div_ceil(ENTRIES)));
     loop {
         let chained: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_record")
             .fetch_one(&pool)
@@ -326,10 +327,11 @@ async fn an_iti81_page_reads_each_record_it_serves_by_its_key() {
         count: 20,
         ..AuditSearchFilter::default()
     };
-    let (sql, values) = ferroehr::system_log::store::search_page::page_statement(&pool, &filter, cursor)
-                .await
-                .expect("the criteria resolve")
-                .expect("a page");
+    let (sql, values) =
+        ferroehr::system_log::store::search_page::page_statement(&pool, &filter, cursor)
+            .await
+            .expect("the criteria resolve")
+            .expect("a page");
     let plan: serde_json::Value = sqlx::query_scalar_with(
         sqlx::AssertSqlSafe(format!("EXPLAIN (ANALYZE, FORMAT JSON) {sql}")),
         values,
@@ -689,7 +691,10 @@ async fn every_entry_is_found_wherever_the_index_cursor_stands() {
         .expect("the access log is counted")
         < i64::from(SEEDED + PAST)
     {
-        assert!(std::time::Instant::now() < deadline, "the reads are chained");
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the reads are chained"
+        );
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
     let last: i64 = sqlx::query_scalar("SELECT max(id) FROM audit.access_log_entry")
@@ -701,7 +706,10 @@ async fn every_entry_is_found_wherever_the_index_cursor_stands() {
             .fetch_one(&pool)
             .await
             .expect("the cursor reads");
-    assert!(stored < last, "entries stand past the cursor: {stored} of {last}");
+    assert!(
+        stored < last,
+        "entries stand past the cursor: {stored} of {last}"
+    );
     let behind = answers(&seeded).await;
     sqlx::query("SELECT pg_advisory_unlock(hashtext('audit.access_log_index'), 0)")
         .execute(&mut *held)
@@ -728,7 +736,6 @@ async fn every_entry_is_found_wherever_the_index_cursor_stands() {
         "and with every entry indexed"
     );
 }
-
 
 /// The entries the ITI-81 page's scale test seeds (#6373).
 const AT_SCALE: u32 = 200_000;
@@ -786,7 +793,9 @@ async fn an_iti81_page_at_scale_starts_no_worker_and_reads_few_buffers() {
                     .await
                     .expect("the criteria resolve")
                     .expect("a page");
-            let mut conn = pool.acquire().await.expect("a connection");
+            let mut conn = ferroehr::db::acquire::acquire(&pool)
+                .await
+                .expect("a connection");
             sqlx::query("SET max_parallel_workers_per_gather = 2")
                 .execute(&mut *conn)
                 .await
@@ -850,9 +859,9 @@ async fn a_page_bound_behind_the_cursor_serves_the_same_records() {
         async move {
             let (sql, values) =
                 ferroehr::system_log::store::search_page::page_statement(&pool, &filter, cursor)
-                .await
-                .expect("the criteria resolve")
-                .expect("a page");
+                    .await
+                    .expect("the criteria resolve")
+                    .expect("a page");
             let rows: Vec<(String, i64)> = sqlx::query_as_with(
                 sqlx::AssertSqlSafe(format!("SELECT p.chain, p.chain_seq FROM ({sql}) p")),
                 values,

@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! What an ITI-81 page carries beside its records (#6320): the policy and
-//! definition revisions where the audit store shares the clinical database,
-//! and in a ride the party store's, which the request confirms its copies
-//! by. The topology is read once per service. No openEHR spec governs the
-//! confirmation: our own design.
+//! What an ITI-81 page carries beside its records (#6320).
+//!
+//! The policy and definition revisions where the audit store shares the
+//! clinical database, and in a ride the party store's, which the request
+//! confirms its copies by. The topology is read once per service. No openEHR
+//! spec governs the confirmation: our own design.
 
 use sqlx::postgres::PgRow;
 use sqlx::{PgPool, Row as _};

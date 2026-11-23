@@ -129,7 +129,8 @@ fn every_identifier_comes_from_the_closed_set() {
             ],
             ..AuditSearchFilter::default()
         },
-        &[], 0,
+        &[],
+        0,
     );
 
     let mut seen: Vec<String> = format!("{count_sql} {sql}")
@@ -179,7 +180,8 @@ fn paging_is_clamped_and_never_textual() {
             offset: i64::MIN,
             ..AuditSearchFilter::default()
         },
-        &[], 0,
+        &[],
+        0,
     );
     // Paging binds as parameters rather than being written into the
     // statement, which is stronger than the clamp alone — so the clamped
@@ -369,7 +371,8 @@ fn a_resolved_token_criterion_reads_the_token_index() {
         &[
             None,
             Some(crate::system_log::search::TokenMatch::from(vec![3, 17])),
-        ], 0,
+        ],
+        0,
     );
     assert!(sql.contains("search_keys && CAST($"), "{sql}");
     assert!(count_sql.contains("search_keys && CAST($"), "{count_sql}");
