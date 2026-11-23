@@ -695,9 +695,8 @@ impl<'a> OptModel<'a> {
             if ty.is_abstract && !self.enum_specs.contains(spec) {
                 let _ = writeln!(
                     b,
-                    "/// openEHR {} `{spec}` — declared `abstract` in the XSD with no\n\
-                     /// concrete subtype in this schema closure, so it is emitted as the\n\
-                     /// plain shape a conforming document must present at its slots.",
+                    "/// openEHR {} `{spec}`, abstract in the XSD with no concrete subtype here,\n\
+                     /// so emitted as the shape a document presents at its slots.",
                     self.target.type_label
                 );
                 doc = String::new();

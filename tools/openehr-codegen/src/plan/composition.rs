@@ -47,18 +47,14 @@ pub(crate) const LANG_BMM3: &str = "components/LANG/json/openehr_lang_1.1.0-bmm3
 const BASE_DOC: &str = "openEHR BASE (foundation + base types), generated from the BMM meta-model.";
 const RM_DOC: &str = "openEHR RM (Reference Model), generated from the BMM meta-model.";
 const LANG_DOC: &str = "openEHR LANG, generated from the BMM meta-model: one generation per \
-    component version. `v1_1` (the 1.1.0 development line, the current generation) carries \
-    the version's published specification units side by side — the STABLE, tool-implemented \
-    BMM v2.x model (`bmm`, its `bmm_persistence` P_BMM form, the `beom` BEL expression model; \
-    on the prelude) and the PAUSED BMM3 model (`bmm3`, full-path only) — plus the hand-written \
-    ODIN/BEL/EL readers and the shared lexer for that version's notations. The generator's own \
-    BMM reader lives in openehr-codegen (tooling, not spec).";
+    component version. `v1_1` carries the BMM v2.x model (`bmm`, `bmm_persistence`, `beom`) and \
+    the paused BMM3 model (`bmm3`, full path only), with the hand-written ODIN, BEL and EL \
+    readers.";
 
-const AM_DOC: &str = "openEHR AM (Archetype Model): `v1_4` (AM 1.4.0, for ADL 1.4) and `v2_4` \
-    (AM 2.4.0, for ADL 2) — both generated from BMM. Both ADL versions are in use.";
+const AM_DOC: &str = "openEHR AM (Archetype Model), generated from BMM: `v1_4` (AM 1.4.0, for \
+    ADL 1.4) and `v2_4` (AM 2.4.0, for ADL 2).";
 const TERM_DOC: &str = "openEHR TERM (Terminology) data model, generated from the BMM \
-    meta-model. The vendored terminology XML content lives in `assets/` (data, not \
-    generated); an XML→model loader is added when composition validation needs it.";
+    meta-model. The vendored terminology XML content lives in `assets/`.";
 
 /// One dependency **generation** a generation resolves against: the dependency
 /// crate's composition key plus the generation module inside it.

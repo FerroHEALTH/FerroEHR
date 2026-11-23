@@ -120,10 +120,7 @@ fn draft_root(rows: &[&DraftModule]) -> String {
          //! FerroEHR-local draft packages: openEHR change proposals generated from\n\
          //! their draft BMM under `tools/openehr-codegen/draft/bmm/`, no openEHR release.\n\
          //!\n\
-         //! The module compiles only with the `draft` feature, which no default feature\n\
-         //! set enables, so a consumer of the published crate meets no draft type\n\
-         //! unless it asks for one. A draft carries no prelude and no `Generation`;\n\
-         //! its types are named by full module path.\n\n",
+         //! Compiled only with the `draft` feature, which no default set enables.\n\n",
     );
     let mut names: Vec<&str> = rows.iter().map(|d| d.package).collect();
     names.sort_unstable();

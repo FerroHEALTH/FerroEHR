@@ -81,11 +81,8 @@ fn realization_register(own_schema: &BmmSchema) -> String {
         "//!\n\
          //! # Emittable-invariant realization register\n\
          //!\n\
-         //! Every RM class invariant the assertion-dialect classifier judges\n\
-         //! mechanically evaluable, with the venue that actually realizes it. A\n\
-         //! `Core` row is realized by a core below; the other venues are realized\n\
-         //! (or adjudicated) outside this file, and are listed so the emitted\n\
-         //! bucket is accounted for in full rather than assumed.\n",
+         //! Every mechanically evaluable RM class invariant, with the venue that\n\
+         //! realizes it. A `Core` row is realized by a core below.\n",
     );
     b.push_str(&render_register_rows(
         &rows,
@@ -157,11 +154,8 @@ fn complex_register(own_schema: &BmmSchema) -> String {
         "//!\n\
          //! # Complex-invariant realization register\n\
          //!\n\
-         //! Every RM class invariant the assertion-dialect classifier judges NOT\n\
-         //! mechanically evaluable (quantifiers, lambdas, cross-object\n\
-         //! navigation), with the venue that realizes it or the citation-pinned\n\
-         //! adjudication that excludes it — the complex bucket is accounted for\n\
-         //! in full, exactly like the emitted bucket above.\n",
+         //! Every RM class invariant that is not mechanically evaluable, with the\n\
+         //! venue that realizes it or the cited adjudication that excludes it.\n",
     );
     b.push_str(&render_register_rows(
         &rows,
@@ -195,15 +189,9 @@ fn pending_register(own_schema: &BmmSchema) -> String {
         "//!\n\
          //! # Terminology-backed invariants (enforced in `validate::terminology`)\n\
          //!\n\
-         //! These BMM class invariants bind a coded value to an openEHR terminology\n\
-         //! group (`has_code_for_group_id`) or a code set (`code_set (id).has_code`),\n\
-         //! so no generated core below can evaluate them mechanically. They are\n\
-         //! realized instead by the sibling binding table —\n\
-         //! `super::terminology::validate_rm_terminology`, over the openEHR\n\
-         //! terminology bundle (TERM 3.1.0) — which the `openehr-its` wire-boundary\n\
-         //! dispatcher runs as a post-core check. Enforcement was audited clean\n\
-         //! against the whole corpus first, so none newly rejects previously-accepted\n\
-         //! data:\n\
+         //! These BMM class invariants bind a coded value to a terminology group or\n\
+         //! code set, so `super::terminology::validate_rm_terminology` realizes them\n\
+         //! over the TERM 3.1.0 bundle:\n\
          //!\n",
     );
     for (class, name, reason) in &enforced {
@@ -215,12 +203,9 @@ fn pending_register(own_schema: &BmmSchema) -> String {
         "//!\n\
          //! # Pending adjudication (runtime-hook-missing)\n\
          //!\n\
-         //! The VERSIONED_OBJECT aggregate invariants quantify over the whole\n\
-         //! version container (`all_versions`, `all_version_ids`, `version_count`,\n\
-         //! `latest_version`) — a property of the versioning/service layer, not of\n\
-         //! any single stored value node — so no per-node core can honestly\n\
-         //! evaluate them (RM `common versioned_object.adoc` §Invariants). They stay\n\
-         //! unrealized here:\n\
+         //! The VERSIONED_OBJECT aggregate invariants quantify over the whole version\n\
+         //! container, so no per-node core evaluates them (RM `common\n\
+         //! versioned_object.adoc` §Invariants):\n\
          //!\n",
     );
     for (class, name, reason) in &aggregate {

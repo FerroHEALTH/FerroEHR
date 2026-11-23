@@ -1543,7 +1543,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.composition.composition.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "EVENT_CONTEXT",
@@ -1551,7 +1551,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.composition.event_context.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "SECTION",
@@ -1559,7 +1559,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.composition.section.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "ENTRY",
@@ -1567,7 +1567,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.composition.entry.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "INSTRUCTION",
@@ -1575,7 +1575,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.composition.instruction.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "DV_TEXT",
@@ -1583,7 +1583,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.data_types.dv_text.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "DV_ORDERED",
@@ -1591,7 +1591,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.data_types.dv_ordered.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "LOCATABLE",
@@ -1599,7 +1599,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.common.locatable.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "LOCATABLE",
@@ -1679,7 +1679,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.demographic.actor.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "ADDRESS",
@@ -1703,7 +1703,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.demographic.party.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "PARTY",
@@ -1799,7 +1799,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.ehr_extract.extract_update_spec.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "EXTRACT_VERSION_SPEC",
@@ -1887,7 +1887,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.common.original_version.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "ORIGINAL_VERSION",
@@ -1903,7 +1903,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.common.original_version.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "ATTESTATION",
@@ -1911,7 +1911,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.common.attestation.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "AUTHORED_RESOURCE",
@@ -1999,7 +1999,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.common.party_identified.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     // ── the complex-bucket adjudications: every classifier-Complex
     // invariant, venue-registered like the emitted bucket ──────────────────

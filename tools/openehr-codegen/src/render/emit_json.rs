@@ -112,11 +112,8 @@ pub(crate) fn emit_file(schemas: &[JsonSchema<'_>], krate: &str) -> String {
          //! Canonical-JSON `serde::Serialize`/`serde::Deserialize` impls for this\n\
          //! crate's generated spec types.\n\
          //!\n\
-         //! Manual (never derived) long-form impls per\n\
-         //! <https://serde.rs/deserialize-struct.html>: the canonical wire's\n\
-         //! `_type` discriminator, its context-dependent presence, deep-descendant\n\
-         //! dispatch and closed key set are not expressible with serde attributes.\n\
-         //! The shared runtime is `openehr_base::serde_support`.\n\n\
+         //! Hand-shaped impls, since serde attributes cannot express the `_type`\n\
+         //! discriminator, its context-dependent presence or the closed key set.\n\n\
          #![allow(\n    \
          clippy::all,\n    \
          clippy::pedantic,\n    \
@@ -194,33 +191,12 @@ pub(crate) fn emit_structural_file(schemas: &[JsonSchema<'_>]) -> String {
          //! Structural conformance dispatch: `_type` → the emitted `Deserialize`\n\
          //! of that spec class.\n\
          //!\n\
-         //! The canonical-JSON codec is the structural-conformance authority for a\n\
-         //! wire node (mandatory attributes present, JSON kinds right, nested slot\n\
-         //! `_type`s resolvable). This dispatch makes that authority reachable for\n\
-         //! EVERY emitted class from a `_type` string alone, so a per-node validation\n\
-         //! walk is not limited to the classes that happen to carry a class\n\
-         //! invariant. The decoded value is discarded — only the `Result` matters.\n\
+         //! One arm per class emitted as a struct; an untagged enum, a newtype and a\n\
+         //! BMM enumeration carry no `_type` of their own. Generic classes are checked\n\
+         //! with an opaque element type.\n\
          //!\n\
-         //! Coverage: one arm per class the generator emits as a STRUCT (every\n\
-         //! concrete class, plus the few abstract classes emitted as structs because\n\
-         //! their concrete descendants live in another schema). Deterministic\n\
-         //! exclusions, by shape:\n\
-         //!\n\
-         //! - an untagged **enum** (abstract or polymorphic slot) carries no `_type`\n\
-         //!   of its own — the active variant's payload does, and every payload is an\n\
-         //!   emitted struct with its own arm;\n\
-         //! - a transparent **newtype** and a BMM **enumeration** serialize as their\n\
-         //!   bare primitive payload, so no `_type` member exists to dispatch on.\n\
-         //!\n\
-         //! Generic classes are monomorphized with an opaque element type, so the\n\
-         //! container's own shape is checked and its elements are accepted verbatim\n\
-         //! (each element is a `_type` node in its own right).\n\
-         //!\n\
-         //! NOTE: no openEHR spec governs a cross-component `_type` namespace (the\n\
-         //! canonical-JSON `_type` is a class name, and several components' BMMs\n\
-         //! declare the same name with different attributes) — our own design: the\n\
-         //! emitter resolves a collision by schema priority, in the order the CLI\n\
-         //! passes the schemas, and every shadowed twin is listed below.\n\n\
+         //! NOTE: no openEHR spec governs a cross-component `_type` namespace: our own\n\
+         //! design resolves a collision by schema order and lists each shadowed twin below.\n\n\
          #![allow(\n    \
          clippy::all,\n    \
          clippy::pedantic,\n    \
@@ -247,11 +223,8 @@ pub(crate) fn emit_structural_file(schemas: &[JsonSchema<'_>]) -> String {
          /// class.\n\
          ///\n\
          /// # Errors\n\
-         /// The inner `Err` is the canonical reader's error for a node that does not\n\
-         /// deserialize as `ty` (a missing mandatory attribute, an undeclared or\n\
-         /// repeated key, a wrong JSON kind, an unresolvable nested slot `_type`),\n\
-         /// carrying the JSON path to the offending node — the same door, and the\n\
-         /// same message, as a direct `crate::json::from_canonical_value` read.\n\
+         /// The inner `Err` is the canonical reader's error, with the JSON path to\n\
+         /// the offending node.\n\
          pub fn structural_check(\n    \
          ty: &str,\n    \
          node: &::serde_json::Value,\n\
@@ -272,11 +245,8 @@ pub(crate) fn emit_structural_file(schemas: &[JsonSchema<'_>]) -> String {
         "\n/// The wire keys the spec class `ty` declares, sorted, or `None` when\n\
          /// `ty` names no emitted struct.\n\
          ///\n\
-         /// Emitted from the SAME field view as the reader's undeclared-key refusal,\n\
-         /// so a caller that must answer \"is this key declared?\" WITHOUT decoding —\n\
-         /// the validation dispatcher's allocation-free fast path — can never\n\
-         /// disagree with the reader that would decode it. `_type` is the canonical\n\
-         /// discriminator, not a modelled attribute, and is never listed.\n\
+         /// Emitted from the reader's own field view, so the two agree. `_type` is\n\
+         /// never listed.\n\
          #[must_use]\n\
          pub fn declared_fields(ty: &str) -> ::core::option::Option<&'static [&'static str]> {\n    \
          match ty {\n",
