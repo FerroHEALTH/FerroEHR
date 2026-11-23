@@ -149,6 +149,13 @@ pub async fn execute(
         .await
         .map_err(ExecError::from)?;
     drop(lease);
+    // NOTE: our own design (#6320), a statement that served no row read no revision, and the
+    // request confirms its copies with a read of its own after it ran.
+    if layout.revisions
+        && let Some(first) = rows.first()
+    {
+        crate::storage::access_projection::observe_revisions(first).map_err(ExecError::from)?;
+    }
 
     let columns = layout
         .columns

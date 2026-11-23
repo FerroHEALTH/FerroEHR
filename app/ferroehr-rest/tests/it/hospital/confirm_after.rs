@@ -459,3 +459,99 @@ async fn authentication_run_again_counts_and_holds_as_one_clean_run() {
     );
     assert_eq!(failures(&provider, &exporter), failed_before + 2);
 }
+
+/// The compositions of the world's EHR as Dr. Jansen's query reads them on
+/// `app`.
+async fn compositions_read_by_jansen(world: &World, app: &axum::Router) -> usize {
+    let body = json!({
+        "q": format!(
+            "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c WHERE e/ehr_id/value = '{}'",
+            world.ehr
+        )
+    });
+    let answer = call(
+        app,
+        "jansen",
+        "POST",
+        &format!("{BASE}/query/aql"),
+        Some("TREAT"),
+        Some(&body),
+    )
+    .await;
+    assert_eq!(answer.status, StatusCode::OK, "the query: {}", answer.body);
+    answer.json()["rows"].as_array().expect("rows").len()
+}
+
+/// A query decided on a policy copy behind the store is confirmed by the
+/// revisions its own statement read, and runs once more behind the up-front
+/// confirm (#6320): the encounter the change classified very restricted is
+/// withheld from the very next query, and the run again is counted once.
+#[tokio::test]
+async fn a_query_decided_on_a_policy_copy_behind_the_store_runs_once_more() {
+    let (provider, exporter) = instruments();
+    let mut world = Box::pin(world()).await;
+    let (other, _drain, _elsewhere) = deaf(&world).await;
+    let served = compositions_read_by_jansen(&world, &other).await;
+    assert!(served > 0, "the query serves the EHR's compositions");
+    let before = reruns(&provider, &exporter);
+    assert_eq!(compositions_read_by_jansen(&world, &other).await, served);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before,
+        "a copy in force runs once"
+    );
+
+    world.policy = classify_the_encounter(&world).await;
+    let withheld = compositions_read_by_jansen(&world, &other).await;
+    assert!(
+        withheld < served,
+        "the change withholds the encounter at once: {withheld} of {served}"
+    );
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "the query ran once more, and only once"
+    );
+    assert_eq!(compositions_read_by_jansen(&world, &other).await, withheld);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "the confirmed copy decides the next query at once"
+    );
+}
+
+/// An `EHR_STATUS` read confirms its policy copies by the revisions its own
+/// version read selects (#6320): a copy in force answers in one run, and a
+/// policy change it never heard of runs the read once more.
+#[tokio::test]
+async fn an_ehr_status_read_confirms_the_policy_on_its_own_statement() {
+    let (provider, exporter) = instruments();
+    let mut world = Box::pin(world()).await;
+    let (other, _drain, _elsewhere) = deaf(&world).await;
+    let uri = format!("{BASE}/ehr/{}/ehr_status", world.ehr);
+    let read = || call(&other, "jansen", "GET", &uri, Some("TREAT"), None);
+    let first = read().await;
+    assert_eq!(first.status, StatusCode::OK, "{}", first.body);
+    let before = reruns(&provider, &exporter);
+    assert_eq!(read().await.status, StatusCode::OK);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before,
+        "a copy in force runs once"
+    );
+
+    world.policy = classify_the_encounter(&world).await;
+    let again = read().await;
+    assert_eq!(again.status, StatusCode::OK, "{}", again.body);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "the read ran once more, and only once"
+    );
+    assert_eq!(read().await.status, StatusCode::OK);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "the confirmed copy decides the next read at once"
+    );
+}
