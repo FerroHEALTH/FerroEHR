@@ -409,7 +409,8 @@ pub(crate) async fn refilled(tx: &mut PgConnection) -> Result<(), StorageError> 
 
 /// The grant revision and the binding revision, and whether the store holds
 /// a caller facts stamp the snapshot of `held` did not see
-/// (`party.facts_behind`), on `conn`, in one read.
+/// (`party.facts_behind`), with the read's own snapshot when it does, on
+/// `conn`, in one read.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure, and
@@ -418,20 +419,25 @@ pub(crate) async fn revisions(
     conn: &mut PgConnection,
     held: Option<&HeldSnapshot>,
 ) -> Result<Revisions, StorageError> {
-    let (grants, bindings, behind, store): (i64, i64, bool, String) = sqlx::query_as(
-        "SELECT revision, binding_revision, party.facts_behind($1::pg_snapshot), \
-                pg_current_snapshot()::text \
-         FROM binding_grant_revision",
+    let (grants, bindings, store): (i64, i64, Option<String>) = sqlx::query_as(
+        "SELECT r.revision, r.binding_revision, \
+                CASE WHEN b.behind THEN pg_current_snapshot()::text END \
+         FROM binding_grant_revision r, \
+              LATERAL (SELECT party.facts_behind($1::pg_snapshot) AS behind) b",
     )
     .bind(held.map(|held| held.snapshot.text()))
     .fetch_one(&mut *conn)
     .await?;
-    let facts = match held {
-        Some(held) if !behind => FactsRead::Seen {
+    let facts = match (held, store) {
+        (Some(held), None) => FactsRead::Seen {
             generation: held.generation,
         },
-        _ => FactsRead::Behind {
-            store: Some(std::sync::Arc::new(crate::db::snapshot::read(&store)?)),
+        (_, store) => FactsRead::Behind {
+            store: store
+                .as_deref()
+                .map(crate::db::snapshot::read)
+                .transpose()?
+                .map(std::sync::Arc::new),
         },
     };
     Ok(Revisions {
