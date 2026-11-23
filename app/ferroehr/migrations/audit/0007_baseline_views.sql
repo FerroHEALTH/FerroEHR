@@ -49,18 +49,30 @@ CREATE FUNCTION audit.access_event_code(p_class text, p_action text) RETURNS tex
 $$;
 
 -- The entry id joins the index of the entries (#6000). A page and the total
--- read the entries no write holds, each named by its id (#6242).
+-- read the entries no write holds, each named by its id (#6242): the search
+-- columns of the indexed entries from access_log_index and those of the
+-- entries past its cursor from their rows by key (#6319), as
+-- access_log_record reads them, so a page reads the index in the search's
+-- order. The row is joined on its key by a left join, so a total that names
+-- the search columns alone reads no row.
 CREATE VIEW access_log_search AS
-    SELECT e.id AS chain_seq, e.time_recorded AS recorded_at, e.event_action AS action,
-           e.event_outcome AS outcome, e.principal, e.patient_id, e.resource_id,
+    SELECT k.entry_id AS chain_seq, k.time_recorded AS recorded_at, e.event_action AS action,
+           e.event_outcome AS outcome, k.principal, k.patient_id, e.resource_id,
            e.request_id, e.client_ip, e.classified_ehr_id AS ehr_id, e.search_tokens,
-           audit.search_keys(e.search_tokens, e.request_id, e.resource_id) AS search_keys,
-           e.id AS entry_id
-      FROM access_log_entry e
-     WHERE e.render_policy_id IS NOT NULL
-       AND NOT EXISTS (SELECT 1 FROM access_log_hold h WHERE h.entry_id = e.id);
+           k.search_keys, k.entry_id
+      FROM (SELECT i.entry_id, i.time_recorded, i.render_policy_id, i.principal, i.patient_id,
+                   i.search_keys
+              FROM access_log_index i
+            UNION ALL
+            SELECT e.id, e.time_recorded, e.render_policy_id, e.principal, e.patient_id,
+                   audit.search_keys(e.search_tokens, e.request_id, e.resource_id)
+              FROM access_log_entry e
+             WHERE e.id > (SELECT x.last_id FROM access_log_index_state x WHERE x.singleton)
+               AND NOT EXISTS (SELECT 1 FROM access_log_hold h WHERE h.entry_id = e.id)) AS k
+      LEFT JOIN access_log_entry e ON e.id = k.entry_id
+     WHERE k.render_policy_id IS NOT NULL;
 COMMENT ON VIEW access_log_search IS
-    'The ITI-81 index of the access-log entries no write holds: what the search filters on, read from the entry''s row (search_keys through its index), and the entry''s id, which names it. A tombstone is not in it.';
+    'The ITI-81 index of the access-log entries no write holds: what the search filters on, read through access_log_index for the indexed entries and from the entry''s row past its cursor, and the entry''s id, which names it. A tombstone is not in it.';
 
 -- The ITI-81 index of the system records no write holds (#6203, #6242): what
 -- the search filters on, read from the records, and each record's position.

@@ -8,7 +8,8 @@
 //! their invariants [`openehr_rm::draft::access_log::invariants`]; an entry
 //! is written once by the [`intake`] before the response that reports its
 //! access, [`store`] keeps the records in the `audit` schema with their
-//! content digests, the [`frontier`] and the [`seal`] seal windows of them,
+//! content digests, [`index`] copies their search columns off the request's
+//! commit, the [`frontier`] and the [`seal`] seal windows of them,
 //! and [`retention`] is the period each entry states, after which the store
 //! replaces it by its tombstone, whose window later folds ([`gap`],
 //! [`expiry`]). The draft is FerroEHR's
@@ -26,6 +27,7 @@ pub mod expiry;
 pub mod frontier;
 pub mod gap;
 pub mod imported;
+pub mod index;
 pub mod intake;
 #[cfg(feature = "fhir")]
 pub mod projection;

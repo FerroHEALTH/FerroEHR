@@ -325,9 +325,18 @@ impl AccessLogStore {
         let Ok(uid) = uuid::Uuid::parse_str(uid) else {
             return Ok(None);
         };
+        // NOTE: our own design (#6319), the record view is a union, which takes no row lock, so the
+        // entry's row is locked in the arm that holds it in the statement's snapshot.
         let row = sqlx::query(concat!(
+            "WITH indexed AS (SELECT e.id FROM audit.access_log_index i \
+               JOIN audit.access_log_entry e ON e.id = i.entry_id \
+              WHERE e.uid = $1 AND e.record_type = 'ACCESS_LOG_ENTRY' FOR UPDATE OF e), \
+             unindexed AS (SELECT e.id FROM audit.access_log_entry e \
+              WHERE e.id > (SELECT x.last_id FROM audit.access_log_index_state x WHERE x.singleton) \
+                AND NOT EXISTS (SELECT 1 FROM audit.access_log_hold h WHERE h.entry_id = e.id) \
+                AND e.uid = $1 AND e.record_type = 'ACCESS_LOG_ENTRY' FOR UPDATE OF e) ",
             records!(),
-            " WHERE r.uid = $1 AND r.record_type = 'ACCESS_LOG_ENTRY' FOR UPDATE OF r"
+            " WHERE r.chain_seq IN (SELECT id FROM indexed UNION ALL SELECT id FROM unindexed)"
         ))
         .bind(uid)
         .fetch_optional(&mut *conn)
@@ -367,13 +376,28 @@ impl AccessLogStore {
     ) -> Result<Vec<AccessLogTombstone>, AccessLogError> {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
+        // NOTE: our own design (#6319), the record view is a union, which takes no row lock, so
+        // each arm locks its first entries and the oldest ends of the two are replaced.
         let rows = sqlx::query(concat!(
+            "WITH indexed AS (SELECT i.entry_id AS id, i.retain_until FROM audit.access_log_index i \
+               JOIN audit.access_log_entry e ON e.id = i.entry_id \
+              WHERE e.record_type = 'ACCESS_LOG_ENTRY' AND i.retain_until < $1::text::date \
+                AND (i.render_policy_id IS NULL OR i.retain_until < $1::text::date - 1 \
+                     OR NOT EXISTS (SELECT 1 FROM audit.delivery_cursor c \
+                                     WHERE c.chain = 'access_log' AND c.through_id < i.entry_id)) \
+              ORDER BY i.retain_until, i.entry_id LIMIT $2 FOR UPDATE OF e SKIP LOCKED), \
+             unindexed AS (SELECT e.id, e.retain_until FROM audit.access_log_entry e \
+              WHERE e.id > (SELECT x.last_id FROM audit.access_log_index_state x WHERE x.singleton) \
+                AND NOT EXISTS (SELECT 1 FROM audit.access_log_hold h WHERE h.entry_id = e.id) \
+                AND e.record_type = 'ACCESS_LOG_ENTRY' AND e.retain_until < $1::text::date \
+                AND (e.render_policy_id IS NULL OR e.retain_until < $1::text::date - 1 \
+                     OR NOT EXISTS (SELECT 1 FROM audit.delivery_cursor c \
+                                     WHERE c.chain = 'access_log' AND c.through_id < e.id)) \
+              ORDER BY e.retain_until, e.id LIMIT $2 FOR UPDATE OF e SKIP LOCKED), \
+             due AS (SELECT id, retain_until FROM indexed UNION ALL SELECT id, retain_until FROM unindexed \
+              ORDER BY retain_until, id LIMIT $2) ",
             records!(),
-            " WHERE r.record_type = 'ACCESS_LOG_ENTRY' AND r.retain_until < $1::text::date \
-                 AND (r.render_policy_id IS NULL OR r.retain_until < $1::text::date - 1 \
-                      OR NOT EXISTS (SELECT 1 FROM audit.delivery_cursor c \
-                                      WHERE c.chain = 'access_log' AND c.through_id < r.chain_seq)) \
-                 ORDER BY r.retain_until, r.chain_seq LIMIT $2 FOR UPDATE OF r SKIP LOCKED"
+            " WHERE r.chain_seq IN (SELECT id FROM due) ORDER BY r.retain_until, r.chain_seq"
         ))
         .bind(today.to_string())
         .bind(i64::from(limit))

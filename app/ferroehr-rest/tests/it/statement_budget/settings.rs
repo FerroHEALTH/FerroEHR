@@ -45,21 +45,24 @@ struct Budget {
 /// beside the merge base, and each WAL ceiling fell by as much. The entry
 /// written once by a plain insert (#6242) wrote 1,121 and 1,118 bytes fewer
 /// and ran 4 and 5 nested statements fewer per write, measured beside the
-/// merge base, and each ceiling fell by as much.
+/// merge base, and each ceiling fell by as much. The entry's search columns
+/// copied off the request's commit (#6319) wrote 747 and 750 bytes fewer per
+/// write, measured beside the merge base, and each WAL ceiling fell by as
+/// much.
 const BUDGETS: [Budget; 2] = [
     Budget {
         name: "a new class",
         round_trips: 15,
         nested: 5,
         class_statements: 1,
-        wal: 11_208,
+        wal: 10_461,
     },
     Budget {
         name: "a stored class",
         round_trips: 15,
         nested: 1,
         class_statements: 1,
-        wal: 8_861,
+        wal: 8111,
     },
 ];
 

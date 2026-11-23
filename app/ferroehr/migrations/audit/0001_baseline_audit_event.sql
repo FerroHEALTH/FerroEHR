@@ -182,8 +182,12 @@ BEGIN
        AND NOT EXISTS (SELECT 1 FROM audit.audit_event e
                         WHERE audit.search_keys(e.search_tokens, e.request_id, e.resource_id)
                               @> ARRAY[OLD.id::bigint])
+       AND NOT EXISTS (SELECT 1 FROM audit.access_log_index i
+                        WHERE i.search_keys @> ARRAY[OLD.id::bigint])
        AND NOT EXISTS (SELECT 1 FROM audit.access_log_entry e
-                        WHERE audit.search_keys(e.search_tokens, e.request_id, e.resource_id)
+                        WHERE e.id > (SELECT x.last_id FROM audit.access_log_index_state x
+                                       WHERE x.singleton)
+                          AND audit.search_keys(e.search_tokens, e.request_id, e.resource_id)
                               @> ARRAY[OLD.id::bigint])
        AND NOT EXISTS (SELECT 1 FROM audit.audit_search_set s
                         WHERE s.tokens @> ARRAY[OLD.id]) THEN
@@ -630,8 +634,8 @@ COMMENT ON FUNCTION hold_search_tokens() IS
 
 -- Deletes the tokens among p_tokens that no record and no search set names.
 -- Called by the reaping bodies with the reaping flag set.
--- PL/pgSQL, so its body is read when it first runs, once access_log_entry
--- (0004) exists.
+-- PL/pgSQL, so its body is read when it first runs, once access_log_entry and
+-- access_log_index (0004) exist.
 CREATE FUNCTION audit.release_search_tokens(p_tokens integer[]) RETURNS bigint
     LANGUAGE plpgsql VOLATILE
     SET search_path = audit, pg_catalog
@@ -645,8 +649,12 @@ BEGIN
            AND NOT EXISTS (SELECT 1 FROM audit.audit_event e
                             WHERE audit.search_keys(e.search_tokens, e.request_id, e.resource_id)
                                   @> ARRAY[t.id::bigint])
+           AND NOT EXISTS (SELECT 1 FROM audit.access_log_index i
+                            WHERE i.search_keys @> ARRAY[t.id::bigint])
            AND NOT EXISTS (SELECT 1 FROM audit.access_log_entry e
-                            WHERE audit.search_keys(e.search_tokens, e.request_id, e.resource_id)
+                            WHERE e.id > (SELECT x.last_id FROM audit.access_log_index_state x
+                                           WHERE x.singleton)
+                              AND audit.search_keys(e.search_tokens, e.request_id, e.resource_id)
                                   @> ARRAY[t.id::bigint])
            AND NOT EXISTS (SELECT 1 FROM audit.audit_search_set s
                             WHERE s.tokens @> ARRAY[t.id])

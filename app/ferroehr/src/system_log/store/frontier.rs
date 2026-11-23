@@ -4,7 +4,8 @@
 //! One frontier round of both audit logs (#6242).
 //!
 //! The round moves the frontier ([`crate::access_log::frontier`]), moves the
-//! delivery frontier the sinks deliver up to, and, when due,
+//! delivery frontier the sinks deliver up to, copies the access log's search
+//! columns up to it ([`crate::access_log::index`]), and, when due,
 //! seals each log in windows ([`crate::access_log::seal`]). No specification
 //! governs it: our own design.
 
@@ -77,6 +78,14 @@ impl AuditStore {
                 frontier.owed(AuditChain::System);
             }
             owed = u64::try_from(moved).unwrap_or(0);
+        }
+        // NOTE: our own design (#6319), a round that fails to index leaves the entries past the
+        // cursor to the readers' key range, which stays exact, and the next round copies them.
+        if let Err(error) = self.chaining_store().index_to(reached.access_log).await {
+            tracing::error!(
+                error = %crate::error::ErrorChain::new(&error),
+                "the access-log search index did not move; the next round copies its entries"
+            );
         }
         let mut sealed = false;
         if seal {

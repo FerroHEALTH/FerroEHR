@@ -37,9 +37,14 @@ pub async fn read(service: &FerroEhrService) -> anyhow::Result<()> {
 /// holds, and the ITI-93 applier's channel when `pmir` is set, so a write on
 /// any replica reaches this one; how many sessions that took.
 ///
+/// Waits for every session to connect, at most `[database] acquire_timeout`
+/// in all, so no first request reads every copy from the store; a session
+/// that does not connect in time is warned about and keeps trying in the
+/// background. No openEHR spec governs this: our own design (#5774).
+///
 /// # Errors
 /// A listener DSN does not parse.
-pub fn listen(
+pub async fn listen(
     service: &FerroEhrService,
     config: &FerroEhrConfig,
     pmir: bool,
@@ -56,5 +61,22 @@ pub fn listen(
         Listeners::new(&config.database, &listened).context("reading the listener DSNs")?;
     let sessions = u32::try_from(listeners.sessions()).unwrap_or(u32::MAX);
     listeners.spawn();
+    let within = config.database.acquire_timeout.get();
+    let connected = tokio::time::timeout(within, async {
+        for copy in &listened {
+            copy.listening_within(within).await;
+        }
+    })
+    .await
+    .is_ok_and(|()| listened.iter().all(|copy| copy.is_listening()));
+    if !connected {
+        for copy in listened.iter().filter(|copy| !copy.is_listening()) {
+            tracing::warn!(
+                channel = copy.channel(),
+                "the policy listener did not connect before the server serves; every request \
+                 reads that policy from the database until it does"
+            );
+        }
+    }
     Ok(sessions)
 }

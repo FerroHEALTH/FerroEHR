@@ -439,9 +439,19 @@ struct Budget {
 /// `EHR_STATUS` read and the population query sent 3, and 3 where the
 /// single-EHR query and the `matches` sent 4, measured beside the merge base,
 /// and each of those round-trip ceilings fell by one.
+/// The access-log entry has since written its key and uid alone, its search
+/// columns copied into the search index by the frontier round (#6319): each
+/// path wrote as many WAL bytes fewer as its entries' index records, 614 on a
+/// read, 598 on an EHR read and on each commit's own entry, 1,076 on the
+/// single-EHR query, 3,300 on the population query, 3,404 on the matches
+/// query and 478 on the ITI-81 page, measured beside the merge base, and each
+/// WAL ceiling fell by as much. A composition commit's figure moves by a few
+/// hundred bytes between runs, so its ceiling fell by its entry's drop, 593,
+/// or by the measured drop where that was smaller.
 /// A COMPOSITION read, by version id, at an instant or from the version
-/// copy, an EHR read and an `EHR_STATUS` read have since read the party store's revisions in
-/// their one clinical statement through `party_door.party_revisions()`,
+/// copy, an EHR read and an `EHR_STATUS` read have since read the party
+/// store's revisions in their one clinical statement through
+/// `party_door.party_revisions()`,
 /// where the two domains share a database, in place of a read of
 /// `binding_grant_revision` on the party pool (#6320): 1 round trip where
 /// they sent 2, measured beside the merge base, and each of those round-trip
@@ -462,7 +472,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 9,
         notifies: 0,
-        wal: 188_205,
+        wal: 187_612,
     },
     Budget {
         path: Path::CommitXml,
@@ -472,7 +482,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 10,
         notifies: 0,
-        wal: 188_507,
+        wal: 187_941,
     },
     Budget {
         path: Path::CommitFlat,
@@ -482,7 +492,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 9,
         notifies: 0,
-        wal: 188_849,
+        wal: 188_411,
     },
     Budget {
         path: Path::ReadJson,
@@ -492,7 +502,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 2064,
+        wal: 1450,
     },
     Budget {
         path: Path::ReadXml,
@@ -502,7 +512,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 2064,
+        wal: 1450,
     },
     Budget {
         path: Path::ReadFlat,
@@ -512,7 +522,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 2064,
+        wal: 1450,
     },
     Budget {
         path: Path::EhrRead,
@@ -522,7 +532,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 1264,
+        wal: 666,
     },
     Budget {
         path: Path::AqlSingle,
@@ -532,7 +542,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 3,
         nested: 0,
         notifies: 0,
-        wal: 3269,
+        wal: 2193,
     },
     Budget {
         path: Path::AqlPopulation,
@@ -542,7 +552,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 2,
         nested: 0,
         notifies: 0,
-        wal: 8622,
+        wal: 5322,
     },
     Budget {
         path: Path::Iti81,
@@ -552,7 +562,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 3,
         nested: 0,
         notifies: 0,
-        wal: 1127,
+        wal: 649,
     },
     Budget {
         path: Path::PartyRead,
@@ -572,7 +582,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 10,
         notifies: 0,
-        wal: 189_586,
+        wal: 189_042,
     },
     Budget {
         path: Path::ReadAtTime,
@@ -582,7 +592,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 2064,
+        wal: 1450,
     },
     Budget {
         path: Path::CommitStatus,
@@ -592,7 +602,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 5,
         nested: 7,
         notifies: 1,
-        wal: 5403,
+        wal: 4805,
     },
     Budget {
         path: Path::ReadStatus,
@@ -602,7 +612,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 1393,
+        wal: 795,
     },
     Budget {
         path: Path::CommitParty,
@@ -622,7 +632,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 3,
         nested: 0,
         notifies: 0,
-        wal: 10_578,
+        wal: 7174,
     },
     Budget {
         path: Path::AqlParty,
@@ -652,7 +662,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 2048,
+        wal: 1434,
     },
     Budget {
         path: Path::CommitUpdate,
@@ -662,7 +672,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 187_688,
+        wal: 187_106,
     },
     Budget {
         path: Path::CommitDelete,
@@ -672,7 +682,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 5267,
+        wal: 4669,
     },
     Budget {
         path: Path::DirectoryCreate,
@@ -682,7 +692,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 6504,
+        wal: 5906,
     },
     Budget {
         path: Path::DirectoryUpdate,
@@ -692,7 +702,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 5410,
+        wal: 4812,
     },
     Budget {
         path: Path::DirectoryDelete,
@@ -702,7 +712,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 4823,
+        wal: 4225,
     },
     Budget {
         path: Path::PartyUpdate,

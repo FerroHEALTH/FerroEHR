@@ -264,8 +264,9 @@ async fn a_refused_caller_and_a_containment_are_refused() {
     }
 }
 
-/// The person's lookup of their entries by time reads the `(ehr_id,
-/// time_recorded)` index, in the order the index keeps.
+/// The person's lookup of their entries by time reads the search index's
+/// `(ehr_id, time_recorded)` index, in the order the index keeps, and the
+/// entries past its cursor by key (#6319).
 #[tokio::test]
 #[expect(
     clippy::disallowed_methods,
@@ -312,8 +313,13 @@ async fn the_persons_lookup_by_time_reads_the_ehr_index() {
     collect_scans(&explained[0]["Plan"], &mut scans);
     assert!(
         scans.iter().any(|(node, index)| node.contains("Index")
-            && index.as_deref() == Some("ix_access_log_entry_ehr")),
-        "the lookup reads ix_access_log_entry_ehr: {scans:?}\n{explained:#}"
+            && index.as_deref() == Some("ix_access_log_index_ehr")),
+        "the lookup reads ix_access_log_index_ehr: {scans:?}\n{explained:#}"
+    );
+    assert!(
+        scans.iter().any(|(node, index)| node.contains("Index")
+            && index.as_deref() == Some("pk_access_log_entry")),
+        "the entries past the cursor are read by key: {scans:?}\n{explained:#}"
     );
     assert!(
         scans.iter().all(|(node, _)| node != "Seq Scan"),

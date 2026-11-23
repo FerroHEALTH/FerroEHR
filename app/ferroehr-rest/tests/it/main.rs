@@ -176,4 +176,5 @@ mod template_adl14_http;
 mod terminology_http;
 mod trace_shape;
 mod version_id_argument_http;
+mod warm_start;
 mod xml_document_roots_http;

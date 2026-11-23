@@ -15,12 +15,15 @@
 //! rejections) and the clinical body tier; then CORS over the whole surface,
 //! with the System Options `OPTIONS` endpoint mounted beside it, since the CORS
 //! layer would otherwise treat it as a preflight. [`router`] wraps those routes
-//! in `ferrohealth_server::stack::app`, which adds the request id, the panic
-//! catch, the request timeout, the body limit, the overload bound, compression,
-//! the request log, the health routes and, outermost, the API security headers
-//! (`ferrohealth_server::api_headers`), and writes its panics and refusals as
-//! RFC 9457 problem details ([`stack_policy`]). The trailing-slash
-//! normalization runs before routing.
+//! in `ferrohealth_server::stack::app`, which adds, from the outside in, the
+//! API security headers (`ferrohealth_server::api_headers`), the overload
+//! bound, the request id, the request log, the client address, the refusal
+//! and panic rendering, the panic catch, the request timeout, the body limit,
+//! the request decoding and compression, beside the health routes, and writes
+//! its panics and refusals as RFC 9457 problem details ([`stack_policy`]). A
+//! request the bound refuses leaves no request line, and every FerroEHR layer
+//! runs inside the bound. The trailing-slash normalization runs before
+//! routing.
 //!
 //! The overload bound covers every FerroEHR route and never the health routes,
 //! so an orchestrator can always probe an overloaded server. No openEHR spec
