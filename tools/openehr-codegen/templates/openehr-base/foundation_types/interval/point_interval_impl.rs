@@ -2,19 +2,9 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM/BASE class invariants for `Point_interval`.
-//!
-//! Two invariant sources apply, both enforced here:
-//! - the class's own `Inv_point` (`lower = upper`) —
-//!   `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.foundation_types.point_interval.adoc`
-//!   §Invariants — reported under `POINT_INTERVAL`;
-//! - the inherited `Lower_included_valid` / `Upper_included_valid` /
-//!   `Limits_consistent` of `…foundation_types.interval.adoc` §Invariants,
-//!   reported under `INTERVAL`, the class that declares them.
-//!
-//! The inherited `Limits_comparable` is not enforced, for the reason recorded in
-//! the sibling `proper_interval_impl`: the released BASE text declares
-//! `strictly_comparable_to` on no class.
+//! `Point_interval` invariants: its own `Inv_point` under `POINT_INTERVAL`
+//! (`org.openehr.base.foundation_types.point_interval.adoc`), and the inherited
+//! `Interval` invariants under `INTERVAL`, `Limits_comparable` excepted.
 
 use super::point_interval::PointInterval;
 use crate::validate::{InvariantViolation, Validate};

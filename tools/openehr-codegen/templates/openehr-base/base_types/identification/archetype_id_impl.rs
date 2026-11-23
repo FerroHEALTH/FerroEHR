@@ -2,17 +2,11 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written accessor functions and the `Value_valid` grammar for
-//! `ARCHETYPE_ID`.
-//!
-//! Spec: BASE 1.3.0
-//! `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.archetype_id.adoc`
-//! and `docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc`
-//! §Syntaxes. Lexical forms: the legacy ADL 1.4
-//! `rm_originator '-' rm_name '-' rm_entity '.' concept_name {'-' specialisation} '.v' major_version`
-//! (e.g. `openEHR-EHR-OBSERVATION.blood_pressure-cuff.v1`) and the ADL 2
-//! `namespace '::' … '.v' version_id` (e.g.
-//! `org.openehr::openEHR-EHR-OBSERVATION.blood_pressure.v2.1.4`).
+//! Accessors and the `Value_valid` grammar for `ARCHETYPE_ID` (BASE 1.3.0
+//! `org.openehr.base.base_types.archetype_id.adoc`,
+//! `master05-identification_package.adoc` §Syntaxes), in the ADL 1.4 form
+//! (`openEHR-EHR-OBSERVATION.blood_pressure-cuff.v1`) and the ADL 2 form
+//! (`org.openehr::openEHR-EHR-OBSERVATION.blood_pressure.v2.1.4`).
 
 use super::archetype_id::ArchetypeId;
 use super::lexical::IdError;
@@ -27,10 +21,8 @@ struct Parts<'a> {
     version: &'a str,
 }
 
-/// Split an archetype-id string into its namespace (before `::`, empty when
-/// absent), the RM qualifier (up to the first `.`), the domain concept (up to
-/// the next `.`) and the version after its `v`. Returns `None` if a separator
-/// is absent or a part is empty.
+/// Splits an archetype id into namespace (empty when absent), RM qualifier,
+/// domain concept and version, or `None` if a part is missing.
 fn parse(value: &str) -> Option<Parts<'_>> {
     let (namespace, rest) = value.split_once("::").unwrap_or(("", value));
     let (qualified, remainder) = rest.split_once('.')?;
@@ -61,8 +53,7 @@ impl ArchetypeId {
         parse(&self.value).map_or("", |p| p.qualified)
     }
 
-    /// Concept name including any specialisations, e.g. `blood_pressure-cuff` —
-    /// the part between the first `.` and the trailing `.vN` (BASE
+    /// The concept name with any specialisations, e.g. `blood_pressure-cuff` (BASE
     /// `domain_concept`).
     #[must_use]
     pub fn domain_concept(&self) -> &str {
@@ -85,9 +76,7 @@ impl ArchetypeId {
     /// and remaining `-`-delimited segments of the RM qualifier.
     #[must_use]
     pub fn rm_entity(&self) -> &str {
-        // rm_originator '-' rm_name '-' rm_entity: take everything after the
-        // second '-'. `splitn(3, ..)` leaves any further '-' inside the third
-        // segment, which is exactly the `rm_entity` remainder.
+        // Everything after the second `-` is `rm_entity`.
         let q = self.qualified_rm_entity();
         let mut segments = q.splitn(3, '-');
         match (segments.next(), segments.next(), segments.next()) {
@@ -96,10 +85,8 @@ impl ArchetypeId {
         }
     }
 
-    /// Name of the concept specialisation, if any, e.g. `cuff` for
-    /// `blood_pressure-cuff` — the last `-`-delimited segment of the domain
-    /// concept when it is specialised, else the empty string (BASE
-    /// `specialisation`).
+    /// The concept specialisation, e.g. `cuff` for `blood_pressure-cuff`, else the
+    /// empty string (BASE `specialisation`).
     #[must_use]
     pub fn specialisation(&self) -> &str {
         let d = self.domain_concept();
@@ -157,15 +144,8 @@ impl ArchetypeId {
 impl FromStr for ArchetypeId {
     type Err = IdError;
 
-    /// Parse an `ARCHETYPE_ID` against the master05 §Syntaxes `archetype_id`
-    /// production.
-    ///
-    /// The door is the SAME check the class's `Validate` impl runs. It used to
-    /// be weaker — a `.v` anywhere, a `.` before it, three `-` segments — so
-    /// `"1-2-3.@@@.vXYZ"` constructed and then failed its own invariants, and
-    /// the "well-formed by construction" guarantee every sibling here
-    /// establishes (`HierObjectId::new` calls `is_uid`, `VersionTreeId::new`
-    /// calls `is_valid_version_tree`) did not hold for this type.
+    /// Parses an `ARCHETYPE_ID` against the master05 §Syntaxes `archetype_id`
+    /// production, the same check its `Validate` impl runs.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.is_empty() {
             return Err(IdError::Empty);
@@ -214,9 +194,8 @@ mod tests {
 
     #[test]
     fn major_version_ignores_minor_and_patch() {
-        // A full hrid_ref (major.minor.patch) still yields the major only — the
-        // significant part for interface-reference matching (BASE Artefact
-        // Identification §Referencing).
+        // A full hrid_ref yields the major only (BASE Artefact Identification
+        // §Referencing).
         let a = aid("openEHR-EHR-OBSERVATION.pulse.v1.2.3");
         assert_eq!(a.version_id(), "1.2.3");
         assert_eq!(a.major_version(), "1");
@@ -274,14 +253,6 @@ mod tests {
 }
 
 /// Lexical validity per BASE base_types master05 §Syntaxes (`Value_valid`).
-///
-/// `archetype_id = ( namespace '::' qualified_rm_entity '.' domain_concept '.v'
-/// version_id ) | ( qualified_rm_entity '.' domain_concept '.v' major_version )`,
-/// with `namespace = alphanum-ext-str { '.' alphanum-ext-str }`,
-/// `qualified_rm_entity = rm_originator '-' rm_name '-' rm_entity` (each an
-/// `alphanum-str`), `domain_concept = concept_name { '-' specialisation }`,
-/// `version_id = major [ '.' minor [ '.' patch [ version_modifier ] ] ]` and
-/// `version_modifier = ( '-rc' | '-alpha' | '-beta' ) [ '.' number ]`.
 ///
 /// NOTE: a namespaceless identifier with a full `version_id` is accepted although BASE 1.3.0 refuses it, because AM 2.4.0 `ARCHETYPE_HRID.namespace` is optional and its artefacts carry that form (upstream conflict #3844, ruling #3845).
 #[must_use]
@@ -395,10 +366,7 @@ mod validity_tests {
         }
     }
 
-    /// The construction door and the class's own invariants must agree, or the
-    /// type's well-formed-by-construction guarantee is not one. They did not:
-    /// the door checked for a `.v`, a `.` before it and three `-` segments, so
-    /// these constructed and then failed `Validate`.
+    /// The construction door and the class's invariants agree.
     #[test]
     fn construction_admits_exactly_what_the_invariants_accept() {
         for value in [
