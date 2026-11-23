@@ -313,7 +313,8 @@ async fn a_failing_tests_clone_is_reclaimed_by_the_next_sweep() {
 /// it to run.
 const ENDED_CHILD: &str = "FERROEHR_TESTKIT_ENDED_CHILD";
 
-/// The line on which the child half names its clone.
+/// The text after which the child half names its clone, on the line libtest
+/// also writes the test's name to.
 const CLONE_LINE: &str = "testkit-clone=";
 
 /// The child half: a process that takes a clone, names it, and ends without
@@ -370,7 +371,7 @@ async fn a_process_that_ends_without_its_drop_has_its_clone_reclaimed() {
     );
     let name = stdout
         .lines()
-        .find_map(|line| line.strip_prefix(CLONE_LINE))
+        .find_map(|line| line.split_once(CLONE_LINE).map(|(_, name)| name.trim()))
         .expect("the child names its clone")
         .to_owned();
     assert!(
@@ -414,7 +415,10 @@ async fn waiting_in_authentication(url: &str) -> tokio::net::TcpStream {
     let tag = stream.read_u8().await.expect("the server's answer");
     let _length = stream.read_i32().await.expect("the answer's length");
     let request = stream.read_i32().await.expect("the authentication request");
-    assert_eq!(tag, AUTHENTICATION, "the server answers with an authentication request");
+    assert_eq!(
+        tag, AUTHENTICATION,
+        "the server answers with an authentication request"
+    );
     assert_ne!(request, 0, "the server asks for a password");
     stream
 }

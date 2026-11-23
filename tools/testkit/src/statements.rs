@@ -27,10 +27,7 @@ async fn database_oid(admin: &mut PgConnection, name: &str) -> Option<sqlx::post
 ///
 /// The [`sqlx::Error`] of the drop. A failure to remove the statements is
 /// not one: the statements then stay counted.
-pub(crate) async fn drop_database(
-    admin: &mut PgConnection,
-    name: &str,
-) -> Result<(), sqlx::Error> {
+pub(crate) async fn drop_database(admin: &mut PgConnection, name: &str) -> Result<(), sqlx::Error> {
     let oid = database_oid(admin, name).await;
     let sql = format!("DROP DATABASE IF EXISTS {name}");
     sqlx::raw_sql(sqlx::AssertSqlSafe(sql))
