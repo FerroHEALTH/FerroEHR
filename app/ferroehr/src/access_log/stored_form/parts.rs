@@ -110,11 +110,8 @@ impl<'w> Cut<'w> {
                 if kept != EMPTY_TREE {
                     row.push(name, &kept);
                 }
-            } else if is_name(name, ACCESSED)
-                && let Some((kept, common)) = item_cut(value)
-            {
-                row.push(name, &kept);
-                shared.push(name, &common);
+            } else if is_name(name, ACCESSED) && only_item_shares(value).is_some() {
+                cut_item(&mut row, &mut shared, name, value);
             } else {
                 row.push(name, value);
             }
@@ -342,39 +339,51 @@ fn details(tree: &[(&str, &str)]) -> Option<(String, String)> {
     Some((envelope.finish(), kept.finish()))
 }
 
-/// The accessed items `items` cut in two when they are one item that holds
-/// [`ITEM_SHARED`]: the row's item without it, and the shared part's item
-/// with it alone, each as a canonical array; `None` for any other items.
-fn item_cut(items: &str) -> Option<(String, String)> {
-    let [item] = elements(items)?[..] else {
+/// The only item of the accessed items `items` when it holds
+/// [`ITEM_SHARED`], read with no copy; `None` for any other items.
+fn only_item_shares(items: &str) -> Option<&str> {
+    let bytes = items.as_bytes();
+    if bytes.first() != Some(&b'[') {
         return None;
+    }
+    let end = value_end(bytes, 1)?;
+    if end + 1 != bytes.len() || bytes.get(end) != Some(&b']') {
+        return None;
+    }
+    let item = items.get(1..end)?;
+    let mut members = Members::of(item)?;
+    members
+        .by_ref()
+        .any(|(name, _)| is_name(name, ITEM_SHARED))
+        .then_some(item)
+}
+
+/// Writes the accessed items `items`, one item holding [`ITEM_SHARED`], as the
+/// member `name` of both parts: the row's item without it, the shared part's
+/// with it alone, straight into their text.
+fn cut_item(row: &mut Object, shared: &mut Object, name: &str, items: &str) {
+    let Some(item) = only_item_shares(items) else {
+        return;
     };
-    let members = members(item)?;
-    if !members.iter().any(|(name, _)| is_name(name, ITEM_SHARED)) {
-        return None;
-    }
-    let mut own = String::with_capacity(item.len() + 2);
-    let mut common = String::with_capacity(item.len() + 2);
-    own.push('[');
-    common.push('[');
-    for (name, value) in members {
-        let side = if is_name(name, ITEM_SHARED) {
-            &mut common
+    row.open(name);
+    shared.open(name);
+    let mut own_first = true;
+    let mut common_first = true;
+    for (member, value) in Members::of(item).into_iter().flatten() {
+        let (out, first) = if is_name(member, ITEM_SHARED) {
+            (&mut shared.out, &mut common_first)
         } else {
-            &mut own
+            (&mut row.out, &mut own_first)
         };
-        side.push(if side.len() == 1 { '{' } else { ',' });
-        side.push_str(name);
-        side.push(':');
-        side.push_str(value);
+        out.push_str(if *first { "[{" } else { "," });
+        *first = false;
+        out.push_str(member);
+        out.push(':');
+        out.push_str(value);
     }
-    for side in [&mut own, &mut common] {
-        if side.len() == 1 {
-            side.push('{');
-        }
-        side.push_str("}]");
+    for (out, first) in [(&mut row.out, own_first), (&mut shared.out, common_first)] {
+        out.push_str(if first { "[{}]" } else { "}]" });
     }
-    Some((own, common))
 }
 
 /// The accessed items of the row part `own` with the shared part's item

@@ -160,6 +160,9 @@ pub struct LiveGrants {
     /// catches up with the store (#5806).
     #[cfg(test)]
     held_back: AtomicBool,
+    /// The full loads this copy ran, so a test counts them (#6343).
+    #[cfg(test)]
+    loads: std::sync::atomic::AtomicUsize,
     /// The listener on [`CHANNEL`].
     listened: Arc<Listened>,
     /// The subjects' care relationships and the teams' patients held.
@@ -197,6 +200,8 @@ impl LiveGrants {
             installing: tokio::sync::Mutex::new(()),
             #[cfg(test)]
             held_back: AtomicBool::new(false),
+            #[cfg(test)]
+            loads: std::sync::atomic::AtomicUsize::new(0),
         }
     }
 
@@ -315,14 +320,27 @@ impl LiveGrants {
                 facts: facts_revision,
                 ..
             } = store::revisions(&mut conn).await?;
+            // NOTE: our own design (#6343), a refresh queued behind one that installed the
+            // revision it read reads nothing more.
             if Some(revision) != self.revision() {
-                kind = "grants";
                 let _installing = crate::db::acquire::awaiting(self.installing.lock()).await;
+                if self.revision().is_some_and(|held| held >= revision) {
+                    return Ok(());
+                }
+                kind = "grants";
+                #[cfg(test)]
+                self.loads.fetch_add(1, Ordering::AcqRel);
                 let loaded = store::load(&mut conn).await?;
                 self.install(loaded);
             } else if Some(facts_revision) != self.facts_revision() {
-                kind = "facts";
                 let _installing = crate::db::acquire::awaiting(self.installing.lock()).await;
+                if self
+                    .facts_revision()
+                    .is_some_and(|held| held >= facts_revision)
+                {
+                    return Ok(());
+                }
+                kind = "facts";
                 let since = self.facts_revision();
                 let changed = read_facts(&mut conn, since).await?;
                 // NOTE: our own design (#5806, #6074), the care copy applies what changed before the
@@ -711,80 +729,4 @@ async fn read_facts(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::party_binding::grants::store::{Dates, Term};
-
-    fn date(text: &str) -> jiff::civil::Date {
-        text.parse().expect("a date")
-    }
-
-    fn row(code: &str) -> CapabilityRow {
-        CapabilityRow::new(
-            Uuid::nil(),
-            Uuid::nil(),
-            code.to_owned(),
-            Term {
-                lifecycle_state: "532".to_owned(),
-                role_dates: Some(Dates {
-                    lower: None,
-                    upper: None,
-                }),
-                dates: Some(Dates {
-                    lower: Some(date("2026-12-01")),
-                    upper: Some(date("2026-12-03")),
-                }),
-                not_before: None,
-                not_after: None,
-            },
-            None,
-        )
-    }
-
-    #[test]
-    fn a_grant_holds_within_its_dates_and_instants_under_the_ceiling() {
-        let ceiling = GrantCeiling::new(Operation::ALL);
-        let now: jiff::Timestamp = "2026-12-02T12:00:00Z".parse().expect("an instant");
-        let today = date("2026-12-02");
-        let relay = row("commit_composition");
-        assert_eq!(
-            in_force(&relay, &ceiling, today, now),
-            Some(Operation::CommitComposition)
-        );
-        assert_eq!(
-            in_force(&relay, &ceiling, date("2026-12-03"), now),
-            None,
-            "the upper bound is exclusive"
-        );
-        assert_eq!(
-            in_force(&relay, &GrantCeiling::new([]), today, now),
-            None,
-            "an operation the ceiling does not admit is never honoured"
-        );
-        let mut timed = relay.clone();
-        timed.term.not_before = Some("2026-12-02T13:00:00Z".parse().expect("an instant"));
-        assert_eq!(in_force(&timed, &ceiling, today, now), None);
-        timed.term.not_before = None;
-        timed.term.not_after = Some("2026-12-02T11:00:00Z".parse().expect("an instant"));
-        assert_eq!(in_force(&timed, &ceiling, today, now), None);
-        let mut empty = relay.clone();
-        empty.term.role_dates = None;
-        assert_eq!(in_force(&empty, &ceiling, today, now), None);
-        let mut inactive = relay;
-        inactive.term.lifecycle_state = "800".to_owned();
-        assert_eq!(in_force(&inactive, &ceiling, today, now), None);
-        assert_eq!(
-            in_force(&row("import_everything"), &ceiling, today, now),
-            None
-        );
-    }
-
-    #[tokio::test]
-    async fn a_change_is_tracked_inside_the_request_only() {
-        let ((), changed) = tracking(async { note_change() }).await;
-        assert!(changed);
-        let ((), changed) = tracking(async {}).await;
-        assert!(!changed);
-        note_change();
-    }
-}
+mod tests;

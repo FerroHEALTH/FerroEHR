@@ -183,3 +183,58 @@ fn the_audit_pool_is_never_smaller_than_a_domain_pool() {
         assert!(audit >= size(Domain::Party), "{settings:?}");
     }
 }
+
+/// A pool whose connections all opened at one instant, as the server opens
+/// them before it answers ready (#5774), retires them one at a time across
+/// [`pool::RETIRE_SPREAD`], each released every second (#6341).
+#[test]
+fn a_full_pool_opened_at_once_retires_its_connections_across_the_spread() {
+    let size: u32 = 20;
+    let retirement = pool::Retirement::new(size);
+    let start = std::time::Instant::now();
+    let mut born = vec![std::time::Duration::ZERO; usize::try_from(size).expect("fits")];
+    let mut retired = Vec::new();
+    for second in 0..2 * pool::RETIRE_SPREAD.as_secs() {
+        let now = pool::LIFETIME + std::time::Duration::from_secs(second);
+        for birth in &mut born {
+            if retirement.retires(now.saturating_sub(*birth), start + now) {
+                retired.push(now);
+                *birth = now;
+            }
+        }
+    }
+    assert_eq!(retired.len(), born.len(), "each connection retires once");
+    let spacing = pool::RETIRE_SPREAD / size;
+    for pair in retired.windows(2) {
+        assert!(
+            pair[1].saturating_sub(pair[0]) >= spacing,
+            "{pair:?} at least {spacing:?} apart"
+        );
+    }
+    let first = retired.first().copied().expect("a retirement");
+    let last = retired.last().copied().expect("a retirement");
+    assert_eq!(first, pool::LIFETIME, "the first retires at the lifetime");
+    assert!(
+        last.saturating_sub(first) < pool::RETIRE_SPREAD,
+        "{last:?} within the spread"
+    );
+    assert!(
+        last.saturating_sub(first) >= pool::RETIRE_SPREAD.saturating_sub(spacing),
+        "{last:?} spread over the window"
+    );
+}
+
+/// A connection past [`pool::LIFETIME_CAP`] retires on its next release even
+/// while the pacing holds the others back.
+#[test]
+fn a_connection_past_the_cap_retires_whatever_the_pacing() {
+    let retirement = pool::Retirement::new(1);
+    let now = std::time::Instant::now();
+    assert!(!retirement.retires(
+        pool::LIFETIME.saturating_sub(std::time::Duration::from_secs(1)),
+        now
+    ));
+    assert!(retirement.retires(pool::LIFETIME, now));
+    assert!(!retirement.retires(pool::LIFETIME, now), "paced");
+    assert!(retirement.retires(pool::LIFETIME_CAP, now), "capped");
+}

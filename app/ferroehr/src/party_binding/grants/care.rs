@@ -299,6 +299,8 @@ impl CareCopy {
     /// The value `cache` holds for `key`, or `read` it and hold it when it
     /// `fits`, unless a drop overtook the read. An evicted entry is read
     /// again, so the cap never changes what a caller is answered (#5926).
+    /// Concurrent misses of one key wait for one read, and each reads on its
+    /// own only when that read held nothing: it failed or did not fit (#6342).
     async fn hold<K, V, E>(
         &self,
         cache: &Cache<K, V>,
@@ -310,18 +312,35 @@ impl CareCopy {
         K: Hash + Eq + Clone + Send + Sync + 'static,
         V: Clone + Send + Sync + 'static,
     {
-        if let Some(held) = cache.get(&key).await {
-            return Ok(held);
-        }
-        let seen = self.drops.load(Ordering::Acquire);
-        let value = read.await?;
-        if fits(&value) {
-            cache.insert(key.clone(), value.clone()).await;
-            if self.drops.load(Ordering::Acquire) != seen {
-                cache.invalidate(&key).await;
+        let mut read = std::pin::pin!(read);
+        let mut fits = Some(fits);
+        loop {
+            let seen = self.drops.load(Ordering::Acquire);
+            let mut led = None;
+            // NOTE: moka 0.12 `Entry::or_optionally_insert_with`, concurrent calls on one key
+            // run one `init` and the others wait for it, answered `None` when it holds nothing.
+            // Boxed: moka's future is large, and a request's future holds it on its stack.
+            let held = Box::pin(cache.entry(key.clone()).or_optionally_insert_with(async {
+                let value = read.as_mut().await;
+                let keep = match (&value, fits.take()) {
+                    (Ok(value), Some(fits)) => fits(value).then(|| value.clone()),
+                    _ => None,
+                };
+                led = Some(value);
+                keep
+            }))
+            .await;
+            match (led, held) {
+                (Some(value), held) => {
+                    if held.is_some() && self.drops.load(Ordering::Acquire) != seen {
+                        cache.invalidate(&key).await;
+                    }
+                    return value;
+                }
+                (None, Some(held)) => return Ok(held.into_value()),
+                (None, None) => {}
             }
         }
-        Ok(value)
     }
 
     /// The care relationships of `subject`, from the copy or read on `pool`.

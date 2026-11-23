@@ -154,6 +154,13 @@ fn record() -> impl Strategy<Value = Value> {
     );
     let outcome = prop_oneof![object_of(&["result", "delivered", "_type"]), value()];
     let query = prop_oneof![object_of(&["language", "rows", "text_digest"]), value()];
+    // The accessed items, an only item of which may hold the categories the shared part keeps
+    // (#6322).
+    let items = proptest::collection::vec(
+        object_of(&["_type", "categories", "origins", "rm_type", "was_delivered"]),
+        0..3,
+    )
+    .prop_map(Value::Array);
     (
         shared,
         own,
@@ -161,8 +168,9 @@ fn record() -> impl Strategy<Value = Value> {
         proptest::option::of(query),
         proptest::option::of(details()),
         proptest::option::of(value()),
+        proptest::option::of(items),
     )
-        .prop_map(|(shared, own, outcome, query, details, link)| {
+        .prop_map(|(shared, own, outcome, query, details, link, items)| {
             let mut record = Map::new();
             for (name, member) in shared.into_iter().chain(own) {
                 record.insert(name.to_owned(), member);
@@ -172,6 +180,7 @@ fn record() -> impl Strategy<Value = Value> {
                 ("query", query),
                 ("other_details", details),
                 (LINK, link),
+                ("items", items),
             ] {
                 if let Some(member) = member {
                     record.insert(name.to_owned(), member);
