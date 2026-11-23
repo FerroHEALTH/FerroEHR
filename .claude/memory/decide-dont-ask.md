@@ -5,7 +5,7 @@ metadata:
   type: feedback
 ---
 
-Decide and act. Do not put a choice to the owner, and do not hand the owner a command to run when you can run it yourself. That covers which option to take, whether an issue is obsolete, reopening or closing an issue, moving a milestone, and design rulings.
+Decide and act. Do not put a choice to the owner, and do not hand the owner a command to run when you can run it yourself. That covers which option to take, whether an issue is obsolete, reopening or closing an issue, moving a milestone, design rulings, and budget or ceiling calls on a pull request. For a performance trade-off, pick the option that leaves fewer allocations, less data through the system and more speed (owner 2026-11-23: "please do not ask me ... do the best what you think so we can get speed and less allocations and less data through the system").
 
 **Why:** on 2026-11-03 the owner said "why are you asking me stupid things, you are in control, so you decide and just do things", after being asked about audit-format options and handed a command to reopen an issue.
 
