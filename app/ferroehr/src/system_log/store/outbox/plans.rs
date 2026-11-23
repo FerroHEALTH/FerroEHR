@@ -106,14 +106,15 @@ async fn the_delivery_read_reads_the_window_by_its_index() {
             &[],
         ),
         (
-            "INSERT INTO audit.audit_event (id, recorded_at, stored_at, action, outcome, \
+            "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_current_xact_id() AS taken) \
+             INSERT INTO audit.audit_event (id, recorded_at, stored_at, action, outcome, \
              event_code, operation, principal, patient_id, resource_class, resource_id, \
              client_ip, request_id, render_policy, search_tokens, content_digest) \
              SELECT gen_random_uuid(), now() - ($1 - g) * interval '1 second', now(), 'R', 0, \
              '110110', 'composition_get', 'user-' || g % 1000, 'patient-' || g % 50000, \
              'composition', md5(g::text) || '::ferroehr::1', '10.0.0.' || g % 250, \
              md5((g * 7)::text), sha256(convert_to('{}', 'UTF8')), ARRAY[1, 2, 3, g % 100], \
-             sha256(int8send(g)) FROM generate_series(1, $1) AS g",
+             sha256(int8send(g)) FROM own_xid CROSS JOIN generate_series(1, $1) AS g",
             &[RECORDS],
         ),
         (
