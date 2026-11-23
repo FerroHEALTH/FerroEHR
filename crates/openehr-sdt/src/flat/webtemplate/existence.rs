@@ -13,38 +13,20 @@ use super::constraint::WebTemplateExistence;
 use super::implicit::attribute_existence;
 use super::inputs;
 
-/// Capture the AOM 1.4 `C_ATTRIBUTE.existence` constraints for the mandatory
-/// single-valued RM attributes of `co`, keyed by their absolute archetype path.
+/// Capture the AOM 1.4 `C_ATTRIBUTE.existence` constraints of the mandatory
+/// single-valued RM attributes of `co`, keyed by absolute archetype path.
 ///
-/// Scope: `C_SINGLE_ATTRIBUTE`s with an existence lower bound `>= 1` and at
-/// least one object-valued constraint child (excluding pure function/primitive
-/// constraints such as `is_integral`/`lower_included`, which never appear as
-/// navigable instance attributes). `name` is excluded (it names the node —
-/// master04 §"Field Identifiers" — and is matched by the archetype-node
-/// predicate instead).
+/// Scope: existence lower `>= 1` with an object-valued constraint child; `name`
+/// is excluded (master04 §"Field Identifiers"). A node-identified structural
+/// child counts too, since compaction may drop it and existence is then the only
+/// check.
 ///
-/// A node-identified structural child (e.g. `OBSERVATION.state → HISTORY[at0005]`,
-/// `HISTORY.summary → ITEM_TREE[at0007]`) is captured here **too**, not only when
-/// the child carries no `node_id`: existence and *occurrences* are orthogonal
-/// (AOM 1.4 §existence — "indicates whether its target object exists or not, i.e.
-/// is mandatory or not"), and a mandated structural wrapper with no leaf content
-/// is dropped by master04 §"Level Removal" compaction, so it never becomes a
-/// walkable node the occurrence check could visit — leaving existence as the only
-/// enforcement that the mandatory attribute is present at all. When the child
-/// does survive, existence and occurrences both fire only on absence (redundant,
-/// never contradictory).
-///
-/// NOTE: AOM 1.4 (`master04-constraint_model_package.adoc` §existence) makes
-/// existence "always required" with an unstated default of `{1..1}`; the OPT XML
-/// always serialises it, and we honour the declared value (biasing toward
-/// confident violations — an unstated/`{0..1}` existence is not enforced).
+/// NOTE: AOM 1.4 §existence defaults to `{1..1}`; the declared value is honoured.
 pub(super) fn existence_constraints(co: &CObject, node_path: &str) -> Vec<WebTemplateExistence> {
     let mut out = Vec::new();
     for attr in inputs::attributes(co) {
-        // A CONTAINER attribute with existence lower >= 1 demands the
-        // attribute's presence regardless of member cardinality (AOM 1.4
-        // c_attribute `Existence_set`; cardinality then governs membership of
-        // the present container — the two constraints are orthogonal).
+        // A container with existence lower >= 1 must be present (AOM 1.4
+        // `Existence_set`); cardinality governs its members.
         if let CAttribute::CMultipleAttribute(m) = attr {
             let (min, max) = occurrences(&m.existence);
             if min.unwrap_or(0) >= 1 {
@@ -61,12 +43,8 @@ pub(super) fn existence_constraints(co: &CObject, node_path: &str) -> Vec<WebTem
         };
         let (min, max) = occurrences(&s.existence);
         let min = min.unwrap_or(0);
-        // Require one object-valued constraint child, which selects real
-        // structural attributes and excludes function/primitive constraints
-        // (`is_integral`, `lower_included`, …) that are never navigable instance
-        // attributes. A CHILDLESS mandatory attribute also counts: AOM 1.4
-        // `master04-constraint_model_package.adoc` §existence lets an archetype
-        // demand presence without constraining the value.
+        // An object-valued child excludes function and primitive constraints; a
+        // childless mandatory attribute counts too (AOM 1.4 §existence).
         let object_valued = s.children.is_empty()
             || s.children
                 .iter()

@@ -1,32 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The internal simplified-instance model.
+//! The internal simplified-instance model: one tree of which FLAT and
+//! STRUCTURED are views (`simplified_formats/master04-basic_concepts.adoc`
+//! §Format variants, §Conversion Between Formats), each a codec ([`flat`],
+//! [`structured`]).
 //!
-//! Both wire variants of the Simplified Formats (ITS-REST
-//! `simplified_formats/master04-basic_concepts.adoc` §Format variants) are
-//! views of one tree: FLAT is the key/value serialization, STRUCTURED the
-//! nested one, and `master04 §Conversion Between Formats` defines the exact
-//! transform between them. [`SimNode`] is that tree, so each wire format is
-//! a pure codec ([`flat`], [`structured`]) and the template-driven RM
-//! conversion is written once against this model.
+//! A node holds its `|suffix` datum parts (`""` for the bare value), its
+//! children with their `:i` indexing, and an optional `|raw` datum.
 //!
-//! Shape:
-//!
-//! - **Datum parts** (`attrs`): the `|suffix` values of a node, keyed by the
-//!   printed suffix chain (`"magnitude"`, `"meaning|code"`, `"issuer:0"`).
-//!   The bare, suffix-less value uses the `""` key. NOTE: the wire
-//!   convention for a bare value alongside suffixed parts in STRUCTURED (an
-//!   `""` property) is not stated by the spec — no openEHR spec governs
-//!   that corner; the `""` key matches the ecosystem's established wire.
-//! - **Children** (`children`): segment name → [`SimChild`]: the ordered
-//!   occurrence list plus whether occurrences are `:i`-indexed on the FLAT
-//!   wire (`master04 §Instance Indexing`: indices appear when a node
-//!   repeats; single-valued nodes carry none).
-//! - **Raw** (`raw`): the `|raw` datum (`master04 §Raw canonical JSON`), the
-//!   RM object a node carries whole, kept as the object, its text or its
-//!   value so neither wire form reads or writes it through a second
-//!   representation (#6003). It writes before the node's other parts.
+//! NOTE: no openEHR spec governs a bare STRUCTURED value beside suffixed parts:
+//! the `""` key is our own design.
 
 #![expect(
     clippy::disallowed_types,
@@ -46,10 +30,8 @@ use serde_json::value::RawValue;
 /// The occurrences of one child segment.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct SimChild {
-    /// Whether FLAT keys for this child carry `:i` instance indices
-    /// (`master04 §Instance Indexing` — repeating nodes). Parsing sets it
-    /// from the input; the RM flattener sets it from the template
-    /// multiplicity (`max > 1 || max == -1`).
+    /// Whether FLAT keys for this child carry `:i` indices (`master04 §Instance
+    /// Indexing`).
     pub indexed: bool,
     /// The occurrences, in instance order.
     pub occurrences: Vec<SimNode>,
@@ -141,10 +123,8 @@ impl SimNode {
         self.attrs.is_empty() && self.raw.is_none() && self.children.is_empty()
     }
 
-    /// Whether this node is a bare-only leaf (a single `""` datum, no
-    /// suffixed parts, no children) — serialized as a plain scalar in
-    /// STRUCTURED (`master04 §Structured format` example: `"time":
-    /// ["2024-01-15T10:30:00Z"]`).
+    /// Whether this node is a bare-only leaf, serialized as a plain scalar in
+    /// STRUCTURED (`master04 §Structured format`).
     #[must_use]
     pub fn is_bare_leaf(&self) -> bool {
         self.children.is_empty()
@@ -169,10 +149,8 @@ impl SimNode {
         self.attrs.get("")
     }
 
-    /// The child occurrence at `name`/`index`, created (with any
-    /// intermediate placeholder occurrences) if absent. An explicit index
-    /// marks the child as indexed on the FLAT wire; use [`Self::place_mut`]
-    /// for pure positional placement without that marking.
+    /// The child occurrence at `name`/`index`, created if absent; an explicit index
+    /// marks the child indexed ([`Self::place_mut`] does not).
     pub fn occurrence_mut(&mut self, name: &str, index: Option<u32>) -> &mut SimNode {
         let child = self.child_mut(name);
         if index.is_some() {
@@ -214,13 +192,8 @@ impl SimNode {
 
     /// Trim trailing empty occurrences and drop fully-empty children.
     ///
-    /// Interior holes (a `:0`/`:2` input with nothing at `:1`) are KEPT as
-    /// empty placeholders and skipped at serialization, so original indices
-    /// survive — compacting them would silently renumber index-correlated
-    /// key families (`master06 §Participation` correlates
-    /// `participation_name:i` / `participation_identifiers:i` by index).
-    /// NOTE: no openEHR spec addresses index gaps — preserving the
-    /// client's numbering is our own, least-surprising posture.
+    /// NOTE: no openEHR spec addresses index gaps: our own design keeps interior
+    /// holes, so index-correlated keys (`master06 §Participation`) keep their numbers.
     pub fn prune_empty(&mut self) {
         for child in self.children.values_mut() {
             for occ in &mut child.occurrences {
@@ -239,11 +212,8 @@ impl SimNode {
 /// most one `ctx` child plus the data root(s).
 pub type SimDocument = SimNode;
 
-/// Whether a JSON value counts as absent on the simplified wire.
-///
-/// Datum values that are `null` or empty are skipped on read and never
-/// emitted (`master04 §Structured format` rule 6: empty objects SHOULD be
-/// omitted; the same reading is applied to FLAT values).
+/// Whether a JSON value counts as absent on the simplified wire (`master04
+/// §Structured format` rule 6).
 #[must_use]
 pub fn is_present(v: &Value) -> bool {
     match v {

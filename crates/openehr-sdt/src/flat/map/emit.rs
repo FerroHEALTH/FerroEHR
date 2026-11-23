@@ -33,12 +33,8 @@ fn code_phrase_parts<'a, I: Instance<'a>>(cp: I) -> (Option<I>, Option<I>, Optio
 }
 
 /// Emit the shared `DV_QUANTIFIED`/`DV_ORDERED` scalar extras (master05
-/// §§DV_QUANTITY, DV_COUNT, DV_PROPORTION, DV_DURATION): `|magnitude_status`,
-/// `|normal_status` (= `normal_status.code_string`; the CODE_PHRASE terminology
-/// is implicitly `openehr`), `|accuracy`, `|accuracy_is_percent`.
-/// `with_accuracy` is false for the temporal family, whose `accuracy` is a
-/// `DV_DURATION` carried as `/_accuracy` (master05 §§DV_DATE, DV_DATE_TIME,
-/// DV_TIME).
+/// §§DV_QUANTITY, DV_COUNT, DV_PROPORTION, DV_DURATION). `with_accuracy` is
+/// false for the temporal family, whose accuracy is `/_accuracy`.
 fn emit_quantified_extras<'a, I: Instance<'a>>(dv: I, out: &mut SimNode, with_accuracy: bool) {
     put(out, "magnitude_status", dv.attr("magnitude_status"));
     put(
@@ -65,11 +61,8 @@ pub(crate) fn emit_leaf<'a, I: Instance<'a>>(
 ) {
     let ty = rm.rm_type().unwrap_or_else(|| base_name(rm_type));
     match ty {
-        // master05 §DV_TEXT (and DV_PARAGRAPH shares the shape). A DV_TEXT held
-        // in an *open* DV_CODED_TEXT slot is the `|other` free-text branch
-        // (master04 §"Open Value-Sets"); otherwise the bare value, or `|value`
-        // when the node also carries metadata that keeps it from being a bare
-        // leaf (`|formatting` / `_mapping`).
+        // master05 §DV_TEXT; in an open DV_CODED_TEXT slot it is the `|other` branch
+        // (master04 §"Open Value-Sets").
         "DV_TEXT" | "DV_PARAGRAPH" => {
             let coded_slot = base_name(rm_type) == "DV_CODED_TEXT";
             let open_slot = coded_slot && list_open != Some(false);
@@ -168,22 +161,14 @@ pub(crate) fn emit_leaf<'a, I: Instance<'a>>(
         }
         // master05 §DV_IDENTIFIER — delegated to the party/identifier module.
         "DV_IDENTIFIER" => parties::emit_identifier(rm, out),
-        // master05 §PARTY_PROXY → §§PARTY_SELF, PARTY_IDENTIFIED,
-        // PARTY_RELATED: a PARTY_PROXY-typed leaf (`ENTRY.subject` —
-        // master05 §§ADMIN_ENTRY/INSTRUCTION/ACTION/EVALUATION/OBSERVATION
-        // `/subject` row) decomposes into the inlined
-        // `|name`/`|id`/`|id_scheme`/`|id_namespace` suffixes plus the
-        // `/_identifier:i` and `/relationship` sub-paths.
+        // master05 §§PARTY_SELF, PARTY_IDENTIFIED, PARTY_RELATED.
         "PARTY_PROXY" | "PARTY_SELF" | "PARTY_IDENTIFIED" | "PARTY_RELATED" => {
             parties::emit_party_as(rm, "PERSON", out);
         }
         // master05 §DV_MULTIMEDIA: bare = `uri.value`, plus the attribute set;
         // `/_thumbnail`, `/_charset`, `/_language` are `_`-attribute sub-paths.
         "DV_MULTIMEDIA" => emit_multimedia(rm, out),
-        // master05 §DV_INTERVAL: a leaf interval whose `/lower`/`/upper`
-        // endpoints are sub-paths (children). NOTE: this is the one leaf
-        // type whose datum is not attrs-only — `emit_leaf` emits its endpoint
-        // children here, since master05 §DV_INTERVAL models them as sub-paths.
+        // master05 §DV_INTERVAL: the one leaf whose endpoints are sub-paths.
         "DV_INTERVAL" => {
             emit_interval(rm, &interval_limit(rm_type), out);
         }
@@ -224,11 +209,8 @@ fn emit_multimedia<'a, I: Instance<'a>>(rm: I, out: &mut SimNode) {
     put(out, "data", rm.attr("data"));
 }
 
-/// Emit the value-internal `_`-families of a leaf value (master05: the
-/// `_normal_range`/`_other_reference_ranges` of the `DV_ORDERED` family, the
-/// `_accuracy` of the temporal family, the `_language`/`_encoding`/`_mapping`
-/// of the text family, and the `_thumbnail`/`_charset`/`_language` of
-/// DV_MULTIMEDIA / DV_PARSABLE). Called from [`emit_rm_attrs`].
+/// Emit the value-internal `_`-families of a leaf value (master05 per-type
+/// tables).
 pub(super) fn emit_value_internal<'a, I: Instance<'a>>(rm: I, ty: &str, out: &mut SimNode) {
     match ty {
         "DV_TEXT" | "DV_PARAGRAPH" | "DV_CODED_TEXT" => emit_text_meta(rm, out),
@@ -315,10 +297,8 @@ fn emit_reference_ranges<'a, I: Instance<'a>>(rm: I, t: &str, out: &mut SimNode)
     }
 }
 
-/// A DV_INTERVAL: `/lower`, `/upper` endpoints of type `t` + the boundary flags,
-/// each flag emitted only when it differs from its default (master05
-/// §DV_INTERVAL: `|lower_unbounded`/`|upper_unbounded` only if true;
-/// `|lower_included`/`|upper_included` only if false).
+/// A DV_INTERVAL: `/lower`, `/upper` and each flag that differs from its
+/// default (master05 §DV_INTERVAL).
 pub(super) fn emit_interval<'a, I: Instance<'a>>(iv: I, t: &str, out: &mut SimNode) {
     if let Some(lower) = iv.attr("lower") {
         emit_leaf(lower, t, None, out.occurrence_mut("lower", None));
@@ -354,13 +334,8 @@ pub(crate) fn emit_rm_attrs<'a, I: Instance<'a>>(rm: I, rm_type: &str, out: &mut
         "OBSERVATION" | "EVALUATION" | "INSTRUCTION" | "ACTION" | "ADMIN_ENTRY" => {
             emit_entry_attrs(rm, ty, out);
         }
-        // A PARTY arm here would emit the family a second time onto the same
-        // node: idempotent, invisible on the wire, and a trap for the next
-        // change to either site (pinned by
-        // `parties::tests::party_identifiers_have_exactly_one_emission_site`).
-        // NOTE: no PARTY arm — the party `_identifier:i` family (master05
-        // §§PARTY_IDENTIFIED, PARTY_RELATED) is emitted by
-        // [`parties::emit_party`], which every route to a party node uses.
+        // NOTE: master05 §§PARTY_IDENTIFIED, PARTY_RELATED: the party `_identifier:i`
+        // family is emitted only by [`parties::emit_party`].
         "ISM_TRANSITION" => emit_ism_transition_attrs(rm, out),
         "EVENT_CONTEXT" => emit_event_context_attrs(rm, out),
         _ => {}
@@ -398,9 +373,7 @@ fn emit_locatable_attrs<'a, I: Instance<'a>>(rm: I, out: &mut SimNode) {
 }
 
 /// Whether every party of both FEEDER_AUDIT_DETAILS survives the master05
-/// suffixes, whose builder fills `PERSON` in as the reference type
-/// ([`parties::ref_type_survives`]); the feeder audit is written whole as
-/// `|raw` otherwise (master04 §Raw canonical JSON).
+/// suffixes ([`parties::ref_type_survives`]); otherwise the audit is `|raw`.
 fn audit_parties_survive<'a, I: Instance<'a>>(fa: I) -> bool {
     ["originating_system_audit", "feeder_system_audit"]
         .iter()
@@ -498,14 +471,9 @@ fn emit_ism_transition_attrs<'a, I: Instance<'a>>(rm: I, out: &mut SimNode) {
     }
 }
 
-/// The EVENT_CONTEXT families (master05 §EVENT_CONTEXT).
-///
-/// A composition's context is normally surfaced through the `ctx/` vocabulary
-/// (see [`crate::flat::ctx`]); these emit only when a walker renders an
-/// EVENT_CONTEXT node through the tree instead. `end_time`/`location` surface
-/// as the lossless `ctx/` scalars (master06 §§end_time, location) and are not
-/// re-emitted here; their `_end_time`/`_location` path forms stay accepted on
-/// input.
+/// The EVENT_CONTEXT families (master05 §EVENT_CONTEXT), for a walker rendering
+/// EVENT_CONTEXT through the tree; `end_time` and `location` surface as `ctx/`
+/// scalars (master06).
 fn emit_event_context_attrs<'a, I: Instance<'a>>(rm: I, out: &mut SimNode) {
     if let Some(hcf) = rm.attr("health_care_facility") {
         parties::emit_party_as(
@@ -606,12 +574,8 @@ fn emit_audit_details<'a, I: Instance<'a>>(d: I, out: &mut SimNode) {
     }
 }
 
-/// INSTRUCTION_DETAILS (master05 §INSTRUCTION_DETAILS): exactly three STRING
-/// suffixes on the `_instruction_details` node itself — `|path` →
-/// `instruction_id.path`, `|composition_uid` → `instruction_id.id`,
-/// `|activity_id` → `activity_id`. The table and the section's example block
-/// agree; `instruction_id` is NOT a nested node on the simplified wire and the
-/// generic OBJECT_REF suffixes (`|id`/`|type`/`|namespace`) are not defined here.
+/// INSTRUCTION_DETAILS (master05 §INSTRUCTION_DETAILS): `|path`,
+/// `|composition_uid` and `|activity_id` on the `_instruction_details` node.
 fn emit_instruction_details<'a, I: Instance<'a>>(det: I, out: &mut SimNode) {
     if let Some(iid) = det.attr("instruction_id") {
         if let Some(v) = iid.attr("path").and_then(Instance::to_value) {
