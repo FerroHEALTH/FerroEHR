@@ -46,9 +46,7 @@ concurrency:
 # `env` context does not exist at job level, which is a documented context
 # restriction and not a choice
 # (https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability).
-# They used to repeat the OWNER as a literal instead (#2775). The postgres name
-# was declared here too until the tagging steps that read it moved into the
-# reusable lane (#2776) — a constant nothing reads is drift waiting to happen.
+# They name the owner by derivation, never as a literal (#2775, #2776).
 env:
   # A FerroEHR started by any step of this workflow sends no usage report to
   # FerroPULSE: compose interpolates this into every server it brings up, and
@@ -63,13 +61,11 @@ permissions: {}
 
 jobs:
   # ── Detect which images need (re)building ───────────────────────────────────
-  # The ci.yml owner ruling (2026-07-17) applied to images: a push that touches
-  # none of an image's build inputs must not recompile and republish it. A
-  # docs-only main push used to run FOUR native release compiles (two
-  # binaries × two arches) for byte-identical
-  # images. A manual dispatch always builds everything (the per-job conditions
-  # below); a release builds everything in release.yml, which has no filter at
-  # all, so a release can never miss an image.
+  # The ci.yml owner ruling (2026-07-17) applied to images: a push that
+  # touches none of an image's build inputs does not recompile or republish it.
+  # A manual dispatch always builds everything (the per-job conditions below);
+  # a release builds everything in release.yml, which has no filter, so a
+  # release never misses an image.
   changes:
     name: detect changes
     runs-on: ubuntu-latest
@@ -77,12 +73,10 @@ jobs:
     permissions:
       contents: read
     outputs:
-      # A manual dispatch builds everything BY DECLARATION rather than by the
-      # filter degrading (dispatch payloads carry no `before`, so paths-filter
-      # used to warn and diff the whole tree — same outcome, accidental
-      # mechanism). A push builds an image when its own files touch the
-      # image's filter OR the image at `:main` lacks the tree's inputs, which
-      # is how the changes of a dropped pending run still build (#4977).
+      # A manual dispatch builds everything by declaration (dispatch payloads
+      # carry no `before`). A push builds an image when its own files touch the
+      # image's filter OR the image at `:main` lacks the tree's inputs, so the
+      # changes of a dropped pending run still build (#4977).
       app: ${{ steps.everything.outputs.all || (steps.filter.outputs.app == 'true' || steps.behind.outputs.app == 'true') && 'true' || 'false' }}
       viewer: ${{ steps.everything.outputs.all || (steps.filter.outputs.viewer == 'true' || steps.behind.outputs.viewer == 'true') && 'true' || 'false' }}
       postgres: ${{ steps.everything.outputs.all || (steps.filter.outputs.postgres == 'true' || steps.behind.outputs.postgres == 'true') && 'true' || 'false' }}
@@ -216,7 +210,7 @@ jobs:
         with:
           persist-credentials: false
       # trivy-action would install Trivy through setup-trivy, whose download
-      # host no longer resolves (#4913), so every scan step skips it.
+      # host does not resolve (#4913), so every scan step installs it here.
       - name: Install Trivy from its GitHub release, checked by sha256
         run: bash scripts/security/install-trivy.sh "$TRIVY_VERSION" "$RUNNER_TEMP/trivy-bin"
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -325,10 +319,6 @@ jobs:
           retention-days: 1
 
   # ── Package + push the multi-arch app image (COPY-only; seconds) ────────────
-  # This job's NAME used to be load-bearing: the chart lane polled another run
-  # for a job called `app image / build` before pulling the image it judged the
-  # chart against. That coupling is gone (#2776) — the chart is a `needs`-ordered
-  # job of the release pipeline, so nothing outside this workflow reads this name.
   app-image:
     name: app image
     needs: binary

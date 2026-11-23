@@ -6,9 +6,7 @@
 #
 # The latency verdict of the lane is the A/B mode (`--ab`, #4318): a baseline
 # build and a candidate build measured in turn on ONE runner, several rounds
-# each, judged against each other. A latency read on one GitHub-hosted runner
-# and compared with a record from another said little (two runs of the same
-# code differed by up to 156 %). Two verdicts come out of the rounds. The plan
+# each, judged against each other. Two verdicts come out of the rounds. The plan
 # verdict reads pages per call, which the runner's speed does not change: an
 # operation fails when the candidate's median is more than the page tolerance
 # and one page above the baseline's highest round. The time verdict divides
@@ -63,9 +61,8 @@
 #                          record of its generation and class
 #   scripts/render/storage-bench-compare.sh --self-test
 #
-# A generation with no committed record fails the run (#4291): a schema
-# generation change once left the lane comparing nothing and passing, so the
-# change that moves the generation commits the new baseline with it.
+# A generation with no committed record fails the run (#4291), so the change
+# that moves the generation commits the new baseline with it.
 #
 # Exit: 0 when nothing regressed beyond the tolerance, 1 when something did or
 # when the measured generation has no committed record, 2 on a usage or input

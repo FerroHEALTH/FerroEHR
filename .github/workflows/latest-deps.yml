@@ -12,14 +12,11 @@
 # Check-only by design: DB-backed tests need the composed stack; a resolution
 # or compile break is the signal this job exists to catch.
 #
-# RUN COLOUR (the watcher family's uniform rule, #2778). A compile or resolution
-# break IS this lane's finding: it files or updates the tracking issue through
-# .github/actions/file-watcher-issue and the run stays GREEN. The run goes RED
-# only when the PROBE fails: the toolchain not installing, or `cargo update`
-# unable to resolve the registry at all, which says nothing about our code. Until
-# #2778 the finding reddened the run, and a repeat finding was dropped entirely —
-# the old filing step skipped an existing issue instead of commenting on it, so a
-# break that persisted for weeks was reported once and then never again.
+# RUN COLOUR (the watcher family's uniform rule, #2778). A compile or
+# resolution break IS this lane's finding: it files or updates the tracking
+# issue through .github/actions/file-watcher-issue, commenting on a repeat,
+# and the run stays GREEN. The run goes RED only when the PROBE fails: the
+# toolchain not installing, or `cargo update` unable to resolve the registry.
 name: latest-deps
 
 on:

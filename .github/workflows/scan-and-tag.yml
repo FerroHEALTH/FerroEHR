@@ -4,25 +4,21 @@
 # The image vulnerability gate and the tag application, as a REUSABLE
 # workflow (#2776).
 #
-# Both halves used to live in containers.yml, which was also the tag-triggered
-# image lane. The release pipeline (release.yml) needs the identical two jobs in
-# the identical order, and a second copy of a security gate is a second thing to
-# keep in step — so the pair moved here and both callers consume it:
+# The release pipeline (release.yml) and containers.yml need the identical
+# two jobs in the identical order, so the pair lives here and both callers
+# consume it:
 #
 #   * containers.yml — main pushes and manual dispatches
 #   * release.yml    — the `v*` release pipeline
 #
 # The ORDER is the whole point (#2747): the builds push by digest
 # (build-image.yml `defer-tags`), this workflow scans that digest, and only a
-# passing scan makes it referencable. The v4.0.4 cut is why — tagged images went
-# live first and the scan failed second, so a HIGH finding was already `latest`
-# by the time the lane turned red.
+# passing scan makes it referencable.
 #
 # A caller passes each image's name, pushed digest and computed tag list. An
 # image whose build SKIPPED or FAILED arrives with an EMPTY digest (an
 # unsuccessful job produces no outputs), which is how the per-image steps below
-# know to sit out — the same information the `needs.<job>.result` conditions
-# carried when both jobs lived in the caller.
+# know to sit out.
 name: Scan and tag images (reusable)
 
 on:
@@ -92,7 +88,7 @@ jobs:
           persist-credentials: false
 
       # trivy-action would install Trivy through setup-trivy, whose download
-      # host no longer resolves (#4913), so every scan step skips it.
+      # host does not resolve (#4913), so every scan step installs it here.
       - name: Install Trivy from its GitHub release, checked by sha256
         run: bash scripts/security/install-trivy.sh "$TRIVY_VERSION" "$RUNNER_TEMP/trivy-bin"
 

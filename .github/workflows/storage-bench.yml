@@ -18,9 +18,8 @@
 # request that says which machine measured it.
 #
 # WHY THE SAME RUNNER (#4318). A hosted runner is shared hardware with noisy
-# neighbours: two runs of the same bench code on 2026-10-28 differed by up to
-# 156 %, so a latency compared with a record from another runner said little.
-# Both builds now run on this runner, alternating (A B, B A, ...), and two
+# neighbours, so a latency compared with a record from another runner says
+# little. Both builds run on this runner, alternating (A B, B A, ...), and two
 # verdicts come out of the rounds (scripts/render/storage-bench-compare.sh
 # --ab, docs/benchmarks/storage/README.md). The plan verdict fails an
 # operation whose pages per call rose beyond the page tolerance, whatever its
@@ -29,9 +28,8 @@
 # only when its median rose beyond the tolerance AND every candidate round is
 # slower than every baseline round at that percentile. With k rounds a build
 # an unchanged operation separates by chance once in C(2k, k) orders, 1 in 70
-# at four rounds and 1 in 12 870 at eight, so eight is the default: at four,
-# unchanged code read 18 operations 15 to 27 % slower when one candidate round
-# ran 22 % slow across the board (run 41105458534). The baseline defaults to
+# at four rounds and 1 in 12 870 at eight, so eight is the default (run
+# 41105458534). The baseline defaults to
 # the candidate's merge base with main, so a dispatch on main measures the
 # same code twice: the lane's own noise check.
 #

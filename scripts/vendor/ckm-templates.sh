@@ -21,7 +21,7 @@
 #     Every template CKM publishes (slug derived from the display name),
 #     for breadth gates over the OPT 1.4 reader / WebTemplate builder.
 #
-# CKM REST PAGINATION GOTCHA (cost an afternoon once — do not relearn it):
+# CKM REST PAGINATION GOTCHA:
 # the list endpoints page with `?size=M&offset=N` (the OpenAPI document at
 # `/rest/v1/openapi.json`, verified on the wire 2026-11-12). `page`, `limit`,
 # `pageSize`, `maxResults`, `count`, `rows` are all silently IGNORED and you

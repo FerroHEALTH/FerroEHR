@@ -3,12 +3,9 @@
 # SPDX-License-Identifier: BUSL-1.1
 # scripts/gh/retry-net.sh — the two network idioms a publishing lane may use.
 #
-# WHY THIS EXISTS (#2775): a publishing lane runs under `set -euo pipefail`, and
-# a bare network call in a command substitution therefore ENDS the lane on any
-# transient failure. At v4.0.4 one TLS handshake timeout inside the chart lane's
-# wait loop failed a release with nothing wrong with the chart. The lesson is not
-# "retry more" — it is that the two kinds of network call have two different
-# correct shapes:
+# WHY THIS EXISTS (#2775): a publishing lane runs under `set -euo pipefail`,
+# so a bare network call in a command substitution ENDS the lane on any
+# transient failure. The two kinds of network call have two correct shapes:
 #
 #   1. An IDEMPOTENT READ retries inside curl and fails loud when it truly
 #      cannot be served: `retry_read`.
@@ -19,8 +16,7 @@
 # A STATE-CHANGING call (a push, a signature) is neither: it retries a bounded
 # number of times with a growing pause and fails loud, because "did it happen?"
 # is not answerable by asking again. `retry_state` is that shape (the chart
-# lane's 3-attempt cosign loop, which exists because chart 6.0.14 was lost to a
-# single Fulcio connection reset).
+# lane's 3-attempt cosign loop).
 #
 # This is a FUNCTION LIBRARY, not a wrapper action: a composite action cannot
 # wrap an arbitrary step of its caller. Source it inside the `run:` block:
