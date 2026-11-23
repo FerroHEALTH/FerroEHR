@@ -615,12 +615,12 @@ pub(crate) async fn middleware(
     };
     let bodiless = axum::body::HttpBody::size_hint(&body).exact() == Some(0);
     if !rides(&layer, &parts, bodiless).await {
-        return decided(&layer, access, Request::from_parts(parts, body), next).await;
+        return Box::pin(decided(&layer, access, Request::from_parts(parts, body), next)).await;
     }
     // NOTE: our own design (#6320), a ride decides on the party copies as they stand, and its
     // answer leaves only once they held the store's revisions its clinical statement read.
     let again = parts.clone();
-    // Boxed: the run is large, and the ride keeps it beside what it noted.
+    // Boxed, as each run of `decided` is: the run is large, so this future holds none of it.
     let (resp, ridden) = Box::pin(ferroehr::party_binding::request::ride(decided(
         &layer,
         access.clone(),
@@ -637,12 +637,12 @@ pub(crate) async fn middleware(
     // store's revisions first, which answers whatever they are.
     drop(resp);
     ferroehr::telemetry::access_path::count_policy_rerun(op);
-    decided(
+    Box::pin(decided(
         &layer,
         access,
         Request::from_parts(again, axum::body::Body::empty()),
         next,
-    )
+    ))
     .await
 }
 

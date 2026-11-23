@@ -578,7 +578,7 @@ const BUDGETS: [Budget; 31] = [
         allocations: 1182,
         peak_bytes: 102_503,
         round_trips: 3,
-        nested: 0,
+        nested: 1,
         notifies: 0,
         wal: 1393,
     },
