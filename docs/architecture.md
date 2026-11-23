@@ -1259,8 +1259,9 @@ which is what makes an optional stage safe to disable:
    32 octets. A subject reference is a pseudonym, so the digest needs no key
    (#6092, `clinical/0056`). The probe binds
    the caller's team ids, the day and the grace, one index probe per EHR row.
-   A replica reads the projection only while the facts revision it reflects
-   is at least the one of the facts the replica holds, so a discharge, a
+   A replica reads the projection only while the party snapshot it was read
+   under covers the one the facts the replica holds were read under, so a
+   discharge, a
    removed membership or an erasure is never granted from a stale row: until
    the projector applies it the query binds the census, the subjects of every
    patient under the caller's teams as a `jsonb` object in a `WITH` clause
@@ -1535,8 +1536,8 @@ own directives or per-object sensitivity; the model has them. What stays in
   (`clinical/0009_baseline_access.sql`). The service then judges again
   from a fresh read, and answers `503` `access-refreshing` when the copy has
   not caught up within 100 ms (#5794). The care projection a population
-  query reads is used only while the party facts revision it reflects
-  covers the one the replica holds; otherwise the query binds the census
+  query reads is used only while the party snapshot it was read under
+  covers the one of the facts the replica holds; otherwise the query binds the census
   (`service::ehr::care_projection`, #5645). A stale copy therefore never
   admits under old facts and never answers fewer rows. Our own design.
 
@@ -1823,12 +1824,25 @@ relationship a `PERSON` holds (an inline
 `RoleClass#MBR`, or `openehr_access::under_care_of`, RM demographic `party_relationship.adoc`: `source`,
 `target`, `time_validity`), each with the term of its holder. The patient's
 `under_care_of` team ids are projected at the commit of the patient's
-`PERSON`. A commit whose facts changed moves `facts_revision` beside the
-grant revision and stamps every party whose facts changed in
-`binding_caller_fact_party`; a replica whose grant revision is current reads
-only the facts of the parties stamped since its copy, one indexed read
-(`grants::caller::store::FACTS`), so an admission costs each replica one
-small read and the request path still adds no transaction. A refill and an
+`PERSON`. A commit whose facts changed stamps every party whose facts
+changed in `binding_caller_fact_party` with its transaction's xid
+(`pg_current_xact_id()`), writing only those parties' rows and sending no
+notification, so relationship commits about different parties never queue
+on one row lock or on the commit lock PostgreSQL takes for a notifying
+transaction (#6074). A replica's copy holds the snapshot it was read under,
+`pg_current_snapshot()` inside its repeatable-read transaction, and reads
+again only the facts of the parties stamped by transactions that snapshot
+did not see: `stamped_xid >= pg_snapshot_xmin(held) AND NOT
+pg_visible_in_snapshot(stamped_xid, held)` (`grants::caller::store::FACTS`,
+PostgreSQL 19, "Transaction ID and Snapshot Information Functions"). A stamp
+is visible to the next read's snapshot only once its transaction committed,
+and a transaction still running when the copy was read holds an xid at or
+above that snapshot's `xmin`, so no stamp is skipped whatever order the
+writers commit in; the audit frontier rests on the same xid order
+(`access_log::frontier`). The same predicate, as `party.facts_behind(held
+pg_snapshot)`, rides in the one read of the store's revisions a request
+makes, so a request finds the copy behind in that read, with no extra
+round trip. A refill and an
 erasure move the grant revision, which reads every fact again. Migration
 `party/0042` returns the grant revision to the never-filled state, so the
 next boot refills the facts of the `ROLE`s already stored before it serves,
@@ -1907,7 +1921,7 @@ none and care fails closed. Migration `party/0043` projects the elements into
 `binding_record_subject` at the commit of the `PERSON`, beside its care
 relationships, and stamps the `PERSON`. The care copy (#5615) holds each
 resolution in a bounded cache read on a miss, one indexed statement, and a
-team's census carries its patients' record subjects; the facts notification
+team's census carries its patients' record subjects; the facts read
 drops every resolution that names a stamped `PERSON` or a reference a stamped
 `PERSON` now declares, so a hit adds no transaction and no identity-source
 call; the unique constraint `(namespace, subject_id)` is deferred to the end
@@ -1926,17 +1940,19 @@ access revision (`clinical/0046`) carries the namespace with the id. **Our own
 design:** the element, the projection, its uniqueness, the resolution order
 and the grant.
 
-**A care decision on a lagging replica** (#5806). The caller facts and the
-care copy reach a replica through its notification, which arrives after the
-commit. A verdict that care decides (the same EHR judged with and without
-care differs), and a query whose resolved care binds any EHR, first compare
-the replica's grant and facts revisions with `binding_grant_revision`: one
-indexed read of one row on the party pool, once per request
+**A care decision on a lagging replica** (#5806). A grant change reaches a
+replica through its notification, which arrives after the commit, and a
+caller facts change through no notification (#6074). A verdict that care
+decides (the same EHR judged with and without care differs), and a query
+whose resolved care binds any EHR, first compare the replica's grant
+revision with `binding_grant_revision` and ask `party.facts_behind` of the
+snapshot its facts copy holds: one read of one row and one index range on
+the party pool, once per request
 (`RequestAccess::care_in_force`). A read of a COMPOSITION runs it alongside
 the version read, and a query alongside its care read
 (`RequestAccess::care_ahead`), so it adds a transaction and no latency; the
 owner accepted that cost on #5891. When the copy is older, the request reads
-it again (the care copy drops what changed before the revision moves), keeps
+it again (the care copy applies what changed before the snapshot moves), keeps
 only the care teams the caller is still a member of in the copy read, and
 judges care again; a copy that stays older for 100 ms refuses with `503`
 `access-refreshing`. A care relationship that ended, a membership that ended
@@ -2191,7 +2207,7 @@ reaches the binding issuers of every stored grant, ended ones included, so
 revoking a client stops no GDPR Art. 17 erasure. The `ROLE` commit refuses a
 capability that names `origin`, `reader` or `binding_issuer` other than once
 (`grants::check_role`). Each replica's refresher reads the grant copy on
-every notification (`LiveGrants::spawn_refresher`), so a commit of a request
+every grant notification (`LiveGrants::spawn_refresher`), so a commit of a request
 that resolves no caller still sees the change-feed grants in force, with no
 read on its path. **Our own design:** no openEHR spec defines a change feed,
 SCIM, or an authorization meaning for these.

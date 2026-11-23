@@ -2,11 +2,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! A grant holds within its dates and instants under the ceiling, a change
-//! is tracked inside its request only, and queued stale refreshes run one
-//! load (#6343).
+//! is tracked inside its request only, queued stale refreshes run one load
+//! (#6343), and the facts copy finds every stamp its snapshot did not see,
+//! whatever order the stamping transactions commit in, with no notification
+//! sent (#6074).
 
 use super::*;
+use crate::party_binding::grants::live::revisions::FactsRead;
 use crate::party_binding::grants::store::{Dates, Term};
+use sqlx::PgPool;
 
 fn date(text: &str) -> jiff::civil::Date {
     text.parse().expect("a date")
@@ -106,4 +110,173 @@ async fn a_change_is_tracked_inside_the_request_only() {
     let ((), changed) = tracking(async {}).await;
     assert!(!changed);
     note_change();
+}
+
+/// A membership of `party` in a team of its own, stamped as a commit stamps
+/// it, on the open transaction `tx`.
+async fn stamp_membership(tx: &mut sqlx::PgConnection, party: Uuid) {
+    sqlx::query(
+        "INSERT INTO binding_caller_fact (holder_id, ordinal, kind, party_id, target_id, \
+         lifecycle_state, role_validity, validity) \
+         VALUES ($1, 0, 'MBR', $1, $2, '532', '(,)', '(,)')",
+    )
+    .bind(party)
+    .bind(Uuid::now_v7())
+    .execute(&mut *tx)
+    .await
+    .expect("the fact");
+    caller::store::finish(tx, vec![party])
+        .await
+        .expect("the stamp");
+}
+
+/// A copy over the party pool of a fresh store, read once.
+async fn read_copy() -> (testkit::TestDb, PgPool, Arc<LiveGrants>) {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = crate::db::domain_pool_from(&db.pool(), Domain::Party);
+    let live = Arc::new(LiveGrants::new(pool.clone()));
+    live.refresh().await.expect("the first read");
+    (db, pool, live)
+}
+
+/// Whether the store's revisions, read against the snapshot the copy holds,
+/// find a stamp it did not see.
+async fn behind(pool: &PgPool, live: &LiveGrants) -> bool {
+    let mut conn = acquire(pool).await.expect("a connection");
+    let read = store::revisions(&mut conn, Some(&live.held_snapshot()))
+        .await
+        .expect("the revisions");
+    !live.holds(&read)
+}
+
+/// A copy read before a stamp commits finds itself behind
+/// (`party.facts_behind`) until it reads again, and then holds the stamped
+/// party's facts; the stamp sent no notification on the grants channel.
+#[tokio::test]
+async fn an_older_snapshot_is_behind_until_the_copy_reads_again() {
+    let (_db, pool, live) = read_copy().await;
+    assert!(!behind(&pool, &live).await, "a copy just read is current");
+    let mut listener = sqlx::postgres::PgListener::connect_with(&pool)
+        .await
+        .expect("a listener");
+    listener.listen(CHANNEL).await.expect("LISTEN");
+    let party = Uuid::now_v7();
+    let mut conn = acquire(&pool).await.expect("a connection");
+    let mut tx = sqlx::Connection::begin(&mut *conn).await.expect("a commit");
+    stamp_membership(&mut tx, party).await;
+    // NOTE: our own design (#5762), a test commit of party rows that no request makes.
+    tx.commit().await.expect("the commit");
+    drop(conn);
+    let older = live.facts_snapshot().expect("a snapshot");
+    for _ in 0..2 {
+        assert!(behind(&pool, &live).await, "the older snapshot is behind");
+        assert_eq!(live.facts_snapshot().as_ref(), Some(&older));
+    }
+    assert!(!live.held_facts().by_party.contains_key(&party));
+    live.refresh().await.expect("the read again");
+    assert!(
+        !behind(&pool, &live).await,
+        "the copy read again is current"
+    );
+    assert!(live.held_facts().by_party.contains_key(&party));
+    let notified =
+        tokio::time::timeout(std::time::Duration::from_millis(300), listener.try_recv()).await;
+    assert!(
+        notified.is_err(),
+        "a facts stamp notifies no replica: {notified:?}"
+    );
+}
+
+/// A stamp of a transaction still running when the copy was read is behind
+/// that copy once it commits, though its xid is below the stamps the copy
+/// already read: B started after A, stamped and committed first, and the copy
+/// read between them reads A's stamp next.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_stamp_running_when_the_copy_was_read_is_read_once_it_commits() {
+    let (_db, pool, live) = read_copy().await;
+    let (first, second) = (Uuid::now_v7(), Uuid::now_v7());
+    let mut a = acquire(&pool).await.expect("a connection");
+    let mut a_tx = sqlx::Connection::begin(&mut *a).await.expect("A");
+    stamp_membership(&mut a_tx, first).await;
+    let mut b = acquire(&pool).await.expect("a connection");
+    let mut b_tx = sqlx::Connection::begin(&mut *b).await.expect("B");
+    stamp_membership(&mut b_tx, second).await;
+    // NOTE: our own design (#5762), a test commit of party rows that no request makes.
+    b_tx.commit().await.expect("B commits first");
+    drop(b);
+    live.refresh().await.expect("the read between them");
+    assert!(live.held_facts().by_party.contains_key(&second));
+    assert!(!live.held_facts().by_party.contains_key(&first));
+    assert!(
+        !behind(&pool, &live).await,
+        "A's stamp is not committed, so the copy holds every one"
+    );
+    // NOTE: our own design (#5762), a test commit of party rows that no request makes.
+    a_tx.commit().await.expect("A commits");
+    drop(a);
+    assert!(behind(&pool, &live).await, "A's stamp is unseen");
+    live.refresh().await.expect("the read after A");
+    assert!(
+        live.held_facts().by_party.contains_key(&first),
+        "the read after A takes its stamp"
+    );
+    assert!(!behind(&pool, &live).await);
+}
+
+/// A read that found a stamp unseen is held only by a facts read numbered
+/// past the reads the copy had started when it returned: one already running
+/// then may have taken an older snapshot.
+#[test]
+fn a_behind_read_is_held_only_by_a_facts_read_started_after_it() {
+    let held = |read| revisions::HeldSnapshot {
+        generation: 3,
+        snapshot: Some(Arc::new("10:10:".parse().expect("a snapshot"))),
+        read,
+        started: Arc::new(AtomicU64::new(read)),
+    };
+    let found = held(4).found(true);
+    assert_eq!(found, FactsRead::Behind { after: Some(4) });
+    assert!(
+        !held(4).holds(&found),
+        "the read installed when it returned"
+    );
+    assert!(held(5).holds(&found), "a read started after it");
+    assert!(!held(9).holds(&FactsRead::Behind { after: None }));
+    assert!(held(4).holds(&held(4).found(false)), "nothing unseen");
+}
+
+/// Refreshes that all found the facts copy behind and queued on
+/// `installing` start one facts read between them: each after the first
+/// finds a read installed that started after its revisions read returned.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn concurrent_behind_refreshes_make_one_facts_read() {
+    let (_db, pool, live) = read_copy().await;
+    let mut conn = acquire(&pool).await.expect("a connection");
+    let mut tx = sqlx::Connection::begin(&mut *conn).await.expect("a commit");
+    stamp_membership(&mut tx, Uuid::now_v7()).await;
+    // NOTE: our own design (#5762), a test commit of party rows that no request makes.
+    tx.commit().await.expect("the commit");
+    drop(conn);
+    let started = live.facts_started.load(Ordering::Acquire);
+    let gate = live.installing.lock().await;
+    let refreshes: Vec<_> = (0..6)
+        .map(|_| {
+            let live = Arc::clone(&live);
+            tokio::spawn(async move { live.refresh().await })
+        })
+        .collect();
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    drop(gate);
+    for refresh in refreshes {
+        refresh
+            .await
+            .expect("the refresh ends")
+            .expect("the store answers");
+    }
+    assert_eq!(
+        live.facts_started.load(Ordering::Acquire),
+        started + 1,
+        "one facts read"
+    );
+    assert!(!behind(&pool, &live).await);
 }

@@ -178,6 +178,7 @@ impl FerroEhrService {
         )
         .with_mapping(Arc::clone(&self.binding))
         .with_live(Arc::clone(&self.bindings))
+        .with_facts(Arc::clone(&self.grants))
     }
 
     /// Rebuild the binding side table from the party versions alone, in one

@@ -9,13 +9,16 @@
 //! ([`crate::party_binding::grants::care`]) holds them in caches of a fixed
 //! bound, read on a miss (#5615).
 //!
-//! The copy is read again when a notification on [`CHANNEL`] marks it stale,
-//! when the listener is down, and after a request whose own commit changed a
-//! grant or a fact, so the next request on every replica decides under the
-//! change. A read is one indexed read of the two revisions; the grant rows
-//! and every fact when the grant revision moved, and otherwise, when the
-//! facts revision moved, one indexed read of the facts of the parties
-//! stamped since ([`caller::store::FACTS`]). Which grants hold is judged at each request on its own
+//! The copy is read again when a notification on [`CHANNEL`] marks the
+//! grants stale, when the listener is down, after a request whose own commit
+//! changed a grant or a fact, and when a request's read of the store's
+//! revisions finds a caller facts stamp the copy's snapshot did not see
+//! (#6074); a facts change sends no notification. A read is one indexed read
+//! of the revisions; the grant rows and every fact when the grant revision
+//! moved, and otherwise, when a stamp is unseen, one indexed read of the facts
+//! of the parties stamped by the transactions the copy's snapshot did not see
+//! ([`caller::store::FACTS`]), after which the copy holds the snapshot of that
+//! read. Which grants hold is judged at each request on its own
 //! date and instant, and a grant of an operation `[authz.grants] allowed` does not
 //! admit is never honoured. No openEHR spec governs operational policy: our
 //! own design.
@@ -25,7 +28,7 @@ use futures::FutureExt as _;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::future::Future;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, PoisonError, RwLock};
 
 use sqlx::PgPool;
@@ -33,6 +36,7 @@ use uuid::Uuid;
 
 use self::revisions::Revisions;
 use crate::db::acquire::acquire;
+use crate::db::snapshot::Snapshot;
 use crate::party_binding::grants::admission::Admission;
 use crate::party_binding::grants::agreement::{Accessor, Agreement};
 use crate::party_binding::grants::caller::care_of::ProviderKey;
@@ -119,8 +123,13 @@ struct Held {
 /// The caller facts as this replica holds them.
 #[derive(Debug, Default)]
 struct HeldFacts {
-    /// The facts revision read; `None` before the first read.
-    revision: Option<i64>,
+    /// The snapshot of the read they were brought to; `None` before the first.
+    snapshot: Option<Arc<Snapshot>>,
+    /// How many reads were installed, so a read of the store's revisions
+    /// judged against one install holds for every later one.
+    generation: u64,
+    /// The number of the facts read installed; `0` before the first.
+    read: u64,
     /// The facts about each party.
     by_party: BTreeMap<Uuid, Arc<[FactRow]>>,
 }
@@ -128,8 +137,21 @@ struct HeldFacts {
 impl HeldFacts {
     /// These facts with `changed` applied: each party read holds the facts
     /// read, and a party read with none holds none.
-    fn with(&self, changed: Changed) -> Self {
-        let mut by_party = self.by_party.clone();
+    fn with(&self, changed: Changed, read: u64) -> Self {
+        Self::from_parts(self.by_party.clone(), self.generation, changed, read)
+    }
+
+    /// The facts `changed` reads whole, installed after these.
+    fn whole(&self, changed: Changed, read: u64) -> Self {
+        Self::from_parts(BTreeMap::new(), self.generation, changed, read)
+    }
+
+    fn from_parts(
+        mut by_party: BTreeMap<Uuid, Arc<[FactRow]>>,
+        generation: u64,
+        changed: Changed,
+        read: u64,
+    ) -> Self {
         for (party, facts) in changed.parties {
             if facts.is_empty() {
                 by_party.remove(&party);
@@ -138,7 +160,9 @@ impl HeldFacts {
             }
         }
         Self {
-            revision: Some(changed.revision),
+            snapshot: Some(changed.snapshot),
+            generation: generation.saturating_add(1),
+            read,
             by_party,
         }
     }
@@ -157,6 +181,10 @@ pub struct LiveGrants {
     facts: RwLock<Arc<HeldFacts>>,
     /// Serializes the reads that install a new revision.
     installing: tokio::sync::Mutex<()>,
+    /// The facts reads this copy started, each numbered by it as it starts,
+    /// so a read of the store's revisions knows which reads began after it
+    /// returned.
+    facts_started: Arc<AtomicU64>,
     /// Holds every read of the copy back, so a test meets a copy that never
     /// catches up with the store (#5806).
     #[cfg(test)]
@@ -199,6 +227,7 @@ impl LiveGrants {
             held: RwLock::new(Arc::default()),
             facts: RwLock::new(Arc::default()),
             installing: tokio::sync::Mutex::new(()),
+            facts_started: Arc::new(AtomicU64::new(0)),
             #[cfg(test)]
             held_back: AtomicBool::new(false),
             #[cfg(test)]
@@ -301,8 +330,8 @@ impl LiveGrants {
     }
 
     /// Read the revisions; every grant row and fact when the grant revision
-    /// moved past the one held, else the facts of the parties stamped since
-    /// the facts revision held when that moved.
+    /// moved past the one held, else the facts of the parties stamped by
+    /// transactions the snapshot held did not see, when the store holds any.
     ///
     /// # Errors
     /// [`GrantsUnavailable`] when the party store does not answer; the copy
@@ -318,9 +347,9 @@ impl LiveGrants {
             let mut conn = acquire(&self.pool).await?;
             let Revisions {
                 grants: revision,
-                facts: facts_revision,
+                facts: facts_read,
                 ..
-            } = store::revisions(&mut conn).await?;
+            } = store::revisions(&mut conn, Some(&self.held_snapshot())).await?;
             // NOTE: our own design (#6343), a refresh queued behind one that installed the
             // revision it read reads nothing more.
             if Some(revision) != self.revision() {
@@ -331,26 +360,29 @@ impl LiveGrants {
                 kind = "grants";
                 #[cfg(test)]
                 self.loads.fetch_add(1, Ordering::AcqRel);
+                let read = self.facts_read_starts();
                 let loaded = store::load(&mut conn).await?;
-                self.install(loaded);
-            } else if Some(facts_revision) != self.facts_revision() {
+                self.install(loaded, read);
+            } else if !self.facts_hold(&facts_read) {
                 let _installing = crate::db::acquire::awaiting(self.installing.lock()).await;
-                if self
-                    .facts_revision()
-                    .is_some_and(|held| held >= facts_revision)
-                {
+                if self.facts_hold(&facts_read) {
                     return Ok(());
                 }
                 kind = "facts";
-                let since = self.facts_revision();
-                let changed = read_facts(&mut conn, since).await?;
+                let since = self.facts_snapshot();
+                let read = self.facts_read_starts();
+                let changed = read_facts(&mut conn, since.as_deref()).await?;
                 // NOTE: our own design (#5806, #6074), the care copy applies what changed before the
-                // revision moves, so a request that finds the revision in force reads no older care.
+                // snapshot moves, so a request that finds the copy current reads no older care.
                 self.care.apply(&changed).await;
                 let held = self.held_facts();
-                if held.revision.is_none_or(|held| held < changed.revision) {
+                if held
+                    .snapshot
+                    .as_ref()
+                    .is_none_or(|held| changed.snapshot.covers(held))
+                {
                     *self.facts.write().unwrap_or_else(PoisonError::into_inner) =
-                        Arc::new(held.with(changed));
+                        Arc::new(held.with(changed, read));
                 }
             }
             Ok::<(), StorageError>(())
@@ -374,9 +406,16 @@ impl LiveGrants {
         }
     }
 
-    /// Install `loaded` as the copy held, logging the stored grants the
-    /// ceiling does not admit.
-    fn install(&self, loaded: Loaded) {
+    /// The number of a facts read that starts now.
+    fn facts_read_starts(&self) -> u64 {
+        self.facts_started
+            .fetch_add(1, Ordering::AcqRel)
+            .saturating_add(1)
+    }
+
+    /// Install `loaded`, read by the facts read numbered `read`, as the copy
+    /// held, logging the stored grants the ceiling does not admit.
+    fn install(&self, loaded: Loaded, read: u64) {
         let ceiling = self.ceiling();
         let above: Vec<&str> = loaded
             .capabilities
@@ -411,8 +450,8 @@ impl LiveGrants {
             capabilities.entry(row.performer_id).or_default().push(row);
         }
         self.care.drop_all();
-        *self.facts.write().unwrap_or_else(PoisonError::into_inner) =
-            Arc::new(HeldFacts::default().with(loaded.facts));
+        let facts = self.held_facts().whole(loaded.facts, read);
+        *self.facts.write().unwrap_or_else(PoisonError::into_inner) = Arc::new(facts);
         *self.held.write().unwrap_or_else(PoisonError::into_inner) = Arc::new(Held {
             revision: Some(loaded.revision),
             clients,
@@ -713,11 +752,11 @@ fn in_force(
     row.term.holds(today, now).then_some(operation)
 }
 
-/// The facts of the parties stamped after `since` (every party for `None`),
-/// read in one repeatable-read snapshot on `conn`.
+/// The facts of the parties stamped by transactions `since` did not see
+/// (every party for `None`), read in one repeatable-read snapshot on `conn`.
 async fn read_facts(
     conn: &mut sqlx::PgConnection,
-    since: Option<i64>,
+    since: Option<&Snapshot>,
 ) -> Result<Changed, StorageError> {
     let mut tx = sqlx::Connection::begin(&mut *conn).await?;
     sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")

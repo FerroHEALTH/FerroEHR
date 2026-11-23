@@ -43,6 +43,7 @@ pub mod pool_name;
 mod retired;
 pub mod server_version;
 mod session;
+pub mod snapshot;
 
 use std::path::PathBuf;
 
@@ -389,7 +390,7 @@ pub enum DbError {
     /// (#6320).
     #[error(
         "the party door is not the one function it must be: `{object}` {problem}. The schema \
-         `party_door` may hold only `party_revisions()`, SECURITY DEFINER with a fixed \
+         `party_door` may hold only `party_revisions(pg_snapshot)`, SECURITY DEFINER with a fixed \
          search_path, since the clinical roles may run what it holds (no openEHR spec governs \
          database roles: our own design). Remedy: drop the object, or recreate the function \
          from the party migrations"
@@ -1364,7 +1365,7 @@ async fn verify_role_barriers(pool: &PgPool, profile: DeploymentProfile) -> Resu
 
 /// The one exception to the grant sweep: the schema `party_door`, which the
 /// clinical roles may enter, holds exactly the function
-/// `party_revisions()`, running as its owner with a fixed `search_path`, and
+/// `party_revisions(pg_snapshot)`, running as its owner with a fixed `search_path`, and
 /// nothing else (#6320). A database without the schema passes.
 ///
 /// # Errors
@@ -1379,7 +1380,8 @@ async fn verify_party_door(pool: &PgPool) -> Result<(), DbError> {
              UNION ALL
              SELECT 'party_door.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')',
                     CASE
-                        WHEN p.proname <> 'party_revisions' OR p.pronargs <> 0
+                        WHEN p.proname <> 'party_revisions' OR p.pronargs <> 1
+                             OR p.proargtypes[0] <> 'pg_catalog.pg_snapshot'::regtype
                             THEN 'is not the door''s function'
                         WHEN NOT p.prosecdef THEN 'does not run as its owner'
                         WHEN NOT EXISTS (
