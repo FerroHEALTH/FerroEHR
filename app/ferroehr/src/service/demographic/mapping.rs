@@ -237,9 +237,6 @@ fn path_errors(
 
 /// The RM types of the data values at `path` (an `ELEMENT` or its `value`)
 /// in the tree under `node`.
-///
-/// A web template draws an `ELEMENT` as its data value nodes, each at the
-/// element's path with `/value` appended.
 pub(super) fn value_types(node: &WebTemplateNode, path: &str) -> Vec<String> {
     let wanted = format!("{}/value", path.trim_end_matches("/value"));
     let mut found = Vec::new();

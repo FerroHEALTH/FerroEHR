@@ -92,11 +92,8 @@ impl FerroEhrService {
     /// A completed import is audited for non-repudiation (inbound →
     /// `EventActionCode::Create`).
     ///
-    /// Returns the id of the EHR the clone landed under — the caller's fixed
-    /// id, or the source id the extract carried, because the created EHR's
-    /// identity is not otherwise
-    /// derivable by a caller that supplied none, and a creating call that
-    /// cannot name what it created is unusable over a wire.
+    /// Returns the id of the EHR the clone landed under: the caller's fixed id,
+    /// or the source id the extract carried.
     ///
     /// # Errors
     /// - `precondition_violation` (`400`) — the extract carries no `EHR_STATUS`
@@ -303,16 +300,10 @@ impl FerroEhrService {
     /// Replay the extract's demographics chapter into the demographic domain,
     /// in a transaction of its own.
     ///
-    /// It cannot ride the clinical transaction: the two domains are separate
-    /// schemas reached by separate pools, which is what keeps the clinical
-    /// record and the identity of its subject apart, and one transaction spans
-    /// one connection. Parties therefore go FIRST and commit on their own. That
-    /// ordering is the recoverable one: `commit_demographic_import` skips a
-    /// container already held locally (parties are shared continuants), so a
-    /// clinical failure afterwards leaves parties nothing references and a
-    /// retry of the whole import completes cleanly, where the reverse order
-    /// would leave an imported EHR whose parties are missing and whose retry is
-    /// refused as a duplicate.
+    /// The two domains are separate schemas behind separate pools, so the
+    /// parties commit first, on their own. A container already held is skipped,
+    /// so a clinical failure afterwards leaves only unreferenced parties and a
+    /// retry of the whole import completes.
     ///
     /// # Errors
     /// Whatever [`commit_demographic_import`] rejects, plus a database fault
@@ -617,11 +608,6 @@ fn push_version(
 /// class and its own attributes here (RM common master06 §Attestation;
 /// §Copying: "the received instance is never modified"), so a re-export renders
 /// what was imported.
-///
-/// Validity is proven by TYPING the received fragment through the canonical
-/// codec — the `ATTESTATION` subtype dispatches on `_type` — after which the
-/// stored fragment is that typed value's canonical encoding, byte-identical to
-/// a well-formed input.
 fn parse_wrapped_commit_audit(ov: &Value) -> Result<Value, ServiceError> {
     let audit = ov.get("commit_audit").ok_or_else(|| {
         ServiceError::precondition("imported ORIGINAL_VERSION has no commit_audit")

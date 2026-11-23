@@ -6,11 +6,10 @@
 //!
 //! The draft access control decision procedure, Reading and Writing the
 //! Settings, item 3: the subject and the controller read the settings, and a
-//! representative and a gate-keeper other than the subject read them
-//! without the marking, which itself says the record is restricted or very
-//! restricted. A version served without its marking no longer holds the data
-//! its `signature` signs, so that view carries no signature and the response
-//! says it is redacted (our own design, #6165).
+//! representative and a gate-keeper other than the subject read them without
+//! the marking. A version served without its marking does not hold the data its
+//! `signature` signs, so that view carries no signature and the response says
+//! it is redacted (our own design, #6165).
 
 #![expect(
     clippy::disallowed_types,
@@ -65,7 +64,7 @@ pub fn redact_settings(settings: &mut Value) {
 }
 
 /// Removes the marking from the `data` of `version`, a `VERSION` of an
-/// `EHR_ACCESS`, and its `signature`, which no longer signs what is served.
+/// `EHR_ACCESS`, and its `signature`, which does not sign what is served.
 pub fn redact_version(version: &mut Value) {
     if let Some(data) = version.get_mut("data") {
         redact_object(data);

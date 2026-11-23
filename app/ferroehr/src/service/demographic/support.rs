@@ -288,10 +288,6 @@ impl FerroEhrService {
     /// the shape the released `VersionedParty` example fixes
     /// (`{namespace: local, type: SYSTEM, id: HIER_OBJECT_ID}`).
     ///
-    /// The body is constructed as the generated [`VersionedObject`] subtype and
-    /// serialized through the native codec, so it carries `_type` first and the
-    /// BMM's own attribute order.
-    ///
     /// # Errors
     /// - [`ServiceError::NotFound`] — the object holds no versions (`label`
     ///   names the family in the message).

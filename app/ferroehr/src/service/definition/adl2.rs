@@ -4,14 +4,6 @@
 //! The ADL2 definitions: ADL2 artefacts (archetype /
 //! template / `operational_template`) keyed by `ARCHETYPE_HRID`, on the
 //! `adl2_artefact` store.
-//!
-//! Validation is the real `openehr-adl` engine (parse → AOM2 phase 1 → RM
-//! phase 2 → specialisation phase 2 against the flat parent). The engine needs
-//! an [`ArchetypeRepository`] to resolve specialisation parents +
-//! `use_archetype` fillers; [`FerroEhrService::adl2_repository`] builds it
-//! from the stored ADL2 sources (the registry is low-volume — an
-//! admin surface — so parse-on-demand is cheap; the
-//! `openehr-adl` phases degrade gracefully when a parent is unresolved).
 
 #![expect(
     clippy::disallowed_types,
@@ -262,15 +254,12 @@ impl FerroEhrService {
     /// Project the stored ADL2 source into its `OperationalTemplateV2` canonical
     /// JSON (`GET …/adl2/{template_id}` with `Accept: application/json`).
     ///
-    /// The OAS declares `OperationalTemplateV2` as an opaque `type: object` with
-    /// no properties (`schemas/aom/OperationalTemplateV2.yaml`), so the AOM2
-    /// canonical JSON of the operational template — a JSON object — satisfies it
-    /// honestly. A stored `operational_template` is serialized as-is; any other
-    /// kind is compiled to its OPT via `openehr_adl::opt::create_opt` first.
+    /// A stored `operational_template` is serialized as-is; any other kind is
+    /// compiled to its OPT first.
     ///
     /// # Errors
     ///
-    /// - The stored source no longer parses → `Internal` (`500`; a stored source
+    /// - The stored source does not parse → `Internal` (`500`; a stored source
     ///   was engine-valid at upload, so this is a server fault).
     /// - A constituent archetype is not stored → `ValidationFailed` (`422`,
     ///   one `VARXR` violation per missing archetype id).
@@ -298,7 +287,7 @@ impl FerroEhrService {
     ///
     /// - [`ServiceError::NotFound`] (`404`) — no stored template matches
     ///   `template_id`.
-    /// - [`ServiceError::Internal`] (`500`) — the stored source no longer parses
+    /// - [`ServiceError::Internal`] (`500`) — the stored source does not parse
     ///   (it was engine-valid at upload, so this is a server fault).
     /// - [`ServiceError::ValidationFailed`] (`422`) — a constituent archetype
     ///   is not stored (one `VARXR` violation per missing archetype id).
@@ -334,7 +323,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// - [`ServiceError::NotFound`] (`404`) — no stored template matches.
-    /// - [`ServiceError::Internal`] (`500`) — the stored source no longer parses.
+    /// - [`ServiceError::Internal`] (`500`) — the stored source does not parse.
     /// - [`ServiceError::Unprocessable`] (`422`) — the OPT cannot be compiled or
     ///   built into a `WebTemplate`.
     pub async fn web_template_adl2(&self, template_id: &str) -> Result<WebTemplate, ServiceError> {
@@ -371,8 +360,8 @@ impl FerroEhrService {
     ///   the OPT 1.4 side —
     ///   `docs/specs/openehr/ITS-REST/specifications/responses/422.yaml`) or the
     ///   stored OPT2 cannot be built into a `WebTemplate`.
-    /// - [`ServiceError::Internal`] (`500`) — the stored ADL2 source no longer
-    ///   parses (it was engine-valid at upload, so this is a server fault).
+    /// - [`ServiceError::Internal`] (`500`) — the stored ADL2 source does not
+    ///   parse (it was engine-valid at upload, so this is a server fault).
     /// - [`ServiceError::Database`] — a store read failed.
     pub(crate) async fn web_template_adl2_cached(
         &self,
@@ -423,7 +412,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// - [`ServiceError::NotFound`] (`404`) — no stored ADL2 template matches.
-    /// - [`ServiceError::Internal`] (`500`) — the stored source no longer parses.
+    /// - [`ServiceError::Internal`] (`500`) — the stored source does not parse.
     /// - [`ServiceError::Unprocessable`] (`422`) — the OPT cannot be compiled.
     async fn adl2_operational_template_for(
         &self,
@@ -442,7 +431,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// - The stored source no longer parses → `Internal` (`500`; a stored source
+    /// - The stored source does not parse → `Internal` (`500`; a stored source
     ///   was engine-valid at upload, so this is a server fault).
     /// - A constituent archetype the template needs is not stored →
     ///   `ValidationFailed` (`422`), one `VARXR` violation per missing

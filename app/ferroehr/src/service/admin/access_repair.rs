@@ -58,9 +58,7 @@ impl FerroEhrService {
     /// do not parse, committing the new `EHR_ACCESS` version as a modification.
     ///
     /// `settings` is the whole new `EHR_ACCESS.settings` object; every other
-    /// attribute of the current `EHR_ACCESS` is kept. The commit runs the
-    /// `EHR_ACCESS` commit validation, writes its contribution and commit
-    /// audit, drops the cached settings, and records the act as an access.
+    /// attribute of the current `EHR_ACCESS` is kept.
     ///
     /// # Errors
     /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown or has no

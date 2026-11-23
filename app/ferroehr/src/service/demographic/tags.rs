@@ -266,8 +266,8 @@ impl FerroEhrService {
 /// [`VersionIdError`] when the configured `system_id` or the stored tag target
 /// is not a well-formed BASE identifier.
 fn party_item_tag(system_id: &str, row: &tag_repo::TagRow) -> Result<ItemTag, ServiceError> {
-    // A stored row that no longer constructs is storage corruption, not a
-    // client fault — fail loud.
+    // A stored row that does not construct is storage corruption, not a client
+    // fault.
     ItemTag::new(
         row.key.clone(),
         row.value.clone(),
