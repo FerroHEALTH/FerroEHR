@@ -49,12 +49,14 @@ use super::authn::{Principal, current_principal};
 use super::authz::AuthzHandle;
 use crate::api::operation::{Verb, operation};
 use crate::state::AppState;
+use ferroehr::telemetry::stage::{self, Stage};
 
 /// The evaluator of the running request of `op`; `None` for the controller's
 /// own operations (`admin_*`), which no directive binds. The read of the
 /// change feed is judged: each event names EHR data, and the feed publishes
 /// only what its reader may read (#5587).
 pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAccess>> {
+    let _stage = stage::enter(Stage::Access);
     if op.starts_with("admin_") && op != crate::api::admin::outbox::READ {
         return None;
     }

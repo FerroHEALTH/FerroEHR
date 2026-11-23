@@ -60,10 +60,10 @@ use crate::access_evaluator_http::{credential, ehr_with_composition};
 use crate::common::{self, BASE, FHIR};
 
 /// The measured requests of each path.
-const REQUESTS: u64 = 10;
+pub(super) const REQUESTS: u64 = 10;
 
 /// The requests of each path sent before the measured ones.
-const WARM: u64 = 3;
+pub(super) const WARM: u64 = 3;
 
 /// The EHRs the paths spread over, each with one IPS composition.
 const EHRS: usize = 5;
@@ -84,7 +84,7 @@ const FLAT: &str = "application/openehr.wt.flat+json";
 
 /// A hot path.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-enum Path {
+pub(super) enum Path {
     CommitJson,
     CommitXml,
     CommitFlat,
@@ -119,7 +119,7 @@ enum Path {
 }
 
 impl Path {
-    const ALL: [Self; 31] = [
+    pub(super) const ALL: [Self; 31] = [
         Self::CommitJson,
         Self::CommitXml,
         Self::CommitFlat,
@@ -153,7 +153,7 @@ impl Path {
         Self::CommitAgent,
     ];
 
-    fn name(self) -> &'static str {
+    pub(super) fn name(self) -> &'static str {
         match self {
             Self::CommitJson => "commit JSON",
             Self::CommitXml => "commit XML",
@@ -794,6 +794,12 @@ const BUDGETS: [Budget; 31] = [
     },
 ];
 
+/// The paths in the order [`BUDGETS`] measures them, which keeps the access
+/// records and parties a later path writes out of what an earlier one reads.
+pub(super) fn order() -> impl Iterator<Item = Path> {
+    BUDGETS.iter().map(|budget| budget.path)
+}
+
 /// The bytes each path may move over the database wire per request, both
 /// directions together, as [`every_hot_path_stays_within_its_wire_budget`]
 /// counts them (#6244): the largest median of three runs on main 4411906444
@@ -927,6 +933,12 @@ impl<S> tracing_subscriber::Layer<S> for Counter
 where
     S: tracing::Subscriber + for<'a> LookupSpan<'a>,
 {
+    // NOTE: our own design (#6321), the stage spans are left disabled, so this
+    // budget counts what the request allocates with no stage marked.
+    fn enabled(&self, metadata: &tracing::Metadata<'_>, _: Context<'_, S>) -> bool {
+        metadata.target() != ferroehr::telemetry::stage::TARGET
+    }
+
     fn on_event(&self, event: &tracing::Event<'_>, ctx: Context<'_, S>) {
         let target = event.metadata().target();
         let conversion = target == openehr_its::conversion::TARGET;
@@ -993,7 +1005,7 @@ impl<F: Future> Future for Measured<'_, F> {
 }
 
 /// One request, owned so it can be built again for each send.
-struct Call {
+pub(super) struct Call {
     method: &'static str,
     uri: String,
     user: &'static str,
@@ -1003,7 +1015,7 @@ struct Call {
 }
 
 impl Call {
-    fn request(&self) -> Request<Body> {
+    pub(super) fn request(&self) -> Request<Body> {
         let mut builder = Request::builder()
             .method(self.method)
             .uri(&self.uri)
@@ -1023,7 +1035,10 @@ impl Call {
 }
 
 /// Sends `request` and reads its whole answer.
-async fn exchange(app: &Router, request: Request<Body>) -> (StatusCode, HeaderMap, Vec<u8>) {
+pub(super) async fn exchange(
+    app: &Router,
+    request: Request<Body>,
+) -> (StatusCode, HeaderMap, Vec<u8>) {
     let response = app.clone().oneshot(request).await.expect("a response");
     let status = response.status();
     let headers = response.headers().clone();
@@ -1043,7 +1058,7 @@ async fn plain(app: &Router, call: &Call) -> (StatusCode, HeaderMap, String) {
 }
 
 /// The fixtures the paths read and write.
-struct World {
+pub(super) struct World {
     ehrs: Vec<(String, String)>,
     xml: String,
     flat: String,
@@ -1104,7 +1119,7 @@ fn object_id(headers: &HeaderMap) -> String {
 }
 
 impl World {
-    async fn build(app: &Router) -> Self {
+    pub(super) async fn build(app: &Router) -> Self {
         let mut ehrs = Vec::new();
         for _ in 0..EHRS {
             ehrs.push(ehr_with_composition(app).await);
@@ -1256,6 +1271,33 @@ impl World {
         }
     }
 
+    /// Builds what `path` reads or writes besides the shared fixtures, right
+    /// before its requests.
+    pub(super) async fn prepare(
+        &self,
+        app: &Router,
+        svc: &ferroehr::service::FerroEhrService,
+        path: Path,
+    ) {
+        match path {
+            Path::ReadVersion => self.judge_on_objects(app, svc).await,
+            Path::CommitDelete => self.deletable(app).await,
+            Path::DirectoryCreate => self.directories(app).await,
+            Path::PartyUpdate => self.parties(app).await,
+            _ => {}
+        }
+    }
+
+    /// Sends the [`WARM`] requests of `path` that go before its measured ones.
+    pub(super) async fn warm(&self, app: &Router, path: Path) {
+        for n in 0..WARM {
+            let n = usize::try_from(n).unwrap();
+            let (status, headers, body) = plain(app, &self.call(path, n)).await;
+            assert!(status.is_success(), "{}: {status} {body}", path.name());
+            self.observe(path, n, &headers);
+        }
+    }
+
     /// Builds the EHRs of the directory paths, one per request, each with a
     /// composition its FOLDER references.
     async fn directories(&self, app: &Router) {
@@ -1357,7 +1399,7 @@ impl World {
     }
 
     /// Records what the answer to the `n`th request of `path` changed.
-    fn observe(&self, path: Path, n: usize, headers: &HeaderMap) {
+    pub(super) fn observe(&self, path: Path, n: usize, headers: &HeaderMap) {
         match path {
             Path::CommitStatus => {
                 self.status_uids.lock().unwrap()[n % self.ehrs.len()] = etag(headers);
@@ -1427,7 +1469,7 @@ impl World {
     }
 
     /// The `n`th request of `path`.
-    fn call(&self, path: Path, n: usize) -> Call {
+    pub(super) fn call(&self, path: Path, n: usize) -> Call {
         let (ehr, vo) = &self.ehrs[n % self.ehrs.len()];
         let minimal = vec![("Prefer", "return=minimal".to_owned())];
         let commit = |content_type, body: String, mut headers: Vec<(&'static str, String)>| {
@@ -1812,12 +1854,7 @@ async fn measure(
     counter: &Counter,
     path: Path,
 ) -> Measure {
-    for n in 0..WARM {
-        let n = usize::try_from(n).unwrap();
-        let (status, headers, body) = plain(app, &world.call(path, n)).await;
-        assert!(status.is_success(), "{}: {status} {body}", path.name());
-        world.observe(path, n, &headers);
-    }
+    world.warm(app, path).await;
     drained(pool).await;
     let evicted = testkit::statements::statement_window(pool)
         .await
@@ -1992,18 +2029,7 @@ async fn measure_all(
     let mut measured = Vec::with_capacity(BUDGETS.len());
     for budget in &BUDGETS {
         let path = budget.path;
-        if path == Path::ReadVersion {
-            world.judge_on_objects(app, svc).await;
-        }
-        if path == Path::CommitDelete {
-            world.deletable(app).await;
-        }
-        if path == Path::DirectoryCreate {
-            world.directories(app).await;
-        }
-        if path == Path::PartyUpdate {
-            world.parties(app).await;
-        }
+        world.prepare(app, svc, path).await;
         let m = Box::pin(measure(app, pool, wire, &world, counter, path)).await;
         measured.push((budget, m));
     }

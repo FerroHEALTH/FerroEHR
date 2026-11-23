@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use super::{IntakeEntry, take_in};
 use crate::access_log::store::AccessLogError;
 use crate::db::acquire::acquire;
+use crate::telemetry::stage::{self, Stage};
 
 /// One request's entries waiting for the gathered intake write.
 pub(super) struct Job {
@@ -291,7 +292,8 @@ pub(super) async fn write_known(
     let mut stored = known.parts.stored(entries, today);
     let mut attempt = 1;
     loop {
-        match take_in(&mut *conn, entries, reserved_by, &stored).await {
+        let statement = take_in(&mut *conn, entries, reserved_by, &stored);
+        match stage::instrument(Stage::Gather, statement).await {
             Err(refused) if !stored.is_empty() && unknown_part(&refused) => {
                 tracing::warn!(error = %refused, "a shared part the intake knew stored is gone; it is written again");
                 known.parts.forget(&stored);

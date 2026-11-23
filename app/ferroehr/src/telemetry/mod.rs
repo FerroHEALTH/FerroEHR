@@ -19,6 +19,7 @@ pub mod conversion;
 pub mod indicators;
 pub mod metrics;
 pub mod samplers;
+pub mod stage;
 
 pub mod build_info;
 #[cfg(test)]

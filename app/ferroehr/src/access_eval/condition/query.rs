@@ -15,6 +15,7 @@ use super::{AccessCondition, CallerKeys, ConditionGroups, RequestAccess, Verdict
 use crate::access_eval::care_tie::Cared;
 use crate::access_eval::class::Classes;
 use crate::service::ehr::access_settings::EhrAccessSettings;
+use crate::telemetry::stage::{self, Stage};
 
 impl RequestAccess {
     /// The condition a query applies, over every EHR of a class among
@@ -23,6 +24,7 @@ impl RequestAccess {
     /// this replica does not hold is withheld.
     #[must_use]
     pub fn condition(&self, classes: &Classes, care: Care) -> AccessCondition {
+        let _stage = stage::enter(Stage::Access);
         let held = Held::of_class(self.confined());
         let left = self.care_left();
         let pair = |settings: Option<&EhrAccessSettings>| VerdictPair {

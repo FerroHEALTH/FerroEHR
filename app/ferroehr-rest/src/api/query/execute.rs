@@ -23,6 +23,7 @@ use crate::overview::error::RestError;
 use super::response::{self, QueryScope};
 use super::{adhoc, cohort, stored};
 use crate::state::AppState;
+use ferroehr::telemetry::stage::{self, Stage};
 
 /// The execution path of one query operation.
 #[derive(Debug, Clone, Copy)]
@@ -81,7 +82,10 @@ pub(crate) async fn serve(
         }
     };
 
-    let mut resp = response::respond_result_set(&parts.headers, &outcome.result_set);
+    let mut resp = {
+        let _stage = stage::enter(Stage::Encode);
+        response::respond_result_set(&parts.headers, &outcome.result_set)
+    };
     if let Some(log_read) = &outcome.log_read {
         // A query over the access log is a read of the log, and its record writes its
         // own access-log entry (the draft's recording rule 4), naming the EHR whose log

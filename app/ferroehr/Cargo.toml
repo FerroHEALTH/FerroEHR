@@ -23,6 +23,10 @@ publish = false
 default = ["fhir", "multimedia"]
 fhir = ["dep:ferrobridge-term", "dep:fhir-types", "ehds-logging/balp", "ihe-atna/balp", "ihe-atna/feed"]
 multimedia = ["dep:bytes", "dep:ferroehr-ext", "ferroehr-ext/multimedia"]
+# The stage spans the hot-path budget times with the thread's CPU clock
+# (#6321): only ferroehr-rest's tests turn it on, so a server build carries
+# no stage mark.
+stage-cpu = []
 # `schemars::JsonSchema` on the configuration tree and every type it reaches,
 # which tools/config-reference renders into the reference page and the default
 # ferroehr.toml (#5316). No server build turns it on.
