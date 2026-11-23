@@ -11,7 +11,7 @@
 //! stamps each party whose facts changed with it and notifies
 //! [`super::super::store::CHANNEL`], so each replica reads again only the
 //! facts of the parties stamped since its copy ([`FACTS`]), with their care
-//! relationships ([`CARED`]) and record subjects, which its care copy
+//! relationships (`CARED`) and record subjects, which its care copy
 //! applies to the care teams it holds (#6074). A refill and an
 //! erasure move the grant revision instead, which reads every fact again. No
 //! openEHR spec governs the side table or its SQL: our own design.
