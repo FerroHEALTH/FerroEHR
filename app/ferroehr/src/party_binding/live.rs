@@ -313,8 +313,7 @@ impl LiveBindings {
             Some(_) => looked_up(LOOKUPS, "behind"),
             None => looked_up(LOOKUPS, "miss"),
         }
-        // NOTE: our own design, boxed so a request's future on a 2 MiB test-thread stack stays small.
-        Box::pin(self.read_through(key, current, read)).await
+        self.read_through(key, current, read).await
     }
 
     /// [`Self::lookup`] past a miss: under `key`'s stripe, the lookup another
