@@ -16,11 +16,11 @@ include::partial$module_vars.adoc[]
 
 == Integrity
 
-. The canonical form of a record is its ITS-JSON serialisation canonicalised by the JSON Canonicalization Scheme of RFC 8785, and its content digest the digest of the UTF-8 octets of that form. A tombstone keeps the content digest of the entry it replaced, which the system stores beside it.
+. The canonical form of a record is its ITS-JSON serialisation canonicalised by the JSON Canonicalization Scheme of RFC 8785. Its content digest is the digest of the UTF-8 octets of that form, unless the system stores the record as facts from which a deterministic renderer gives the canonical form back: the content digest is then the digest of those stored facts with the version of the renderer, which the system stores with the record and by which it renders the record for every reader, so a rendering is never what is sealed. A tombstone keeps the content digest of the entry it replaced, which the system stores beside it.
 . A system seals its records in windows of consecutive record numbers, each window following the one before it with no number between. A window's seal is the digest of a text that starts with a version tag and names the window, the previous seal and each record's number and content digest in number order, each field as its length in octets, a colon, the field and a line feed.
 . A system MUST NOT seal a window while a record whose number falls in it may still be written.
 . A system SHOULD sign each seal as an `ACCESS_LOG_CHECKPOINT` of the log up to the window's last record, and SHOULD deposit checkpoints where the recording system cannot alter them.
-. A verifier recomputes each window's seal from its records' content digests, recomputes the content digest of each `ACCESS_LOG_ENTRY`, follows the seals from one to the next, and checks a checkpoint's signature and seal.
+. A verifier recomputes each window's seal from its records' content digests, recomputes the content digest of each `ACCESS_LOG_ENTRY` from what the system stores of it, follows the seals from one to the next, and checks a checkpoint's signature and seal.
 . A change of algorithm or version tag takes effect at a stated window.
 
 == Retention
@@ -48,4 +48,4 @@ The caller's authorisation selects the view. A request parameter MUST NOT widen 
 
 == Exchange
 
-A system that transfers an EHR to another system exports the EHR's records, each with its content digest, signed whole by the exporting system, and carries no record or digest about another person. The receiving system verifies the signature and every entry's digest, keeps the records' `_system_id_`, `_retain_until_` and content digests, and records the import as an entry of its own log that names the export's digest and a digest over its records.
+A system that transfers an EHR to another system exports the EHR's records, each entry with the digest of its canonical form and each tombstone with the content digest it keeps, signed whole by the exporting system, and carries no record or digest about another person. The receiving system verifies the signature and every entry's digest, keeps the records' `_system_id_`, `_retain_until_` and content digests, and records the import as an entry of its own log that names the export's digest and a digest over its records.

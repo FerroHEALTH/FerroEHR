@@ -55,6 +55,7 @@ BEGIN
        OR NEW.uid IS DISTINCT FROM OLD.uid
        OR NEW.content::jsonb ->> 'system_id' IS DISTINCT FROM OLD.content::jsonb ->> 'system_id'
        OR NEW.time_recorded IS DISTINCT FROM OLD.time_recorded
+       OR NEW.form IS DISTINCT FROM OLD.form
        OR (NEW.id, NEW.content_digest) IS DISTINCT FROM (OLD.id, OLD.content_digest)
     THEN
         RAISE EXCEPTION
@@ -157,8 +158,11 @@ CREATE TABLE access_log_entry (
     -- The record's own part, canonicalised by RFC 8785: with the shared part
     -- joined back, its canonical form without its link.
     content            text        STORAGE MAIN NOT NULL,
-    -- The SHA-256 of the whole canonical form, computed by the writer.
+    -- The SHA-256 of the entry's stored facts (access_log::stored_form::parts::facts::facts_digest),
+    -- computed by the writer.
     content_digest     bytea       STORAGE MAIN NOT NULL,
+    -- The version of the stored form, which the reader renders the entry by.
+    form               smallint    NOT NULL DEFAULT 1,
     ehr_id             uuid,
     party_id           text        STORAGE MAIN,
     retain_until       date,
@@ -192,6 +196,7 @@ CREATE TABLE access_log_entry (
     CONSTRAINT uq_access_log_entry_uid UNIQUE (uid),
     CONSTRAINT ck_access_log_entry_type
         CHECK (record_type IN ('ACCESS_LOG_ENTRY', 'ACCESS_LOG_TOMBSTONE')),
+    CONSTRAINT ck_access_log_entry_form CHECK (form = 1),
     CONSTRAINT ck_access_log_entry_removed
         CHECK ((time_removed IS NOT NULL) = (record_type = 'ACCESS_LOG_TOMBSTONE')),
     CONSTRAINT ck_access_log_entry_event_action
@@ -246,7 +251,9 @@ COMMENT ON COLUMN access_log_entry.content IS
 COMMENT ON COLUMN access_log_entry.uid IS
     'The record''s uid, derived from content.';
 COMMENT ON COLUMN access_log_entry.content_digest IS
-    'The SHA-256 of the whole canonical form when the entry was written, computed by the writer; a tombstone keeps it, and its window''s seal covers it.';
+    'The SHA-256 of the entry''s stored facts when it was written (its form, uid, time, EHR, request and resource ids, shared part digest and row part, access_log::stored_form::parts::facts::facts_digest), computed by the writer; a tombstone keeps it, and its window''s seal covers it, never a rendering of the entry (#6322).';
+COMMENT ON COLUMN access_log_entry.form IS
+    'The version of the stored form the entry was written in: the reader renders its canonical form, and every projection of it, by the renderer of that version, and refuses a version it has none for (#6322).';
 COMMENT ON COLUMN access_log_entry.ehr_id IS
     'The entry''s ehr_id when it is a UUID in its lower-case hyphenated form, which the row part then leaves out; NULL on a tombstone and for any other id, which the row part keeps.';
 COMMENT ON COLUMN access_log_entry.event_action IS
@@ -470,7 +477,7 @@ COMMENT ON TABLE access_log_seal_verified IS
 -- condition of its own is planned apart and sorted whole. An indexed entry
 -- is held by no write: the cursor stays below every hold.
 CREATE VIEW access_log_record AS
-    SELECT k.entry_id AS chain_seq, e.record_type, e.uid, k.time_recorded, e.content,
+    SELECT k.entry_id AS chain_seq, e.record_type, e.uid, k.time_recorded, e.content, e.form,
            e.content_digest, k.ehr_id, k.party_id,
            k.retain_until, e.time_removed, e.fold_after, e.action_terminology, e.action_code,
            e.result_terminology, e.result_code, e.shared, e.event_action, e.event_outcome,
@@ -515,14 +522,6 @@ CREATE FUNCTION audit.access_log_instant_text(p_at timestamptz) RETURNS text
 $$;
 COMMENT ON FUNCTION access_log_instant_text(timestamptz) IS
     'An instant as an access-log row part leaves it out: UTC, the microseconds without trailing zeros, Z.';
-
-CREATE FUNCTION audit.access_log_content_digest(p_content text) RETURNS text
-    LANGUAGE sql STABLE PARALLEL SAFE
-    AS $$
-    SELECT pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p_content, 'UTF8')), 'hex')
-$$;
-COMMENT ON FUNCTION access_log_content_digest(text) IS
-    'The content digest of a canonical form: the single definition the writer''s check and the verifier both call.';
 
 -- No SET clause and every name by its pg_catalog name, so the planner
 -- inlines it.
@@ -609,10 +608,24 @@ CREATE FUNCTION audit.access_log_document(
            OPERATOR(pg_catalog.||) CASE
                 WHEN common IS NULL THEN own
                 ELSE (common OPERATOR(pg_catalog.-) 'other_details'
-                             OPERATOR(pg_catalog.-) 'outcome' OPERATOR(pg_catalog.-) 'query')
+                             OPERATOR(pg_catalog.-) 'outcome' OPERATOR(pg_catalog.-) 'query'
+                             OPERATOR(pg_catalog.-) 'items')
                      OPERATOR(pg_catalog.||)
                      (own OPERATOR(pg_catalog.-) 'other_details'
-                          OPERATOR(pg_catalog.-) 'outcome' OPERATOR(pg_catalog.-) 'query')
+                          OPERATOR(pg_catalog.-) 'outcome' OPERATOR(pg_catalog.-) 'query'
+                          OPERATOR(pg_catalog.-) 'items')
+                     OPERATOR(pg_catalog.||)
+                     CASE WHEN common OPERATOR(pg_catalog.?) 'items'
+                               AND own OPERATOR(pg_catalog.?) 'items' THEN
+                            pg_catalog.jsonb_build_object('items', pg_catalog.jsonb_build_array(
+                                (common OPERATOR(pg_catalog.#>) '{items,0}'::pg_catalog.text[])
+                                OPERATOR(pg_catalog.||)
+                                (own OPERATOR(pg_catalog.#>) '{items,0}'::pg_catalog.text[])))
+                          WHEN common OPERATOR(pg_catalog.?) 'items' THEN
+                            pg_catalog.jsonb_build_object('items', common OPERATOR(pg_catalog.->) 'items')
+                          WHEN own OPERATOR(pg_catalog.?) 'items' THEN
+                            pg_catalog.jsonb_build_object('items', own OPERATOR(pg_catalog.->) 'items')
+                          ELSE '{}'::pg_catalog.jsonb END
                      OPERATOR(pg_catalog.||)
                      CASE WHEN common OPERATOR(pg_catalog.?) 'other_details'
                                OR own OPERATOR(pg_catalog.?) 'other_details' THEN
@@ -668,7 +681,7 @@ CREATE FUNCTION audit.access_log_document(
                    p_shared::pg_catalog.jsonb AS common) AS parts
 $$;
 COMMENT ON FUNCTION access_log_document(text, text, text, uuid, timestamptz, uuid, text, text) IS
-    'An access-log record as one jsonb, its canonical form without its link: the row part with the members its index columns hold, the shared part and the members the columns hold, the access details in the order of their codes. The SQL readers of a member both parts or the columns hold read it here; the server joins the parts in Rust.';
+    'An access-log record as one jsonb, its canonical form without its link: the row part with the members its index columns hold, the shared part and the members the columns hold, an only item with the members the shared part keeps of it, the access details in the order of their codes. The SQL readers of a member both parts or the columns hold read it here; the server joins the parts in Rust.';
 
 -- The columns of an entry derived from its content, with the index columns
 -- the row part leaves members to.

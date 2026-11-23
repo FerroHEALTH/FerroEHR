@@ -6,6 +6,7 @@
 
 use secrecy::ExposeSecret as _;
 
+mod golden;
 mod mapping;
 
 use super::Projection;

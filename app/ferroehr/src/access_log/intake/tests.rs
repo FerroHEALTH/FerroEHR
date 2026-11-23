@@ -124,7 +124,7 @@ async fn a_failure_with_no_answer_refuses_every_request() {
 /// The intake form as the `Value` path wrote it before #5849: the entry's
 /// JSON value without its link, canonicalised whole, split, its row without
 /// the members its columns give back (#5784), and read at the derive's
-/// paths.
+/// paths, its digest taken over those stored facts (#6322).
 #[expect(
     clippy::disallowed_types,
     reason = "the reference is computed over the entry's ITS-JSON value (#1694 boundary class: \
@@ -139,7 +139,6 @@ fn through_value(entry: &AccessLogEntry) -> (String, String, Option<(String, Str
     };
     members.remove("link");
     let document = Value::Object(members.clone());
-    let whole = canonical_json(&document).expect("the whole form");
     let text = |path: &str| {
         document
             .pointer(path)
@@ -190,7 +189,32 @@ fn through_value(entry: &AccessLogEntry) -> (String, String, Option<(String, Str
         let text = canonical_json(&shared).expect("the shared part");
         (crate::digest::sha256_hex(&text), text)
     });
-    (crate::digest::sha256_hex(&whole), row, shared, derived)
+    let columns = crate::access_log::stored_form::parts::assemble::RowColumns {
+        record_type: derived.record_type.as_deref().expect("a class"),
+        uid: uuid::Uuid::parse_str(derived.uid.as_deref().expect("a uid")).expect("a UUID"),
+        time_recorded: derived
+            .time_recorded
+            .as_deref()
+            .expect("a time")
+            .parse()
+            .expect("an instant"),
+        ehr_id: derived
+            .ehr_id
+            .as_deref()
+            .and_then(crate::access_log::stored_form::column_uuid),
+        index: crate::access_log::stored_form::parts::index::IndexColumns {
+            request_id: None,
+            resource_id: None,
+        },
+    };
+    let digest = crate::access_log::stored_form::parts::facts::facts_digest(
+        crate::access_log::stored_form::parts::facts::FORM,
+        &row,
+        shared.as_ref().map(|(digest, _)| digest.as_str()),
+        &columns,
+    )
+    .expect("the facts digest");
+    (crate::digest::hex(&digest), row, shared, derived)
 }
 
 proptest::proptest! {
