@@ -54,6 +54,7 @@ pub(crate) async fn check_care(
     mapping: &BindingMapping,
     committed: &crate::versioning::change::Committed,
     facts: Option<&Facts>,
+    prior: Option<&crate::storage::version_repo::gate::Prior>,
 ) -> Result<bool, ServiceError> {
     let standalone = committed.kind == Kind::PartyRelationship;
     if !standalone
@@ -69,15 +70,20 @@ pub(crate) async fn check_care(
         None if standalone => &GrantFacts::default(),
         None => return Ok(false),
     };
-    let before: Option<String> = sqlx::query_scalar(
-        "SELECT v.body FROM version v WHERE v.vo_id = $1 AND v.sys_version < $2 \
-         AND v.body IS NOT NULL ORDER BY v.sys_version DESC LIMIT 1",
-    )
-    .bind(committed.vo_id)
-    .bind(committed.sys_version)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(StorageError::from)?;
+    // The gate read's last body is the newest before the commit, every version it
+    // saw being older than the one the commit wrote.
+    let before: Option<String> = match prior {
+        Some(prior) => prior.last_body.as_ref().map(|(_, _, body)| body.clone()),
+        None => sqlx::query_scalar(
+            "SELECT v.body FROM version v WHERE v.vo_id = $1 AND v.sys_version < $2 \
+             AND v.body IS NOT NULL ORDER BY v.sys_version DESC LIMIT 1",
+        )
+        .bind(committed.vo_id)
+        .bind(committed.sys_version)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(StorageError::from)?,
+    };
     let before = match before {
         Some(body) => {
             let body: Value = serde_json::from_str(&body).map_err(StorageError::BodyDecode)?;

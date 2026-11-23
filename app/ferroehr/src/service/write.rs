@@ -187,7 +187,13 @@ impl FerroEhrService {
                     // NOTE: our own design (#5762), the records are held (#6256) before this commit,
                     // and its statement inserts their reservation, so they commit with it.
                     match ready.commit(&mut tx, &signing_ctx, reservation).await {
-                        Ok(committed) => tx.commit().await.map(|()| committed).map_err(Into::into),
+                        Ok(committed) => {
+                            // NOTE: our own design (#5762), a party commit's record subjects are
+                            // checked by their deferred key at this COMMIT (#6257).
+                            let done = tx.commit().await;
+                            done.map(|()| committed)
+                                .map_err(crate::party_binding::grants::caller::subject::collision)
+                        }
                         Err(error) => Err(error),
                     }
                 } else {

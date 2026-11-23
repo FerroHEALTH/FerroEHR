@@ -57,6 +57,12 @@ impl Precondition {
         })
     }
 
+    /// Whether the precondition names no preceding version at all, so a write
+    /// judged again commits on whatever tip it finds.
+    pub(super) fn names_none(&self) -> bool {
+        self.full.is_none() && self.tree.is_none()
+    }
+
     /// The full-identity half: `412` when the `If-Match` names another
     /// version than the locked tip, compared case-insensitively (BASE
     /// `base_types` master05 §"Composite Identifiers and Case").

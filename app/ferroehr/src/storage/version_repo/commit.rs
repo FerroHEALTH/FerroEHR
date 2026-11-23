@@ -495,6 +495,8 @@ pub async fn commit_folded(
         LazyLock::new(|| super::guarded::statement(super::guarded::Beside::Status));
     static FOLDER: LazyLock<String> =
         LazyLock::new(|| super::guarded::statement(super::guarded::Beside::Folder));
+    static PARTY: LazyLock<String> =
+        LazyLock::new(|| super::guarded::statement(super::guarded::Beside::Party));
     let status = matches!(&folded, Folded::Guarded { guard, .. } if guard.status.is_some());
     let (sql, id, ehr_id, version, guard) = match folded {
         Folded::Contribution { id, ehr_id } => (&CONTRIBUTION, id, ehr_id, None, None),
@@ -507,6 +509,9 @@ pub async fn commit_folded(
         }
         Folded::Guarded { id, version, guard } if guard.folder => {
             (&FOLDER, id, version.ehr_id, Some(version), Some(guard))
+        }
+        Folded::Guarded { id, version, guard } if guard.party.is_some() => {
+            (&PARTY, id, version.ehr_id, Some(version), Some(guard))
         }
         Folded::Guarded { id, version, guard } => {
             (&GUARDED, id, version.ehr_id, Some(version), Some(guard))
@@ -537,8 +542,17 @@ pub async fn commit_folded(
                 query,
                 &v.rows.iter().collect::<Vec<_>>(),
             );
-            let row = match guard.as_ref().and_then(|guard| guard.status.as_deref()) {
-                Some(status) => query
+            let party = guard.as_ref().and_then(|guard| guard.party.as_deref());
+            let status = guard.as_ref().and_then(|guard| guard.status.as_deref());
+            let row = match (status, party) {
+                (None, Some(party)) => {
+                    query
+                        .bind(party.key_space)
+                        .bind(party.reverse.as_deref())
+                        .fetch_one(&mut *tx)
+                        .await?
+                }
+                (Some(status), _) => query
                     .bind(status.subject_id.as_deref())
                     .bind(status.subject_namespace.as_deref())
                     .bind(status.is_queryable)
@@ -548,7 +562,7 @@ pub async fn commit_folded(
                     .fetch_one(&mut *tx)
                     .await
                     .map_err(|e| subject_in_use(e, status))?,
-                None => query.fetch_one(&mut *tx).await?,
+                (None, None) => query.fetch_one(&mut *tx).await?,
             };
             (row, Some((v.vo_id, v.sys_version, v.blob_uris)))
         }
