@@ -20,6 +20,7 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::party_binding::grants::store::GrantHead;
+use crate::party_binding::step::Step;
 use crate::storage::error::StorageError;
 
 /// The patient identifier rows of the identifier `$2` under the issuer
@@ -70,38 +71,57 @@ pub(crate) async fn replace(
     tx: &mut PgConnection,
     head: GrantHead<'_>,
 ) -> Result<(), StorageError> {
-    sqlx::query("DELETE FROM binding_patient_identifier WHERE holder_id = $1")
-        .bind(head.vo_id)
-        .execute(&mut *tx)
-        .await?;
+    let (gone, came) = steps(head);
+    gone.run(tx).await?;
+    if head
+        .live()
+        .is_some_and(|facts| !facts.patient_identifiers.is_empty())
+    {
+        came.run(tx).await?;
+    }
+    Ok(())
+}
+
+/// The two steps that replace the patient identifiers of `head`: the delete
+/// of those it carried and the insert of those its live body carries.
+pub(crate) fn steps(head: GrantHead<'_>) -> (Step<'_>, Step<'_>) {
+    let holder = head.vo_id;
+    let gone = Step::new(
+        "pd",
+        "DELETE FROM binding_patient_identifier WHERE holder_id = $1",
+        None,
+        move |query| query.bind(holder),
+    );
     let carried = head
         .live()
         .map_or(&[][..], |facts| facts.patient_identifiers.as_slice());
-    if carried.is_empty() {
-        return Ok(());
-    }
+    let writes = !carried.is_empty();
     let ordinal: Vec<i32> = (0..carried.len())
         .map(|at| i32::try_from(at).unwrap_or(i32::MAX))
         .collect();
     let issuer: Vec<&str> = carried.iter().map(|i| i.issuer.as_str()).collect();
     let id_type: Vec<&str> = carried.iter().map(|i| i.id_type.as_str()).collect();
     let value: Vec<&str> = carried.iter().map(|i| i.id.as_str()).collect();
-    sqlx::query(
+    let came = Step::new(
+        "pi",
         "INSERT INTO binding_patient_identifier \
              (holder_id, ordinal, issuer, identifier_type, value, lifecycle_state) \
          SELECT $1, t.ordinal, t.issuer, t.identifier_type, t.value, $2 \
          FROM unnest($3::integer[], $4::text[], $5::text[], $6::text[]) \
               AS t(ordinal, issuer, identifier_type, value)",
+        None,
+        move |query| {
+            query
+                .bind(holder)
+                .bind(head.lifecycle_state)
+                .bind(ordinal)
+                .bind(issuer)
+                .bind(id_type)
+                .bind(value)
+        },
     )
-    .bind(head.vo_id)
-    .bind(head.lifecycle_state)
-    .bind(&ordinal)
-    .bind(&issuer)
-    .bind(&id_type)
-    .bind(&value)
-    .execute(&mut *tx)
-    .await?;
-    Ok(())
+    .writing(writes);
+    (gone, came)
 }
 
 /// The patient `PERSON`s that carry the identifier `value` under `issuer`,

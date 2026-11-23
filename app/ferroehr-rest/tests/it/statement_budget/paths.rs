@@ -421,6 +421,17 @@ struct Budget {
 /// 115,228 and 130,009 bytes to 124,725 and 139,506, and each peak ceiling of
 /// those paths is the figure measured plus 1%, the rise the orchestrator
 /// approved as the price of the records-first order.
+/// A party commit has since settled its access rows in two statements, every
+/// delete and retirement in one and every insert in the next, where it sent
+/// one statement per table (#6257): a PERSON create, update and delete send
+/// 12 round trips where they sent 20 and run 3 nested statements where they
+/// ran 6, with 141, 142, 141 and 144 fewer allocations on the two creates,
+/// the update and the delete; an ORGANISATION, GROUP and ROLE create send
+/// 10, 10 and 19 where they sent 12, 11 and 21, with 26, 10 and 19 fewer
+/// allocations, measured twice beside the merge base, and each of those
+/// ceilings fell by its path's figure. The AGENT create, which settles no
+/// row, sends 10 as before and made 5 to 12 allocations more, and its
+/// ceilings stay. No path's WAL, median peak or notifies moved.
 const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
@@ -575,10 +586,10 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitParty,
         conversions: 8,
-        allocations: 1856,
+        allocations: 1715,
         peak_bytes: 125_972,
-        round_trips: 22,
-        nested: 13,
+        round_trips: 14,
+        nested: 10,
         notifies: 1,
         wal: 6622,
     },
@@ -605,10 +616,10 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitPartyScored,
         conversions: 8,
-        allocations: 2344,
+        allocations: 2202,
         peak_bytes: 140_901,
-        round_trips: 22,
-        nested: 14,
+        round_trips: 14,
+        nested: 11,
         notifies: 1,
         wal: 9191,
     },
@@ -675,29 +686,29 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyUpdate,
         conversions: 8,
-        allocations: 2097,
+        allocations: 1956,
         peak_bytes: 129_641,
-        round_trips: 20,
-        nested: 7,
+        round_trips: 12,
+        nested: 4,
         notifies: 1,
         wal: 6599,
     },
     Budget {
         path: Path::PartyDelete,
         conversions: 2,
-        allocations: 1714,
+        allocations: 1570,
         peak_bytes: 112_950,
-        round_trips: 20,
-        nested: 7,
+        round_trips: 12,
+        nested: 4,
         notifies: 1,
         wal: 4316,
     },
     Budget {
         path: Path::CommitOrganisation,
         conversions: 8,
-        allocations: 1594,
+        allocations: 1568,
         peak_bytes: 126_183,
-        round_trips: 12,
+        round_trips: 10,
         nested: 1,
         notifies: 0,
         wal: 6710,
@@ -705,9 +716,9 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitGroup,
         conversions: 8,
-        allocations: 1576,
+        allocations: 1566,
         peak_bytes: 126_027,
-        round_trips: 11,
+        round_trips: 10,
         nested: 1,
         notifies: 0,
         wal: 6689,
@@ -715,9 +726,9 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitRole,
         conversions: 9,
-        allocations: 2159,
+        allocations: 2140,
         peak_bytes: 126_256,
-        round_trips: 21,
+        round_trips: 19,
         nested: 6,
         notifies: 0,
         wal: 7012,
@@ -765,6 +776,11 @@ const BUDGETS: [Budget; 31] = [
 /// 8,951, 7,866, 7,620, 11,576 and 7,522 bytes where they moved 12,615,
 /// 11,166, 8,597, 8,352, 12,202 and 8,149, and their ceilings are the merge
 /// base's figures plus 64 bytes, lowered by those drops.
+/// A party commit has since settled its access rows in two statements
+/// (#6257): 1,058 or 1,059 bytes fewer on the two PERSON creates, the update
+/// and the delete, and 152, 76 and 159 on the ORGANISATION, GROUP and ROLE
+/// creates, measured beside the merge base, and each of those ceilings fell
+/// by its path's figure.
 const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::CommitJson, 202_143),
     (Path::CommitXml, 202_289),
@@ -781,21 +797,21 @@ const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::ReadAtTime, 131_699),
     (Path::CommitStatus, 5572),
     (Path::ReadStatus, 3142),
-    (Path::CommitParty, 9571),
+    (Path::CommitParty, 8513),
     (Path::AqlMatches, 17_539),
     (Path::AqlParty, 11_509),
-    (Path::CommitPartyScored, 11_920),
+    (Path::CommitPartyScored, 10_861),
     (Path::ReadVersion, 3336),
     (Path::CommitUpdate, 202_571),
     (Path::CommitDelete, 4875),
     (Path::DirectoryCreate, 4985),
     (Path::DirectoryUpdate, 4795),
     (Path::DirectoryDelete, 4152),
-    (Path::PartyUpdate, 10_464),
-    (Path::PartyDelete, 9015),
-    (Path::CommitOrganisation, 7930),
-    (Path::CommitGroup, 7684),
-    (Path::CommitRole, 11_640),
+    (Path::PartyUpdate, 9406),
+    (Path::PartyDelete, 7957),
+    (Path::CommitOrganisation, 7778),
+    (Path::CommitGroup, 7608),
+    (Path::CommitRole, 11_481),
     (Path::CommitAgent, 7586),
 ];
 
