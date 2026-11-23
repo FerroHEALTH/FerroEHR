@@ -1,36 +1,17 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Specialisation flattening — overlay a differential child archetype onto its
-//! flat parent to produce the flat form.
+//! Specialisation flattening: overlay a differential child onto its flat parent.
 //!
-//! Oracle: `docs/specs/openehr/AM/docs/AOM2/master08-validation.adoc`
-//! §Flattening (the overlay-semantics enumeration) and
-//! `docs/specs/openehr/AM/docs/ADL2/master09.02`–`master09.10` (the concrete
-//! redefinition + section-merge rules). master08 §Flattening explicitly defers
-//! the concrete algorithm to the ADL-Workbench reference compiler
-//! ("provide a reasonable template"), so the *ordering* of the overlay concerns
-//! within a single step is our own design; the individual rules below are each
-//! spec-cited.
+//! `AOM2/master08-validation.adoc` §Flattening and `ADL2/master09.02` to
+//! `master09.10`; master08 defers the algorithm to the reference compiler, so the
+//! ordering of the overlay concerns is our own design. [`flat_form`] flattens a
+//! lineage top-down.
 //!
-//! One flatten step ([`flatten`]) overlays the child differential onto an
-//! already-flat parent, handling: differential paths (incl. overridden codes)
-//! and path congruence (`master09.02` §Path Congruence); node overlay by
-//! congruent id with cloning vs in-place replacement (`master09.05` §Single and
-//! Multiple Specialisation — the `clone_not_needed` predicate); sibling-order
-//! anchors (`master09.04` §Ordering of Sibling Nodes — the moving-anchor run
-//! model); deletions (`occurrences {0}` / `existence {0}`); proxy inline
-//! expansion on override (`master09.05` §Internal Reference (Proxy Object)
-//! Redefinition); and the section-level merges (`master09.06`–`master09.10`).
-//! Multi-level lineage is flattened top-down and memoised by [`flat_form`].
-//!
-//! NOTE: plain flattening's treatment of prohibited nodes is spec-silent (the
-//! normative removal/inlining rules are OPT-only —
-//! `docs/specs/openehr/AM/docs/OPT2/master03-opt_raw.adoc` §Flattening;
-//! `master08` §Flattening defers to the Workbench): a prohibited
-//! (`occurrences {0}`) node is KEPT stripped of its sub-structure, and
-//! un-overridden proxies / open slots are retained — our own design/extension
-//! for a lossless plain flat form.
+//! NOTE: plain flattening of prohibited nodes is spec-silent (OPT2
+//! `master03-opt_raw.adoc` §Flattening is OPT-only): our own design keeps a
+//! prohibited node stripped of its sub-structure, and keeps un-overridden
+//! proxies and open slots, for a lossless flat form.
 
 use std::collections::BTreeMap;
 
@@ -93,12 +74,9 @@ pub enum FlattenError {
     },
 }
 
-/// Flatten `child` (a differential specialised archetype) against its already-
-/// flattened parent `flat_parent`, producing the flat form.
-///
-/// `repo` supplies proxy-target and supplier lookups. The result carries
-/// `is_differential = false` (a flat form). `flat_parent` must be the true flat
-/// form of the parent — for a specialised parent obtain it via [`flat_form`].
+/// Flatten `child` against its already-flattened parent `flat_parent` (for a
+/// specialised parent, from [`flat_form`]); `repo` supplies proxy targets and
+/// suppliers.
 ///
 /// # Errors
 /// [`FlattenError::UnresolvedDifferentialPath`] if a child differential path
@@ -129,13 +107,9 @@ pub fn flatten(
     Ok(rebuild_flat(child, flat_def, flat_term))
 }
 
-/// The flat form of `archetype`, resolving and flattening its full
-/// specialisation lineage top-down (`master08` §Flattening: "process each
-/// parent in order from the top").
-///
-/// A non-specialised or ADL 1.4 archetype is its own flat form, its parent id
-/// kept (`ADL2/master07.02` §File-naming). Results are memoised per repo lookup key
-/// for the duration of the call graph.
+/// The flat form of `archetype`, flattening its lineage top-down (`master08`
+/// §Flattening: "process each parent in order from the top"), memoised per call.
+/// A non-specialised or ADL 1.4 archetype is its own flat form.
 ///
 /// # Errors
 /// [`FlattenError::ParentNotFound`] if a lineage parent is absent from `repo`,
@@ -267,17 +241,9 @@ enum Overlaid {
     New { node: CObject },
 }
 
-/// Overlay the children of one container/single attribute — the cloning +
-/// sibling-order core.
-///
-/// Classifies each child node in source order as a redefinition of a
-/// congruent base node or a new extension, carrying its EXPLICIT sibling
-/// marker.
-///
-/// The parser attaches a marker only to the node immediately after the marker
-/// keyword; per `master09.04` L249 a marker anchors every following node until
-/// the next marker, so the run range is everything from the first
-/// explicitly-marked node onward.
+/// Classify each child node in source order as a redefinition or an extension,
+/// with its explicit sibling marker; a marker anchors every following node
+/// until the next (`master09.04` L249).
 #[expect(
     clippy::indexing_slicing,
     reason = "`base_idx` is a `find_congruent_idx` result over `base_nodes`, so it is in bounds by construction"
@@ -303,16 +269,9 @@ fn classify_children(
     Ok(classified)
 }
 
-/// Phase 1: the working list with every unmarked node at its default position
-/// — redefinitions in place or cloned, extensions appended
-/// (`master09.04` L272).
-///
-/// The cloning decision uses the WHOLE redef set, but only the default
-/// (pre-marker) redefs are placed here: run-range redefs are positioned by
-/// their run in phase 2, so a base node whose only redefinition is in the run
-/// range is dropped here for the run to place. Where cloning is needed the
-/// parent node survives and the default clone-redefs follow it
-/// (`master09.05` §Single and Multiple Specialisation).
+/// Phase 1: every unmarked node at its default position, redefinitions in place
+/// or cloned and extensions appended (`master09.04` L272, `master09.05`); run
+/// redefinitions wait for phase 2.
 #[expect(
     clippy::indexing_slicing,
     reason = "`split` is a `position(..).unwrap_or(len)` over `classified`, so `classified[..split]` is valid"
@@ -346,14 +305,9 @@ fn place_default_nodes(
     work
 }
 
-/// Two phases (`master09.04`/`master09.05`):
-/// 1. Build the working list with in-place redefinitions and cloning applied,
-///    ignoring sibling markers (unmarked nodes placed at their default position:
-///    redefinitions in place, extensions at the end).
-/// 2. Insert the marked nodes at their anchors — a `before`/`after` marker
-///    anchors the run of nodes following it until the next marker
-///    (`master09.04` L249), resolved with dependency ordering so an anchor that
-///    is itself placed by a later run is available first.
+/// Overlay one attribute's children: build the working list with redefinitions
+/// and cloning, then insert the marked nodes at their anchors in dependency
+/// order (`master09.04`, `master09.05`).
 #[expect(
     clippy::indexing_slicing,
     reason = "every index here is in bounds by construction: `split` is a `position(..).unwrap_or(len)` so `classified[split..]` is valid, and `runs[i]` is guarded by the enclosing `i < runs.len()`"
@@ -365,11 +319,6 @@ fn overlay_children(
 ) -> Result<(), FlattenError> {
     let base_nodes = base_attr.children.clone();
 
-    // Classify each child node in source order, carrying its EXPLICIT sibling
-    // marker. The parser attaches a marker only to the node immediately after
-    // the marker keyword; per `master09.04` L249 a marker anchors every following
-    // node until the next marker, so the run range is everything from the first
-    // explicitly-marked node onward.
     let classified = classify_children(base_nodes.as_deref().unwrap_or_default(), child_attr)?;
     let split = classified
         .iter()
@@ -501,9 +450,6 @@ fn insert_run(work: &mut Vec<CObject>, at: InsertAt, nodes: Vec<CObject>) {
 /// clone not needed = max effective_occurrences of object node in parent = 1 OR
 ///     object node in child is sole child of its parent, and has max occurrences = 1
 /// ```
-///
-/// When cloning is NOT needed the parent node is replaced in place; otherwise the
-/// parent node survives and each child overlays a clone of it.
 fn clone_not_needed(base_node: &CObject, base_attr: &CAttribute, redefs: &[&CObject]) -> bool {
     // A same-id redefinition (occurrences/prohibition/type change on the parent
     // node itself, not a split into new specialised siblings) is always in place —
@@ -546,11 +492,9 @@ fn max_effective_occurrences(node: &CObject, attr: &CAttribute) -> Option<i32> {
     Some(1)
 }
 
-/// Overlay one child node onto its congruent base node (`master09.05`). For two
-/// `C_COMPLEX_OBJECT`s the base is cloned and the child's id / type / occurrences
-/// / attributes are overlaid; a prohibited (`occurrences {0}`) child keeps the
-/// node visible but strips its sub-structure (plain flat — see the module NOTE).
-/// For any other combination the child fully specifies the node and replaces it.
+/// Overlay one child node onto its congruent base node (`master09.05`): two
+/// `C_COMPLEX_OBJECT`s merge, a prohibited child strips the sub-structure, and
+/// any other child replaces the node.
 pub(crate) fn overlay_node(base: &CObject, child: &CObject) -> Result<CObject, FlattenError> {
     if let (
         CObject::CComplexObject(CComplexObject::CComplexObject(bp)),
@@ -594,17 +538,10 @@ pub(crate) fn overlay_node(base: &CObject, child: &CObject) -> Result<CObject, F
     Ok(node)
 }
 
-/// Overlays a child node's `C_ATTRIBUTE_TUPLE` set onto the base node's, keyed
-/// by member-attribute group.
-///
-/// A tuple's identity is the attribute group it co-constrains: the conformance
-/// functions compare a child tuple only against the parent tuple over the same
-/// group (`AOM2/master04.5` §Conformance semantics: `C_SECOND_ORDER` —
-/// "'corresponding' means a node found at the same or a congruent path"), and
-/// `ADL2/master09.05` §Tuple Redefinition narrows a group by restating that
-/// group's whole row list. So a child tuple REPLACES the base tuple over the
-/// same group, a base tuple over a group the child does not restate is
-/// RETAINED, and a child tuple over a group the base does not carry is APPENDED.
+/// Overlays a child's `C_ATTRIBUTE_TUPLE`s onto the base's by member group: a
+/// restated group replaces, others are kept or appended (`AOM2/master04.5`
+/// §Conformance semantics: `C_SECOND_ORDER`; `ADL2/master09.05` §Tuple
+/// Redefinition).
 fn overlay_attribute_tuples(out: &mut CComplexObjectData, child: &[CAttributeTuple]) {
     // NOTE: no openEHR spec governs tuple overlay — `AOM2/master08` §Flattening
     // enumerates no second-order case; group-keyed merge is our own design, so
@@ -635,12 +572,8 @@ fn overlay_attribute_tuples(out: &mut CComplexObjectData, child: &[CAttributeTup
     out.attribute_tuples = openehr_base::containers::present(merged);
 }
 
-/// The order-insensitive member-attribute group a `C_ATTRIBUTE_TUPLE`
-/// co-constrains — its overlay identity.
-///
-/// Sorted, because the conformance functions match two tuples on their member
-/// SET and map positions between them (`AOM2/master04.5` §Conformance
-/// semantics: `C_ATTRIBUTE_TUPLE`), not on declaration order.
+/// The sorted member-attribute group of a `C_ATTRIBUTE_TUPLE`, its overlay
+/// identity (`AOM2/master04.5` §Conformance semantics: `C_ATTRIBUTE_TUPLE`).
 fn tuple_group_key(tuple: &CAttributeTuple) -> Vec<&str> {
     let mut names = tuple_member_names(tuple);
     names.sort_unstable();
@@ -649,12 +582,9 @@ fn tuple_group_key(tuple: &CAttributeTuple) -> Vec<&str> {
 
 // ── terminology merge ──────────────────────────────────────────────────────
 
-/// Merge parent + child terminology for the flat form (`master09.09`,
-/// `master09.10`): `term_definitions` accumulate per language (child overrides /
-/// adds; the parent's terms always survive) restricted to the languages present
-/// in the flat parent (`master09.07` — languages intersect, child-only languages
-/// discarded); `value_sets` replace by id; `term_bindings` override by
-/// (terminology, code).
+/// Merge parent and child terminology for the flat form (`master09.07` to
+/// `master09.10`): terms accumulate per flat-parent language, value sets replace
+/// by id, bindings override by (terminology, code).
 fn merge_terminology(
     parent: &ArchetypeTerminology,
     child: &ArchetypeTerminology,
@@ -751,12 +681,7 @@ fn mark_flat(archetype: &Archetype) -> Archetype {
 
 // ── small helpers ──────────────────────────────────────────────────────────
 
-/// The mutable attribute list of a `C_COMPLEX_OBJECT`, materialised.
-///
-/// `C_COMPLEX_OBJECT.attributes` is `0..1`, so it emits as `Option<Vec<…>>`;
-/// every caller here is about to overlay an attribute INTO the list, so the
-/// absent state is materialised on the way in and the returned list is never
-/// left empty.
+/// The attribute list of a `C_COMPLEX_OBJECT`, materialised for an overlay.
 fn complex_attributes_mut(cco: &mut CComplexObject) -> &mut Vec<CAttribute> {
     match cco {
         CComplexObject::CComplexObject(d) => d.attributes.get_or_insert_default(),

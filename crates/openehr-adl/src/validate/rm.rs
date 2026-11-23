@@ -1,33 +1,15 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Reference-model (RM) validation of ADL2 archetypes.
+//! Reference-model validation of ADL2 archetypes (`AOM2/master08-validation.adoc`
+//! §Phase 2 → Validate Against Reference Model): VCORM, VCORMT, VCARM, VCAEX,
+//! VCACA and VCAM, with VACSO and the interior-node half of VATID, which hinge on
+//! the RM's single/multiple determination.
 //!
-//! The checks that require "a computational representation of the reference
-//! model" (`docs/specs/openehr/AM/docs/AOM2/master08-validation.adoc` §Phase 2
-//! → Validate Against Reference Model): a `C_OBJECT`'s type must exist in the
-//! RM (VCORM) and conform to the type declared for its owning attribute
-//! (VCORMT); an attribute name must exist on the enclosing RM type (VCARM); the
-//! archetype `existence` (VCAEX), `cardinality` (VCACA) and single/multiple
-//! arity (VCAM) of an attribute must conform to the RM. The single-valued-child
-//! occurrences rule (VACSO, `master04.5` §Validity Rules: `C_ATTRIBUTE`) and the
-//! interior-node terminology-definedness half of VATID (`master07` §Overview: a
-//! term definition is optional only for children of single-valued attributes)
-//! also live here because both hinge on the RM's single/multiple determination.
-//!
-//! The checks are generic over a [`RmModel`] so the same code validates against
-//! the openEHR RM 1.2.0 ([`ProductionRmModel`], the generated
-//! `openehr_rm::v1_2::model`) or any other reference model the archetype declares
-//! (the conformance corpus authors fixtures against openEHR's `TEST_PKG` test
-//! schema; a BMM-loaded [`RmModel`] serves those). This pluggable seam realises
-//! the RM-adaptation architecture of
-//! `docs/specs/openehr/AM/docs/AOM2/master11-rm_adaptation.adoc`.
-//!
-//! Reference-model type-name matching is case-insensitive and whitespace-
-//! ignored, with generic type names composed from RM class names
-//! (`docs/specs/openehr/AM/docs/ADL2/master04.3-cadl_complex_types.adoc`
-//! §Reference Model Type Matching); [`base_type_name`]/`normalise_type_name`
-//! implement that lexical layer, shared by every [`RmModel`].
+//! The checks are generic over a [`RmModel`] (`master11-rm_adaptation.adoc`):
+//! [`ProductionRmModel`] for openEHR RM 1.2.0, or a BMM-loaded model. Type names
+//! match case-insensitively with whitespace ignored (`ADL2/master04.3` §Reference
+//! Model Type Matching), through [`base_type_name`].
 
 use std::collections::BTreeSet;
 
@@ -56,14 +38,10 @@ use openehr_am::v2_4::aom2::definitions::adl_code_definitions::AdlCodeDefinition
 /// One attribute of an RM type, as reported by a [`RmModel`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RmAttr {
-    /// The declared value type of the attribute, as a full RM type name
-    /// **including any generic arguments** (`EVENT<ITEM_STRUCTURE>`,
-    /// `DV_INTERVAL<DV_QUANTITY>`, or a plain `DV_TEXT`). A formal generic
-    /// parameter is resolved to its bound, so `HISTORY.events` reads
-    /// `EVENT<ITEM_STRUCTURE>` rather than `EVENT<T>`. VCORMT matches the
-    /// object's stated type against this covariantly on the generic arguments
-    /// (`master04.2` §`Rm_type_name` and Reference Model Type Matching); an empty
-    /// argument list (a bare type reference) leaves the arguments unconstrained.
+    /// The declared value type of the attribute with its generic arguments, a
+    /// formal parameter resolved to its bound (`HISTORY.events` reads
+    /// `EVENT<ITEM_STRUCTURE>`); VCORMT matches against it covariantly (`master04.2`
+    /// §`Rm_type_name`).
     pub declared_type: String,
     /// True if the attribute is a container (multiply-valued) in the RM.
     pub is_multiple: bool,
@@ -100,18 +78,12 @@ pub enum EnumUnderlying {
     String,
 }
 
-/// A reference model against which an archetype is validated — the pluggable
-/// seam of `master11-rm_adaptation.adoc`.
+/// A reference model against which an archetype is validated
+/// (`master11-rm_adaptation.adoc`).
 ///
-/// Implementors answer the questions the RM checks need: does a type exist,
-/// does one type conform to another, what are an attribute's declared type /
-/// multiplicity / existence / cardinality, and (for
-/// VCORMEN/VCORMENV/VCORMENU) is a type an enumeration and what are its
-/// declared literal values.
-///
-/// Type-name arguments may be generic (`HISTORY<ITEM_LIST>`) and are matched
-/// case-insensitively with whitespace ignored (`master04.3` §Reference Model
-/// Type Matching); implementors should route through [`base_type_name`].
+/// Type-name arguments may be generic and match case-insensitively with
+/// whitespace ignored (`master04.3` §Reference Model Type Matching);
+/// implementors route through [`base_type_name`].
 pub trait RmModel {
     /// A human-readable identity of the model (for notices/messages).
     fn name(&self) -> &str;
@@ -137,11 +109,9 @@ pub trait RmModel {
     fn enumeration(&self, rm_type: &str) -> Option<RmEnum>;
 }
 
-/// The base (outer) class name of a possibly-generic RM type name.
-///
-/// Surrounding whitespace is trimmed (`"Interval<Quantity>"` → `"Interval"`,
-/// `"HISTORY <ITEM_LIST>"` → `"HISTORY"`), per `master04.3` §Reference Model
-/// Type Matching.
+/// The base (outer) class name of a possibly-generic RM type name, trimmed
+/// (`"HISTORY <ITEM_LIST>"` → `"HISTORY"`; `master04.3` §Reference Model Type
+/// Matching).
 #[must_use]
 pub fn base_type_name(rm_type: &str) -> &str {
     rm_type.split('<').next().unwrap_or(rm_type).trim()
@@ -205,19 +175,12 @@ pub(crate) fn normalise_type_name(rm_type: &str) -> String {
         .collect()
 }
 
-/// Whether a stated object type `child` conforms to the attribute's declared RM
-/// type `declared`, covariantly on generic arguments (`master04.2`
-/// §`Rm_type_name` and Reference Model Type Matching: `Interval<Ordered>` matches
-/// `Interval<Quantity>` where `Quantity` conforms to `Ordered`). Both names may
-/// be generic and are compared case-insensitively / whitespace-ignored by the
-/// underlying [`RmModel::conforms`].
+/// Whether a stated object type `child` conforms to the declared RM type
+/// `declared`, covariantly on generic arguments (`master04.2` §`Rm_type_name`).
 ///
-/// Returns `Some(false)` only on a *positive* non-conformance — of the base type
-/// or of a generic argument. `None` when the model cannot decide (an unknown
-/// base type — VCORM reports that separately). A bare declared reference (no
-/// generic arguments emitted) leaves the arguments unconstrained, as does a
-/// child that states no arguments or a differing argument arity — none of those
-/// is a positive non-conformance.
+/// `Some(false)` only on a positive non-conformance of the base type or an
+/// argument; `None` when the model cannot decide. Missing or differing argument
+/// lists constrain nothing.
 #[must_use]
 pub(crate) fn type_conforms(rm: &dyn RmModel, child: &str, declared: &str) -> Option<bool> {
     match rm.conforms(child, declared) {
@@ -240,23 +203,12 @@ pub(crate) fn type_conforms(rm: &dyn RmModel, child: &str, declared: &str) -> Op
     Some(true)
 }
 
-/// The openEHR RM 1.2.0 reference model — the generated `openehr_rm::v1_2::model`
-/// static attribute/type table (`crates/openehr-rm/src/model`), the same oracle
-/// the AQL planner types against.
+/// The openEHR RM 1.2.0 reference model, the generated `openehr_rm::v1_2::model`
+/// table, which makes VCAEX, VCAM, VCACA and VCORMT's argument half exact. A
+/// container the BMM leaves without cardinality reads as `{0..*}`.
 ///
-/// The generated model records an attribute's declared type with its resolved
-/// generic arguments (`type_params`), its container cardinality (`cardinality`),
-/// existence (`is_mandatory`) and container shape, plus the RM enumeration table
-/// (`enumeration`). VCAEX/VCAM/VCACA and the generic-argument half of VCORMT are
-/// therefore exact from the model; the only fallback is a permissive `{0..*}`
-/// container cardinality for the rare attribute the BMM leaves un-cardinalitied
-/// (`cardinality == None` on a container).
-///
-/// NOTE: VCORMT matches a stated generic argument against the RM parameter's
-/// BOUND, not the instantiated binding (`master04.2` §`Rm_type_name` and
-/// Reference Model Type Matching) — a sound, never-false-firing
-/// approximation, since the binding subtypes the bound and the emitter erases
-/// the parameter name.
+/// NOTE: VCORMT matches a stated generic argument against the parameter's bound
+/// (`master04.2` §`Rm_type_name`), an approximation that never fires falsely.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ProductionRmModel;
 
@@ -353,14 +305,8 @@ pub(super) fn production_class(base: &str) -> Option<&'static model::RmClass> {
     model::class(base).or_else(|| model::class(&base.to_uppercase()))
 }
 
-/// Whether the openEHR [`ProductionRmModel`] governs `archetype` — decided
-/// from the HRID `rm_publisher`/`rm_package` (a lower-cased `openehr`
-/// publisher with a package that is not a test/foreign schema).
-///
-/// Archetypes whose publisher or package name a model this build does not
-/// carry are not RM-checked by the production model (the caller supplies the
-/// appropriate [`RmModel`], or skips — see
-/// [`validate_source`](super::validate_source)).
+/// Whether the openEHR [`ProductionRmModel`] governs `archetype`, from the HRID
+/// `rm_publisher` (`openehr`) and a package that is no test schema.
 #[must_use]
 pub fn production_model_governs(archetype: &Archetype) -> bool {
     production_model_governs_view(&view(archetype))
@@ -375,28 +321,13 @@ fn production_model_governs_view(v: &ArchetypeView<'_>) -> bool {
     publisher == "openehr" && !matches!(package.as_str(), "TEST_PKG" | "TASK_PLANNING")
 }
 
-/// Validate `archetype` against `rm` — the reference-model conformance checks
-/// for `dialect`.
+/// Validate `archetype` against `rm` for `dialect`.
 ///
-/// Under [`Dialect::Adl2`] that is the full AOM2 set: VCORM, VCARM, VCORMT,
-/// VCAEX, VCACA, VCAM, plus the RM-dependent VACSO and the interior-node half of
-/// VATID. These are the `master08` §Phase 2 → Validate Against Reference Model
-/// checks (master08 "phase 2 — validate against reference model" in the spec's
-/// guide vocabulary). Gating (they run only when basic integrity passed) is
-/// applied by [`validate_source`](super::validate_source) /
-/// [`super::validate`]; called directly, they run unconditionally.
-///
-/// Under [`Dialect::Adl14`] only **VUNT** is reported. The ADL 1.4 formalism
-/// defines exactly two cADL validity rules of its own: VCOC
-/// (`ADL1.4/master05-cadl.adoc` §Occurrences L324), which needs no RM and runs
-/// in the 1.4 basic-integrity pass, and VUNT (§Internal References L512-513:
-/// "the type mentioned in a `use_node` must be the same as or a super-type
-/// (according to the reference model) of the reference model type of the node
-/// referred to"), whose "according to the reference model" clause puts it here.
-/// Every other check above is an AOM2 rule with no ADL 1.4 counterpart — running
-/// them would judge a 1.4 artefact by ADL 2's catalogue, which this crate does
-/// not do (a 1.4 upload is judged AS 1.4). So the walk runs once either way and
-/// the 1.4 dialect keeps only VUNT out of it.
+/// Under [`Dialect::Adl2`]: VCORM, VCARM, VCORMT, VCAEX, VCACA, VCAM, VACSO and
+/// the interior-node half of VATID (`master08` §Phase 2). Under
+/// [`Dialect::Adl14`]: VUNT only, the one ADL 1.4 rule that needs the RM
+/// (`ADL1.4/master05-cadl.adoc` §Internal References). Called directly, the
+/// checks run without the phase gate of [`validate_source`](super::validate_source).
 #[must_use]
 pub fn validate_rm_conformance(
     archetype: &Archetype,
@@ -462,11 +393,8 @@ impl RmScan<'_> {
     /// attribute and its child objects against the reference model.
     fn walk_complex(&mut self, path: &str, rm_type: &str, cco: &CComplexObject) {
         for attr in complex_attributes(cco) {
-            // A differential-path attribute relocates the constraint to a node
-            // elsewhere in the flat parent (master04.5 §C_ATTRIBUTE, VDIFP)
-            // rather than introducing an attribute block here, so VCARM/VCAEX
-            // do not apply against `rm_type`. Its RM validity is checked at the
-            // resolved location by the phase-2 specialisation walk.
+            // A differential-path attribute is checked at its resolved location by the
+            // specialisation walk (master04.5 §C_ATTRIBUTE, VDIFP).
             if attr.differential_path.is_some() {
                 continue;
             }
@@ -479,11 +407,8 @@ impl RmScan<'_> {
 
             match rm_attr {
                 None => {
-                    // VCARM: the attribute must be defined in the RM as an
-                    // attribute of the enclosing type (master04.5 §Validity
-                    // Rules: `C_ATTRIBUTE`). Only reportable when the enclosing RM
-                    // type is itself known; an unknown enclosing type is already
-                    // VCORM/VCORMT at the level above.
+                    // VCARM (master04.5 §Validity Rules: `C_ATTRIBUTE`); an unknown enclosing type
+                    // is already VCORM above.
                     if !rm_type.is_empty() && self.rm.type_exists(rm_type) {
                         let name = &attr.rm_attribute_name;
                         let mut message = format!(
@@ -545,11 +470,8 @@ impl RmScan<'_> {
         }
     }
 
-    /// VCAM: single/multiple arity must match the RM.
-    ///
-    /// A cardinality declares the attribute a container; if the RM attribute is
-    /// single-valued that is a mismatch (master04.5 §Validity Rules:
-    /// `C_ATTRIBUTE`, VCAM).
+    /// VCAM: a cardinality on a single-valued RM attribute (master04.5 §Validity
+    /// Rules: `C_ATTRIBUTE`).
     fn check_arity(&mut self, attr_path: &str, attr: &CAttribute, rm_attr: &RmAttr) {
         if attr.cardinality.is_some() && !rm_attr.is_multiple {
             push_issue(
@@ -563,9 +485,6 @@ impl RmScan<'_> {
 
     /// VCACA: cardinality must conform to the RM container cardinality
     /// (master04.5 §Validity Rules: `C_ATTRIBUTE`).
-    ///
-    /// Only meaningful when the RM attribute is a container; a cardinality on a
-    /// single-valued RM attribute is already VCAM.
     fn check_cardinality_conformance(
         &mut self,
         attr_path: &str,
@@ -591,13 +510,8 @@ impl RmScan<'_> {
         }
     }
 
-    /// VACSO: the occurrences of a child object of a single-valued attribute
-    /// cannot have an upper limit greater than 1 (master04.5 §Validity Rules:
-    /// `C_ATTRIBUTE` — the rules "for single-valued attributes, i.e. when
-    /// `C_ATTRIBUTE`.`is_multiple` is False").
-    ///
-    /// The single/multiple determination is the RM's, not the parser's
-    /// cardinality heuristic, so the caller gates on `rm_attr.is_multiple`.
+    /// VACSO: a child of a single-valued attribute cannot have occurrences above 1
+    /// (master04.5 §Validity Rules: `C_ATTRIBUTE`), the RM deciding single-valued.
     fn check_single_valued_child_occurrences(&mut self, attr_path: &str, attr: &CAttribute) {
         for child in attr.children.iter().flatten() {
             if let Some(occ) = child_occurrences(child)
@@ -645,11 +559,9 @@ impl RmScan<'_> {
         }
     }
 
-    /// VCORM / VCORMT: a child object's declared type must exist in the
-    /// reference model and be the same as, or conform to, the type declared
-    /// for the owning attribute — covariantly on any generic arguments
-    /// (master04.5 §Validity Rules: `C_OBJECT`, VCORMT; master04.2
-    /// §`Rm_type_name` and Reference Model Type Matching).
+    /// VCORM / VCORMT: a child's type must exist in the RM and conform to the owning
+    /// attribute's declared type (master04.5 §Validity Rules: `C_OBJECT`; master04.2
+    /// §`Rm_type_name`).
     fn check_child_type(&mut self, child_path: &str, child_type: &str, declared_type: &str) {
         if !self.rm.type_exists(child_type) {
             push_issue(
@@ -675,13 +587,8 @@ impl RmScan<'_> {
         }
     }
 
-    /// Interior-node VATID: a node under a multiply-valued attribute must have
-    /// its id-code defined in the terminology.
-    ///
-    /// For a single-valued attribute a term definition is optional (master07
-    /// §Overview). The flattened terminology of a specialised archetype is not
-    /// available here, so the caller runs this on the archetype's own
-    /// terminology only.
+    /// Interior-node VATID: a node under a multiply-valued attribute must have its
+    /// id-code defined in the archetype's own terminology (master07 §Overview).
     fn check_interior_node_id(&mut self, child_path: &str, child: &CObject) {
         let nid = object_node_id(child);
         if (AdlCodeDefinitionsData::is_id_code(nid) || AdlCodeDefinitionsData::is_at_code(nid))
@@ -696,25 +603,12 @@ impl RmScan<'_> {
         }
     }
 
-    /// VUNT: the type named in a `use_node` must be the same as, or a super-type
-    /// of, the reference-model type of the node it refers to.
+    /// VUNT: the type named in a `use_node` must be the referenced node's RM type
+    /// or a super-type of it (`AOM2/master04.5` §Validity Rules:
+    /// `C_COMPLEX_OBJECT_PROXY`; `ADL1.4/master05-cadl.adoc` §Internal References).
     ///
-    /// `ADL2/master04.5-cadl_primitive_types.adoc` has the AOM2 wording
-    /// (`AOM2/master04.5-constraint_model-class_definitions.adoc` §Validity Rules:
-    /// `C_COMPLEX_OBJECT_PROXY`, VUNT); the ADL 1.4 formalism states the same rule
-    /// in `ADL1.4/master05-cadl.adoc` §Internal References L510-513 — "The type
-    /// mentioned in the `use_node` reference must always be the same type as, or a
-    /// super-type of the referenced type … a `use_node` reference to such a node can
-    /// legally mention the parent type".
-    ///
-    /// It lives HERE, in the reference-model pass, rather than in phase 1, because
-    /// the rule is explicitly "according to the reference model": deciding
-    /// super-type-hood needs [`RmModel::conforms`], which phase 1 does not have.
-    /// (Same reason VACSO moved here.) The target node is resolved against the
-    /// archetype's own definition tree, which is the flat form for a
-    /// non-specialised archetype (`ADL2/master09.02` §Differential and Flat Forms);
-    /// an unresolvable path is VUNP's business, not VUNT's, so it is left alone
-    /// here.
+    /// Deciding super-type needs [`RmModel::conforms`], so it runs in this pass. An
+    /// unresolvable path is VUNP's.
     fn check_proxy_type(&mut self, path: &str, proxy: &CComplexObjectProxy) {
         let declared = normalise_type_name(&proxy.rm_type_name);
         if declared.is_empty() {
@@ -772,18 +666,12 @@ impl RmScan<'_> {
         }
     }
 
-    /// Validate a primitive constraint `child` against an enumeration-typed RM
-    /// slot (`en`): the primitive kind must match the enumeration's underlying
-    /// type (VCORMEN), and each constrained value must be a declared literal
-    /// value (VCORMENV for an integer-based enumeration, VCORMENU for a
-    /// string-based one).
+    /// Validate a primitive constraint against an enumeration-typed RM slot:
+    /// VCORMEN for a primitive-kind mismatch, VCORMENV/VCORMENU for an out-of-set
+    /// integer or string value.
     ///
-    /// NOTE: `master08` §Phase 2 lists (VCORMENV, VCORMENU, VCORMEN) with only a
-    /// one-line gloss ("enumeration type constraints use valid literal values")
-    /// and no full vendored text; the split below — VCORMEN for a primitive-kind
-    /// mismatch, VCORMENV/VCORMENU for an out-of-set integer/string value — is
-    /// our reading of that gloss against `master04.2` §Constraints on
-    /// Enumeration Types (no fuller openEHR spec text governs the partition).
+    /// NOTE: `master08` §Phase 2 glosses these codes in one line; the partition is
+    /// our reading of `master04.2` §Constraints on Enumeration Types.
     fn check_enumeration(&mut self, path: &str, child: &CObject, en: &RmEnum) {
         match child {
             CObject::CInteger(c) => {
@@ -855,11 +743,9 @@ impl RmScan<'_> {
     }
 }
 
-/// The concrete integer values a `C_INTEGER` enumeration constraint admits as
-/// point values (`{2, 3}` → `[2, 3]`; the spec-illustrated enumeration form,
-/// `master04.2` §Constraints on Enumeration Types). A range interval is not
-/// enumerated here (conservative — no false VCORMENV on the "equivalent range"
-/// form the spec also allows).
+/// The point values of a `C_INTEGER` enumeration constraint; a range is not
+/// enumerated, so it raises no VCORMENV (`master04.2` §Constraints on
+/// Enumeration Types).
 fn integer_point_values(constraint: &[Interval<i32>]) -> Vec<i32> {
     constraint.iter().filter_map(point_value_i32).collect()
 }

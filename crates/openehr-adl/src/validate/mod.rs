@@ -1,58 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The AOM2 validation engine: orchestration over a catalogue of topic modules.
+//! The AOM2 validation engine: the five public entry points and the phase
+//! drivers over the topic modules ([`catalogue`], [`bindings`], [`slots`],
+//! [`rm`], [`conformance`] and the private ones).
 //!
-//! A validator walks an assembled `openehr_am::v2_4::aom2` [`Archetype`]
-//! and produces typed [`ValidationIssue`]s, each carrying a
-//! [`ValidationCode`] (one variant per AOM2 validity
-//! code), a [`Severity`], a message, and — where derivable
-//! — the archetype path the issue is anchored at.
-//!
-//! This module holds ONLY the orchestration: [`ValidationIssue`], the five
-//! public entry points, and the three drivers (`run_integrity_checks`,
-//! `run_parent_conformance`, `run_flat_form_checks`) that call the topic modules
-//! in the order the spec's phase schedule prescribes — master08's "phase 1 /
-//! phase 2 / phase 3" in the spec's guide vocabulary. Every rule lives in the
-//! topic module that owns its subject matter:
-//!
-//! | module | topic |
-//! |---|---|
-//! | [`catalogue`] | the code vocabulary: `Severity` + `ValidationCode` |
-//! | `identification` | archetype id, root typename/concept, versions, languages, the terminology-structure gate |
-//! | `structure` | the phase-1 definition-tree walk (node identity, cardinality, slots, assumed values) |
-//! | `terminology` | term definitions, value sets and the codes the definition references |
-//! | [`bindings`] | binding keys (VTTBK/VTCBK) + the external terminology-service seam (VETDF) |
-//! | `annotations` | the `annotations` and `rm_overlay` sections |
-//! | `source_level` | the checks that read the raw parsed source (VOKU, VRRLP) |
-//! | `specialisation` | a differential child against its flat parent |
-//! | [`slots`] | slot redefinition/filling + the template-filler pass |
-//! | [`rm`] | the reference-model seam and its checks |
-//! | [`conformance`] | the `master04.5` conformance functions the above build on |
-//! | `flat` | everything decidable only on the flattened form |
-//!
-//! The phase-1 catalogue and its orchestration are defined in
-//! `docs/specs/openehr/AM/docs/AOM2/master08-validation.adoc` §Phase 1 - Basic
-//! Integrity, with the full rule texts in `master03-archetype_package.adoc`,
-//! `master04.5-constraint_model-class_definitions.adoc`,
-//! `master06-rm_overlay.adoc`, and `master07-terminology_package.adoc` (cited
-//! per check in the topic modules); the phase-2 RM checks are `master08` §Phase
-//! 2 → Validate Against Reference Model (cited per check in [`rm`]).
-//!
-//! Phase orchestration follows `master08` "multi-pass … more basic kinds of
-//! errors being checked first": phase 2 runs only after phase 1 passes, and both
-//! full-pipeline entries ([`validate`] / [`validate_source`]) run the SAME phase
-//! set, since AOM2 defines no partial-validation profile. Parent-dependent
-//! checks (VACSD, VASID, VALC, VTPL) take an optional [`ArchetypeRepository`]
-//! and degrade to the standalone half they can compute without one.
-//!
-//! The specialised-vs-flat-parent checks live in `specialisation` (slot arm in
-//! [`slots`]) and run against the parent [`resolve_flat_parent`] returns. Per
-//! `ADL2/master09.02` §Differential and Flat Forms ("For a top-level archetype,
-//! the flat-form is the same as its differential form") a level-0 parent is used
-//! as-is; a specialised parent ([`FlatParent::NeedsFlattener`]) goes through
-//! [`crate::flatten::flat_form`] first. Phase 3 (`flat`) then runs on the
-//! flattened form.
+//! The catalogue and phase schedule are `AOM2/master08-validation.adoc`: phase 2
+//! runs only after phase 1 passes, and phase 3 on the flattened form. A level-0
+//! parent is its own flat form (`ADL2/master09.02` §Differential and Flat
+//! Forms); a specialised one goes through [`crate::flatten::flat_form`].
+//! Parent-dependent checks take an optional [`ArchetypeRepository`] and keep
+//! the half they can compute without one.
 
 mod annotations;
 pub mod bindings;
@@ -125,27 +83,12 @@ pub(super) fn push_issue(
     issues.push(ValidationIssue::new(code, msg).at_path(path.to_owned()));
 }
 
-/// Run the basic-integrity catalogue over `v`, appending issues to `issues`
-/// (master08 "phase 1 — basic integrity" in the spec's guide vocabulary).
+/// Run the basic-integrity catalogue over `v` in the order of
+/// `master08-validation.adoc` §Phase 1: identification, structure, then
+/// terminology, which needs a clean terminology structure.
 ///
-/// The order follows `master08-validation.adoc` §Phase 1 - Basic Integrity:
-/// basic identification checks first, then structural, then terminology (the
-/// latter gated behind a clean terminology structure and no basic error —
-/// master08 "basic errors first", and a code cannot be checked against a
-/// missing/inconsistent terminology).
-///
-/// `dialect` selects the validity catalogue: [`Dialect::Adl2`] runs the full
-/// AOM2 integrity catalogue; [`Dialect::Adl14`] runs the subset that corresponds
-/// to the ADL 1.4 / AOM 1.4 standalone validity rules (see
-/// [`validate_source_integrity`] for the correspondence + the suppressed
-/// AOM2-only rules, each spec-cited at its check site).
-///
-/// Not run in phase 1, though the catalogue carries their variants: the
-/// reference-model checks and the path halves of VRANP/VRRLP/VRMVP ([`rm`]),
-/// VDIFP + VSONIF (`specialisation`), the flat-form halves
-/// VATDF/VTVSMD/VACMCU/VCOSU (`flat`), the external-reference half of VARXR
-/// ([`slots`]), and VETDF, which needs the [`bindings::TerminologyResolver`]
-/// seam because a network-free engine holds no terminology-service client.
+/// `dialect` selects the catalogue; see [`validate_source_integrity`] for the
+/// ADL 1.4 subset.
 fn run_integrity_checks(
     v: &ArchetypeView<'_>,
     repo: Option<&ArchetypeRepository>,
@@ -208,19 +151,11 @@ fn run_integrity_checks(
     }
 }
 
-/// Validate an assembled [`Archetype`] against the AOM2 basic-integrity
-/// catalogue (master08 "phase 1 — basic integrity" in the spec's guide
-/// vocabulary).
+/// Validate an assembled [`Archetype`] against the ADL2 basic-integrity
+/// catalogue (`master08` §Phase 1).
 ///
-/// The catalogue is the ADL2 one: an assembled [`Archetype`] carries no memory
-/// of the dialect it was read from, so the dialect-sensitive entry is the
-/// source-level [`validate_source_integrity`].
-///
-/// `repo`, when supplied, resolves the archetype's parent (and suppliers) so
-/// the parent-dependent integrity checks (VACSD depth comparison, VASID, VALC,
-/// VTPL) can run; when `None`, those checks compute only their standalone half
-/// or are skipped. Source-level checks that need the raw ODIN text (VOKU) are
-/// not run here — use [`validate_source_integrity`] for those.
+/// With `repo` the parent-dependent checks (VACSD, VASID, VALC, VTPL) run in
+/// full. The source-level checks (VOKU) need [`validate_source_integrity`].
 #[must_use]
 pub fn validate_integrity(
     archetype: &Archetype,
@@ -231,36 +166,14 @@ pub fn validate_integrity(
     issues
 }
 
-/// Parses `src` in `dialect` and runs that dialect's basic-integrity catalogue.
+/// Parses `src` in `dialect` and runs that dialect's basic-integrity catalogue,
+/// including the source-level checks (VOKU, VRRLP).
 ///
-/// The pass includes the source-level checks (VOKU keyed-list uniqueness,
-/// VRRLP rule paths) that need the raw ODIN text (master08 "phase 1 — basic
-/// integrity" in the spec's guide vocabulary).
-///
-/// Under [`Dialect::Adl2`] this is the full AOM2 integrity catalogue.
-///
-/// Under [`Dialect::Adl14`] it is the subset that corresponds to the ADL 1.4 /
-/// AOM 1.4 standalone validity rules, plus the 1.4-only definition-path walk
-/// (VDFPT).
-///
-/// A 1.4 upload is judged AS 1.4, on its 1.4-shaped `openehr_am::v2_4` model,
-/// never post-conversion: converting to ADL 2 changes the artefact. The checks
-/// corresponding to an ADL 1.4 / AOM 1.4 rule run unchanged; four AOM2-only
-/// rules that would false-reject a valid 1.4 archetype are suppressed at their
-/// check sites in `identification` / `structure` / `terminology`, each cited
-/// there: VARAV/VARRV (AOM 1.4 has no 3-part `adl_version`/`rm_release`), VCOID
-/// (relaxed to the AOM 1.4 `node_id` rule), VATCV (1.4 terminology constraints
-/// are not ADL2 code forms) and VCOSU (1.4 node ids are only sibling-unique).
-///
-/// Three checks are 1.4-ONLY, absent from AOM2:
-/// - **VCOC** — cardinality/occurrences validity over the children's EFFECTIVE
-///   occurrences (`ADL1.4/master05-cadl.adoc` §Occurrences L321-324).
-/// - **VATDF/VACDF over the 1.4 term-constraint spelling** — the qualified form
-///   `[local:: a, b ; assumed]` of `ADL1.4/master09-customising_adl.adoc`
-///   §Custom Syntax is decomposed so definedness is judged per code; external
-///   terminology codes are not archetype terms and are excluded.
-/// - **VDFPT** — `use_node` target paths must resolve within the definition
-///   section (`ADL1.4/master08-adl.adoc` §Definition Section).
+/// A 1.4 upload is judged as 1.4. Four AOM2-only rules are suppressed for it at
+/// their check sites (VARAV/VARRV, VCOID, VATCV, VCOSU), and three run only for
+/// it: VCOC (`ADL1.4/master05-cadl.adoc` §Occurrences), definedness over the
+/// qualified term-constraint form (`master09-customising_adl.adoc` §Custom
+/// Syntax), and VDFPT (`master08-adl.adoc` §Definition Section).
 ///
 /// # Errors
 /// Returns the parse [`SyntaxError`]s if `src` does not parse in `dialect`;
@@ -286,23 +199,9 @@ pub fn validate_source_integrity(
     Ok(issues)
 }
 
-/// Parses an **ADL 1.4** source and validates it against the full 1.4 catalogue.
-///
-/// The catalogue is the 1.4 basic-integrity pass
-/// ([`validate_source_integrity`] with [`Dialect::Adl14`]) plus the one 1.4
-/// validity rule that needs a reference model, VUNT
-/// ([`rm::validate_rm_conformance`] in the 1.4 dialect).
-///
-/// The 1.4 counterpart of [`validate_source`], and a separate entry rather than
-/// a dialect branch because ADL 1.4 has no differential lineage to flatten and
-/// no AOM2 external-binding rule: an [`ArchetypeRepository`] or a
-/// [`bindings::TerminologyResolver`] would be a silently ignored parameter.
-///
-/// VUNT is a rule of the ADL 1.4 formalism itself (`ADL1.4/master05-cadl.adoc`
-/// §Internal References L512-513). The RM pass runs only when the integrity
-/// pass raised no [`Severity::Error`] (`master08` §Overview phase gate), and a
-/// type `rm` does not know is undecidable rather than wrong, so an artefact on
-/// an unknown reference model raises no VUNT.
+/// Parses an ADL 1.4 source and validates it against the full 1.4 catalogue:
+/// the 1.4 basic-integrity pass plus VUNT (`ADL1.4/master05-cadl.adoc` §Internal
+/// References), which runs only after an error-free integrity pass.
 ///
 /// # Errors
 /// Returns the parse [`SyntaxError`]s if `src` does not parse as ADL 1.4;
@@ -331,23 +230,12 @@ pub fn validate_adl14_source(
     Ok(issues)
 }
 
-/// Validates an assembled [`Archetype`] against the full schedule.
+/// Validates an assembled [`Archetype`] against the full schedule: basic
+/// integrity, then, only if that raised no [`Severity::Error`], the RM,
+/// parent-conformance and flat-form checks (`master08` §Overview).
 ///
-/// The schedule is basic integrity, then — only if that raised no
-/// [`Severity::Error`] — the reference-model checks against `rm`, the
-/// parent-conformance checks, and the flat-form checks (master08's "phase 1 /
-/// phase 2 / phase 3" in the spec's guide vocabulary).
-///
-/// The gating is the `master08` §Overview phase gate ("more basic kinds of
-/// errors being checked first"): each later pass runs on a structurally-sound
-/// archetype only. [`validate_source`] runs this same schedule from source
-/// text, plus the source-level integrity checks (VOKU) that need the raw ODIN
-/// and are not available here.
-///
-/// `resolver` verifies external term bindings (VETDF); pass
-/// [`bindings::NoTerminologyResolver`] when no terminology service is
-/// available (VETDF is then not raised — `master03` §Validity Rules "subject to
-/// tool accessibility").
+/// With [`bindings::NoTerminologyResolver`] VETDF is not raised (`master03`
+/// §Validity Rules: "subject to tool accessibility").
 #[must_use]
 pub fn validate(
     archetype: &Archetype,
@@ -366,12 +254,8 @@ pub fn validate(
     issues
 }
 
-/// Run the specialised-child-against-flat-parent checks, gated on a supplied
-/// repository and a still-clean issue list (`master08` §Overview phase gate;
-/// these are its "phase 2 — validate against parent" in the spec's guide
-/// vocabulary). A non-specialised archetype, an unresolved parent, or a parent
-/// that itself needs the flattener silently skips the checks (never a wrong
-/// answer against an un-flattened parent).
+/// Run the specialised-child-against-flat-parent checks, gated on a repository
+/// and a clean issue list; an unresolvable or unflattened parent skips them.
 fn run_parent_conformance(
     archetype: &Archetype,
     repo: Option<&ArchetypeRepository>,
@@ -413,13 +297,8 @@ fn run_parent_conformance(
     }
 }
 
-/// Run the flat-form checks (VUNP, VACMCO) on the flattened archetype, gated on
-/// a still-clean issue list (`master08` §Phase 3 - Validation of Flat Form —
-/// carried out after successful flat-form generation). A specialised archetype
-/// is flattened via [`crate::flatten::flat_form`] (needs `repo`); a level-0
-/// archetype is its own flat form. If flattening is impossible (specialised, no
-/// resolvable parent) the checks are skipped rather than run against a wrong
-/// (un-flattened) form.
+/// Run the flat-form checks on the flattened archetype, gated on a clean issue
+/// list (`master08` §Phase 3); skipped when the archetype cannot be flattened.
 fn run_flat_form_checks(
     archetype: &Archetype,
     repo: Option<&ArchetypeRepository>,
@@ -444,11 +323,9 @@ fn run_flat_form_checks(
     }
 }
 
-/// Run the repository-dependent filler checks (VARXR, VTPL) through
-/// [`slots::validate_fillers`], gated on a supplied repository and a
-/// still-clean issue list (`master08` §Phase 2 lists VARXR under "Validate
-/// Specialised Definition"; `master04.5` §Validity Rules: `C_ARCHETYPE_ROOT`
-/// states it for every external reference).
+/// Run the repository-dependent filler checks (VARXR, VTPL), gated on a
+/// repository and a clean issue list (`master04.5` §Validity Rules:
+/// `C_ARCHETYPE_ROOT`).
 fn run_filler_checks(
     archetype: &Archetype,
     repo: Option<&ArchetypeRepository>,
@@ -467,24 +344,12 @@ fn run_filler_checks(
     }
 }
 
-/// Parses and validates ADL2 `src` against the same schedule as [`validate`].
+/// Parses and validates ADL2 `src` against the schedule of [`validate`], plus
+/// the source-level integrity checks.
 ///
-/// The source-level integrity checks are added: basic integrity, then — only
-/// if that is error-free — the reference-model checks against `rm` (`master08`
-/// §Overview phase gate), the parent-conformance checks, and the flat-form
-/// checks.
-///
-/// NOTE: the flat-form checks run even for a top-level archetype — the
-/// V-codes are unconditional (`master03-archetype_package.adoc` §Validity
-/// Rules: "apply to all varieties of ARCHETYPE object"), AOM2 defines no
-/// partial-validation profile, and a top-level archetype's flat form IS its
-/// differential form (`ADL2/master09.02-spec_concepts.adoc` §Differential
-/// and Flat Forms), so no phase may be omitted.
-///
-/// `resolver` verifies external term bindings (VETDF); pass
-/// [`bindings::NoTerminologyResolver`] when no terminology service is
-/// available (VETDF is then not raised — `master03` §Validity Rules "subject to
-/// tool accessibility").
+/// NOTE: the flat-form checks run for a top-level archetype too, whose flat form
+/// is its differential (`master03-archetype_package.adoc` §Validity Rules;
+/// `ADL2/master09.02` §Differential and Flat Forms).
 ///
 /// # Errors
 /// Returns the parse [`SyntaxError`]s if `src` does not parse into an

@@ -1,19 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Basic-integrity structural topic: the definition-tree walk and the rules that are
-//! decidable from the archetype's own constraint structure — node identity and
-//! uniqueness, sibling attribute uniqueness, differential-path placement,
-//! container cardinality vs child occurrences, `C_ARCHETYPE_ROOT` shape, slot
-//! include/exclude consistency, terminology-constraint code form, and primitive
-//! assumed values.
-//!
-//! Rule texts:
-//! `docs/specs/openehr/AM/docs/AOM2/master04.5-constraint_model-class_definitions.adoc`
-//! §Validity Rules (`C_OBJECT` / `C_COMPLEX_OBJECT` / `C_ATTRIBUTE` /
-//! `ARCHETYPE_SLOT` / `C_PRIMITIVE_OBJECT`) and `master08-validation.adoc`
-//! §Phase 1 - Basic Integrity; the ADL 1.4-only VCOC rule is
-//! `ADL1.4/master05-cadl.adoc` §Occurrences.
+//! Basic-integrity structure: the definition-tree walk and the rules decidable
+//! from the archetype's own constraint structure (`AOM2/master04.5` §Validity
+//! Rules; `master08-validation.adoc` §Phase 1; VCOC from
+//! `ADL1.4/master05-cadl.adoc` §Occurrences).
 
 use std::collections::{BTreeSet, HashMap};
 
@@ -112,12 +103,8 @@ impl StructureScan<'_> {
             CObject::CComplexObject(cco) => self.walk_complex(path, cco),
             CObject::ArchetypeSlot(slot) => self.check_slot(path, slot),
             CObject::CTerminologyCode(tc) => {
-                // VATCV (code form) applies only to ADL2 constraint codes; the
-                // ADL 1.4 dialect preserves 1.4 terminology constraints
-                // verbatim (`local, at0004`, `[openehr::524]`, listed forms) in
-                // the constraint string — these are not ADL2 code forms, and
-                // their validity is ontology-definedness (ADL1.4 master08
-                // §Local Constraint Codes / VATDF/VACDF), not the ADL2 regex.
+                // VATCV applies to ADL2 codes only; 1.4 constraints are judged by
+                // definedness (ADL1.4 master08 §Local Constraint Codes).
                 if self.dialect == Dialect::Adl2 {
                     self.check_terminology_code_form(path, &tc.constraint);
                 }
@@ -144,21 +131,13 @@ impl StructureScan<'_> {
     }
 
     fn walk_complex(&mut self, path: &str, cco: &CComplexObject) {
-        // VARXNC / VARXAV / VARXTV: `C_ARCHETYPE_ROOT` validity (master08 §Phase 1
-        // §Various Structure Validation).
-        //
-        // NOTE: VARXR (external-reference *resolution*) is a phase-2 check that
-        // needs the supplier repository, so it runs in the specialisation
-        // validator ([`super::slots`], `master08` §Phase 2), not here.
+        // VARXNC / VARXAV / VARXTV (master08 §Phase 1 §Various Structure Validation).
         if let CComplexObject::CArchetypeRoot(r) = cco {
             self.check_archetype_root(path, r);
         }
 
-        // VCATU: sibling attributes uniquely named (master04.5 §`C_COMPLEX_OBJECT`).
-        // In a differential archetype a root-level attribute is identified by
-        // its whole differential path: `/items` and `/items[id9]/items` end in
-        // the same RM attribute name yet address different nodes of the flat
-        // parent (ADL2 master09.02 §Differential Paths).
+        // VCATU (master04.5 §`C_COMPLEX_OBJECT`): a differential attribute is
+        // identified by its whole path (ADL2 master09.02 §Differential Paths).
         let mut seen_attrs = BTreeSet::new();
         for attr in complex_attributes(cco) {
             let key = (
@@ -191,9 +170,8 @@ impl StructureScan<'_> {
     /// VARXNC / VARXAV / VARXTV: `C_ARCHETYPE_ROOT` validity (master08 §Phase 1
     /// §Various Structure Validation).
     ///
-    /// NOTE: VARXR (external-reference *resolution*) is a phase-2 check that
-    /// needs the supplier repository, so it runs in the specialisation
-    /// validator ([`super::slots`], `master08` §Phase 2), not here.
+    /// NOTE: VARXR needs the supplier repository, so it runs in [`super::slots`]
+    /// (`master08` §Phase 2).
     fn check_archetype_root(
         &mut self,
         path: &str,
@@ -228,13 +206,8 @@ impl StructureScan<'_> {
         }
     }
 
-    /// VCOSU (AOM 1.4 sibling scope): in the 1.4 dialect node ids are only
-    /// *sibling*-unique — children under the same container attribute must have
-    /// distinct node ids (AOM1.4 master04 §`Node_id` and Paths — "guarantees
-    /// sibling node unique identification").
-    ///
-    /// ADL2 uses the stronger archetype-wide uniqueness (`walk_object` / the
-    /// flat-form walk), so this sibling-scoped pass is 1.4-only.
+    /// VCOSU in the 1.4 dialect: node ids are sibling-unique (AOM1.4 master04
+    /// §`Node_id` and Paths).
     fn check_sibling_node_ids(&mut self, path: &str, attr: &CAttribute) {
         let mut sibling_ids: BTreeSet<&str> = BTreeSet::new();
         for child in attr.children.iter().flatten() {
@@ -269,33 +242,19 @@ impl StructureScan<'_> {
             );
         }
 
-        // VACMCU/WACMCL compare a child's occurrences against its owning
-        // attribute's STATED cardinality (master04.5 §`C_ATTRIBUTE`), so they
-        // run only when a cardinality is present and the archetype is its own
-        // flat form.
-        //
-        // NOTE: VACSO needs `C_ATTRIBUTE._is_multiple_`, which the parser's
-        // cardinality heuristic cannot supply, so it runs in [`super::rm`].
+        // VACMCU/WACMCL against the stated cardinality, for an own-flat-form archetype
+        // (master04.5 §`C_ATTRIBUTE`); VACSO runs in [`super::rm`].
         if !self.v.is_specialised() && attr.is_multiple {
             self.check_container_cardinality(&attr_path, attr);
         }
 
-        // VCOC is the ADL 1.4 formalism's own cardinality/occurrences rule,
-        // distinct from the AOM2 VACMCU/WACMCL pair above, so it runs on the 1.4
-        // dialect only. Gated to the non-specialised (own-flat-form) case for the
-        // same reason as VACMCU: a specialised archetype need not restate the
-        // inherited cardinality, so the sums here would be computed against a
-        // cardinality that is not the effective one.
+        // VCOC, the ADL 1.4 rule, for an own-flat-form archetype.
         if self.dialect == Dialect::Adl14 && !self.v.is_specialised() {
             self.check_vcoc(&attr_path, attr);
         }
 
-        // Whether a child object is required to carry a node id. AOM2 requires
-        // one on every non-primitive object (master04.5 §`C_OBJECT`); AOM 1.4
-        // requires one only for children of a container (multiple) attribute —
-        // "any leaf or near-leaf node which has no sibling nodes from the same
-        // attribute can safely have no node_id" (AOM1.4 master04 §Node_id and
-        // Paths; ADL1.4 master08 §Definition Section).
+        // AOM2 requires a node id on every non-primitive object (master04.5
+        // §`C_OBJECT`), AOM 1.4 only under a container (AOM1.4 master04 §Node_id).
         let require_child_node_id = match self.dialect {
             Dialect::Adl2 => true,
             Dialect::Adl14 => attr.is_multiple,
@@ -349,26 +308,12 @@ impl StructureScan<'_> {
         }
     }
 
-    /// VCOC (ADL 1.4): cardinality/occurrences validity —
-    /// `ADL1.4/master05-cadl.adoc` §Occurrences L321-324: "the interval
-    /// represented by: (the sum of all occurrences minimum values) .. (the sum of
-    /// all occurrences maximum values) must be inside the interval of the
-    /// cardinality."
+    /// VCOC (ADL 1.4): the sum of the children's occurrences must lie inside the
+    /// cardinality (`ADL1.4/master05-cadl.adoc` §Occurrences L321-324), over
+    /// [`effective_occurrences_adl14`].
     ///
-    /// The children's occurrences are the EFFECTIVE ones
-    /// ([`effective_occurrences_adl14`]): a child with no stated `occurrences` is
-    /// `{1..1}` (master05 L316), and a `use_node` with none takes the referenced
-    /// node's (master05 L515) — without those defaults the sums would be computed
-    /// from zero-width intervals and the rule would never see a real archetype's
-    /// child set.
-    ///
-    /// NOTE: the sum-LOWER half of the containment (`cardinality.lower <= Σ
-    /// occurrences.lower`) is NOT raised — AOM2 itself downgrades that half
-    /// to the WARNING WACMCL while the upper half is the ERROR VACMCU
-    /// (`AOM2/master04.5-constraint_model-class_definitions.adoc` §Validity
-    /// Rules: `C_ATTRIBUTE`), and openEHR's own regression corpus passes
-    /// archetypes violating it; the two genuine-defect halves (overfillable
-    /// upper, unsatisfiable lower) are raised.
+    /// NOTE: the sum-lower half is not raised, matching AOM2's WACMCL warning
+    /// (`AOM2/master04.5` §Validity Rules: `C_ATTRIBUTE`).
     fn check_vcoc(&mut self, attr_path: &str, attr: &CAttribute) {
         let Some(card) = attr.cardinality.as_ref() else {
             return; // no cardinality ⇒ not a container ⇒ VCOC does not apply.
@@ -421,13 +366,10 @@ impl StructureScan<'_> {
     }
 
     fn check_slot(&mut self, path: &str, slot: &ArchetypeSlot) {
-        // VDSEV / VDSIV: slot include/exclude consistency (master04.5
-        // §`ARCHETYPE_SLOT`), the spec's if/elseif chain, so exactly one branch
-        // fires.
+        // VDSEV / VDSIV (master04.5 §`ARCHETYPE_SLOT`), the spec's if/elseif chain.
         //
-        // NOTE: with the include-side branches first, VDSIV is unreachable on a
-        // real slot, which always has an `include`, so every inconsistency
-        // reports as VDSEV even though the spec defines both.
+        // NOTE: a real slot always has an `include`, so every inconsistency reports as
+        // VDSEV.
         let inc_empty = slot.includes.as_ref().is_none_or(Vec::is_empty);
         let exc_empty = slot.excludes.as_ref().is_none_or(Vec::is_empty);
         let inc_any = !inc_empty && slot.includes.iter().flatten().all(is_any_assertion);
@@ -491,13 +433,8 @@ impl StructureScan<'_> {
         }
     }
 
-    /// `C_STRING.constraint`: a string constraint is either a list of fixed
-    /// Strings or a single regular expression
+    /// `C_STRING.constraint` is a list of fixed strings or one delimited regex
     /// (`ADL2/master04.5-cadl_primitive_types.adoc` §Constraints on String).
-    ///
-    /// A regular expression is told apart by its `/` or `^` delimiters, the
-    /// stored form the AOM2 `C_STRING` class table defines, so a mixture and a
-    /// second regular expression are both refused.
     fn check_string_constraint(&mut self, path: &str, constraint: &[String]) {
         let regexes = constraint.iter().filter(|c| is_delimited_regex(c)).count();
         if regexes == 0 || constraint.len() == 1 {
@@ -518,22 +455,13 @@ impl StructureScan<'_> {
         );
     }
 
-    /// VOBAV: a primitive assumed value must fall within its own constraint
-    /// (master04.5 §`C_PRIMITIVE_OBJECT`).
-    ///
-    /// The enumerable primitives (Boolean / String) test list membership; the
-    /// ordered primitives (Integer / Real and the temporal `Iso8601_*` types)
-    /// test point-in-interval containment (`master04.5` §`C_ORDERED` — the value
-    /// space is a list of `Interval`s, `has` = a point falls in some interval).
-    /// A primitive with an empty constraint (`any_allowed`) admits any assumed
-    /// value. The temporal branches use `Interval::has_definite` so an
-    /// incomparable (undecidable) value never raises a false violation.
-    /// Raise VOBAV at `path` with `msg` — the shared shape of every arm of
-    /// [`StructureScan::check_primitive_assumed`].
+    /// Raise VOBAV at `path` with `msg`.
     fn vobav(&mut self, msg: &'static str, path: &str) {
         push_issue(&mut self.issues, ValidationCode::Vobav, msg, path);
     }
 
+    /// VOBAV: a primitive assumed value must fall within its own constraint
+    /// (master04.5 §`C_PRIMITIVE_OBJECT`, §`C_ORDERED`).
     fn check_primitive_assumed(&mut self, path: &str, obj: &CObject) {
         let violation = match obj {
             CObject::CBoolean(b) => b
@@ -617,12 +545,8 @@ fn integer_assumed_violates(
     !inside
 }
 
-/// VOBAV for an ordered temporal primitive: a non-empty constraint list is
-/// violated only when the assumed value is *definitely* outside every interval
-/// (`Interval::has_definite` returns `Some(false)` for all of them). An
-/// undecidable pairing (`None`, e.g. a partial date whose completions overlap a
-/// bound) leaves containment unknown and never raises — mirroring the numeric
-/// `has`-based check while staying conservative under partial order.
+/// VOBAV for an ordered temporal primitive: violated only when the assumed value
+/// is definitely outside every interval.
 fn temporal_assumed_violates<T: PartialOrd>(constraint: &[Interval<T>], av: &T) -> bool {
     !constraint.is_empty()
         && constraint
@@ -655,12 +579,8 @@ fn exc_non_any_and_any(exc_empty: bool, exc_any: bool) -> bool {
 /// The archetype-id literals referenced by a slot assertion (read from its
 /// expression tree — the constraint targets an id via a regex).
 fn assertion_archetype_ids(a: &Assertion) -> Vec<String> {
-    // Slot assertions constrain `archetype_id/value matches {/regex/}`; the
-    // regex, when it is a literal id (no meta-characters), is itself the id.
-    // VDFAI's subject is the ARCHETYPE IDENTIFIER (ADL1.4 master05 §Archetype
-    // Slots), so an assertion targeting another property (`domain_concept`,
-    // `short_concept_name`, a path) constrains something that is not an
-    // archetype id and yields none.
+    // VDFAI's subject is the archetype identifier (ADL1.4 master05 §Archetype
+    // Slots); an assertion on another property yields none.
     let targets_archetype_id = crate::rules::slot_assertion_path(a)
         .is_some_and(|path| path.trim_start().starts_with("archetype_id"));
     if !targets_archetype_id {
