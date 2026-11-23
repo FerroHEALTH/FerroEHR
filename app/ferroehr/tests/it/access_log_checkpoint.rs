@@ -582,10 +582,8 @@ async fn a_rolled_back_intake_leaves_no_entry_and_no_seal() {
     ferroehr::access_log::intake::take_in(
         &mut tx,
         &[intake],
-        &[],
         None,
         &std::collections::BTreeSet::new(),
-        &ferroehr::access_log::intake::Named::default(),
     )
     .await
     .expect("the intake write");

@@ -33,7 +33,6 @@ use crate::access_log::intake::{IndexRow, IntakeEntry};
 use super::chains::AuditChain;
 use super::writers::Pinned;
 use super::{AuditRecord, AuditStore, LearnedSets, RecordEnd, stored_record};
-use crate::access_log::projection::Projection;
 use crate::access_log::store::AccessLogStore;
 use crate::system_log::AuditError;
 use crate::system_log::event::{AuditEvent, EntryScope, EventOutcome};
@@ -63,13 +62,8 @@ pub(super) fn split(
     (rows, row_ends, entries)
 }
 
-/// The intake rows of a batch of entries: each one's uid, its row and its
-/// search tokens.
-pub(super) type EntryRows = (
-    Vec<uuid::Uuid>,
-    Vec<IntakeEntry>,
-    Vec<Vec<crate::access_log::intake::IntakeToken>>,
-);
+/// The intake rows of a batch of entries: each one's uid and its row.
+pub(super) type EntryRows = (Vec<uuid::Uuid>, Vec<IntakeEntry>);
 
 impl AuditStore {
     /// Write the entry of each of `records` into the intake on `conn`, each
@@ -86,16 +80,8 @@ impl AuditStore {
         records: Vec<AuditRecord>,
         reserved_by: Option<uuid::Uuid>,
     ) -> Result<(Vec<uuid::Uuid>, LearnedSets), AuditError> {
-        let (uids, intake, tokens) = self.entry_rows(writing, records).await?;
-        crate::access_log::intake::take_in(
-            conn,
-            &intake,
-            &tokens,
-            reserved_by,
-            &BTreeSet::new(),
-            &crate::access_log::intake::Named::default(),
-        )
-        .await?;
+        let (uids, intake) = Self::entry_rows(writing, records)?;
+        crate::access_log::intake::take_in(conn, &intake, reserved_by, &BTreeSet::new()).await?;
         Ok((uids, LearnedSets::default()))
     }
 
@@ -115,62 +101,36 @@ impl AuditStore {
         reservation: uuid::Uuid,
     ) -> Result<(), AuditError> {
         let entered = self.with_entries(writing, records).await?;
-        let (_, intake, tokens) = self.entry_rows(writing, entered).await?;
+        let (_, intake) = Self::entry_rows(writing, entered)?;
         self.group()
-            .write_on(conn, &intake, &tokens, Some(reservation))
+            .write_on(conn, &intake, Some(reservation))
             .await?;
         Ok(())
     }
 
-    /// The intake rows of the entries `records` carry, with each one's uid
-    /// and search tokens, in their order.
+    /// The intake rows of the entries `records` carry, with each one's uid,
+    /// in their order. The index row is read from the record of the access;
+    /// no projection is rendered on the request (#6322): the frontier round
+    /// renders the search tokens from the stored entry.
     ///
     /// # Errors
     /// As [`Self::intake_entries`], less the store's.
-    pub(super) async fn entry_rows(
-        &self,
+    pub(super) fn entry_rows(
         writing: &Pinned,
         records: Vec<AuditRecord>,
     ) -> Result<EntryRows, AuditError> {
-        let mut entered = Vec::with_capacity(records.len());
-        let mut tokens = Vec::with_capacity(records.len());
+        let mut uids = Vec::with_capacity(records.len());
+        let mut intake = Vec::with_capacity(records.len());
         for record in records {
-            let Some(entry) = record.entry else {
+            let Some(mut entry) = record.entry else {
                 continue;
             };
-            let under = writing.of(&record.event);
-            let digest = Self::registered_digest(&under)?;
-            let policy = under.compiled().await?;
-            let projection = Projection {
-                context: &policy.context,
-                categories: &policy.categories,
-            };
-            let (event, subject) = projection.record(&entry, 0)?;
-            let resource = crate::system_log::fhir::to_resource(
-                &event,
-                projection.context,
-                subject.as_deref(),
-            );
-            tokens.push(
-                tokens_of(resource, &event)
-                    .into_iter()
-                    .map(|token| crate::access_log::intake::IntakeToken {
-                        shares: super::AuditElement::shares(token.parameter),
-                        parameter: token.parameter,
-                        system: token.system,
-                        code: token.code,
-                    })
-                    .collect::<Vec<_>>(),
-            );
-            entered.push((entry, index_row(&event, subject, digest)));
-        }
-        let mut uids = Vec::with_capacity(entered.len());
-        let mut intake = Vec::with_capacity(entered.len());
-        for (mut entry, index) in entered {
+            let digest = Self::registered_digest(&writing.of(&record.event))?;
+            let index = index_row(&record.event, record.subject, digest);
             uids.push(uuid::Uuid::parse_str(entry.uid.value()).map_err(AuditError::EntryUid)?);
             intake.push(IntakeEntry::of(&mut entry, Some(index))?);
         }
-        Ok((uids, intake, tokens))
+        Ok((uids, intake))
     }
 
     /// `records`, each whose access writes an access-log entry carrying it:
@@ -422,7 +382,7 @@ pub(super) fn token_texts(ids: &[Vec<i32>]) -> Vec<String> {
 
 /// The index row of the entry whose record is `event`, written under the
 /// policy `digest`, its search tokens still to be filled in.
-fn index_row(event: &AuditEvent, subject: Option<String>, digest: Vec<u8>) -> IndexRow {
+pub(crate) fn index_row(event: &AuditEvent, subject: Option<String>, digest: Vec<u8>) -> IndexRow {
     let nonempty = |value: &str| (!value.is_empty()).then(|| value.to_owned());
     IndexRow {
         action: event.action.as_code(),
@@ -439,7 +399,6 @@ fn index_row(event: &AuditEvent, subject: Option<String>, digest: Vec<u8>) -> In
         // NOTE: no specification governs this: our own design; only a classified access names its
         // EHR in the index, as only its EHDS access record names it.
         ehr_id: event.category.as_ref().and(event.ehr_id.clone()),
-        search_tokens: String::new(),
         render_policy: digest,
     }
 }

@@ -86,7 +86,7 @@ const PROBE: &str = "(idle probe)";
 /// transaction (or a statement outside one) that runs any of them falls into
 /// a request's window by timing, so its bytes are kept apart from the
 /// requests' own ([`Ledger::background`]).
-const BACKGROUND: [&str; 14] = [
+const BACKGROUND: [&str; 16] = [
     STARTUP,
     "SELECT pg_advisory_xact_lock(hashtext('audit.access_log_index'), 0)",
     "SET search_path ",
@@ -101,6 +101,8 @@ const BACKGROUND: [&str; 14] = [
     "WITH x AS MATERIALIZED (SELECT pg_sequence_last_value(",
     "SELECT id, encode(content_digest, 'hex') FROM audit.access_log_entry WHERE id > ",
     "SELECT seq, encode(content_digest, 'hex') FROM audit.audit_event WHERE seq > ",
+    "SELECT s.last_id FROM audit.access_log_index_state ",
+    "SELECT DISTINCT p.digest FROM audit.access_log_entry ",
 ];
 
 /// What the relay moved, by the statement's text, its whitespace collapsed:
