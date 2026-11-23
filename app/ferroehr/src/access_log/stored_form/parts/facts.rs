@@ -7,8 +7,11 @@
 use super::assemble::RowColumns;
 
 /// The version of the stored form this build writes and its renderer reads
-/// (#6322): the row part, the shared part and the columns as [`whole`] joins
-/// them. A reader refuses a form it has no renderer for.
+/// (#6322).
+///
+/// The form is the row part, the shared part and the columns as
+/// [`super::assemble::whole`] joins them. A reader refuses a form it has no
+/// renderer for.
 pub const FORM: i16 = 1;
 
 /// The tag the facts digest of a stored form starts with.
