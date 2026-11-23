@@ -69,9 +69,6 @@ fn out_of_grammar_reason(q: &str) -> Option<&'static str> {
 /// Extract the contents of every `AsciiDoc` `----` listing block; a bare
 /// fragment is wrapped in a `SELECT … FROM EHR e WHERE <fragment>` shell by
 /// [`official_aql_corpus_parses`].
-///
-/// A delimiter is a line of four or more hyphens, and a block closes on the
-/// line identical to the one that opened it (Asciidoctor, "Delimited blocks").
 fn listing_blocks(doc: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut open: Option<&str> = None;
@@ -165,9 +162,6 @@ pub(crate) fn standard_queries() -> Vec<String> {
 }
 
 /// Parses one query and round-trips it through the printer.
-///
-/// The whole official corpus must satisfy parse → print → parse with an
-/// identical AST; the error is the failure message to record.
 fn round_trip_failure(query: &str) -> Result<(), String> {
     let ast = openehr_query::parser::parse_str(query).map_err(|e| e.to_string())?;
     let printed = openehr_query::printer::to_aql(&ast, None);

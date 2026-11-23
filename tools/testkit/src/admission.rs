@@ -84,9 +84,6 @@ pub(crate) async fn admit(
 
 /// Takes one of the `slots` slots of `class` on `conn`, waiting while none
 /// is free.
-///
-/// The search starts at a slot the backend's process id picks, so the
-/// processes that look at once do not all try the same one.
 async fn take(conn: &mut PgConnection, class: i32, slots: i32) -> Result<(), sqlx::Error> {
     loop {
         let taken: Option<i32> = sqlx::query_scalar(

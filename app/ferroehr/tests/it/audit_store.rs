@@ -1211,6 +1211,123 @@ async fn every_search_parameter_matches_what_the_document_says() {
     );
 }
 
+/// The ITI-81 token condition tests a token id once, through `search_keys`
+/// (#6373): on both chains every record's keys hold each of its search
+/// tokens, every other key lies outside the `integer` range a token id takes,
+/// and for every stored token id the keys select the same records as the
+/// tokens themselves.
+#[tokio::test]
+async fn a_token_id_selects_the_same_records_through_the_keys() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let policy = classifying_policy();
+    let compiled = policy.compile().expect("compile");
+    let store = AuditStore::new(pool.clone()).with_render_policy(policy);
+    let records: Vec<AuditRecord> = every_kind_of_record(&compiled)
+        .iter()
+        .map(|(event, subject)| record(event, subject.as_deref()))
+        .collect();
+    store
+        .insert_batch(&records, &[])
+        .await
+        .expect("batch insert");
+    store.catch_up().await.expect("the index catches up");
+
+    let chains: Vec<String> = sqlx::query_scalar(
+        "SELECT DISTINCT chain FROM audit.audit_record \
+          WHERE cardinality(search_tokens) > 0 ORDER BY chain",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("the chains");
+    assert_eq!(chains, ["access_log", "system"], "both chains carry tokens");
+    for relation in [
+        "audit.audit_record",
+        "audit.system_search",
+        "audit.access_log_index",
+        "audit.access_log_search(0)",
+    ] {
+        let missing: i64 = sqlx::query_scalar(AssertSqlSafe(format!(
+            "SELECT count(*) FROM {relation} r \
+              WHERE NOT r.search_keys @> coalesce(r.search_tokens::bigint[], '{{}}')"
+        )))
+        .fetch_one(&pool)
+        .await
+        .expect("the keys are read");
+        assert_eq!(missing, 0, "{relation}: the keys hold every token");
+        let inside: i64 = sqlx::query_scalar(AssertSqlSafe(format!(
+            "SELECT count(*) FROM {relation} r, unnest(r.search_keys) AS k(key) \
+              WHERE k.key BETWEEN -2147483648 AND 2147483647 \
+                AND NOT k.key = ANY (coalesce(r.search_tokens::bigint[], '{{}}'))"
+        )))
+        .fetch_one(&pool)
+        .await
+        .expect("the keys are read");
+        assert_eq!(
+            inside, 0,
+            "{relation}: no column key lies in the token range"
+        );
+    }
+    // The column keys are column * 2^33 plus a 32-bit hash, for the columns 1 and 2 alone.
+    let bounds: (i64, i64, i64) = sqlx::query_as(
+        "SELECT 1::bigint * 8589934592 - 2147483648, 2147483647::bigint, \
+                (SELECT count(*) FROM pg_catalog.pg_proc p \
+                  JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace \
+                 WHERE n.nspname = 'audit' AND p.proname = 'search_keys' \
+                   AND p.prosrc LIKE '%search_key(1, p_request_id)%' \
+                   AND p.prosrc LIKE '%search_key(2, p_resource_id)%') \
+          FROM audit.search_key(1, 'x') AS k(key) \
+         WHERE (SELECT p.prosrc FROM pg_catalog.pg_proc p \
+                  JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace \
+                 WHERE n.nspname = 'audit' AND p.proname = 'search_key') \
+               LIKE '%p_column::pg_catalog.int8 * 8589934592 + pg_catalog.hashtext(p_value)%'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the key functions are read");
+    assert!(
+        bounds.0 > bounds.1 && bounds.2 == 1,
+        "the smallest column key lies above every token id: {bounds:?}"
+    );
+
+    let tokens: Vec<i32> = sqlx::query_scalar(
+        "SELECT DISTINCT t FROM audit.audit_record, unnest(search_tokens) AS t ORDER BY t",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("the token ids");
+    assert!(tokens.len() > 10, "the records carry tokens: {tokens:?}");
+    for token in tokens {
+        let selected = |condition: &'static str| {
+            let pool = pool.clone();
+            async move {
+                sqlx::query_scalar::<_, String>(AssertSqlSafe(format!(
+                    "SELECT coalesce(string_agg(chain || ':' || chain_seq, ',' \
+                                     ORDER BY chain, chain_seq), '') \
+                       FROM audit.audit_record WHERE {condition}"
+                )))
+                .bind(token)
+                .fetch_one(&pool)
+                .await
+                .expect("the records are selected")
+            }
+        };
+        let by_keys = selected("search_keys && ARRAY[$1::bigint]").await;
+        assert!(!by_keys.is_empty(), "token {token} selects a record");
+        assert_eq!(
+            by_keys,
+            selected("search_tokens && ARRAY[$1::integer]").await,
+            "token {token}: the keys select what the tokens select"
+        );
+        assert_eq!(
+            by_keys,
+            selected("search_keys && ARRAY[$1::bigint] AND search_tokens && ARRAY[$1::integer]")
+                .await,
+            "token {token}: the keys select what both tests select"
+        );
+    }
+}
+
 /// A classified access under [`classifying_policy`] with its own request id
 /// and object, of `action` (a read or a create).
 fn classified_access(
@@ -1526,8 +1643,12 @@ async fn retention_keeps_a_token_an_access_log_entry_names() {
         .insert(&access, None)
         .await
         .expect("insert the access");
+    store
+        .catch_up()
+        .await
+        .expect("the frontier round renders the entry's tokens into the index (#6322)");
     let shared: i32 = sqlx::query_scalar(
-        "SELECT t.id FROM audit.access_log_entry e, unnest(e.search_tokens) AS u(id) \
+        "SELECT t.id FROM audit.access_log_index e, unnest(e.search_tokens) AS u(id) \
            JOIN audit.audit_search_token t ON t.id = u.id \
           WHERE t.parameter = 'agent.identifier' AND t.code = 'alice'",
     )

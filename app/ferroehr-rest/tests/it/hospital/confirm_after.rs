@@ -17,7 +17,7 @@ use opentelemetry_sdk::metrics::data::{AggregatedMetrics, MetricData, ScopeMetri
 use opentelemetry_sdk::metrics::{InMemoryMetricExporter, PeriodicReader, SdkMeterProvider};
 use serde_json::{Value, json};
 
-use crate::common::{BASE, EXT};
+use crate::common::{BASE, EXT, FHIR};
 use crate::hospital::abac::answered;
 use crate::hospital::build::{composition, world};
 use crate::hospital::ledger::{Expect, Ledger};
@@ -553,5 +553,42 @@ async fn an_ehr_status_read_confirms_the_policy_on_its_own_statement() {
         reruns(&provider, &exporter),
         before + 1,
         "the confirmed copy decides the next read at once"
+    );
+}
+
+/// An ITI-81 page confirms its policy copies by the revisions its own page
+/// statement selects, where the audit store shares the clinical database
+/// (#6320): a copy in force answers in one run, and a policy change it never
+/// heard of runs the search once more.
+#[tokio::test]
+async fn an_iti81_page_confirms_the_policy_on_its_own_statement() {
+    let (provider, exporter) = instruments();
+    let mut world = Box::pin(world()).await;
+    let (other, _drain, _elsewhere) = deaf(&world).await;
+    let uri = format!("{FHIR}/AuditEvent?date=ge2026-01-01&_count=20");
+    let search = || call(&other, ROOT, "GET", &uri, None, None);
+    let first = search().await;
+    assert_eq!(first.status, StatusCode::OK, "{}", first.body);
+    let before = reruns(&provider, &exporter);
+    assert_eq!(search().await.status, StatusCode::OK);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before,
+        "a copy in force runs once"
+    );
+
+    world.policy = classify_the_encounter(&world).await;
+    let again = search().await;
+    assert_eq!(again.status, StatusCode::OK, "{}", again.body);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "the search ran once more, and only once"
+    );
+    assert_eq!(search().await.status, StatusCode::OK);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "the confirmed copy decides the next search at once"
     );
 }

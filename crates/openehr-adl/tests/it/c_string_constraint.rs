@@ -3,8 +3,6 @@
 
 //! `C_STRING.constraint` is a list of fixed strings or one regex, never both
 //! (`ADL2/master04.5-cadl_primitive_types.adoc` §Constraints on String).
-//!
-//! ADL 2 cannot spell a mixture, so the refusing cases build it on a parsed model.
 
 #![allow(
     clippy::panic,

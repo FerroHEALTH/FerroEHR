@@ -15,9 +15,6 @@ use std::path::{Path, PathBuf};
 /// Returns every `json!` invocation under `<manifest_dir>/src` whose body
 /// carries a `"_type"` key, as sorted `(crate-relative path, 1-based line)`.
 ///
-/// Everything from a file's first line-initial `#[cfg(test)]` on is skipped as
-/// unit-test fixture territory.
-///
 /// # Errors
 /// Any I/O failure walking or reading the crate's `src/` tree.
 pub fn offending_sites(manifest_dir: &str) -> std::io::Result<Vec<(String, usize)>> {

@@ -86,9 +86,6 @@ pub(super) fn push_issue(
 /// Run the basic-integrity catalogue over `v` in the order of
 /// `master08-validation.adoc` §Phase 1: identification, structure, then
 /// terminology, which needs a clean terminology structure.
-///
-/// `dialect` selects the catalogue; see [`validate_source_integrity`] for the
-/// ADL 1.4 subset.
 fn run_integrity_checks(
     v: &ArchetypeView<'_>,
     repo: Option<&ArchetypeRepository>,
@@ -153,9 +150,6 @@ fn run_integrity_checks(
 
 /// Validate an assembled [`Archetype`] against the ADL2 basic-integrity
 /// catalogue (`master08` §Phase 1).
-///
-/// With `repo` the parent-dependent checks (VACSD, VASID, VALC, VTPL) run in
-/// full. The source-level checks (VOKU) need [`validate_source_integrity`].
 #[must_use]
 pub fn validate_integrity(
     archetype: &Archetype,

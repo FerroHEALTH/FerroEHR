@@ -527,7 +527,14 @@ fn service_error_outcome(e: ServiceError) -> Response {
     let refused = RestError::from(e);
     let status = refused.status();
     let message = crate::overview::error::detail_of(refused.error());
-    operation_outcome(status, issue_type(status), &message)
+    let mut response = operation_outcome(status, issue_type(status), &message);
+    // NOTE: RFC 9110 §10.2.3, a 503 here is transient, as every other 503 of the server says.
+    if status == StatusCode::SERVICE_UNAVAILABLE {
+        response
+            .headers_mut()
+            .insert(http::header::RETRY_AFTER, HeaderValue::from_static("1"));
+    }
+    response
 }
 
 /// A refusal written outside this module on a FHIR route, such as the

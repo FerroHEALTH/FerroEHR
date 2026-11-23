@@ -98,20 +98,12 @@ fn token_condition(found: &TokenMatch) -> sea_query::Cond {
         let ids: Vec<String> = ids.iter().map(ToString::to_string).collect();
         format!("{{{}}}", ids.join(","))
     };
-    // NOTE: our own design (#6202), a token id is a key of the index and an element of the row's
-    // own tokens alike: the index reads the first, and a scan in time order tests the second,
-    // which costs less than the keys computed again for every row it passes.
+    // NOTE: our own design (#6373), token ids are `integer` keys and column keys lie above them.
     let carries = |ids: &[i32]| {
-        let ids = ids_of(ids);
-        sea_query::Cond::all()
-            .add(Expr::cust_with_values(
-                "search_keys && CAST($1 AS bigint[])",
-                [ids.clone()],
-            ))
-            .add(Expr::cust_with_values(
-                "search_tokens && CAST($1 AS integer[])",
-                [ids],
-            ))
+        sea_query::Cond::all().add(Expr::cust_with_values(
+            "search_keys && CAST($1 AS bigint[])",
+            [ids_of(ids)],
+        ))
     };
     let mut any = sea_query::Cond::any();
     if !found.ids.is_empty() {

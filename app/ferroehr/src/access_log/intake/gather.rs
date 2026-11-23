@@ -7,8 +7,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::ids::TokenIds;
-use super::{IntakeEntry, IntakeToken, take_in};
+use super::{IntakeEntry, take_in};
 use crate::access_log::store::AccessLogError;
 use crate::db::acquire::acquire;
 use crate::telemetry::stage::{self, Stage};
@@ -16,7 +15,6 @@ use crate::telemetry::stage::{self, Stage};
 /// One request's entries waiting for the gathered intake write.
 pub(super) struct Job {
     pub(super) entries: Vec<IntakeEntry>,
-    pub(super) tokens: Vec<Vec<IntakeToken>>,
     pub(super) done: tokio::sync::oneshot::Sender<Result<(), std::sync::Arc<AccessLogError>>>,
 }
 
@@ -171,12 +169,10 @@ impl std::fmt::Debug for Job {
     }
 }
 
-/// What the gathered writers learned the store holds: the shared parts and
-/// the ids of the search tokens and shared sets.
+/// What the gathered writers learned the store holds: the shared parts.
 #[derive(Debug, Default)]
 pub(super) struct Known {
     parts: StoredParts,
-    ids: TokenIds,
 }
 
 /// One writer's loop, until every sender is gone: it takes what waits, and
@@ -223,19 +219,15 @@ pub(super) async fn gather(
 /// written twice and none is answered as written when it may not be.
 pub(super) async fn write_jobs(pool: &sqlx::PgPool, known: &Known, jobs: Vec<Job>, count: usize) {
     let mut entries = Vec::with_capacity(count);
-    let mut tokens = Vec::with_capacity(count);
     let mut spans = Vec::with_capacity(jobs.len());
     let mut answers = Vec::with_capacity(jobs.len());
     for job in jobs {
         let start = entries.len();
-        let mut job_tokens = job.tokens;
-        job_tokens.resize(job.entries.len(), Vec::new());
         entries.extend(job.entries);
-        tokens.extend(job_tokens);
         spans.push(start..entries.len());
         answers.push(job.done);
     }
-    let written = write_retrying(pool, known, &entries, &tokens).await;
+    let written = write_retrying(pool, known, &entries).await;
     match written {
         Err(refused) if answers.len() > 1 && refused_by_database(&refused) => {
             tracing::warn!(
@@ -244,11 +236,9 @@ pub(super) async fn write_jobs(pool: &sqlx::PgPool, known: &Known, jobs: Vec<Job
                 "the gathered access-log intake write was refused; writing each request on its own"
             );
             for (answer, span) in answers.into_iter().zip(spans) {
-                let own = match (entries.get(span.clone()), tokens.get(span)) {
-                    (Some(own), Some(own_tokens)) => {
-                        write_retrying(pool, known, own, own_tokens).await
-                    }
-                    _ => Err(AccessLogError::Gathered(None)),
+                let own = match entries.get(span) {
+                    Some(own) => write_retrying(pool, known, own).await,
+                    None => Err(AccessLogError::Gathered(None)),
                 };
                 // NOTE: our own design (#5770), a request that stopped waiting needs no answer.
                 let _gone = answer.send(own.map_err(std::sync::Arc::new));
@@ -274,10 +264,9 @@ pub(super) async fn write_retrying(
     pool: &sqlx::PgPool,
     known: &Known,
     entries: &[IntakeEntry],
-    tokens: &[Vec<IntakeToken>],
 ) -> Result<(), AccessLogError> {
     let mut conn = acquire(pool).await?;
-    write_known(&mut conn, known, entries, tokens, None).await
+    write_known(&mut conn, known, entries, None).await
 }
 
 /// Writes `entries` on `conn`, which holds no transaction, in one statement
@@ -287,17 +276,14 @@ pub(super) async fn write_retrying(
 /// refused statement committed nothing, so running it again writes each
 /// entry once.
 ///
-/// The parts `known` knows stored are left out of the statement and the
-/// search tokens whose ids it knows are named by id; when the store no
-/// longer holds such a part (SQLSTATE `23503`) or the ids are of another
-/// generation (`FE001`), they are forgotten and the statement runs again
-/// with every part or with the tokens to resolve. A committed statement
-/// teaches `known` the parts it stored or kept and the ids it resolved.
+/// The parts `known` knows stored are left out of the statement; when the
+/// store no longer holds such a part (SQLSTATE `23503`), they are forgotten
+/// and the statement runs again with every part. A committed statement
+/// teaches `known` the parts it stored or kept.
 pub(super) async fn write_known(
     conn: &mut sqlx::PgConnection,
     known: &Known,
     entries: &[IntakeEntry],
-    tokens: &[Vec<IntakeToken>],
     reserved_by: Option<uuid::Uuid>,
 ) -> Result<(), AccessLogError> {
     let today = jiff::Timestamp::now()
@@ -306,29 +292,12 @@ pub(super) async fn write_known(
     let mut stored = known.parts.stored(entries, today);
     let mut attempt = 1;
     loop {
-        let named = known.ids.resolve(entries, tokens);
-        let unnamed = named.search_tokens.len() < entries.len()
-            || named.search_tokens.iter().any(Option::is_none);
-        let written = async {
-            let statement = take_in(&mut *conn, entries, tokens, reserved_by, &stored, &named);
-            stage::instrument(Stage::Gather, statement).await?;
-            // NOTE: our own design (#6242), the ids the committed statement resolved are learned,
-            // and a failure to learn them never fails the write.
-            if unnamed && let Err(failed) = known.ids.learn(&mut *conn, tokens).await {
-                tracing::warn!(error = %failed, "the search token ids could not be learned; the next write resolves them");
-            }
-            Ok::<(), AccessLogError>(())
-        }
-        .await;
-        match written {
+        let statement = take_in(&mut *conn, entries, reserved_by, &stored);
+        match stage::instrument(Stage::Gather, statement).await {
             Err(refused) if !stored.is_empty() && unknown_part(&refused) => {
                 tracing::warn!(error = %refused, "a shared part the intake knew stored is gone; it is written again");
                 known.parts.forget(&stored);
                 stored.clear();
-            }
-            Err(refused) if stale_ids(&refused) => {
-                tracing::info!("the search token ids moved on; the intake reads them again");
-                known.ids.forget();
             }
             Err(refused) if attempt < ATTEMPTS && transient(&refused) => {
                 tracing::warn!(attempt, error = %refused, "the access-log intake write runs again");
@@ -342,12 +311,6 @@ pub(super) async fn write_known(
             written => return written,
         }
     }
-}
-
-/// Whether the database refused `error` because the search token ids the
-/// writer named are of another generation (`audit.access_log_intake_take`).
-pub(super) fn stale_ids(error: &AccessLogError) -> bool {
-    sqlstate(error).is_some_and(|code| code == "FE001")
 }
 
 /// Whether the database refused `error` because an entry names a shared part

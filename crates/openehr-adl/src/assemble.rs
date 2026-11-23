@@ -2,11 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Assembles a parsed ADL artefact into the generated AOM2 object model.
-//!
-//! The ODIN sections, the cADL `definition` and the `rules` fold into an
-//! [`Archetype`] (`ADL2/master07.07` to `master07.14`; `AOM2/master03`; BASE
-//! `resource/`). A type error in a section raises [`SyntaxErrorCode::Sdinv`] or
-//! its `SA**` code.
 
 use std::collections::BTreeMap;
 

@@ -82,6 +82,7 @@ pub(super) async fn resolve_delete(
         // express.
         stable_compatible: true,
         origins: Vec::new(),
+        episodes: Vec::new(),
         attestations: Vec::new(),
         is_first_folder: false,
         time_committed: at.known_now.unwrap_or(next.now),
@@ -118,6 +119,8 @@ struct Prepared {
     rendered: Rendered,
     stable_compatible: bool,
     origins: Vec<String>,
+    /// The episodes a COMPOSITION is placed in.
+    episodes: Vec<crate::versioning::episode::EpisodeKey>,
     /// SHA-256 over the canonical body with the root `uid` removed
     /// ([`crate::storage::render::content_digest`]).
     content_digest: [u8; 32],
@@ -177,6 +180,7 @@ impl Prepared {
             preceding: placed.preceding,
             stable_compatible: self.stable_compatible,
             origins: self.origins,
+            episodes: self.episodes,
             attestations,
             is_first_folder: placed.is_first_folder,
             time_committed: placed.time_committed,
@@ -260,6 +264,11 @@ fn prepare_body(
     // NOTE: the party hooks read the one rendering of the body, whichever
     // form it was committed as (#6003).
     let read = crate::versioning::tree::Indexed::root(&rendered);
+    let episodes = if kind == Kind::Composition {
+        crate::versioning::episode::placed(read)?
+    } else {
+        Vec::new()
+    };
     let party_facts = kind.is_demographic().then(|| {
         Box::new(crate::party_binding::derive::Facts::of(
             kind,
@@ -273,6 +282,7 @@ fn prepare_body(
         rendered,
         stable_compatible,
         origins,
+        episodes,
         content_digest,
         party_facts,
         party_refs,

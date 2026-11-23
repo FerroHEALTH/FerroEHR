@@ -537,6 +537,9 @@ struct ResolvedWrite {
     /// The distinct origins of the body, derived at commit
     /// ([`crate::versioning::origins`]); empty on a logical delete.
     origins: Vec<String>,
+    /// The episodes a COMPOSITION is placed in ([`super::episode::placed`]);
+    /// empty when unplaced, on a logical delete and for every other kind.
+    episodes: Vec<super::episode::EpisodeKey>,
     /// `UPDATE_VERSION.attestations` committed with this version.
     attestations: Vec<attestation::AttestationInput>,
     /// SHA-256 over the canonical body with the root `uid` removed

@@ -43,9 +43,6 @@ pub(crate) fn corpus_files() -> Vec<PathBuf> {
 
 /// The corpus-relative key of `path`: the path with its corpus root
 /// (`tests/vendor/` or `tests/fixtures/`) stripped and separators normalized.
-///
-/// One derivation for every gate, so an absolute, machine-dependent path can
-/// never reach a snapshot manifest or an exclusion lookup.
 pub(crate) fn corpus_rel(path: &Path) -> String {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
     let rel = [
@@ -60,11 +57,6 @@ pub(crate) fn corpus_rel(path: &Path) -> String {
 
 /// The file a gate should actually read for the vendored fixture at `path`:
 /// its repo-authored VALID TWIN when one exists, else `path` itself.
-///
-/// A gate that walks a vendored directory DIRECTLY (rather than through
-/// [`corpus_files`] + [`excluded`]) still has to honour the twins adjudication,
-/// or it re-reads a document the corpus gates already refused. Routing through
-/// here keeps one substitution rule for every gate.
 pub(crate) fn twinned(path: &Path) -> PathBuf {
     let Some(stem) = path.file_stem().and_then(std::ffi::OsStr::to_str) else {
         return path.to_path_buf();
@@ -183,14 +175,10 @@ pub(crate) fn excluded(name: &str) -> Option<&'static str> {
             "defective fixture: two ENTRY nodes hoist FEEDER_AUDIT.feeder_system_audit onto \
              the ENTRY (valid twin in tests/fixtures/twins/, refusal in fixture_twins.rs)",
         ),
-        // DEFECTIVE upstream fixture class, adjudicated (14 documents): a
-        // PLACEHOLDER `OBJECT_VERSION_ID`
-        // (`__THIS_SHOULD_BE_MODIFIED_BY_THE_TEST_::ehrbase.org::1`) whose
-        // `object_id` matches none of the three `uid` productions of BASE
-        // `base_types/master05-identification_package.adoc` §Syntaxes. Each is
-        // kept vendored verbatim as the INVALID twin, with its corrected VALID
-        // twin in `tests/fixtures/twins/`; asserted refusals in
-        // `fixture_twins.rs`.
+        // DEFECTIVE upstream fixture class (14 documents): a placeholder
+        // `OBJECT_VERSION_ID` matching no `uid` production of BASE
+        // `base_types/master05-identification_package.adoc` §Syntaxes; valid
+        // twins in `tests/fixtures/twins/`, refusals in `fixture_twins.rs`.
         "composition/canonical_json/alternative_types.json"
         | "composition/canonical_json/duration_tests.json"
         | "composition/canonical_json/laboratory_report.json"

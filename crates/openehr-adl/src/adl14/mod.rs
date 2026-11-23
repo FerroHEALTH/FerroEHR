@@ -10,11 +10,6 @@
 //! node ids (`master07.04` §Node Identifier Codes) and `v1.0.0` versions
 //! (`master07.05`); the meta-data half follows
 //! `ADL1.4/masterAppB-extended_metadata.adoc` and `AOM2/master01-preface.adoc`.
-//!
-//! Pipeline: the 1.4 cADL front end ([`lower`], [`domain`]); the 1.4-shaped
-//! parse ([`crate::assemble::parse_artefact`], with [`opt`] decomposing an OPT
-//! per root); the converter core ([`convert`]); the [`differ`] for a specialised
-//! source; and the conversion [`log`].
 
 pub(crate) mod authored_flat;
 mod code_shift;

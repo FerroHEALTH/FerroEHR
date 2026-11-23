@@ -1752,6 +1752,18 @@ the identifier it carries, or whose `covers_for` names no party of its
 `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v2.0.0` as examples
 ([Default demographic definitions](installation/default-demographic-definitions.md)).
 
+**Placing a composition in an episode of care.** A COMPOSITION names the
+episodes of care it belongs to with an `ELEMENT` anywhere in its
+`context.other_context` whose `name` is the code `episode` of
+`openehr_access` and whose value is the episode's `DV_IDENTIFIER` (`issuer`
+and `id`), as the care delivery environment identifies it. FerroEHR keeps
+the episodes of each composition's current version; no access decision
+reads them yet. A persistent composition (`openehr::431`) that names an
+episode, and an `episode` element without a `DV_IDENTIFIER` carrying an
+issuer and an id, are refused `422` on a commit, a CONTRIBUTION, an EHR
+Extract import and an archive load. Your template must admit the element,
+for example in a CLUSTER of an `other_context` slot.
+
 **Group memberships of a provider.** A `PARTY_RELATIONSHIP` in an
 `ORGANISATION`'s `relationships` carrying `MBR` of `HL7_RoleClass` makes that provider a
 member of the `GROUP` its `target` names, such as the providers of a

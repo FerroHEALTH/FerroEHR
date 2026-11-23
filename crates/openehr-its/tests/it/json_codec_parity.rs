@@ -13,25 +13,6 @@
 )]
 //! The **canonical-JSON codec contract** gate: byte hazards + `FromJson`
 //! tolerance rules.
-//!
-//! Originally (R3/R4a) this gate proved the emitted `ToJson`/`FromJson` codec
-//! byte-identical to the retired `#[derive(OpenEhrType)]` serde path. That serde
-//! path is now GONE — `openehr_its::json::to_canonical_json`/`from_canonical_json`
-//! ARE the native codec — so a serde-vs-codec comparison is vacuous. Retargeted:
-//!
-//! - The corpus determinism (parse → re-serialize the whole vendored corpus, byte
-//!   stable) is the R0 manifest snapshot in `canonical_contract.rs`; the two
-//!   redundant corpus parity tests that lived here are folded into it.
-//! - The **byte-hazard cases** (float lexemes, string escaping, `None`/empty
-//!   omission, the `Interval` default flags, typed-literal enums) are retargeted
-//!   from `serde == codec` to **codec-vs-pinned-bytes** — the exact-byte
-//!   assertion strength is preserved, now pinned to a literal rather than to the
-//!   deleted serde output.
-//! - The eight **`FromJson` tolerance rules** (unknown keys ignored, out-of-order
-//!   members, `_type` discipline, abstract/concrete polymorphic slots,
-//!   `Option`/`Vec` + `Interval` defaults, RM number typing, string escapes) are
-//!   asserted directly on the codec reader (the redundant second serde read is
-//!   dropped; every semantic assertion is kept).
 
 use openehr_its::json::{from_canonical_json, to_canonical_json};
 use openehr_rm::prelude::{
@@ -69,14 +50,9 @@ fn float_and_integer_lexemes() {
         &q2,
         r#"{"_type":"DV_QUANTITY","magnitude":3.14159265,"units":"mm"}"#,
     );
-    // An exponent-form real. NOTE: no openEHR spec governs the REAL lexeme — our
-    // own design/extension; the canonical form is `serde_json`'s
-    // shortest-round-trip rendering, which writes a SIGNED exponent (`1e+21`).
-    // RFC 8259 §6 admits both `e21` and `e+21` for the same value; pinning
-    // serde_json's is what makes our output byte-identical to the ecosystem
-    // reference encoder, and the exponent form is only reached outside the
-    // decimal window no clinical quantity leaves (the R0 corpus manifest is
-    // unaffected). Assert the deterministic codec output.
+    // An exponent-form real. NOTE: no openEHR spec governs the REAL lexeme (our
+    // own design): the canonical form is `serde_json`'s signed exponent
+    // (`1e+21`), which RFC 8259 §6 admits.
     let q3: DvQuantity =
         from_canonical_json(r#"{"_type":"DV_QUANTITY","magnitude":1e21,"units":"mm"}"#).unwrap();
     assert_bytes(
@@ -172,10 +148,7 @@ fn typed_literal_enum_including_other() {
     assert_eq!(to_canonical_json(&ProportionKind::from_value(99)), "99");
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// `FromJson` tolerance rules — asserted directly on the native codec reader
-// (verbatim the retired derive's rules; the redundant second serde read is gone).
-// ════════════════════════════════════════════════════════════════════════════
+// ════ `FromJson` tolerance rules, asserted on the native codec reader ════
 
 /// A minimal `DV_QUANTITY` JSON (mandatory fields only).
 const QTY: &str = r#"{"_type":"DV_QUANTITY","magnitude":5,"units":"mm"}"#;

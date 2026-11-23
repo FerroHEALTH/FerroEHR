@@ -14,10 +14,6 @@ use crate::aom::interval::Bounds;
 
 /// The openEHR RM 1.2.0 of [`ProductionRmModel`] extended by further classes.
 ///
-/// The classes belong to packages that are no RM release, each given as a
-/// class table in the shape of the generated RM table, such as a draft change
-/// proposal's own classes.
-///
 /// An extension class is found before an RM class of the same name, may
 /// inherit from RM classes and may be the type of an RM attribute it
 /// conforms to, which is the RM adaptation an archetype over such a package

@@ -11,10 +11,6 @@
 //! The RFC 8785 writer as it stood before the fast paths of #5682, kept as the
 //! reference the current writer is held byte-identical to and timed against
 //! (`tests/it/canonical_fast_path.rs`, `benches/canonical_form.rs`).
-//!
-//! It scans strings by character, escapes a control character through
-//! `write!`, writes every number through `ryu-js`, and sorts names by their
-//! UTF-16 code units. Only finite numbers reach it, so it has no error path.
 
 use std::fmt::Write as _;
 

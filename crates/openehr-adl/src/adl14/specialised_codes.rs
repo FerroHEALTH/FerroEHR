@@ -28,10 +28,6 @@ use crate::hrid::raw_id_specialisation_depth;
 /// `parent` does not define with a specialisation depth other than the
 /// child's own.
 ///
-/// The child's depth is the one its identifier states
-/// ([`raw_id_specialisation_depth`]). A child that specialises nothing, or an artefact that is not an
-/// authored archetype, passes.
-///
 /// # Errors
 ///
 /// [`ConvertError::UndottedNewCodes`] naming every such code, in code order.
