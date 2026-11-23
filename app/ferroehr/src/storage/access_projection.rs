@@ -250,11 +250,16 @@ fn observe_revisions(row: &sqlx::postgres::PgRow) -> Result<(), sqlx::Error> {
     {
         crate::policy_register::observed::observe(policy, definitions);
     }
-    let party = match row.try_get::<Option<(i64, i64, i64)>, _>(PARTY_REVISIONS) {
-        Ok(party) => party,
-        // NOTE: sqlx Error::ColumnNotFound, only a statement of a ride reads the party revisions.
-        Err(sqlx::Error::ColumnNotFound(_)) => None,
-        Err(error) => return Err(error),
+    // Outside a ride no statement selects them, and a missing column's error is an allocation.
+    let party = if crate::party_binding::request::riding() {
+        match row.try_get::<Option<(i64, i64, i64)>, _>(PARTY_REVISIONS) {
+            Ok(party) => party,
+            // NOTE: sqlx Error::ColumnNotFound, only a ride's statement reads the party revisions.
+            Err(sqlx::Error::ColumnNotFound(_)) => None,
+            Err(error) => return Err(error),
+        }
+    } else {
+        None
     };
     if let Some((grants, facts, bindings)) = party {
         crate::party_binding::request::observe(
