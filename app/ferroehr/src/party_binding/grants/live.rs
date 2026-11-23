@@ -160,6 +160,9 @@ pub struct LiveGrants {
     /// catches up with the store (#5806).
     #[cfg(test)]
     held_back: AtomicBool,
+    /// The full loads this copy ran, so a test counts them (#6343).
+    #[cfg(test)]
+    loads: std::sync::atomic::AtomicUsize,
     /// The listener on [`CHANNEL`].
     listened: Arc<Listened>,
     /// The subjects' care relationships and the teams' patients held.
@@ -197,6 +200,8 @@ impl LiveGrants {
             installing: tokio::sync::Mutex::new(()),
             #[cfg(test)]
             held_back: AtomicBool::new(false),
+            #[cfg(test)]
+            loads: std::sync::atomic::AtomicUsize::new(0),
         }
     }
 
@@ -315,14 +320,27 @@ impl LiveGrants {
                 facts: facts_revision,
                 ..
             } = store::revisions(&mut conn).await?;
+            // NOTE: our own design (#6343), a refresh queued behind one that installed the
+            // revision it read reads nothing more.
             if Some(revision) != self.revision() {
-                kind = "grants";
                 let _installing = crate::db::acquire::awaiting(self.installing.lock()).await;
+                if self.revision().is_some_and(|held| held >= revision) {
+                    return Ok(());
+                }
+                kind = "grants";
+                #[cfg(test)]
+                self.loads.fetch_add(1, Ordering::AcqRel);
                 let loaded = store::load(&mut conn).await?;
                 self.install(loaded);
             } else if Some(facts_revision) != self.facts_revision() {
-                kind = "facts";
                 let _installing = crate::db::acquire::awaiting(self.installing.lock()).await;
+                if self
+                    .facts_revision()
+                    .is_some_and(|held| held >= facts_revision)
+                {
+                    return Ok(());
+                }
+                kind = "facts";
                 let since = self.facts_revision();
                 let changed = read_facts(&mut conn, since).await?;
                 // NOTE: our own design (#5806, #6074), the care copy applies what changed before the
@@ -777,6 +795,33 @@ mod tests {
             in_force(&row("import_everything"), &ceiling, today, now),
             None
         );
+    }
+
+    /// Refreshes that all found the copy stale and queued on `installing` run
+    /// one load between them: each after the first finds the revision it
+    /// read installed (#6343).
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn concurrent_stale_refreshes_make_one_load() {
+        let db = testkit::db().await.expect("testkit database");
+        let pool = crate::db::domain_pool_from(&db.pool(), Domain::Party);
+        let live = Arc::new(LiveGrants::new(pool));
+        let gate = live.installing.lock().await;
+        let refreshes: Vec<_> = (0..6)
+            .map(|_| {
+                let live = Arc::clone(&live);
+                tokio::spawn(async move { live.refresh().await })
+            })
+            .collect();
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        drop(gate);
+        for refresh in refreshes {
+            refresh
+                .await
+                .expect("the refresh ends")
+                .expect("the store answers");
+        }
+        assert_eq!(live.loads.load(Ordering::Acquire), 1, "one load");
+        assert!(live.revision().is_some(), "the revision is installed");
     }
 
     #[tokio::test]

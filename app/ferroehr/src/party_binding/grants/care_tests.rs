@@ -246,6 +246,59 @@ async fn a_census_past_the_bound_is_answered_and_never_held() {
     assert_eq!(copy.held().teams.entries, 0);
 }
 
+/// Concurrent misses of one subject share one store read and are all
+/// answered what the store holds (#6342); a read that holds nothing, here a
+/// census past the bound, leaves each miss to read on its own.
+#[tokio::test]
+async fn concurrent_misses_of_one_key_make_one_store_read() {
+    const MISSES: usize = 16;
+    let copy = CareCopy::bounded(CAP, CENSUS_BYTES);
+    let reads = AtomicUsize::new(0);
+    let subject = Uuid::now_v7();
+    let misses = (0..MISSES).map(|_| {
+        copy.hold(
+            &copy.subjects,
+            subject,
+            async {
+                reads.fetch_add(1, Ordering::Relaxed);
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                Ok::<_, Infallible>(relationships(subject))
+            },
+            |_| true,
+        )
+    });
+    for answer in futures::future::join_all(misses).await {
+        assert_eq!(answer.expect("the read succeeds"), relationships(subject));
+    }
+    assert_eq!(reads.load(Ordering::Relaxed), 1, "one store read");
+
+    let team = Uuid::now_v7();
+    let large = Arc::new(census(team, 100, 1));
+    let bound = large.bytes() - 1;
+    let copy = CareCopy::bounded(SUBJECTS, bound);
+    let reads = AtomicUsize::new(0);
+    let misses = (0..4).map(|_| {
+        copy.hold(
+            &copy.teams,
+            team,
+            async {
+                reads.fetch_add(1, Ordering::Relaxed);
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                Ok::<_, Infallible>(Arc::clone(&large))
+            },
+            |census| census.bytes() <= bound,
+        )
+    });
+    for answer in futures::future::join_all(misses).await {
+        assert_eq!(answer.expect("the read succeeds").cared, large.cared);
+    }
+    assert_eq!(
+        reads.load(Ordering::Relaxed),
+        4,
+        "a census never held is read by each"
+    );
+}
+
 /// One statement of a commit, with the uuids and the texts it binds in turn.
 type Statement<'a> = (&'a str, Vec<Uuid>, Vec<&'a str>);
 
