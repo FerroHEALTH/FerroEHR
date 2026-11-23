@@ -468,6 +468,11 @@ struct Budget {
 /// trips where it sent 8, and its ceiling fell by one. Each step of such a
 /// ride runs in an allocation of its own, so no peak or allocation ceiling
 /// rose, and a path that does not ride holds 136 bytes less at its peak.
+/// The ITI-81 page has since carried the policy and definition revisions
+/// and, in a ride, the party store's on its page statement (#6320): 1 round
+/// trip where it sent 3, and 1 nested statement, the door's, where it ran
+/// none, measured beside the merge base, and its round-trip ceiling fell by
+/// two.
 const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
@@ -564,8 +569,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 0,
         allocations: 8977,
         peak_bytes: 624_026,
-        round_trips: 3,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
         wal: 649,
     },

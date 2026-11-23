@@ -481,10 +481,10 @@ impl FerroEhrService {
         };
         // NOTE: our own design (#6027), a request waiting on another's first read keeps no
         // connection meanwhile.
-        let carried = crate::db::acquire::awaiting(
-            self.audit_carried
-                .get_or_try_init(|| store::carried::Carried::probe(&audit_store.pool, &self.pool)),
-        )
+        let carried = crate::db::acquire::awaiting(self.audit_carried.get_or_try_init(|| async {
+            let door = self.party_door_open().await?;
+            store::carried::Carried::probe(&audit_store.pool, &self.pool, door).await
+        }))
         .await
         .copied()
         .map_err(ServiceError::from)?;

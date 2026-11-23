@@ -65,15 +65,23 @@ pub(super) fn build_search_statements(
     let (count_sql, count_values) = total(&condition).build_sqlx(PostgresQueryBuilder);
     let served = u64::try_from(page_size(filter)).unwrap_or(50);
     let mut page = page(&condition, count, offset, served);
+    // NOTE: our own design (#6320), the revisions ride on the page's first record alone, which
+    // the confirmation reads, so the other records carry a NULL over the wire.
+    let first = |carried: &'static str| -> Expr {
+        sea_query::CaseStatement::new()
+            .case(
+                Expr::col((Alias::new("page_key"), Alias::new("position"))).eq(1),
+                Expr::cust(carried),
+            )
+            .into()
+    };
     if filter.carried.policy {
-        page.expr_as(
-            Expr::cust(super::carried::POLICY),
-            Alias::new("policy_revision"),
-        )
-        .expr_as(
-            Expr::cust(super::carried::DEFINITIONS),
-            Alias::new("definition_revision"),
-        );
+        let carried = if filter.carried.reads_party() {
+            super::carried::PARTY
+        } else {
+            super::carried::POLICY
+        };
+        page.expr_as(first(carried), Alias::new(super::carried::CARRIED));
     }
     let (sql, values) = page.build_sqlx(PostgresQueryBuilder);
     (count_sql, count_values, sql, values)
