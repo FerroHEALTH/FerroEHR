@@ -306,9 +306,9 @@ fn substituted(reference: &RmTypeRef, class: &RmClass, instantiated: &RmType) ->
     )
 }
 
-/// The type of the attribute `attribute` of `instantiated`, with the class's
-/// actual arguments substituted (`lower` of `DV_INTERVAL<DV_QUANTITY>` is a
-/// `DV_QUANTITY`; of a bare `DV_INTERVAL`, the bound `DV_ORDERED`).
+/// The type of `attribute` of `instantiated`, its arguments substituted
+/// (`lower` of `DV_INTERVAL<DV_QUANTITY>` is `DV_QUANTITY`; of a bare
+/// `DV_INTERVAL`, the bound `DV_ORDERED`).
 ///
 /// # Errors
 ///
@@ -371,9 +371,7 @@ impl PathStep {
     }
 }
 
-/// The arguments `holder` gives the parameters of its descendant `descendant`,
-/// matched by name as the RM reuses a parameter's name down a family
-/// (`EVENT<T>`, `POINT_EVENT<T>`).
+/// The arguments `holder` gives its descendant's parameters, matched by name.
 fn carried(holder: &RmClass, args: &[RmType], descendant: &RmClass) -> Vec<RmType> {
     if args.is_empty() {
         return Vec::new();
@@ -401,11 +399,8 @@ fn conforms(sub: &AttributeType, sup: &AttributeType) -> bool {
         && (sup.item.params().is_empty() || sub.item.params() == sup.item.params())
 }
 
-/// The type `holder` takes as an instance of its descendant `class`.
-///
-/// The arguments are carried by parameter name, so a value declared
-/// `EVENT<ITEM_TREE>` that is a `POINT_EVENT` is a `POINT_EVENT<ITEM_TREE>`;
-/// `holder` itself is returned when `class` is its own class.
+/// The type `holder` takes as an instance of its descendant `class`, arguments
+/// carried by parameter name (`EVENT<ITEM_TREE>` → `POINT_EVENT<ITEM_TREE>`).
 ///
 /// # Errors
 ///
@@ -429,9 +424,8 @@ pub fn narrowed(holder: &RmType, class: &str) -> Result<RmType, TypingError> {
     ))
 }
 
-/// Types the attribute `attribute` of a value of type `holder`: on the
-/// holder's class where it declares the attribute, else on the concrete
-/// descendants that do (see the module documentation).
+/// Types `attribute` of a value of type `holder`, on the holder's class or on
+/// the concrete descendants that declare it.
 ///
 /// # Errors
 ///
@@ -478,11 +472,8 @@ pub fn step_type(holder: &RmType, attribute: &str) -> Result<PathStep, TypingErr
     })
 }
 
-/// Types every step of `path` below a value of type `class`, outermost first.
-///
-/// Each step starts from the item type of the step before, so a container
-/// step (`items`) is followed by a step on one of its items. Predicates select
-/// instances and do not change a step's type.
+/// Types every step of `path` below a value of type `class`, outermost
+/// first, each from the item type of the step before.
 ///
 /// # Errors
 ///

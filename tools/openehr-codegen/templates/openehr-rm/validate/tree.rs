@@ -2,36 +2,13 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! RM-instance validation over typed RM (#6002).
+//! RM-instance validation over a typed tree (#6002): the class invariants
+//! (each class's [`Validate`] by [`super::typed_dispatch::dispatch_typed`]),
+//! [`super::check_archetyped_valid`], the HISTORY shape duty and the
+//! [`super::terminology::slots_for`] bindings, over the generated walk.
 //!
-//! The template-independent passes of a commit, the core class invariants
-//! with the per-node checks beside them, then the RM-mandated openEHR
-//! terminology, run over a typed tree with no canonical-JSON value and no
-//! per-node decode. The walk is generated (`tree_generated.rs`, one
-//! [`Walk`] impl per RM and BASE class); the decisions are the same ones the
-//! canonical-JSON passes make, from the same sources:
-//!
-//! - the class invariants are each class's [`Validate`] impl, routed by the
-//!   table [`super::typed_dispatch::dispatch_typed`] holds for the JSON
-//!   tier, and closed out with the inherited `LOCATABLE.Archetype_node_id_valid`
-//!   exactly as `openehr_its::wire_validate::validate_rm_value_typed` does;
-//! - `LOCATABLE.Archetyped_valid` is [`super::check_archetyped_valid`];
-//! - the HISTORY shape duty is [`super::check_data_structure_shapes`]'s rule
-//!   read off the typed events;
-//! - the terminology slots are [`super::terminology::slots_for`].
-//!
-//! What a typed tree holds by construction is not re-checked: an undeclared
-//! member, a foreign `_type` in a slot and a scalar in a class-typed list are
-//! refused by the reader, and every mandatory `1..*` container is a
-//! `NonEmptyVec` the reader refuses absent or empty. The RM's mandatory `0..*`
-//! containers, which the reader reads as empty when absent, sit under
-//! `AUTHORED_RESOURCE` and no committed resource reaches them (an
-//! `openehr-codegen` emitter invariant holds this), so the presence check of
-//! `check_mandatory_containers` has nothing to judge here.
-//!
-//! Messages come in canonical attribute order, whatever member order the
-//! client sent. No openEHR specification orders validation messages: our own
-//! design.
+//! What the reader refuses is not re-checked. Messages come in canonical
+//! attribute order; no openEHR specification orders them: our own design.
 
 use std::any::Any;
 use std::fmt::Write as _;
@@ -283,9 +260,7 @@ fn norm_path(p: &str) -> String {
     }
 }
 
-/// Run the template-independent passes over a typed RM resource: every
-/// node's class invariants and per-node checks, then the RM-mandated
-/// terminology, each in canonical attribute order.
+/// Runs the template-independent passes over a typed RM resource.
 #[must_use]
 pub fn validate_tree<T: Walk + ?Sized>(root: &T) -> Vec<TreeViolation> {
     let mut w = Walker {
@@ -301,9 +276,8 @@ pub fn validate_tree<T: Walk + ?Sized>(root: &T) -> Vec<TreeViolation> {
     w.out
 }
 
-/// [`validate_tree`] over everything a typed RM value holds, the value
-/// itself left out: the complement of [`validate_node`], for a caller that
-/// reports the root in that function's form.
+/// [`validate_tree`] without the value itself, the complement of
+/// [`validate_node`].
 #[must_use]
 pub fn validate_below<T: Walk + ?Sized>(value: &T) -> Vec<TreeViolation> {
     let mut w = Walker {
@@ -320,14 +294,8 @@ pub fn validate_below<T: Walk + ?Sized>(value: &T) -> Vec<TreeViolation> {
     w.out
 }
 
-/// Judge one typed RM value by itself, leaving what it holds unvisited: its
-/// class invariants, then its terminology bindings.
-///
-/// The violations are the ones `openehr_its::wire_validate::validate_rm_value`
-/// reports for the value's canonical JSON, in its form (the path relative to
-/// the value, `Invariant <Name> failed on type <RM_TYPE>`), with no rendering.
-/// It is the pass for a value no committed document holds, such as the
-/// committer of an audit.
+/// Judges one typed value by itself: its class invariants, then its
+/// terminology bindings, as `validate_rm_value` reports them.
 #[must_use]
 pub fn validate_node<T: Walk + ?Sized>(value: &T) -> Vec<InvariantViolation> {
     let mut w = Walker {
@@ -374,9 +342,7 @@ fn root_node(node: &Node<'_>, out: &mut Vec<InvariantViolation>) {
     }
 }
 
-/// The HISTORY generic-parameter duty of
-/// [`super::check_data_structure_shapes`], read off the typed events: every
-/// event's `data` is the same `ITEM_STRUCTURE` subtype.
+/// The HISTORY duty over typed events.
 fn history_shapes(value: &dyn Any, inv: &mut Vec<InvariantViolation>) {
     use crate::v1_2::data_structures::history::event::Event;
     use crate::v1_2::data_structures::history::history::History;
@@ -430,8 +396,7 @@ fn run<T: Validate + 'static>(value: &dyn Any, out: &mut Vec<InvariantViolation>
 }
 
 /// The class-invariant table of [`super::typed_dispatch::dispatch_typed`],
-/// over typed nodes. A class with no arm carries no class invariant of its
-/// own (`None`); `Some(false)` is an arm whose type the node does not have.
+/// typed: `None` for a class without an arm.
 #[expect(
     clippy::too_many_lines,
     reason = "a flat RM type -> concrete type table; the length is the size of the RM type set, not logic"
