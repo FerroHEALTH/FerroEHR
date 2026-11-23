@@ -7,9 +7,14 @@
 4+^h|*Draft, not part of an RM release*
 
 |[[latest_issue]]0.1.0
+|Episodes of care: the care relationship element `context` renamed `episode`, the scope of the relationship; a composition placed in episodes by the `episode` element of the new `record placement element` group in `EVENT_CONTEXT._other_context_`, persistent compositions never placed; coverage in steps 7 and 8 and in the actor scope `care`, with the refusal `refused-outside-episode`; `ACCESS_DATA_SCOPE._episodes_`, `ACCESS_POLICY._episode_shared_` and `ACCESS_RELATIONSHIP_VALIDITY._episode_required_`; the `caseload_episodes` member and the SMART `episodeId`; the FHIR `EpisodeOfCare`, `Encounter.episodeOfCare` and HL7 v2 visit mappings.
+|FerroEHR
+|[[latest_issue_date]]23 Nov 2026
+
+|0.1.0
 |Care relationships with a role, a provider and cover, read through the closed paths `direct`, `team`, `self_declared` and `attested`, each relationship versioned on its own; `_care_roles_` and `_care_path_` on `ACCESS_ACTOR_SCOPE`. `CONFIDENTIALITY_SETTINGS` (scheme `confidentiality`) as the parent of `ACCESS_DIRECTIVE_SETTINGS`, with the marking of a whole record, the controller's exclusions and the order `N` < `R` < `V`; a confidentiality on labels, classifications and data scopes. The controller's facts about care relationships, value-set bindings and a profile as a template of the policy archetype; representations and kinships as stored facts the writer decides. The refusals `refused-confidentiality`, `refused-excluded` and `refused-conflict`. HL7 code systems named `HL7_<name>`. The care relationship resources and the caseload members of a query.
 |FerroEHR
-|[[latest_issue_date]]19 Nov 2026
+|19 Nov 2026
 
 |0.1.0
 |The decision procedure checks `ACCESS_POLICY._purpose_required_` as step 4, before the controller's rules, so an access without a purpose under a policy that requires one is refused `refused-purpose-missing` whatever rules exist. The `_purposes_` of a `controller_rule` match only a purpose the access declares.

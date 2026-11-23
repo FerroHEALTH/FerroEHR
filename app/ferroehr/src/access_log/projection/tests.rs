@@ -185,6 +185,7 @@ pub(super) fn cared_read(policy: &CompiledPolicy, attested: bool) -> AuditEvent 
                     in_grace: false,
                     covers_for: None,
                     provider: identifier("urn:example:providers", "p-1", Some("ORGANISATION")),
+                    episode: None,
                 },
             ))),
             ..crate::access_log::entry::authorisation(Authorisation::TreatmentRelationship)

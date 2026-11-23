@@ -95,6 +95,19 @@
         "upper_unbounded": true
       }
     },
+    "episodes": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "episodes",
+      "documentation": "The episodes of care the data are placed in, each the `DV_IDENTIFIER` (`_issuer_` and `_id_`) of an `episode` element in the `_other_context_` of a composition's `EVENT_CONTEXT`, compared by issuer and id. Data placed in no episode match no entry.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_IDENTIFIER"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
     "recorded": {
       "_type": "P_BMM_GENERIC_PROPERTY",
       "name": "recorded",
@@ -108,14 +121,15 @@
     }
   },
   "invariants": {
-    "Not_empty": "objects /= Void or templates /= Void or archetypes /= Void or categories /= Void or sensitivities /= Void or confidentialities /= Void or origins /= Void or recorded /= Void",
+    "Not_empty": "objects /= Void or templates /= Void or archetypes /= Void or categories /= Void or sensitivities /= Void or confidentialities /= Void or origins /= Void or episodes /= Void or recorded /= Void",
     "Objects_valid": "objects /= Void implies not objects.is_empty",
     "Templates_valid": "templates /= Void implies not templates.is_empty",
     "Archetypes_valid": "archetypes /= Void implies not archetypes.is_empty",
     "Categories_valid": "categories /= Void implies not categories.is_empty",
     "Sensitivities_valid": "sensitivities /= Void implies not sensitivities.is_empty",
     "Confidentialities_valid": "confidentialities /= Void implies (not confidentialities.is_empty and confidentialities.for_all (c | c.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality)))",
-    "Origins_valid": "origins /= Void implies not origins.is_empty"
+    "Origins_valid": "origins /= Void implies not origins.is_empty",
+    "Episodes_valid": "episodes /= Void implies not episodes.is_empty"
   }
 }
 --------
