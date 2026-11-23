@@ -417,9 +417,11 @@ pub(crate) async fn revisions(
     conn: &mut PgConnection,
     held: Option<&HeldSnapshot>,
 ) -> Result<Revisions, StorageError> {
+    // NOTE: PostgreSQL plan cache, a scan of the function evaluates the snapshot's cast once, so
+    // the statement settles on its generic plan (#6392).
     let (grants, bindings, behind): (i64, i64, bool) = sqlx::query_as(
-        "SELECT revision, binding_revision, party.facts_behind($1::pg_snapshot) \
-         FROM binding_grant_revision",
+        "SELECT r.revision, r.binding_revision, b.behind \
+         FROM binding_grant_revision r, party.facts_behind($1::pg_snapshot) b(behind)",
     )
     .bind(
         held.and_then(|held| held.snapshot.as_deref())
