@@ -396,7 +396,7 @@ COMMENT ON COLUMN version.content_key IS 'The sys_version whose node rows hold t
 -- read paths consult.
 --
 -- The columns a commit changes — head_sys_version, trunk_head_sys_version,
--- lifecycle_state, committed_at — appear in NO index, which is what makes the
+-- lifecycle_state, committed_at, episodes — appear in NO index, which is what makes the
 -- per-commit UPDATE heap-only-tuple eligible: PostgreSQL performs a HOT update
 -- when "the update does not modify any columns referenced by the table's
 -- indexes" and a new tuple fits on the same page (PostgreSQL 18, "Heap-Only
@@ -455,6 +455,9 @@ CREATE TABLE vo_head (
     -- The archetype_node_id of the trunk head's root node, which the access
     -- condition of a query compares.
     root_archetype         text,
+    -- The episodes of care a COMPOSITION trunk head is placed in, each
+    -- SHA-256 of the episode's issuer, 0x00 and id, sorted; NULL when unplaced.
+    episodes               bytea[],
     CONSTRAINT pk_vo_head PRIMARY KEY (vo_id),
 --@clinical-begin
     CONSTRAINT fk_vo_head_ehr FOREIGN KEY (ehr_id) REFERENCES ehr (id) ON DELETE CASCADE,

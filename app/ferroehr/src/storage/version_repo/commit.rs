@@ -19,6 +19,7 @@ use serde_json::Value;
 use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
+use super::head_upsert::{HeadEpisodes, HeadUpsert, Placement};
 use crate::ids::{EhrId, VoId};
 use crate::storage::error::StorageError;
 
@@ -151,96 +152,9 @@ pub struct FoldedVersion<'a> {
     /// The `archetype_node_id` of the body's root, which the head row keeps
     /// for a trunk commit (#5782); `None` on a logical delete.
     pub root_archetype: Option<&'a str>,
-}
-
-/// The head upsert both folded commit statements carry.
-///
-/// One mutable row per versioned object, written in the same statement as the
-/// version row it describes. A TRUNK commit advances every column; a BRANCH
-/// commit advances only what a branch changes — the any-lineage head ordinal
-/// and the commit instant — leaving the trunk's own head, its content key
-/// (the version insert's `content_key`, #4944), lifecycle state and template
-/// alone, because a branch does not supersede the trunk (RM common
-/// master06 §The 'Virtual Version Tree'). The root archetype goes with the
-/// template (#5782).
-///
-/// `{branch}`, `{ordinal}`, `{lifecycle}`, `{template}` and `{archetype}` are the caller's
-/// parameter placeholders; `FROM {version}` orders this CTE after the version
-/// insert.
-///
-/// The update is MONOTONIC: it applies only when the committing version's
-/// ordinal is greater than the one the head already records, and a trunk commit
-/// additionally only when it is greater than the recorded trunk head. The
-/// ordinal comes from a placement read under the per-object advisory lock, so
-/// under that lock it always is; the guard is what keeps a replayed or
-/// out-of-order statement from walking the head backwards, which would make an
-/// older version read as current.
-pub(super) struct HeadUpsert<'a> {
-    /// The versioned object's id.
-    pub(super) vo: &'a str,
-    /// The versioned object's RM type.
-    pub(super) kind: &'a str,
-    /// The owning EHR, `NULL` for a party.
-    pub(super) ehr: &'a str,
-    /// The new version's `sys_version`.
-    pub(super) ordinal: &'a str,
-    /// The new version's `branch_number`; `0` is a trunk commit.
-    pub(super) branch: &'a str,
-    /// The new version's `lifecycle_state`.
-    pub(super) lifecycle: &'a str,
-    /// The template the new version was validated against.
-    pub(super) template: &'a str,
-    /// The root archetype of the new version's content.
-    pub(super) archetype: &'a str,
-    /// The commit instant.
-    pub(super) committed_at: &'a str,
-    /// The CTE that inserted the version row, which orders this one after it.
-    pub(super) version: &'a str,
-}
-
-impl HeadUpsert<'_> {
-    /// Render the CTE body with this statement's placeholders substituted.
-    pub(super) fn sql(&self) -> String {
-        let Self {
-            vo,
-            kind,
-            ehr,
-            ordinal,
-            branch,
-            lifecycle,
-            template,
-            archetype,
-            committed_at,
-            version,
-        } = *self;
-        format!(
-            "INSERT INTO vo_head (vo_id, kind, ehr_id, head_sys_version, \
-             trunk_head_sys_version, trunk_head_content_key, lifecycle_state, template_id, \
-             root_archetype, committed_at) \
-         SELECT {vo}, {kind}, {ehr}, {ordinal}, \
-                CASE WHEN {branch} = 0 THEN {ordinal} ELSE NULL END, \
-                CASE WHEN {branch} = 0 THEN {version}.content_key ELSE NULL END, \
-                {lifecycle}, {template}, {archetype}, {committed_at}::timestamptz \
-         FROM {version} \
-         ON CONFLICT (vo_id) DO UPDATE SET \
-             head_sys_version = EXCLUDED.head_sys_version, \
-             committed_at = EXCLUDED.committed_at, \
-             trunk_head_sys_version = CASE WHEN {branch} = 0 \
-                 THEN EXCLUDED.head_sys_version ELSE vo_head.trunk_head_sys_version END, \
-             trunk_head_content_key = CASE WHEN {branch} = 0 \
-                 THEN EXCLUDED.trunk_head_content_key ELSE vo_head.trunk_head_content_key END, \
-             lifecycle_state = CASE WHEN {branch} = 0 \
-                 THEN EXCLUDED.lifecycle_state ELSE vo_head.lifecycle_state END, \
-             template_id = CASE WHEN {branch} = 0 \
-                 THEN EXCLUDED.template_id ELSE vo_head.template_id END, \
-             root_archetype = CASE WHEN {branch} = 0 \
-                 THEN EXCLUDED.root_archetype ELSE vo_head.root_archetype END \
-         WHERE EXCLUDED.head_sys_version > vo_head.head_sys_version \
-           AND ({branch} <> 0 \
-                OR vo_head.trunk_head_sys_version IS NULL \
-                OR EXCLUDED.head_sys_version > vo_head.trunk_head_sys_version)"
-        )
-    }
+    /// The episodes a COMPOSITION is placed in, which the head row keeps for
+    /// a trunk commit; empty when unplaced.
+    pub episodes: &'a [crate::versioning::episode::EpisodeKey],
 }
 
 /// What one folded commit statement writes beside its `commit_audit` row.
@@ -318,15 +232,16 @@ enum Shape {
     Guarded,
 }
 
-/// The statement text of one [`Folded`] shape.
+/// The statement text of one [`Folded`] shape, for a version of
+/// `placement`.
 ///
 /// Every shape binds the same parameters in the same order: `$1` to `$5` the
 /// audit, `$6` the CONTRIBUTION uid, `$7` the owning EHR, `$8` to `$26` the
-/// version, `$27` the version's root archetype and `$28` on the node arrays,
-/// so one binder serves all three.
-fn folded_statement(shape: Shape) -> String {
+/// version, `$27` the version's root archetype, `$28` on the node arrays and
+/// then a placed version's episodes, so one binder serves all three.
+fn folded_statement(shape: Shape, placement: Placement) -> String {
     if matches!(shape, Shape::Guarded) {
-        return super::guarded::statement(super::guarded::Beside::Nothing);
+        return super::guarded::statement(super::guarded::Beside::Nothing, placement);
     }
     let contribution = matches!(shape, Shape::Contribution | Shape::Standalone);
     let version = matches!(shape, Shape::Standalone | Shape::Into);
@@ -348,7 +263,13 @@ fn folded_statement(shape: Shape) -> String {
         } else {
             ("$6", "a")
         };
-        version_ctes("", ("$7", contribution_id, "a.id", from), 8, 28)
+        let after_nodes = 28 + crate::storage::node_write::node_array_count();
+        version_ctes(
+            "",
+            ("$7", contribution_id, "a.id", from),
+            8,
+            (28, placement, after_nodes),
+        )
     } else {
         String::new()
     };
@@ -376,14 +297,16 @@ const VERSION_COLUMNS: &str = "vo_id, kind, ehr_id, sys_version, trunk_version, 
 
 /// The version-row, head-upsert and node CTEs of one version, named `v`, `h`
 /// and `n` with `suffix`: the version's twenty parameters start at `first`
-/// in the order [`bind_version`] binds them, its node arrays at `nodes`, and
+/// in the order [`bind_version`] binds them, its node arrays at `nodes`, its
+/// episodes at `episodes` when its `placement` writes them
+/// ([`bind_episodes`]), and
 /// `(ehr, contribution, audit, from)` name the owning EHR, the CONTRIBUTION
 /// and audit ids and the CTEs the version row is selected from.
 pub(super) fn version_ctes(
     suffix: &str,
     (ehr, contribution, audit, from): (&str, &str, &str, &str),
     first: usize,
-    nodes: usize,
+    (nodes, placement, episodes): (usize, Placement, usize),
 ) -> String {
     let p = |offset: usize| format!("${}", first + offset);
     let list = |offsets: &[usize]| {
@@ -415,6 +338,11 @@ pub(super) fn version_ctes(
             lifecycle: &p(6),
             template: &p(9),
             archetype: &p(19),
+            episodes: match placement {
+                Placement::Untouched => HeadEpisodes::Untouched,
+                Placement::Cleared => HeadEpisodes::Cleared,
+                Placement::Placed => HeadEpisodes::Placed(episodes),
+            },
             committed_at: &p(14),
             version: &version,
         }
@@ -451,6 +379,53 @@ pub(super) fn bind_version<'q>(
         .bind(v.root_archetype)
 }
 
+/// Bind the episodes of a placed `v` as one `bytea[]`, the parameter
+/// [`version_ctes`] reads after everything else the statement binds.
+pub(super) fn bind_episodes<'q>(
+    query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
+    v: &FoldedVersion<'q>,
+) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
+    if v.episodes.is_empty() {
+        return query;
+    }
+    query.bind(
+        v.episodes
+            .iter()
+            .map(|key| key.as_bytes().as_slice())
+            .collect::<Vec<_>>(),
+    )
+}
+
+/// The statement text `folded` runs: its shape, what it writes beside the
+/// version, and what the version does with its object's episodes.
+fn folded_text(folded: &Folded<'_>) -> &'static str {
+    use super::guarded::Beside;
+    static CONTRIBUTION: LazyLock<String> =
+        LazyLock::new(|| folded_statement(Shape::Contribution, Placement::Untouched));
+    static STANDALONE: LazyLock<[String; 3]> =
+        LazyLock::new(|| Placement::ALL.map(|p| folded_statement(Shape::Standalone, p)));
+    static INTO: LazyLock<[String; 3]> =
+        LazyLock::new(|| Placement::ALL.map(|p| folded_statement(Shape::Into, p)));
+    static GUARDED: LazyLock<[String; 3]> =
+        LazyLock::new(|| Placement::ALL.map(|p| folded_statement(Shape::Guarded, p)));
+    static STATUS: LazyLock<[String; 3]> =
+        LazyLock::new(|| Placement::ALL.map(|p| super::guarded::statement(Beside::Status, p)));
+    static FOLDER: LazyLock<[String; 3]> =
+        LazyLock::new(|| Placement::ALL.map(|p| super::guarded::statement(Beside::Folder, p)));
+    static PARTY: LazyLock<[String; 3]> =
+        LazyLock::new(|| Placement::ALL.map(|p| super::guarded::statement(Beside::Party, p)));
+    let (texts, version): (&'static LazyLock<[String; 3]>, _) = match folded {
+        Folded::Contribution { .. } => return CONTRIBUTION.as_str(),
+        Folded::Standalone { version, .. } => (&STANDALONE, version),
+        Folded::Into { version, .. } => (&INTO, version),
+        Folded::Guarded { version, guard, .. } if guard.status.is_some() => (&STATUS, version),
+        Folded::Guarded { version, guard, .. } if guard.directory.is_some() => (&FOLDER, version),
+        Folded::Guarded { version, guard, .. } if guard.party.is_some() => (&PARTY, version),
+        Folded::Guarded { version, .. } => (&GUARDED, version),
+    };
+    Placement::of(version).pick(texts)
+}
+
 /// Run one folded commit statement ([`Folded`]), returning the rows it wrote.
 ///
 /// On a CONTRIBUTION uid already in use the `contribution` CTE inserts nothing
@@ -467,37 +442,16 @@ pub async fn commit_folded(
     audit: &AuditRow<'_>,
     folded: Folded<'_>,
 ) -> Result<FoldedRows, StorageError> {
-    static CONTRIBUTION: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Contribution));
-    static STANDALONE: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Standalone));
-    static INTO: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Into));
-    static GUARDED: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Guarded));
-    static STATUS: LazyLock<String> =
-        LazyLock::new(|| super::guarded::statement(super::guarded::Beside::Status));
-    static FOLDER: LazyLock<String> =
-        LazyLock::new(|| super::guarded::statement(super::guarded::Beside::Folder));
-    static PARTY: LazyLock<String> =
-        LazyLock::new(|| super::guarded::statement(super::guarded::Beside::Party));
     let status = matches!(&folded, Folded::Guarded { guard, .. } if guard.status.is_some());
-    let (sql, id, ehr_id, version, guard) = match folded {
-        Folded::Contribution { id, ehr_id } => (&CONTRIBUTION, id, ehr_id, None, None),
-        Folded::Standalone { id, version } => {
-            (&STANDALONE, id, version.ehr_id, Some(version), None)
+    let sql = folded_text(&folded);
+    let (id, ehr_id, version, guard) = match folded {
+        Folded::Contribution { id, ehr_id } => (id, ehr_id, None, None),
+        Folded::Standalone { id, version } | Folded::Into { id, version } => {
+            (id, version.ehr_id, Some(version), None)
         }
-        Folded::Into { id, version } => (&INTO, id, version.ehr_id, Some(version), None),
-        Folded::Guarded { id, version, guard } if guard.status.is_some() => {
-            (&STATUS, id, version.ehr_id, Some(version), Some(guard))
-        }
-        Folded::Guarded { id, version, guard } if guard.directory.is_some() => {
-            (&FOLDER, id, version.ehr_id, Some(version), Some(guard))
-        }
-        Folded::Guarded { id, version, guard } if guard.party.is_some() => {
-            (&PARTY, id, version.ehr_id, Some(version), Some(guard))
-        }
-        Folded::Guarded { id, version, guard } => {
-            (&GUARDED, id, version.ehr_id, Some(version), Some(guard))
-        }
+        Folded::Guarded { id, version, guard } => (id, version.ehr_id, Some(version), Some(guard)),
     };
-    let query = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
+    let query = sqlx::query(sqlx::AssertSqlSafe(sql))
         .bind(audit.system_id)
         .bind(audit.change_type)
         .bind(&audit.description)
@@ -522,7 +476,7 @@ pub async fn commit_folded(
                 query,
                 &v.rows.iter().collect::<Vec<_>>(),
             );
-            let row = fetch_beside(tx, query, guard.as_ref()).await?;
+            let row = fetch_beside(tx, query, guard.as_ref(), &v).await?;
             (row, Some((v.vo_id, v.sys_version, v.blob_uris)))
         }
     };
@@ -547,47 +501,55 @@ pub async fn commit_folded(
 /// Run a folded statement `query`, binding first what a guarded one takes
 /// after its node arrays: an `EHR_STATUS` commit's columns, a party commit's
 /// key-space gate and reverse targets, or a directory write's slot
-/// ([`super::guarded::DirectorySlot`]).
+/// ([`super::guarded::DirectorySlot`]), and last the episodes of a placed `v`.
 ///
 /// # Errors
 /// [`StorageError::SubjectInUse`] when a status commit's subject is in use,
 /// else [`StorageError::Database`] on a driver failure.
-async fn fetch_beside(
+async fn fetch_beside<'q>(
     tx: &mut PgConnection,
-    query: sqlx::query::Query<'_, sqlx::Postgres, sqlx::postgres::PgArguments>,
+    query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
     guard: Option<&super::guarded::Guard>,
+    v: &FoldedVersion<'q>,
 ) -> Result<sqlx::postgres::PgRow, StorageError> {
     let party = guard.and_then(|guard| guard.party.as_deref());
     let status = guard.and_then(|guard| guard.status.as_deref());
     Ok(match (status, party) {
         (None, Some(party)) => {
-            query
-                .bind(party.key_space)
-                .bind(party.reverse.as_deref())
-                .fetch_one(&mut *tx)
-                .await?
-        }
-        (Some(status), _) => query
-            .bind(status.subject_id.as_deref())
-            .bind(status.subject_namespace.as_deref())
-            .bind(status.is_queryable)
-            .bind(status.is_modifiable)
-            .bind(status.subject_digest.as_deref())
-            .bind(crate::storage::access_projection::CHANNEL)
+            bind_episodes(
+                query.bind(party.key_space).bind(party.reverse.as_deref()),
+                v,
+            )
             .fetch_one(&mut *tx)
-            .await
-            .map_err(|e| subject_in_use(e, status))?,
+            .await?
+        }
+        (Some(status), _) => bind_episodes(
+            query
+                .bind(status.subject_id.as_deref())
+                .bind(status.subject_namespace.as_deref())
+                .bind(status.is_queryable)
+                .bind(status.is_modifiable)
+                .bind(status.subject_digest.as_deref())
+                .bind(crate::storage::access_projection::CHANNEL),
+            v,
+        )
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| subject_in_use(e, status))?,
         (None, None) => match guard.and_then(|guard| guard.directory) {
             Some(slot) => {
-                query
-                    .bind(slot.highest)
-                    .bind(slot.tip.map(|(vo, _)| vo))
-                    .bind(slot.tip.and_then(|(_, head)| head))
-                    .bind(slot.new)
-                    .fetch_one(&mut *tx)
-                    .await?
+                bind_episodes(
+                    query
+                        .bind(slot.highest)
+                        .bind(slot.tip.map(|(vo, _)| vo))
+                        .bind(slot.tip.and_then(|(_, head)| head))
+                        .bind(slot.new),
+                    v,
+                )
+                .fetch_one(&mut *tx)
+                .await?
             }
-            None => query.fetch_one(&mut *tx).await?,
+            None => bind_episodes(query, v).fetch_one(&mut *tx).await?,
         },
     })
 }
