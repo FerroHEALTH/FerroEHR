@@ -1923,7 +1923,10 @@ fn judged_allocations(measured: u64, ceiling: u64) -> (bool, String) {
     if ALLOCATIONS_GATED {
         judged(measured, ceiling)
     } else {
-        (true, format!("{measured} (ceiling {ceiling}, gated on Linux)"))
+        (
+            true,
+            format!("{measured} (ceiling {ceiling}, gated on Linux)"),
+        )
     }
 }
 
@@ -1991,7 +1994,10 @@ async fn every_hot_path_stays_within_its_budget() {
         let peak = m.low(|a| u64::try_from(a.peak.max(0)).unwrap());
         let cells = [
             ("conversions", judged(m.conversions(), budget.conversions)),
-            ("allocations", judged_allocations(allocations, budget.allocations)),
+            (
+                "allocations",
+                judged_allocations(allocations, budget.allocations),
+            ),
             ("peak bytes", judged(peak, budget.peak_bytes)),
             ("round trips", judged(m.round_trips, budget.round_trips)),
             ("nested statements", judged(m.nested, budget.nested)),
