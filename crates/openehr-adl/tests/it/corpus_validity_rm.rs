@@ -638,9 +638,9 @@ fn vcormt_generic_argument_non_conformance() {
 // ── VCACA on the production model (real BMM cardinality) ────────────────────
 
 /// `CLUSTER.items` has RM cardinality `{1..*}` in the production openEHR RM;
-/// constraining it to `{0..*}` widens the lower bound → VCACA. This exercises
-/// the tight lower-bound half of VCACA now that the generated model carries real
-/// container cardinality (master04.5 §Validity Rules: `C_ATTRIBUTE`, VCACA).
+/// constraining it to `{0..*}` widens the lower bound → VCACA, against the
+/// generated model's container cardinality (master04.5 §Validity Rules:
+/// `C_ATTRIBUTE`, VCACA).
 #[test]
 fn vcaca_production_model_lower_bound() {
     let production = ProductionRmModel;
