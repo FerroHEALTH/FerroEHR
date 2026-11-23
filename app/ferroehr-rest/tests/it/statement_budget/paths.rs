@@ -739,7 +739,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyDelete,
         conversions: 2,
-        allocations: 1568,
+        // NOTE: our own design (#6074), the held snapshot its facts refresh binds and reads back.
+        allocations: 1571,
         peak_bytes: 112_950,
         round_trips: 12,
         nested: 4,
