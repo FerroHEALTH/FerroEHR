@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The FLAT key an RM attribute of a structural class is written under when
-//! the Web Template has no node for it, from the ITS-REST
-//! `simplified_formats/master05-rm_mapping.adoc` tables plus two codec keys
-//! ([`KeySource`]).
+//! The FLAT key of a structural RM attribute the Web Template has no node for.
+//!
+//! From the `simplified_formats/master05-rm_mapping.adoc` tables plus two codec
+//! keys ([`KeySource`]).
 
 use KeyForm::{IndexedStep, Step, Suffix};
 use KeySource::{Example, OwnDesign, Table};

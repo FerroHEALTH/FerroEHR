@@ -68,10 +68,12 @@ pub struct WebTemplateConstraintBinding {
     pub query_uri: String,
 }
 
-/// A structural stub: the node-identified child the template constrains a
-/// `data`, `description`, `protocol` or `state` attribute with, kept so the
-/// builder can fill the dropped attribute with that identity (AOM 1.4
-/// `master04-constraint_model_package.adoc` §`Valid_value`).
+/// A structural stub for a constrained structural attribute.
+///
+/// The node-identified child the template constrains `data`, `description`,
+/// `protocol` or `state` with, kept so the builder can fill the dropped
+/// attribute with that identity (AOM 1.4 `master04-constraint_model_package.adoc`
+/// §`Valid_value`).
 #[derive(Debug, Clone)]
 pub struct WebTemplateStructuralStub {
     /// The constrained RM attribute name (`data`, `description`, `protocol`,

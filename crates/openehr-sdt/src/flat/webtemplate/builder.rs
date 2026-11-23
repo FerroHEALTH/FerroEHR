@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! OPT 1.4 → Web Template walk (ITS-REST simplified_formats master04 §"Web
-//! Template Metadata"): build a node per constraint object, compact per
-//! §"Level Removal", then assign ids per §"Node ID Generation Rules".
+//! OPT 1.4 → Web Template walk.
+//!
+//! ITS-REST simplified_formats master04 §"Web Template Metadata": build a node
+//! per constraint object, compact per §"Level Removal", then assign ids per
+//! §"Node ID Generation Rules".
 //!
 //! The web template mirrors the OPT's constraint tree, so RM-mandatory
 //! attributes the OPT leaves unconstrained are not injected, and an internal

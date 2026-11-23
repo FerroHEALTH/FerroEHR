@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The internal simplified-instance model: one tree of which FLAT and
-//! STRUCTURED are views (`simplified_formats/master04-basic_concepts.adoc`
-//! §Format variants, §Conversion Between Formats), each a codec ([`flat`],
-//! [`structured`]).
+//! The internal simplified-instance model.
+//!
+//! FLAT and STRUCTURED are views of one tree
+//! (`simplified_formats/master04-basic_concepts.adoc` §Format variants,
+//! §Conversion Between Formats), each a codec ([`flat`], [`structured`]).
 //!
 //! A node holds its `|suffix` datum parts (`""` for the bare value), its
 //! children with their `:i` indexing, and an optional `|raw` datum.

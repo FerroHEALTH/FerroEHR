@@ -1,12 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! COMPOSITION ⇄ FLAT and STRUCTURED (ITS-REST
-//! `simplified_formats/master04-basic_concepts.adoc`), and FLAT ⇄ STRUCTURED,
-//! all through the simplified tree ([`crate::flat::sim`]). The `rm_*` entry
-//! points work on the typed COMPOSITION (#6003); the canonical-JSON ones are
-//! unchecked projections. `now` is the `ctx/time` default (`master04
-//! §Context`).
+//! COMPOSITION ⇄ FLAT and STRUCTURED, and FLAT ⇄ STRUCTURED.
+//!
+//! All go through the simplified tree ([`crate::flat::sim`]); the `rm_*` entry
+//! points work on the typed COMPOSITION, the canonical-JSON ones are unchecked
+//! projections. `now` is the `ctx/time` default (`master04 §Context`).
 
 #![expect(
     clippy::disallowed_types,

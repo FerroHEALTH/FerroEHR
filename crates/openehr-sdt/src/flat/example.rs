@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Example instances of a [`WebTemplate`] (the `adl1.4/{id}/example`
-//! endpoint): [`example_composition`] at a [`DetailLevel`], [`example_party`]
-//! and [`example_instance`], with deterministic values built through
-//! [`composition_from_flat`]. `Required` and `Medium` are committable;
-//! populated leaves grow `required ⊆ medium ⊆ complete`.
+//! Example instances of a [`WebTemplate`] (the `adl1.4/{id}/example` endpoint).
+//!
+//! [`example_composition`] at a [`DetailLevel`], [`example_party`] and
+//! [`example_instance`], built through [`composition_from_flat`]. `Required` and
+//! `Medium` are committable; populated leaves grow `required ⊆ medium ⊆ complete`.
 //!
 //! NOTE: ITS-REST says example generation is non-normative ("vendors may
 //! produce different results"); `PARTY_*` leaves are skipped rather than

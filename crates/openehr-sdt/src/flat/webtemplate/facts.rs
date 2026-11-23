@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! What an operational template states about a node that the Web Template
-//! document has no member for, kept on the node built from it. An OPT 1.4
-//! `T_COMPLEX_OBJECT` is walked as the `C_COMPLEX_OBJECT` it extends
-//! (`Template.xsd`).
+//! Operational-template facts the Web Template document has no member for.
+//!
+//! Kept on the node built from them. An OPT 1.4 `T_COMPLEX_OBJECT` is walked as
+//! the `C_COMPLEX_OBJECT` it extends (`Template.xsd`).
 
 use std::collections::BTreeMap;
 

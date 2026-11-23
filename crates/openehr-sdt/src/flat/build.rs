@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Simplified tree → typed RM, the reverse of [`crate::flat::flatten`]: the
-//! [`WebTemplate`] is walked against the [`SimDocument`], each leaf rebuilt
-//! per `master05-rm_mapping.adoc` (`crate::flat::map`), the omitted levels
-//! re-materialised (ITS-REST `simplified_formats/master04` §Level Removal),
-//! the `ctx/` vocabulary applied (`master06-context_information.adoc`), and
-//! the RM-mandatory fields filled, through `openehr_rm::v1_2::access` (#6003).
+//! Simplified tree → typed RM, the reverse of [`crate::flat::flatten`].
+//!
+//! The [`WebTemplate`] is walked against the [`SimDocument`]: leaves rebuilt per
+//! `master05-rm_mapping.adoc`, omitted levels re-materialised (master04 §Level
+//! Removal), the `ctx/` vocabulary applied (master06) and RM-mandatory fields
+//! filled, through `openehr_rm::v1_2::access`.
 //!
 //! Unknown field identifiers are rejected (`master04 §Validation`).
 

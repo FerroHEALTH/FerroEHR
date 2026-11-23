@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The simplified-path (FLAT key) model: parsing and printing only
-//! (`simplified_formats/master04-basic_concepts.adoc` §Field Identifiers, §RM
-//! Attributes prefix), e.g. `vital_signs/body_temperature:0/any_event:0/temperature|magnitude`.
+//! The simplified-path (FLAT key) model: parsing and printing only.
+//!
+//! `simplified_formats/master04-basic_concepts.adoc` §Field Identifiers, §RM
+//! Attributes prefix: `vital_signs/body_temperature:0/any_event:0/temperature|magnitude`.
 
 use std::fmt::{Display, Formatter};
 
