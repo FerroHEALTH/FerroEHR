@@ -1,15 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! A curated public surface over the pipeline for the emitter-invariant tests
-//! (`tests/emitter_invariants.rs`).
-//!
-//! It runs the **real** pipeline on the **real** vendored inputs and returns
-//! plain data — the stage-2/3/4 facts the invariants assert over — so the
-//! tests never reach into crate internals.
-//!
-//! This module is test scaffolding, not part of the generator's output path; it
-//! only reads the same tables and functions `cli.rs` drives.
+//! The pipeline's facts for the emitter-invariant tests
+//! (`tests/emitter_invariants.rs`), run on the real vendored inputs.
 
 #![expect(
     clippy::disallowed_types,
@@ -151,13 +144,10 @@ pub fn composition_infos() -> Vec<CompositionInfo> {
 
 // ── completeness ────────────────────────────────────────────────────────────
 
-/// Per-**generation** class-count breakdown for the completeness invariant.
+/// Per-generation class-count breakdown for the completeness invariant.
 ///
-/// One row per vendored BMM file composing the crate. Counting per generation
-/// (not over a merged class map) is load-bearing: a merged map hides a
-/// cross-generation name collision entirely — every name is still present, so a
-/// name-level count over the merge passes while one generation's shape and
-/// attributes have been discarded.
+/// Counted per generation because a merged class map hides a cross-generation
+/// name collision.
 #[derive(Debug, Clone)]
 pub struct Completeness {
     /// The composition key.
@@ -171,16 +161,14 @@ pub struct Completeness {
     /// Classes skipped because they are mapped to Rust (primitive / container /
     /// marker / functional / service / constant-holder).
     pub skipped_mapped: usize,
-    /// Classes skipped because they are abstract with no concrete descendants
-    /// and are never referenced as a field type (the only other sanctioned
-    /// skip).
+    /// Classes skipped because they are abstract, have no concrete descendants
+    /// and are never a field type.
     pub skipped_abstract_unused: usize,
-    /// Classes that vanished for **neither** sanctioned reason — a silent drop.
-    /// The completeness invariant requires this to be empty.
+    /// Classes skipped for neither sanctioned reason; the invariant requires none.
     pub silently_dropped: Vec<String>,
 }
 
-/// Compute the completeness breakdown of every BMM generation composing one
+/// Computes the completeness breakdown of every BMM generation composing one
 /// crate, in declaration order.
 ///
 /// # Errors
@@ -200,10 +188,6 @@ pub fn completeness(key: &str) -> Result<Vec<Completeness>, Error> {
 }
 
 /// The completeness breakdown of one BMM specification unit.
-///
-/// A skipped class is accounted for by WHY it is skipped: a mapped type, an
-/// abstract class with no variants that nothing references, or — the one that
-/// matters — a silent drop.
 fn unit_completeness(model: &Model, schema: &BmmSchema) -> Completeness {
     let used = model.used_as_type();
     let mut planned = 0;
@@ -236,8 +220,7 @@ fn unit_completeness(model: &Model, schema: &BmmSchema) -> Completeness {
     }
 }
 
-/// One BMM-declared attribute that reaches no emitted Rust field — the
-/// attribute-level half of the completeness invariant.
+/// One BMM-declared attribute that reaches no emitted Rust field.
 #[derive(Debug, Clone)]
 pub struct AttributeGap {
     /// The vendored BMM file declaring it.
@@ -251,21 +234,9 @@ pub struct AttributeGap {
 }
 
 /// Every BMM-declared attribute of a crate's generations that reaches no
-/// emitted struct field.
+/// emitted struct field, with the number of `(class, attribute)` pairs checked.
 ///
-/// A class emitted as a struct (or a polymorphic slot's `{Name}Data`) must carry
-/// every attribute its OWN generation declares on it; a class emitted as a
-/// closed subtype set carries its attributes through each concrete variant's
-/// flattened struct. A designated owner/parent back-reference is deliberately
-/// omitted from the struct
-/// (the `back_reference` decision map) and is not a gap.
-///
-/// This is the check the class-NAME-level count cannot make: a merged
-/// two-generation class map keeps every name while silently dropping one
-/// generation's attribute set.
-///
-/// The `usize` beside the gap list is how many `(class, attribute)` pairs were
-/// actually checked, so the invariant can assert the check is not vacuous.
+/// A back-reference omitted by the `back_reference` map is not a gap.
 ///
 /// # Errors
 /// Returns an error if the crate's BMM files cannot be loaded.
@@ -294,9 +265,6 @@ fn unit_attribute_gaps(u: &ComposedUnit, gaps: &mut Vec<AttributeGap>) -> usize 
 
 /// Collects one class's attribute gaps into `gaps`, returning how many
 /// `(attribute, carrier)` pairs were checked.
-///
-/// A back-referenced attribute is deliberately absent from every emitted field
-/// set (`overrides::back_reference`), so it is not a gap.
 fn class_attribute_gaps(
     u: &ComposedUnit,
     name: &str,
@@ -325,13 +293,8 @@ fn class_attribute_gaps(
     checked
 }
 
-/// The emitted types that must carry a class's declared attributes.
-///
-/// A struct (or a polymorphic slot's `{Name}Data`) carries them itself; a
-/// closed subtype set carries them through each concrete variant. A literal
-/// enumeration and a transparent newtype are scalars on the wire and declare
-/// no attributes of their own; a mapped or unused-abstract class emits
-/// nothing, which the name-level completeness check accounts for.
+/// The emitted types that must carry a class's declared attributes: the struct
+/// itself, or each concrete variant of a closed subtype set.
 fn attribute_carriers(
     name: &str,
     class: &crate::load::bmm::BmmClass,
@@ -345,8 +308,7 @@ fn attribute_carriers(
     }
 }
 
-/// The emitted field names of a class — flattened, back-references omitted:
-/// exactly what `render_struct_def` writes.
+/// The emitted field names of a class, flattened, back-references omitted.
 fn emitted_field_names(model: &Model, class_name: &str) -> BTreeSet<String> {
     model.get(class_name).map_or_else(BTreeSet::new, |cls| {
         model
@@ -359,7 +321,7 @@ fn emitted_field_names(model: &Model, class_name: &str) -> BTreeSet<String> {
 }
 
 /// A file path or prelude identifier claimed by more than one BMM generation of
-/// the same crate — the silent-shape-pick hazard, which must never occur.
+/// the same crate.
 #[derive(Debug, Clone)]
 pub struct GenerationConflict {
     /// The composition key.
@@ -370,14 +332,8 @@ pub struct GenerationConflict {
     pub files: Vec<String>,
 }
 
-/// Emitted-path conflicts between the BMM generations composing each crate.
-///
-/// Must be empty: every generation renders under its own version-named top
-/// module, so two generations sharing an emitted path would mean one
-/// overwrites the other (a silently picked shape). Cross-generation prelude
-/// collisions no longer exist by construction — the crate prelude re-exports
-/// the CURRENT generation only, and each generation carries its own in-tree
-/// prelude.
+/// Emitted-path conflicts between the BMM generations composing each crate;
+/// the invariant requires none.
 ///
 /// # Errors
 /// Returns an error if any composition's BMM files cannot be loaded.
@@ -403,10 +359,8 @@ pub fn generation_conflicts() -> Result<Vec<GenerationConflict>, Error> {
                 external: &g.external,
             })
             .collect();
-        // Path conflicts are independent of the banner input, so an empty
-        // sibling set is the right (and cheapest) view here. Attribute each
-        // emitted path to the generation whose module prefixes it; the
-        // crate-level artifacts (`lib.rs`, `prelude.rs`) are assembled once.
+        // Path conflicts do not depend on the banner input, so an empty sibling set
+        // suffices; `lib.rs` and `prelude.rs` are assembled once per crate.
         for f in emit_composed(comp, &gens, &SiblingImpls::default()) {
             let file = c
                 .generations
@@ -430,9 +384,8 @@ pub fn generation_conflicts() -> Result<Vec<GenerationConflict>, Error> {
 
 // ── invariant classification (assertion-dialect analyzer) ────────────────────
 
-/// One classified BMM invariant: the owning class, the invariant name, its
-/// verbatim assertion expression, and the R5 bucket the assertion-dialect
-/// analyzer assigns it.
+/// One classified BMM invariant with the bucket the assertion-dialect analyzer
+/// assigns it.
 #[derive(Debug, Clone)]
 pub struct ClassifiedInvariant {
     /// The generation module (`v1_2`) whose schema declares it.
@@ -449,9 +402,8 @@ pub struct ClassifiedInvariant {
     pub reason: String,
 }
 
-/// Classify every `BMM_CLASS.invariants` expression in a crate's own schema
-/// with the assertion-dialect analyzer, returning one row per invariant, sorted
-/// by (class, name) for determinism.
+/// Classifies every `BMM_CLASS.invariants` expression in a crate's own schema,
+/// sorted by (class, name).
 ///
 /// # Errors
 /// Returns an error if the crate's BMM files cannot be loaded.
@@ -485,9 +437,8 @@ pub fn classify_invariants(key: &str) -> Result<Vec<ClassifiedInvariant>, Error>
 
 // ── constructibility ────────────────────────────────────────────────────────
 
-/// The non-constructible concrete classes of every BMM generation composing a
-/// crate (an unbroken mandatory single-valued construction cycle). The invariant
-/// requires empty.
+/// The concrete classes of a crate that an unbroken mandatory construction
+/// cycle makes non-constructible; the invariant requires none.
 ///
 /// # Errors
 /// Returns an error if the crate's BMM files cannot be loaded.
@@ -506,14 +457,9 @@ pub fn constructibility_offenders(key: &str) -> Result<Vec<String>, Error> {
 
 // ── determinism ─────────────────────────────────────────────────────────────
 
-/// Render every generated spec crate's `src/` tree (`emit`) to an in-memory
-/// map, keyed by each file's path relative to the workspace `crates/`
-/// directory.
-///
-/// Drives `cli::render_emit_files` — the same text production the `emit`
-/// subcommand drives, generation-twin template stamps included — and applies the
-/// value-carrier guard and SPDX header the subcommand writes, so a value equals
-/// the on-disk file before `rustfmt`.
+/// Renders every generated spec crate's `src/` tree (`emit`) in memory, keyed
+/// by path relative to `crates/`, byte-equal to the on-disk file before
+/// `rustfmt`.
 ///
 /// # Errors
 /// Returns an error if a composition's BMM files cannot be loaded, or if a
@@ -522,13 +468,8 @@ pub fn emit_to_memory() -> Result<BTreeMap<String, String>, Error> {
     Ok(to_memory(cli::render_emit_files()?))
 }
 
-/// Render the canonical-JSON `serde` impls and `_type` dispatch (`emit-json`)
-/// to an in-memory map, keyed by each file's path relative to the workspace
-/// `crates/` directory.
-///
-/// Drives `cli::render_json_files` — the same text production the `emit-json`
-/// subcommand drives — and applies the value-carrier guard and SPDX header the
-/// subcommand writes, so a value equals the on-disk file before `rustfmt`.
+/// Renders the `emit-json` output in memory, keyed by path relative to
+/// `crates/`.
 ///
 /// # Errors
 /// Returns an error if a composition's BMM files cannot be loaded.
@@ -536,13 +477,8 @@ pub fn emit_json_to_memory() -> Result<BTreeMap<String, String>, Error> {
     Ok(to_memory(cli::render_json_files()?))
 }
 
-/// Render the canonical-XML `ToXml`/`FromXml` impls (`emit-xml`) to an
-/// in-memory map, keyed by each file's path relative to the workspace `crates/`
-/// directory.
-///
-/// Drives `cli::render_xml_files` — the same text production the `emit-xml`
-/// subcommand drives — and applies the value-carrier guard and SPDX header the
-/// subcommand writes, so a value equals the on-disk file before `rustfmt`.
+/// Renders the `emit-xml` output in memory, keyed by path relative to
+/// `crates/`.
 ///
 /// # Errors
 /// Returns an error if the RM/BASE compositions or the vendored XSD bundles
@@ -551,12 +487,8 @@ pub fn emit_xml_to_memory() -> Result<BTreeMap<String, String>, Error> {
     Ok(to_memory(cli::render_xml_files()?.files))
 }
 
-/// Render the ITS-REST contract (`emit-rest`) to an in-memory map, keyed by
-/// each file's path relative to the workspace `crates/` directory.
-///
-/// Drives `cli::render_rest_files` — the same text production the `emit-rest`
-/// subcommand drives — and applies the value-carrier guard and SPDX header the
-/// subcommand writes, so a value equals the on-disk file before `rustfmt`.
+/// Renders the `emit-rest` output in memory, keyed by path relative to
+/// `crates/`.
 ///
 /// # Errors
 /// Returns an error if the RM/BASE compositions or a vendored OAS bundle cannot
@@ -565,13 +497,8 @@ pub fn emit_rest_to_memory() -> Result<BTreeMap<String, String>, Error> {
     Ok(to_memory(cli::render_rest_files()?))
 }
 
-/// Render the OPT 1.4 model + canonical-XML codec (`emit-opt`) to an in-memory
-/// map, keyed by each file's path relative to the workspace `crates/`
-/// directory.
-///
-/// Drives `cli::render_opt_files` — the same text production the `emit-opt`
-/// subcommand drives — and applies the value-carrier guard and SPDX header the
-/// subcommand writes, so a value equals the on-disk file before `rustfmt`.
+/// Renders the `emit-opt` output in memory, keyed by path relative to
+/// `crates/`.
 ///
 /// # Errors
 /// Returns an error if the RM/BASE compositions or the AM/OPT XSD closure cannot
@@ -580,12 +507,8 @@ pub fn emit_opt_to_memory() -> Result<BTreeMap<String, String>, Error> {
     Ok(to_memory(cli::render_opt_files()?.files))
 }
 
-/// Render both AOM2 archetype codecs (`emit-aom2`) to an in-memory map, keyed by
-/// each file's path relative to the workspace `crates/` directory.
-///
-/// Drives `cli::render_aom2_files` — the same text production the `emit-aom2`
-/// subcommand drives — and applies the value-carrier guard and SPDX header the
-/// subcommand writes, so a value equals the on-disk file before `rustfmt`.
+/// Renders the `emit-aom2` output in memory, keyed by path relative to
+/// `crates/`.
 ///
 /// # Errors
 /// Returns an error if the RM/BASE compositions or either AOM2 XSD closure
@@ -594,14 +517,8 @@ pub fn emit_aom2_to_memory() -> Result<BTreeMap<String, String>, Error> {
     Ok(to_memory(cli::render_aom2_files()?.files))
 }
 
-/// Render the static RM attribute/type model (`emit-rm-model`) to an in-memory
-/// map, keyed by each file's path relative to the workspace `crates/`
-/// directory.
-///
-/// Drives `cli::render_rm_model_files` — the same text production the
-/// `emit-rm-model` subcommand and `emit` both drive — and applies the
-/// value-carrier guard and SPDX header they write, so a value equals the on-disk
-/// file before `rustfmt`.
+/// Renders the `emit-rm-model` output in memory, keyed by path relative to
+/// `crates/`.
 ///
 /// # Errors
 /// Returns an error if the RM composition's BMM files cannot be loaded.
@@ -609,13 +526,8 @@ pub fn emit_rm_model_to_memory() -> Result<BTreeMap<String, String>, Error> {
     Ok(to_memory(cli::render_rm_model_files()?))
 }
 
-/// Render the RM class-invariant cores (`emit-validate`) to an in-memory map,
-/// keyed by each file's path relative to the workspace `crates/` directory.
-///
-/// Drives `cli::render_validate_files` — the same text production the
-/// `emit-validate` subcommand and `emit` both drive — and applies the
-/// value-carrier guard and SPDX header they write, so a value equals the on-disk
-/// file before `rustfmt`.
+/// Renders the `emit-validate` output in memory, keyed by path relative to
+/// `crates/`.
 ///
 /// # Errors
 /// Returns an error if the RM composition's BMM files cannot be loaded.
@@ -623,8 +535,7 @@ pub fn emit_validate_to_memory() -> Result<BTreeMap<String, String>, Error> {
     Ok(to_memory(cli::render_validate_files()?))
 }
 
-/// Turn an emit target's rendered files into the path → bytes map the tests
-/// compare, applying the same [`cli::generated_bytes`] the CLI writes through.
+/// Maps rendered files to path and bytes through [`cli::generated_bytes`].
 fn to_memory(files: Vec<cli::EmittedFile>) -> BTreeMap<String, String> {
     files
         .into_iter()
@@ -637,8 +548,8 @@ fn to_memory(files: Vec<cli::EmittedFile>) -> BTreeMap<String, String> {
 
 // ── cross-schema re-emission (source-package mirroring + downstream closure) ──
 
-/// One re-emitted cross-schema class: where its package sits in the upstream
-/// source schema vs where it is grafted in the downstream (AM 2.4) schema.
+/// One re-emitted cross-schema class with its upstream and downstream package
+/// paths.
 #[derive(Debug, Clone)]
 pub struct Mirror {
     /// The re-emitted class name.
@@ -649,10 +560,8 @@ pub struct Mirror {
     pub augmented_path: Option<String>,
 }
 
-/// One generation's declared model as `CLASS` → attribute name → signature.
-///
-/// The signature is `attribute_signature`'s canonical text, so a comparison
-/// over this map sees an attribute's TYPE and CARDINALITY, not only its name.
+/// One generation's declared model as `CLASS` → attribute name →
+/// `attribute_signature` text.
 pub type GenerationAttributeMap = BTreeMap<String, BTreeMap<String, String>>;
 
 /// The model delta between two generations of one crate, in BOTH directions.
@@ -668,21 +577,16 @@ pub struct GenerationDelta {
     /// `CLASS.attribute` pairs the older generation declares on classes both
     /// generations share, absent from the newer.
     pub attributes_removed: Vec<String>,
-    /// Attributes both generations declare on a shared class whose SIGNATURE
+    /// Attributes both generations declare on a shared class whose signature
     /// differs, as `CLASS.attribute: <older> -> <newer>`.
-    ///
-    /// The retype class an existence comparison cannot see —
-    /// `GENERIC_ENTRY.data: ITEM_TREE -> ITEM` (SPECRM-18) is one member.
     pub attributes_changed: Vec<String>,
 }
 
-/// The canonical signature of one declared BMM property: its shape, its type,
-/// its existence and (for a container) its cardinality.
+/// The canonical signature of one declared BMM property.
 ///
-/// Rendered as `[?]<type>` for a single property and
-/// `[?]<container><item> [lower..upper]` for a container one, where a leading
-/// `?` marks an optional (`0..1`) property. Examples: `ITEM_TREE`,
-/// `?DV_TEXT`, `List<LINK> [0..*]`, `?Hash<String,String>`.
+/// `[?]<type>` for a single property, `[?]<container><item> [lower..upper]`
+/// for a container; `?` marks `0..1`. Examples: `ITEM_TREE`, `?DV_TEXT`,
+/// `List<LINK> [0..*]`.
 #[must_use]
 fn attribute_signature(property: &crate::load::bmm::BmmProperty) -> String {
     let existence = if property.is_mandatory { "" } else { "?" };
@@ -716,10 +620,8 @@ fn type_text(t: &BmmType) -> String {
     }
 }
 
-/// The declared attribute signatures of one generation of crate `key`.
-///
-/// Multi-unit generations fold their units' class maps last-wins (the
-/// crate-level naming view).
+/// The declared attribute signatures of one generation of crate `key`, units
+/// folded last-wins.
 ///
 /// # Errors
 /// Returns an error if the composition or the generation fails to load.
@@ -743,10 +645,6 @@ pub fn generation_attribute_map(key: &str, module: &str) -> Result<GenerationAtt
 }
 
 /// Computes the model delta between two loaded generation maps.
-///
-/// The pure half of [`generation_attribute_delta`], so a mutation can be
-/// injected into a scratch model and the comparison exercised without
-/// re-vendoring a BMM.
 #[must_use]
 pub fn attribute_delta(
     older: &GenerationAttributeMap,
@@ -793,12 +691,8 @@ pub fn attribute_delta(
     }
 }
 
-/// Computes the model delta from generation `older` to `newer` of crate `key` —
-/// the acceptance-boundary ledger's input.
-///
-/// The comparison is over attribute SIGNATURES (`attribute_signature`), so a
-/// changed type, existence or container cardinality lands in
-/// [`GenerationDelta::attributes_changed`] instead of passing as unchanged.
+/// Computes the attribute-signature delta from generation `older` to `newer`
+/// of crate `key`.
 ///
 /// # Errors
 /// Returns an error if the composition or either generation fails to load.
@@ -824,8 +718,8 @@ fn find_generation<'a>(
         .ok_or_else(|| format!("composition {:?} has no generation {module:?}", c.comp.key).into())
 }
 
-/// The AM 2.4 downstream re-emission closure (the upstream classes whose Rust
-/// form widens downstream) with the source vs augmented package paths of each.
+/// The AM 2.4 re-emission closure with each class's source and augmented
+/// package paths.
 ///
 /// # Errors
 /// Returns an error if the AM/BASE/LANG BMM files cannot be loaded.
@@ -838,8 +732,7 @@ pub fn v2_4_reemit_mirrors() -> Result<Vec<Mirror>, Error> {
     let aug = augment_with_reemit(&unit.schema, &unit.model, &reemit, &dep_refs);
     let aug_paths = class_paths(&aug);
 
-    // Source package path per class, first-wins across the dependency schemas
-    // (BASE before LANG — the same order `augment_with_reemit` grafts).
+    // First wins, in the order `augment_with_reemit` grafts.
     let mut source_paths: BTreeMap<String, String> = BTreeMap::new();
     for dep in &v2_4.dep_schemas {
         for (cls, path) in class_paths(dep) {
@@ -857,13 +750,8 @@ pub fn v2_4_reemit_mirrors() -> Result<Vec<Mirror>, Error> {
         .collect())
 }
 
-/// One generation's raw downstream re-emission closure — the upstream classes
-/// `analyze::cross_schema_reemit` (crate-private) reports for generation
-/// `module` of crate `key`.
-///
-/// Queryable per generation (not just AM 2.4) so the "which generations have a
-/// non-empty closure, and does the emitter act on it" question is answered from
-/// the analysis itself rather than from a citation that can go stale.
+/// The raw re-emission closure `analyze::cross_schema_reemit` reports for
+/// generation `module` of crate `key`.
 ///
 /// # Errors
 /// Returns an error if the composition's BMM files cannot be loaded or
@@ -877,11 +765,7 @@ pub fn reemit_closure(key: &str, module: &str) -> Result<BTreeSet<String>, Error
         .collect())
 }
 
-/// The set of type files (`"<crate>/<path>"`) emitted for one crate — the
-/// crate `key`'s rendered output alone.
-///
-/// Used to prove upstream (LANG) output is untouched by downstream (AM)
-/// analysis.
+/// The type files (`"<crate>/<path>"`) rendered for crate `key` alone.
 ///
 /// # Errors
 /// Returns an error if the crate's BMM files cannot be loaded.
@@ -923,16 +807,12 @@ pub struct DeclEntry {
     pub reason: String,
 }
 
-/// Every declarative decision entry, tagged by which map it came from, for the
-/// integrity invariant (non-empty citation; the keyed class/field exists).
+/// Every declarative decision entry, tagged by its source map.
 #[derive(Debug, Clone)]
 pub struct DeclMap {
     /// The map's name (`back_reference`, `class_binding`, …).
     pub map: &'static str,
-    /// Whether the integrity test must verify the entry's `(class[, field])`
-    /// exists in a loaded schema (true for binding maps; false for the
-    /// mapped-class denylist and the primitive type map, whose extra entries
-    /// are inert).
+    /// Whether the entry's `(class[, field])` must exist in a loaded schema.
     pub check_existence: bool,
     /// The entries.
     pub entries: Vec<DeclEntry>,
@@ -1046,9 +926,7 @@ pub fn decision_maps() -> Vec<DeclMap> {
                 .collect(),
         },
         DeclMap {
-            // The keys are OAS component-schema names, not BMM classes, so
-            // existence is checked against the vendored bundles by
-            // `oas_monomorphizations`, not by the BMM class/field scan.
+            // The keys are OAS schema names; `oas_monomorphizations` checks them.
             map: "oas_monomorphization",
             check_existence: false,
             entries: overrides::OAS_MONOMORPHIZATIONS
@@ -1142,9 +1020,7 @@ pub fn decision_maps() -> Vec<DeclMap> {
         },
         DeclMap {
             map: "dialect_predicates",
-            // The keys are BMM assertion-dialect predicate spellings, not
-            // class/field names, so existence is checked against the classifier
-            // (see `dialect_predicates_match_the_classifier`), not the schema.
+            // The keys are predicate spellings; the classifier test checks them.
             check_existence: false,
             entries: overrides::DIALECT_PREDICATES
                 .iter()
@@ -1169,23 +1045,17 @@ pub fn dialect_predicates() -> Vec<(String, String)> {
         .collect()
 }
 
-/// One accounted assertion-dialect-**emittable** class invariant.
-///
-/// Records which venue the realization register
-/// (`plan::overrides::INVARIANT_REALIZATIONS`) says realizes it, flattened for
-/// the accounting invariant.
+/// One emittable class invariant with the venue the realization register
+/// (`plan::overrides::INVARIANT_REALIZATIONS`) assigns it.
 #[derive(Debug, Clone)]
 pub struct AccountedInvariant {
     /// The owning BMM class name.
     pub class: String,
     /// The BMM invariant name.
     pub name: String,
-    /// The venue name (`"Core"`, `"Impl"`, `"Wire"`, `"Excluded"`,
-    /// `"Unrealized"`), or `"UNACCOUNTED"` when the register has no row —
-    /// an emittable invariant no venue claims.
+    /// The venue name, or `"UNACCOUNTED"` when the register has no row.
     pub venue: &'static str,
-    /// The realizing site (core function name, or repo-relative file); empty
-    /// for the non-realizing venues and for an unaccounted invariant.
+    /// The realizing site; empty for non-realizing venues.
     pub site: String,
     /// The class's vendored spec file, repo-relative; empty when unaccounted.
     pub citation: String,
@@ -1193,9 +1063,8 @@ pub struct AccountedInvariant {
     pub reason: String,
 }
 
-/// Account a crate's own emittable class invariants against the realization
-/// register: one row per invariant the classifier buckets `emitted`, sorted by
-/// `(class, name)`.
+/// Accounts a crate's emittable class invariants against the realization
+/// register, sorted by `(class, name)`.
 ///
 /// # Errors
 /// Returns an error if the crate's BMM files cannot be loaded.
@@ -1219,21 +1088,15 @@ pub fn accounted_emitted_invariants(key: &str) -> Result<Vec<AccountedInvariant>
     ))
 }
 
-/// Accounts an explicit `(class, invariant, assertion-expression)` set.
-///
-/// The set is checked against the realization register — the seam the accounting
-/// invariant's negative case uses to prove an unrealized emit is caught (a
-/// synthetic emittable invariant has no register row, so it accounts as
-/// `"UNACCOUNTED"`).
+/// Accounts an explicit `(class, invariant, assertion-expression)` set against
+/// the realization register.
 #[must_use]
 pub fn account_invariants(triples: &[(&str, &str, &str)]) -> Vec<AccountedInvariant> {
     account(triples.iter().copied())
 }
 
-/// The complex-bucket analogue of [`accounted_emitted_invariants`].
-///
-/// Every invariant of `key`'s composed schemas the classifier judges NOT
-/// mechanically evaluable, accounted against the realization register.
+/// Accounts the invariants of `key` the classifier judges not mechanically
+/// evaluable against the realization register.
 ///
 /// # Errors
 ///
@@ -1294,9 +1157,8 @@ fn present(rows: Vec<overrides::AccountedInvariant>) -> Vec<AccountedInvariant> 
         .collect()
 }
 
-/// The declared additional polymorphic subtype members
-/// (`analyze`-level inheritance edges the vendored BMM under-declares), as
-/// `(parent, subtype)` pairs.
+/// The declared additional polymorphic subtype members, as `(parent, subtype)`
+/// pairs.
 #[must_use]
 pub fn subtype_extensions() -> Vec<(String, String)> {
     overrides::SUBTYPE_EXTENSIONS
@@ -1329,8 +1191,7 @@ pub fn untyped_fields() -> Vec<(String, String, String)> {
 /// Returns an error if the composition's BMM files cannot be loaded.
 pub fn enum_variants(key: &str, class: &str) -> Result<Option<Vec<String>>, Error> {
     let c = compose(key)?;
-    // Newest generation first (mirroring the retired merged-view semantics
-    // where the last generation won a colliding name).
+    // Newest generation first.
     Ok(c.generations
         .iter()
         .rev()
@@ -1353,7 +1214,7 @@ pub fn runtime_predicates() -> Vec<String> {
         .collect()
 }
 
-/// Does `class` exist as a class in any loaded composition model?
+/// Whether `class` exists in any loaded composition model.
 ///
 /// # Errors
 /// Returns an error if any composition's BMM files cannot be loaded.
@@ -1371,8 +1232,8 @@ pub fn class_exists(class: &str) -> Result<bool, Error> {
     Ok(false)
 }
 
-/// Does `class` carry a (flattened) field named `field` in any loaded
-/// composition model?
+/// Whether `class` carries a flattened field `field` in any loaded composition
+/// model.
 ///
 /// # Errors
 /// Returns an error if any composition's BMM files cannot be loaded.
@@ -1392,12 +1253,8 @@ pub fn field_exists(class: &str, field: &str) -> Result<bool, Error> {
     Ok(false)
 }
 
-/// The attribute names composition `key`'s OWN schema declares on `class`
-/// (declared, not inherited), or `None` if that schema declares no such class.
-///
-/// Used to pin the RM/BASE twin classes: five class names are declared by both
-/// components with materially different member sets, and both generations are
-/// emitted deliberately (see `plan::composition`'s module note).
+/// The attribute names composition `key`'s own schema declares on `class`, or
+/// `None` if it declares no such class.
 ///
 /// # Errors
 /// Returns an error if the composition's BMM files cannot be loaded.
@@ -1423,18 +1280,13 @@ pub struct VendoredDefault {
     pub field: String,
     /// The facet text, verbatim from the schema.
     pub facet: String,
-    /// The Rust expression the emitter derives (an enumeration constant as the
-    /// `@SPEC::Variant` marker), or `None` when the facet is not renderable in
-    /// the property's declared type.
+    /// The Rust expression the emitter derives, or `None` when the facet is not
+    /// renderable in the property's type.
     pub rendered: Option<String>,
 }
 
-/// Every `default` facet the vendored schemas carry, across every composition
-/// generation, with what the emitter makes of it.
-///
-/// This is the reconciliation surface for the hand-written `field_default`
-/// table: the vendored facet is the source, the table is the residue, and the
-/// two must not overlap.
+/// Every `default` facet of the vendored schemas with what the emitter makes
+/// of it; the hand-written `field_default` table must not overlap it.
 ///
 /// # Errors
 /// Returns an error if a vendored BMM file cannot be loaded.
@@ -1482,8 +1334,7 @@ pub fn unrenderable_defaults() -> Vec<(String, String, Vec<String>)> {
         .collect()
 }
 
-/// Resolve a rendered default against a stand-in `@SPEC` resolver, exactly as
-/// the emitters resolve it (`plan::overrides::resolve_default`).
+/// Resolves a rendered default as `plan::overrides::resolve_default` does.
 #[must_use]
 pub fn resolve_default(default: &str, resolve: impl Fn(&str) -> String) -> String {
     overrides::resolve_default(default, resolve)
@@ -1498,8 +1349,7 @@ pub fn hand_written_defaults() -> Vec<(String, String)> {
         .collect()
 }
 
-/// One adjudicated OAS monomorphization, paired with what the VENDORED bundles
-/// actually declare for that schema key.
+/// One OAS monomorphization beside the titles the vendored bundles declare.
 #[derive(Debug, Clone)]
 pub struct OasMonomorphizationCheck {
     /// The OAS `components/schemas` key.
@@ -1508,15 +1358,12 @@ pub struct OasMonomorphizationCheck {
     pub declared_title: String,
     /// The generated Rust type the map resolves it to.
     pub rust_type: String,
-    /// The `title` values the vendored bundles really declare for that key
-    /// (empty when no bundle declares the key at all).
+    /// The vendored `title` values for that key, empty when none declares it.
     pub vendored_titles: BTreeSet<String>,
 }
 
-/// Every `OAS_MONOMORPHIZATIONS` entry checked against the vendored bundles.
-///
-/// The mapping is only legitimate because each ITS-REST schema declares its real
-/// spec name in `title`, so the entry must still match the vendored text.
+/// Every `OAS_MONOMORPHIZATIONS` entry checked against the vendored bundles'
+/// `title` text.
 ///
 /// # Errors
 /// Returns an error if a vendored OAS bundle cannot be read or parsed.
@@ -1553,11 +1400,8 @@ pub fn oas_monomorphizations() -> Result<Vec<OasMonomorphizationCheck>, Error> {
         .collect())
 }
 
-/// The schema names the shared-module fallback document carries, paired with
-/// the `allOf` base names the hoisted schemas reach.
-///
-/// The second set must be a subset of the first, or `emit_common` flattens
-/// `allOf` compositions against a document that cannot resolve their bases.
+/// The schema names of the shared-module fallback document, and the `allOf`
+/// bases the hoisted schemas reach; the second must be a subset of the first.
 ///
 /// # Errors
 /// Returns an error if a vendored OAS bundle or a BMM file cannot be loaded.
@@ -1631,17 +1475,11 @@ pub fn merged_fallback_schema_names() -> Result<(BTreeSet<String>, BTreeSet<Stri
 
 // ── model-query report ──────────────────────────────────────────────────────
 
-/// Renders the `model-query` report over the real vendored BMM inputs.
+/// Renders the `model-query` report over the vendored BMM inputs, as the CLI
+/// prints it.
 ///
-/// It is the same projection the CLI subcommand prints (BMM-declared facts
-/// beside the current field-shape decision), so a golden test pins the CLI's
-/// actual output.
-///
-/// `component`/`class`/`attribute` are the optional filters; `format` is one of
-/// `table`, `tsv`, `json`.
-/// `flattened` reports one row per class × CARRIED attribute (inherited ones
-/// included, each with its declaring class) instead of one row per class ×
-/// declared attribute.
+/// `format` is `table`, `tsv` or `json`; `flattened` gives one row per carried
+/// attribute, inherited ones included.
 ///
 /// # Errors
 /// Returns an error if a vendored BMM file cannot be loaded, if `format` is not
@@ -1665,14 +1503,8 @@ pub fn model_query(
     )
 }
 
-/// Hand-written generation-twin pairs of `key`'s crate that are byte-identical
-/// modulo generation tokens — each MUST be a template.
-///
-/// Walks every non-current generation module against the current one; a
-/// hand-written file (no `@generated` first line) at the same relative path
-/// in both is normalized with the template substitution and compared. The
-/// returned relative paths are the families the template mechanism must
-/// absorb; the emitter-invariants suite asserts the list is EMPTY.
+/// Hand-written generation-twin files of `key`'s crate that are identical
+/// modulo generation tokens, and so must be templates.
 ///
 /// # Errors
 /// Returns an error if the composition fails to load or a crate tree cannot
@@ -1754,18 +1586,11 @@ fn hand_written_files(dir: &std::path::Path) -> Result<BTreeMap<String, String>,
     Ok(out)
 }
 
-/// BMM-declared functions whose realization DIFFERS between two generations of
-/// one crate, as `<CLASS>.<function>: realized in <gen>, missing in <gen>`.
+/// BMM functions both generations of one crate declare but only one realizes,
+/// as `<CLASS>.<function>: realized in <gen>, missing in <gen>`.
 ///
-/// The staleness this catches: the generation-twin templates give every
-/// generation one source, so a class both generations declare must realize the
-/// same accessors in both. A divergence means a per-generation override drifted,
-/// or a re-vendor renamed a function and only one generation followed.
-///
-/// A function only the newer BMM declares is NOT a divergence when the older
-/// generation realizes it anyway — a superset is permitted by the direction
-/// contract (`docs/VERSIONS.md` §Spec version policy). The reverse, realized in
-/// the older generation but not the newer, IS reported.
+/// An older generation realizing a function only the newer declares is
+/// permitted (`docs/VERSIONS.md` §Spec version policy).
 ///
 /// # Errors
 /// Returns an error if the composition fails to load or a crate tree cannot be
@@ -1797,10 +1622,7 @@ pub fn generation_function_divergence(key: &str) -> Result<Vec<String>, Error> {
 /// Per class: the functions a generation DECLARES, and those it realizes.
 type ClassFunctions = BTreeMap<String, (BTreeSet<String>, BTreeSet<String>)>;
 
-/// The declared/realized function tables of one generation's classes.
-///
-/// A class with no `*_impl.rs` sibling is absent from the table entirely
-/// (`class_function_status`), so it can never look like a divergence.
+/// The declared and realized function tables of one generation's classes.
 ///
 /// # Errors
 /// Returns an error if the generation's module tree cannot be read.
@@ -1820,13 +1642,8 @@ fn generation_class_functions(
     Ok(per_class)
 }
 
-/// Appends every function one generation of the pair realizes and the other
-/// does not.
-///
-/// Only a function BOTH generations declare can diverge. A generation pair like
-/// AM's `v1_4`/`v2_4` is two different specifications sharing class names, so a
-/// function one of them never declares is not a gap in the other — comparing
-/// against the realized set alone reported nine of those.
+/// Appends every function both generations declare that one realizes and the
+/// other does not.
 fn push_pair_divergences(
     module: &str,
     classes: &ClassFunctions,
@@ -1848,11 +1665,8 @@ fn push_pair_divergences(
     }
 }
 
-/// The functions one class DECLARES and those its hand-written sibling
-/// realizes, or `None` when the class has no `*_impl.rs` sibling at all.
-///
-/// Both spellings are recognised: a BMM name that is a Rust keyword is
-/// realized as a raw identifier (`fn r#type(`).
+/// The functions one class declares and those its `*_impl.rs` sibling
+/// realizes (a keyword name as `r#name`), or `None` without a sibling.
 fn class_function_status(
     name: &str,
     class: &crate::load::bmm::BmmClass,
@@ -1877,13 +1691,8 @@ fn class_function_status(
     Some((declared, found))
 }
 
-/// Whether `body` applies items to `rust_type` — an `impl` block on it, or the
-/// type passed to a macro that writes one.
-///
-/// Substring matching is not enough in either direction: `ImportedVersion`
-/// contains `Version`, and a doc comment naming a type says nothing about what
-/// the file implements. So the occurrence must be delimited, and it must sit
-/// where an impl target sits.
+/// Whether `body` applies items to `rust_type`: an `impl` block on it, or the
+/// type passed to a macro that writes one, matched as a delimited identifier.
 fn targets_type(body: &str, rust_type: &str) -> bool {
     body.lines().any(|line| {
         let line = line.trim();
@@ -1900,10 +1709,7 @@ fn targets_type(body: &str, rust_type: &str) -> bool {
 /// so `Version` does not match inside `ImportedVersion`.
 fn delimited_mention(haystack: &str, needle: &str) -> bool {
     let is_ident = |c: char| c.is_alphanumeric() || c == '_';
-    // Split on the needle rather than slicing by byte index: a `&str` index can
-    // land inside a multi-byte character, and `string_slice` is denied for
-    // exactly that reason. Each split boundary gives the neighbouring
-    // characters directly.
+    // Split on the needle: a byte index can land inside a multi-byte character.
     let mut rest = haystack;
     while let Some(at) = rest.find(needle) {
         let (before, from_match) = rest.split_at(at);
@@ -1921,17 +1727,8 @@ fn delimited_mention(haystack: &str, needle: &str) -> bool {
 }
 
 /// BMM-declared functions of `key`'s crate that no Rust method realizes, as
-/// `<generation>/<CLASS>.<function>`.
-///
-/// The BMM declares functions by name and result type only, so their bodies are
-/// hand-written — normally in a `*_impl.rs` sibling. This projection reports,
-/// per generation, EVERY declared function of EVERY class whose name appears as
-/// no `fn` item realizing it anywhere in that generation.
-///
-/// A class's behaviour sibling is an INPUT to that test, never a gate on
-/// reporting it: a BMM `function` is a computed operation, not a property, so a
-/// class with no sibling realizes none of its functions and must still be
-/// reported.
+/// `<generation>/<CLASS>.<function>`, whether or not the class has an
+/// `*_impl.rs` sibling.
 ///
 /// # Errors
 /// Returns an error if the composition fails to load or a crate tree cannot be
@@ -1963,14 +1760,7 @@ pub fn unrealized_bmm_functions(key: &str) -> Result<Vec<String>, Error> {
 }
 
 /// Appends every BMM function of one class that no Rust method in `generation`
-/// realizes, as `<generation>/<CLASS>.<function>`.
-///
-/// A class the emitter never gives a Rust type has nowhere to carry an inherent
-/// method, so its BMM functions are realized by the language rather than by us:
-/// `Integer.add` is `i32`'s `+`, and `impl i32` is not a thing anyone can
-/// write. The authority is the emitter's OWN decision maps, not a name
-/// heuristic — if a class starts emitting, it starts being measured, with no
-/// second list to keep in step.
+/// realizes; a class the emitter's maps give no Rust type is skipped.
 fn push_unrealized_functions(
     name: &str,
     class: &crate::load::bmm::BmmClass,
@@ -2004,15 +1794,8 @@ fn bodies_of<'a>(name: &str, bodies: &'a BTreeMap<String, String>) -> [&'a str; 
     ]
 }
 
-/// Whether one BMM function is realized anywhere in its generation.
-///
-/// A BMM name that is a Rust keyword is realized as a RAW identifier
-/// (`BMM_CLASS.type` → `pub fn r#type(`), so both spellings count or those
-/// functions could never be credited at all. A method may also be realized by
-/// a MACRO applied elsewhere in the generation, so the witness searches every
-/// body — but such a body must name the type as an impl TARGET, not merely
-/// mention it: a mention credited `VERSION.data` to `imported_version_impl.rs`,
-/// a false NEGATIVE that silently drops a real gap.
+/// Whether one BMM function is realized anywhere in its generation, by name or
+/// raw identifier, in a body that names the type as an impl target.
 fn function_is_realized(
     name: &str,
     function: &str,
@@ -2031,18 +1814,11 @@ fn function_is_realized(
         .any(|body| realized(body) && targets_type(body, &rust_type))
 }
 
-/// Every `.rs` file under `dir` as file-stem → the CONCATENATED bodies of every
-/// file with that stem, generated and hand-written alike (the realization check
-/// reads both: an accessor may be emitted on the struct or written in its
-/// behaviour sibling).
+/// Every `.rs` file under `dir` as file-stem → the concatenated bodies of every
+/// file with that stem, generated and hand-written alike.
 ///
-/// Concatenated rather than inserted, because a stem is not unique within a
-/// generation: `openehr-lang`'s `v1_1` carries `bmm/core/bmm_class_impl.rs`
-/// AND `bmm3/core/entity/bmm_class_impl.rs` (likewise `bmm_type_impl` and
-/// `bmm_model_impl`). Keeping one body per stem dropped whichever file the
-/// directory walk reached second — reporting 36 already-realized `v1_1`
-/// functions as gaps, hiding the losing file's real gaps, and making the result
-/// depend on filesystem order rather than on the tree.
+/// A stem is not unique within a generation (`bmm_class_impl` appears twice in
+/// `openehr-lang` `v1_1`), so bodies are concatenated.
 fn rust_bodies_by_stem(dir: &std::path::Path) -> Result<BTreeMap<String, String>, Error> {
     let mut out: BTreeMap<String, String> = BTreeMap::new();
     if !dir.exists() {
@@ -2099,18 +1875,8 @@ pub struct UntypedFacet {
 }
 
 /// Every `xs:enumeration`-faceted simple type of an XSD-driven closure that the
-/// emitter does not carry as a typed enum.
-///
-/// Two properties, both of which a re-vendoring could silently break: the
-/// closure's faceted simple types each emit a fieldless enum, and every element
-/// slot declared with one is typed to that enum rather than falling back to
-/// `String` — which would make an out-of-range value indistinguishable from a
-/// declared one.
-///
-/// The base/rm resolution maps are deliberately empty: a simple type is never a
-/// key of either (they hold complexType class names), so the partition cannot
-/// affect facet emission, while generating every complexType widens the slot
-/// sweep instead of narrowing it.
+/// emitter does not carry as a typed enum, including slots that fall back to
+/// `String`.
 ///
 /// # Errors
 /// When a closure's schema files cannot be read or parsed.
@@ -2184,9 +1950,8 @@ fn push_untyped_facet_slots(
     }
 }
 
-/// A place where the concrete-only `xsi:type` reading would LOSE a document
-/// shape: a concrete type a slot must be able to carry that is missing from
-/// the variant set emitted for that slot.
+/// A concrete type a slot must carry that is missing from the slot's emitted
+/// variant set.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LostVariant {
     /// The emission closure (`opt14`, `aom2`, `aom2_model`).
@@ -2201,17 +1966,11 @@ pub struct LostVariant {
     pub problem: &'static str,
 }
 
-/// Every concrete type an XSD-driven closure's dispatch enums would fail to
-/// carry, reading `xsi:type` variants as CONCRETE descendants only.
+/// Every concrete type an XSD-driven closure's dispatch enums fail to carry,
+/// reading `xsi:type` variants as concrete descendants only.
 ///
-/// A type declared `abstract` is not a legal `xsi:type` value, so it is
-/// correctly absent from a slot's variant set — but each of its CONCRETE
-/// descendants is legal there and must be present. The two facts are
-/// independent: the second is what guarantees the concrete-only reading
-/// discards no document shape, and it is the one worth checking, because the
-/// closures are full of slots typed above an abstract type (`EXPR_ITEM` over
-/// `EXPR_OPERATOR`, `C_OBJECT` over `C_DOMAIN_TYPE`, `OBJECT_ID` over
-/// `UID_BASED_ID`) rather than free of them.
+/// An abstract type is not a legal `xsi:type` value, but each of its concrete
+/// descendants is.
 ///
 /// # Errors
 /// When a closure's schema files cannot be read or parsed.
@@ -2253,12 +2012,8 @@ pub fn lost_dispatch_variants() -> Result<Vec<LostVariant>, Error> {
     Ok(out)
 }
 
-/// Reports the shapes one abstract intermediate loses at one slot.
-///
-/// The abstract type itself is correctly absent from the variant set; every
-/// concrete type BELOW it is a shape a document can present at this slot, so a
-/// missing one is a loss — and the abstract type appearing AS a variant is the
-/// mirror defect.
+/// Reports the concrete types below one abstract intermediate missing at one
+/// slot, and the abstract type itself if it appears as a variant.
 fn push_lost_variants(
     closure: &str,
     declared: &str,

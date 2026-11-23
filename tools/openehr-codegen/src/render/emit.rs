@@ -1,29 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Stage 4 — RENDER. Walks a merged BMM [`Model`] and produces deterministic,
-//! byte-stable Rust for the openEHR spec crates.
+//! Stage 4, render: walks a merged BMM [`Model`] and produces byte-stable Rust
+//! for the openEHR spec crates.
 //!
-//! Emission rules:
-//! - A concrete class inlines all inherited fields, ancestor-first, so any
-//!   field is one hop away.
-//! - `Option<T>` for non-mandatory single properties, `Vec<T>` for containers.
-//! - Untagged enums for abstract classes used as a property type — the closed
-//!   polymorphic slots (`DATA_VALUE`, `ITEM`, …).
-//! - Transparent newtypes for enumeration classes that are a bare primitive on
-//!   the wire (`VALIDITY_KIND` → `String`).
-//! - Generics only where the BMM declares them (`Interval<T>`); the type
-//!   argument is emitted at each use site.
-//! - Foundation primitives, containers and marker traits map to Rust types and
-//!   are never emitted ([`crate::plan::overrides::PRIMITIVES`],
-//!   [`crate::plan::overrides::MAPPED_CLASSES`]).
-//! - Every emitted public item carries documentation: the BMM `documentation`
-//!   where the vendored schema has it, else a deterministic synthesized line
-//!   ([`synth_class_doc`], [`synth_field_doc`]), sanitized for rustdoc by
-//!   [`crate::render::doc_prose::sanitize_doc_prose`].
-//!
-//! These type files carry no serde attributes or derives: `emit-json` generates
-//! the (de)serialization and the `_type` discriminator separately.
+//! A concrete class inlines its inherited fields, ancestor first; an abstract
+//! class used as a property type is an enum over its subtypes; foundation
+//! primitives and containers map to Rust types
+//! ([`crate::plan::overrides::PRIMITIVES`],
+//! [`crate::plan::overrides::MAPPED_CLASSES`]). Every public item carries the
+//! BMM `documentation` or a synthesized line ([`synth_class_doc`],
+//! [`synth_field_doc`]). Serde lives in `emit-json`.
 
 use crate::analyze::{External, Model, class_paths};
 use crate::load::bmm::{
@@ -41,20 +28,11 @@ use crate::plan::{Emission, decide};
 use crate::render::{doc_prose, naming};
 use std::collections::{BTreeMap, BTreeSet};
 
-/// Prepend a file-root `#![expect(clippy::disallowed_types)]` to a generated
-/// body whose CODE mentions the workspace-banned `serde_json::Value`.
+/// Prepends a file-root `#![expect(clippy::disallowed_types)]` to a generated
+/// body whose code names `serde_json::Value`.
 ///
-/// Free-form JSON in generated output is admitted only where the model
-/// adjudicates it (`plan::overrides::UNTYPED_FIELDS` writes the citation NOTE
-/// at the field) or where the spec itself leaves the slot open (BMM `Any`,
-/// `xs:anyType`, an out-of-closure reference). The `expect` is scoped to the
-/// one file and stays honest: comment-only mentions insert nothing, and a
-/// regeneration that stops carrying the type drops the attribute with it.
-///
-/// A body with feature-gated regions (`#[cfg(feature = …)]` — the ITS-REST
-/// group modules, whose server trait and client are each behind a feature)
-/// gets `#![allow(…)]` instead: the carrier may sit inside a gated region, so
-/// under a selection without that feature an `expect` would be unfulfilled.
+/// A body with `#[cfg(feature = …)]` regions gets `#![allow(…)]` instead, since
+/// the carrier may sit in a disabled region.
 pub(crate) fn guard_value_carriers(body: &str) -> String {
     let code_carries = body.lines().any(|l| {
         let t = l.trim_start();
@@ -63,11 +41,8 @@ pub(crate) fn guard_value_carriers(body: &str) -> String {
     if !code_carries {
         return body.to_owned();
     }
-    // Insert after the leading header (`//`) + module-doc (`//!`) block AND
-    // after any existing inner-attribute (`#![…]`) blocks: a later same-level
-    // blanket `#![allow(clippy::all, …)]` would mask the lint and leave the
-    // expectation unfulfilled, so the guard must come last. An outer doc
-    // comment (`///`) already belongs to the first item and stops the scan.
+    // After the header, the module docs and any `#![…]` blocks: a later blanket
+    // `#![allow(clippy::all, …)]` would leave the expectation unfulfilled.
     let mut at = 0usize;
     let mut attr_depth = 0usize;
     for line in body.split_inclusive('\n') {
@@ -129,12 +104,8 @@ pub(crate) struct Version {
 
 /// One BMM generation of a crate as the emitter consumes it.
 ///
-/// A crate composed of several generations (AM 1.4/2.4; LANG's stable v2.x
-/// BMM beside the v3 development line — `LANG/docs/bmm3/master00-amendment_record.adoc`
-/// SPECLANG-14) emits each one COMPLETELY from its own schema and its own
-/// resolution model under its own version-named top module, so a class name
-/// declared by two generations yields two Rust types at two module paths,
-/// each with its own shape and its own intra-generation cross-references.
+/// Each generation emits completely under its own version-named top module, so
+/// a class name two generations declare yields two Rust types.
 pub(crate) struct CrateGeneration<'a> {
     /// The table row this generation emits from (module name, spec version,
     /// current marker).
@@ -158,9 +129,7 @@ pub(crate) struct RenderUnit<'a> {
     pub schema: &'a BmmSchema,
 }
 
-/// The emission shapes that produce a file: [`Emission`] minus its `Skip`
-/// variant. Narrowing at the planning step makes "a skipped class reached the
-/// render loop" unrepresentable instead of a runtime check.
+/// The emission shapes that produce a file: [`Emission`] minus `Skip`.
 enum Shape<'a> {
     /// [`Emission::Struct`].
     Struct,
@@ -189,13 +158,8 @@ impl<'a> Shape<'a> {
     }
 }
 
-/// Emit one specification unit under its generation's version-named top
-/// module. Produces the type files and the `mod.rs` tree; the caller
-/// assembles the generation prelude, the crate prelude and `lib.rs`. The
-/// generation's spec version lives ONLY on the `Generation` enum (owner
-/// ruling 2026-08-05: no version constants anywhere — a second copy of the
-/// same fact can only drift, and `spec_version()` is a `const fn`, so even
-/// const contexts need no constant).
+/// Emits one specification unit under its generation's version-named top
+/// module: the type files and the `mod.rs` tree.
 pub(crate) fn emit_version(
     model: &Model,
     schema: &BmmSchema,
@@ -209,19 +173,14 @@ pub(crate) fn emit_version(
         chain: Vec<String>,
     }
 
-    // Safeguard (owner ruling 2026-07-19): never emit a non-constructible type.
-    // A mandatory single-valued construction cycle must be broken at a designated
-    // owner/parent back-reference edge (`back_reference`); this fails loudly if a
-    // cycle is left unbroken (e.g. a future BMM addition), pointing at the fix.
+    // A mandatory construction cycle must be broken at a `back_reference` edge.
     model.assert_constructible(schema);
 
     let class_pkg = class_paths(schema);
     let used = model.used_as_type();
 
-    // Spec class names emitted in this version; anything referenced outside it
-    // degrades to `serde_json::Value` so the crate stays self-contained. This is
-    // the same projection [`crate::analyze::emittable_specs`] computes — the one
-    // the `External` prelude index and the `model-query` report resolve against.
+    // A spec referenced outside this version degrades to `serde_json::Value`; the
+    // projection [`crate::analyze::emittable_specs`] computes.
     let mut local: BTreeSet<String> = BTreeSet::new();
     for (name, class) in &schema.classes {
         if !matches!(decide(model, class, &used), Emission::Skip) {
@@ -252,9 +211,7 @@ pub(crate) fn emit_version(
             chain: chain.clone(),
             ident: naming::type_name(name),
         });
-        // A polymorphic-concrete class emits a sibling `{Name}Data` struct in the
-        // same file (the enum owns `{Name}`); export it from the prelude too so
-        // downstream code (e.g. the generated XML impls) can name it.
+        // A polymorphic-concrete class's `{Name}Data` struct is exported too.
         if matches!(shape, Shape::PolyEnum(_)) {
             index.insert(format!("{}Data", naming::type_name(name)), chain.clone());
             emitted.push(Emitted {
@@ -307,9 +264,7 @@ pub(crate) fn emit_version(
 
     let type_chains: Vec<Vec<String>> = planned.iter().map(|p| p.chain.clone()).collect();
 
-    // Module tree, with the generation's own `<prefix>/prelude` registered so
-    // the generation `mod.rs` declares it (the caller assembles the prelude
-    // file itself, over the generation's prelude-carrying units).
+    // The caller assembles the generation prelude file itself.
     let mut tree_chains = type_chains.clone();
     let prelude = format!("{prefix}::prelude");
     tree_chains.push(prelude.split("::").map(str::to_owned).collect());
@@ -322,11 +277,8 @@ pub(crate) fn emit_version(
     }
 }
 
-/// The crate-relative module path a class's emitted type lives at WITHIN its
-/// generation module, e.g. `core::bmm_class` — the same chain
-/// [`emit_version`] builds under the generation prefix, so a downstream
-/// emitter can name any type by
-/// `<crate>::<generation>::<type_module_path>::<Ident>`.
+/// The module path a class's emitted type lives at within its generation
+/// module, e.g. `core::bmm_class`.
 #[must_use]
 pub(crate) fn type_module_path(schema: &BmmSchema, class: &str) -> String {
     let pkg = class_paths(schema).get(class).cloned().unwrap_or_default();
@@ -339,14 +291,9 @@ pub(crate) fn type_module_path(schema: &BmmSchema, class: &str) -> String {
     chain.join("::")
 }
 
-/// Emit a fully-composed crate: every BMM generation rendered completely
-/// under its version-named top module (with its own prelude + `SPEC_VERSION`),
-/// the crate prelude re-exporting the CURRENT generation only, and `lib.rs`
-/// carrying the crate `SPEC_VERSION` and the [`crate::plan::composition`]
-/// table's emitted `Generation` enum.
-///
-/// `generations` pairs each composed generation with the (possibly augmented —
-/// `cross_schema_reemit`) schema the render loop consumes.
+/// Emits a fully composed crate: every generation under its version-named top
+/// module, the crate prelude over the current generation, and `lib.rs` with
+/// the `Generation` enum.
 #[must_use]
 pub(crate) fn emit_composed(
     comp: &CrateComposition,
@@ -425,11 +372,8 @@ fn emit_lib(top: &BTreeSet<String>, comp: &CrateComposition) -> GenFile {
     }
     b.push_str("//!\n//! The type files are generated; hand-written spec behaviour\n");
     b.push_str("//! lives in sibling `*_impl.rs` files.\n\n");
-    // Lint exceptions inherent to faithful spec generation: the spec owns the
-    // doc text, the subtype names and the attribute names, so satisfying the
-    // doc, name-prefix and struct-field lints would fork the model.
-    // `reason` is mandatory (`allow_attributes_without_reason` is deny); `expect`
-    // is wrong because a given crate need not trigger every listed lint.
+    // The spec owns the doc text and names, so these lints would fork the model;
+    // `allow`, since a given crate need not trigger each one.
     b.push_str(
         "#![allow(\n    \
          clippy::doc_markdown,\n    \
@@ -469,12 +413,7 @@ fn emit_lib(top: &BTreeSet<String>, comp: &CrateComposition) -> GenFile {
     }
     b.push_str("pub mod prelude;\n");
     b.push_str(&crate::plan::drafts::lib_declaration(comp.crate_name));
-    // No crate-level SPEC_VERSION const (owner ruling 2026-08-05): a
-    // multi-generation crate has no single implemented spec version — the
-    // `Generation` enum is the authority (per-variant `spec_version()`, the
-    // derived `Default` marking the current generation). A fixed crate-root
-    // pin would contradict the selected generation the moment a consumer
-    // configures a non-current one.
+    // No crate-level SPEC_VERSION: the `Generation` enum is the authority.
     b.push_str(&emit_generation_enum(comp));
     GenFile {
         path: "lib.rs".to_string(),
@@ -524,9 +463,7 @@ fn emit_generation_enum(comp: &CrateComposition) -> String {
         "    /// Returns the openEHR specification version this generation implements.\n    \
          #[must_use]\n    pub const fn spec_version(self) -> &'static str {\n        match self {\n",
     );
-    // Variants sharing one spec version fold into a single or-pattern arm
-    // (LANG's v2/v3 both carry the 1.1.0-line release) — identical match
-    // arms are a clippy deny in the generated output.
+    // Variants sharing one spec version fold into one or-pattern arm.
     let mut version_arms: Vec<(&str, Vec<String>)> = Vec::new();
     for (variant, g) in &variants {
         if let Some((_, vs)) = version_arms.iter_mut().find(|(v, _)| *v == g.spec_version) {
@@ -541,9 +478,7 @@ fn emit_generation_enum(comp: &CrateComposition) -> String {
             patterns.join(" | ")
         ));
     }
-    // The doc's example token is THIS crate's current generation, not a
-    // hardcoded one: a fixed `"v1_2"` told openehr-term's readers its token
-    // was `v1_2` when the only token it has is `v3_1`.
+    // The example token is this crate's current generation.
     b.push_str(&format!(
         "        }}\n    }}\n\n    /// Returns the generation token — the version-module name\n    \
          /// (`\"{current_module}\"`), which is also the [`std::fmt::Display`] and\n    \
@@ -594,10 +529,7 @@ fn emit_generation_enum(comp: &CrateComposition) -> String {
 }
 
 fn emit_prelude(emitted: &[Emitted], path: &str) -> GenFile {
-    // Both the crate prelude (assembled from the CURRENT generation's emitted
-    // set — the chains carry the generation module) and each generation's own
-    // in-tree prelude are emitted through this one function; only the entry
-    // set differs.
+    // Emits the crate prelude and each generation's prelude; only the entries differ.
     let mut b = String::from(
         "// @generated by openehr-codegen — DO NOT EDIT.\n\
          //! Prelude: re-exports every generated spec type of ONE generation.\n\
@@ -656,10 +588,8 @@ pub(crate) fn struct_generics(model: &Model, class: &BmmClass) -> Vec<String> {
         .collect()
 }
 
-/// The struct definition (doc, derive, fields) under the name `struct_ty`,
-/// without the file header. `struct_ty` is normally `type_name(class)`, but a
-/// polymorphic-concrete class emits its own instances as `{Name}Data` (the
-/// enum owns `{Name}`). The canonical `_type` stays the class name either way.
+/// The struct definition under the name `struct_ty`, without the file header;
+/// a polymorphic-concrete class uses `{Name}Data`.
 fn render_struct_def(
     model: &Model,
     class: &BmmClass,
@@ -673,20 +603,14 @@ fn render_struct_def(
     let mut b = String::new();
     push_struct_prologue(&mut b, class, struct_ty, &gen_decl);
 
-    // A class with a validating construction door (`plan::construction`) emits
-    // its fields `pub(crate)` instead of `pub`: outside this crate the only way
-    // to obtain a value is the hand-written `*_impl.rs` constructor, which runs
-    // the released grammar. `pub(crate)` rather than fully private because the
-    // grammar itself is hand-written spec behaviour in a sibling module of the
-    // same crate, and the generator never writes into `*_impl.rs`.
+    // A class behind a validating construction door (`plan::construction`) has
+    // `pub(crate)` fields, read by its hand-written `*_impl.rs` constructor.
     let field_vis = if construction::is_validated(&class.name) {
         "pub(crate)"
     } else {
         "pub"
     };
-    // `(ident, rust_type)` for each emitted field, in emission order — the read
-    // accessors a validated class needs, and the parameter order its constructor
-    // is called in by the generated codecs.
+    // `(ident, rust_type)` per field, in the constructor's parameter order.
     let mut emitted: Vec<(String, String)> = Vec::new();
 
     let props = model.flattened_props(class);
@@ -694,13 +618,7 @@ fn render_struct_def(
     let mut first = true;
     for rp in &props {
         let p = rp.prop;
-        // A designated owner/parent back-reference is a non-data navigational
-        // association, never forward-owned data and never on the canonical wire;
-        // emitting it as an owning field makes the type a non-constructible
-        // infinite value (see `back_reference`). Omit it from the struct + serde;
-        // behavioural access, if ever needed, belongs in a hand-written
-        // `*_impl.rs`. This is the only sanctioned way to break a mandatory
-        // construction cycle — a forward composition is never relaxed.
+        // A back-reference is omitted from the struct and serde.
         if let Some(citation) = back_reference(&rp.owner, &p.name) {
             push_back_reference_note(&mut b, &p.name, citation);
             continue;
@@ -718,17 +636,10 @@ fn render_struct_def(
             "",
         );
 
-        // The wire name (rename) and literal default are consumed by the JSON
-        // codec emitter (`emit-json`, which reads them from the BMM), not from a
-        // struct attribute — so no serde/`openehr` field attribute is emitted here.
+        // The wire name and default live in `emit-json`.
         let ident = naming::field_ident(&p.name);
         let rust_ty = field_type(model, class, p, generics, subst, local, external);
-        // A field that degraded to free-form JSON *and* carries an adjudication
-        // gets the decision written at the site: silence over an untyped slot in
-        // a generated spec crate is indistinguishable from an oversight. The
-        // NOTE is conditional on the degrade actually happening, so a
-        // composition where the type IS resolvable (the AM24 re-emission of
-        // `EL_CASE`, where `C_OBJECT` is local) emits the typed field with no note.
+        // An adjudicated field that degraded to free-form JSON carries its NOTE.
         if rust_ty.contains("serde_json::Value") {
             push_untyped_field_note(&mut b, &rp.owner, &class.name, &p.name);
         }
@@ -758,13 +669,8 @@ fn generic_decl(params: &[String]) -> String {
     }
 }
 
-/// The imports every enum variant's payload embeds.
-///
-/// For a variant threaded over the enum's own params (`IntervalEvent<T>`) that
-/// is just the variant type; for a bound-filled variant
-/// (`DvInterval<DvOrdered>`) it also includes the auto-filled bound arguments.
-/// This mirrors the payload decision, so a bound type the payload never names
-/// is not imported.
+/// The imports every enum variant's payload embeds, bound-filled arguments
+/// included.
 fn variant_imports(
     model: &Model,
     variants: &[String],
@@ -790,9 +696,6 @@ fn variant_imports(
 }
 
 /// The imports the in-file `{Name}Data` struct needs for the class's own fields.
-///
-/// The enum's own type is never imported into its own file, and a spec neither
-/// the local ident index nor an external prelude places is skipped.
 fn data_struct_imports(
     model: &Model,
     class: &BmmClass,
@@ -823,10 +726,6 @@ fn data_struct_imports(
 
 /// Appends the struct's doc block, spec alias, construction note and the
 /// `derive` + opening `pub struct` lines.
-///
-/// No serde/`_type` derive is emitted: canonical-JSON (de)serialization is
-/// provided by the emitted `ToJson`/`FromJson` impls in `openehr-its`
-/// (`emit-json`), so the type is a plain data record.
 fn push_struct_prologue(b: &mut String, class: &BmmClass, struct_ty: &str, gen_decl: &str) {
     doc_block_or(
         b,
@@ -836,10 +735,7 @@ fn push_struct_prologue(b: &mut String, class: &BmmClass, struct_ty: &str, gen_d
         &synth_class_summary(&class.name),
     );
     push_spec_alias(b, &class.name, struct_ty, "");
-    // A class the construction map records as staying a plain record although a
-    // reader might expect a validating door carries that adjudication here, at
-    // the public fields it is about — silence over an unguarded identifier type
-    // is indistinguishable from an oversight.
+    // The plain-record adjudication, at the public fields it concerns.
     if let Some(note) = construction::plain_record_note(&class.name) {
         b.push_str(&format!("// NOTE: {note}\n"));
     }
@@ -848,10 +744,7 @@ fn push_struct_prologue(b: &mut String, class: &BmmClass, struct_ty: &str, gen_d
 }
 
 /// The `// inherited: X` group header a property opens, if it starts a new
-/// inheritance group.
-///
-/// The header carries a blank line before it — but not as the very first line
-/// inside the braces, which rustfmt strips.
+/// inheritance group, with a blank line before it except first in the braces.
 fn inherited_group_header(
     rp: &crate::analyze::ResolvedProp<'_>,
     class_name: &str,
@@ -866,12 +759,6 @@ fn inherited_group_header(
 }
 
 /// The NOTE emitted in place of an omitted back-reference field.
-///
-/// A designated owner/parent back-reference is a non-data navigational
-/// association, never forward-owned data and never on the canonical wire;
-/// emitting it as an owning field makes the type a non-constructible infinite
-/// value. This is the only sanctioned way to break a mandatory construction
-/// cycle — a forward composition is never relaxed.
 fn push_back_reference_note(b: &mut String, prop: &str, citation: &str) {
     b.push_str(&format!(
         "    // NOTE: `{prop}` (BMM-mandatory back-reference) omitted — {citation}. \
@@ -881,14 +768,7 @@ fn push_back_reference_note(b: &mut String, prop: &str, citation: &str) {
     ));
 }
 
-/// The NOTE emitted beside a field that degraded to free-form JSON *and*
-/// carries an adjudication.
-///
-/// Silence over an untyped slot in a generated spec crate is
-/// indistinguishable from an oversight. The note is conditional on the degrade
-/// actually happening, so a composition where the type IS resolvable (the AM24
-/// re-emission of `EL_CASE`, where `C_OBJECT` is local) emits the typed field
-/// with no note.
+/// The NOTE emitted beside an adjudicated field that degraded to free-form JSON.
 fn push_untyped_field_note(b: &mut String, owner: &str, class: &str, prop: &str) {
     if let Some(adj) = untyped_field(owner, prop).or_else(|| untyped_field(class, prop)) {
         b.push_str(&format!(
@@ -898,14 +778,8 @@ fn push_untyped_field_note(b: &mut String, owner: &str, class: &str, prop: &str)
     }
 }
 
-/// The read accessors + door NOTE for a class whose fields are `pub(crate)`
-/// behind a validating constructor (`plan::construction`).
-///
-/// Emitting the accessors here rather than hand-writing one per class keeps the
-/// scheme mechanical: a field added to a validated class by a spec bump gains
-/// its reader automatically, and the accessor set can never drift from the field
-/// set. `String` reads back as `&str` (the idiomatic borrow); every other type
-/// reads back by reference.
+/// The read accessors and door NOTE for a class whose fields are `pub(crate)`
+/// behind a validating constructor; `String` reads back as `&str`.
 fn render_accessors(
     spec_name: &str,
     struct_ty: &str,
@@ -938,10 +812,7 @@ fn render_accessors(
         if i > 0 {
             b.push('\n');
         }
-        // `&Option<T>` is never the right accessor return (clippy::ref_option:
-        // it forces the caller to reborrow and blocks passing a plain `Some(&x)`)
-        // — an optional field reads back as `Option<&T>`, with `Option<String>`
-        // borrowing all the way down to `Option<&str>`.
+        // An optional field reads back as `Option<&T>` (`clippy::ref_option`).
         let (ret, expr) = match rust_ty
             .strip_prefix("Option<")
             .and_then(|inner| inner.strip_suffix('>'))
@@ -967,11 +838,8 @@ fn render_accessors(
     b
 }
 
-/// Emit the class's `BMM_CLASS.constants` as an `impl {ty} { pub const … }`
-/// block (empty when the class has none). `ty` is the struct the constants hang
-/// on — `type_name(class)` for a plain struct, `{Name}Data` for a polymorphic
-/// slot. Each constant carries a doc line citing its verbatim BMM name (the BMM
-/// is the authority); the literal is decoded from the raw BMM `value`.
+/// Emits the class's `BMM_CLASS.constants` as an `impl {ty}` block of `pub
+/// const` items, each doc citing its BMM name.
 fn render_constants(class: &BmmClass, ty: &str) -> String {
     if class.constants.is_empty() {
         return String::new();
@@ -995,12 +863,9 @@ fn render_constants(class: &BmmClass, ty: &str) -> String {
     b
 }
 
-/// Decode a BMM constant's raw `value` to a Rust `(type, literal)` pair. A JSON
-/// number keys off the BMM `type` (`Real`/`Double` → `f64`, else `i64`); a JSON
-/// string carries a quoted `"…"` (→ `&str`) or `'…'` (→ `char`) literal,
-/// a bareword cross-reference to a sibling constant (→ `Self::OTHER`), or a
-/// boolean keyword. Numeric character references (`&#42;`) and Eiffel octal
-/// escapes (`\015`) inside literals are decoded.
+/// Decodes a BMM constant's raw `value` to a Rust `(type, literal)` pair,
+/// decoding numeric character references (`&#42;`) and Eiffel octal escapes
+/// (`\015`).
 fn const_literal(c: &BmmConstant, siblings: &BTreeSet<&str>) -> (String, String) {
     let is_real = matches!(c.type_name.as_str(), "Real" | "Double");
     match &c.value {
@@ -1019,12 +884,9 @@ fn const_literal(c: &BmmConstant, siblings: &BTreeSet<&str>) -> (String, String)
     }
 }
 
-/// Decode a STRING-valued BMM constant to a Rust `(type, literal)` pair.
-///
-/// A quoted `"…"` is a `&str`, a quoted `'…'` a `char`, a bareword naming a
-/// sibling constant a `Self::OTHER` cross-reference, and a bareword under a
-/// `Boolean` type a bool. Anything else is emitted verbatim as a string
-/// literal — the safest total decoding.
+/// Decodes a string-valued BMM constant: `"…"` is `&str`, `'…'` a `char`, a
+/// sibling name `Self::OTHER`, a bareword under `Boolean` a bool, and anything
+/// else a string literal.
 fn string_const_literal(
     t: &str,
     type_name: &str,
@@ -1112,12 +974,8 @@ fn decode_char(inner: &str) -> char {
     decoded.chars().next().unwrap_or('\u{0}')
 }
 
-/// Compute a field's Rust type (the JSON codec handles `None`/empty omission at
-/// its field call sites, so no attribute is needed on the field).
-///
-/// This is the single field-shape decision: the struct renderer above calls it
-/// for every flattened property, and [`crate::render::model_query`] calls it to
-/// report the decision, so the report cannot drift from the emitted code.
+/// Computes a field's Rust type; [`crate::render::model_query`] reports the
+/// same decision.
 pub(crate) fn field_type(
     model: &Model,
     class: &BmmClass,
@@ -1158,16 +1016,12 @@ struct ContainerShape<'a> {
     cardinality: &'a Option<crate::load::bmm::BmmCardinality>,
 }
 
-/// The inner Rust type of a single-valued property, boxed where leaving it by
-/// value would make the struct infinitely sized.
+/// The inner Rust type of a single-valued property, boxed where by-value would
+/// make the struct infinitely sized.
 ///
-/// The cycle may be direct self-recursion, mutual recursion
-/// (`RESOURCE_DESCRIPTION` ↔ `AUTHORED_RESOURCE`), or F-bounded recursion through
-/// an auto-filled generic arg (`DV_QUANTITY` → `normal_range:
-/// DvInterval<DvOrdered>`, and `DvOrdered`'s variants include `DV_QUANTITY`), so
-/// every spec name the rendered type embeds by value is checked, not just its
-/// head. A type already behind an indirection (`Vec`, `BTreeMap`, `BTreeSet`)
-/// breaks the cycle on its own, and boxing it would be redundant.
+/// Every spec name the type embeds by value is checked, so mutual and
+/// F-bounded recursion are caught (`DV_QUANTITY.normal_range:
+/// DvInterval<DvOrdered>`).
 #[expect(
     clippy::too_many_arguments,
     reason = "the field-shape decision threads the same resolution tables `field_type` takes; bundling them would hide which each renderer reads"
@@ -1212,39 +1066,17 @@ fn single_field_type(
 
 /// The Rust type of a container property.
 ///
-/// A byte buffer (`Array<Octet>` / `List<Octet>`, e.g. `DV_MULTIMEDIA.data`) is
-/// inline base64 *text* on the canonical wire, not a JSON array, so it carries
-/// the base64 verbatim as a `String` (decoding is a behaviour-layer concern),
-/// like other broader-than-a-crate openEHR types; its optionality follows the
-/// property.
+/// A byte buffer (`Array<Octet>`) is base64 text on the wire, so a `String`.
+/// Otherwise:
 ///
-/// Every other container's shape follows its BMM existence and cardinality:
-///
-/// - mandatory with cardinality `0..*` is `Vec<T>` (the model genuinely
-///   admits zero members);
-/// - mandatory `1..*` is `NonEmptyVec<T>` — the declared lower bound is a
-///   structural statement about the model, so the type carries it and the
-///   strict readers refuse `[]` at parse;
-/// - optional with no non-empty rule is `Option<Vec<T>>`, because the RM
-///   distinguishes Void from empty on a `0..1` container — `FOLDER.items` /
-///   `FOLDER.folders` are both `0..1` with no non-empty invariant
-///   (`org.openehr.rm.common.folder.adoc` §Attributes), so "absent" and
-///   "present-but-empty" are two legitimate model states;
-/// - optional under an invariant of the `x /= Void implies not x.is_empty`
-///   family is `Option<NonEmptyVec<T>>` — no valid instance can carry
-///   present-but-empty, so it stops being representable
-///   (`LOCATABLE.Links_valid`, `org.openehr.rm.common.locatable.adoc`
+/// - mandatory `0..*` is `Vec<T>`;
+/// - mandatory `1..*` is `NonEmptyVec<T>`, less
+///   [`crate::plan::overrides::contradicted`] entries;
+/// - optional is `Option<Vec<T>>`, since the RM tells Void from empty
+///   (`org.openehr.rm.common.folder.adoc` §Attributes);
+/// - optional under an `x /= Void implies not x.is_empty` invariant is
+///   `Option<NonEmptyVec<T>>` (`org.openehr.rm.common.locatable.adoc`
 ///   §Invariants).
-///
-/// The `1..*` source is the BMM minus
-/// [`crate::plan::overrides::contradicted`] (an attribute whose
-/// declared lower bound the release's own syntax chapter contradicts). The write direction is
-/// unaffected either way: the canonical-JSON writer omits an empty list
-/// whether it is `None` or `Some(vec![])` (ITS-REST overview `Resources.md`
-/// §JSON Format — "attributes (even required ones) that are `Null` or an
-/// empty list (array) SHOULD be absent when serialized"); the reader is the
-/// direction that gains (`absent` → `None`, `[]` → `Some(vec![])`, or a
-/// refusal where the type is `NonEmptyVec`).
 #[expect(
     clippy::too_many_arguments,
     reason = "the field-shape decision threads the same resolution tables `field_type` takes; bundling them would hide which each renderer reads"
@@ -1308,10 +1140,7 @@ fn emit_enum(
     has_sibling: bool,
 ) -> String {
     let ty = naming::type_name(&class.name);
-    // The enum is generic over the abstract class's declared params that any
-    // concrete variant uses (`VERSION<T>` exposes `T` only through
-    // `ORIGINAL_VERSION.data: T`); `used_generic_params` resolves this uniformly
-    // so a bare reference elsewhere renders the same arity.
+    // Generic over the abstract class's params any concrete variant uses.
     let enum_generics: Vec<String> = model
         .used_generic_params(&class.name)
         .into_iter()
@@ -1320,18 +1149,14 @@ fn emit_enum(
     let gen_decl = generic_decl(&enum_generics);
     let mut b = String::new();
 
-    // Compute payloads first (so imports can be derived from what they touch).
-    // Each entry is `(variant ident, payload type, doc line)` — a variant is a
-    // public item `missing_docs` checks, and the BMM has no per-subtype text for
-    // a closed slot, so the line is synthesized from the subtype's spec name.
+    // `(variant ident, payload type, doc line)`, so imports derive from payloads.
     let payloads: Vec<(String, String, String)> = variants
         .iter()
         .map(|d| enum_variant_payload(model, class, d, &enum_generics, local, external))
         .collect();
 
-    // A polymorphic *concrete* class also carries its own instances: append a
-    // `{Name}({Name}Data)` variant last (least-rich, so richer subtypes match
-    // first on the untagged wire), and emit the `{Name}Data` struct in-file.
+    // A polymorphic concrete class adds `{Name}({Name}Data)` last, so richer
+    // subtypes match first.
     let data_ty = format!("{ty}Data");
     let data_generics = struct_generics(model, class);
     let data_subst = class_binding(&class.name);
@@ -1366,11 +1191,7 @@ fn emit_enum(
         ));
     }
 
-    // No serde: the canonical-JSON `_type` dispatch (abstract slots require
-    // `_type`; concrete polymorphic slots default a `_type`-less value to the
-    // base type) is emitted as a native `FromJson` impl in `openehr-its`
-    // (`emit-json`), and serialization as a native `ToJson` impl there. This
-    // enum is a plain closed subtype set with no derive/serde attributes.
+    // No serde: `emit-json` writes the `_type` dispatch.
     file_header(&mut b, &class.name, has_sibling);
     write_uses(&mut b, &[], &imports);
 
@@ -1417,10 +1238,8 @@ fn emit_enum(
     b
 }
 
-/// One `From<payload> for Enum` per variant of an RM enum, so a caller builds
-/// a variant the same way whether the layout boxes it or not
-/// ([`crate::plan::layout`]). A payload type two variants share gets none,
-/// since the conversion would be ambiguous.
+/// One `From<payload> for Enum` per variant of an RM enum; a payload type two
+/// variants share gets none.
 fn render_variant_froms(ty: &str, gen_decl: &str, payloads: &[(String, String, String)]) -> String {
     let inner = |payload: &str| -> String {
         payload
@@ -1465,9 +1284,7 @@ fn emit_newtype(class: &BmmClass, prim: &str, has_sibling: bool) -> String {
         &synth_class_summary(&class.name),
     );
     push_spec_alias(&mut b, &class.name, &ty, "");
-    // A transparent primitive newtype; canonical-JSON (de)serialization is the
-    // emitted `ToJson`/`FromJson` impl in `openehr-its` (`emit-json`), which
-    // delegates through the inner primitive.
+    // A transparent primitive newtype; `emit-json` writes its codec.
     b.push_str("#[derive(Debug, Clone, PartialEq, Eq)]\n");
     b.push_str(&format!("pub struct {ty}(pub {prim});\n"));
     b
@@ -1488,10 +1305,9 @@ enum EnumLitWire {
     Int(i32),
 }
 
-/// Resolve an enumeration's constants to `(ident, wire)` pairs, applying the same
-/// value rule as the RM-model emitter (`BMM_ENUMERATION`: explicit `item_values`
-/// win; an INTEGER with none assumes 0,1,2,…; a STRING with none takes each
-/// constant name as its own value).
+/// Resolves an enumeration's constants to `(ident, wire)` pairs: explicit
+/// `item_values` win, an INTEGER with none counts from 0, a STRING with none
+/// takes each name (`BMM_ENUMERATION`).
 fn enum_literals(enumeration: &BmmEnumeration) -> Vec<EnumLit> {
     let is_int = enumeration.underlying_type == "INTEGER";
     enumeration
@@ -1519,18 +1335,8 @@ fn enum_literals(enumeration: &BmmEnumeration) -> Vec<EnumLit> {
 
 /// One untagged-enum variant as `(ident, payload type, doc line)`.
 ///
-/// A variant is a public item `missing_docs` checks, and the BMM has no
-/// per-subtype text for a closed slot, so the doc line is synthesized from the
-/// subtype's spec name.
-///
-/// The payload threads the enum's own generic params when the subtype belongs
-/// to the same generic family (`Event<T>` → `PointEvent(PointEvent<T>)`), and
-/// otherwise bound-fills the variant (`DvInterval(DvInterval<DvOrdered>)`). It
-/// is boxed when leaving it by value would make the enum infinitely sized:
-/// either the payload embeds the enum type through a bound-filled argument
-/// (`EL_TERMINAL` ⊇ `EL_CASE_TABLE<EL_TERMINAL>`), or the variant's own fields
-/// reach back to the enum (`BMM_TYPE` ⊇ `BMM_CONTAINER_TYPE` whose `base_type`
-/// is a `BMM_TYPE`). A `Vec`/map payload already breaks the cycle.
+/// The payload threads the enum's generic params within one generic family and
+/// bound-fills otherwise; it is boxed when it reaches back to the enum.
 pub(crate) fn enum_variant_payload(
     model: &Model,
     class: &BmmClass,
@@ -1568,17 +1374,9 @@ pub(crate) fn enum_variant_payload(
     (variant, payload, doc)
 }
 
-/// Emit a BMM enumeration class as a real Rust enum: one variant per named
-/// constant, plus a tolerance-preserving `Other(String|i32)` catch-all.
-///
-/// The hand-written serde is provably byte-identical to the transparent
-/// `String`/`i32` newtype it replaces: `serialize` writes `as_str`/`value` (the
-/// constant token for a known variant, the verbatim payload for `Other`), and
-/// `deserialize` reads the bare primitive then maps it through the total
-/// `from_wire`/`from_value`. Because `as_str ∘ from_wire` (and `value ∘
-/// from_value`) is the identity for every input, the round-trip preserves every
-/// byte. A strict `TryFrom` seam alongside rejects out-of-set values with a
-/// per-enum typed error and never yields `Other`.
+/// Emits a BMM enumeration class as a Rust enum: one variant per constant,
+/// plus an `Other` catch-all, with a strict `TryFrom` that never yields
+/// `Other`.
 fn emit_enum_literals(class: &BmmClass, enumeration: &BmmEnumeration, has_sibling: bool) -> String {
     let ty = naming::type_name(&class.name);
     let spec = &class.name;
@@ -1606,11 +1404,7 @@ fn emit_enum_literals(class: &BmmClass, enumeration: &BmmEnumeration, has_siblin
     emit_enum_conversions(&mut b, &ty, is_int, &lits);
     emit_enum_try_from(&mut b, &ty, spec, &err_ty, is_int, &lits);
 
-    // Canonical-JSON (de)serialization is the emitted `ToJson`/`FromJson` impl in
-    // `openehr-its` (`emit-json`): `ToJson` writes `as_str`/`value` (the constant
-    // token or verbatim `Other` payload) and `FromJson` maps the bare primitive
-    // through the total `from_wire`/`from_value`, byte-identical to the primitive
-    // it replaces. No serde impl is emitted here.
+    // `emit-json` writes the codec through `from_wire`/`from_value`.
 
     emit_enum_error_type(&mut b, &ty, spec, &err_ty, err_inner, is_int);
     b
@@ -1787,9 +1581,7 @@ fn emit_enum_error_type(
 
 // ── import + header helpers ──────────────────────────────────────────────────
 
-/// Precise `use` lines for a struct's referenced spec types: `crate::…` for
-/// types emitted in this crate, the dependency generation's full
-/// defining-module path for dependency types.
+/// Precise `use` lines for a struct's referenced spec types.
 fn import_lines(
     model: &Model,
     class: &BmmClass,
@@ -1806,9 +1598,8 @@ fn import_lines(
     imports
 }
 
-/// Resolve a referenced spec type to a `use` line: local (`crate::…`) wins,
-/// then the dependency generation's defining module; an unresolved type needs
-/// no import (it rendered as `serde_json::Value`).
+/// Resolves a referenced spec type to a `use` line: local first, then the
+/// dependency generation; an unresolved type needs none.
 fn add_import(
     imports: &mut BTreeSet<String>,
     spec: &str,
@@ -1832,13 +1623,8 @@ fn struct_header(b: &mut String, class: &str, imports: &BTreeSet<String>, has_si
     write_uses(b, &[], imports);
 }
 
-/// The generated file's banner + its module documentation. Every generated type
-/// file IS a module, and `missing_docs` checks modules, so the file carries an
-/// inner `//!` summary naming the spec class it realizes (an out-of-line
-/// module's inner docs satisfy the lint at the `pub mod` declaration site).
-/// `has_sibling` adds the sibling-`*_impl.rs` banner line — emitted for exactly
-/// the classes that HAVE one on disk (`crate::load::impls::SiblingImpls`), so
-/// the banner never points a reader at a file that does not exist.
+/// The generated file's banner and `//!` summary naming its spec class, with
+/// the sibling-`*_impl.rs` line when one exists.
 fn file_header(b: &mut String, class: &str, has_sibling: bool) {
     b.push_str(&format!(
         "// @generated by openehr-codegen from BMM (`{class}`) — DO NOT EDIT.\n"
@@ -1852,19 +1638,15 @@ fn file_header(b: &mut String, class: &str, has_sibling: bool) {
     ));
 }
 
-/// A rustdoc search alias carrying the verbatim openEHR spelling, so
-/// `EHR_STATUS` finds `EhrStatus`. Skipped when the Rust name already equals the
-/// spec name — rustc rejects an alias identical to the item name.
+/// A rustdoc search alias carrying the verbatim openEHR spelling; skipped when
+/// it equals the Rust name.
 fn push_spec_alias(b: &mut String, spec: &str, rust_ty: &str, indent: &str) {
     if spec != rust_ty {
         b.push_str(&format!("{indent}#[doc(alias = \"{spec}\")]\n"));
     }
 }
 
-/// The synthesized class-doc line for a BMM class the vendored schema carries no
-/// `documentation` for (10 such classes across the pinned schemas as of the
-/// current pins) — `missing_docs` admits no exceptions, and an honest
-/// synthesized line beats a silent gap.
+/// The class-doc line for a BMM class the vendored schema leaves undocumented.
 fn synth_class_summary(spec: &str) -> String {
     format!("The openEHR `{spec}` class.")
 }
@@ -1882,11 +1664,7 @@ fn synth_field_doc(owner: &str, prop: &str) -> String {
     )
 }
 
-/// Emit a crate's `use` block as a single lexicographically-sorted list (so the
-/// output matches `rustfmt`'s default import ordering — `crate::…` before
-/// `openehr_base::…`), followed by a blank line. `fixed` holds always-present
-/// uses (none now that the type files carry no derive/serde); `imports` holds
-/// the per-file resolved spec imports.
+/// Emits a crate's `use` block sorted as `rustfmt` sorts it, then a blank line.
 fn write_uses(b: &mut String, fixed: &[&str], imports: &BTreeSet<String>) {
     let mut all: BTreeSet<String> = imports.clone();
     for f in fixed {
@@ -1899,11 +1677,9 @@ fn write_uses(b: &mut String, fixed: &[&str], imports: &BTreeSet<String>) {
     b.push('\n');
 }
 
-/// Emit `doc` as `///` lines, falling back to `fallback` when the vendored BMM
-/// carries no documentation for the item. Every public item needs docs
-/// (`missing_docs`), so there is no "no docs" branch. `summary_hint` is the
-/// synthesized summary line prepended when the prose opens with a sentence
-/// too long to stand as the RFC 1574 summary (empty = leave verbatim).
+/// Emits `doc` as `///` lines, or `fallback` when the BMM has none;
+/// `summary_hint` is prepended when the prose's first sentence is too long for
+/// a summary.
 fn doc_block_or(
     b: &mut String,
     doc: Option<&str>,
@@ -1918,10 +1694,7 @@ fn doc_block_or(
     }
 }
 
-/// Emit a one-sentence `summary` line, then the BMM prose as the detail
-/// paragraph after a blank `///` — the documented rustdoc shape (the first
-/// paragraph is what search results and module indexes show:
-/// <https://doc.rust-lang.org/rustdoc/how-to-write-documentation.html>).
+/// Emits a one-sentence `summary`, then the BMM prose as the detail paragraph.
 fn doc_summary_then(b: &mut String, summary: &str, doc: Option<&str>, indent: &str) {
     b.push_str(&format!("{indent}/// {summary}\n"));
     if doc.is_some_and(|d| !d.trim().is_empty()) {
