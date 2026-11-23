@@ -124,12 +124,8 @@ CREATE VIEW audit_record AS
 COMMENT ON VIEW audit_record IS
     'Every record the ITI-81 search, the person''s own trail and the FHIR Feed read: an audit_event record no write holds by its columns and its position, an access-log entry by its stored parts, the digest of its shared part (which a page reads once for every entry naming it), the columns its row part leaves out (recorded_at is its time_recorded) and the version of its stored form, from which the server renders it. A record is named by its chain and position.';
 
--- One access-log entry as audit_record holds it, read by its key from its
--- own row (#6320). An ITI-81 page takes its keys from the search index and
--- then reads each record it serves here, so the read is one primary-key
--- lookup: through access_log_record the open window past the index's cursor
--- is an arm no key reaches, and it would be scanned once a record. A key the
--- page holds is no write's and names an entry, as the search index admits.
+-- One access-log entry as audit_record holds it, read by its primary key: each
+-- record an ITI-81 page serves (#6320).
 --
 -- No openEHR spec governs audit storage: our own design.
 CREATE VIEW access_log_by_key AS

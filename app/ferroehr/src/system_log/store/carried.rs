@@ -1,17 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! What an ITI-81 page carries beside its records (#6320).
-//!
-//! Where the audit store shares the clinical database and its role may read
-//! `clinical.request_revisions`, the page statement selects the policy and
-//! definition revisions at its own snapshot, so the request confirms its
-//! policy copies after it ran, by the revisions the statement read, and
-//! makes no read of them first. Where its role may also run the party door,
-//! a ride's page selects the party store's revisions too
-//! (`party_binding::request::reads_door`). Elsewhere the page carries
-//! nothing, and the request reads them in a statement of their own. The
-//! topology is read once per service. No openEHR spec governs the confirmation: our own design.
+//! What an ITI-81 page carries beside its records (#6320): the policy and
+//! definition revisions where the audit store shares the clinical database,
+//! and in a ride the party store's, which the request confirms its copies
+//! by. The topology is read once per service. No openEHR spec governs the
+//! confirmation: our own design.
 
 use sqlx::postgres::PgRow;
 use sqlx::{PgPool, Row as _};

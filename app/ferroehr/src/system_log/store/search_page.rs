@@ -226,9 +226,8 @@ fn page(condition: &Cond, count: u64, offset: u64, served: u64) -> SelectStateme
         .to_owned();
     let key = Alias::new("page_key");
     let record = Alias::new("page_record");
-    // NOTE: our own design (#5965, #6320), `OFFSET 0` keeps the read lateral, so each served
-    // record is found by its position in its own chain's relation: an access-log entry by the
-    // key of its row, never through the open window of `audit_record`'s union.
+    // NOTE: our own design (#5965, #6320), `OFFSET 0` keeps the read lateral, one key read per
+    // served record in its own chain's relation.
     let in_chain = |relation: &str, chain: &str| {
         Query::select()
             .columns(record_columns().map(Alias::new))
@@ -283,8 +282,7 @@ fn record_columns() -> impl Iterator<Item = &'static str> {
 /// The candidates are read from `access_log_search` through the entries'
 /// time index: its first `first` rows by `recorded_at`, and every row tied
 /// with the last of them, since the order's next key, `stored_at`, is not in
-/// the view. A candidate's keys are its index row's own (#6320), so no
-/// record is read before the page is taken.
+/// the view. A candidate's keys are its index row's own (#6320).
 fn access_log_page(condition: &Cond, first: u64) -> SelectStatement {
     let search = || (Alias::new(AUDIT), Alias::new(ACCESS_LOG_SEARCH));
     // NOTE: our own design (#5968), a page reads only the entries the chainer linked.
@@ -318,8 +316,7 @@ fn access_log_page(condition: &Cond, first: u64) -> SelectStatement {
     );
     candidates.union(UnionType::Distinct, keys(newest(first, 0)));
     let candidate = Alias::new("access_log_candidate");
-    // NOTE: our own design (#6320), an entry's keys are its search index row's: it is stored at
-    // the instant it records, and its chain is the access log's, so no record is read for them.
+    // NOTE: our own design (#6320), an entry is stored at the instant it records.
     let mut page = Query::select();
     page.expr_as(Expr::cust("'access_log'::text"), Alias::new("chain"))
         .column((candidate.clone(), Alias::new("chain_seq")))

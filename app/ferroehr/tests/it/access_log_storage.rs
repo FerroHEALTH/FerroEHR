@@ -296,12 +296,8 @@ async fn a_newest_page_reads_the_index_in_its_order() {
     }
 }
 
-/// An ITI-81 page reads each access-log record it serves by the key of its
-/// row alone, with entries past the search index's cursor (#6320): a
-/// candidate's keys are its search index row's, and a served record is one
-/// primary-key read of its row, never a read through `audit_record`'s union
-/// of the indexed entries and the open window, which reads the index and the
-/// open window again once a record.
+/// An ITI-81 page reads each access-log record it serves by one primary-key
+/// read of its row, with entries past the search index's cursor (#6320).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_iti81_page_reads_each_record_it_serves_by_its_key() {
     let seeded = seed(ENTRIES).await;
