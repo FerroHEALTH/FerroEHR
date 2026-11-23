@@ -1,0 +1,1 @@
+- A JSON read of a COMPOSITION, EHR_STATUS, EHR_ACCESS, FOLDER or party version hands the stored body to the response as the bytes the database sent, with no UTF-8 check and no copy. An XML, FLAT or STRUCTURED read parses those bytes straight into the typed RM. The bodies and headers served are unchanged.
