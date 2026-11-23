@@ -1923,9 +1923,10 @@ record, audit record or decision metric, and the read runs once more behind the
 up-front confirm, which never runs it again. `access_policy_reruns_total{op}`
 counts those runs (#6251). An `EHR_STATUS` or directory read and an AQL query
 confirm after they ran the same way (#6320): the version read of the EHR
-object selects the revisions, and a clinical query a request judges selects
-them as two hidden columns of its own statement (`aql::sql::Layout::revisions`);
-a query that served no row reads them once after it ran. A COMPOSITION create, update or delete, a
+object selects the revisions, and a clinical query a request judges reads
+them on the one-row read of the versions it served, or, when it serves none,
+as two hidden columns of its own statement (`aql::sql::Layout::revisions`); a
+query that served no row reads them once after it ran. A COMPOSITION create, update or delete, a
 CONTRIBUTION commit, an `EHR_STATUS` commit and a directory create, update or
 delete make no read first either: the gate read of the write
 returns the revisions, the write is decided on the copies as they stand, and a
