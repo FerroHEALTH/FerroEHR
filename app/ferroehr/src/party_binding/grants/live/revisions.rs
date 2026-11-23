@@ -36,11 +36,21 @@ impl LiveGrants {
     /// The revisions in force in the store when this replica's copy is older
     /// than them, from the indexed read the request makes
     /// ([`crate::party_binding::request`]); `None` when the copy
-    /// holds them.
+    /// holds them, or when the request rides and the copy is noted as held
+    /// for the ride to be judged by.
     ///
     /// # Errors
     /// [`GrantsUnavailable`] when the party store does not answer.
     pub async fn behind(&self) -> Result<Option<Revisions>, GrantsUnavailable> {
+        // NOTE: our own design (#6320), a ride decides on the copy as it stands and is answered
+        // only once the revisions its clinical statement read are the copy's or older.
+        if crate::party_binding::request::riding()
+            && !self.listened.must_read()
+            && let (Some(grants), Some(facts)) = (self.revision(), self.facts_revision())
+        {
+            crate::party_binding::request::held(grants, facts);
+            return Ok(None);
+        }
         let store = crate::party_binding::request::revisions(&self.pool).await?;
         Ok((!self.holds(store)).then_some(store))
     }
