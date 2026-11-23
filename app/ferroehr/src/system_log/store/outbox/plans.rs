@@ -29,12 +29,17 @@ const PAGES: u64 = 400;
 
 /// The generic plan of the delivery read for the syslog sink, the pages it
 /// touched, and the records it reads, each as whether retried and its
-/// position.
+/// position. The statement reaches `PREPARE` as a bound value.
 async fn read(conn: &mut PgConnection) -> (String, u64, Vec<(bool, i64)>) {
-    sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
-        "PREPARE next_owed (text) AS {}",
-        next_statement()
-    )))
+    sqlx::query("SELECT set_config('ferroehr.plan_test', $1, false)")
+        .bind(next_statement())
+        .execute(&mut *conn)
+        .await
+        .expect("the read is handed over");
+    sqlx::raw_sql(
+        "DO $$ BEGIN EXECUTE 'PREPARE next_owed (text) AS ' \
+         || current_setting('ferroehr.plan_test'); END $$",
+    )
     .execute(&mut *conn)
     .await
     .expect("the read prepares");
@@ -94,29 +99,50 @@ async fn the_delivery_read_reads_the_window_by_its_index() {
     let mut conn = crate::db::acquire::acquire(&db.pool())
         .await
         .expect("a connection");
-    sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
-        "INSERT INTO audit.audit_render_policy (digest, policy) \
-         VALUES (sha256(convert_to('{{}}', 'UTF8')), '{{}}'); \
-         INSERT INTO audit.audit_event (id, recorded_at, stored_at, action, outcome, event_code, \
-         operation, principal, patient_id, resource_class, resource_id, client_ip, request_id, \
-         render_policy, search_tokens, content_digest) \
-         SELECT gen_random_uuid(), now() - ({RECORDS} - g) * interval '1 second', now(), 'R', 0, \
-         '110110', 'composition_get', 'user-' || g % 1000, 'patient-' || g % 50000, \
-         'composition', md5(g::text) || '::ferroehr::1', '10.0.0.' || g % 250, \
-         md5((g * 7)::text), sha256(convert_to('{{}}', 'UTF8')), ARRAY[1, 2, 3, g % 100], \
-         sha256(int8send(g)) FROM generate_series(1, {RECORDS}) AS g; \
-         INSERT INTO audit.audit_event_hold (seq, reserved_by) \
-         SELECT seq, gen_random_uuid() FROM audit.audit_event WHERE seq > {RECORDS} - {HELD}; \
-         INSERT INTO audit.delivery_cursor (sink, chain, through_id) \
-         VALUES ('syslog', 'system', {CURSOR}), ('syslog', 'access_log', 0); \
-         UPDATE audit.delivery_frontier SET through_id = {FRONTIER} WHERE chain = 'system'; \
-         INSERT INTO audit.delivery_parked (sink, chain, record_id, reason) \
-         SELECT 'syslog', 'system', g, 'refused' \
-         FROM generate_series({CURSOR} + 1, {CURSOR} + {PARKED}) AS g"
-    )))
-    .execute(&mut *conn)
-    .await
-    .expect("the log is written");
+    let seed: [(&str, &[i64]); 6] = [
+        (
+            "INSERT INTO audit.audit_render_policy (digest, policy) \
+             VALUES (sha256(convert_to('{}', 'UTF8')), '{}')",
+            &[],
+        ),
+        (
+            "INSERT INTO audit.audit_event (id, recorded_at, stored_at, action, outcome, \
+             event_code, operation, principal, patient_id, resource_class, resource_id, \
+             client_ip, request_id, render_policy, search_tokens, content_digest) \
+             SELECT gen_random_uuid(), now() - ($1 - g) * interval '1 second', now(), 'R', 0, \
+             '110110', 'composition_get', 'user-' || g % 1000, 'patient-' || g % 50000, \
+             'composition', md5(g::text) || '::ferroehr::1', '10.0.0.' || g % 250, \
+             md5((g * 7)::text), sha256(convert_to('{}', 'UTF8')), ARRAY[1, 2, 3, g % 100], \
+             sha256(int8send(g)) FROM generate_series(1, $1) AS g",
+            &[RECORDS],
+        ),
+        (
+            "INSERT INTO audit.audit_event_hold (seq, reserved_by) \
+             SELECT seq, gen_random_uuid() FROM audit.audit_event WHERE seq > $1",
+            &[RECORDS - HELD],
+        ),
+        (
+            "INSERT INTO audit.delivery_cursor (sink, chain, through_id) \
+             VALUES ('syslog', 'system', $1), ('syslog', 'access_log', 0)",
+            &[CURSOR],
+        ),
+        (
+            "UPDATE audit.delivery_frontier SET through_id = $1 WHERE chain = 'system'",
+            &[FRONTIER],
+        ),
+        (
+            "INSERT INTO audit.delivery_parked (sink, chain, record_id, reason) \
+             SELECT 'syslog', 'system', g, 'refused' FROM generate_series($1, $2) AS g",
+            &[CURSOR + 1, CURSOR + PARKED],
+        ),
+    ];
+    for (statement, values) in seed {
+        let mut query = sqlx::query(statement);
+        for value in values {
+            query = query.bind(*value);
+        }
+        query.execute(&mut *conn).await.expect("the log is written");
+    }
     sqlx::raw_sql(
         "VACUUM ANALYZE audit.audit_event, audit.audit_event_hold, audit.delivery_parked, \
          audit.delivery_cursor, audit.delivery_frontier",
@@ -137,13 +163,11 @@ async fn the_delivery_read_reads_the_window_by_its_index() {
         "the first record not parked"
     );
 
-    sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
-        "UPDATE audit.delivery_parked SET retry = true \
-         WHERE record_id > {CURSOR} + {PARKED} - {RETRIED}"
-    )))
-    .execute(&mut *conn)
-    .await
-    .expect("the parked records are retried");
+    sqlx::query("UPDATE audit.delivery_parked SET retry = true WHERE record_id > $1")
+        .bind(CURSOR + PARKED - RETRIED)
+        .execute(&mut *conn)
+        .await
+        .expect("the parked records are retried");
     let (plan, pages, rows) = read(&mut conn).await;
     assert_bounded(&plan, pages, "a retried record");
     assert_eq!(
@@ -155,10 +179,11 @@ async fn the_delivery_read_reads_the_window_by_its_index() {
         "the oldest retried record, then the first record not parked"
     );
 
-    sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
-        "UPDATE audit.delivery_cursor SET through_id = {FRONTIER} \
-         WHERE sink = 'syslog' AND chain = 'system'"
-    )))
+    sqlx::query(
+        "UPDATE audit.delivery_cursor SET through_id = $1 \
+         WHERE sink = 'syslog' AND chain = 'system'",
+    )
+    .bind(FRONTIER)
     .execute(&mut *conn)
     .await
     .expect("the cursor reaches the frontier");
