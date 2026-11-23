@@ -714,6 +714,9 @@ impl ::serde::Serialize
         if self.origins.as_ref().is_some_and(|__v| !__v.is_empty()) {
             __n += 1;
         }
+        if self.episodes.as_ref().is_some_and(|__v| !__v.is_empty()) {
+            __n += 1;
+        }
         if self.recorded.is_some() {
             __n += 1;
         }
@@ -755,6 +758,11 @@ impl ::serde::Serialize
         {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "origins", __v)?;
         }
+        if let Some(__v) = &self.episodes
+            && !__v.is_empty()
+        {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "episodes", __v)?;
+        }
         if let Some(__v) = &self.recorded {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "recorded", __v)?;
         }
@@ -772,6 +780,7 @@ impl<'de> ::serde::Deserialize<'de>
             "archetypes",
             "categories",
             "confidentialities",
+            "episodes",
             "objects",
             "origins",
             "recorded",
@@ -788,6 +797,7 @@ impl<'de> ::serde::Deserialize<'de>
             __F5,
             __F6,
             __F7,
+            __F8,
         }
         impl<'de> ::serde::Deserialize<'de> for __Field {
             fn deserialize<__D: ::serde::Deserializer<'de>>(
@@ -815,7 +825,8 @@ impl<'de> ::serde::Deserialize<'de>
                             "sensitivities" => ::core::result::Result::Ok(__Field::__F4),
                             "confidentialities" => ::core::result::Result::Ok(__Field::__F5),
                             "origins" => ::core::result::Result::Ok(__Field::__F6),
-                            "recorded" => ::core::result::Result::Ok(__Field::__F7),
+                            "episodes" => ::core::result::Result::Ok(__Field::__F7),
+                            "recorded" => ::core::result::Result::Ok(__Field::__F8),
                             _ => ::core::result::Result::Err(
                                 ::openehr_base::serde_support::unknown_field(
                                     __v,
@@ -849,7 +860,8 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __s4: ::core::option::Option<_> = None;
                 let mut __s5: ::core::option::Option<_> = None;
                 let mut __s6: ::core::option::Option<_> = None;
-                let mut __s7: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s7: ::core::option::Option<_> = None;
+                let mut __s8: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -923,10 +935,18 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F7 => {
                             if __s7.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("recorded"),
+                                    ::serde::de::Error::duplicate_field("episodes"),
                                 );
                             }
                             __s7 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F8 => {
+                            if __s8.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("recorded"),
+                                );
+                            }
+                            __s8 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
                         }
                     }
                 }
@@ -938,7 +958,8 @@ categories: __s3,
 sensitivities: __s4,
 confidentialities: __s5,
 origins: __s6,
-recorded: __s7.flatten(),
+episodes: __s7,
+recorded: __s8.flatten(),
 })
             }
         }
@@ -2363,6 +2384,13 @@ impl ::serde::Serialize
             __n += 1;
         }
         if self
+            .episode_shared
+            .as_ref()
+            .is_some_and(|__v| !__v.is_empty())
+        {
+            __n += 1;
+        }
+        if self
             .conflict_rules
             .as_ref()
             .is_some_and(|__v| !__v.is_empty())
@@ -2472,6 +2500,11 @@ impl ::serde::Serialize
         if let Some(__v) = &self.caseload {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "caseload", __v)?;
         }
+        if let Some(__v) = &self.episode_shared
+            && !__v.is_empty()
+        {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "episode_shared", __v)?;
+        }
         if let Some(__v) = &self.conflict_rules
             && !__v.is_empty()
         {
@@ -2540,6 +2573,7 @@ impl<'de> ::serde::Deserialize<'de>
             "conflict_rules",
             "controller",
             "details",
+            "episode_shared",
             "feeder_audit",
             "links",
             "log_restrictions",
@@ -2585,6 +2619,7 @@ impl<'de> ::serde::Deserialize<'de>
             __F24,
             __F25,
             __F26,
+            __F27,
         }
         impl<'de> ::serde::Deserialize<'de> for __Field {
             fn deserialize<__D: ::serde::Deserializer<'de>>(
@@ -2625,17 +2660,18 @@ impl<'de> ::serde::Deserialize<'de>
                             "self_declared_care" => ::core::result::Result::Ok(__Field::__F15),
                             "attested_care" => ::core::result::Result::Ok(__Field::__F16),
                             "caseload" => ::core::result::Result::Ok(__Field::__F17),
-                            "conflict_rules" => ::core::result::Result::Ok(__Field::__F18),
+                            "episode_shared" => ::core::result::Result::Ok(__Field::__F18),
+                            "conflict_rules" => ::core::result::Result::Ok(__Field::__F19),
                             "concealed_confidentialities" => {
-                                ::core::result::Result::Ok(__Field::__F19)
+                                ::core::result::Result::Ok(__Field::__F20)
                             }
-                            "value_sets" => ::core::result::Result::Ok(__Field::__F20),
-                            "purpose_required" => ::core::result::Result::Ok(__Field::__F21),
-                            "rules" => ::core::result::Result::Ok(__Field::__F22),
-                            "catalogue" => ::core::result::Result::Ok(__Field::__F23),
-                            "log_restrictions" => ::core::result::Result::Ok(__Field::__F24),
-                            "log_retention" => ::core::result::Result::Ok(__Field::__F25),
-                            "details" => ::core::result::Result::Ok(__Field::__F26),
+                            "value_sets" => ::core::result::Result::Ok(__Field::__F21),
+                            "purpose_required" => ::core::result::Result::Ok(__Field::__F22),
+                            "rules" => ::core::result::Result::Ok(__Field::__F23),
+                            "catalogue" => ::core::result::Result::Ok(__Field::__F24),
+                            "log_restrictions" => ::core::result::Result::Ok(__Field::__F25),
+                            "log_retention" => ::core::result::Result::Ok(__Field::__F26),
+                            "details" => ::core::result::Result::Ok(__Field::__F27),
                             _ => ::core::result::Result::Err(
                                 ::openehr_base::serde_support::unknown_field(
                                     __v,
@@ -2682,12 +2718,13 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __s18: ::core::option::Option<_> = None;
                 let mut __s19: ::core::option::Option<_> = None;
                 let mut __s20: ::core::option::Option<_> = None;
-                let mut __s21: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s22: ::core::option::Option<_> = None;
+                let mut __s21: ::core::option::Option<_> = None;
+                let mut __s22: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s23: ::core::option::Option<_> = None;
                 let mut __s24: ::core::option::Option<_> = None;
-                let mut __s25: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s25: ::core::option::Option<_> = None;
                 let mut __s26: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s27: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -2851,7 +2888,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F18 => {
                             if __s18.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("conflict_rules"),
+                                    ::serde::de::Error::duplicate_field("episode_shared"),
                                 );
                             }
                             __s18 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2859,9 +2896,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F19 => {
                             if __s19.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field(
-                                        "concealed_confidentialities",
-                                    ),
+                                    ::serde::de::Error::duplicate_field("conflict_rules"),
                                 );
                             }
                             __s19 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2869,7 +2904,9 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F20 => {
                             if __s20.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("value_sets"),
+                                    ::serde::de::Error::duplicate_field(
+                                        "concealed_confidentialities",
+                                    ),
                                 );
                             }
                             __s20 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2877,7 +2914,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F21 => {
                             if __s21.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("purpose_required"),
+                                    ::serde::de::Error::duplicate_field("value_sets"),
                                 );
                             }
                             __s21 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2885,7 +2922,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F22 => {
                             if __s22.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("rules"),
+                                    ::serde::de::Error::duplicate_field("purpose_required"),
                                 );
                             }
                             __s22 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2893,7 +2930,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F23 => {
                             if __s23.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("catalogue"),
+                                    ::serde::de::Error::duplicate_field("rules"),
                                 );
                             }
                             __s23 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2901,7 +2938,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F24 => {
                             if __s24.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("log_restrictions"),
+                                    ::serde::de::Error::duplicate_field("catalogue"),
                                 );
                             }
                             __s24 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2909,7 +2946,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F25 => {
                             if __s25.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("log_retention"),
+                                    ::serde::de::Error::duplicate_field("log_restrictions"),
                                 );
                             }
                             __s25 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2917,10 +2954,18 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F26 => {
                             if __s26.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("details"),
+                                    ::serde::de::Error::duplicate_field("log_retention"),
                                 );
                             }
                             __s26 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F27 => {
+                            if __s27.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("details"),
+                                );
+                            }
+                            __s27 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
                         }
                     }
                 }
@@ -2952,17 +2997,18 @@ impl<'de> ::serde::Deserialize<'de>
                         self_declared_care: __s15.flatten(),
                         attested_care: __s16,
                         caseload: __s17.flatten(),
-                        conflict_rules: __s18,
-                        concealed_confidentialities: __s19,
-                        value_sets: __s20,
-                        purpose_required: __s21
+                        episode_shared: __s18,
+                        conflict_rules: __s19,
+                        concealed_confidentialities: __s20,
+                        value_sets: __s21,
+                        purpose_required: __s22
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("purpose_required"))?,
-                        rules: __s22,
-                        catalogue: __s23,
-                        log_restrictions: __s24,
-                        log_retention: __s25.flatten(),
-                        details: __s26.flatten(),
+                        rules: __s23,
+                        catalogue: __s24,
+                        log_restrictions: __s25,
+                        log_retention: __s26.flatten(),
+                        details: __s27.flatten(),
                     },
                 )
             }
@@ -2983,20 +3029,22 @@ if self.roles.as_ref().is_some_and(|__v| !__v.is_empty()) { __n += 1; }
 if self.organisation_types.as_ref().is_some_and(|__v| !__v.is_empty()) { __n += 1; }
 if self.default_period.is_some() { __n += 1; }
 if self.max_period.is_some() { __n += 1; }
+if self.episode_required.is_some() { __n += 1; }
 let mut __st = ::serde::Serializer::serialize_struct(__serializer, "ACCESS_RELATIONSHIP_VALIDITY", __n)?;
 ::serde::ser::SerializeStruct::serialize_field(&mut __st, "_type", "ACCESS_RELATIONSHIP_VALIDITY")?;
 if let Some(__v) = &self.roles && !__v.is_empty() { ::serde::ser::SerializeStruct::serialize_field(&mut __st, "roles", __v)?; }
 if let Some(__v) = &self.organisation_types && !__v.is_empty() { ::serde::ser::SerializeStruct::serialize_field(&mut __st, "organisation_types", __v)?; }
 if let Some(__v) = &self.default_period { ::serde::ser::SerializeStruct::serialize_field(&mut __st, "default_period", __v)?; }
 if let Some(__v) = &self.max_period { ::serde::ser::SerializeStruct::serialize_field(&mut __st, "max_period", __v)?; }
+if let Some(__v) = &self.episode_required { ::serde::ser::SerializeStruct::serialize_field(&mut __st, "episode_required", __v)?; }
 ::serde::ser::SerializeStruct::end(__st)
 }
 }
 
 impl<'de> ::serde::Deserialize<'de> for crate::draft::access_control::access_control::access_relationship_validity::AccessRelationshipValidity {
 fn deserialize<__D: ::serde::Deserializer<'de>>(__deserializer: __D) -> ::core::result::Result<Self, __D::Error> {
-const __FIELDS: &[&str] = &["default_period", "max_period", "organisation_types", "roles"];
-enum __Field { __Type, __F0, __F1, __F2, __F3, }
+const __FIELDS: &[&str] = &["default_period", "episode_required", "max_period", "organisation_types", "roles"];
+enum __Field { __Type, __F0, __F1, __F2, __F3, __F4, }
 impl<'de> ::serde::Deserialize<'de> for __Field {
 fn deserialize<__D: ::serde::Deserializer<'de>>(__deserializer: __D) -> ::core::result::Result<Self, __D::Error> {
 struct __KeyVisitor;
@@ -3012,6 +3060,7 @@ match __v {
 "organisation_types" => ::core::result::Result::Ok(__Field::__F1),
 "default_period" => ::core::result::Result::Ok(__Field::__F2),
 "max_period" => ::core::result::Result::Ok(__Field::__F3),
+"episode_required" => ::core::result::Result::Ok(__Field::__F4),
 _ => ::core::result::Result::Err(::openehr_base::serde_support::unknown_field(__v, "ACCESS_RELATIONSHIP_VALIDITY", __FIELDS)),
 }
 }
@@ -3032,6 +3081,7 @@ let mut __s0: ::core::option::Option<_> = None;
 let mut __s1: ::core::option::Option<_> = None;
 let mut __s2: ::core::option::Option<::core::option::Option<_>> = None;
 let mut __s3: ::core::option::Option<::core::option::Option<_>> = None;
+let mut __s4: ::core::option::Option<::core::option::Option<_>> = None;
 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
  match __key {
 __Field::__Type => {
@@ -3055,6 +3105,10 @@ __Field::__F3 => {
 if __s3.is_some() { return ::core::result::Result::Err(::serde::de::Error::duplicate_field("max_period")); }
 __s3 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
 }
+__Field::__F4 => {
+if __s4.is_some() { return ::core::result::Result::Err(::serde::de::Error::duplicate_field("episode_required")); }
+__s4 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+}
 }
 }
 ::core::result::Result::Ok(crate::draft::access_control::access_control::access_relationship_validity::AccessRelationshipValidity {
@@ -3062,6 +3116,7 @@ roles: __s0,
 organisation_types: __s1,
 default_period: __s2.flatten(),
 max_period: __s3.flatten(),
+episode_required: __s4.flatten(),
 })
 }
 }

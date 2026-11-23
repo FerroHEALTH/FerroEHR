@@ -102,8 +102,8 @@ pub(crate) async fn app_over(
     Box::pin(app_over_pools(mapping, db, pool, &pools)).await
 }
 
-/// [`app_over`] with the server's domain pools `pools`, the audit sender and
-/// the test's own reads on `pool`.
+/// [`app_over`] with the domain pools `pools`, the audit runtime's over
+/// `pool`.
 pub(crate) async fn app_over_pools(
     mapping: ferroehr::party_binding::BindingMapping,
     db: testkit::TestDb,

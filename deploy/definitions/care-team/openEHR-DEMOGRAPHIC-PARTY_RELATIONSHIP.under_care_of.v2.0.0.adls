@@ -14,7 +14,7 @@ description
         ["en"] = <
             language = <[ISO_639-1::en]>
             purpose = <"A care relationship: a PARTY_RELATIONSHIP of its own from the patient's PERSON, its source, to the carer, its target: a professional's PERSON, a ROLE a professional performs, a care team's GROUP or an ORGANISATION unit, with the period of the care as its time_validity.">
-            use = <"Written at /demographic/party_relationship by the care delivery environment, such as a hospital's ADT system, under a write_care_relationship grant, each relationship versioned on its own. Its name is under_care_of of the draft openEHR access terminology openehr_access, and its details hold the elements the care relationship element group of that terminology names: care_role (1..1), the part the carer plays in the patient's care, provider (1..1), the ORGANISATION in whose care it is, and covers_for, context and basis (0..1). Adapted from the person-to-provider PARTY_RELATIONSHIP the openEHR CKM archetype the derived_from entry names constrains inline.">
+            use = <"Written at /demographic/party_relationship by the care delivery environment, such as a hospital's ADT system, under a write_care_relationship grant, each relationship versioned on its own. Its name is under_care_of of the draft openEHR access terminology openehr_access, and its details hold the elements the care relationship element group of that terminology names: care_role (1..1), the part the carer plays in the patient's care, provider (1..1), the ORGANISATION in whose care it is, and covers_for, episode and basis (0..1). Adapted from the person-to-provider PARTY_RELATIONSHIP the openEHR CKM archetype the derived_from entry names constrains inline.">
             copyright = <"© openEHR Foundation">
         >
     >
@@ -56,7 +56,7 @@ terminology
             ["id3"] = <text = <"Care role"> description = <"The part the carer plays in the care of the patient, named care_role of openehr_access: a code of the value set the access policy binds for care_role, or of HL7_ParticipationType when it binds none.">>
             ["id5"] = <text = <"Provider"> description = <"The healthcare provider in whose care the relationship is, named provider of openehr_access: an ORGANISATION by issuer and id, with the type ORGANISATION.">>
             ["id7"] = <text = <"Covers for"> description = <"The carer the target replaces for the period of the relationship, named covers_for of openehr_access.">>
-            ["id9"] = <text = <"Context"> description = <"The episode, referral or case the relationship belongs to, named context of openehr_access.">>
+            ["id9"] = <text = <"Episode"> description = <"The episode of care the relationship is scoped to, as the care delivery environment identifies it, named episode of openehr_access.">>
             ["id11"] = <text = <"Basis"> description = <"Who wrote the relationship, named basis of openehr_access: assigned, the default, or self_declared.">>
         >
     >

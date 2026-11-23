@@ -61,7 +61,43 @@ async fn served() -> (
     (db, pool, svc, app)
 }
 
-/// [`served`] with every connection of the server, its `LISTEN` sessions
+/// The domain pools over the database `url`, each built as the server builds
+/// it (`ferroehr::db::connect_domains`) and holding one connection it keeps,
+/// so every request meets the connection the warm-up prepared.
+async fn kept_pools(url: &str) -> ferroehr::db::domain::DomainPools {
+    let settings = ferroehr::db::DbConfig {
+        max_connections: Some(1),
+        min_connections: Some(1),
+        ..ferroehr::db::DbConfig::new(url)
+    };
+    ferroehr::db::connect_domains(&settings)
+        .await
+        .expect("the domain pools connect")
+}
+
+/// [`served`] over domain pools of one kept connection each ([`kept_pools`]),
+/// which it returns.
+async fn steady() -> (
+    testkit::TestDb,
+    PgPool,
+    Arc<ferroehr::service::FerroEhrService>,
+    Router,
+    ferroehr::db::domain::DomainPools,
+) {
+    let (db, pool) = crate::common::migrated_pool().await;
+    let pools = kept_pools(db.url()).await;
+    let (db, pool, svc, app) = Box::pin(crate::access_evaluator_http::app_over_pools(
+        crate::party_binding_http::mapping(),
+        db,
+        pool,
+        &pools,
+    ))
+    .await;
+    listening(&db, &svc).await;
+    (db, pool, svc, app, pools)
+}
+
+/// [`steady`] with every connection of the server, its `LISTEN` sessions
 /// included, through a [`wire::Wire`] relay that counts the bytes each
 /// statement moves; the pool it returns reaches the database directly, so
 /// the test's own reads are not counted.
@@ -70,6 +106,7 @@ async fn wired() -> (
     PgPool,
     Arc<ferroehr::service::FerroEhrService>,
     Router,
+    ferroehr::db::domain::DomainPools,
     wire::Wire,
 ) {
     let (db, direct) = crate::common::migrated_pool().await;
@@ -79,14 +116,17 @@ async fn wired() -> (
         .max_connections(10)
         .min_connections(0)
         .connect_lazy_with(wire.options(&options));
-    let (db, _, svc, app) = Box::pin(crate::access_evaluator_http::app_over(
+    let relayed_url = wire.url(db.url());
+    let pools = kept_pools(&relayed_url).await;
+    let (db, _, svc, app) = Box::pin(crate::access_evaluator_http::app_over_pools(
         crate::party_binding_http::mapping(),
         db,
         relayed,
+        &pools,
     ))
     .await;
-    listening_at(&wire.url(db.url()), &svc).await;
-    (db, direct, svc, app, wire)
+    listening_at(&relayed_url, &svc).await;
+    (db, direct, svc, app, pools, wire)
 }
 
 /// Connects the `LISTEN` session of every copy `svc` holds over the database

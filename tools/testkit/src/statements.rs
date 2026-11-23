@@ -20,15 +20,6 @@ async fn database_oid(admin: &mut PgConnection, name: &str) -> Option<sqlx::post
         .flatten()
 }
 
-/// Whether a drop ends the database's live sessions first.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Force {
-    /// `WITH (FORCE)`: the clone's owner is done with it.
-    Yes,
-    /// A clone with live sessions belongs to a running test process.
-    No,
-}
-
 /// Drops the database `name` and removes the statements
 /// `pg_stat_statements` counted in it.
 ///
@@ -36,16 +27,9 @@ pub(crate) enum Force {
 ///
 /// The [`sqlx::Error`] of the drop. A failure to remove the statements is
 /// not one: the statements then stay counted.
-pub(crate) async fn drop_database(
-    admin: &mut PgConnection,
-    name: &str,
-    force: Force,
-) -> Result<(), sqlx::Error> {
+pub(crate) async fn drop_database(admin: &mut PgConnection, name: &str) -> Result<(), sqlx::Error> {
     let oid = database_oid(admin, name).await;
-    let sql = match force {
-        Force::Yes => format!("DROP DATABASE IF EXISTS {name} WITH (FORCE)"),
-        Force::No => format!("DROP DATABASE IF EXISTS {name}"),
-    };
+    let sql = format!("DROP DATABASE IF EXISTS {name}");
     sqlx::raw_sql(sqlx::AssertSqlSafe(sql))
         .execute(&mut *admin)
         .await?;
