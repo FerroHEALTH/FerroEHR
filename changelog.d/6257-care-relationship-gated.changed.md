@@ -2,5 +2,6 @@
   included, writes its access record first, is judged on one read of the
   relationship and its versions, commits its version behind one guarded
   statement, and settles its caller facts, the end it takes from the access
-  policy and its representation row in two statements. Its answers and the
-  rows it leaves stay as they were.
+  policy and its representation row in two statements. A care relationship
+  create sends 27 statements where it sent 41. Its answers and the rows it
+  leaves stay as they were.

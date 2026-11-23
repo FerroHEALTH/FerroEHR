@@ -69,9 +69,12 @@ const CASELOAD: Ceiling = Ceiling {
 /// transactions and three `pg_notify` calls. Once the representation
 /// trigger moved and notified only for a statement that changed a row
 /// (#6284), it ran 2 nested statements, 1 `pg_notify` call and 79 bytes
-/// fewer (7,763 to 7,767), and each ceiling fell by its drop.
+/// fewer (7,763 to 7,767), and each ceiling fell by its drop. Judged on one
+/// gate read and committed behind one guarded statement, its settle in two
+/// statements (#6257), it sent 27 round trips where it sent 41, the other
+/// counts and the WAL bytes unchanged.
 const COMMIT: Ceiling = Ceiling {
-    round_trips: 41,
+    round_trips: 27,
     nested: 2,
     notifies: 1,
     wal: 7924,
