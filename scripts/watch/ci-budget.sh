@@ -4,17 +4,17 @@
 #
 # scripts/watch/ci-budget.sh — the execution time of each budgeted CI lane on main.
 #
-# WHY (#3131, #3490): a shard count fixes a lane for the suite it was measured
-# against and no longer. This reads the recent SUCCESSFUL main runs and, per
+# WHY (#3131, #3490): a fixed shard count fits the suite it was sized for. This
+# reads the recent SUCCESSFUL main runs and, per
 # lane, takes the slowest matching job of each run and the median over runs.
 # For ci.yml those are its merge-queue runs: a push to main the queue passed
 # skips most of ci.yml's lanes (#4546), and every change merges through a
 # queue run of its own.
 #
 # A lane's figure is JOB time, `started_at` to `completed_at`, never the run's
-# wall clock. The run's clock also counts the time each job waited for a runner,
-# which reached 49 minutes on main runs when several ran at once, and no shard
-# count can shorten that queue. Runs in which a lane did not run (a docs-only
+# wall clock: the run's clock also counts the time each job waited for a
+# runner, which no shard count shortens. Runs in which a lane did not run (a
+# docs-only
 # push skips the cargo jobs) do not count towards its sample.
 #
 # The `ui-e2e server binary` job has no shard count: every ui-e2e shard waits

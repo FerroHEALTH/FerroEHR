@@ -131,17 +131,13 @@ jobs:
           fi
 
   # ── Coverage, sharded (#3131) ──────────────────────────────────────────────
-  # Coverage rides this lane by owner directive (2026-08-24) and that stays.
-  # What changed is that it no longer runs as one serial block: the instrumented
-  # suite was 692 s of a 1150 s lane whose actual scan is 95 s, the same shape
-  # the CI test job had before #3123 sharded it.
+  # Coverage rides this lane by owner directive (2026-08-24), sharded (#3123).
   #
   # Each shard reports its OWN lcov and `scan` merges them. It has to be a
   # merge that SUMS hit counts: `cargo llvm-cov report` emits every instrumented
   # line in every report, so a shard's file lists the lines only its siblings
-  # covered, with zero hits. Measured on `openehr-query` while designing this:
-  # unpartitioned 91.5% of 1346 lines, one shard alone 76.2%, `lcov -a` of both
-  # shards 91.5% — exactly the unpartitioned figure. Handing Sonar the shard
+  # covered, with zero hits; `lcov -a` of the shards gives the unpartitioned
+  # figure. Handing Sonar the shard
   # files directly is what must not happen: `sonar.rust.lcov.reportPaths` takes
   # a list, but the SonarQube Cloud coverage documentation says multiple reports
   # are "consumed sequentially without a defined strategy for handling
@@ -250,13 +246,12 @@ jobs:
       contents: read
       pull-requests: read # PR decoration reads the PR metadata
       security-events: write # the push-only SARIF mirror below (#3032)
-    # Coverage rides this lane (owner directive 2026-08-24) but no longer runs
-    # IN this job: the `coverage` shards and `coverage-viewer` above produce the
-    # lcov this scan imports (sonar.rust.lcov.reportPaths —
+    # Coverage rides this lane (owner directive 2026-08-24): the `coverage`
+    # shards and `coverage-viewer` above produce the lcov this scan imports
+    # (sonar.rust.lcov.reportPaths,
     # docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/test-coverage/
-    # test-coverage-parameters), so no database is needed here any more. The
-    # former ci.yml `coverage` job is still folded into this lane, and the
-    # README's coverage badge is still Sonar's own.
+    # test-coverage-parameters), so no database is needed here. The README's
+    # coverage badge is Sonar's own.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
