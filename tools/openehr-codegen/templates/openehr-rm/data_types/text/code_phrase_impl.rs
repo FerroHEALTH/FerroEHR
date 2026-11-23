@@ -2,11 +2,7 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM class invariant for `CODE_PHRASE`.
-//!
-//! `Code_string_valid` (`not code_string.is_empty`) —
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.code_phrase.adoc`
-//! §Invariants.
+//! `CODE_PHRASE.Code_string_valid` (`org.openehr.rm.data_types.code_phrase.adoc`).
 
 use crate::v1_2::data_types::text::code_phrase::CodePhrase;
 use openehr_base::validate::{InvariantViolation, Validate};

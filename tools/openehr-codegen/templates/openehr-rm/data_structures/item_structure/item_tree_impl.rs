@@ -26,29 +26,16 @@ impl ItemTree {
             .and_then(|node| serde_json::from_value::<Element>(node.clone()).ok()))
     }
 
-    /// Returns `true` when `a_path` is a valid leaf path of this tree.
-    ///
-    /// Spec: `org.openehr.rm.data_structures.item_tree.adoc` §Functions
-    /// `has_element_path` — "True if path `a_path` is a valid leaf path". The
-    /// function's return type is `Boolean`, so a malformed path expression is
-    /// `false`: it is not a leaf path of this tree, or of any other.
+    /// Whether `a_path` is a valid leaf path of this tree (`has_element_path`); a
+    /// malformed path is `false`.
     #[must_use]
     pub fn has_element_path(&self, a_path: &str) -> bool {
         matches!(self.element_at_path(a_path), Ok(Some(_)))
     }
 
-    /// Returns a CEN EN13606-compatible hierarchy: one `CLUSTER` carrying this
-    /// tree's items.
-    ///
-    /// Spec: `org.openehr.rm.data_structures.item_tree.adoc` §Functions
-    /// `as_hierarchy` — "Generate a CEN EN13606-compatible hierarchy, which is
-    /// the same as the tree's physical representation", i.e. the items are
-    /// carried across unchanged, under the tree's own name and node id.
-    ///
-    /// `None` for an empty tree: `CLUSTER.items` is `1..*`
-    /// (`org.openehr.rm.data_structures.cluster.adoc` §Attributes), so a
-    /// cluster over no items is not a `CLUSTER`, and this page explicitly
-    /// permits the tree to be empty.
+    /// One `CLUSTER` carrying this tree's items under its name and node id
+    /// (`as_hierarchy`), or `None` for an empty tree, since `CLUSTER.items` is
+    /// `1..*`.
     #[must_use]
     pub fn as_hierarchy(&self) -> Option<Cluster> {
         let items = self.items.clone()?;
@@ -164,9 +151,8 @@ mod tests {
         assert_eq!(nested.archetype_node_id, "at0003");
     }
 
-    /// "True if path is a valid leaf path" — an interior `CLUSTER` sits at a
-    /// perfectly good path that is not a LEAF path, and neither is a path that
-    /// resolves to nothing or a malformed expression.
+    /// An interior `CLUSTER`, an unresolved path and a malformed one are not leaf
+    /// paths.
     #[test]
     fn only_a_path_onto_an_element_is_a_leaf_path() {
         let tree = populated().expect("a non-empty cluster");
