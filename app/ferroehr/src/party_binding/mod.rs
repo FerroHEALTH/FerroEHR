@@ -34,6 +34,7 @@ pub mod request;
 mod rows;
 pub mod shipped;
 pub mod source;
+mod step;
 pub mod store;
 
 use std::collections::{BTreeMap, BTreeSet};

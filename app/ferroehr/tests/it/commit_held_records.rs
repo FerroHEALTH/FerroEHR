@@ -389,6 +389,71 @@ async fn a_directory_create_refused_after_its_intake_leaves_no_held_record() {
     );
 }
 
+/// A recorded directory create whose gate read found no directory, and whose
+/// statement runs only after another create committed one, takes the rank
+/// that create took: it is judged again and answers `409`, and the EHR keeps
+/// one hierarchy (#6318).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_directory_create_whose_statement_follows_another_commit_answers_409() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = audited(&pool).await;
+    let unrecorded = FerroEhrService::new(&DomainPools::from_shared(&pool));
+    let ehr = crate::fixtures::create_ehr(&svc).await;
+    let mut lock = pool.begin().await.expect("begin the lock");
+    sqlx::query("LOCK TABLE audit.access_log_entry IN EXCLUSIVE MODE")
+        .execute(&mut *lock)
+        .await
+        .expect("lock the access-log entries");
+    let recorder = primed();
+    let kept = recorder.clone();
+    let late = {
+        let svc = Arc::clone(&svc);
+        let request = uv(&crate::fixtures::folder("late"), "249", None);
+        tokio::spawn(ferroehr::db::acquire::request_scope(with_recorder(
+            recorder,
+            async move { Box::pin(svc.create_directory(ehr, request)).await },
+        )))
+    };
+    tokio::time::timeout(Duration::from_secs(30), async {
+        loop {
+            let waiting: bool = sqlx::query_scalar(
+                "SELECT EXISTS (SELECT 1 FROM pg_locks l JOIN pg_class c ON c.oid = l.relation \
+                 WHERE NOT l.granted AND c.relname = 'access_log_entry')",
+            )
+            .fetch_one(&pool)
+            .await
+            .expect("the lock waits");
+            if waiting {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("the late create made its gate read and waits on its records");
+    Box::pin(unrecorded.create_directory(ehr, uv(&crate::fixtures::folder("first"), "249", None)))
+        .await
+        .expect("the first create commits");
+    lock.commit().await.expect("release the lock");
+    let refused = late
+        .await
+        .expect("the late create completes")
+        .expect_err("the late create is refused");
+    assert!(
+        matches!(refused, ServiceError::Conflict(_)),
+        "the late create answers 409: {refused:?}"
+    );
+    assert!(kept.reserved().is_empty(), "it keeps no reservation");
+    let hierarchies: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM clinical.ehr_folder WHERE ehr_id = $1")
+            .bind(ehr)
+            .fetch_one(&pool)
+            .await
+            .expect("the hierarchies");
+    assert_eq!(hierarchies, 1, "the EHR keeps one directory");
+}
+
 /// One recorded update of `created` with content `n`, as a protocol adapter
 /// sends it; the committed version and the write's recorder.
 async fn recorded_update(
