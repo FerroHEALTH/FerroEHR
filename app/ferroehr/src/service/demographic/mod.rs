@@ -89,6 +89,7 @@ mod care_visible;
 mod care_writer;
 mod contact_erasure;
 mod contribution;
+mod gated;
 mod party;
 mod relationship;
 mod support;

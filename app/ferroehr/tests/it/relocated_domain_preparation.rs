@@ -152,8 +152,8 @@ async fn a_party_domain_in_its_own_database_is_prepared_and_verified() {
         .expect("the second database is its own entry");
     assert_eq!(
         party_database.schemas,
-        ["party", "ext"],
-        "an erasure drops the party schema and ext"
+        ["party_door", "party", "ext"],
+        "an erasure drops the party schemas and ext"
     );
 }
 

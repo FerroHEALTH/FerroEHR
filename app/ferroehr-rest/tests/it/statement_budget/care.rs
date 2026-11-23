@@ -71,9 +71,12 @@ const CASELOAD: Ceiling = Ceiling {
 /// transactions and three `pg_notify` calls. Once the representation
 /// trigger moved and notified only for a statement that changed a row
 /// (#6284), it ran 2 nested statements, 1 `pg_notify` call and 79 bytes
-/// fewer (7,763 to 7,767), and each ceiling fell by its drop.
+/// fewer (7,763 to 7,767), and each ceiling fell by its drop. Judged on one
+/// gate read and committed behind one guarded statement, its settle in two
+/// statements (#6257), it sent 27 round trips where it sent 41, the other
+/// counts and the WAL bytes unchanged.
 const COMMIT: Ceiling = Ceiling {
-    round_trips: 41,
+    round_trips: 27,
     nested: 2,
     notifies: 1,
     wal: 7924,
@@ -85,9 +88,11 @@ const COMMIT: Ceiling = Ceiling {
 /// the team's census and its patients' record subjects again; the commit
 /// now applies the stamped parties' facts it reads anyway to the copy, with
 /// the care relationships read in place of the stamped teams, so the pair
-/// takes 50. The other counts are the commit's.
+/// takes 50. The other counts are the commit's. With the commit judged on
+/// one gate read and committed behind one guarded statement (#6257), the
+/// pair takes 35, measured twice.
 const RECARE: Ceiling = Ceiling {
-    round_trips: 50,
+    round_trips: 35,
     nested: COMMIT.nested + CASELOAD.nested,
     notifies: COMMIT.notifies + CASELOAD.notifies,
     wal: COMMIT.wal + CASELOAD.wal,

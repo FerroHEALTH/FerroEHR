@@ -74,7 +74,7 @@ async fn the_lookups_stay_under_the_cap_and_an_evicted_one_reads_the_store() {
                 Ok::<_, Infallible>((found(n), 0))
             };
             let lookup = bindings
-                .lookup(key(n), 0, read)
+                .lookup(key(n), Some(0), read)
                 .await
                 .expect("the read succeeds");
             assert_eq!(lookup, found(n), "round {round}, login {n}");
@@ -105,7 +105,7 @@ async fn a_lookup_read_before_the_stores_revision_is_read_again() {
                 Ok::<_, Infallible>((found(1), read_at))
             };
             bindings
-                .lookup(key(1), revision, read)
+                .lookup(key(1), Some(revision), read)
                 .await
                 .expect("the read succeeds")
         }

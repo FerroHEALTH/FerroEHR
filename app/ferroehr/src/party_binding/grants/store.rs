@@ -145,15 +145,15 @@ pub(crate) fn steps(kind: Kind, head: GrantHead<'_>) -> (Vec<Step<'_>>, Vec<Step
     match kind {
         Kind::Organisation => {
             clear.extend([clients_gone(head), provider_gone(head)]);
-            fill.extend([clients_came(head), provider_came(head)]);
+            fill.extend(clients_came(head).into_iter().chain(provider_came(head)));
         }
         Kind::Person | Kind::Group | Kind::Agent => {
             clear.push(clients_gone(head));
-            fill.push(clients_came(head));
+            fill.extend(clients_came(head));
         }
         Kind::Role => {
             clear.push(capabilities_gone(head));
-            fill.push(capabilities_came(head));
+            fill.extend(capabilities_came(head));
         }
         _ => {}
     }
@@ -164,13 +164,10 @@ pub(crate) fn steps(kind: Kind, head: GrantHead<'_>) -> (Vec<Step<'_>>, Vec<Step
 /// came.
 async fn write_clients(tx: &mut PgConnection, head: GrantHead<'_>) -> Result<bool, StorageError> {
     let gone = clients_gone(head).run(tx).await?;
-    if head
-        .live()
-        .is_none_or(|facts| facts.grants.clients.is_empty())
-    {
+    let Some(came) = clients_came(head) else {
         return Ok(!gone.is_empty());
-    }
-    let came = clients_came(head).run(tx).await?;
+    };
+    let came = came.run(tx).await?;
     Ok(!gone.is_empty() || !came.is_empty())
 }
 
@@ -185,21 +182,20 @@ fn clients_gone<'q>(head: GrantHead<'_>) -> Step<'q> {
     )
 }
 
-/// The step that inserts the client rows the live `head` holds.
-fn clients_came(head: GrantHead<'_>) -> Step<'_> {
-    let facts = head.live().filter(|facts| !facts.grants.clients.is_empty());
+/// The step that inserts the client rows the live `head` holds; `None` when
+/// it holds none.
+fn clients_came(head: GrantHead<'_>) -> Option<Step<'_>> {
+    let facts = head
+        .live()
+        .filter(|facts| !facts.grants.clients.is_empty())?;
     let (issuers, clients): (Vec<&str>, Vec<&str>) = facts
-        .map(|facts| {
-            facts
-                .grants
-                .clients
-                .iter()
-                .map(|(issuer, client)| (issuer.as_str(), client.as_str()))
-                .unzip()
-        })
-        .unwrap_or_default();
-    let provider = facts.and_then(|facts| facts.grants.provider);
-    Step::new(
+        .grants
+        .clients
+        .iter()
+        .map(|(issuer, client)| (issuer.as_str(), client.as_str()))
+        .unzip();
+    let provider = facts.grants.provider;
+    Some(Step::new(
         "ci",
         "INSERT INTO binding_client (party_id, issuer, client_id, lifecycle_state, provider_id) \
          SELECT $1, t.issuer, t.client_id, $4, $5 \
@@ -214,17 +210,13 @@ fn clients_came(head: GrantHead<'_>) -> Step<'_> {
                 .bind(head.lifecycle_state)
                 .bind(provider)
         },
-    )
-    .writing(facts.is_some())
+    ))
 }
 
 /// Replaces the provider row of the `ORGANISATION` `head`; whether the row
 /// changed.
 async fn write_provider(tx: &mut PgConnection, head: GrantHead<'_>) -> Result<bool, StorageError> {
-    let step = match provider_of(head) {
-        Some(_) => provider_came(head),
-        None => provider_gone(head),
-    };
+    let step = provider_came(head).unwrap_or_else(|| provider_gone(head));
     Ok(!step.run(tx).await?.is_empty())
 }
 
@@ -248,38 +240,32 @@ fn provider_gone(head: GrantHead<'_>) -> Step<'_> {
     )
 }
 
-/// The step that writes the provider row of `head` when it carries an
-/// identifier, leaving a row that holds it as it is.
-fn provider_came(head: GrantHead<'_>) -> Step<'_> {
-    let identifier = provider_of(head);
-    Step::new(
+/// The step that writes the provider row of `head`, leaving a row that holds
+/// its identifier as it is; `None` when it carries none.
+fn provider_came(head: GrantHead<'_>) -> Option<Step<'_>> {
+    let (issuer, id) = provider_of(head)?;
+    Some(Step::new(
         "vi",
         "INSERT INTO binding_provider (party_id, issuer, id) \
-         SELECT $1, $2, $3 WHERE $2::text IS NOT NULL \
+         SELECT $1, $2, $3 \
          ON CONFLICT (party_id) DO UPDATE SET issuer = EXCLUDED.issuer, id = EXCLUDED.id, \
              written_at = now() \
          WHERE (binding_provider.issuer, binding_provider.id) \
                IS DISTINCT FROM (EXCLUDED.issuer, EXCLUDED.id) \
          RETURNING party_id AS p, NULL::text AS t",
         Some(Tag::Grants),
-        move |query| {
-            query
-                .bind(head.vo_id)
-                .bind(identifier.map(|(issuer, _)| issuer))
-                .bind(identifier.map(|(_, id)| id))
-        },
-    )
-    .writing(identifier.is_some())
+        move |query| query.bind(head.vo_id).bind(issuer).bind(id),
+    ))
 }
 
 /// Replaces the capability rows of the `ROLE` `head`; whether any row went or
 /// came.
 async fn write_role(tx: &mut PgConnection, head: GrantHead<'_>) -> Result<bool, StorageError> {
     let gone = capabilities_gone(head).run(tx).await?;
-    if capability_holder(head).is_none() {
+    let Some(came) = capabilities_came(head) else {
         return Ok(!gone.is_empty());
-    }
-    let came = capabilities_came(head).run(tx).await?;
+    };
+    let came = came.run(tx).await?;
     Ok(!gone.is_empty() || !came.is_empty())
 }
 
@@ -305,15 +291,12 @@ fn capabilities_gone<'q>(head: GrantHead<'_>) -> Step<'q> {
 }
 
 /// The step that inserts the capability rows the live `head` grants its
-/// performer.
-fn capabilities_came(head: GrantHead<'_>) -> Step<'_> {
-    let holder = capability_holder(head);
-    let columns = holder.map_or_else(CapabilityColumns::default, |(facts, _)| {
-        CapabilityColumns::of(&facts.grants)
-    });
-    let performer = holder.map(|(_, performer)| performer);
-    let validity = holder.and_then(|(facts, _)| facts.validity.as_ref());
-    Step::new(
+/// performer; `None` when it grants none to one.
+fn capabilities_came(head: GrantHead<'_>) -> Option<Step<'_>> {
+    let (facts, performer) = capability_holder(head)?;
+    let columns = CapabilityColumns::of(&facts.grants);
+    let validity = facts.validity.as_ref();
+    Some(Step::new(
         "ki",
         "INSERT INTO binding_capability \
              (role_id, ordinal, operation, performer_id, lifecycle_state, role_validity, \
@@ -342,12 +325,10 @@ fn capabilities_came(head: GrantHead<'_>) -> Step<'_> {
                 .bind(columns.not_after)
                 .bind(columns.credentials)
         },
-    )
-    .writing(holder.is_some())
+    ))
 }
 
 /// The capabilities of a `ROLE` as the arrays the insert binds.
-#[derive(Default)]
 struct CapabilityColumns<'a> {
     ordinal: Vec<i32>,
     operation: Vec<&'a str>,
