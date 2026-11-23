@@ -610,13 +610,9 @@ pub(crate) fn middleware(
 ) -> std::pin::Pin<Box<dyn Future<Output = Response> + Send>> {
     let bodiless = axum::body::HttpBody::size_hint(req.body()).exact() == Some(0);
     if layer.authenticator.enabled() && req.method() == http::Method::GET && bodiless {
-        let f = riding(layer, req, next);
-        eprintln!("DBGSZ riding={}", std::mem::size_of_val(&f));
-        Box::pin(f)
+        Box::pin(riding(layer, req, next))
     } else {
-        let f = served(layer, req, next);
-        eprintln!("DBGSZ served={}", std::mem::size_of_val(&f));
-        Box::pin(f)
+        Box::pin(served(layer, req, next))
     }
 }
 
@@ -643,32 +639,30 @@ async fn served(layer: AuthLayer, req: Request, mut next: Next) -> Response {
 /// clinical statements can read the party store's revisions, served as a
 /// ride, so it can run again whole.
 async fn riding(layer: AuthLayer, req: Request, mut next: Next) -> Response {
+    // NOTE: our own design (#6320), each step of a ride runs in an allocation of its own, so the
+    // frame that waits beside a run holds only what the rerun needs.
     let auth = &layer.authenticator;
     let (parts, body) = req.into_parts();
-    let access = match auth.verify(&parts).await {
+    let access = match Box::pin(auth.verify(&parts)).await {
         Ok(access) => access,
         Err(e) => return refusal::refusal_of(auth, &parts.headers, &e),
     };
-    if !matches!(layer.service.party_door_open().await, Ok(true)) {
+    if !matches!(Box::pin(layer.service.party_door_open()).await, Ok(true)) {
         return Box::pin(decided(&layer, access, Request::from_parts(parts, body), &mut next)).await;
     }
     // NOTE: our own design (#6320), a ride decides on the party copies as they stand, and its
     // answer leaves only once they held the store's revisions its clinical statement read.
     // The rerun keeps the request's extensions (its matched route and request id), never a body.
     let again = parts.clone();
-    let rf = ferroehr::party_binding::request::ride(Box::pin(decided(
+    let (resp, ridden) = ferroehr::party_binding::request::ride(Box::pin(decided(
         &layer,
         access.clone(),
         Request::from_parts(parts, body),
         &mut next,
-    )));
-    eprintln!("DBGSZ ride={} access={} parts={}", std::mem::size_of_val(&rf), std::mem::size_of_val(&access), std::mem::size_of_val(&again));
-    let (resp, ridden) = rf.await;
-    let hf = layer.service.ride_held(ridden);
-    eprintln!("DBGSZ held={}", std::mem::size_of_val(&hf));
-    let ridden = hf;
-    let op = "x";
-    if matches!(ridden.await, Ok(true)) {
+    )))
+    .await;
+    let op = ridden.op().unwrap_or("unnamed");
+    if matches!(Box::pin(layer.service.ride_held(ridden)).await, Ok(true)) {
         return resp;
     }
     // NOTE: our own design (#6320), the run the store overtook leaves nothing: its answer and
