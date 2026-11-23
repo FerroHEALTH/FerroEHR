@@ -158,7 +158,7 @@ CREATE TABLE access_log_entry (
     -- The record's own part, canonicalised by RFC 8785: with the shared part
     -- joined back, its canonical form without its link.
     content            text        STORAGE MAIN NOT NULL,
-    -- The SHA-256 of the entry's stored facts (access_log::stored_form::parts::facts_digest),
+    -- The SHA-256 of the entry's stored facts (access_log::stored_form::parts::facts::facts_digest),
     -- computed by the writer.
     content_digest     bytea       STORAGE MAIN NOT NULL,
     -- The version of the stored form, which the reader renders the entry by.
@@ -251,7 +251,7 @@ COMMENT ON COLUMN access_log_entry.content IS
 COMMENT ON COLUMN access_log_entry.uid IS
     'The record''s uid, derived from content.';
 COMMENT ON COLUMN access_log_entry.content_digest IS
-    'The SHA-256 of the entry''s stored facts when it was written (its form, uid, time, EHR, request and resource ids, shared part digest and row part, access_log::stored_form::parts::facts_digest), computed by the writer; a tombstone keeps it, and its window''s seal covers it, never a rendering of the entry (#6322).';
+    'The SHA-256 of the entry''s stored facts when it was written (its form, uid, time, EHR, request and resource ids, shared part digest and row part, access_log::stored_form::parts::facts::facts_digest), computed by the writer; a tombstone keeps it, and its window''s seal covers it, never a rendering of the entry (#6322).';
 COMMENT ON COLUMN access_log_entry.form IS
     'The version of the stored form the entry was written in: the reader renders its canonical form, and every projection of it, by the renderer of that version, and refuses a version it has none for (#6322).';
 COMMENT ON COLUMN access_log_entry.ehr_id IS

@@ -274,7 +274,7 @@ async fn facts_digest(pool: &PgPool, id: i64) -> String {
     .fetch_one(pool)
     .await
     .expect("the entry's row");
-    let columns = ferroehr::access_log::stored_form::parts::RowColumns {
+    let columns = ferroehr::access_log::stored_form::parts::assemble::RowColumns {
         record_type: row.get("record_type"),
         uid: row.get("uid"),
         time_recorded: row
@@ -286,13 +286,15 @@ async fn facts_digest(pool: &PgPool, id: i64) -> String {
             resource_id: row.get("resource_id"),
         },
     };
-    hex(&ferroehr::access_log::stored_form::parts::facts_digest(
-        row.get("form"),
-        row.get("content"),
-        row.get("shared"),
-        &columns,
+    hex(
+        &ferroehr::access_log::stored_form::parts::facts::facts_digest(
+            row.get("form"),
+            row.get("content"),
+            row.get("shared"),
+            &columns,
+        )
+        .expect("the facts digest"),
     )
-    .expect("the facts digest"))
 }
 
 /// An entry that breaks an invariant of the draft leaves no record.

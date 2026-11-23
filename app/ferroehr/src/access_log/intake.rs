@@ -99,8 +99,8 @@ impl IntakeEntry {
         let derived = Derived::of(&cut).map_err(AccessLogError::Canonical)?;
         let shared = shared.map(|text| (sha256_hex(&text), text));
         let columns = row_columns(&derived, index.as_ref())?;
-        let digest = stored_form::parts::facts_digest(
-            stored_form::parts::FORM,
+        let digest = stored_form::parts::facts::facts_digest(
+            stored_form::parts::facts::FORM,
             &row,
             shared.as_ref().map(|(digest, _)| digest.as_str()),
             &columns,
@@ -121,10 +121,10 @@ impl IntakeEntry {
 fn row_columns<'d>(
     derived: &'d Derived,
     index: Option<&'d IndexRow>,
-) -> Result<stored_form::parts::RowColumns<'d>, AccessLogError> {
+) -> Result<stored_form::parts::assemble::RowColumns<'d>, AccessLogError> {
     let unreadable =
         |what: &'static str| AccessLogError::Canonical(serde::ser::Error::custom(what));
-    Ok(stored_form::parts::RowColumns {
+    Ok(stored_form::parts::assemble::RowColumns {
         record_type: derived
             .record_type
             .as_deref()
@@ -158,7 +158,8 @@ impl IntakeEntry {
         let stored = Self::stored(entry, Some(index))?;
         let columns = row_columns(&stored.derived, stored.index.as_ref())?;
         let shared = stored.shared.as_ref().map(|(_, text)| text.as_str());
-        stored_form::parts::whole(&stored.row, shared, &columns).map_err(AccessLogError::Canonical)
+        stored_form::parts::assemble::whole(&stored.row, shared, &columns)
+            .map_err(AccessLogError::Canonical)
     }
 }
 

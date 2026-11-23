@@ -386,15 +386,15 @@ fn assembled<T: serde::Serialize>(
     let written = parts(record, &[LINK]).expect("the parts write");
     let row = super::index::without_columns(&written.row, &index).expect("the row part reads");
     let (record_type, uid, time_recorded, ehr_id) = columns_of(&written.whole);
-    let columns = super::RowColumns {
+    let columns = super::assemble::RowColumns {
         record_type: &record_type,
         uid,
         time_recorded,
         ehr_id,
         index,
     };
-    let whole =
-        super::whole(&row, written.shared.as_deref(), &columns).expect("the parts assemble");
+    let whole = super::assemble::whole(&row, written.shared.as_deref(), &columns)
+        .expect("the parts assemble");
     (whole, written.whole)
 }
 
