@@ -9,8 +9,8 @@
 //! The seed writes the rows the commit path derives from a patient's
 //! `under_care_of` relationship, a professional's membership (`MBR`) and the
 //! role its `ROLE` names straight into `party.binding_caller_fact`, as the caller
-//! facts' integration test does, stamps each party with the facts revision and
-//! moves both revisions, so the copy reads every row. The measurement starts
+//! facts' integration test does, stamps each party with the seeding
+//! transaction and moves the grant revision, so the copy reads every row. The measurement starts
 //! a [`LiveGrants`] over the party pool and reads it, then reads the care
 //! relationships of as many subjects as the care copy holds and the patients
 //! of every team, each twice, a miss and a hit. It reports the resident
@@ -114,15 +114,14 @@ pub(crate) async fn seed(pool: &PgPool, target: Target) -> anyhow::Result<()> {
     .await
     .context("seed the roles")?;
     sqlx::query(
-        "INSERT INTO party.binding_caller_fact_party (party_id, revision) \
-         SELECT DISTINCT party_id, 1 FROM party.binding_caller_fact",
+        "INSERT INTO party.binding_caller_fact_party (party_id, stamped_xid) \
+         SELECT DISTINCT party_id, pg_current_xact_id() FROM party.binding_caller_fact",
     )
     .execute(&mut *tx)
     .await
     .context("stamp the parties")?;
     sqlx::query(
-        "UPDATE party.binding_grant_revision \
-         SET revision = revision + 1, facts_revision = facts_revision + 1",
+        "UPDATE party.binding_grant_revision SET revision = revision + 1",
     )
     .execute(&mut *tx)
     .await

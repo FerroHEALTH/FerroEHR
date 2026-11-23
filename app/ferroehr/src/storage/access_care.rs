@@ -17,6 +17,7 @@ use sqlx::{PgConnection, PgPool, Row};
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
+use crate::db::snapshot::{self, Snapshot};
 use crate::ids::EhrId;
 use crate::party_binding::grants::caller::care_of::CarerKind;
 use crate::storage::access_projection::EhrSubject;
@@ -102,10 +103,10 @@ pub const fn kind_code(kind: CarerKind) -> &'static str {
     }
 }
 
-/// What the state row of the projection holds: the facts revision it
-/// reflects and the check value of the digest form its digests were taken
+/// What the state row of the projection holds: the party snapshot it was
+/// read under and the check value of the digest form its digests were taken
 /// in, each `None` before the first run.
-pub type State = (Option<i64>, Option<Vec<u8>>);
+pub type State = (Option<Snapshot>, Option<Vec<u8>>);
 
 /// How a projector reads the state row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -122,30 +123,37 @@ pub enum StateRead {
 /// [`StorageError::Database`] on a driver failure.
 pub async fn state(conn: &mut PgConnection, read: StateRead) -> Result<State, StorageError> {
     let sql = match read {
-        StateRead::Unlocked => "SELECT revision, key_check FROM access_care_state WHERE singleton",
+        StateRead::Unlocked => {
+            "SELECT snapshot::text AS snapshot, key_check FROM access_care_state WHERE singleton"
+        }
         StateRead::Locked => {
-            "SELECT revision, key_check FROM access_care_state WHERE singleton FOR UPDATE"
+            "SELECT snapshot::text AS snapshot, key_check FROM access_care_state WHERE singleton \
+             FOR UPDATE"
         }
     };
     let row = sqlx::query(sql).fetch_one(&mut *conn).await?;
-    Ok((row.try_get("revision")?, row.try_get("key_check")?))
+    let snapshot: Option<String> = row.try_get("snapshot")?;
+    Ok((
+        snapshot.as_deref().map(snapshot::read).transpose()?,
+        row.try_get("key_check")?,
+    ))
 }
 
-/// Record that the projection reflects the facts revision `revision`, its
-/// digests taken in the form `key_check` names.
+/// Record that the projection was read under the party snapshot `snapshot`,
+/// its digests taken in the form `key_check` names.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn set_state(
     tx: &mut PgConnection,
-    revision: i64,
+    snapshot: &Snapshot,
     key_check: &[u8],
 ) -> Result<(), StorageError> {
     sqlx::query(
-        "UPDATE access_care_state SET revision = $1, key_check = $2, updated_at = now() \
-         WHERE singleton",
+        "UPDATE access_care_state SET snapshot = $1::pg_snapshot, key_check = $2, \
+         updated_at = now() WHERE singleton",
     )
-    .bind(revision)
+    .bind(snapshot.to_string())
     .bind(key_check)
     .execute(&mut *tx)
     .await?;

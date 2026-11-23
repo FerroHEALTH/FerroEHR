@@ -27,7 +27,7 @@ use uuid::Uuid;
 use crate::db::acquire::acquire;
 use crate::party_binding::derive::{Facts, container};
 use crate::party_binding::grants::derive::{Bound, GrantFacts};
-use crate::party_binding::grants::live::revisions::Revisions;
+use crate::party_binding::grants::live::revisions::{FactsRead, HeldSnapshot, Revisions};
 use crate::party_binding::grants::operation::Operation;
 use crate::party_binding::step::{Step, Tag};
 use crate::storage::error::StorageError;
@@ -407,17 +407,33 @@ pub(crate) async fn refilled(tx: &mut PgConnection) -> Result<(), StorageError> 
     Ok(())
 }
 
-/// The grant revision, the facts revision and the binding revision, on
-/// `conn`, in one read.
+/// The grant revision and the binding revision, and whether the store holds
+/// a caller facts stamp the snapshot of `held` did not see
+/// (`party.facts_behind`), on `conn`, in one read.
 ///
 /// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub(crate) async fn revisions(conn: &mut PgConnection) -> Result<Revisions, StorageError> {
-    let (grants, facts, bindings) = sqlx::query_as(
-        "SELECT revision, facts_revision, binding_revision FROM binding_grant_revision",
+/// [`StorageError::Database`] on a driver failure, and
+/// [`StorageError::InvalidRows`] for a snapshot that does not read.
+pub(crate) async fn revisions(
+    conn: &mut PgConnection,
+    held: Option<&HeldSnapshot>,
+) -> Result<Revisions, StorageError> {
+    let (grants, bindings, behind, store): (i64, i64, bool, String) = sqlx::query_as(
+        "SELECT revision, binding_revision, party.facts_behind($1::pg_snapshot), \
+                pg_current_snapshot()::text \
+         FROM binding_grant_revision",
     )
+    .bind(held.map(|held| held.snapshot.to_string()))
     .fetch_one(&mut *conn)
     .await?;
+    let facts = match held {
+        Some(held) if !behind => FactsRead::Seen {
+            generation: held.generation,
+        },
+        _ => FactsRead::Behind {
+            store: std::sync::Arc::new(crate::db::snapshot::read(&store)?),
+        },
+    };
     Ok(Revisions {
         grants,
         facts,
@@ -617,7 +633,7 @@ impl Dates {
 /// Everything the grant rows hold, read in one snapshot: the revision, every
 /// client identifier with its provider, every capability, and every caller
 /// fact.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub(crate) struct Loaded {
     pub(crate) revision: i64,
     pub(crate) clients: Vec<ClientRow>,

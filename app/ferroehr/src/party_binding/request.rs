@@ -18,7 +18,7 @@ use sqlx::PgPool;
 use tokio::sync::OnceCell;
 
 use crate::db::acquire::acquire;
-use crate::party_binding::grants::live::revisions::Revisions;
+use crate::party_binding::grants::live::revisions::{HeldSnapshot, Revisions};
 use crate::party_binding::grants::store;
 use crate::storage::error::StorageError;
 
@@ -33,35 +33,39 @@ pub async fn scope<F: Future>(fut: F) -> F::Output {
     READ.scope(OnceCell::new(), fut).await
 }
 
-/// The revisions in force in the party store: the ones the running request
-/// read, or one indexed read on a connection of `pool` that is given back
-/// before this returns.
+/// The revisions in force in the party store, the caller facts judged
+/// against `held`, the snapshot the facts copy holds: the ones the running
+/// request read, or one indexed read on a connection of `pool` that is given
+/// back before this returns.
 ///
 /// # Errors
 /// [`StorageError`] when the party store does not answer; a failed read is
 /// not kept, and the next caller reads again.
-pub(crate) async fn revisions(pool: &PgPool) -> Result<Revisions, StorageError> {
+pub(crate) async fn revisions(
+    pool: &PgPool,
+    held: Option<&HeldSnapshot>,
+) -> Result<Revisions, StorageError> {
     let read = || async {
         let mut conn = acquire(pool).await?;
-        store::revisions(&mut conn).await
+        store::revisions(&mut conn, held).await
     };
     // NOTE: tokio LocalKey::try_with, outside a request (a background task, a
     // test of a service) there is nothing to share the read with.
-    let Ok(held) = READ.try_with(|held| held.get().copied()) else {
+    let Ok(read_before) = READ.try_with(|read| read.get().cloned()) else {
         return read().await;
     };
-    if let Some(held) = held {
-        return Ok(held);
+    if let Some(read_before) = read_before {
+        return Ok(read_before);
     }
     let fresh = read().await?;
     // NOTE: tokio OnceCell::set, a read a sibling future of the request
     // finished first stands, and both are revisions the store held.
     Ok(READ
-        .try_with(|held| {
-            match held.set(fresh) {
+        .try_with(|read| {
+            match read.set(fresh.clone()) {
                 Ok(()) | Err(_) => {}
             }
-            held.get().copied().unwrap_or(fresh)
+            read.get().cloned().unwrap_or_else(|| fresh.clone())
         })
         .unwrap_or(fresh))
 }

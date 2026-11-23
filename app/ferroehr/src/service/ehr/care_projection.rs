@@ -4,31 +4,33 @@
 //! The care projector (#5699).
 //!
 //! It keeps the clinical care projection (`clinical/0009_baseline_access.sql`) at
-//! the party facts revision this replica holds, so a query's access
-//! condition binds only the caller's team ids.
+//! the party facts this replica holds, so a query's access condition binds
+//! only the caller's team ids.
 //!
 //! It reads the party domain on the party pool, in one repeatable-read
 //! snapshot, and gives that connection back before it writes the clinical
 //! domain on the clinical pool, under the projection's state row, so one
 //! projector of the cluster writes at a time, no role reaches both domains
-//! and no pool is waited for while another's connection is held. Each run applies every `PERSON` stamped
-//! since the revision the projection holds, or every `PERSON` in care when
-//! it holds none or its digests were taken in another form, then digests
-//! the EHR rows that carry a subject and no digest. Only then does this
-//! replica read the projection, and only while it is at least as recent as
-//! the facts it holds: a removed relationship is never read from a stale row.
+//! and no pool is waited for while another's connection is held. Each run
+//! applies every `PERSON` stamped by a transaction the snapshot the
+//! projection was read under did not see, or every `PERSON` in care when it
+//! holds none or its digests were taken in another form, then digests the EHR
+//! rows that carry a subject and no digest. Only then does this replica read
+//! the projection, and only while its snapshot covers the one the facts it
+//! holds were read under: a removed relationship is never read from a stale
+//! row.
 //!
 //! Every subject reference is held as its SHA-256 digest
 //! ([`access_care::subject_digest`]). No openEHR spec governs the
 //! projection: our own design.
 
-use std::sync::Arc;
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::{Arc, PoisonError, RwLock};
 
 use sqlx::{Connection, PgPool};
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
+use crate::db::snapshot::Snapshot;
 use crate::party_binding::grants::caller;
 use crate::party_binding::grants::caller::care_of::{CareOf, CarerKind};
 use crate::party_binding::grants::care::care_of;
@@ -43,34 +45,40 @@ use crate::storage::error::StorageError;
 /// The `PERSON`s read and written in one statement.
 const CHUNK: usize = 1000;
 
-/// How often the projector compares the facts revision this replica holds
-/// with the one the projection reflects; an in-memory read, no statement.
+/// How often the projector compares the snapshot of the facts this replica
+/// holds with the one the projection was read under; an in-memory read, no
+/// statement.
 const TICK: std::time::Duration = std::time::Duration::from_millis(200);
 
 /// How long the projector waits after a failed run before it tries again.
 const RETRY: std::time::Duration = std::time::Duration::from_secs(5);
 
-/// The party facts revision the projection is known to reflect on this
-/// replica; none before its first run.
-#[derive(Debug)]
-pub struct Projected(AtomicI64);
-
-impl Default for Projected {
-    fn default() -> Self {
-        Self(AtomicI64::new(i64::MIN))
-    }
-}
+/// The party snapshot the projection is known to have been read under on
+/// this replica; none before its first run.
+#[derive(Debug, Default)]
+pub struct Projected(RwLock<Option<Arc<Snapshot>>>);
 
 impl Projected {
-    /// Whether the projection reflects at least the facts revision `held`.
+    /// Whether the projection holds every stamp the snapshot `held` sees.
     #[must_use]
-    pub fn covers(&self, held: Option<i64>) -> bool {
-        held.is_some_and(|held| self.0.load(Ordering::Acquire) >= held)
+    pub fn covers(&self, held: Option<&Snapshot>) -> bool {
+        let projected = self.0.read().unwrap_or_else(PoisonError::into_inner);
+        projected
+            .as_ref()
+            .zip(held)
+            .is_some_and(|(projected, held)| projected.covers(held))
     }
 
-    /// Record that the projection reflects `revision`, never moving back.
-    fn reached(&self, revision: i64) {
-        self.0.fetch_max(revision, Ordering::AcqRel);
+    /// Record that the projection was read under `snapshot`, never moving
+    /// back.
+    fn reached(&self, snapshot: Arc<Snapshot>) {
+        let mut projected = self.0.write().unwrap_or_else(PoisonError::into_inner);
+        if projected
+            .as_ref()
+            .is_none_or(|projected| snapshot.covers(projected))
+        {
+            *projected = Some(snapshot);
+        }
     }
 }
 
@@ -87,8 +95,8 @@ struct Projector {
 /// transaction begins.
 #[derive(Debug)]
 struct PartyRead {
-    /// The party facts revision the snapshot read.
-    revision: i64,
+    /// The party snapshot the read ran under.
+    snapshot: Arc<Snapshot>,
     /// Whether the projection is rebuilt whole.
     whole: bool,
     /// The `PERSON`s to replace, a chunk at a time, each with its rows.
@@ -109,7 +117,8 @@ impl FerroEhrService {
     /// this replica holds, so a query may read it.
     #[must_use]
     pub fn care_projection_current(&self) -> bool {
-        self.care_projected.covers(self.grants.facts_revision())
+        self.care_projected
+            .covers(self.grants.facts_snapshot().as_deref())
     }
 
     /// Remove the care of each of `persons` from the projection, the erasure
@@ -122,16 +131,15 @@ impl FerroEhrService {
         access_care::forget(&self.pool, persons).await
     }
 
-    /// Run the care projector once on this replica, as its task runs it, and
-    /// answer the facts revision the projection reached.
+    /// Run the care projector once on this replica, as its task runs it.
     ///
     /// # Errors
     /// [`StorageError`] when a domain cannot be read or written.
-    pub async fn project_care(&self) -> Result<i64, StorageError> {
+    pub async fn project_care(&self) -> Result<(), StorageError> {
         let projector = self.projector();
-        let revision = projector.project().await?;
-        projector.projected.reached(revision);
-        Ok(revision)
+        let snapshot = projector.project().await?;
+        projector.projected.reached(snapshot);
+        Ok(())
     }
 
     /// The projector of this replica.
@@ -161,11 +169,11 @@ impl Projector {
     async fn run(self) {
         let mut first = true;
         loop {
-            let held = self.grants.facts_revision();
-            if first || !self.projected.covers(held) {
+            let held = self.grants.facts_snapshot();
+            if first || !self.projected.covers(held.as_deref()) {
                 match self.project().await {
-                    Ok(revision) => {
-                        self.projected.reached(revision);
+                    Ok(snapshot) => {
+                        self.projected.reached(snapshot);
                         first = false;
                     }
                     Err(error) => {
@@ -186,15 +194,15 @@ impl Projector {
         }
     }
 
-    /// One run: the projection brought to the party facts revision it reads,
-    /// then every undigested EHR row digested; the revision reached.
+    /// One run: the projection brought to the party facts it reads, then
+    /// every undigested EHR row digested; the snapshot it read under.
     ///
     /// The party side is read whole first, from the state the projection
     /// held, and its connection given back before the clinical transaction
     /// begins, which writes it only while the state row still holds that
     /// state, so no pool is waited for while another's connection is held
     /// (#5879, #5986). No openEHR spec governs this: our own design (#6187).
-    async fn project(&self) -> Result<i64, StorageError> {
+    async fn project(&self) -> Result<Arc<Snapshot>, StorageError> {
         let key_check = subject_digest(access_care::DIGEST_CHECK);
         let namespace = self.grants.namespace();
         loop {
@@ -216,19 +224,19 @@ impl Projector {
             for (persons, rows) in &read.chunks {
                 access_care::replace(&mut tx, persons, rows).await?;
             }
-            access_care::set_state(&mut tx, read.revision, &key_check).await?;
+            access_care::set_state(&mut tx, &read.snapshot, &key_check).await?;
             // NOTE: our own design (#5762), the care projector, which runs in the background.
             tx.commit().await?;
             drop(clinical);
             self.digest_ehrs(&namespace).await?;
-            return Ok(read.revision);
+            return Ok(read.snapshot);
         }
     }
 
     /// The party side of a run from the projection's state `seen`, read in
-    /// one repeatable-read snapshot: every `PERSON` stamped since the
-    /// revision it holds, or every `PERSON` in care when it holds none or its
-    /// digests were taken in a form other than `key_check`.
+    /// one repeatable-read snapshot: every `PERSON` stamped by a transaction
+    /// the snapshot it holds did not see, or every `PERSON` in care when it
+    /// holds none or its digests were taken in a form other than `key_check`.
     async fn read_party(
         &self,
         seen: &access_care::State,
@@ -242,11 +250,8 @@ impl Projector {
         sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
             .execute(&mut *snapshot)
             .await?;
-        let revision = crate::party_binding::grants::store::revisions(&mut snapshot)
-            .await?
-            .facts;
-        let persons = match *held {
-            Some(held) if !whole && held >= revision => Vec::new(),
+        let read = Arc::new(crate::db::snapshot::current(&mut snapshot).await?);
+        let persons = match held {
             Some(held) if !whole => caller::store::stamped_since(&mut snapshot, held).await?,
             _ => caller::store::cared_persons(&mut snapshot).await?,
         };
@@ -258,7 +263,7 @@ impl Projector {
         // NOTE: our own design (#5762), the care projector, which runs in the background.
         snapshot.commit().await?;
         Ok(PartyRead {
-            revision,
+            snapshot: read,
             whole,
             chunks,
         })

@@ -43,6 +43,7 @@ pub mod pool_name;
 mod retired;
 pub mod server_version;
 mod session;
+pub mod snapshot;
 
 use std::path::PathBuf;
 

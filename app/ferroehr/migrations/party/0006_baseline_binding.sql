@@ -486,16 +486,12 @@ CREATE TABLE binding_grant_revision (
     singleton  boolean PRIMARY KEY DEFAULT true CHECK (singleton),
     revision   bigint NOT NULL,
     revised_at timestamptz NOT NULL DEFAULT now(),
-    -- The revision of binding_caller_fact, which moves with each change of a
-    -- party's caller facts.
-    facts_revision   bigint NOT NULL DEFAULT 0,
     -- The revision of the binding side table, which moves once in each
     -- transaction that changes it (binding_changed).
     binding_revision bigint NOT NULL DEFAULT 0
 );
 INSERT INTO binding_grant_revision (singleton, revision) VALUES (true, 0);
 COMMENT ON TABLE binding_grant_revision IS 'The revision of binding_client and binding_capability, which moves with each change of either. Our own design.';
-COMMENT ON COLUMN binding_grant_revision.facts_revision IS 'The revision of binding_caller_fact, which moves with each change of a party''s caller facts and stamps that party in binding_caller_fact_party.';
 COMMENT ON COLUMN binding_grant_revision.binding_revision IS 'The revision of the binding side table (binding_identifier, binding_membership, binding_representation and the state of binding_key_space), which moves once in each transaction that changes one of them.';
 
 -- ── binding_caller_fact ─────────────────────────────────────────────────────
@@ -616,14 +612,31 @@ COMMENT ON COLUMN binding_caller_fact.writer_id IS 'The container the committer 
 COMMENT ON COLUMN binding_caller_fact.self_declared IS 'Whether a care relationship''s basis is self_declared; false for every other fact.';
 
 -- ── binding_caller_fact_party ───────────────────────────────────────────────
--- The facts revision at which each party's facts last changed, so a replica
--- reads again only the facts of the parties that changed since its copy.
+-- The transaction that last changed each party's facts, so a replica reads
+-- again only the facts of the parties its copy's snapshot did not see. A
+-- commit writes only the rows of the parties it changed: no row is shared by
+-- commits about different parties.
 CREATE TABLE binding_caller_fact_party (
-    party_id uuid PRIMARY KEY,
-    revision bigint NOT NULL
+    party_id    uuid PRIMARY KEY,
+    stamped_xid xid8 NOT NULL
 );
-CREATE INDEX ix_binding_caller_fact_party_revision ON binding_caller_fact_party (revision);
-COMMENT ON TABLE binding_caller_fact_party IS 'The facts revision at which the caller facts of each party last changed. Our own design.';
+CREATE INDEX ix_binding_caller_fact_party_stamped ON binding_caller_fact_party (stamped_xid);
+COMMENT ON TABLE binding_caller_fact_party IS 'The transaction that last changed the caller facts of each party. Our own design.';
+COMMENT ON COLUMN binding_caller_fact_party.stamped_xid IS 'pg_current_xact_id() of the transaction that last changed the party''s caller facts.';
+
+-- Whether a stamp exists that the snapshot held did not see: a copy read
+-- under held is behind the store. The xmin bound keeps it a range scan of
+-- ix_binding_caller_fact_party_stamped (PostgreSQL 19, "Transaction ID and
+-- Snapshot Information Functions"). A copy never read (NULL) is behind.
+CREATE FUNCTION facts_behind(held pg_snapshot) RETURNS boolean
+    LANGUAGE sql STABLE PARALLEL SAFE
+BEGIN ATOMIC
+    SELECT held IS NULL OR EXISTS (
+        SELECT 1 FROM binding_caller_fact_party p
+         WHERE p.stamped_xid >= pg_snapshot_xmin(held)
+           AND NOT pg_visible_in_snapshot(p.stamped_xid, held));
+END;
+COMMENT ON FUNCTION facts_behind(pg_snapshot) IS 'Whether binding_caller_fact_party holds a stamp the snapshot held did not see, so a copy read under it is behind. Our own design.';
 
 -- ── binding_record_subject ──────────────────────────────────────────────────
 -- One row per reference a PERSON head that is not deleted declares.

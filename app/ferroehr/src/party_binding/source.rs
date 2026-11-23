@@ -102,6 +102,9 @@ pub struct LocalPartySource {
     /// This replica's copy of the lookups and names; `None` reads the store
     /// on every request.
     live: Option<Arc<LiveBindings>>,
+    /// This replica's caller facts copy, whose snapshot the request's one
+    /// read of the store's revisions is judged against; `None` for none.
+    facts: Option<Arc<crate::party_binding::grants::live::LiveGrants>>,
 }
 
 impl LocalPartySource {
@@ -115,7 +118,17 @@ impl LocalPartySource {
             mapping: Arc::default(),
             creator: None,
             live: None,
+            facts: None,
         }
+    }
+
+    /// Returns this source reading the store's revisions against the
+    /// snapshot of the caller facts copy `facts`, so the request's one read
+    /// serves that copy's check too.
+    #[must_use]
+    pub fn with_facts(mut self, facts: Arc<crate::party_binding::grants::live::LiveGrants>) -> Self {
+        self.facts = Some(facts);
+        self
     }
 
     /// Returns this source holding its lookups and names in `live`.
@@ -210,7 +223,8 @@ impl LocalPartySource {
         };
         // NOTE: our own design (#6048), a held lookup is taken only at the binding revision the
         // request reads from the store, so no decision rests on a notification's delay.
-        let revision = crate::party_binding::request::revisions(&self.pool)
+        let held = self.facts.as_ref().and_then(|facts| facts.held_snapshot());
+        let revision = crate::party_binding::request::revisions(&self.pool, held.as_ref())
             .await?
             .bindings;
         let key = LookupKey {

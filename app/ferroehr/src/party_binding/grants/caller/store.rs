@@ -2,25 +2,30 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Row I/O for the caller facts: `binding_caller_fact`, the record subjects
-//! of `binding_record_subject` ([`super::subject`]), the stamps of
-//! `binding_caller_fact_party` and the facts revision.
+//! of `binding_record_subject` ([`super::subject`]) and the stamps of
+//! `binding_caller_fact_party`.
 //!
 //! A commit of a `ROLE`, a `PERSON` or an `ORGANISATION` replaces the facts
 //! its head holds, and a `PERSON` its record subjects, in its own
-//! transaction; when they changed, it moves the facts revision,
-//! stamps each party whose facts changed with it and notifies
-//! [`super::super::store::CHANNEL`], so each replica reads again only the
-//! facts of the parties stamped since its copy ([`FACTS`]), with their care
-//! relationships (`CARED`) and record subjects, which its care copy
-//! applies to the care teams it holds (#6074). A refill and an
-//! erasure move the grant revision instead, which reads every fact again. No
-//! openEHR spec governs the side table or its SQL: our own design.
+//! transaction; when they changed, it stamps each party whose facts changed
+//! with its transaction's xid, writing no row another commit shares and
+//! sending no notification, so commits about different parties never queue
+//! on one row or on the notification queue's commit lock (#6074). Each
+//! replica reads again only the facts of the parties stamped by transactions
+//! its copy's snapshot did not see ([`FACTS`]), with their care
+//! relationships (`CARED`) and record subjects, which its care copy applies
+//! to the care teams it holds, once a request finds such a stamp
+//! (`party.facts_behind`). A refill and an erasure move the grant revision
+//! instead, which reads every fact again. No openEHR spec governs the side
+//! table or its SQL: our own design.
 
 #![expect(
     clippy::disallowed_types,
     reason = "owner-approved 2026-08-03 (#1694 family 1): the capability and relationship \
               `time_validity` fragments the fact rows are derived from"
 )]
+
+use std::sync::Arc;
 
 use serde_json::Value;
 use sqlx::{PgConnection, Row};
@@ -29,7 +34,8 @@ use uuid::Uuid;
 use super::care_of::{CareFact, CarerKind, Cover, ProviderKey};
 use super::kin::KinFact;
 use super::{CallerFact, FactKind, FactValue};
-use crate::party_binding::grants::store::{CHANNEL, GrantHead, Term};
+use crate::db::snapshot::Snapshot;
+use crate::party_binding::grants::store::{GrantHead, Term};
 use crate::party_binding::step::{Returned, Step, Tag, differ, parties};
 use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
@@ -38,6 +44,16 @@ use openehr_rm::draft::access_control::terminology::ForeignCode;
 mod insert;
 
 use insert::insert;
+
+/// The stamps `$1`, a `pg_snapshot`, did not see, over
+/// `binding_caller_fact_party p`: the xmin bound keeps it a range scan of
+/// `ix_binding_caller_fact_party_stamped`, as `party.facts_behind` reads it.
+macro_rules! unseen {
+    () => {
+        "p.stamped_xid >= pg_snapshot_xmin($1::pg_snapshot) \
+         AND NOT pg_visible_in_snapshot(p.stamped_xid, $1::pg_snapshot)"
+    };
+}
 
 /// The columns of one fact, over `binding_caller_fact f`.
 macro_rules! fact_columns {
@@ -52,20 +68,21 @@ macro_rules! fact_columns {
     };
 }
 
-/// Every caller fact of the parties stamped after the facts revision `$1`:
-/// the facts a replica's copy holds, so no care relationship of a subject
-/// (#5615).
+/// Every caller fact of the parties stamped by transactions the snapshot
+/// `$1` did not see: the facts a replica's copy holds, so no care
+/// relationship of a subject (#5615).
 ///
 /// A stamped party that holds none reads one row of `NULL` facts. It is
-/// answered from `ix_binding_caller_fact_party_revision` and
+/// answered from `ix_binding_caller_fact_party_stamped` and
 /// `ix_binding_caller_fact_party`, and public so a test can `EXPLAIN` it.
 pub const FACTS: &str = concat!(
     "SELECT p.party_id AS stamped, ",
     fact_columns!(),
     " FROM binding_caller_fact_party p \
      LEFT JOIN binding_caller_fact f ON f.party_id = p.party_id AND f.kind <> 'under_care_of' \
-     WHERE p.revision > $1 \
-     ORDER BY p.party_id, f.holder_id, f.ordinal, f.kind"
+     WHERE ",
+    unseen!(),
+    " ORDER BY p.party_id, f.holder_id, f.ordinal, f.kind"
 );
 
 /// Every caller fact, the read of a whole copy: the parties that hold none,
@@ -77,19 +94,20 @@ const HELD_FACTS: &str = concat!(
      ORDER BY f.party_id, f.holder_id, f.ordinal, f.kind"
 );
 
-/// The care relationships of the subjects stamped after the facts revision
-/// `$1`, by subject.
+/// The care relationships of the subjects stamped by transactions the
+/// snapshot `$1` did not see, by subject.
 ///
 /// A replica applies them to the census of each care team it holds (#6074).
-/// Answered from `ix_binding_caller_fact_party_revision` and
+/// Answered from `ix_binding_caller_fact_party_stamped` and
 /// `ix_binding_caller_fact_party`.
 const CARED: &str = concat!(
     "SELECT f.party_id AS stamped, ",
     fact_columns!(),
     " FROM binding_caller_fact_party p \
      JOIN binding_caller_fact f ON f.party_id = p.party_id AND f.kind = 'under_care_of' \
-     WHERE p.revision > $1 \
-     ORDER BY f.party_id, f.holder_id, f.ordinal"
+     WHERE ",
+    unseen!(),
+    " ORDER BY f.party_id, f.holder_id, f.ordinal"
 );
 
 /// The care relationships of the subject `$1`. Answered from
@@ -136,19 +154,23 @@ const CARE_OF_HOLDER: &str = concat!(
     " FROM binding_caller_fact f WHERE f.holder_id = $1 AND f.kind = 'under_care_of'"
 );
 
-/// The record subjects the parties stamped after the facts revision `$1`
-/// declare now, by `PERSON` and position, each with whether it is live as
-/// [`super::subject::declared_by`] reads it: whose cached resolution a
-/// replica drops, and which its care teams' censuses hold. Answered from
-/// `ix_binding_caller_fact_party_revision` and the primary key of
-/// `binding_record_subject`.
-const DECLARED: &str = "SELECT r.holder_id, r.namespace, r.subject_id, \
+/// The record subjects the parties stamped by transactions the snapshot `$1`
+/// did not see declare now, by `PERSON` and position, each with whether it
+/// is live as [`super::subject::declared_by`] reads it: whose cached
+/// resolution a replica drops, and which its care teams' censuses hold.
+/// Answered from `ix_binding_caller_fact_party_stamped` and the primary key
+/// of `binding_record_subject`.
+const DECLARED: &str = concat!(
+    "SELECT r.holder_id, r.namespace, r.subject_id, \
      r.lifecycle_state IN ('532', '553') AND NOT EXISTS (SELECT 1 FROM pmir_suppression s \
        WHERE s.kind = 'subject' AND s.holder_id = r.holder_id AND s.namespace = r.namespace \
        AND lower(s.value) = lower(r.subject_id)) AS live \
      FROM binding_caller_fact_party p \
      JOIN binding_record_subject r ON r.holder_id = p.party_id \
-     WHERE p.revision > $1 ORDER BY r.holder_id, r.ordinal";
+     WHERE ",
+    unseen!(),
+    " ORDER BY r.holder_id, r.ordinal"
+);
 
 /// The text of one stored fact, as a commit compares the facts of a head
 /// before and after.
@@ -232,13 +254,14 @@ impl crate::memory::Weigh for FactRow {
     }
 }
 
-/// The facts read since a facts revision: the revision read, every party
-/// stamped since, the caller facts each holds, and the care relationships
-/// and record subjects of the stamped parties now.
-#[derive(Debug, Clone, Default)]
+/// The facts read since a snapshot: the snapshot of the read, every party
+/// stamped by a transaction the earlier one did not see, the caller facts
+/// each holds, and the care relationships and record subjects of the stamped
+/// parties now.
+#[derive(Debug, Clone)]
 pub(crate) struct Changed {
-    /// The facts revision the read saw.
-    pub(crate) revision: i64,
+    /// The snapshot the read ran under.
+    pub(crate) snapshot: Arc<Snapshot>,
     /// Every party read, sorted, each with its caller facts; empty facts for
     /// a party that holds none, such as a patient in care.
     pub(crate) parties: Vec<(Uuid, Vec<FactRow>)>,
@@ -263,8 +286,8 @@ pub(crate) struct Declared {
 /// Replaces the facts of `head` on its commit transaction `tx`: the facts
 /// about `party` (the performer of a `ROLE`, a `PERSON` or `ORGANISATION`
 /// itself) its live body
-/// holds, under the `ROLE`'s `role_validity`. When they changed, moves the
-/// facts revision, stamps every party whose facts changed and notifies.
+/// holds, under the `ROLE`'s `role_validity`. When they changed, stamps every
+/// party whose facts changed.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -296,9 +319,9 @@ pub(crate) async fn write_person(
     finish(tx, parties).await
 }
 
-/// Stamps `parties`, when any, moves the facts revision and notifies every
-/// replica, so each drops what it holds about them and reads it again; also
-/// what a received PMIR message
+/// Stamps `parties`, when any, so each replica that finds the stamps drops
+/// what it holds about them and reads it again; also what a received PMIR
+/// message
 /// does when it splits an identifier or a record subject off a `PERSON`
 /// ([`crate::service::demographic::identity_feed`]).
 ///
@@ -377,21 +400,14 @@ pub(crate) fn changed(rows: &[Returned]) -> Vec<Uuid> {
     moved
 }
 
-/// Moves the facts revision, stamps `parties` with it and notifies
-/// [`CHANNEL`], on `tx`.
+/// Stamps `parties` with the xid of `tx`, on `tx`: the rows of those parties
+/// alone, and no notification (#6074).
 async fn stamp(tx: &mut PgConnection, parties: &[Uuid]) -> Result<(), StorageError> {
     sqlx::query(
-        "WITH revised AS ( \
-             UPDATE binding_grant_revision SET facts_revision = facts_revision + 1, \
-                 revised_at = now() \
-             RETURNING facts_revision), \
-         stamped AS ( \
-             INSERT INTO binding_caller_fact_party (party_id, revision) \
-             SELECT p, revised.facts_revision FROM revised, unnest($2::uuid[]) AS p \
-             ON CONFLICT (party_id) DO UPDATE SET revision = EXCLUDED.revision) \
-         SELECT pg_notify($1, 'facts ' || revised.facts_revision) FROM revised",
+        "INSERT INTO binding_caller_fact_party (party_id, stamped_xid) \
+         SELECT p, pg_current_xact_id() FROM unnest($1::uuid[]) AS p \
+         ON CONFLICT (party_id) DO UPDATE SET stamped_xid = EXCLUDED.stamped_xid",
     )
-    .bind(CHANNEL)
     .bind(parties)
     .execute(&mut *tx)
     .await?;
@@ -434,29 +450,27 @@ pub(crate) async fn erase(tx: &mut PgConnection, vo_ids: &[Uuid]) -> Result<bool
     Ok(gone > 0 || subjects > 0)
 }
 
-/// Reads the facts of every party stamped after `since`, or of every party
-/// when `since` is `None`, with the facts revision, on `conn`, which holds a
-/// repeatable-read snapshot or reads both in one.
+/// Reads the facts of every party stamped by a transaction `since` did not
+/// see, or of every party when `since` is `None`, with the snapshot of the
+/// read, on `conn`, which holds a repeatable-read snapshot.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure, and a stored kind or
 /// value the side table's checks admit and this reading does not.
 pub(crate) async fn load(
     conn: &mut PgConnection,
-    since: Option<i64>,
+    since: Option<&Snapshot>,
 ) -> Result<Changed, StorageError> {
-    let revision = crate::party_binding::grants::store::revisions(conn)
-        .await?
-        .facts;
-    let (rows, cared, declared) = match since {
+    let snapshot = Arc::new(crate::db::snapshot::current(conn).await?);
+    let (rows, cared, declared) = match since.map(Snapshot::to_string) {
         Some(since) => {
             let declared: Vec<(Uuid, String, String, bool)> = sqlx::query_as(DECLARED)
-                .bind(since)
+                .bind(&since)
                 .fetch_all(&mut *conn)
                 .await?;
             (
-                sqlx::query(FACTS).bind(since).fetch_all(&mut *conn).await?,
-                sqlx::query(CARED).bind(since).fetch_all(&mut *conn).await?,
+                sqlx::query(FACTS).bind(&since).fetch_all(&mut *conn).await?,
+                sqlx::query(CARED).bind(&since).fetch_all(&mut *conn).await?,
                 declared
                     .into_iter()
                     .map(|(person, namespace, id, live)| Declared {
@@ -474,7 +488,7 @@ pub(crate) async fn load(
         ),
     };
     Ok(Changed {
-        revision,
+        snapshot,
         parties: by_party(rows)?,
         cared: by_party(cared)?,
         declared,
@@ -528,18 +542,21 @@ pub(crate) async fn cared_persons(conn: &mut PgConnection) -> Result<Vec<Uuid>, 
     .await?)
 }
 
-/// Every party stamped after the facts revision `since`, read on `conn`.
+/// Every party stamped by a transaction the snapshot `since` did not see,
+/// read on `conn`.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub(crate) async fn stamped_since(
     conn: &mut PgConnection,
-    since: i64,
+    since: &Snapshot,
 ) -> Result<Vec<Uuid>, StorageError> {
-    Ok(sqlx::query_scalar(
-        "SELECT party_id FROM binding_caller_fact_party WHERE revision > $1 ORDER BY party_id",
-    )
-    .bind(since)
+    Ok(sqlx::query_scalar(concat!(
+        "SELECT p.party_id FROM binding_caller_fact_party p WHERE ",
+        unseen!(),
+        " ORDER BY p.party_id"
+    ))
+    .bind(since.to_string())
     .fetch_all(&mut *conn)
     .await?)
 }

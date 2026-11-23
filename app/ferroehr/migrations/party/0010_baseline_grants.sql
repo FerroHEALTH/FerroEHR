@@ -21,7 +21,8 @@ REVOKE ALL ON FUNCTION
     binding_validity(p_interval jsonb),
     binding_fold(p_value text),
     binding_changed(),
-    person_version_changed()
+    person_version_changed(),
+    facts_behind(held pg_snapshot)
     FROM PUBLIC;
 
 DO $$
@@ -132,7 +133,8 @@ BEGIN
             TO ferroehr_party;
         GRANT EXECUTE ON FUNCTION
             node_shared_member(a_key text, a_num integer, a_tier text, a_vo_id uuid, a_sys_version integer),
-            node_shared(a_shared jsonb, a_tier text, a_vo_id uuid, a_sys_version integer)
+            node_shared(a_shared jsonb, a_tier text, a_vo_id uuid, a_sys_version integer),
+            facts_behind(held pg_snapshot)
             TO ferroehr_party, ferroehr_party_reader;
         ALTER DEFAULT PRIVILEGES IN SCHEMA party GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO ferroehr_party;
         ALTER DEFAULT PRIVILEGES IN SCHEMA party GRANT SELECT ON TABLES TO ferroehr_party_reader;

@@ -86,7 +86,12 @@ fn live() -> LiveGrants {
             },
             Some(Arc::new(credentials)),
         )],
-        facts: Changed::default(),
+        facts: Changed {
+            snapshot: Arc::new("1:1:".parse().expect("a snapshot")),
+            parties: Vec::new(),
+            cared: Vec::new(),
+            declared: Vec::new(),
+        },
     });
     live
 }

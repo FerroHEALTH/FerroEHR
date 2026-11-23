@@ -3,21 +3,51 @@
 
 //! Whether [`LiveGrants`] holds the revisions in force in the store.
 //!
-//! A replica learns of a change another one committed from its notification,
-//! which arrives after the commit. A decision that care admits compares the
-//! revisions it was judged under with the store's first, so a removal another
-//! replica committed is never read from an older copy (#5806). No openEHR
-//! spec governs the copy: our own design.
+//! A replica learns of a grant change another one committed from its
+//! notification, which arrives after the commit, and of a caller facts change
+//! from no notification at all (#6074). A decision that care admits compares
+//! the revisions it was judged under with the store's first, so a removal
+//! another replica committed is never read from an older copy (#5806). No
+//! openEHR spec governs the copy: our own design.
+
+use std::sync::Arc;
 
 use super::{GrantsUnavailable, LiveGrants};
+use crate::db::snapshot::Snapshot;
 
-/// The revisions of the party store: of the grants, of the caller facts and
-/// of the binding side table.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The revisions of the party store: of the grants and of the binding side
+/// table, and whether the caller facts copy saw every stamp.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Revisions {
     pub(crate) grants: i64,
-    pub(crate) facts: i64,
+    pub(crate) facts: FactsRead,
     pub(crate) bindings: i64,
+}
+
+/// What a read of the store's revisions found of the caller facts, against
+/// the snapshot the facts copy held when it was asked (`party.facts_behind`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FactsRead {
+    /// The store holds no stamp the copy's snapshot of `generation` did not
+    /// see.
+    Seen {
+        /// The install of the copy that was asked.
+        generation: u64,
+    },
+    /// It holds one, or the copy held no snapshot: a copy holds the facts once
+    /// its snapshot covers `store`, the read's own.
+    Behind {
+        /// The snapshot the read ran under.
+        store: Arc<Snapshot>,
+    },
+}
+
+/// The snapshot the facts copy holds and the install it came with, which the
+/// store's revisions are read against.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HeldSnapshot {
+    pub(crate) generation: u64,
+    pub(crate) snapshot: Arc<Snapshot>,
 }
 
 impl LiveGrants {
@@ -27,10 +57,22 @@ impl LiveGrants {
         self.held().revision
     }
 
-    /// The facts revision this replica holds; `None` before its first read.
+    /// The snapshot the facts this replica holds were read under; `None`
+    /// before its first read.
     #[must_use]
-    pub fn facts_revision(&self) -> Option<i64> {
-        self.held_facts().revision
+    pub fn facts_snapshot(&self) -> Option<Arc<Snapshot>> {
+        self.held_facts().snapshot.clone()
+    }
+
+    /// The snapshot the facts copy holds with its install, for a read of the
+    /// store's revisions ([`crate::party_binding::request::revisions`]).
+    #[must_use]
+    pub fn held_snapshot(&self) -> Option<HeldSnapshot> {
+        let held = self.held_facts();
+        held.snapshot.as_ref().map(|snapshot| HeldSnapshot {
+            generation: held.generation,
+            snapshot: Arc::clone(snapshot),
+        })
     }
 
     /// The revisions in force in the store when this replica's copy is older
@@ -41,8 +83,10 @@ impl LiveGrants {
     /// # Errors
     /// [`GrantsUnavailable`] when the party store does not answer.
     pub async fn behind(&self) -> Result<Option<Revisions>, GrantsUnavailable> {
-        let store = crate::party_binding::request::revisions(&self.pool).await?;
-        Ok((!self.holds(store)).then_some(store))
+        let store =
+            crate::party_binding::request::revisions(&self.pool, self.held_snapshot().as_ref())
+                .await?;
+        Ok((!self.holds(&store)).then_some(store))
     }
 
     /// Bring the copy to the store's revisions as the request reads them
@@ -63,11 +107,24 @@ impl LiveGrants {
 
     /// Whether the copy holds at least the revisions `store`.
     #[must_use]
-    pub fn holds(&self, store: Revisions) -> bool {
-        self.revision().is_some_and(|held| held >= store.grants)
-            && self
-                .facts_revision()
-                .is_some_and(|held| held >= store.facts)
+    pub fn holds(&self, store: &Revisions) -> bool {
+        self.revision().is_some_and(|held| held >= store.grants) && self.facts_hold(&store.facts)
+    }
+
+    /// Whether the facts copy holds every stamp `read` found: the copy asked
+    /// or a later install of it when the read found none unseen, and a
+    /// snapshot that covers the read's own when it found one.
+    pub(crate) fn facts_hold(&self, read: &FactsRead) -> bool {
+        let held = self.held_facts();
+        match read {
+            FactsRead::Seen { generation } => {
+                held.snapshot.is_some() && held.generation >= *generation
+            }
+            FactsRead::Behind { store } => held
+                .snapshot
+                .as_ref()
+                .is_some_and(|snapshot| snapshot.covers(store)),
+        }
     }
 }
 
