@@ -141,8 +141,6 @@ struct Counts {
 }
 
 /// What one corpus file's `regression` tag turned out to mean.
-///
-/// A `Violation` carries the message tail; the caller prefixes the file name.
 enum TagOutcome {
     ExactCode,
     PassClean,

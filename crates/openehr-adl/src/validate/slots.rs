@@ -89,9 +89,6 @@ impl<'a> ParentScan<'a> {
 
     /// The identity and closure rules of a specialised slot (`master04.5`
     /// §`ARCHETYPE_SLOT`): VDSSID, VDSSP and VDSSC.
-    ///
-    /// NOTE: the `masterAppB` grammar admits `closed` or a body, so VDSSC fires only
-    /// for AOM input not parsed from ADL2.
     fn check_slot_identity(
         &mut self,
         child_slot: &ArchetypeSlot,
@@ -213,9 +210,6 @@ fn slot_assertions_equal(a: &[Assertion], b: &[Assertion]) -> bool {
 /// The first literal archetype id a child `include` names that the parent slot
 /// does not admit, a VDSSM widening (`master04.5` §Validity Rules:
 /// `ARCHETYPE_SLOT`; `ADL2/master04.3` §Archetype Slots).
-///
-/// An unreadable child include is skipped; any unreadable parent include makes
-/// the parent set unknown, refuting nothing.
 fn slot_widens_by_literal(
     child_slot: &ArchetypeSlot,
     parent_slot: &ArchetypeSlot,
@@ -249,9 +243,6 @@ fn slot_widens_by_literal(
 
 /// True if the parent slot admits the archetype `id` (satisfies an `include`
 /// assertion and is not caught by a specific `exclude`).
-///
-/// The parent slot's include/exclude assertions constrain `archetype_id/value`
-/// with a regex; a filler matches if it satisfies an include regex.
 fn slot_admits(slot: &ArchetypeSlot, id: &str) -> bool {
     if slot.is_closed {
         return false;

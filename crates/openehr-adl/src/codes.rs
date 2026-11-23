@@ -117,10 +117,6 @@ impl NodeCoding {
 }
 
 /// A parsed ADL local code.
-///
-/// Carries its [`CodePrefix`] and the ordered `.`-separated numeric segments
-/// (verbatim strings, so zero-padding survives round-trips — `at0004.0.1` →
-/// prefix `At`, segments `["0004", "0", "1"]`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParsedCode {
     /// The alphabetic leader.
@@ -135,9 +131,6 @@ impl ParsedCode {
     /// separators, i.e. `segments.len() - 1`
     /// (master07 §Specialisation Depth: `at0004` depth 0, `at0004.1` depth 1,
     /// `at0004.0.1` depth 2).
-    ///
-    /// ac-codes are a flat code space and have no depth semantics; this returns
-    /// their raw dot-count all the same (ac-codes carry no dots in practice).
     #[must_use]
     pub fn specialisation_depth(&self) -> usize {
         self.segments.len().saturating_sub(1)
@@ -187,9 +180,6 @@ pub fn parse_code(code: &str) -> Option<ParsedCode> {
 
 /// The specialisation depth of a code (= dot-count of its numeric part), or
 /// `None` for a non-code string (master07 §Specialisation Depth).
-///
-/// ac-codes are flat (no depth); callers that care must gate on the code's
-/// [`CodePrefix`].
 #[must_use]
 pub fn specialisation_depth(code: &str) -> Option<usize> {
     parse_code(code).map(|c| c.specialisation_depth())
@@ -198,13 +188,6 @@ pub fn specialisation_depth(code: &str) -> Option<usize> {
 /// The immediate specialisation parent of a code — the code with its trailing
 /// `.N` segment removed (master07 §Specialisation Depth: the parent of
 /// `at0025.1.1` is `at0025.1`).
-///
-/// Returns `None` for a level-0 code (no separators) or a non-code string.
-///
-/// NOTE: no formal `specialisation_parent_from_code` is vendored; this is
-/// derived from the master07 dot-structure prose. The intervening `.0` filler
-/// (`at0004.0.1`) is preserved literally — one specialisation level is removed
-/// per call.
 #[must_use]
 pub fn specialisation_parent_from_code(code: &str) -> Option<String> {
     let parsed = parse_code(code)?;
@@ -226,10 +209,6 @@ pub fn is_root_code(code: &str) -> bool {
 
 /// True if `code` is a valid archetype root code at the given specialisation
 /// depth.
-///
-/// A root code qualifies when its number of `.1` segments equals `depth`
-/// (AOM2 master03 VARCN: root `node_id` of the form `at0000{.1}*` / `id1{.1}*`
-/// where the number of `.1` components equals the specialisation depth).
 #[must_use]
 pub fn is_root_code_at_depth(code: &str, depth: usize) -> bool {
     is_root_code(code) && specialisation_depth(code) == Some(depth)
@@ -242,10 +221,6 @@ pub fn is_root_code_at_depth(code: &str, depth: usize) -> bool {
 /// the last is a `0` filler (`at0.0.1`, `at0004.0.1`'s new-node cousin
 /// `at0.0.1`) (master07 §Specialisation Depth; master09.05 `at0.{0.}*N` new-node
 /// form). A level-0 code is never "new at level" in this sense.
-///
-/// NOTE: no formal `is_added_code` is vendored (only `is_redefined_code`); this
-/// is its complement for a specialised code, derived from the master07/09.05
-/// dot-structure prose.
 #[must_use]
 pub fn is_new_at_level(code: &str) -> bool {
     let Some(parsed) = parse_code(code) else {

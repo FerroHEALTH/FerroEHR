@@ -3,10 +3,6 @@
 
 //! Gate over CKM's generated ADL 2 export (`corpus/archetypes/ckm/adl2-generated/`,
 //! CKM Release 1.22.0), which measures CKM's conversion, not FerroEHR's.
-//!
-//! Each file parses and validates (parents first, production RM) or is refused
-//! on its adjudicated code; each reason opens with `conversion:`, `source:` or
-//! `parent:`.
 #![allow(
     clippy::expect_used,
     clippy::panic,

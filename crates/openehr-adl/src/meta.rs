@@ -3,20 +3,12 @@
 
 //! Parsed-artefact identity summary.
 //!
-//! This is the small public accessor the REST/service layer reads after
-//! [`crate::assemble::parse_artefact`], so it never re-derives the HRID /
-//! concept / kind / specialisation parent from source text by hand.
-//!
 //! The fields are exactly what the ITS-REST `DEFINITION` group needs:
 //! `TemplateMetadata.archetype_id` + `.concept` (the OPT list rows;
 //! `docs/specs/openehr/ITS-REST/specifications/schemas/definition/TemplateMetadata.yaml`),
 //! the storage `kind` (`archetype` / `template` / `operational_template` /
 //! `template_overlay`; `AOM2/master07.04`), the `specialize` parent reference,
 //! and the specialisation depth (VACSD; `AOM2/master08-validation.adoc` Phase 1).
-//!
-//! [`regression_tag`] lives here for the same reason: it is a read-only
-//! summary accessor over the assembled artefact's resource description, not a
-//! part of assembly itself.
 
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::archetype::authored_archetype::AuthoredArchetype;

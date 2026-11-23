@@ -3,26 +3,6 @@
 
 //! Whole-corpus coverage gate: every ADL file under `tests/corpus/**` is claimed
 //! by exactly one harness category, keyed on the full path (INVENTORY §10).
-//!
-//! | Category | Directory selector | Owning harness |
-//! |---|---|---|
-//! | `FlattenerSpecExamples` | `flattener/specexamples/**` | `flattener_spec.rs` |
-//! | `FlattenerSiblingOrder` | `flattener/siblingorder/**` | `flattener_spec.rs` |
-//! | `ValidityTemplates` | `validity/templates/*.adls` | `templates_corpus.rs` |
-//! | `ValidityLegacy14Adls` | `validity/legacy_adl_1.4/*.adls` | `legacy14_corpus.rs` + basic integrity |
-//! | `ValidityLegacy14Adl` | `validity/legacy_adl_1.4/*.adl` | `legacy14_corpus.rs` (1.4 tolerance) |
-//! | `Validity` | `validity/**/*.adls` (rest) | `corpus_validity_{integrity,parent_conformance,rm}.rs` |
-//! | `Robustness` | `robustness/**` | `corpus_validity_integrity.rs` (never-panic floor) |
-//! | `Upgrade14Source` | `upgrade/upgrade_from_14/*.adl` | `adl14_conversion.rs` (convert) |
-//! | `Upgrade14Target` | `upgrade/upgrade_from_14/*.adls` | `adl14_conversion.rs` (compare target) |
-//! | `Upgrade15` | `upgrade/upgrade_from_15/*.adls` | `legacy14_corpus.rs` (parse+validate) |
-//! | `FeaturesAdls` | `features/**/*.adls` | `corpus_{outer_parse,definition_parse,roundtrip}.rs` |
-//! | `FeaturesAdl` | `features/**/*.adl` | `legacy14_corpus.rs` (1.4-tolerant parse) |
-//! | `Adl14Dadl` | `adl14-dadl/*.adl` | `adl14_dadl_breadth.rs` (accept/refuse per fixture) |
-//! | `Adl14Cadl` | `adl14-cadl/*.adl` | `adl14_cadl_gates.rs` (accept/refuse/invalid per fixture) |
-//!
-//! The hand-written `adl14-dadl/` and `adl14-cadl/` trees are counted apart from
-//! the vendored-corpus size ratchet.
 
 use std::path::{Path, PathBuf};
 

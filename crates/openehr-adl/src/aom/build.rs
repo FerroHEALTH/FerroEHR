@@ -3,13 +3,6 @@
 
 //! Constructors for the generated AOM2 constraint model.
 //!
-//! The generated `openehr_am::v2_4::aom2` structs are plain records with every
-//! field spelled out (including the `parent`/`soc_parent` back-references the
-//! emitter leaves unset; back-references are hand-wired, never emitted owning
-//! fields). Building one by
-//! hand at each call site is noise, so the shapes the parser, the flattener, the
-//! ADL 1.4 lowering, and the OPT generator all need live here once.
-//!
 //! Spec oracle for the shapes themselves:
 //! `docs/specs/openehr/AM/docs/AOM2/master04.5-constraint_model-class_definitions.adoc`
 //! (`C_OBJECT` / `C_ATTRIBUTE` / `C_PRIMITIVE_OBJECT` class definitions) and

@@ -2,12 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The cADL value machinery every primitive production shares.
-//!
-//! Interval kind-classification, value lists with their `, ...` continuation
-//! marker, the `|…|` interval forms of `odin_values.g4` and their endpoints
-//! (including the `infinity` / `-infinity` / `*` unbounded markers), the
-//! signed numeric readers, and the `CadlValue` value-kind trait that types
-//! them. One `impl` block over the `Parser` state of [`crate::parse`].
 
 use openehr_base::prelude::{Interval, Iso8601Date, Iso8601DateTime, Iso8601Duration, Iso8601Time};
 
