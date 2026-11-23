@@ -9,12 +9,6 @@
 //! the `return=minimal` (default, header-only) vs `return=representation`
 //! (full body) `Prefer` policy — driven through the assembled router over a
 //! **real** `FerroEhrService` on a real `PostgreSQL`.
-//!
-//! The former `Mock` backend returned fixed resource ids; the real service
-//! assigns each version its own `OBJECT_VERSION_ID`, so the tests create the
-//! resources through the wire and read the server-assigned ids back from the
-//! `ETag`/body. The wire assertions (weak `ETag`, `Location` presence/absence,
-//! `Prefer` body policy, status codes) are unchanged.
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
@@ -209,9 +203,9 @@ async fn composition_get_sets_etag_and_location() {
 
 #[tokio::test]
 async fn versioned_ehr_status_version_at_time_sets_version_headers() {
-    // 200_VERSION_of_EHR_STATUS_at_time declares ETag_VERSION (the version_uid)
-    // plus a `Location_deprecated` header — the deprecated Location is no longer
-    // emitted (overview §"Deprecated headers").
+    // 200_VERSION_of_EHR_STATUS_at_time declares ETag_VERSION plus a
+    // `Location_deprecated` header, which is not emitted (overview §"Deprecated
+    // headers").
     let (_pg, app) = common::app(common::api_config(false)).await;
     let ehr_id = create_ehr(&app).await;
     let (_body, current) = current_ehr_status(&app, &ehr_id).await;
@@ -247,8 +241,8 @@ async fn composition_delete_is_204_with_headers() {
     let req = common::req("DELETE", format!("{BASE}/ehr/{ehr_id}/composition/{ovid}")).build();
     let (status, h, body) = send(&app, req).await;
 
-    // 204_version_deleted: ETag of the deleted version; its Location is
-    // `Location_deprecated` in the OAS and is no longer emitted.
+    // 204_version_deleted: the ETag of the deleted version; its
+    // `Location_deprecated` is not emitted.
     assert_eq!(status, StatusCode::NO_CONTENT);
     let deleted = etag_uid(&h);
     assert_eq!(
@@ -543,11 +537,10 @@ async fn ehr_status_read_and_write_carry_the_commit_instant() {
     assert_eq!(write_lm, imf_fixdate(commit_instant(&version)));
 }
 
-/// The EHR create already carried the weak `ETag`; the EHR **reads** now do
-/// too. Overview §"`ETag` and Last-Modified": the value "is usually taken from
-/// e.g. `VERSIONED_OBJECT.uid.value`, `VERSION.uid.value`, `EHR.ehr_id.value`",
-/// and both headers SHOULD accompany "resources that have versioning or unique
-/// state identifiers". No `Location` on a GET (§Location).
+/// The EHR create and the EHR reads carry the weak `ETag` (overview §"`ETag`
+/// and Last-Modified": the value "is usually taken from e.g.
+/// `VERSIONED_OBJECT.uid.value`, `VERSION.uid.value`, `EHR.ehr_id.value`"), and
+/// a GET carries no `Location` (§Location).
 #[tokio::test]
 async fn ehr_get_carries_the_weak_ehr_id_etag() {
     let (_pg, app) = common::app(common::api_config(false)).await;

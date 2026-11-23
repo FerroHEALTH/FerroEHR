@@ -42,9 +42,6 @@ fn put_json(path: &str, body: &str) -> Request<Body> {
 
 /// Every released operation a whole-EHR restriction reaches answers `403`, and
 /// the same operations answer normally once it is lifted.
-///
-/// One case per operation rather than one broad assertion: a red row then names
-/// the operation whose gate is missing.
 #[tokio::test]
 async fn a_restricted_ehr_refuses_every_released_read_and_write_with_403() {
     let (_pg, app) = common::app(common::api_config(true)).await;

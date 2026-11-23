@@ -7,11 +7,10 @@
 //! decisions to data in the EHR must be made in accordance with the policies
 //! and rules in this object" — RM `org.openehr.rm.ehr.ehr_access.adoc`); the
 //! gate runs before dispatch on every EHR-scoped route. These tests drive the
-//! assembled router with `tower`'s `oneshot`, over the **real** `FerroEhrService`
-//! (the scripted `Mock`/scheme hook is gone). The per-test scheme is
-//! now a **real committed `EHR_ACCESS` version** (the only write path is a
-//! CONTRIBUTION — RM ehr `master04-ehr_package.adoc` §EHR Access), seeded at the
-//! service level before the app is built.
+//! assembled router with `tower`'s `oneshot` over the real `FerroEhrService`,
+//! each scheme a committed `EHR_ACCESS` version (the only write path is a
+//! CONTRIBUTION, RM ehr `master04-ehr_package.adoc` §EHR Access) seeded before
+//! the app is built.
 //!
 //! They assert: default-open admits anonymous-era flows; `restricted` and
 //! `consent_required` deny a caller who is no gate-keeper (403) and admit a
