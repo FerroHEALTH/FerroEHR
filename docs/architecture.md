@@ -622,7 +622,11 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   candidates from `access_log_search` with the records tied on the last
   instant, and takes the page from their union by the records' keys alone;
   only the records the page serves are then read whole, so an access-log
-  entry's document is rendered once per served entry (#5965). The exact
+  entry's document is rendered once per served entry (#5965). A candidate's
+  keys are its search index row's, and a served entry is read by its key from
+  its own row through `access_log_by_key`, so neither reads
+  `access_log_record`'s union of the index and the open window once a record
+  (#6320). The exact
   total counts the
   access log from the time index alone, which carries `render_policy_id`
   and the entry id (`system_log::store::search_page`, #5646); it also counts
@@ -1945,7 +1949,10 @@ confirm after they ran the same way (#6320): the version read of the EHR
 object selects the revisions, and a clinical query a request judges reads
 them on the one-row read of the versions it served, or, when it serves none,
 as two hidden columns of its own statement (`aql::sql::Layout::revisions`); a
-query that served no row reads them once after it ran. A COMPOSITION create, update or delete, a
+query that served no row reads them once after it ran. An ITI-81 page does
+the same where the audit store shares the clinical database and its role may
+read `clinical.request_revisions`: the page statement selects them beside its
+records, and elsewhere the search reads them in a statement of their own. A COMPOSITION create, update or delete, a
 CONTRIBUTION commit, an `EHR_STATUS` commit and a directory create, update or
 delete make no read first either: the gate read of the write
 returns the revisions, the write is decided on the copies as they stand, and a
