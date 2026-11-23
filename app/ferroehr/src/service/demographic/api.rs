@@ -151,8 +151,7 @@ impl FerroEhrService {
         precondition: Precondition,
         request: WriteRequest<Party>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let current = self.existing_party(kind, vo_id).await?;
-        self.commit_party_update(current, precondition, request.map(Body::from))
+        self.commit_party_update((kind, vo_id), precondition, request.map(Body::from))
             .await
             .map_err(ServiceError::flattened)
     }
@@ -179,8 +178,7 @@ impl FerroEhrService {
         precondition: Precondition,
         request: WriteRequest,
     ) -> Result<ServiceResponse, ServiceError> {
-        let current = self.existing_party(kind, vo_id).await?;
-        self.commit_party_delete(current, precondition, request)
+        self.commit_party_delete((kind, vo_id), precondition, request)
             .await
             .map_err(ServiceError::flattened)
     }

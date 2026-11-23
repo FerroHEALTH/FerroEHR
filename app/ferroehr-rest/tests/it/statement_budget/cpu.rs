@@ -42,7 +42,7 @@ use super::drained;
 use super::paths::{Path, REQUESTS, World, exchange, order};
 
 /// The most CPU microseconds each path's lower-quartile request may take.
-const CPU_BUDGETS: [(Path, u64); 25] = [
+const CPU_BUDGETS: [(Path, u64); 31] = [
     (Path::CommitJson, 100_000),
     (Path::CommitXml, 100_000),
     (Path::CommitFlat, 100_000),
@@ -68,6 +68,12 @@ const CPU_BUDGETS: [(Path, u64); 25] = [
     (Path::DirectoryCreate, 100_000),
     (Path::DirectoryUpdate, 100_000),
     (Path::DirectoryDelete, 100_000),
+    (Path::PartyUpdate, 100_000),
+    (Path::PartyDelete, 100_000),
+    (Path::CommitOrganisation, 100_000),
+    (Path::CommitGroup, 100_000),
+    (Path::CommitRole, 100_000),
+    (Path::CommitAgent, 100_000),
 ];
 
 /// Whether the ceilings are judged: in an optimised build only.
