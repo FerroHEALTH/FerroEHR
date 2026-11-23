@@ -155,7 +155,7 @@ impl FerroEhrService {
                     outbox: None,
                     reservation: None,
                     status: None,
-                    folder: false,
+                    folder: None,
                 },
             };
             let ready =

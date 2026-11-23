@@ -103,11 +103,13 @@ pub(crate) async fn prepare_write(
     let party_facts = resolved.party_facts.take();
     let mut prepared = prepare(ctx, &audit, ctx.stamp.mint(), resolved)?;
     prepared.committed.deleted = deleted;
-    // A new FOLDER hierarchy joins `EHR.folders` in the guarded statement itself.
-    let guard = Guard {
-        folder: prepared.take_first_folder(),
-        ..guard
+    // A new FOLDER hierarchy joins `EHR.folders` in the guarded statement itself, at the
+    // rank its gate read judged next.
+    let folder = match guard.folder {
+        Some(rank) if prepared.take_first_folder() => Some(rank),
+        _ => None,
     };
+    let guard = Guard { folder, ..guard };
     Ok(Ready {
         ehr_id,
         audit,

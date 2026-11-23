@@ -505,7 +505,7 @@ pub async fn commit_folded(
         Folded::Guarded { id, version, guard } if guard.status.is_some() => {
             (&STATUS, id, version.ehr_id, Some(version), Some(guard))
         }
-        Folded::Guarded { id, version, guard } if guard.folder => {
+        Folded::Guarded { id, version, guard } if guard.folder.is_some() => {
             (&FOLDER, id, version.ehr_id, Some(version), Some(guard))
         }
         Folded::Guarded { id, version, guard } => {
@@ -548,7 +548,10 @@ pub async fn commit_folded(
                     .fetch_one(&mut *tx)
                     .await
                     .map_err(|e| subject_in_use(e, status))?,
-                None => query.fetch_one(&mut *tx).await?,
+                None => match guard.as_ref().and_then(|guard| guard.folder) {
+                    Some(rank) => query.bind(rank).fetch_one(&mut *tx).await?,
+                    None => query.fetch_one(&mut *tx).await?,
+                },
             };
             (row, Some((v.vo_id, v.sys_version, v.blob_uris)))
         }
