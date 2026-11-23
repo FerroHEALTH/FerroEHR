@@ -479,8 +479,21 @@ impl FerroEhrService {
                 "the local audit record repository is not enabled ([audit.store])",
             ));
         };
+        // NOTE: our own design (#6027), a request waiting on another's first read keeps no
+        // connection meanwhile.
+        let carried = crate::db::acquire::awaiting(
+            self.audit_carried
+                .get_or_try_init(|| store::carried::Carried::probe(&audit_store.pool, &self.pool)),
+        )
+        .await
+        .copied()
+        .map_err(ServiceError::from)?;
+        let filter = store::AuditSearchFilter {
+            carried,
+            ..filter.clone()
+        };
         audit_store
-            .search(filter)
+            .search(&filter)
             .await
             .map_err(|e| ServiceError::internal("search the audit record repository", e))
     }

@@ -64,7 +64,18 @@ pub(super) fn build_search_statements(
     let offset = u64::try_from(Ord::max(filter.offset, 0)).unwrap_or(0);
     let (count_sql, count_values) = total(&condition).build_sqlx(PostgresQueryBuilder);
     let served = u64::try_from(page_size(filter)).unwrap_or(50);
-    let (sql, values) = page(&condition, count, offset, served).build_sqlx(PostgresQueryBuilder);
+    let mut page = page(&condition, count, offset, served);
+    if filter.carried.policy {
+        page.expr_as(
+            Expr::cust(super::carried::POLICY),
+            Alias::new("policy_revision"),
+        )
+        .expr_as(
+            Expr::cust(super::carried::DEFINITIONS),
+            Alias::new("definition_revision"),
+        );
+    }
+    let (sql, values) = page.build_sqlx(PostgresQueryBuilder);
     (count_sql, count_values, sql, values)
 }
 

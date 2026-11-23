@@ -318,9 +318,9 @@ async fn an_iti81_page_reads_each_record_it_serves_by_its_key() {
         .await
         .expect("the index moves");
     vacuum(&pool).await;
-    let filter = ferroehr::system_log::store::AuditSearchFilter {
+    let filter = AuditSearchFilter {
         count: 20,
-        ..ferroehr::system_log::store::AuditSearchFilter::default()
+        ..AuditSearchFilter::default()
     };
     let (sql, values) = ferroehr::system_log::store::page_statement(&filter);
     let plan: serde_json::Value = sqlx::query_scalar_with(

@@ -398,3 +398,22 @@ fn a_filter_of_single_valued_distinct_criteria_is_shaped() {
     assert!(!super::search_page::shaped(&twice));
     assert!(super::search_page::shaped(&AuditSearchFilter::default()));
 }
+
+/// A page that carries the policy revisions selects them beside its records,
+/// under the names the confirmation reads (#6320).
+#[test]
+fn a_carried_page_selects_the_policy_revisions() {
+    let carried = AuditSearchFilter {
+        carried: super::carried::Carried { policy: true },
+        ..filter_with("benign")
+    };
+    let (count_sql, _, sql, _) = build_search_statements(&carried, &RESOLVED);
+    assert!(sql.contains("clinical.request_revisions"), "{sql}");
+    assert!(sql.contains("\"policy_revision\"") && sql.contains("\"definition_revision\""));
+    assert!(
+        !count_sql.contains("request_revisions"),
+        "the total carries nothing"
+    );
+    let (_, _, plain, _) = build_search_statements(&filter_with("benign"), &RESOLVED);
+    assert!(!plain.contains("request_revisions"), "{plain}");
+}

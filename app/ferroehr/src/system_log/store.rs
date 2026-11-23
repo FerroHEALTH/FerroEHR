@@ -43,6 +43,8 @@ use uuid::Uuid;
 
 mod access_log;
 mod batch;
+#[cfg(feature = "fhir")]
+pub mod carried;
 pub mod chain_walk;
 pub mod chains;
 pub mod delivery;
@@ -829,6 +831,7 @@ impl AuditStore {
             .persistent(shaped)
             .fetch_all(&mut *acquire(&self.pool).await?)
             .await?;
+        filter.carried.observe(&rows)?;
         // The page statement reads one record past the page, which says whether a next
         // page exists without counting the matches.
         let more = rows.len() > search_page::page_size(filter);
@@ -842,10 +845,11 @@ impl AuditStore {
     }
 }
 
-/// The page statement of the ITI-81 retrieval of `filter` and its bound
-/// values, as [`AuditStore::search`] runs it when no criterion names a stored
-/// token: what a plan test explains, so it explains the statement the search
-/// emits and not a copy that can drift from it.
+/// The page statement of the ITI-81 retrieval of `filter`, with its values.
+///
+/// It is the statement [`AuditStore::search`] runs when no criterion names a
+/// stored token, so a plan test explains what the search emits and not a
+/// copy that can drift from it.
 #[cfg(feature = "fhir")]
 #[must_use]
 pub fn page_statement(filter: &AuditSearchFilter) -> (String, sea_query_sqlx::SqlxValues) {
@@ -909,6 +913,8 @@ pub struct AuditSearchFilter {
     pub until_inclusive: bool,
     /// The criteria, each of which a record must match.
     pub criteria: Vec<AuditCriterion>,
+    /// What the page statement carries beside its records (#6320).
+    pub carried: carried::Carried,
     /// `_count` — page size (default 50, capped at 1000).
     pub count: i64,
     /// `_offset` — page offset.

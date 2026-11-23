@@ -272,6 +272,11 @@ pub struct FerroEhrService {
     /// once it has built them ([`Self::observe_authn`]); empty in
     /// [`Self::new`].
     pub(in crate::service) authn_caches: Arc<std::sync::OnceLock<Arc<dyn observed::HeldCaches>>>,
+    /// What an ITI-81 page carries beside its records, read once
+    /// (`system_log::store::carried`, #6320).
+    #[cfg(feature = "fhir")]
+    pub(crate) audit_carried:
+        Arc<tokio::sync::OnceCell<crate::system_log::store::carried::Carried>>,
 }
 
 impl FerroEhrService {
@@ -353,6 +358,8 @@ impl FerroEhrService {
             bindings: Arc::default(),
             import_policy: Arc::default(),
             authn_caches: Arc::default(),
+            #[cfg(feature = "fhir")]
+            audit_carried: Arc::default(),
         }
     }
 
