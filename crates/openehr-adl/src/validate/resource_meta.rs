@@ -72,9 +72,6 @@ pub(super) fn check(v: &ArchetypeView<'_>, issues: &mut Vec<ValidationIssue>) {
 }
 
 /// The `RESOURCE_DESCRIPTION` invariants of BASE `base` over `archetype`.
-///
-/// They are `Original_author_valid` and `Lifecycle_state_valid` under BASE
-/// 1.3.0, which states them, and none under BASE 1.2.0, which does not.
 #[must_use]
 pub fn check_base_description(archetype: &Archetype, base: Generation) -> Vec<ValidationIssue> {
     let mut issues = Vec::new();

@@ -225,10 +225,6 @@ impl Parser<'_> {
     /// `cadl2.g4` mandates the bracket in ADL 2.
     /// The slot's `'[' ID_CODE ']'` node id, which ADL 1.4 may omit.
     ///
-    /// The AOM 1.4 node-id rule (anonymous where no sibling disambiguation is
-    /// needed) is enforced by VCOID in the 1.4 validation pass, not here;
-    /// `cadl2.g4` mandates the bracket in ADL 2.
-    ///
     /// # Errors
     /// A missing bracket in ADL 2, or a malformed node id.
     fn parse_slot_node_id(&mut self) -> PResult<String> {
@@ -326,16 +322,6 @@ impl Parser<'_> {
     /// Parse the assertion block after a slot `include`/`exclude` keyword
     /// (`master04.3` §Archetype Slots; cADL grammar `c_includes : SYM_INCLUDE
     /// assertion+`).
-    ///
-    /// The block is captured as a raw span (the token run to the next
-    /// `exclude`/`}` at brace-depth 0) and handed to
-    /// [`crate::rules::parse_slot_assertions`], which parses it via the BEL
-    /// composition into one or more AOM [`Assertion`] trees
-    /// (`EXPR_ARCHETYPE_REF matches EXPR_ARCHETYPE_ID_CONSTRAINT`, `master05`),
-    /// each carrying its own rendered `string_expression`; the
-    /// `archetype_id/value matches {/regex/}` regex is compile-checked (`SCSRE`).
-    /// A block may carry more than one assertion (grammar `assertion+`), so every
-    /// parsed assertion is returned.
     fn parse_slot_assertions(&mut self) -> PResult<Vec<Assertion>> {
         let start = self.pos;
         let start_byte = self.cur_span().start;
@@ -400,12 +386,8 @@ mod tests {
 
     #[test]
     fn adl14_anonymous_archetype_slot() {
-        // ADL1.4 master05-cadl.adoc §Archetype Slots writes the slot WITHOUT
-        // a node id in its own normative examples ("allow_archetype
-        // OBSERVATION occurrences ∈ {0..1} ∈ { include ... }"); §cADL node
-        // types shows the identified form (`allow_archetype ENTRY[at2002]`).
-        // Both must parse in the 1.4 dialect; ADL 2 keeps the bracket
-        // mandatory (cadl2.g4).
+        // ADL 1.4 slots may omit the node id (`ADL1.4/master05-cadl.adoc`
+        // §Archetype Slots examples); ADL 2 requires it (cadl2.g4).
         let cco = parse_definition_body(
             "SECTION[at0000] matches {\n\
              items cardinality matches {0..*; unordered} matches {\n\

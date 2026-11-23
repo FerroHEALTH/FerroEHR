@@ -9,13 +9,6 @@
 //! and read, an AQL query with `CONTAINS`, and an AQL query ordered by a
 //! context path.
 //!
-//! A run seeds a fixed number of EHRs and compositions from the vendored
-//! vital signs template, runs an unrecorded warm-up, and then runs a fixed
-//! number of operations over a fixed number of concurrent workers. The count
-//! is fixed, never the duration, so two servers measured with the same
-//! arguments finish holding the same data. Any answer outside the expected
-//! status fails the run: an error is never counted as a fast operation.
-//!
 //! With `--audit` the run also measures the logging component (EHDS Annex II
 //! 1.1): after the measured phase it waits for the access log to settle, counts
 //! the access records of the measured window through ITI-81 (`_count=0`) per

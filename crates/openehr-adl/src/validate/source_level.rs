@@ -11,11 +11,6 @@
 //! * **VRRLP** — each path mentioned in a rule must be found within the
 //!   archetype (`master03` §Validity Rules). The `rules` section is preserved
 //!   as source text, so the path literals are scanned out of it.
-//!
-//! Both are therefore reachable only from the source-level entry points
-//! ([`super::validate_source_integrity`], [`super::validate_adl14_source`],
-//! [`super::validate_source`]), which carry
-//! the [`SourceArtefact`] alongside the assembled archetype.
 
 use std::collections::BTreeSet;
 
@@ -30,11 +25,6 @@ use crate::source::SourceArtefact;
 
 /// VRRLP: each path mentioned in a rule must be found within the archetype
 /// (master03 §Validity Rules).
-///
-/// NOTE: implemented by scanning the raw `rules` section text for node-id-
-/// predicated path literals and resolving them; the RM-valid-extension half is
-/// a reference-model concern (`super::rm`). Pure-RM rule paths are accepted
-/// here.
 pub(super) fn check_rule_paths(
     v: &ArchetypeView<'_>,
     src: &SourceArtefact,
@@ -65,11 +55,8 @@ pub(super) fn check_rule_paths(
 /// model's `BTreeMap`s already dedupe keys).
 pub(super) fn check_object_key_unique(src: &SourceArtefact, issues: &mut Vec<ValidationIssue>) {
     for section in [
-        // The `language` section is keyed too — `master07.07` types
-        // `translations` as `Hash<TRANSLATION_DETAILS, String>`, so a repeated
-        // `translations = <["de"] = <…> ["de"] = <…>>` key is the same VOKU
-        // violation as a repeated terminology code, and went unreported while
-        // this section was left out of the scanned set.
+        // `translations` is `Hash<TRANSLATION_DETAILS, String>`
+        // (`master07.07`), so a repeated language key is a VOKU violation.
         src.language.as_ref(),
         src.description.as_ref(),
         src.terminology.as_ref(),
@@ -153,11 +140,6 @@ fn scan_predicated_paths(text: &str) -> Vec<String> {
 /// the live CKM library uses it exclusively — the docs-vs-grammar inversion is
 /// reported upstream); this check surfaces the deprecation at exactly its
 /// spec strength: a warning naming the preferred spelling, per occurrence.
-///
-/// Token-level scan (comments and string literals are not tokens, so neither
-/// can false-positive): a lowered domain-type name (`C_DV_QUANTITY`,
-/// `C_DV_ORDINAL`, `C_CODE_PHRASE`) followed by `<`, with no `(` immediately
-/// before the name.
 pub(super) fn check_deprecated_domain_spelling_adl14(
     text: &str,
     issues: &mut Vec<ValidationIssue>,
