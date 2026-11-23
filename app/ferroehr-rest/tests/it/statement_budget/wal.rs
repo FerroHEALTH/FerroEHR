@@ -399,12 +399,15 @@ fn corpus(file: &str) -> String {
 /// and its ceiling fell by as much; a lab commit repeats none and keeps its
 /// ceiling.
 const COMMIT_CEILINGS: [(Fixture, u64, u64); 2] =
-    [(Fixture::Ips, 188_857, 8), (Fixture::Lab, 9942, 8)];
+    [(Fixture::Ips, 188_462, 8), (Fixture::Lab, 9548, 8)];
 
 /// Whether `relation` is written by a commit rather than by the access log or
 /// the audit intake beside it.
 pub(super) fn commit_relation(relation: &str) -> bool {
-    !entry_relation(relation) && !pass_relation(relation) && !relation.contains("audit_")
+    ["commit_audit", "pk_commit_audit", "uq_commit_audit"]
+        .iter()
+        .any(|prefix| relation.starts_with(prefix))
+        || !entry_relation(relation) && !pass_relation(relation) && !relation.contains("audit_")
 }
 
 /// Each composition commit writes at most its ceiling in [`COMMIT_CEILINGS`]

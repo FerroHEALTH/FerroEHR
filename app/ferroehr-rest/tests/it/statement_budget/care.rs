@@ -79,7 +79,7 @@ const COMMIT: Ceiling = Ceiling {
     round_trips: 27,
     nested: 2,
     notifies: 1,
-    wal: 7924,
+    wal: 7482,
 };
 
 /// A care relationship's commit to Dr Jansen's team followed by her
