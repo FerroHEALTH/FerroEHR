@@ -252,12 +252,16 @@ fn ledger(statements: &[Counted]) -> String {
     out
 }
 
-/// Waits until the chainer released every held record of either log.
+/// Waits until the chainer released every held record of either log and its
+/// round indexed every access-log entry with its search tokens (#6322).
 async fn drained(pool: &PgPool) {
-    for _ in 0..400 {
+    for _ in 0..800 {
         let waiting: i64 = sqlx::query_scalar(
             "SELECT /* statement_budget_own */ (SELECT count(*) FROM audit.access_log_hold) \
-             + (SELECT count(*) FROM audit.audit_event_hold)",
+             + (SELECT count(*) FROM audit.audit_event_hold) \
+             + (SELECT count(*) FROM audit.access_log_entry e \
+                 WHERE e.id > (SELECT x.last_id FROM audit.access_log_index_state x \
+                                WHERE x.singleton))",
         )
         .fetch_one(pool)
         .await
@@ -267,7 +271,7 @@ async fn drained(pool: &PgPool) {
         }
         tokio::time::sleep(std::time::Duration::from_millis(25)).await;
     }
-    panic!("the chainer did not release the held records");
+    panic!("the chainer did not release and index the records");
 }
 
 /// The access-log entries in the log.
