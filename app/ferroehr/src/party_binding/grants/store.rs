@@ -434,7 +434,6 @@ pub(crate) async fn revisions(
         },
         (_, store) => FactsRead::Behind {
             store: store
-                .as_deref()
                 .map(crate::db::snapshot::read)
                 .transpose()?
                 .map(std::sync::Arc::new),

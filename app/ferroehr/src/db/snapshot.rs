@@ -45,38 +45,56 @@ impl std::str::FromStr for Snapshot {
     type Err = NotASnapshot;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
-        let refused = || NotASnapshot {
-            text: text.to_owned(),
-            xid: None,
-        };
-        let mut parts = text.splitn(3, ':');
-        let mut next = || {
-            parts
-                .next()
-                .ok_or_else(refused)
-                .map(str::trim)
-                .map(str::to_owned)
-        };
-        let (xmin, xmax, xip) = (next()?, next()?, next()?);
-        let xid = |part: &str| {
-            part.parse::<u64>().map_err(|xid| NotASnapshot {
-                text: text.to_owned(),
-                xid: Some(xid),
-            })
-        };
-        let mut xip = xip
-            .split(',')
-            .filter(|part| !part.is_empty())
-            .map(xid)
-            .collect::<Result<Vec<u64>, _>>()?;
-        xip.sort_unstable();
-        Ok(Self {
-            xmin: xid(&xmin)?,
-            xmax: xid(&xmax)?,
-            xip,
-            text: text.trim().into(),
-        })
+        Self::try_from(text.to_owned())
     }
+}
+
+impl TryFrom<String> for Snapshot {
+    type Error = NotASnapshot;
+
+    /// The snapshot `text` names, keeping `text` to bind back, with no
+    /// allocation beside the list of running xids when it holds any.
+    fn try_from(text: String) -> Result<Self, Self::Error> {
+        let trimmed = text.trim();
+        let mut parts = trimmed.splitn(3, ':');
+        let (Some(xmin), Some(xmax), Some(xip)) = (parts.next(), parts.next(), parts.next()) else {
+            return Err(NotASnapshot { text, xid: None });
+        };
+        match xids(xmin, xmax, xip) {
+            Ok((xmin, xmax, xip)) => {
+                let text = if trimmed.len() == text.len() {
+                    text.into_boxed_str()
+                } else {
+                    trimmed.into()
+                };
+                Ok(Self {
+                    xmin,
+                    xmax,
+                    xip,
+                    text,
+                })
+            }
+            Err(xid) => Err(NotASnapshot {
+                text,
+                xid: Some(xid),
+            }),
+        }
+    }
+}
+
+/// The xmin, the xmax and the sorted running xids of a snapshot's three parts.
+fn xids(
+    xmin: &str,
+    xmax: &str,
+    xip: &str,
+) -> Result<(u64, u64, Vec<u64>), std::num::ParseIntError> {
+    let mut running = xip
+        .split(',')
+        .filter(|part| !part.is_empty())
+        .map(|part| part.trim().parse::<u64>())
+        .collect::<Result<Vec<u64>, _>>()?;
+    running.sort_unstable();
+    Ok((xmin.trim().parse()?, xmax.trim().parse()?, running))
 }
 
 impl fmt::Display for Snapshot {
@@ -115,8 +133,8 @@ impl Snapshot {
 ///
 /// # Errors
 /// [`StorageError::InvalidRows`] when it does not read.
-pub fn read(text: &str) -> Result<Snapshot, StorageError> {
-    text.parse()
+pub fn read(text: String) -> Result<Snapshot, StorageError> {
+    Snapshot::try_from(text)
         .map_err(|refused: NotASnapshot| StorageError::InvalidRows(refused.to_string()))
 }
 
@@ -130,7 +148,7 @@ pub async fn current(conn: &mut PgConnection) -> Result<Snapshot, StorageError> 
     let text: String = sqlx::query_scalar("SELECT pg_current_snapshot()::text")
         .fetch_one(&mut *conn)
         .await?;
-    read(&text)
+    read(text)
 }
 
 #[cfg(test)]

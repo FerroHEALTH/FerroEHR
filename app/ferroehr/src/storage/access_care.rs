@@ -134,7 +134,7 @@ pub async fn state(conn: &mut PgConnection, read: StateRead) -> Result<State, St
     let row = sqlx::query(sql).fetch_one(&mut *conn).await?;
     let snapshot: Option<String> = row.try_get("snapshot")?;
     Ok((
-        snapshot.as_deref().map(snapshot::read).transpose()?,
+        snapshot.map(snapshot::read).transpose()?,
         row.try_get("key_check")?,
     ))
 }
