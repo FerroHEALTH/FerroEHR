@@ -434,8 +434,7 @@ async fn upload_invalid_source_is_400_with_rule_codes() {
 /// unique state identifiers", and the `ETag` "is considered to be of weak-type
 /// and should have a weakness indicator `W/` prefix". An ADL2 operational
 /// template's unique state identifier is its versioned `ARCHETYPE_HRID`, so
-/// the upload `201` and every retrieval carry `W/"<hrid>"` — the ADL 1.4
-/// sibling's behaviour, which the ADL2 routes previously omitted.
+/// the upload `201` and every retrieval carry `W/"<hrid>"`.
 ///
 /// A partially addressed template (`…/{concept_family}/1`) resolves to a
 /// concrete artefact, so the `ETag` names the RESOLVED full HRID, not the

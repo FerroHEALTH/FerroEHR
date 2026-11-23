@@ -1,48 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Flat-form topic: everything decidable only after flattening.
+//! Flat-form checks, run on [`crate::flatten::flat_form`] after an error-free
+//! basic-integrity pass (`master08` §Overview).
 //!
-//! Two groups, both run by [`super::run_flat_form_checks`] on the flat form
-//! ([`crate::flatten::flat_form`]) and both gated on an error-free
-//! basic-integrity pass (`master08` §Overview phase gate).
-//!
-//! **The flat-form pass proper** —
-//! `docs/specs/openehr/AM/docs/AOM2/master08-validation.adoc`
-//! §Phase 3 - Validation of Flat Form ("carried out after successful generation
-//! of the flat form"), [`validate_flat_form_structure`]:
-//!
-//! * VUNP — every `C_COMPLEX_OBJECT_PROXY` (`use_node`) target path must resolve
-//!   to an object node in the flat form (`master04.5`
-//!   §`C_COMPLEX_OBJECT_PROXY`, VUNP L482-483).
-//! * VACMCO — every object node's occurrences must be satisfiable within its
-//!   enclosing attribute's cardinality (`master04.5` §`C_ATTRIBUTE`, VACMCO
-//!   L158-159).
-//!
-//! These run on the flat form because a proxy target or a container's full child
-//! set may be assembled from several specialisation levels. The same proxy walk
-//! serves the ADL 1.4 rule VDFPT ([`validate_definition_paths_adl14`]), whose
-//! resolution target is a 1.4 artefact's own (standalone) definition.
-//!
-//! **Deferred basic-integrity halves for a SPECIALISED archetype**
-//! ([`validate_flat_form`]) — four checks are properties of the FLAT form. For a
-//! non-specialised archetype the differential is the flat form, so
-//! [`super::structure`] / [`super::terminology`] run them directly:
-//!
-//! * **VATDF** — every at-code used as a value must be defined in the flattened
-//!   terminology (`master03` §Validity Rules).
-//! * **VTVSMD** — every value-set member must be defined there too (`master07`
-//!   §Validity Rules).
-//! * **VACMCU** (error) / **WACMCL** (warning) — a container attribute's child
-//!   occurrences against its flattened cardinality (`master04.5`
-//!   §`C_ATTRIBUTE`); a specialised child may not restate the inherited
-//!   cardinality.
-//! * **VCOSU** — object node ids must be unique within the archetype
-//!   (`master04.5` §`C_OBJECT`; [`super::scope`]), judged per node IDENTITY
-//!   because flattening clones a redefined node's whole subtree.
-//!
-//! [`super::run_flat_form_checks`] runs that second group only for a specialised
-//! archetype whose flat form was produced, so no check double-fires.
+//! [`validate_flat_form_structure`]: VUNP and VACMCO (`AOM2/master08` §Phase 3;
+//! `master04.5`). [`validate_definition_paths_adl14`]: the ADL 1.4 VDFPT.
+//! [`validate_flat_form`]: the flat-form halves of VATDF, VTVSMD, VACMCU/WACMCL
+//! and VCOSU for a specialised archetype; a non-specialised one runs them in
+//! [`super::structure`] and [`super::terminology`].
 
 use std::collections::HashMap;
 
@@ -82,15 +48,8 @@ pub(super) fn validate_flat_form_structure(flat: &Archetype) -> Vec<ValidationIs
     scan.issues
 }
 
-/// VDFPT for an assembled **ADL 1.4** archetype: every `use_node` internal
-/// reference (a `C_COMPLEX_OBJECT_PROXY` after assembly) must carry a target
-/// path that resolves within the definition section (`ADL1.4/master08-adl.adoc`
-/// §Definition Section validity rules, VDFPT). A 1.4 artefact is standalone —
-/// no differential lineage — so its own definition tree IS the resolution
-/// target; the AOM2 flat-form mirror of this rule is VUNP
-/// ([`validate_flat_form_structure`]). Cardinality/occurrences stay with the
-/// 1.4-dialect VCOC check in the basic-integrity pass, so only the proxy walk
-/// runs here.
+/// VDFPT for an assembled ADL 1.4 archetype: every `use_node` target resolves in
+/// its own definition (`ADL1.4/master08-adl.adoc` §Definition Section).
 #[must_use]
 pub(super) fn validate_definition_paths_adl14(archetype: &Archetype) -> Vec<ValidationIssue> {
     let v = view(archetype);
@@ -139,17 +98,9 @@ impl FlatScan<'_> {
         }
     }
 
-    /// The proxy target path must resolve to an object node in the walked
-    /// definition — VUNP on the AOM2 flat form (`master04.5`
-    /// §`C_COMPLEX_OBJECT_PROXY`, VUNP L482-483), VDFPT on an assembled
-    /// ADL 1.4 definition (`ADL1.4/master08-adl.adoc` §Definition Section).
-    /// Beyond bare resolution, VUNP's own text requires the target "is not
-    /// itself an internal reference node", and the target must not lie on the
-    /// proxy's own ancestor path ("The path must not be in the parent path of
-    /// the proxy object itself, but may be a sibling",
-    /// `ADL2/master04.3-cadl_complex_types.adoc` §Internal References) — an
-    /// ancestor target makes the proxy's deep-copy expansion infinitely
-    /// recursive, so it is rejected for both dialect codes.
+    /// The proxy target must resolve to an object node that is no proxy and not on
+    /// the proxy's own ancestor path: VUNP (`master04.5` §`C_COMPLEX_OBJECT_PROXY`;
+    /// `ADL2/master04.3` §Internal References), or VDFPT on ADL 1.4.
     fn check_proxy(&mut self, target_path: &str, path: &str) {
         if target_path.is_empty() {
             push_issue(
@@ -318,16 +269,12 @@ fn walk_flat(
     }
 }
 
-/// VCOSU: an identified (non-primitive) object node's id must be unique across
-/// the flat form — judged per NODE IDENTITY, not per materialisation.
+/// VCOSU: an identified node's id is unique across the flat form, judged per
+/// node identity.
 ///
-/// NOTE: raw id counting is unsound on a flat form — flattening CLONES a
-/// parent subtree per specialised child, ids included
-/// (`master08-validation.adoc` §Flattening;
-/// `ADL2/master09.05-spec_object_redef.adoc` §Flattening) — so two
-/// occurrences are compared on their SPECIALISATION-ROOT paths: equal root
-/// paths are clones of one node (legal), different root paths are two nodes
-/// wearing one id (the VCOSU violation).
+/// NOTE: flattening clones a parent subtree per specialised child
+/// (`master08-validation.adoc` §Flattening), so occurrences compare on their
+/// specialisation-root paths.
 fn check_node_id_unique(
     obj: &CObject,
     path: &str,
@@ -358,15 +305,9 @@ fn check_node_id_unique(
     }
 }
 
-/// A path with every REDEFINED node code reduced to the level-0 code it
-/// specialises (`[id4.1]` → `[id4]`, `[id4.1.2]` → `[id4]`), so two clones of
-/// one parent node share a path and two distinct nodes do not.
-///
-/// A code that is NEW at its level (`[id0.32]`) specialises nothing —
-/// [`AdlCodeDefinitionsData::is_redefined_code`] is false for it — so it is left
-/// alone and two independently-added nodes never collapse onto each other.
-///
-/// [`AdlCodeDefinitionsData::is_redefined_code`]: openehr_am::v2_4::aom2::definitions::adl_code_definitions::AdlCodeDefinitionsData::is_redefined_code
+/// A path with every redefined node code reduced to its level-0 code
+/// (`[id4.1]` → `[id4]`), so clones of one node share a path; a new code is
+/// kept.
 fn specialisation_root_path(path: &str) -> String {
     let mut out = String::with_capacity(path.len());
     let mut rest = path;

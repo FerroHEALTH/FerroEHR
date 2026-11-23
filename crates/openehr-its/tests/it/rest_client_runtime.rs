@@ -941,8 +941,6 @@ async fn a_head_answer_is_not_measured_by_its_declared_length() -> TestResult {
 /// Starts a server that answers every request `200` with a chunked body of
 /// `chunks` 1 KiB chunks, or an endless one under `None`, and returns its base
 /// URL.
-///
-/// A chunked body declares no length, which `wiremock` cannot answer.
 async fn chunked_server(chunks: Option<usize>) -> Result<String, Box<dyn Error>> {
     use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;

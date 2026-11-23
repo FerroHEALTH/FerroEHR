@@ -2,12 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Ingestion-side artefact-validity tests (surface A1).
-//!
-//! Each per-code test takes the vendored valid `minimal_evaluation.opt` and
-//! breaks exactly one aspect (either as a targeted XML mutation or as a typed
-//! model mutation for the terminology-side sets the minimal fixture does not
-//! carry), asserting the matching AOM2 rule code surfaces. The corpus guard
-//! asserts every vendored valid OPT still passes unchanged.
 
 use std::path::{Path, PathBuf};
 
@@ -86,10 +80,6 @@ fn valid_minimal_passes() {
 /// Every vendored valid OPT under this crate's own resources must parse and
 /// must still upload — the ingestion checks may never mis-reject a legitimate
 /// template.
-///
-/// Parseability is asserted here as well as in the `openehr-its` `opt14_corpus`
-/// gate: a template this sweep cannot read is a finding either way, and
-/// skipping it silently would make the upload assertion vacuous for that file.
 #[test]
 fn corpus_all_valid_opts_pass() {
     // The service knowledge corpus is the upload-surface oracle. (The

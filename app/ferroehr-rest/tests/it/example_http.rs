@@ -4,19 +4,6 @@
 //! End-to-end HTTP tests for the template-example endpoint
 //! (`GET /definition/template/adl1.4/{template_id}/example`, a Release-1.1.0
 //! operation — ITS-REST overview `Amendment_record` §Release-1.1.0, SPECITS-58).
-//!
-//! The Demo Vitals OPT is uploaded through the real wire
-//! (`POST /definition/template/adl1.4`, `application/xml`); the real service
-//! then generates the example COMPOSITION from the stored `WebTemplate`. The
-//! assembled router is driven for each supported `Accept`:
-//!
-//! * default / `application/json` → canonical JSON COMPOSITION;
-//! * `application/xml` → canonical XML;
-//! * `application/openehr.wt.flat+json` / `…wt.structured+json` → the FLAT /
-//!   STRUCTURED converters;
-//! * an unsupported `Accept` → `406`;
-//! * an unknown `template_id` → `404`;
-//! * an invalid `detail_level` → `400`.
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};

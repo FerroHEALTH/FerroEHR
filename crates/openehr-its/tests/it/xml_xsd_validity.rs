@@ -23,21 +23,6 @@
 //! adjudication — so a NEW divergence fails the build while the known set stays
 //! honest.
 //!
-//! ## Method
-//!
-//! `xmllint --schema` (the same tool the C14N gate shells to) over a **driver
-//! schema written at test time**: it `xs:include`s the vendored bundle files
-//! verbatim by absolute path and adds only the global `xs:element` declarations
-//! the bundle itself lacks. The vendored schemas are never modified, and the
-//! driver adds no type, facet or content model — only a document root to hang
-//! validation on, which is exactly what ITS-XML withholds for most REST
-//! resources.
-//! The divergence sweeps below are computed from the generated RM model
-//! (`openehr_rm::v1_2::model`) against the XSD text, so they re-derive themselves on
-//! every run instead of trusting a hand-maintained attribute list.
-//!
-//! ## What the sweep establishes
-//!
 //! The standing premise that the two lineages "differ only by the root `xmlns`"
 //! is true of our SERIALIZER and false of the SCHEMAS. `docs/specs/openehr/
 //! ITS-XML/README.adoc` §"Releases and IM Versions" describes the 2.0.0 change
@@ -248,9 +233,6 @@ fn read_types(bundle: &Bundle) -> BTreeMap<String, XsdType> {
 }
 
 /// Read one XSD document's `xs:complexType` inventory into `types`.
-///
-/// Only a TOP-LEVEL `complexType` (depth 1) names a type; nested anonymous
-/// ones contribute their members to the enclosing named type.
 fn read_types_from(xml: &str, types: &mut BTreeMap<String, XsdType>) {
     let mut reader = quick_xml::Reader::from_str(xml);
     let mut current: Option<String> = None;
@@ -289,9 +271,6 @@ fn close_element(element: &BytesEnd<'_>, current: &mut Option<String>, depth: &m
 }
 
 /// Folds one opening (or self-closing) XSD element into `types`.
-///
-/// `empty` distinguishes `<xs:complexType/>` from `<xs:complexType>`, which is
-/// what keeps the nesting depth honest.
 fn record_element(
     element: &BytesStart<'_>,
     empty: bool,
@@ -406,10 +385,6 @@ fn is_wire_class(name: &str) -> bool {
 /// folder includes one of them — so the defect covers the whole lineage, not
 /// just `latest`. The v1 bundle's own `archetypeNodeId` facet
 /// (`its-xml-1.0.2-nsv1/ALL/BaseTypes.xsd`) is plain XSD regex and compiles.
-///
-/// This is pinned rather than worked around: the moment upstream fixes the
-/// facet (or the bundle is re-vendored) this test fails, and the nsv2 half of
-/// the gate can be promoted from "uncompilable" to real validation.
 #[test]
 fn nsv2_lineage_is_uncompilable_by_a_conformant_xsd_processor() {
     let driver = write_driver(&V2, "nsv2_compile_probe", &[("folder", "FOLDER")]);
@@ -438,14 +413,6 @@ fn nsv2_lineage_is_uncompilable_by_a_conformant_xsd_processor() {
 // ---------------------------------------------------------------------------
 
 /// Concrete RM 1.2.0 classes with NO `xs:complexType` in the nsv1 bundle.
-///
-/// The `Release-1.0.2v2` tag publishes `components/ALL/` (11 XSDs) +
-/// `components/AOM2/` and nothing else — verified against the upstream tag
-/// tree — so the whole EHR package (`Ehr.xsd`) and the whole demographic
-/// package (`Demographic.xsd`) are simply absent, together with everything RM
-/// added afterwards (`DV_SCALE`, `ITEM_TAG`, the `VERSIONED_*` containers).
-/// A canonical-XML document of any of these has no v1 schema to conform to at
-/// all — the media type is declared, the schema binding is not.
 const V1_ABSENT_TYPES: &[&str] = &[
     "ADDRESS",
     "ADDRESSED_MESSAGE",

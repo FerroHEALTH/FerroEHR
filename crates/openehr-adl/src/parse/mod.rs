@@ -1,34 +1,15 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The cADL definition-section parser.
+//! The cADL definition-section parser: recursive descent over the shared token
+//! stream, transcribed from `vendor/grammar/v2_4/{cadl2.g4, cadl2_primitives.g4}`
+//! into the generated AOM2 constraint model.
 //!
-//! A hand-written recursive-descent parser over the shared openEHR token
-//! stream under its cADL reading ([`openehr_lang::v1_1::lexer::lex`]),
-//! transcribed 1:1 from the vendored normative grammars
-//! `crates/openehr-adl/vendor/grammar/v2_4/{cadl2.g4, cadl2_primitives.g4}`. It
-//! builds the **generated** AOM2 constraint model
-//! (`openehr_am::v2_4::aom2::constraint_model`) directly — never a new model
-//! type — producing a [`CComplexObject`] tree for a `definition` section body.
-//!
-//! Recursive descent rather than `chumsky`: the cADL primitive sub-grammar —
-//! `|…|` interval endpoints prefixed with relational operators, the duration
-//! `pattern`/`interval` mix, kind-classification of an interval by its endpoint
-//! token — is strongly context-sensitive and reads more clearly as
-//! straight-line code, which also matches the outer parser idiom in
-//! [`crate::source`].
-//!
-//! Slot include/exclude assertion expressions are BEL trees built by
-//! [`crate::rules::parse_slot_assertions`], and the common
-//! `archetype_id/value matches {/regex/}` form is additionally regex-compile
-//! checked (`SCSRE`). Semantic (V-code) validation is `crate::validate`.
-//!
-//! This module carries what every production shares — the dialect selector, the
-//! parser state, the entry points, the cursor/error helpers — and the
-//! productions live in [`parser`] (structure / attribute / tuple), [`refs`]
-//! (slot / root / internal reference), [`default_value`], [`primitives`],
-//! [`values`] and [`patterns`]. The ADL 1.4-only productions are in [`crate::adl14::lower`],
-//! reached from three dialect-gated dispatch points.
+//! Recursive descent suits the context-sensitive primitive sub-grammar. Slot
+//! assertions are BEL trees from [`crate::rules::parse_slot_assertions`];
+//! V-code validation is `crate::validate`. The productions live in [`parser`],
+//! [`refs`], [`default_value`], [`primitives`], [`values`] and [`patterns`], the
+//! ADL 1.4-only ones in [`crate::adl14::lower`].
 
 pub mod default_value;
 pub mod parser;
@@ -56,24 +37,14 @@ pub(crate) type PResult<T> = Result<T, ()>;
 
 /// Which ADL dialect the cADL parser accepts.
 ///
-/// `Adl2` is the spec-conformant grammar (`cadl2.g4`). `Adl14` accepts the ADL
-/// 1.4 cADL language: it ADDS the 1.4-only definition forms — qualified/listed
-/// terminology constraints (`[local::at0001]`, `[local:: a, b, c ; assumed]`,
-/// `[openehr::524]`) and the inline dADL domain constraints
-/// (`C_DV_QUANTITY <…>`, `(C_DV_ORDINAL) <…>`) — and REMOVES the constructs ADL
-/// 2 introduced, because a 1.4 source is judged as 1.4 rather than as a
-/// permissive superset. The removed set (each refused with a typed
-/// [`SyntaxError`] naming the construct, see `Parser::adl2_only`):
-/// `use_archetype`, the slot `closed` marker, the `_default` pseudo-attribute,
-/// second-order attribute tuples, term-constraint strengths, and `@terminology`
-/// operational bindings. `before`/`after` sibling order stays accepted —
-/// `ADL1.4/master05-cadl.adoc` §Keywords L53 lists both as cADL 1.4 keywords.
+/// `Adl14` adds the 1.4-only terminology and inline-dADL domain forms and
+/// refuses the constructs ADL 2 introduced (`use_archetype`, `closed`,
+/// `_default`, tuples, term-constraint strengths, `@terminology` bindings) with
+/// a typed [`SyntaxError`], since the cADL 1.4 keyword set is closed
+/// (`ADL1.4/master05-cadl.adoc` §Keywords).
 ///
-/// NOTE: no openEHR spec governs 1.4→2 conversion — the additive half exists
-/// only to feed `crate::adl14` and is our own design (see the module flag on
-/// `crate::adl14`). The subtractive half IS spec-grounded: the closed cADL 1.4
-/// keyword set of `ADL1.4/master05-cadl.adoc` §Keywords (L48-53). `Adl2` parsing
-/// is unchanged either way.
+/// NOTE: no openEHR spec governs 1.4→2 conversion; the additive half feeds
+/// `crate::adl14` and is our own design.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Dialect {
     /// The spec-conformant ADL2 grammar.
@@ -82,20 +53,11 @@ pub enum Dialect {
     Adl14,
 }
 
-/// Parse a raw cADL `definition`-section body (the text between the
-/// `definition` keyword and the next section) into a [`CComplexObject`], using
-/// the grammar of `dialect`.
+/// Parse a raw cADL `definition`-section body into a [`CComplexObject`] using
+/// the grammar of `dialect`; error spans are relative to `body`.
 ///
-/// This is the core entry point: it lexes `body` and runs the cADL grammar.
-/// Error byte spans are relative to `body`.
-///
-/// Under [`Dialect::Adl14`] the 1.4-only terminology-constraint and inline-dADL
-/// domain forms are accepted and kept in a converter-internal encoding
-/// (qualified codes and lists in the `C_TERMINOLOGY_CODE.constraint` string;
-/// domain blocks lowered to a `DV_QUANTITY`/`DV_ORDINAL` with a `property`
-/// at-code + a tuple/attribute set) that `crate::adl14::convert` rewrites into
-/// spec-valid ADL2. See the `crate::adl14` module flag: no openEHR spec governs
-/// that conversion.
+/// Under [`Dialect::Adl14`] the 1.4-only forms are kept in a converter-internal
+/// encoding that `crate::adl14::convert` rewrites (our own design).
 ///
 /// # Errors
 /// Returns every [`SyntaxError`] found (the `S*` catalogue codes of
@@ -230,13 +192,8 @@ impl Parser<'_> {
     }
 
     /// Run `production` one object-nesting level deeper, refusing past the
-    /// engine bound.
-    ///
-    /// Every nested object enters through here, so the recursive descent is
-    /// bounded by [`Nesting`]. The refusal is raised as `SUNK` — the
-    /// catalogue's "Syntax error (unknown cause)" bucket (`ADL2/master04.6`
-    /// §Syntax Validity Rules), because the bound is an implementation limit
-    /// no `S*` code describes — with the limit named in the message.
+    /// [`Nesting`] bound as `SUNK` (`ADL2/master04.6` §Syntax Validity Rules), since
+    /// no `S*` code describes an implementation limit.
     pub(crate) fn nested<T>(
         &mut self,
         production: impl FnOnce(&mut Self) -> PResult<T>,
@@ -256,14 +213,8 @@ impl Parser<'_> {
     /// Take a decoded string/character literal, or report its escape defect at
     /// `span` and bail.
     ///
-    /// NOTE: the `S*` code space is a verbatim 1:1 mirror of the openEHR
-    /// catalogue (`ADL2/master04.6-cadl_validity_rules.adoc` §Syntax Validity
-    /// Rules) and carries no code for a lexical defect INSIDE a literal, so
-    /// this reuses `SUNK` ("Syntax error (unknown cause)") — the same bucket
-    /// every other lexical failure reports under
-    /// ([`openehr_lang::v1_1::lexer::lex`]) — and
-    /// names the defect in the message. Inventing a code would break the 1:1
-    /// mirror.
+    /// NOTE: the `S*` codes mirror `ADL2/master04.6` §Syntax Validity Rules, which
+    /// has no code for a defect inside a literal, so this reports `SUNK`.
     pub(crate) fn decoded_literal(
         &mut self,
         decoded: Result<String, openehr_lang::v1_1::escape::EscapeError>,
@@ -278,24 +229,12 @@ impl Parser<'_> {
         }
     }
 
-    /// Refuse an ADL 2-only cADL construct met while parsing in the
-    /// [`Dialect::Adl14`] dialect.
+    /// Refuse an ADL 2-only cADL construct in the [`Dialect::Adl14`] dialect, since
+    /// the cADL 1.4 keyword set is closed (`ADL1.4/master05-cadl.adoc` §Keywords).
     ///
-    /// A 1.4 source is judged AS 1.4. The cADL 1.4 keyword set is CLOSED —
-    /// `ADL1.4/master05-cadl.adoc` §Keywords (L48-53) lists exactly
-    /// `matches`/`~matches`/`is_in`/`~is_in`, `occurrences`/`existence`/
-    /// `cardinality`, `ordered`/`unordered`/`unique`, `infinity`,
-    /// `use_node`/`allow_archetype`, `include`/`exclude`, `before`/`after` — so a
-    /// construct that ADL 2 added is a syntax error in a 1.4 text, not a
-    /// silently-accepted superset.
-    ///
-    /// NOTE: the `S*` code space is a verbatim 1:1 mirror of the openEHR
-    /// catalogue (`ADL2/master04.6-cadl_validity_rules.adoc` §Syntax Validity
-    /// Rules) and carries no "wrong ADL generation" code, so each gate reuses the
-    /// catalogue code for its parse POSITION (`SCOAT` in an object body, `SCCOG`
-    /// in object position, `STCCP` inside a term-code constraint) and names the
-    /// construct plus the generation in the message. Inventing a code would break
-    /// the 1:1 mirror [`SyntaxErrorCode`] documents.
+    /// NOTE: `ADL2/master04.6` has no "wrong ADL generation" code, so each gate uses
+    /// the code of its parse position (`SCOAT`, `SCCOG`, `STCCP`) and names the
+    /// construct.
     pub(crate) fn adl2_only<T>(&mut self, code: SyntaxErrorCode, construct: &str) -> PResult<T> {
         self.err(
             code,
@@ -311,38 +250,19 @@ impl Parser<'_> {
                 && matches!(self.peek_at(1), Some(Token::SymMatches)))
     }
 
-    /// True if the cursor is at a regex-match operator (`=~` or `!~`).
-    ///
-    /// Neither is a token in any normative lexical specification, so both
-    /// arrive here as a token PAIR: `=~` as `SymEq SymNot` and `!~` as
-    /// `SymNot SymNot` (`!` and `~` both fold into `SYM_NOT` —
-    /// `adl_keywords.g4` `SYM_NOT : [Nn][Oo][Tt] | '!' | '∼' | '~' | '¬'`).
+    /// Whether the cursor is at `=~` or `!~`, which arrive as token pairs
+    /// (`adl_keywords.g4` `SYM_NOT`).
     pub(crate) fn at_regex_match_operator(&self) -> bool {
         matches!(self.peek(), Some(Token::SymEq | Token::SymNot))
             && matches!(self.peek_at(1), Some(Token::SymNot))
     }
 
-    /// Refuse a negated matches operator with a message that says where the
-    /// negation IS admitted.
+    /// Refuse a negated matches operator, saying where negation is admitted.
     ///
-    /// `ADL1.4/master05-cadl.adoc` §Keywords lists `~matches`/`~is_in` (L47)
-    /// and glosses them at L91-98 ("Occasionally, the matches operator needs to
-    /// be used in the negative, usually at a leaf block"), but NO production of
-    /// any normative grammar admits them:
-    /// * the chapter's own §Syntax has one `SYM_MATCHES` in `c_attribute`,
-    ///   `c_complex_object` and `archetype_slot` (L1069-1120) and its §Symbols
-    ///   lexer (L1300-1354) has no `~` symbol and no `∉` token at all;
-    /// * the vendored ANTLR set is identical — `cadl14.g4` uses `SYM_MATCHES`
-    ///   only, and `adl_keywords.g4` `SYM_MATCHES` folds `matches`/`is_in`/`∈`
-    ///   with no negated counterpart.
-    ///
-    /// The only negation the grammars DO admit is prefix `not`/`~`/`!`/`¬` on a
-    /// whole boolean expression (`base_expressions.g4` `boolean_expr : SYM_NOT
-    /// boolean_expr`), i.e. inside a slot `include`/`exclude` assertion or the
-    /// rules section, which this crate parses through `openehr_lang::v1_1::bel`. So
-    /// the negated operator is refused HERE, in cADL constraint position, and
-    /// accepted there — never silently read as an affirmative `matches`, which
-    /// would invert the constraint.
+    /// `ADL1.4/master05-cadl.adoc` §Keywords lists `~matches`/`~is_in`, but no
+    /// normative production (`cadl14.g4`, `adl_keywords.g4`) admits them; prefix
+    /// `not` is admitted only on a boolean expression (`base_expressions.g4`), in
+    /// slot assertions and rules.
     pub(crate) fn negated_matches_reject<T>(&mut self, code: SyntaxErrorCode) -> PResult<T> {
         self.err(
             code,
@@ -378,13 +298,9 @@ impl Parser<'_> {
 
 // ── re-entrant sub-parsers (driven by `crate::rules`) ─────────────────────
 
-/// Parse a `matches { … }` primitive-constraint right-hand side (the verbatim
-/// `{ c_primitive_object }` text, braces included) into a [`CPrimitiveObject`].
-///
-/// This is the reusable entry the rules / slot-assertion BEL builder
-/// ([`crate::rules`]) drives to construct an `EXPR_CONSTRAINT` leaf
-/// (`AOM2` master05; primitive grammar `master04.5`). The leaf takes the
-/// short-form primitive node id of `coding`, the archetype's own.
+/// Parse a `matches { … }` primitive right-hand side into a
+/// [`CPrimitiveObject`] for an `EXPR_CONSTRAINT` leaf (`AOM2` master05), with
+/// the short-form primitive node id of `coding`.
 ///
 /// # Errors
 /// Returns the cADL `S*` catalogue errors if the constraint is malformed or its
@@ -441,11 +357,9 @@ pub(crate) fn parse_inline_primitive_text(
     }
 }
 
-/// Parse a contained-regexp right-hand side (`{ /re/ }` / `{ ^re^ }`, verbatim)
-/// into a [`CString`], the regex matcher for an archetype-id slot assertion
-/// (`EXPR_ARCHETYPE_ID_CONSTRAINT`, `AOM2` master05; `master04.3` §Archetype
-/// Slots), carrying the short-form primitive node id of `coding`. The regex is
-/// compile-checked (`SCSRE`).
+/// Parse a contained-regexp right-hand side (`{ /re/ }`, `{ ^re^ }`) into the
+/// [`CString`] of an archetype-id slot assertion (`AOM2` master05; `master04.3`
+/// §Archetype Slots), compile-checked (`SCSRE`).
 ///
 /// # Errors
 /// [`SyntaxErrorCode::Scsre`] if the regex does not compile.

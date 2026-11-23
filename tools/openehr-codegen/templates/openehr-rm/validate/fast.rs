@@ -2,68 +2,16 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! The allocation-free fast path of the RM class-invariant check (hand-written),
-//! exposed via [`super::try_fast_validate`]. The authoritative tier it declines
-//! to is the sibling [`super::typed_dispatch`]; the wire-boundary entry point
-//! that runs the two in order lives in
-//! `openehr_its::wire_validate::validate_rm_value`.
+//! The allocation-free fast path of the RM class-invariant check
+//! ([`super::try_fast_validate`]), declining to [`super::typed_dispatch`].
 //!
-//! No openEHR spec governs this module — it is our own performance design; the
-//! *semantics* it realizes are exactly those of the typed dispatch in
-//! [`super::typed_dispatch`] (the RM class invariants of the `*_impl.rs`
-//! siblings plus the structural type-conformance rejection of a typed
-//! deserialize).
-//!
-//! # Design: vouch-or-fall-back
-//!
-//! The typed dispatcher deserializes every `_type` node into its concrete RM
-//! type to run a handful of scalar checks — ~1.5k `serde_json::from_value` runs
-//! per populated commit. This module removes that cost for the common case:
-//!
-//! 1. structural conformance is checked directly against the live
-//!    `&serde_json::Value` node, driven by the generated static RM model
-//!    ([`crate::v1_2::model`]), so the field tables cannot drift from the
-//!    generated types;
-//! 2. a conforming node has its class invariants evaluated straight off the
-//!    JSON map through the same invariant cores the typed `Validate` impls
-//!    call, so the violation messages are byte-identical by construction;
-//! 3. a node this checker cannot verifiably vouch for falls back to the
-//!    authoritative typed path. The fast path never emits a rejection of its
-//!    own, so a vouching bug can only degrade to the slow-correct path, never
-//!    to a different wire result.
-//!
-//! # The conformance rules mirrored from the deserialize layer
-//!
-//! The vouch check replicates, conservatively, what the native canonical-JSON
-//! codec's `FromJson` impls (and their `_type`-dispatched slot enums) accept:
-//!
-//! - mandatory single-valued attribute: present and non-`null` (the derive's
-//!   shadow treats a `null` as absent → `missing field`);
-//! - optional attribute: absent or `null` is fine;
-//! - `Vec` attribute: absent → empty; present must be an array (`null` is a
-//!   deserialize error);
-//! - `_type` on a slot payload: must name a concrete descendant of the
-//!   declared class; absent is only allowed when the declared class is itself
-//!   concrete (the generated enums' untagged-default arm) — abstract slots
-//!   require it;
-//! - primitives: `String`→JSON string, `Boolean`→bool, `Real`→any number,
-//!   `Integer`/`Integer64`→integral number in `i32`/`i64` range (floats
-//!   rejected, as serde does), `Character`→one-char string;
-//! - anything not modelled here (`Hash` attributes, classes outside
-//!   [`fast_spec`], the `Interval` default-able bound flags) → fall back.
-//!
-//! **Shallow mode** mirrors the typed dispatcher's `prune_child_nodes` (in
-//! [`super::typed_dispatch`]) for the structural container classes the typed
-//! path checks via `run_shallow`: a child
-//! *collection* is vouched without descending iff it is empty or contains at
-//! least one object (exactly the arrays the prune empties before the typed
-//! deserialize), while single-valued nested nodes are still checked (their
-//! presence/type is a constraint the shallow deserialize enforces).
-//!
-//! Generic-parameter erasure: the dispatcher checks `HISTORY` as
-//! `History<Value>` and the events as `POINT_EVENT`/`INTERVAL_EVENT` with
-//! `data: Value` — so `data` on those two classes accepts anything non-absent
-//! ([`generic_any_slot`]), mirroring the monomorphized `Value` payload.
+//! No openEHR spec governs this module: our own design. A node is checked
+//! against the generated model ([`crate::v1_2::model`]) and its invariants run
+//! through the same cores the typed impls call; a node it cannot vouch for
+//! falls back, and it never rejects on its own. It accepts conservatively what
+//! the canonical-JSON readers accept, mirrors `prune_child_nodes` in shallow
+//! mode, and accepts any payload in a generic `data` slot
+//! ([`generic_any_slot`]).
 
 #![expect(
     clippy::disallowed_types,
@@ -80,18 +28,13 @@ use crate::v1_2::validate::{
 };
 use openehr_base::validate::{InvariantViolation, Validate};
 
-/// Validate `value` (whose `_type` is `ty`) on the fast path. Returns `true`
-/// when the node was fully handled (invariants appended to `out`); `false`
-/// means the caller must run the typed dispatch instead. Nothing is appended
-/// to `out` unless `true` is returned.
+/// Validates `value` of type `ty` on the fast path, returning whether it
+/// handled the node; nothing is appended on `false`.
 pub(super) fn try_validate(ty: &str, value: &Value, out: &mut Vec<InvariantViolation>) -> bool {
     let Value::Object(obj) = value else {
         return false;
     };
-    // Dispatch mode: which classes have a fast invariant evaluator, and
-    // whether the typed path would deserialize them shallowly (`run_shallow`)
-    // or in full (`run`). Must stay in lockstep with the typed dispatch table
-    // in `super::typed_dispatch` (`dispatch_typed`).
+    // Must match the table in `super::typed_dispatch::dispatch_typed`.
     let shallow = match ty {
         // `run_shallow` classes (structural containers, scalar-only invariants).
         "CLUSTER" | "POINT_EVENT" | "INTERVAL_EVENT" | "COMPOSITION" | "EVENT_CONTEXT"
@@ -117,16 +60,7 @@ pub(super) fn try_validate(ty: &str, value: &Value, out: &mut Vec<InvariantViola
     run_invariants(ty, obj, out)
 }
 
-/// The structural specs this checker models, resolved from the generated
-/// static RM model. A class outside this set (or absent from the model) makes
-/// the containing node fall back to the typed path. The set covers the
-/// composition-content hot path; notable *exclusions* (deliberate — their
-/// typed acceptance has semantics this checker does not replicate):
-/// `DV_INTERVAL` (default-able bound flags + ordered-limit invariants),
-/// `REFERENCE_RANGE`, `DV_MULTIMEDIA` (octet payload), `FEEDER_AUDIT`,
-/// `OBJECT_REF`/`LOCATABLE_REF`, `INSTRUCTION_DETAILS`, `PARTICIPATION`,
-/// the time-specification family, `DV_STATE`, `DV_PARAGRAPH`,
-/// `GENERIC_ENTRY`.
+/// The classes this checker models; any other makes the node fall back.
 fn fast_spec(name: &str) -> Option<&'static RmClass> {
     let listed = matches!(
         name,
@@ -195,23 +129,14 @@ fn fast_spec(name: &str) -> Option<&'static RmClass> {
     }
 }
 
-/// `HISTORY` is dispatched as `History<Value>` and its events as
-/// `POINT_EVENT`/`INTERVAL_EVENT` with `data: Value` (generic parameter
-/// monomorphized away), so `data` on the event classes accepts any non-absent,
-/// non-`null` payload.
+/// The generic `data` slot of `POINT_EVENT` and `INTERVAL_EVENT`, which
+/// accepts any present payload.
 fn generic_any_slot(class: &str, attr: &str) -> bool {
     attr == "data" && matches!(class, "POINT_EVENT" | "INTERVAL_EVENT")
 }
 
-/// Whether the typed deserialize of `class` verifiably accepts `obj`. `false`
-/// means "cannot vouch" (not "invalid") — the caller falls back to the typed
-/// path, which decides authoritatively.
-///
-/// Performance: iterates the node's entries once and matches attribute names by
-/// static-string compare instead of one hashed `obj.get` per attribute — this
-/// runs for every `_type` node of every commit, and the map hashing was the
-/// measured residual cost. Mandatory-presence is closed out by counting the
-/// mandatory single-valued attributes seen against the class's total.
+/// Whether the typed deserialize of `class` verifiably accepts `obj`; `false`
+/// means "cannot vouch".
 fn node_conforms(obj: &Map<String, Value>, class: &'static RmClass, shallow: bool) -> bool {
     let mut mandatory_seen = 0usize;
     for (key, v) in obj {
@@ -231,11 +156,7 @@ fn node_conforms(obj: &Map<String, Value>, class: &'static RmClass, shallow: boo
             AttrCheck::Absent | AttrCheck::Conforms => {}
         }
     }
-    // Absent attributes: an OPTIONAL container defaults to `None` and an
-    // optional single attribute to `None`, but a missing MANDATORY attribute
-    // fails the typed deserialize — whether it is single-valued or a container
-    // (a mandatory container is a plain `Vec`/`NonEmptyVec` field the reader
-    // requires). Every mandatory attribute must therefore have been seen.
+    // Every mandatory attribute must have been seen.
     mandatory_seen == class.attributes.iter().filter(|a| a.is_mandatory).count()
 }
 
@@ -284,11 +205,8 @@ fn single_conforms(
     }
 }
 
-/// Checks a container attribute's wire value.
-///
-/// A `1..*` container emits as `NonEmptyVec<T>`, whose constructor refuses an
-/// empty list — so an empty array does NOT deserialize and this checker must
-/// not vouch for it.
+/// Checks a container attribute's wire value; an empty `1..*` array is not
+/// vouched for.
 fn list_conforms(v: &Value, attr: &'static RmAttribute, shallow: bool) -> AttrCheck {
     // `Vec` never deserializes from a non-array (incl. `null`).
     let Value::Array(items) = v else {
@@ -312,13 +230,8 @@ fn list_conforms(v: &Value, attr: &'static RmAttribute, shallow: bool) -> AttrCh
     }
 }
 
-/// Checks the structural witness of a pruned array.
-///
-/// This mirrors `prune_child_nodes`: the prune keeps the FIRST member of any
-/// object array as the witness, which the typed decode inspects — so this
-/// checker inspects it too. An empty array on a non-`NonEmptyVec` field
-/// trivially deserializes; a non-empty all-scalar array is kept verbatim and
-/// typed-checked, so it is not vouched for here.
+/// Checks the first object member of a pruned array, as `prune_child_nodes`
+/// keeps it; a non-empty all-scalar array is not vouched for.
 fn shallow_members_conform(items: &[Value], attr: &'static RmAttribute) -> bool {
     let Some(first) = items.first() else {
         return true;
@@ -344,11 +257,8 @@ fn value_conforms(v: &Value, declared: &str, shallow: bool) -> bool {
     }
 }
 
-/// Whether an object in a slot declared as spec class `declared` verifiably
-/// deserializes: the payload `_type` (validated by every generated
-/// `Deserialize`) selects a concrete descendant; a `_type`-less payload is
-/// only accepted by a slot whose declared class is itself concrete (the
-/// untagged-default arm of the generated enums — an abstract slot errors).
+/// Whether an object in a slot declared `declared` deserializes: its `_type`
+/// names a concrete descendant, or it has none and the slot is concrete.
 fn class_slot_conforms(v: &Value, declared: &str, shallow: bool) -> bool {
     let Value::Object(obj) = v else {
         return false;
@@ -386,9 +296,7 @@ fn class_slot_conforms(v: &Value, declared: &str, shallow: bool) -> bool {
 
 // ── invariant evaluation on the conformed node ───────────────────────────────
 
-/// Linear-scan field access: an RM node has ≤ ~10 keys, so a sequential
-/// static-string compare beats the map's hashed lookup on this hot path
-/// (performance: same reasoning as the entry iteration in [`node_conforms`]).
+/// Linear-scan field access, faster than hashing on a node of few keys.
 fn field<'a>(obj: &'a Map<String, Value>, key: &str) -> Option<&'a Value> {
     obj.iter().find_map(|(k, v)| (k == key).then_some(v))
 }
@@ -415,11 +323,8 @@ fn present(obj: &Map<String, Value>, key: &str) -> bool {
     field(obj, key).is_some_and(|v| !v.is_null())
 }
 
-/// Run the class invariants for the (structurally conformed) node, appending
-/// via the same `pub(crate)` cores the typed `Validate` impls call — the
-/// violation text has a single source. Returns `false` (nothing appended)
-/// for the rare sub-cases the fast path declines (e.g. a periodic `HISTORY`,
-/// whose `Period_consistency` needs the typed event/offset arithmetic).
+/// Runs the class invariants of a conforming node through the shared cores;
+/// `false` for a declined case such as a periodic `HISTORY`.
 #[expect(
     clippy::too_many_lines,
     reason = "a flat per-RM-class dispatch table; splitting it would scatter the mirror of the typed invariant table"
@@ -468,11 +373,8 @@ fn run_invariants(ty: &str, obj: &Map<String, Value>, out: &mut Vec<InvariantVio
             };
             generated::dv_parsable_core(formalism, out);
         }
-        // DV_AMOUNT descendants. `normal_range` (the only input of the
-        // DV_ORDERED consistency invariant that could fire) is a DV_INTERVAL,
-        // which `node_conforms` never vouches for — so on this path the
-        // consistency check is vacuously satisfied, exactly as the typed
-        // `push_normal_range_consistency` no-ops without a range.
+        // `normal_range` is a DV_INTERVAL, never vouched for, so the consistency
+        // invariant cannot fire here.
         "DV_QUANTITY" | "DV_COUNT" | "DV_DURATION" => {
             if ty == "DV_DURATION" {
                 let Some(value) = str_of(obj, "value") else {
@@ -603,9 +505,7 @@ fn run_invariants(ty: &str, obj: &Map<String, Value>, out: &mut Vec<InvariantVio
                 out,
             );
         }
-        // Single-`value` identifier classes: the invariant cores live in
-        // `openehr-base`; constructing the (one-string) typed value keeps the
-        // violation text single-sourced there at the cost of one allocation.
+        // The identifier cores live in `openehr-base`.
         "TERMINOLOGY_ID" => {
             let Some(value) = str_of(obj, "value") else {
                 return false;

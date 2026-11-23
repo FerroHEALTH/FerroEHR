@@ -5,8 +5,6 @@
 //! `docs/specs/openehr/ITS-REST/specifications/docs/system/` + the
 //! `system-*.openapi.yaml` OAS group.
 //!
-//! One operation: `OPTIONS /` — the System Options and Conformance manifest.
-//!
 //! The System API is not part of the generated ITS-REST contract (the
 //! `emit-rest` groups are `ehr`/`query`/`definition`/`admin`/`demographic`
 //! only, `crates/openehr-its/src/rest/generated/`), so its single operation is

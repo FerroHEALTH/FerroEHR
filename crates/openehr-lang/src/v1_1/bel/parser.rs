@@ -43,10 +43,6 @@ impl<'a, 'b, B: BelBuilder> Parser<'a, 'b, B> {
     }
 
     /// Run `production` one nesting level deeper, refusing past the bound.
-    ///
-    /// Every self-recursive production (a parenthesised or quantified
-    /// sub-expression, a `not` or sign chain) enters through here, so the
-    /// parser's native recursion is bounded by [`Nesting`].
     fn nested<T>(
         &mut self,
         production: impl FnOnce(&mut Self) -> Result<T, BelError>,
@@ -204,12 +200,9 @@ impl<'a, 'b, B: BelBuilder> Parser<'a, 'b, B> {
             return None;
         };
         match self.peek() {
-            // `Name : Type = primitive_object` — the valued constant. The RHS
-            // is the odin_values `primitive_object`: an interval value is
-            // carried verbatim ([`BelLiteral::Interval`]), everything else
-            // parses as the expression the scalar literals already are. (The
-            // `primitive_list_value` form is unreachable here — a comma ends
-            // the statement read — an honest boundary recorded on the audit.)
+            // `Name : Type = primitive_object`: an interval is carried verbatim
+            // ([`BelLiteral::Interval`]), anything else parses as an
+            // expression.
             Some(Token::SymEq) => {
                 self.pos += 1;
                 let value = if self.peek() == Some(&Token::SymIvlDelim) {
@@ -484,13 +477,10 @@ impl<'a, 'b, B: BelBuilder> Parser<'a, 'b, B> {
                 self.pos += 1;
                 Ok(self.builder.literal(BelLiteral::Duration(s)))
             }
-            // `[terminology::code]` — a Terminology_code literal
-            // (`LANG/docs/BEL/master03-language.adoc` §Literals; the grammar
-            // reaches TERM_CODE_REF via its odin_values import). NOTE: the
-            // grammar's arithmetic_leaf omits the token — the BEOM-normative
-            // reading (`TYPE_DEF_TERMINOLOGY_CODE` exists precisely for these
-            // values) plus §Literals ground the leaf position, for equality
-            // use.
+            // `[terminology::code]`, a Terminology_code literal
+            // (`LANG/docs/BEL/master03-language.adoc` §Literals;
+            // `TYPE_DEF_TERMINOLOGY_CODE` grounds the leaf the grammar's
+            // arithmetic_leaf omits).
             Some(Token::TermCodeRef(code)) => {
                 self.pos += 1;
                 Ok(self.builder.literal(BelLiteral::TermCode(code)))
@@ -648,10 +638,6 @@ fn relational(t: &Token) -> Option<(&'static str, &'static str)> {
 
 /// Decode a double-quoted BEL string literal (strip delimiters, decode the
 /// `master03` escapes).
-///
-/// The lexer (`validate_string`) has already run
-/// [`crate::v1_1::escape::validate`] over the same text, so the decode cannot fail
-/// here.
 #[expect(
     clippy::expect_used,
     reason = "`Token::String` only exists when the lexer's validate_string ran crate::v1_1::escape::validate over the same body and it succeeded, so this decode of that body cannot fail"
@@ -662,10 +648,6 @@ fn decode_string(raw: &str) -> String {
 }
 
 /// Decode a single-quoted character literal to a `char`.
-///
-/// The lexer (`validate_char`) admits only the six quoted forms in a character
-/// literal, so the decode cannot fail here, and its token regex admits exactly
-/// one body character, so the decoded literal is never empty.
 #[expect(
     clippy::expect_used,
     reason = "`Token::Character` only exists when the lexer's validate_char admitted the body, which restricts an escape to the six quoted forms none of which can fail to decode; the same token regex admits one body character or one two-character escape, each decoding to exactly one char, so the literal is never empty"

@@ -66,20 +66,12 @@ fn out_of_grammar_reason(q: &str) -> Option<&'static str> {
     None
 }
 
-/// Extract the contents of **every** `AsciiDoc` `----` listing block.
-///
-/// Previously only SELECT-containing blocks were kept, which silently dropped
-/// any bare `WHERE`/operator/function/`matches` fragment example — so the
-/// `WHERE`/predicate/function surface went unexercised (audit hygiene note on
-/// `08-aql-parser.md`). We now take all blocks and classify each in
-/// [`official_aql_corpus_parses`]: a block that already contains a full
-/// `SELECT` is parsed as-is; a bare fragment is wrapped in a minimal
-/// `SELECT … FROM EHR e WHERE <fragment>` shell before parsing.
+/// Extract the contents of every `AsciiDoc` `----` listing block; a bare
+/// fragment is wrapped in a `SELECT … FROM EHR e WHERE <fragment>` shell by
+/// [`official_aql_corpus_parses`].
 ///
 /// A delimiter is a line of four or more hyphens, and a block closes on the
-/// line identical to the one that opened it (Asciidoctor, "Delimited blocks":
-/// the closing delimiter must match the opening one exactly, and a listing
-/// delimiter may be longer than the minimum four characters).
+/// line identical to the one that opened it (Asciidoctor, "Delimited blocks").
 fn listing_blocks(doc: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut open: Option<&str> = None;

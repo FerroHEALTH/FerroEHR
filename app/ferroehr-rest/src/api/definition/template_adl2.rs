@@ -7,18 +7,6 @@
 //! `definition_template_adl2_list` / `_upload` / `_get` / `_example_get` /
 //! `_version_get`. Governing spec text:
 //! `docs/specs/openehr/ITS-REST/specifications/docs/definition/`.
-//!
-//! ADL2 artefacts are validated + compiled by the `openehr-adl` engine through
-//! the service layer (`FerroEhrService::adl2_*`). The `_get`/`_version_get`
-//! operations serve two representations of the stored operational template:
-//! `text/plain` — the stored ADL2 **source** verbatim
-//! (`200_Template_adl2_retrieved.yaml` body `oneOf: [OperationalTemplateV2,
-//! string]`, whose example is ADL2 source) — and `application/json` — the
-//! `OperationalTemplateV2` canonical-JSON projection (the OAS declares that
-//! schema as an opaque `type: object`, `schemas/aom/OperationalTemplateV2.yaml`,
-//! so the AOM2 canonical JSON of the OPT satisfies it). `application/xml` is
-//! enumerated by the `Accept` header but the response declares **no**
-//! `application/xml` body content, so an `Accept` naming only XML is a `406`.
 
 #![expect(
     clippy::disallowed_types,
@@ -132,12 +120,6 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
 
 /// `GET …/definition/template/adl2/{template_id}` — the stored operational
 /// template.
-///
-/// Resolves `template_id` (full HRID, or a partial that selects the latest
-/// matching version) and serves the representation `Accept` negotiates:
-/// `text/plain` source, `application/json` `OperationalTemplateV2`, or `406`
-/// when only `application/xml` (which the response declares no body for) is
-/// acceptable. Unknown `template_id` → `404`.
 pub(super) async fn get(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let p = parts.decode(
@@ -322,12 +304,6 @@ fn json_response(status: StatusCode, json: String) -> Response {
 /// empty body. `Location` is set on every case, and the applied preference is
 /// declared through the shared [`negotiate::prefer::set_preference_applied`] seam
 /// (`Requests_and_responses.md` §Representation details negotiation).
-///
-/// A template is not `uid`-versioned, so the identifier body is the
-/// `template_id` object rather than the generic `{uid}` of
-/// [`negotiate::prefer::write_negotiated`]; every upload outcome is `201 Created`, so
-/// the identifier variant's never-`204` rule (§"Prefer only identifier") holds
-/// trivially.
 fn upload_response(headers: &HeaderMap, location: &str, hrid: &str, source: String) -> Response {
     let applied =
         if negotiate::prefer::prefers(headers, negotiate::prefer::Preference::Representation) {

@@ -4,26 +4,9 @@
 #![expect(clippy::expect_used, reason = "test assertions/diagnostics/fixtures")]
 //! Verdict invariance across the legal canonical-JSON spelling freedoms.
 //!
-//! Canonical JSON admits several spellings of the same instance, and the
-//! conformance answer must not depend on which one a client picked. Each
-//! freedom gets its own corpus-wide property (the
-//! omitted-optional-`_type` freedom is already pinned by
-//! `untagged_nodes::corpus_verdicts_are_tag_presence_independent`):
-//!
-//! 1. **Omitted empty collections** — the canonical serializer omits empty
-//!    `Vec` fields entirely, so `"x": []` and an absent `x` decode to the
-//!    same typed instance. DELETING a present-but-empty collection member
-//!    from a VALID document must change no verdict. (The reverse direction
-//!    is deliberately NOT an invariance: several RM invariants forbid the
-//!    present-but-empty spelling itself — e.g. `EVENT_CONTEXT`
-//!    `Participations_validity`: `participations /= Void implies not
-//!    participations.is_empty` — so INSERTING `[]` legitimately creates a
-//!    violation the omitted spelling does not carry.)
-//! 2. **Number lexical forms** — the codec's tolerant read accepts an
-//!    integer token where the RM declares a Real (`78` for `78.0`), so
-//!    re-spelling every whole-valued Real leaf as an integer token must
-//!    change no verdict (this drives the fast path and the typed path over
-//!    both spellings).
+//! Deleting a present empty collection from a valid document changes no
+//! verdict, and neither does writing a whole Real as an integer token. Inserting
+//! `[]` may, since invariants such as `Participations_validity` refuse it.
 
 use openehr_sdt::rm_instance::validate_rm_and_terminology;
 use serde_json::{Number, Value};
@@ -132,12 +115,8 @@ fn integer_spelling_of_whole_reals_changes_no_verdict() {
     corpus_invariance("integerize-whole-reals", integerize_whole_reals);
 }
 
-/// The deliberate NON-invariance of the reverse collection direction, pinned
-/// so it cannot silently regress into leniency: the present-but-empty
-/// spelling of `EVENT_CONTEXT.participations` IS a violation
-/// (`Participations_validity`: `participations /= Void implies not
-/// participations.is_empty` — RM ehr §`EVENT_CONTEXT`), while the omitted
-/// spelling is clean.
+/// A present empty `EVENT_CONTEXT.participations` is a violation, the omitted
+/// spelling clean (RM ehr §`EVENT_CONTEXT` `Participations_validity`).
 #[test]
 fn present_but_empty_participations_is_a_violation_and_omitted_is_not() {
     let mut doc = serde_json::json!({

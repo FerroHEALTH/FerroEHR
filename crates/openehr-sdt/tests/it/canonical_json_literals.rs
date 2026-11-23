@@ -1,17 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Regression gate: canonical RM shapes are BUILT from the generated
-//! `openehr-*` types, never hand-written as `json!` literals.
-//!
-//! A `json!` literal carrying a `"_type"` key is, by definition, a hand-rolled
-//! canonical openEHR fragment — the scanner mechanics live in
-//! [`testkit::json_literals`] (shared by every crate's gate); this file owns
-//! ONLY this crate's adjudications (issue #1686; extended to the Simplified
-//! Formats engine by #2444, which moved here with it under #3482). To add a site, classify it and put it in [`ALLOWLIST`] with a
-//! one-line reason — every entry must name why that file's literals are NOT a
-//! synthesized canonical shape. A stale entry (allowlisted file with no
-//! remaining literals) fails too, so the list cannot rot.
+//! Canonical RM shapes are built from the generated `openehr-*` types, never
+//! written as `json!` literals; each exception is in [`ALLOWLIST`] with its
+//! reason, and a stale entry fails ([`testkit::json_literals`]).
 
 /// Files whose `_type`-carrying `json!` literals are classified as something
 /// other than a synthesized canonical shape, each with the reason.

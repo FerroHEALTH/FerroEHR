@@ -5,13 +5,6 @@
 //! Traversal of the [`crate::ast`]: a read-only [`Visit`] and a mutating
 //! [`VisitMut`], each exhaustive over every node type.
 //!
-//! Every trait method defaults to the matching `walk_*` function, which visits
-//! the node's children in source order. A visitor overrides the methods for the
-//! nodes it cares about and calls the `walk_*` function from the override when
-//! it still wants the children. The walk functions destructure every struct and
-//! match every enum without a wildcard, so a new AST field or variant fails to
-//! compile here until the traversal covers it.
-//!
 //! # Examples
 //!
 //! Collect every path compared in the WHERE clause:
@@ -50,8 +43,6 @@ use crate::ast::{
 };
 
 /// A read-only traversal of the AST, borrowing each node for `'ast`.
-///
-/// Every method defaults to its `walk_*` function; see the module docs.
 pub trait Visit<'ast> {
     /// Visits a whole query.
     fn visit_select_query(&mut self, node: &'ast SelectQuery) {
@@ -475,11 +466,6 @@ pub fn walk_aggregate_call<'ast, V: Visit<'ast> + ?Sized>(v: &mut V, node: &'ast
 }
 
 /// A mutating traversal of the AST.
-///
-/// The mirror of [`Visit`] over `&mut` nodes: an override may rewrite or
-/// replace the node it is handed (`*node = …`), and decides whether the
-/// children of the result are walked. Removing a `WHERE` condition is a
-/// rewrite of its parent: replace the `And` holding it with the other operand.
 pub trait VisitMut {
     /// Visits a whole query.
     fn visit_select_query_mut(&mut self, node: &mut SelectQuery) {

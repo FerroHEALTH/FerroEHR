@@ -34,8 +34,6 @@
 //! `FromJson` codec and the canonical-XML codec are generated over hand-written
 //! runtimes, so the spec crates carry no serde derive.
 //!
-//! # Features
-//!
 //! The default `full` feature is every surface above. The graph underneath it
 //! is layered so a consumer takes only what it reads: `json` is the canonical
 //! JSON base, `xml` adds the XML codecs and `opt14` the operational-template
@@ -81,8 +79,4 @@ pub mod wire_validate;
 pub mod xml;
 
 /// The openEHR specification version this crate implements.
-///
-/// The pin is deliberately independent of the crates.io package version,
-/// which is the crate's own `SemVer` line and moves only with this
-/// implementation's code.
 pub const SPEC_VERSION: &str = "1.1.0";

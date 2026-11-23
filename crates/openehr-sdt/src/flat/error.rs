@@ -1,12 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Errors for the Simplified Formats layer.
-//!
-//! Every MUST-level rejection in the Simplified Formats specification
-//! (`ITS-REST/docs/simplified_formats/`) has its own variant so callers can
-//! branch on the outcome without string matching; the wire layer maps these
-//! to `422`/`400` per the ITS-REST operation contracts.
+//! Errors for the Simplified Formats layer, one variant per MUST-level
+//! rejection of ITS-REST `simplified_formats/`.
 
 /// An error in Simplified-Format (FLAT / STRUCTURED / Web Template) handling.
 #[derive(Debug, thiserror::Error)]
@@ -16,9 +12,8 @@ pub enum FlatError {
     #[error("invalid operational template: {0}")]
     InvalidTemplate(String),
 
-    /// A `C_STRING` pattern of the template compiles in no regex engine (ADL 1.4
-    /// `master05-cadl.adoc` §Regular Expression), so no value could be judged
-    /// against it.
+    /// A `C_STRING` pattern that compiles in no regex engine (ADL 1.4
+    /// `master05-cadl.adoc` §Regular Expression).
     #[error("the string pattern {pattern:?} at {path} compiles in no regex engine")]
     UnevaluablePattern {
         /// The archetype path of the constrained node.
@@ -56,17 +51,12 @@ pub enum FlatError {
         reason: String,
     },
 
-    /// A path does not resolve to a node of the target Web Template
-    /// (master04 §Validation: "Field identifiers match WT metadata
-    /// structure").
+    /// A path that resolves to no Web Template node (master04 §Validation).
     #[error("unknown simplified path: {0}")]
     UnknownPath(String),
 
-    /// A value given on a node that takes no value of its own: an ELEMENT
-    /// whose `value` admits several types, or a structural node. master05
-    /// puts a value on a data value node (its per-type tables), and master04
-    /// §Validation checks that "field identifiers match WT metadata
-    /// structure", so the value is refused, never dropped.
+    /// A value on a node that takes none, such as a structural node (master04
+    /// §Validation).
     #[error(
         "{path} is a {rm_type}, which takes no value of its own{}",
         value_hint(alternatives)
@@ -93,15 +83,13 @@ pub enum FlatError {
         path: String,
     },
 
-    /// `|other` combined with `|code`/`|value`/`|terminology` on one leaf —
-    /// the combination servers MUST reject (master04 §Open Value-Sets and
-    /// the `|other` Suffix).
+    /// `|other` beside `|code`/`|value`/`|terminology` (master04 §Open
+    /// Value-Sets and the `|other` Suffix).
     #[error("|other is mutually exclusive with |code/|value/|terminology at {0}")]
     OtherSuffixConflict(String),
 
-    /// `|other` used where the value-set constraint is closed
-    /// (`listOpen: false`) — MUST be rejected (master04 §Open Value-Sets
-    /// and the `|other` Suffix).
+    /// `|other` on a closed value set (master04 §Open Value-Sets and the `|other`
+    /// Suffix).
     #[error("|other not allowed at {0}: the value set is closed")]
     OtherOnClosedValueSet(String),
 
@@ -110,9 +98,8 @@ pub enum FlatError {
     #[error("mandatory ctx field {0} is required (master04 §Context: language and territory)")]
     MissingContext(&'static str),
 
-    /// A `|code` on a closed value-set leaf names a code outside the bound
-    /// list and carries no explicit `|value` to supply the text
-    /// (master04 §Validation: "Terminology bindings are valid").
+    /// A `|code` outside a closed value set with no `|value` (master04
+    /// §Validation).
     #[error("coded value is not a member of the bound value set: '{code}' at {path}")]
     CodeNotInValueSet {
         /// The simplified path of the coded leaf.
@@ -125,15 +112,8 @@ pub enum FlatError {
     #[error("unknown context key ctx/{0}")]
     UnknownContext(String),
 
-    /// A FLAT key the RM types 1..1 is absent from the submitted document:
-    /// either a `|suffix` the master05 mapping table marks `Required: yes` —
-    /// e.g. all three of §LINK's `|type`, `|meaning` and `|target`
-    /// (`RM/docs/UML/classes/org.openehr.rm.common.link.adoc` §Attributes) —
-    /// or a `ctx/` key standing in for a mandatory attribute of the RM object
-    /// it builds, e.g. `ctx/participation_function:<i>` for
-    /// `PARTICIPATION.function`
-    /// (`RM/docs/UML/classes/org.openehr.rm.common.participation.adoc`
-    /// §Attributes).
+    /// An absent key the RM types 1..1: a master05 `Required: yes` suffix (§LINK)
+    /// or a `ctx/` key for a mandatory attribute (`ctx/participation_function:<i>`).
     #[error("{key} is required")]
     MissingRequiredSuffix {
         /// The full FLAT key the client omitted, e.g. `…/_link:0|meaning` or
@@ -141,11 +121,8 @@ pub enum FlatError {
         key: String,
     },
 
-    /// A FLAT or STRUCTURED write decomposes a value of an RM type the
-    /// Simplified Formats define no form for: ITS-REST
-    /// `simplified_formats/master05-rm_mapping.adoc` has a mapping table per
-    /// supported type (§DV_TEXT to §DV_INTERVAL) and none for `DV_STATE`.
-    /// Only the master04 §Raw canonical JSON bypass (`|raw`) carries one.
+    /// A value of an RM type master05 gives no mapping table, such as `DV_STATE`;
+    /// only `|raw` carries one.
     #[error(
         "{path} is a {rm_type}, for which the simplified formats define no form \
          (simplified_formats master05-rm_mapping has no {rm_type} table); \
@@ -158,9 +135,7 @@ pub enum FlatError {
         path: String,
     },
 
-    /// A value has the wrong JSON type or an unparsable encoding for its
-    /// slot (e.g. a non-numeric `|magnitude`, a malformed compact
-    /// participation-identifier list).
+    /// A value of the wrong JSON type or encoding for its slot.
     #[error("invalid value at {path}: {reason}")]
     InvalidValue {
         /// The simplified path of the offending value.
@@ -169,9 +144,7 @@ pub enum FlatError {
         reason: String,
     },
 
-    /// A `|raw` value carries no `_type`, so it cannot be read as an RM
-    /// object (master04 §Raw canonical JSON: "The raw JSON value must include
-    /// the `_type` property indicating the openEHR type").
+    /// A `|raw` value without `_type` (master04 §Raw canonical JSON).
     #[error("invalid |raw payload at {path}: the value must be a canonical-JSON object with _type")]
     RawWithoutType {
         /// The simplified path of the `|raw` key.
@@ -204,15 +177,11 @@ pub enum FlatError {
         source: openehr_its::json::JsonParseError,
     },
 
-    /// The input or produced structure is not the shape the converter
-    /// expects (e.g. the RM value at a template path is not the declared RM
-    /// type, or a STRUCTURED document is not a JSON object).
+    /// The input or produced structure is not the shape the converter expects.
     #[error("simplified-format conversion error: {0}")]
     Conversion(String),
 
-    /// An example COMPOSITION was asked of a template whose root is not a
-    /// COMPOSITION (an ENTRY or a SECTION, for example), which no COMPOSITION
-    /// conforms to.
+    /// An example COMPOSITION asked of a template not rooted at COMPOSITION.
     #[error(
         "the template root {root} is not a COMPOSITION, so no example COMPOSITION exists for it"
     )]
@@ -221,10 +190,8 @@ pub enum FlatError {
         root: String,
     },
 
-    /// An example party was asked of a party template that constrains no
-    /// `identities` member, while RM demographic §PARTY `Identities_valid`
-    /// requires at least one and the template names no archetype node to
-    /// make it from.
+    /// An example party asked of a template constraining no `identities` member,
+    /// which RM `Identities_valid` requires.
     #[error(
         "the {class} template constrains no PARTY_IDENTITY, so no example {class} carries the \
          identity the RM requires"
@@ -242,17 +209,13 @@ pub enum FlatError {
         root: String,
     },
 
-    /// A party (or other non-COMPOSITION root) document carries a `ctx/` key:
-    /// the `ctx/` vocabulary is the COMPOSITION context (ITS-REST
-    /// `simplified_formats/master06`), and such a root has none.
+    /// A `ctx/` key on a non-COMPOSITION document (master06).
     #[error(
         "only a COMPOSITION document takes ctx/ keys: ctx/ is the COMPOSITION context vocabulary"
     )]
     ContextOnParty,
 
-    /// A built party is not an instance of its root class; the refusal (the
-    /// typed finish's, or the strict canonical reader's for a canonical-JSON
-    /// party) is the source.
+    /// A built party that is not an instance of its root class.
     #[error("the built party does not decode as {class}")]
     PartyDecode {
         /// The party class the build targeted.

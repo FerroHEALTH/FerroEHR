@@ -27,10 +27,6 @@
 //! archetype, and deleted nodes (`occurrences {0}`, `existence {0}`) are
 //! removed.
 //!
-//! The same inputs give the same bytes: every collection is walked in input
-//! order or through a `BTreeMap`, so a product can commit the OPT and a check
-//! can regenerate it and fail on drift.
-//!
 //! # Examples
 //!
 //! ```
@@ -82,9 +78,6 @@ use crate::opt14::types::{
 use crate::xml::runtime::XmlError;
 
 /// The archetypes a template definition may name, keyed by archetype id.
-///
-/// The writer resolves every [`ArchetypeUse`] here by the exact archetype id
-/// string; it never guesses a version.
 #[derive(Debug, Clone, Default)]
 pub struct ArchetypeLibrary {
     by_id: BTreeMap<String, Archetype>,
@@ -128,9 +121,6 @@ impl FromIterator<Archetype> for ArchetypeLibrary {
 }
 
 /// A template definition: what an operational template is built from.
-///
-/// It carries the header the OPT states (`Template.xsd`
-/// `OPERATIONAL_TEMPLATE`) and the tree of archetype uses, the root first.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TemplateDefinition {
     /// The OPT `template_id`.
@@ -229,18 +219,6 @@ pub enum Narrowing {
     /// Redefines child objects of the attribute at `path` (ending in the
     /// attribute name), such as a `DV_TEXT` value narrowed to a
     /// `DV_CODED_TEXT` with a value set.
-    ///
-    /// Each object redefines the archetype child with its node id, or, when
-    /// it has none, the child without a node id of its exact reference-model
-    /// type, else the only such child its type conforms to. Its type must
-    /// conform to the redefined child's and its occurrences lie within. Over
-    /// a complex child its attributes overlay the child's: an attribute the
-    /// child constrains is narrowed the same way (existence, cardinality,
-    /// children), an attribute at existence `{0}` is removed, and the child's
-    /// other attributes are kept. An object at occurrences `{0}` removes the
-    /// child. When any object has no node id, the objects without one are the
-    /// attribute's whole set of alternatives, and the archetype's other
-    /// alternatives are removed.
     Redefine {
         /// The attribute's path.
         path: String,
@@ -254,10 +232,6 @@ pub enum Narrowing {
 
 /// One copy of an archetype node that may occur more than once, placed after
 /// the node and the copies before it.
-///
-/// The copy starts from the archetype's node as it stands before the
-/// template's other narrowings and keeps its node id; the node itself stays
-/// unless a narrowing excludes it, in which case the copies take its place.
 #[derive(Debug, Clone, PartialEq)]
 pub struct NodeClone {
     /// The path of the object node cloned, ending in its node id.
@@ -496,13 +470,6 @@ pub enum WriteError {
 }
 
 /// Builds the operational template of `definition` over `library`.
-///
-/// The root archetype becomes the OPT `definition`, a `C_ARCHETYPE_ROOT`
-/// carrying the template id; every filler becomes a `C_ARCHETYPE_ROOT` placed
-/// directly after its slot, or in the open attribute it names. Each root carries its archetype's term
-/// definitions in the template language and its term bindings, and
-/// `component_ontologies` carries every constituent's whole ontology, once
-/// per archetype id, in first-use order.
 ///
 /// # Errors
 ///

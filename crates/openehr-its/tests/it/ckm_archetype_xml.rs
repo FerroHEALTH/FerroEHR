@@ -31,10 +31,6 @@ use openehr_its::opt14::types::Archetype;
 /// here is a NEGATIVE test: the gate asserts the read still fails, so a
 /// loosened codec cannot hide behind the entry.
 ///
-/// The entries are two defects in CKM's XML exporter. The first four are the
-/// SAME one, and the evidence is CKM contradicting itself: the export names
-/// `xsi:type="C_DV_SCALE"` on a `C_OBJECT`, but
-///
 /// * no vendored openEHR schema declares that type — it is absent from every
 ///   `OpenehrProfile.xsd` we vendor (ITS-XML 1.0.2 `ALL/` and ITS-XML 2.0.0
 ///   `AM/Release-1.4/`), both of which DO
@@ -42,11 +38,6 @@ use openehr_its::opt14::types::Archetype;
 /// * CKM's own ADL 1.4 export of the same archetype contains no `DV_SCALE` or
 ///   `C_DV_SCALE` anywhere, so the constraint is expressed differently in the
 ///   text serialization — the XML exporter introduces the type on its own.
-///
-/// An `xsi:type` naming a type the schema does not declare makes the document
-/// schema-invalid, so refusing it is correct: accepting an undeclared
-/// constrainer would silently fork the AM model. Recorded as a defect in the
-/// vendored data, NOT as a codec gap — nothing here asks for a codegen change.
 ///
 /// The other seven came with the 2026-11-12 re-vendoring: where the ADL 1.4
 /// source constrains a duration to one value (`value matches {PT1M}`), CKM's

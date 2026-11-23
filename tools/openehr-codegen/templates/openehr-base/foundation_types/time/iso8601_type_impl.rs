@@ -2,29 +2,14 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written `Iso8601_type` spec behaviour — the two abstract functions the
-//! class declares, dispatched over its descendants.
-//!
-//! Spec: `BASE/docs/UML/classes/org.openehr.base.foundation_types.iso8601_type.adoc`
-//! §Functions — `is_partial` ("True if this date time is partial, i.e. if
-//! trailing end (right hand) value(s) is/are missing") and `is_extended`
-//! ("True if this ISO8601 string is in the 'extended' form, i.e. uses `'-'`
-//! and / or `':'` separators. This is the preferred format"), both `(abstract)`
-//! and effected by every descendant, whose own definition is the one this
-//! dispatcher calls.
+//! The abstract `Iso8601_type` functions `is_partial` and `is_extended`,
+//! dispatched over its descendants (`iso8601_type.adoc` §Functions).
 
 use super::iso8601_type::Iso8601Type;
 
 impl Iso8601Type {
-    /// `Iso8601_type.is_partial` (abstract): "True if this date time is
-    /// partial, i.e. if trailing end (right hand) value(s) is/are missing"
-    /// (class doc §Functions), answered by the descendant this value carries.
-    ///
-    /// `Iso8601_duration` effects it as "Returns False"
-    /// (`…iso8601_duration.adoc` §Functions); the `Option` its accessor adds is
-    /// this crate's honest-absence answer for a value that does not parse, and
-    /// this function is `1..1`, so an undecidable duration takes the effected
-    /// constant.
+    /// `Iso8601_type.is_partial` of the carried descendant; an unparseable
+    /// duration answers its effected "Returns False".
     #[must_use]
     pub fn is_partial(&self) -> bool {
         match self {
@@ -36,14 +21,8 @@ impl Iso8601Type {
         }
     }
 
-    /// `Iso8601_type.is_extended` (abstract): "True if this ISO8601 string is
-    /// in the 'extended' form, i.e. uses `'-'` and / or `':'` separators"
-    /// (class doc §Functions), answered by the descendant this value carries.
-    ///
-    /// `Iso8601_duration` effects it as "Returns True"
-    /// (`…iso8601_duration.adoc` §Functions) — a duration has no compact form —
-    /// so an undecidable duration takes that effected constant, as under
-    /// [`Self::is_partial`].
+    /// `Iso8601_type.is_extended` of the carried descendant; an unparseable
+    /// duration answers its effected "Returns True".
     #[must_use]
     pub fn is_extended(&self) -> bool {
         match self {

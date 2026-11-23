@@ -50,8 +50,6 @@ pub(crate) fn canonical_key(id: &str) -> String {
 /// trailing `.v<major>[.<minor>[.<patch>]]` segment, or `None` when the id
 /// carries no such suffix.
 ///
-/// # Spec basis
-///
 /// ADL 1.4 has no formal template-version field — the CNF schedule states
 /// "versioning is not applicable for ADL 1.4"
 /// (`docs/specs/openehr/CNF/docs/platform_test_schedule/master04-func_tc_definition_adl.adoc`

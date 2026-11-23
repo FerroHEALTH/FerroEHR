@@ -5,14 +5,9 @@
 //! save it as a stored query (FerroUI `design/consoles/ferroehr/`, pages 18.8
 //! to 18.18).
 //!
-//! Build keeps the whole query in its form: the template, what it returns,
-//! the data points (a repeater), the condition groups (E6) and the order and
-//! limit. Every control posts as it stands and every add or remove is a
-//! submit naming what it acts on, so the builder works with no WebAssembly;
-//! the server reads the form, applies the step, and draws the page again
-//! with the AQL the builder lowers to ([`crate::builder::lower`]). The AQL
-//! tab is the code editor (B2) with the grammar check beside it and the
-//! parameters a run binds. Open in AQL and Open in Build carry the query
+//! Build keeps the whole query in its form, so every step is a post the server
+//! answers with the page drawn again and the AQL it lowers to
+//! ([`crate::builder::lower`]). Open in AQL and Open in Build carry the query
 //! across ([`crate::builder::lift`]). No openEHR spec governs the viewer's
 //! pages: our own design; the queries are openEHR AQL.
 

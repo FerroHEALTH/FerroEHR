@@ -257,9 +257,6 @@ pub struct Summary {
 }
 
 /// The binding outcome of one access record, with the fields it needs.
-///
-/// Its JSON form is the one the access-log entry keeps among its details
-/// (`crate::access_log::details`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BindingRecord {

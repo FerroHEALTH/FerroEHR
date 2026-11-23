@@ -52,14 +52,9 @@ pub struct EhrRow {
 pub struct AuditRow {
     /// The row id.
     pub id: Uuid,
-    /// `AUDIT_DETAILS.time_committed` as an RFC 3339 instant — `jiff`'s own
-    /// rendering of the stored `timestamptz`, so the export can parse it back
-    /// losslessly when it reassembles the version's `commit_audit`
-    /// (RM common master04 §Audit Details). `PostgreSQL`'s `timestamptz` input
-    /// accepts this form and the older `::text` rendering alike
-    /// (<https://www.postgresql.org/docs/18/datatype-datetime.html>
-    /// §Date/Time Input), so archives written before this projection still
-    /// load.
+    /// `AUDIT_DETAILS.time_committed` as an RFC 3339 instant, `jiff`'s
+    /// rendering of the stored `timestamptz`, which the export parses back
+    /// losslessly (RM common master04 §Audit Details).
     pub time_committed: String,
     /// `AUDIT_DETAILS.system_id`.
     pub system_id: String,

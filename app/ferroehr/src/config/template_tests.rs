@@ -85,11 +85,6 @@ fn template_values(key: &str) -> impl Iterator<Item = &'static str> + '_ {
 }
 
 /// Every field the default config SERIALIZES must be a key in the template.
-///
-/// Total for concrete fields and needs no hand-maintained list: it walks the
-/// serialized default, so a newly added field is covered the moment it
-/// exists. `Option::None` fields serialize away and are covered by
-/// [`template_declares_every_optional_oidc_field`] instead.
 #[test]
 fn template_declares_every_serialized_field() {
     fn walk(value: &serde_json::Value, missing: &mut Vec<String>) {
@@ -154,10 +149,6 @@ fn accepted_fields<T: serde::de::DeserializeOwned>(section: &str) -> Vec<String>
 /// Optional fields serialize away when `None`, so the walk above cannot see
 /// them, which is the class an operator can least afford to have
 /// undeclared.
-///
-/// Covered here are the sections carrying secret or file-indirection keys,
-/// where an undiscoverable key costs an operator most. Adding another
-/// section is one line, because the field list comes from serde.
 #[test]
 fn template_declares_every_optional_field_of_the_secret_bearing_sections() {
     let sections = [

@@ -27,10 +27,6 @@ use ferroehr::service::query::request::AqlQueryRequest;
 use crate::fixtures::uv;
 
 /// The shared minimal valid RM COMPOSITION, carrying the given `content` list.
-///
-/// The generation delta these tests probe lives entirely in `content`, so the
-/// suite adds it to the shared fixture rather than restating the mandatory
-/// attributes.
 fn composition(name: &str, content: &Value) -> Value {
     let mut composition = crate::fixtures::composition(name);
     composition["content"] = content.clone();
@@ -372,12 +368,6 @@ fn archive_dir() -> String {
 /// The stamp survives the ADMIN dump/load round trip: a development-only body
 /// exported from one repository and loaded into a fresh one is still refused
 /// under `stable` there, and still served under `development`.
-///
-/// Dump/load is the one path that reconstructs a version in a database that
-/// never saw the commit (`export_ehrs`/`load_ehrs`), so it is
-/// where an inherited `stable_compatible = true` would be a claim nothing made:
-/// the loaded rows must never read as compatible with a generation set that
-/// cannot express them.
 #[tokio::test]
 async fn dump_and_load_into_a_fresh_repository_preserve_the_stamp() {
     let source_db = testkit::db().await.expect("testkit database");

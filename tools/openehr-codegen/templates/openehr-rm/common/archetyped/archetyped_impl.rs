@@ -2,11 +2,8 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM class invariant for `ARCHETYPED`.
-//!
-//! `Rm_version_valid` (`not rm_version.is_empty`) —
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.archetyped.adoc`
-//! §Invariants.
+//! `ARCHETYPED.Rm_version_valid` (`org.openehr.rm.common.archetyped.adoc`
+//! §Invariants).
 
 use crate::v1_2::common::archetyped::archetyped::Archetyped;
 use openehr_base::validate::{InvariantViolation, Validate};

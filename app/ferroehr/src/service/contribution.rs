@@ -68,9 +68,6 @@ fn domain_pool(cx: &FerroEhrService, party_only: bool) -> &sqlx::PgPool {
 /// object kind from the payload `_type` (create) or the stored object
 /// (modify/delete).
 ///
-/// The target EHR must exist before committing, so a create-only
-/// CONTRIBUTION to a missing EHR is a clean `NotFound`, not a storage FK error.
-///
 /// # Errors
 /// [`ServiceError::NotFound`] for a missing target EHR; the `classify` in [`crate::versioning::contribution`]
 /// rejections per version; [`ServiceError::Unprocessable`] for a malformed
@@ -237,9 +234,6 @@ struct ContributionWrite<'a> {
 
 /// Writes the resolved change set in one transaction, with the cross-area
 /// commit hooks around it.
-///
-/// This is the single site of truth for the CONTRIBUTION path; the direct
-/// create/update paths run the same hooks inline on their own write flow.
 ///
 /// # Errors
 /// The `VERSIONED_COMPOSITION` cross-version rejections (RM ehr

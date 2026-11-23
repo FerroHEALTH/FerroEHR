@@ -4,16 +4,6 @@
 //! The recorder of the replayed CDR (`tests/fixtures/cdr/`), driven by
 //! `scripts/viewer-record.sh`.
 //!
-//! With `FERROEHR_VIEWER_RECORD_CDR` and `FERROEHR_VIEWER_RECORD_DIR` set,
-//! every `ssr_app` test draws its screens over a live FerroEHR: the replayed
-//! CDR becomes a proxy that answers a test's stubs first, forwards every
-//! other request, answers with exactly the fields a recording keeps, and
-//! appends the exchange to a file of the test's own. The ignored
-//! [`write_the_recording`] then merges those files into `recording.json`
-//! and `manifest.json`, in one order whatever order the tests ran in, with
-//! every id and every instant the run stamped replaced by a stand-in, so a
-//! second recording of the same screens writes the same bytes.
-//!
 //! No openEHR specification governs the viewer's test fixtures: our own
 //! design.
 
@@ -83,9 +73,6 @@ impl Recording {
 }
 
 /// Starts the recording proxy over `stubs` and returns its base URL.
-///
-/// `stub_answer` picks the stub that answers a request, by the replay's own
-/// rules; a stub is answered and never recorded.
 pub(crate) async fn proxy(
     recording: Recording,
     stubs: Arc<[Value]>,
@@ -195,14 +182,8 @@ pub(crate) fn respond(exchange: &Value) -> http::Response<axum::body::Body> {
 
 /// Merges a recording run into `tests/fixtures/cdr/`.
 ///
-/// The exchanges are read test by test in name order, the first of each
-/// method, path, body and status is kept, and the kept ones are ordered by
-/// path, method, body and status. Every UUID becomes a stand-in numbered by
-/// first appearance, as does every base64 SHA-256 digest (a version
-/// signature). An instant the seed stamped (between `started` and `seeded`,
-/// which the recorder writes around its seed) becomes a stand-in a second
-/// after the one before; one the reads stamped (an answer's creation time,
-/// whose order depends on the tests' schedule) becomes one stand-in.
+/// Every UUID, digest and run instant becomes a numbered stand-in, so a second
+/// recording of the same screens writes the same bytes.
 #[tokio::test]
 #[ignore = "the recorder's last step: scripts/viewer-record.sh runs it after a recording run"]
 async fn write_the_recording() {

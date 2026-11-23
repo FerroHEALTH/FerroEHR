@@ -3,10 +3,6 @@
 
 //! The status document in its public and full forms.
 //!
-//! The public `/rest/status` summary is mounted outside the authentication
-//! layer; the full document is served by the management surface behind its
-//! access gate (`/management/status`).
-//!
 //! NOTE: no openEHR spec governs an operational status or health endpoint —
 //! our own operational surface. Health is a separate contract with its own
 //! clients and lives entirely in the process-root family (`/health`,

@@ -96,11 +96,8 @@ impl<'a> LabelError<'a, &'a [Token], DefaultExpected<'a, Token>> for Failure {
         self.preferred(Self::Syntax(span))
     }
 
-    // A REPLACE keeps a typed uniqueness violation (it always carries more
-    // information) but must actually replace a plain syntax conflict —
-    // chumsky has already decided the new position supersedes the old one,
-    // and keeping the stale span would pin every report to the first
-    // backtracked branch failure.
+    // A REPLACE keeps a typed uniqueness violation but replaces a plain syntax
+    // conflict, so reports never pin the first backtracked branch failure.
     fn replace_expected_found<E: IntoIterator<Item = DefaultExpected<'a, Token>>>(
         self,
         _expected: E,
@@ -244,13 +241,8 @@ fn keyed_objects<'a>(
     block: impl Parser<'a, &'a [Token], OdinValue, Err<'a>> + Clone + 'a,
 ) -> impl Parser<'a, &'a [Token], OdinValue, Err<'a>> + Clone {
     let key_id = key_id();
-    // Sibling keys must be unique — rule *VDOBU*
-    // (`LANG/docs/odin/master05-content` §Container Objects: "object
-    // identifier uniqueness: sibling objects occurring within a container
-    // attribute must be uniquely identified with respect to each other").
-    // Keys compare as their typed values, so `[01]` duplicates `[1]`. A
-    // repeat is a typed [`Failure::DuplicateKey`], never a silent
-    // last-one-wins overwrite.
+    // Sibling keys are unique as typed values, so `[01]` duplicates `[1]` (rule
+    // VDOBU, `LANG/docs/odin/master05-content` §Container Objects).
     just(Token::LBracket)
         .ignore_then(key_id)
         .then_ignore(just(Token::RBracket))
@@ -336,12 +328,9 @@ fn object_block<'a>() -> impl Parser<'a, &'a [Token], OdinValue, Err<'a>> + Clon
 
         // object_reference_block : odin_path ( (',' odin_path)+ | '...' )?
         //
-        // A reference path may be rooted at an object identifier —
-        // `<["tourism_db_13"]/hotels["sofitel"]>` — for references across the
-        // identified objects of one document
-        // (`LANG/docs/odin/master06-references` §Across Objects; the vendored
-        // `odin.g4` `odin_path` lacks the form, and the docs text wins). The
-        // key is reconstructed verbatim into the path text.
+        // A path may be rooted at an object identifier
+        // (`LANG/docs/odin/master06-references` §Across Objects; the docs text
+        // wins over `odin.g4`).
         let bare_path =
             select! { Token::AdlPath(s) => s }.or(just(Token::SymSlash).to("/".to_owned()));
         let path = key_id()
@@ -373,17 +362,12 @@ fn object_block<'a>() -> impl Parser<'a, &'a [Token], OdinValue, Err<'a>> + Clon
                 OdinValue::PathList(v)
             });
 
-        // `<...>` — an empty section / void object, legal at any level.
-        // `AM/docs/ADL1.4/master04-dadl` §Empty Sections: "Empty sections are
-        // allowed at both internal and leaf node levels … Nested empty
-        // sections can be used", with the principle "Empty sections can appear
-        // anywhere"; `LANG/docs/odin/master05-content` §Void Objects: "A void
-        // object, i.e. an object attribute that has no value is allowed in an
-        // ODIN text, but ignored by parsers."
+        // `<...>` is an empty section or void object, legal at any level
+        // (`AM/docs/ADL1.4/master04-dadl` §Empty Sections,
+        // `LANG/docs/odin/master05-content` §Void Objects).
         //
-        // NOTE: it maps to [`OdinValue::Empty`], the same value as `<>` — both
-        // spec passages define the construct as "this attribute exists and has
-        // no data", so no consumer can act on the distinction.
+        // NOTE: both passages define it as an attribute with no data, so it is
+        // [`OdinValue::Empty`] like `<>`.
         let void = just(Token::SymListContinue).to(OdinValue::Empty);
 
         let inner = choice((
@@ -415,13 +399,9 @@ fn object_block<'a>() -> impl Parser<'a, &'a [Token], OdinValue, Err<'a>> + Clon
 
         let uri = select! { Token::EmbeddedUri(s) => OdinValue::Uri(s) };
 
-        // `attr_name = (syntax) <# … #>` — a plug-in-syntax object block
-        // (`LANG/docs/odin/master09-plug_in_syntaxes`: "Plug-in syntaxes are
-        // indicated in ODIN … by the use of the syntax type in parentheses
-        // preceding the `<>` block. For a plug-in section, the `<>` delimiters
-        // are modified to `<# #>`"). The general form makes the `(syntax)` tag
-        // part of the construct, so a bare `<# … #>` with no tag stays a parse
-        // error. The tag is an ordinary identifier and the body is handed over
+        // `attr_name = (syntax) <# … #>`, a plug-in-syntax block whose
+        // `(syntax)` tag is required
+        // (`LANG/docs/odin/master09-plug_in_syntaxes`); the body is handed over
         // verbatim.
         let plug_in_tag = select! {
             Token::AlphaLcId(s) => s,
@@ -510,16 +490,9 @@ fn primitive_object<'a>() -> impl Parser<'a, &'a [Token], OdinValue, Err<'a>> + 
     // `|0..5|, ...`).
     let item = choice((interval_value(leaf.clone()), leaf));
 
-    // primitive_value | primitive_list_value | *_interval_list_value: a single
-    // item (scalar), or a comma-separated list, optionally left open with a
-    // trailing `, ...`. Per `master07` §"Lists of Built-in Types" `...` is the
-    // open-list continuation marker; the general `v (',' v)* (',' '...')?`
-    // accepted here is a strict superset of `odin_values.g4`'s encoding that
-    // additionally admits the open multi-datum list the prose describes. Lists
-    // are HOMOGENEOUS ("items, all of the same type"), so a kind mismatch is a
-    // typed refusal at the offending item, compared at the value-variant level.
-    // NOTE: an interval item's ENDPOINT type is not re-checked here — the
-    // per-type interval productions already pin each interval's own endpoints.
+    // A scalar, or a homogeneous comma-separated list optionally left open with
+    // `, ...` (`master07` §Lists of Built-in Types), a superset of
+    // `odin_values.g4`; per-type interval productions pin interval endpoints.
     item.clone()
         .map_with(|value, e| (value, e.span()))
         .then(
@@ -557,14 +530,9 @@ fn primitive_object<'a>() -> impl Parser<'a, &'a [Token], OdinValue, Err<'a>> + 
 fn interval_value<'a>(
     leaf: impl Parser<'a, &'a [Token], OdinValue, Err<'a>> + Clone + 'a,
 ) -> impl Parser<'a, &'a [Token], OdinValue, Err<'a>> + Clone {
-    // An interval endpoint: a leaf value, or one of the unbounded markers
-    // `infinity` / `-infinity` / `*` (`AM/docs/ADL1.4/master04-dadl`
-    // §Intervals of Ordered Primitive Types — its own example `|0..infinity|`
-    // is glossed "0 - infinity (i.e. >= 0)"). An unbounded marker yields
-    // `None`, the representation this crate already uses for the open side of
-    // a one-sided interval; the sign carried by `-infinity` is not recorded
-    // separately because the side of the interval the endpoint sits on already
-    // determines the direction.
+    // An interval endpoint: a leaf value, or the unbounded `infinity`,
+    // `-infinity` or `*` read as `None` (`AM/docs/ADL1.4/master04-dadl`
+    // §Intervals of Ordered Primitive Types).
     let unbounded = choice((
         just(Token::SymMinus)
             .or_not()
@@ -736,10 +704,6 @@ fn integer_lexeme(s: &str) -> Option<i64> {
 }
 
 /// Strip the surrounding double quotes and decode `master03` escapes.
-///
-/// The lexer (`validate_string`) has already run
-/// [`crate::v1_1::escape::validate`] over the same text, so the decode cannot fail
-/// here.
 #[expect(
     clippy::expect_used,
     reason = "`Token::String` only exists when the lexer's validate_string ran crate::v1_1::escape::validate over the same body and it succeeded, so this decode of that body cannot fail"
@@ -750,10 +714,6 @@ fn decode_string(raw: &str) -> String {
 }
 
 /// Decode a single-quoted `CHARACTER` literal to its `char`.
-///
-/// The lexer (`validate_char`) admits only the six quoted forms in a character
-/// literal, so the decode cannot fail here, and its token regex admits exactly
-/// one body character, so the decoded literal is never empty.
 #[expect(
     clippy::expect_used,
     reason = "`Token::Character` only exists when the lexer's validate_char admitted the body, which restricts an escape to the six quoted forms none of which can fail to decode; the same token regex admits one body character or one two-character escape, each decoding to exactly one char, so the literal is never empty"

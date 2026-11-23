@@ -15,17 +15,6 @@
 //! gap (`EVENT_CONTEXT.setting` had zero wire exercise until the TERM
 //! program added it, and the escape behind it survived precisely because
 //! nothing measured reach).
-//!
-//! The slot inventory is DERIVED (`openehr_rm::v1_2::model::classes()` ×
-//! `validate::terminology::slots_for`), never a second hand list; the total is
-//! pinned so an arm for a type outside the static model cannot vanish
-//! silently. The invariant-core dimension (the generated cores in
-//! `openehr_rm::v1_2::validate::generated`) is deliberately OUT of constructive
-//! scope: cores are arbitrary predicates whose violating instances are not
-//! mechanically derivable from the model — their reach is carried by the
-//! fast-vs-typed corpus equivalence battery and the per-invariant unit tests
-//! beside each `*_impl.rs`, and the boundary is recorded here rather than
-//! silently skipped.
 
 use openehr_rm::v1_2::validate::terminology::{
     Binding, CodeSet, Group, Slot, slot_is_violated, slots_for,
@@ -97,13 +86,9 @@ fn all_slots() -> Vec<(&'static str, &'static Slot)> {
 #[test]
 fn every_terminology_slot_detects_a_violation_and_passes_its_valid_twin() {
     let slots = all_slots();
-    // The pinned table size: an arm can only leave this table together with a
-    // deliberate register/test change, never silently. (Types outside the
-    // static model would silently drop out of `all_slots` — the pin catches
-    // that shrinkage too; every match arm of `slots_for` names a static-model
-    // class.) 56 since ATTESTATION gained the `change_type` slot it inherits
-    // from AUDIT_DETAILS: the table is keyed on the exact wire `_type`, so an
-    // ancestor's slot reaches a descendant only by being repeated.
+    // Pins the table size, so an arm leaves only with a deliberate change;
+    // keyed on the exact wire `_type`, an inherited slot is repeated per
+    // descendant.
     assert_eq!(
         slots.len(),
         56,

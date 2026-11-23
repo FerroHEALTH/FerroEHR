@@ -2,43 +2,15 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM/BASE class invariants + accessor functions for
-//! `VERSION_TREE_ID`.
+//! Invariants and accessors for `VERSION_TREE_ID` (BASE 1.3.0
+//! `org.openehr.base.base_types.version_tree_id.adoc`):
+//! `trunk_version [ '.' branch_number '.' branch_version ]`.
 //!
-//! Spec: BASE 1.3.0
-//! `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.version_tree_id.adoc`.
-//! Lexical form: `trunk_version [ '.' branch_number '.' branch_version ]`.
-//!
-//! Invariants — the SEVEN entries the class table declares under §Invariants,
-//! each realized under its own name so a violation report names the rule it
-//! breaks:
-//! - `Value_valid`: `not value.is_empty` — checked.
-//! - `Trunk_version_valid`: `trunk_version /= Void and then
-//!   trunk_version.is_integer and then trunk_version.as_integer >= 1` —
-//!   checked.
-//! - `Branch_number_valid`: `branch_number /= Void implies
-//!   branch_number.is_integer and then branch_number.as_integer >= 1` —
-//!   checked.
-//! - `Branch_version_valid`: the same rule for `branch_version` — checked.
-//! - `Branch_validity`: `(branch_number = Void and branch_version = Void) xor
-//!   (branch_number /= Void and branch_version /= Void)` — structurally
-//!   satisfied, never checked: both accessors are DERIVED from the same
-//!   three-part decomposition of `value`, so each is `Some` exactly when the
-//!   other is.
-//! - `Is_branch_validity`: `is_branch xor branch_number = Void` — structurally
-//!   satisfied for the same reason (`is_branch` is `parts = 3`, which is also
-//!   the condition under which `branch_number` is `Some`).
-//! - `Is_first_validity`: `not is_first xor trunk_version.is_equal("1")` —
-//!   structurally satisfied: `is_first` is DERIVED as
-//!   `trunk_version() == "1"`, so the equivalence holds by construction.
-//!
-//! Plus `Value_lexical_form_valid`, our own name: a `value` that is not the
-//! `version_tree_id` production at all satisfies every invariant above
-//! vacuously — the accessors read `Void` — yet is not a legal identifier. BASE
-//! `master05-identification_package.adoc` §Syntaxes gives the production.
-//!
-//! Accessor functions (`trunk_version`, `is_branch`, `is_first`,
-//! `branch_number`, `branch_version`) decompose the `value` string.
+//! `Value_valid`, `Trunk_version_valid`, `Branch_number_valid` and
+//! `Branch_version_valid` are checked; `Branch_validity`,
+//! `Is_branch_validity` and `Is_first_validity` hold by construction, since the
+//! accessors derive from one decomposition. `Value_lexical_form_valid` is our
+//! own name for the master05 §Syntaxes production.
 
 use super::lexical::{IdError, is_positive_int};
 use super::version_tree_id::VersionTreeId;
@@ -109,15 +81,8 @@ impl VersionTreeId {
 }
 
 impl VersionTreeId {
-    /// Build a `VERSION_TREE_ID` from its string form, validating the BASE
-    /// `master05-identification_package.adoc` §Syntaxes production
-    /// `version_tree_id = trunk_version, [ '.', branch_number, '.',
-    /// branch_version ]` with every part starting at 1 (RM common
+    /// Builds a `VERSION_TREE_ID`, each part at least 1 (master05 §Syntaxes; RM
     /// `master06-change_control_package.adoc` §"The 'Virtual Version Tree'").
-    ///
-    /// This is the **only** construction door: the generated `value` field is
-    /// `pub(crate)`, so no consumer outside this crate can hold a
-    /// `VERSION_TREE_ID` that is not a legal version-tree identifier.
     ///
     /// # Errors
     /// [`IdError::Empty`] for an empty value; [`IdError::VersionTree`] for
@@ -178,9 +143,7 @@ impl Validate for VersionTreeId {
             return;
         }
         let parts: Vec<&str> = self.value.split('.').collect();
-        // The lexical production first: outside it the accessors read `Void`
-        // and every declared invariant would hold vacuously (see the module
-        // docs — our own name, no openEHR spec names this rule).
+        // Outside the production every declared invariant holds vacuously.
         if !matches!(parts.len(), 1 | 3) {
             out.push(failed("Value_lexical_form_valid"));
             return;
@@ -189,18 +152,14 @@ impl Validate for VersionTreeId {
         if !is_positive_int(self.trunk_version()) {
             out.push(failed("Trunk_version_valid"));
         }
-        // `Branch_number_valid` / `Branch_version_valid` — each, WHEN PRESENT,
-        // is an integer >= 1 (both are Void on a trunk identifier, where the
-        // implication holds vacuously).
+        // Each, when present, is an integer >= 1.
         if self.branch_number().is_some_and(|b| !is_positive_int(b)) {
             out.push(failed("Branch_number_valid"));
         }
         if self.branch_version().is_some_and(|v| !is_positive_int(v)) {
             out.push(failed("Branch_version_valid"));
         }
-        // `Branch_validity`, `Is_branch_validity` and `Is_first_validity` are
-        // structurally satisfied by the derived accessors (module docs), so
-        // they have no runtime check to fail.
+        // The other three hold by construction.
     }
 }
 
@@ -232,9 +191,7 @@ mod tests {
         );
     }
 
-    /// Every malformed value names the BASE §Invariants entry it breaks — the
-    /// point of the per-invariant realization: a report says WHICH rule failed,
-    /// not merely that the string was rejected.
+    /// Every malformed value names the invariant it breaks.
     #[test]
     fn malformed_values_name_the_invariant_they_break() {
         for (bad, invariant) in [
@@ -271,21 +228,13 @@ mod tests {
             ),
             "a non-numeric single part breaks Trunk_version_valid"
         );
-        // The accepting twins stay silent. `01` is among them: master05
-        // §Syntaxes gives `trunk_version = number` and `number = digit,
-        // { digit }`, and `Trunk_version_valid` bounds the VALUE (`>= 1`), not
-        // the spelling — so a foreign system's zero-padded id is legal and must
-        // round-trip.
+        // `01` is legal: `Trunk_version_valid` bounds the value, not the spelling.
         for good in ["1", "42", "1.2.3", "10.9.8", "01", "1.02.3", "007"] {
             assert!(vtid(good).is_empty(), "{good:?} is a legal VERSION_TREE_ID");
         }
     }
 
-    /// The three structurally-satisfied invariants (`Branch_validity`,
-    /// `Is_branch_validity`, `Is_first_validity`) can never be reported,
-    /// because the accessors they relate are derived from one decomposition —
-    /// pinned so a future accessor change that breaks the derivation shows up
-    /// here rather than as a silent unreported violation.
+    /// The three invariants that hold by construction are never reported.
     #[test]
     fn the_derived_invariants_hold_by_construction() {
         for value in ["1", "7", "1.1.1", "2.3.3"] {

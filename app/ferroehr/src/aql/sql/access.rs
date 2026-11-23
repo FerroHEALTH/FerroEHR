@@ -206,12 +206,11 @@ fn admits_every_known(condition: &ConditionGroups) -> bool {
 /// know: the condition [`by_settings`] renders when every known class, the
 /// closed verdict and the default admit every item, rewritten exactly.
 ///
-/// The EHRs of an unknown class are read by one uncorrelated subquery,
-/// which PostgreSQL hashes once per execution, where `by_settings` probed
-/// the settings row once per candidate row. A row of such an EHR fails the
+/// The EHRs of an unknown class are read by one uncorrelated subquery, which
+/// PostgreSQL hashes once per execution. A row of such an EHR fails the
 /// statement as `by_settings` does ([`unknown_class`]). A row with no EHR, a
-/// party's head, has no settings row and is admitted, as the default admits
-/// it. No openEHR spec governs this: our own design (#5782).
+/// party's head, has no settings row and is admitted, as the default admits it.
+/// No openEHR spec governs this: our own design (#5782).
 fn class_known(condition: &ConditionGroups, target: Expr) -> Expr {
     Expr::cust_with_exprs(
         "CASE WHEN COALESCE($1 NOT IN (SELECT access_unknown.ehr_id \
@@ -341,10 +340,9 @@ pub(super) fn settled(condition: &AccessCondition, target: Expr) -> Expr {
 ///
 /// One scalar probe of the settings row by its key decides each: it answers
 /// `with` (an unknown `with` is false) when the row exists and NULL when it
-/// does not, which `default` then replaces. An `EXISTS` beside a `NOT
-/// EXISTS` under an `OR` was planned as two hashed `SubPlans` over every
-/// settings row before the first row came back (#5701). No openEHR spec
-/// governs this: our own design.
+/// does not, which `default` then replaces. An `EXISTS` beside a `NOT EXISTS`
+/// under an `OR` would plan two hashed `SubPlans` over every settings row
+/// (#5701). No openEHR spec governs this: our own design.
 fn by_settings(
     condition: &ConditionGroups,
     target: Expr,
@@ -553,9 +551,8 @@ fn template_in(h: &str, templates: &[String]) -> Expr {
 /// `archetypes`; a head with no content is of none.
 ///
 /// The head row carries the root archetype (#5782), so this compares a column
-/// of the row the query already joined, where a probe of the root node row by
-/// its key cost about four buffers per candidate row and clause. No openEHR
-/// spec governs this: our own design.
+/// of the row the query already joined. No openEHR spec governs this: our own
+/// design.
 fn archetype_in(h: &str, archetypes: &[String]) -> Expr {
     if archetypes.is_empty() {
         return Expr::val(false);

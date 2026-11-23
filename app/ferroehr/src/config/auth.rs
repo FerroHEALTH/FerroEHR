@@ -112,10 +112,6 @@ pub fn audience_bases(root: Option<&PublicRoot>, api_base_path: &str) -> Vec<Str
 /// Resolves `[auth]` for a reader that classifies no token, each issuer
 /// that names no audience resolved for `bases` ([`audience_bases`]).
 ///
-/// The boot checks, the party mapping and the federation trust read the
-/// issuers and the Basic store; a standing question asked of the result fails
-/// ([`Unasked`]).
-///
 /// # Errors
 /// [`AuthConfigError::Section`] when the crate refuses the section.
 pub fn resolve(section: &AuthSection, bases: &[String]) -> Result<Resolved, AuthConfigError> {

@@ -2,44 +2,15 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! The **terminology-backed RM class invariants**.
+//! The terminology-backed RM class invariants.
 //!
-//! These are the RM invariants whose
-//! evaluation needs a terminology-group or code-set membership lookup, which
-//! the generated invariant cores cannot express mechanically (the BMM
-//! assertion dialect calls out to `terminology (…)` / `code_set (…)`).
+//! openEHR group membership (`has_code_for_group_id`, `terminology_id =
+//! "openehr"` only) and code-set membership (`code_set (id).has_code`), against
+//! [`openehr_term::bundle`] (TERM 3.1.0).
 //!
-//! Two families of terminology binding are enforced, both properties of the RM
-//! instance value alone (independent of any archetype / template):
-//!
-//! 1. **openEHR terminology *group* codes** (`has_code_for_group_id`) — the
-//!    `defining_code` of a coded slot must be a member of the openEHR group
-//!    fixed by the owning RM type. These carry `terminology_id = "openehr"`; a
-//!    non-`openehr` terminology binding is out of scope for the openEHR-group
-//!    check and is skipped (matching `terminology (Terminology_id_openehr)…`).
-//! 2. **openEHR / ISO / IANA code-set codes** (`code_set (id).has_code`) — a
-//!    `CODE_PHRASE` (or bare code) whose code value must be a member of the
-//!    external or internal code set fixed by the invariant. The RM invariant
-//!    here has **no** `terminology_id` guard, so the code value is validated
-//!    against the set directly.
-//!
-//! This module is the single source of the slot → vocabulary binding table
-//! ([`slots_for`]) plus the membership decisions ([`Group`]/[`CodeSet`], backed
-//! by [`openehr_term::bundle`], TERM 3.1.0). Two presentation adapters consume
-//! it: [`validate_rm_terminology`] (the core form, emitting
-//! [`InvariantViolation`]s — what the `openehr-its` wire-boundary dispatcher
-//! runs as a post-core check) and the `openehr-its` RM-instance terminology
-//! pass (its own `ValidationKind::Terminology` message rendering). Neither
-//! re-derives the bindings.
-//!
-//! # Spec
-//!
-//! Each entry cites the RM class-invariant source
-//! (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.*.adoc`) and the
-//! openEHR terminology group / code-set id it resolves against (defined in the
-//! openEHR Terminology, `docs/specs/openehr/TERM/docs/SupportTerminology/`).
-//! The bundle codes themselves come from the vendored TERM assets in
-//! [`openehr_term::bundle`].
+//! [`slots_for`] is the one binding table; [`validate_rm_terminology`] and the
+//! `openehr-its` terminology pass both read it. Each entry cites its
+//! `RM/docs/UML/classes/org.openehr.rm.*.adoc` invariant.
 
 #![expect(
     clippy::disallowed_types,
@@ -51,11 +22,7 @@ use openehr_base::validate::InvariantViolation;
 use openehr_term::bundle::{OpenehrTerminology, openehr};
 use serde_json::Value;
 
-/// An openEHR terminology *group* a coded slot must draw from.
-///
-/// The membership check is guarded by `terminology_id == "openehr"` (the
-/// `has_code_for_group_id` invariants bind against the openEHR terminology
-/// only).
+/// An openEHR terminology group a coded slot must draw from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Group {
     /// `composition_category` — `COMPOSITION.category`.
@@ -129,9 +96,8 @@ impl Group {
     }
 }
 
-/// A code set (openEHR-internal or ISO/IANA-external) a coded slot must draw
-/// from. Checked **without** a `terminology_id` guard — the RM invariant is
-/// `code_set (id).has_code (code)`.
+/// A code set a coded slot must draw from, checked without a
+/// `terminology_id` guard.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CodeSet {
     /// `languages` (ISO 639-1).
@@ -219,28 +185,15 @@ pub struct Slot {
     pub binding: Binding,
 }
 
-/// The coded slots fixed by an owning RM `_type`, with the invariant +
-/// vocabulary each realizes.
-///
-/// The single source of the terminology binding table; both
-/// [`validate_rm_terminology`] and the `openehr-its` RM-instance terminology
-/// pass resolve against it.
-///
-/// Scoping follows the BMM: `null_flavour` is `ELEMENT`-scoped and `normal_status`
-/// is scoped to the concrete `DV_ORDERED` descendants (the invariants are declared
-/// on `ELEMENT` / `DV_ORDERED`). `math_function` covers all `EVENT` subtypes; the
-/// field is present only on `INTERVAL_EVENT`, so the other arms are inert (the
-/// missing field skips).
+/// The coded slots of an RM `_type`, each with its invariant and vocabulary.
 #[must_use]
 #[expect(
     clippy::too_many_lines,
     reason = "a flat `_type` -> `&[Slot]` terminology-binding table; the length is the size of the RM type set, not logic"
 )]
 pub fn slots_for(rm_type: &str) -> &'static [Slot] {
-    // Reused vocab-per-field slot vectors.
-    // ENTRY subtypes + DV_TEXT family share `language` (ISO 639-1) + `encoding`
-    // (IANA character sets): RM `entry.adoc` Language_valid/Encoding_valid,
-    // `dv_text.adoc` Language_valid/Encoding_valid.
+    // `language` and `encoding`: RM `entry.adoc` and `dv_text.adoc`
+    // Language_valid and Encoding_valid.
     const LANG_ENCODING: &[Slot] = &[
         Slot {
             field: "language",
@@ -299,9 +252,7 @@ pub fn slots_for(rm_type: &str) -> &'static [Slot] {
                 binding: Binding::Group(Group::InstructionTransition),
             },
         ],
-        // participation.adoc + extract_participation.adoc: Function_valid +
-        // Mode_valid (both bind the same participation_function / participation_mode
-        // groups). The per-type message takes the concrete `_type`.
+        // participation.adoc, extract_participation.adoc: Function_valid, Mode_valid.
         "PARTICIPATION" | "EXTRACT_PARTICIPATION" => &[
             Slot {
                 field: "function",
@@ -330,10 +281,7 @@ pub fn slots_for(rm_type: &str) -> &'static [Slot] {
             invariant: "Purpose_valid",
             binding: Binding::Group(Group::TermMappingPurpose),
         }],
-        // dv_encapsulated.adoc: Charset_valid / Language_valid (character_sets /
-        // languages) + dv_multimedia.adoc: Media_type_valid (media_types),
-        // Compression_algorithm_validity (compression_algorithms),
-        // Integrity_check_algorithm_validity (integrity_check_algorithms).
+        // dv_encapsulated.adoc and dv_multimedia.adoc.
         "DV_MULTIMEDIA" => &[
             Slot {
                 field: "media_type",
@@ -380,10 +328,8 @@ pub fn slots_for(rm_type: &str) -> &'static [Slot] {
             invariant: "Change_type_valid",
             binding: Binding::Group(Group::AuditChangeType),
         }],
-        // attestation.adoc: Reason_valid (attestation_reason group), PLUS the
-        // Change_type_valid it inherits from AUDIT_DETAILS — this table is keyed
-        // on the exact wire `_type`, so an ancestor's slot reaches a descendant
-        // only by being repeated here.
+        // attestation.adoc Reason_valid, and the inherited Change_type_valid: the
+        // table is keyed by exact `_type`.
         "ATTESTATION" => &[
             Slot {
                 field: "reason",
@@ -433,13 +379,7 @@ pub fn slots_for(rm_type: &str) -> &'static [Slot] {
     }
 }
 
-/// The `(code, terminology_id)` of a coded value node — a
-/// `DV_CODED_TEXT`/state (via `defining_code`) or a bare `CODE_PHRASE`.
-///
-/// `None` when the node is not coded (e.g. a plain `DV_TEXT` participation
-/// function, or an absent optional slot), which is skipped: the `has_code…`
-/// invariants are guarded by a `generating_type = DV_CODED_TEXT` / `/= Void`
-/// antecedent.
+/// The `(code, terminology_id)` of a coded node, or `None` when uncoded.
 #[must_use]
 pub fn openehr_code(node: &Value) -> Option<(&str, &str)> {
     let code_phrase = node.get("defining_code").unwrap_or(node);
@@ -452,12 +392,8 @@ pub fn openehr_code(node: &Value) -> Option<(&str, &str)> {
     Some((code, terminology))
 }
 
-/// Whether `slot` is satisfied by `node`'s coded value.
-///
-/// Returns `Some(false)` only for a present, in-scope code that is NOT a
-/// member of the bound vocabulary; `None` when the slot is absent, uncoded,
-/// or (for a group binding) carries a non-`openehr` terminology (out of scope
-/// for the openEHR-group check).
+/// Whether `slot` is satisfied by `node`: `Some(false)` only for a present
+/// in-scope code outside the vocabulary.
 #[must_use]
 pub fn slot_is_violated(slot: &Slot, node: &Value) -> bool {
     let Some((code, terminology)) = openehr_code(node) else {
@@ -477,17 +413,8 @@ pub fn slot_is_violated(slot: &Slot, node: &Value) -> bool {
     }
 }
 
-/// Run the terminology-backed RM class invariants for a single canonical-JSON
-/// node, dispatching on its `_type`.
-///
-/// Appends one [`InvariantViolation`] per violated coded slot, in the uniform
-/// `Invariant <Name> failed on type <RM_TYPE>` form and keyed to the offending
-/// attribute path. A node whose `_type` binds no coded slot appends nothing.
-///
-/// This is the core form of the RM terminology/code-set invariants; the
-/// `openehr-its` wire-boundary dispatcher runs it as a post-core check, and the
-/// `openehr-its` RM-instance terminology pass resolves the same [`slots_for`]
-/// table for its own message rendering.
+/// Runs the terminology-backed invariants of one node, appending one violation
+/// per violated slot.
 pub fn validate_rm_terminology(ty: &str, value: &Value, out: &mut Vec<InvariantViolation>) {
     for slot in slots_for(ty) {
         let Some(node) = value.get(slot.field) else {
@@ -507,11 +434,7 @@ mod tests {
     use super::*;
     use openehr_term::codes::AuditChangeType;
 
-    /// This table is keyed on the exact wire `_type`, so an invariant declared
-    /// on an ancestor reaches a descendant only by being repeated. `ATTESTATION`
-    /// inherits `AUDIT_DETAILS`, so an out-of-group `change_type` must be
-    /// refused on both — it was accepted on `ATTESTATION` while the identical
-    /// `AUDIT_DETAILS` node was refused.
+    /// An out-of-group `change_type` is refused on `ATTESTATION` too.
     #[test]
     fn an_inherited_coded_invariant_reaches_the_descendant() {
         let node = serde_json::json!({

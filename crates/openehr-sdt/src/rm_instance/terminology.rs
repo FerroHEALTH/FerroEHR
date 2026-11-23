@@ -1,24 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! RM-mandated openEHR-terminology validation — the RM-instance terminology
-//! pass.
-//!
-//! The slot → vocabulary binding table and the membership decisions live in
-//! [`openehr_rm::v1_2::validate::terminology`] (this crate does not re-derive them):
-//! the same table the wire-boundary dispatcher
-//! ([`openehr_its::wire_validate::validate_rm_value`]) enforces. This pass keeps only
-//! the *presentation* — a [`ValidationKind::Terminology`] message carrying the
-//! human-readable vocabulary label and the RM instance path — recursing the
-//! instance with the running-path buffer.
-//!
-//! Two families of terminology binding are enforced, both properties of the RM
-//! instance (independent of the archetype / `WebTemplate`): openEHR terminology
-//! *group* codes (`has_code_for_group_id`, guarded by `terminology_id = "openehr"`)
-//! and openEHR / ISO / IANA code-set codes (`code_set (id).has_code`, unguarded).
-//! See [`openehr_rm::v1_2::validate::terminology`] for the per-slot spec citations
-//! (`docs/specs/openehr/RM/docs/UML/classes/`) resolved against the terminology
-//! bundle in [`openehr_term::bundle`] (TERM 3.1.0).
+//! The RM-instance terminology pass: a [`ValidationKind::Terminology`] message
+//! per violation, over the binding table of
+//! [`openehr_rm::v1_2::validate::terminology`] (TERM 3.1.0, [`openehr_term::bundle`]).
 
 #![expect(
     clippy::disallowed_types,
@@ -34,18 +19,9 @@ use serde_json::Value;
 use super::{ValidationKind, ValidationMessage, norm_path, push};
 
 /// Pass 2: recurse the instance, checking every coded slot its owning RM type
-/// binds against the shared terminology binding table.
+/// binds.
 ///
-/// `path` is the single reusable running-path buffer pushed/popped per step,
-/// mirroring [`super::rm_invariant_pass`]: a segment is appended before a
-/// coded-slot check or a recursion and truncated back after, so the full path
-/// string is materialized only when a violation is recorded.
-///
-/// `declared` is the parent attribute's declared RM type when concrete — the
-/// effective type of a node whose wire `_type` is legitimately absent
-/// (canonical JSON requires `_type` only on polymorphic slots), so untagged
-/// nodes like `COMPOSITION.context` still get their coded slots checked
-/// ([`openehr_rm::v1_2::model::declared_concrete_type`]).
+/// `path` and `declared` work as in [`super::rm_invariant_pass`].
 pub(crate) fn terminology_pass(
     out: &mut Vec<ValidationMessage>,
     v: &Value,

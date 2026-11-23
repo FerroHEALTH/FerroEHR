@@ -2,23 +2,13 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM spec functions for `PARTY_RELATIONSHIP`.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.party_relationship.adoc`
-//! §Functions + §Invariants.
+//! `PARTY_RELATIONSHIP.type` (`org.openehr.rm.demographic.party_relationship.adoc`).
 
 use crate::v1_2::data_types::text::dv_text::DvText;
 use crate::v1_2::demographic::party_relationship::PartyRelationship;
 
 impl PartyRelationship {
-    /// Returns the type of this relationship, e.g. employment or authority.
-    ///
-    /// Spec: `org.openehr.rm.demographic.party_relationship.adoc` §Functions
-    /// `type` — "Type of relationship, such as employment, authority, health
-    /// provision" — pinned to the inherited runtime name by §Invariants
-    /// `Type_validity: type = name`, exactly as its `ADDRESS` / `CONTACT` /
-    /// `PARTY_IDENTITY` siblings state in their own §Functions prose.
+    /// The type of this relationship: its `name` (`Type_validity: type = name`).
     #[must_use]
     pub fn r#type(&self) -> &DvText {
         &self.name

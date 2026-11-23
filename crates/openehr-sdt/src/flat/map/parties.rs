@@ -1,13 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Party / reference / participation / identifier codecs.
-//!
-//! Covers the ITS-REST `simplified_formats/master05-rm_mapping.adoc` tables for
-//! `PARTY_SELF`, `PARTY_IDENTIFIED`, `PARTY_RELATED` (the `PARTY_PROXY` subtypes),
-//! `OBJECT_REF`, `PARTICIPATION`, and `DV_IDENTIFIER`. These shapes are shared by
-//! the ENTRY / EVENT_CONTEXT `_`-attribute families in [`super::structures`] and
-//! by the `_identifier:i` / performer inlining rules.
+//! Party, reference, participation and identifier codecs (the
+//! `simplified_formats/master05-rm_mapping.adoc` tables for the `PARTY_PROXY`
+//! subtypes, `OBJECT_REF`, `PARTICIPATION` and `DV_IDENTIFIER`).
 
 #![expect(
     clippy::disallowed_types,
@@ -81,10 +77,8 @@ pub(crate) fn identifier_from_fields(fields: &[(&str, &Value)]) -> Result<Obj, F
 
 /// OBJECT_REF → `|type`/`|id`/`|id_scheme`/`|namespace` attrs on `out`.
 ///
-/// NOTE: master05 §OBJECT_REF's table row is `|scheme` (→ `id.scheme`), but
-/// every spec example carries `|id_scheme` (e.g. INSTRUCTION `_guideline_id`,
-/// master05 §INSTRUCTION). The example blocks are the wire authority, so this
-/// emits `|id_scheme`; [`build_object_ref`] accepts either.
+/// NOTE: master05 §OBJECT_REF's table says `|scheme` but every example says
+/// `|id_scheme`; this emits the example form, and [`build_object_ref`] reads both.
 pub(super) fn emit_object_ref<'a, I: Instance<'a>>(oref: I, out: &mut SimNode) {
     put(out, "type", oref.attr("type"));
     put(out, "id", at(oref, &["id", "value"]));
@@ -134,34 +128,16 @@ pub(super) fn emit_party_as<'a, I: Instance<'a>>(
     }
 }
 
-/// PARTY_PROXY (`PARTY_SELF`/`PARTY_IDENTIFIED`/`PARTY_RELATED`) → inlined
-/// `|name`/`|id`/`|id_scheme`/`|id_namespace` attrs on `out`, plus `_identifier:i`
-/// (PARTY_IDENTIFIED) and a `/relationship` DV_CODED_TEXT child (PARTY_RELATED).
+/// PARTY_PROXY → inlined `|name`/`|id`/`|id_scheme`/`|id_namespace` attrs on
+/// `out`, plus `_identifier:i` and a `/relationship` child.
 ///
-/// The three subtype tables (master05 §§PARTY_SELF, PARTY_IDENTIFIED,
-/// PARTY_RELATED) share the `|id`/`|id_scheme`/`|id_namespace` rows, so the
-/// concrete subtype is carried by two discriminators: a `/relationship` child
-/// means PARTY_RELATED (master05 §PARTY_RELATED), and `|_type` marks a
-/// PARTY_SELF (master05 §FEEDER_AUDIT_DETAILS, `/subject` row Note: "add
-/// /subject|_type: PARTY_SELF"). Without the marker a PARTY_SELF would rebuild
-/// as a PARTY_IDENTIFIED, so it is emitted whenever the value is one.
+/// A `/relationship` child marks PARTY_RELATED and `|_type` marks PARTY_SELF
+/// (master05 §FEEDER_AUDIT_DETAILS: "add /subject|_type: PARTY_SELF"). This is
+/// the only emission site of the party `_identifier:i` family.
 ///
-/// NOTE: master05 §PARTY_RELATED spells the relationship sub-path two ways —
-/// both example blocks of the section write
-/// `…/composer/relationship|code`/`|value`/`|terminology` (and the
-/// §"PARTY_RELATED performer" table row is likewise `/relationship`), while
-/// the §PARTY_RELATED mapping table's Flat Path column reads
-/// `/_relationship`. The example spelling is the emitted one (it is the form
-/// two tables and every example agree on); the underscore spelling is
-/// accepted on input as an alias by [`relationship_child`].
-///
-/// This is the **sole** emission site of the party `_identifier:i` family
-/// (master05 §§PARTY_IDENTIFIED, PARTY_RELATED `/_identifier:i`):
-/// [`super::emit::emit_rm_attrs`] deliberately carries no PARTY arm, so
-/// the family is emitted exactly once however a party node is reached — a
-/// PARTY_PROXY datum leaf through [`super::emit::emit_leaf`], or a
-/// `_provider` / `_health_care_facility` / FEEDER_AUDIT_DETAILS party through
-/// [`super::structures`].
+/// NOTE: master05 §PARTY_RELATED's table says `/_relationship` while its
+/// examples say `/relationship`; this emits the example form and
+/// [`relationship_child`] reads both.
 pub(super) fn emit_party<'a, I: Instance<'a>>(p: I, out: &mut SimNode) {
     if p.rm_type() == Some("PARTY_SELF") {
         out.attrs.insert("_type".to_owned(), json!("PARTY_SELF"));
@@ -191,20 +167,13 @@ pub(super) fn emit_party<'a, I: Instance<'a>>(p: I, out: &mut SimNode) {
     }
 }
 
-/// Build a PARTY_PROXY from a party sim node. `PARTY_SELF` when `|_type` is
-/// `"PARTY_SELF"` (master05 §FEEDER_AUDIT_DETAILS note: "add /subject|_type:
-/// PARTY_SELF"); `PARTY_RELATED` when a `/relationship` child is present
-/// (master05 §PARTY_RELATED); otherwise `PARTY_IDENTIFIED` (master05
-/// §PARTY_IDENTIFIED). `default_party_type` is the `PARTY_REF.type` used when an
-/// `|id` is present but no explicit ref type (`PERSON`/`ORGANISATION`).
+/// Build a PARTY_PROXY from a party sim node: `PARTY_SELF` for `|_type`,
+/// `PARTY_RELATED` for a `/relationship` child, else `PARTY_IDENTIFIED`
+/// (master05). `default_party_type` is the `PARTY_REF.type` for an `|id` with no
+/// explicit ref type.
 ///
-/// Both master05 spellings of the relationship sub-path are accepted here (see
-/// [`relationship_child`]); consuming it in this builder — rather than routing
-/// `_relationship` through [`super::build_rm_attr`] like the other
-/// `_`-prefixed families — is what makes the alias correct: the child is the
-/// PARTY_PROXY subtype discriminator, so it must be read *before* the concrete
-/// party type is decided, not attached afterwards to an already-typed
-/// PARTY_IDENTIFIED.
+/// The relationship child decides the subtype, so it is read here rather than
+/// through [`super::build_rm_attr`].
 pub(super) fn build_party(node: &SimNode, default_party_type: &str) -> Result<Obj, FlatError> {
     let explicit_self = node
         .attrs
@@ -225,10 +194,8 @@ pub(super) fn build_party(node: &SimNode, default_party_type: &str) -> Result<Ob
     identified_party(node, default_party_type, relationship, identifiers)
 }
 
-/// A `PARTY_IDENTIFIED`, or the `PARTY_RELATED` a `/relationship` child
-/// makes it, from the `|name` and external-reference suffixes of `node`
-/// (`ref_type` its reference type when none is written), `identifiers` and
-/// `relationship` (master05 §§PARTY_IDENTIFIED, PARTY_RELATED).
+/// A `PARTY_IDENTIFIED`, or the `PARTY_RELATED` a `/relationship` child makes
+/// it (master05 §§PARTY_IDENTIFIED, PARTY_RELATED).
 fn identified_party(
     node: &SimNode,
     ref_type: &str,
@@ -258,14 +225,9 @@ fn identified_party(
     Ok(p)
 }
 
-/// Whether the master05 suffixes carry `party` whole when the builder fills
-/// `default_party_type` in as its `external_ref.type`.
-///
-/// The §§PARTY_IDENTIFIED and PARTY_PROXY tables of master05 define `|id`,
-/// `|id_scheme`, `|id_namespace` and `|name` and no row for the reference
-/// type, so a party whose `external_ref.type` is another type cannot survive
-/// the suffixes; its emitter writes the party as `|raw` instead (master04
-/// §Raw canonical JSON).
+/// Whether the master05 suffixes carry `party` whole with `default_party_type`
+/// as its `external_ref.type`; master05 has no row for the reference type, so
+/// another type is written as `|raw`.
 pub(crate) fn ref_type_survives<'a, I: Instance<'a>>(party: I, default_party_type: &str) -> bool {
     at(party, &["external_ref", "type"])
         .and_then(Instance::as_str)
@@ -284,10 +246,9 @@ pub(crate) fn performer_survives<'a, I: Instance<'a>>(participation: I) -> bool 
 /// performer is a person (master05 §PARTICIPATION defines no reference-type row).
 const PERFORMER_REF_TYPE: &str = "PERSON";
 
-/// The `PARTY_REF` external reference for a party sim node, when it carries an
-/// `|id` (master05 §PARTY_IDENTIFIED: `|id_namespace` is required when `|id` is
-/// set). A `|id_scheme` makes the id a `GENERIC_ID`; without one it is a
-/// `HIER_OBJECT_ID` (so a scheme is never fabricated).
+/// The `PARTY_REF` for a party sim node carrying an `|id` (master05
+/// §PARTY_IDENTIFIED); a `|id_scheme` makes the id a `GENERIC_ID`, else a
+/// `HIER_OBJECT_ID`.
 fn external_ref(node: &SimNode, default_party_type: &str) -> Result<Option<Obj>, FlatError> {
     let Some(id) = node.attrs.get("id").and_then(Value::as_str) else {
         return Ok(None);
@@ -349,12 +310,8 @@ pub(super) fn emit_participation<'a, I: Instance<'a>>(p: I, out: &mut SimNode) {
     }
 }
 
-/// The inlined performer of a PARTICIPATION: its `|name`/`|id`/`|id_scheme`/
-/// `|id_namespace` suffixes, the `|identifiers_<field>:i` list, and a
-/// PARTY_RELATED `/relationship` child.
-///
-/// Performer identifiers are inlined as `|identifiers_<field>:i` suffixes
-/// (master05 §PARTICIPATION), not the `_identifier:i` sub-path form.
+/// The inlined performer of a PARTICIPATION, with its identifiers as
+/// `|identifiers_<field>:i` suffixes (master05 §PARTICIPATION).
 fn emit_performer<'a, I: Instance<'a>>(performer: I, out: &mut SimNode) {
     if let Some(name) = performer.attr("name").and_then(Instance::to_value) {
         out.attrs.insert("name".to_owned(), name);
@@ -459,31 +416,18 @@ fn single<'a>(node: &'a SimNode, name: &str) -> Option<&'a SimNode> {
     node.children.get(name).and_then(|c| c.occurrences.first())
 }
 
-/// The PARTY_RELATED `relationship` DV_CODED_TEXT child of a party node, under
-/// either spelling master05 §PARTY_RELATED gives it.
-///
-/// The section's two example blocks write
-/// `"…/composer/relationship|code": "10"` (and §"PARTY_RELATED performer"
-/// repeats `/relationship` in both its table and its example), while the
-/// §PARTY_RELATED mapping table's Flat Path column reads `/_relationship`.
-/// The spec contradicts itself, so both are read on input; only the example
-/// spelling is ever emitted ([`emit_party`]), keeping RM → FLAT → RM stable.
+/// The PARTY_RELATED `relationship` child of a party node, under either
+/// spelling master05 §PARTY_RELATED gives it.
 fn relationship_child(node: &SimNode) -> Option<&SimNode> {
     single(node, "relationship").or_else(|| single(node, RELATIONSHIP_TABLE_SEGMENT))
 }
 
-/// The master05 §PARTY_RELATED *table* spelling of the relationship sub-path,
-/// accepted on input as an alias of the example spelling `/relationship`.
-/// [`crate::flat::build`] excludes this segment from the generic `_`-family
-/// routing on a PARTY leaf, because [`build_party`] consumes it.
+/// The master05 §PARTY_RELATED table spelling of the relationship sub-path,
+/// read as an alias of `/relationship`.
 pub(crate) const RELATIONSHIP_TABLE_SEGMENT: &str = "_relationship";
 
-/// The party identifier family's segment (master05 §§PARTY_IDENTIFIED,
-/// PARTY_RELATED `/_identifier:i`). [`build_party`] is its single consumption
-/// site — [`crate::flat::build`] excludes it from the generic `_`-family
-/// routing on a PARTY leaf, whose `identifier` arm would otherwise rebuild the
-/// same children over the key and, on an all-empty family, write the
-/// `identifiers: []` that RM `Identifiers_valid` forbids.
+/// The party identifier family's segment (master05 `/_identifier:i`), consumed
+/// only by [`build_party`]; an empty family must not become `identifiers: []`.
 pub(crate) const IDENTIFIER_SEGMENT: &str = "_identifier";
 
 #[cfg(test)]
@@ -606,13 +550,8 @@ mod tests {
         node
     }
 
-    // master05 §PARTY_RELATED gives the relationship sub-path TWO spellings:
-    // the mapping table's Flat Path column reads `/_relationship`, while both
-    // example blocks of the same section (and the §"PARTY_RELATED performer"
-    // table + example) write `…/relationship|code`. Both are accepted on
-    // input and both make the party a PARTY_RELATED — the child is the
-    // subtype discriminator, so `build_party` must consume it whichever way
-    // it is spelled.
+    // master05 §PARTY_RELATED spells the sub-path `/_relationship` and
+    // `/relationship`; both make the party a PARTY_RELATED.
     #[test]
     fn party_related_accepts_both_master05_relationship_spellings() {
         let example =
@@ -668,10 +607,7 @@ mod tests {
         );
     }
 
-    // The party `_identifier:i` family (master05 §§PARTY_IDENTIFIED,
-    // PARTY_RELATED `/_identifier:i`) has exactly ONE emission site,
-    // `emit_party`. This pins the ownership split in both directions, so a
-    // second emission site fails here rather than silently.
+    // The party `_identifier:i` family has exactly one emission site, `emit_party`.
     #[test]
     fn party_identifiers_have_exactly_one_emission_site() {
         let rm = json!({
@@ -698,14 +634,8 @@ mod tests {
             from_rm_attrs.children.keys().collect::<Vec<_>>()
         );
     }
-    // …and exactly ONE CONSUMPTION site on the way back: `build_party`. The
-    // generic `_`-family router still owns an `identifier` arm for hosts that
-    // are not parties, so the split is enforced by
-    // `crate::flat::build::leaf_consumes_segment`. This pins the edge the two
-    // sites do NOT agree on: an `_identifier` family whose occurrences are all
-    // empty. `build_party` omits the key; the router's arm would insert
-    // `identifiers: []`, which RM `PARTY_IDENTIFIED`'s `Identifiers_valid`
-    // forbids and ITS-REST Resources.md §JSON Format keeps off the wire.
+    // …and one consumption site, `build_party`: an all-empty family must not
+    // become `identifiers: []` (RM `PARTY_IDENTIFIED` `Identifiers_valid`).
     #[test]
     fn an_all_empty_party_identifier_family_yields_no_identifiers_key() {
         let mut party = SimNode::default();

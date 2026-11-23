@@ -63,12 +63,11 @@ fn imported_versions_member_type_is_enforced() {
     }
 }
 
-/// The received original's OWN `contribution` and `commit_audit` are the
-/// FOREIGN act, kept for the wrapped `ORIGINAL_VERSION` — RM common
-/// master06 §Committal and Audits: "the knowledge of the original
-/// Contribution and committal are retained inside the wrapped
-/// `ORIGINAL_VERSION` instance". Regression for #1679, whose defect was
-/// that the received `contribution` was dropped entirely and the foreign
+/// The received original's own `contribution` and `commit_audit` are the
+/// foreign act, kept for the wrapped `ORIGINAL_VERSION`: RM common master06
+/// §Committal and Audits, "the knowledge of the original Contribution and
+/// committal are retained inside the wrapped `ORIGINAL_VERSION` instance"
+/// (#1679).
 /// `commit_audit` was written as the version row's own.
 #[test]
 fn wrapped_original_keeps_its_foreign_contribution_and_audit() {

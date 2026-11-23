@@ -2,16 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The shared commit-fixture family the topic modules import.
-//!
-//! Every suite that drives a write through the service layer needs the same
-//! pieces: a `PARTY_IDENTIFIED` committer, an `openehr` change-type
-//! `DV_CODED_TEXT`, a minimal valid RM COMPOSITION, and the
-//! `UPDATE_VERSION` envelope carrying them. They live here once, so the per-suite
-//! copies cannot drift apart.
-//!
-//! A suite whose fixture identity is load-bearing (an assertion reads the
-//! composer or committer name) takes the parameterized builder rather than a
-//! private copy.
 
 use ferroehr::service::ehr::object::EhrObject;
 use serde_json::{Value, json};
@@ -85,10 +75,6 @@ pub(crate) fn lifecycle(code: &str) -> Value {
 
 /// Returns a minimal *valid* RM COMPOSITION named `name`, composed by
 /// `composer`.
-///
-/// `language`, `territory`, `category` and `composer` are all `1..1` (RM ehr,
-/// COMPOSITION class), so typed RM validation rejects a fixture without them.
-/// No template is referenced, so the fixture needs no `template_store` row.
 pub(crate) fn composition_by(name: &str, composer: &str) -> Value {
     json!({
         "_type": "COMPOSITION",
@@ -258,12 +244,6 @@ pub(crate) fn folder(name: &str) -> Value {
 // ── separated-credential fixtures ────────────────────────────────────────────
 
 /// A password for a throwaway login role, fresh per call.
-///
-/// The value is never a secret: the role lives as long as one test against an
-/// ephemeral clone. It is generated rather than written down because a literal
-/// here is indistinguishable, to a scanner and to a reader, from a credential
-/// that does matter, and the repository's own rule is that a finding is fixed
-/// rather than suppressed.
 pub(crate) fn throwaway_password() -> String {
     format!("pw{}", uuid::Uuid::now_v7().simple())
 }
@@ -278,10 +258,6 @@ pub(crate) fn with_role(base_url: &str, user: &str, password: &str) -> String {
 }
 
 /// A login DSN for a throwaway role holding `domain_role` and nothing else.
-///
-/// Roles are cluster-global on the shared testkit server, so the login role is
-/// named off the clone's database name and the testkit sweep reaps it. The DSN
-/// form is what lets a test build a real `DbConfig` on a separated credential.
 pub(crate) async fn dsn_as(db: &testkit::TestDb, suffix: &str, domain_role: &str) -> String {
     let login = format!("{}_{suffix}", db.name());
     let password = throwaway_password();
@@ -295,11 +271,6 @@ pub(crate) async fn dsn_as(db: &testkit::TestDb, suffix: &str, domain_role: &str
 }
 
 /// Every link of an error's cause chain, outermost first, joined by ` <- `.
-///
-/// A curated service message says nothing about the driver fault behind it;
-/// the chain does. A test that fails on a database step panics with this so
-/// the cause is in the report rather than only on a trace nobody captured
-/// (#3250).
 pub(crate) fn source_chain(error: &dyn std::error::Error) -> String {
     let mut out = error.to_string();
     let mut next = error.source();
@@ -313,9 +284,6 @@ pub(crate) fn source_chain(error: &dyn std::error::Error) -> String {
 
 /// The four domain pools of a co-located test database, and the layout that
 /// describes it.
-///
-/// Every DB-backed test runs one testkit database with all four schemas in it,
-/// which is the shared-DSN posture the boot gate reads as one credential.
 pub(crate) fn shared_pools(pool: &sqlx::PgPool) -> ferroehr::db::domain::DomainPools {
     ferroehr::db::domain::DomainPools::from_shared(pool)
 }

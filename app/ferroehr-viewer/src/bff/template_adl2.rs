@@ -13,18 +13,8 @@
 //! (`definition/template/adl2/{template_id}/{version}`) as `?version=` URL
 //! state, so a pinned view is shareable.
 //!
-//! The fourth, **Path catalog**, is built viewer-side: the ADL2 resource
-//! serves no Web Template representation, so the BFF reads the same
-//! `application/json` body ([`fetch_adl2_compiled`]), parses the AOM2 operational template, builds its
-//! Web Template and projects the [`crate::builder::catalog::CatalogNode`] tree
-//! the ADL 1.4 detail screen renders — same tree component, same node
-//! inspector, one code path for both families.
-//!
 //! No openEHR spec governs the viewer — our own design / product extension;
 //! the wire it reads is the ITS-REST Definition API.
-//!
-//! Absence (`404`) is `Ok(None)`, a first-class state rather than an error;
-//! tab and version state live in the URL.
 
 use crate::bff::templates::violations;
 use crate::builder::catalog::CatalogNode;
@@ -36,13 +26,9 @@ use crate::locale::{tr, tr_with};
 
 /// Fetch the stored ADL2 operational-template SOURCE.
 ///
-/// GET `definition/template/adl2/{template_id}` (or
-/// `…/{template_id}/{version}` when `version` is given) with
-/// `Accept: text/plain` — the artefact interchange form the resource serves
-/// verbatim. `version` is an exact SEMVER or a `{major}` / `{major}.{minor}`
-/// prefix resolving to the highest match; an unknown template or version is a
-/// `404`, returned as `Ok(None)` because absence is a state this screen
-/// renders, not a failure.
+/// `version` is an exact SEMVER or a `{major}` / `{major}.{minor}` prefix
+/// resolving to the highest match. `Ok(None)` when the template or version is
+/// unknown (`404`).
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
@@ -114,11 +100,7 @@ pub fn missing_constituents(body: &str) -> Vec<String> {
 /// Compile a stored ADL2 template: fetch its `OperationalTemplateV2`
 /// canonical JSON.
 ///
-/// The same resource as [`fetch_adl2_source`] under
-/// `Accept: application/json`, which the CDR answers with the AOM2
-/// canonical-JSON projection of the operational template, asked with
-/// `Prefer: return=representation` so a refusal names its violations. A `422`
-/// naming missing constituents is [`Compiled::Missing`]; `404` is
+/// A `422` naming missing constituents is [`Compiled::Missing`]; a `404` is
 /// [`Compiled::Absent`].
 ///
 /// # Errors
@@ -154,13 +136,6 @@ pub async fn fetch_adl2_compiled(
 /// Build the Web-Template path catalog of one `OperationalTemplateV2`
 /// canonical-JSON body.
 ///
-/// The body is read with [`openehr_its::json::from_canonical_json`] into the
-/// AOM2
-/// [`OperationalTemplate`](openehr_am::v2_4::aom2::archetype::operational_template::OperationalTemplate)
-/// — the exact type the CDR serialized — then
-/// [`openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4`]
-/// produces the Web Template and [`crate::builder::catalog::from_web_template`]
-/// the slim tree the views render. Both stages are named in the error.
 /// # Errors
 /// [`ViewerError::Failed`] when the AOM2 JSON fails to parse or the Web
 /// Template fails to build (the diagnostic named, never a panic).

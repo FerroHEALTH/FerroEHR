@@ -5,13 +5,6 @@
 //! (RM common `master06-change_control_package.adoc` §Change Control /
 //! §Attestation; ITS-REST `UpdateVersion.yaml` + `UpdateAttestation.yaml`)
 //! against a real `PostgreSQL` 18 (shared testkit harness).
-//!
-//! Covers: attestations committed with a NEW version
-//! (`UPDATE_VERSION.attestations`, "Signing content at committal"); a later
-//! `666|attestation|`-only contribution attaching an `ATTESTATION` to an
-//! existing `ORIGINAL_VERSION` (no new version); their exposure on the served
-//! `ORIGINAL_VERSION` and in `REVISION_HISTORY`; and `CONTRIBUTION.versions` +
-//! the aggregate change-type semantics. Plus the error surface (400/422/404).
 
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
@@ -876,10 +869,9 @@ async fn ehr_contribution_list_page_extension() {
 }
 
 /// `UPDATE_VERSION.lifecycle_state` in its released wire shape, a
-/// `DV_CODED_TEXT` (ITS-REST `schemas/ehr/UpdateVersion.yaml`). The `CODE_PHRASE`
-/// shape `{terminology_id, code_string}` this helper used to send is refused
-/// since ruling 1 of #3595; [`code_phrase_lifecycle_spellings_are_refused`]
-/// pins that.
+/// `DV_CODED_TEXT` (ITS-REST `schemas/ehr/UpdateVersion.yaml`);
+/// [`code_phrase_lifecycle_spellings_are_refused`] pins the refusal of a
+/// `CODE_PHRASE` (ruling 1 of #3595).
 fn lifecycle(code: &str) -> Value {
     crate::fixtures::lifecycle(code)
 }
@@ -1545,9 +1537,6 @@ async fn contribution_cannot_delete_the_ehr_status() {
 /// producible by the spec's own procedure. Left unchecked, the read side
 /// answers `204` for the resource while its node rows stay stored and
 /// AQL-queryable.
-///
-/// Both twins are asserted: the refusal (CONTRIBUTION member AND direct
-/// route), and the acceptance of the same content under `532|complete|`.
 #[tokio::test]
 async fn data_carrying_deleted_lifecycle_is_refused_on_both_routes() {
     let (_db, svc) = crate::fixtures::service().await;
@@ -1647,10 +1636,6 @@ async fn data_carrying_deleted_lifecycle_is_refused_on_both_routes() {
 /// `400_CONTRIBUTION` change-control trigger ("the modification type does not
 /// match the operation"), the same refusal family the direct DELETE wire's
 /// committal header carries.
-///
-/// Three outcomes are asserted: the contradictory state refused (nothing
-/// committed), an out-of-group state refused as the invariant violation it is,
-/// and the `523`-declaring twin committing the deletion.
 #[tokio::test]
 async fn a_delete_member_with_a_contradictory_lifecycle_state_is_refused() {
     let (_db, svc) = crate::fixtures::service().await;
@@ -2155,12 +2140,6 @@ async fn merge_provenance_on_a_member_is_recorded_and_served() {
 /// either legal self-tag, and a `_type` naming `IMPORTED_VERSION` (ITS-REST
 /// `Resources.md`: the value "MUST be the uppercase class name from the RM
 /// specification") are refused naming the key.
-///
-/// `UPDATE_VERSION` is otherwise open (`UpdateVersion.yaml` declares no
-/// `additionalProperties`), so a member carrying `item` commits as a local
-/// `ORIGINAL_VERSION` that wraps nothing; the accepting twins are that member,
-/// the same member without the key, and the member self-tagged
-/// `_type: ORIGINAL_VERSION`.
 #[tokio::test]
 async fn foreign_version_identity_is_refused_on_the_commit_wire() {
     let (_db, svc) = crate::fixtures::service().await;
@@ -2461,10 +2440,8 @@ async fn contribution_audit_change_type_is_required_not_derived() {
     );
 }
 
-/// Every member-scoped CONTRIBUTION refusal names `versions[i]` (#2590):
-/// measured live, the declared-key check named the member while the data
-/// parse and validation refusals did not — on the one route whose purpose is
-/// a multi-member change set, a client could not tell which member failed.
+/// Every member-scoped CONTRIBUTION refusal names `versions[i]` (#2590), so on
+/// a multi-member change set a client can tell which member failed.
 #[tokio::test]
 async fn member_scoped_refusals_name_the_offending_version_index() {
     let (_db, svc) = crate::fixtures::service().await;

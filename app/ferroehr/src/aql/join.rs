@@ -14,23 +14,12 @@
 //! FROM PERSON p CONTAINS (<party classes> AND EHR e [CONTAINS <clinical classes>])
 //! ```
 //!
-//! with any other `PARTY` class as the root too, the abstract `PARTY` and
-//! `ACTOR` included. The parties and the clinical
-//! content each live behind their own pool and role, so no
-//! statement can answer the query; [`split`] cuts it into a party query (the
-//! root, its party classes, the `WHERE` conjuncts and columns that read them)
-//! and a clinical query (the `EHR` and what it contains, likewise), each an
-//! ordinary single-domain AQL statement the engine plans and runs unchanged.
-//! The caller joins the two answers on the `EHR_STATUS.subject` references
-//! that name the party: a row is a party row
-//! and a clinical row of an EHR that party is the subject of, so a party with
-//! no EHR and an EHR with no party answer nothing.
-//!
-//! The order keys are projected beside each side's columns and each side runs
-//! ordered by its own keys, so the joined rows sort by the ranks the database's
-//! own comparison assigned ([`JoinPlan::order`]). An aggregate, `DISTINCT`, and
-//! any expression reading both sides would need the joined rows inside one
-//! statement, and each is refused.
+//! [`split`] cuts the query into a party query and a clinical query, each an
+//! ordinary single-domain statement, since the parties and the clinical content
+//! live behind their own pools and roles. The caller joins the answers on the
+//! `EHR_STATUS.subject` references, so a party with no EHR and an EHR with no
+//! party answer nothing. An aggregate, `DISTINCT` and any expression reading
+//! both sides are refused.
 
 use std::collections::BTreeSet;
 
@@ -337,9 +326,6 @@ struct Sides<'a> {
 impl Sides<'_> {
     /// The half every root in `roots` belongs to; an expression reading no
     /// variable (a literal, `CURRENT_DATE()`) is evaluated by the party query.
-    ///
-    /// A root neither half binds is left to the party half, whose planner
-    /// refuses it as an unknown variable.
     ///
     /// # Errors
     /// [`AqlFeatureError::JoinedCrossDomainExpression`] when `roots` names a

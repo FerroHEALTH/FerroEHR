@@ -1,23 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Every text-producing emit target — `emit`, `emit-json`, `emit-xml`,
-//! `emit-rest`, `emit-opt`, `emit-aom2`, `emit-rm-model`, `emit-validate` — as
-//! properties over the **real** pipeline on the **real** vendored inputs.
-//!
-//! Each test drives `openehr_codegen::testsupport::emit_*_to_memory`, which
-//! calls the very render function the matching `cmd_*` handler calls: the
-//! handler is a write-files shell over it, so tested text and emitted text
-//! cannot drift. Every target is asserted three ways — the render is
-//! byte-deterministic, it produces exactly its file set (each non-empty,
-//! banner-headed and SPDX-stamped), and its bytes equal the committed
-//! generated tree, which is the in-process half of the `codegen-drift` check.
-//!
-//! `emit` is the one target whose file set is pinned by SHAPE rather than by
-//! enumeration: it renders the whole spec layer (four figures of files), so the
-//! properties asserted are that every composed crate contributes, that the
-//! generation-twin template stamps ride along, and that the RM crate's model and
-//! invariant cores are part of the same set.
+//! Every text-producing emit target over the real pipeline: each render is
+//! byte-deterministic, produces exactly its file set, and equals the committed
+//! generated tree.
 
 use openehr_codegen::testsupport;
 use std::collections::BTreeMap;
@@ -42,9 +28,7 @@ const XML_FILES: &[&str] = &[
     "openehr-its/src/xml/generated/mod.rs",
 ];
 
-/// The complete file set `emit-rest` produces, in emitted-map (sorted) order:
-/// the shared `common` module, one module per API group whose OAS declares
-/// operations, and the module declaration file.
+/// The file set `emit-rest` produces, in sorted order.
 const REST_FILES: &[&str] = &[
     "openehr-its/src/rest/generated/admin.rs",
     "openehr-its/src/rest/generated/common.rs",
@@ -63,9 +47,7 @@ const OPT_FILES: &[&str] = &[
     "openehr-its/src/opt14/types.rs",
 ];
 
-/// The complete file set `emit-aom2` produces, in emitted-map (sorted) order:
-/// the persistent form (`aom2`) and the AOM model form (`aom2_model`), each its
-/// own closure into its own module.
+/// The file set `emit-aom2` produces, in sorted order.
 const AOM2_FILES: &[&str] = &[
     "openehr-its/src/aom2/impls.rs",
     "openehr-its/src/aom2/mod.rs",
@@ -75,9 +57,8 @@ const AOM2_FILES: &[&str] = &[
     "openehr-its/src/aom2_model/types.rs",
 ];
 
-/// The complete file set `emit-rm-model` produces, in emitted-map (sorted)
-/// order: one `model/` subtree per RM generation, because a selectable
-/// generation is a complete peer and not a types-only shell.
+/// The file set `emit-rm-model` produces, one `model/` subtree per RM
+/// generation.
 const RM_MODEL_FILES: &[&str] = &[
     "openehr-rm/src/v1_1/model/data.rs",
     "openehr-rm/src/v1_1/model/mod.rs",
@@ -118,9 +99,8 @@ fn emit_is_byte_deterministic() {
     assert_deterministic("emit", &a, &b);
 }
 
-/// `emit` produces one file set covering every composed crate, the RM crate's
-/// model and invariant cores, and the generation-twin template stamps — each
-/// file non-empty, banner-headed and SPDX-stamped.
+/// `emit` covers every composed crate, the RM model and cores, and the
+/// template stamps, each file well-formed.
 #[test]
 fn emit_emits_every_composed_crate_including_the_template_stamps() {
     let files = testsupport::emit_to_memory().unwrap();
@@ -238,11 +218,7 @@ fn emit_rest_matches_the_committed_tree() {
     assert_matches_committed_tree("emit-rest", &files);
 }
 
-/// Every API group gates exactly one server module and exactly one client module.
-///
-/// The two halves ride separate features (`rest-server`, `rest-client`), so a
-/// second gate, or a half emitted outside its gate, would compile a half into a
-/// consumer that did not ask for it.
+/// Every API group gates exactly one server module and one client module.
 #[test]
 fn every_rest_group_gates_one_server_module_and_one_client_module() {
     let files = testsupport::emit_rest_to_memory().unwrap();
@@ -274,10 +250,6 @@ fn every_rest_group_gates_one_server_module_and_one_client_module() {
 }
 
 /// Every operation of a group has one outcome enum and one client method.
-///
-/// The route table lists the group's operations as the OAS declares them, so
-/// the outcome enums and the client methods are counted against it: an
-/// operation the client half skipped would leave the counts apart.
 #[test]
 fn every_rest_operation_has_one_outcome_and_one_client_method() {
     let files = testsupport::emit_rest_to_memory().unwrap();
@@ -309,12 +281,8 @@ fn every_rest_operation_has_one_outcome_and_one_client_method() {
     }
 }
 
-/// Every operation of a group has one success-answer enum, one trait method,
-/// one router binding and one handler in the server module.
-///
-/// Counted against the route table, like the client half: an operation the
-/// router skipped would be unreachable over HTTP while its trait method still
-/// compiles.
+/// Every operation of a group has one success enum, trait method, router
+/// binding and handler.
 #[test]
 fn every_rest_operation_has_one_server_response_route_and_handler() {
     let files = testsupport::emit_rest_to_memory().unwrap();
@@ -354,13 +322,8 @@ fn every_rest_operation_has_one_server_response_route_and_handler() {
     }
 }
 
-/// Every documented response is an outcome variant the client method matches.
-///
-/// Each variant carries a ``/// The `NNN` answer.`` doc line and each client
-/// method one `http::StatusCode::` arm per variant, so the two counts agree
-/// exactly when no documented status was dropped from either side. A status the
-/// emitter's table does not name renders as `UnregisteredStatus`, which must
-/// never reach the committed contract.
+/// Every documented response is an outcome variant the client method matches,
+/// and no `UnregisteredStatus` reaches the contract.
 #[test]
 fn every_documented_rest_response_is_a_matched_variant() {
     let files = testsupport::emit_rest_to_memory().unwrap();
@@ -388,11 +351,8 @@ fn every_documented_rest_response_is_a_matched_variant() {
     }
 }
 
-/// The client module reaches the hoisted shared types one module level up.
-///
-/// The hoisted schemas live in `generated::common`, a sibling of the group
-/// module; the client module sits one level below the group, so every
-/// reference it makes is `super::super::common::`, never `super::common::`.
+/// The client module reaches the hoisted shared types as
+/// `super::super::common::`.
 #[test]
 fn rest_client_modules_reach_hoisted_types_through_super_super() {
     let files = testsupport::emit_rest_to_memory().unwrap();
@@ -554,11 +514,6 @@ fn emit_rm_model_matches_the_committed_tree() {
 }
 
 /// Every RM generation's `mod.rs` declares the emitted model module.
-///
-/// The declaration is the one thing `emit-rm-model` does NOT render — it is a
-/// read-modify-write of the generation `mod.rs`, which `emit` instead writes
-/// into the rendered body. Both spell it from `cli`'s one `RM_MODEL_DECL`
-/// constant; this asserts the outcome the two paths must agree on.
 #[test]
 fn every_rm_generation_declares_its_model_module() {
     let root = crates_root();
@@ -589,9 +544,7 @@ fn emit_validate_emits_its_whole_file_set() {
     assert_file_set("emit-validate", &files, VALIDATE_FILES);
 }
 
-/// The rendered invariant cores equal the committed generated tree — which is
-/// also what `emit` writes there, since both drive
-/// `cli::render_validate_files`.
+/// The rendered invariant cores equal the committed generated tree.
 #[test]
 fn emit_validate_matches_the_committed_tree() {
     let files = testsupport::emit_validate_to_memory().unwrap();
@@ -626,11 +579,8 @@ fn assert_file_set(target: &str, files: &BTreeMap<String, String>, expected: &[&
     assert_well_formed(target, target, files);
 }
 
-/// Assert every rendered file is non-empty, opens on a line-one banner carrying
-/// `banner_needle`, and carries its crate's SPDX licence header.
-///
-/// `banner_needle` is the target name for every target that stamps it into the
-/// banner; `emit`'s banner names only the generator, so it passes `@generated`.
+/// Asserts every rendered file is non-empty, opens on a banner carrying
+/// `banner_needle`, and carries its crate's SPDX header.
 fn assert_well_formed(target: &str, banner_needle: &str, files: &BTreeMap<String, String>) {
     assert!(!files.is_empty(), "{target}: rendered nothing");
     for (path, body) in files {
@@ -640,8 +590,7 @@ fn assert_well_formed(target: &str, banner_needle: &str, files: &BTreeMap<String
             banner.contains("@generated") && banner.contains(banner_needle),
             "{target}: {path} does not open with its generated banner: {banner:?}",
         );
-        // The needle names the SPDX tag WITHOUT an expression, which the
-        // REUSE scanner would otherwise parse and refuse as invalid.
+        // The needle omits the SPDX expression, which REUSE would refuse.
         // REUSE-IgnoreStart
         assert!(
             body.contains("SPDX-License-Identifier: "),
@@ -651,12 +600,8 @@ fn assert_well_formed(target: &str, banner_needle: &str, files: &BTreeMap<String
     }
 }
 
-/// Assert a target's rendered bytes equal the committed generated tree.
-///
-/// The rendered body is put through `rustfmt` first, exactly as the `cmd_*`
-/// handler puts the file it just wrote through it — `rustfmt` reading stdin
-/// formats byte-identically to `rustfmt` reading that same text from a file, so
-/// nothing has to be written to compare.
+/// Asserts a target's rendered bytes, through `rustfmt`, equal the committed
+/// generated tree.
 #[expect(
     clippy::panic,
     reason = "test diagnostics: a missing committed file names itself instead of \
@@ -677,20 +622,8 @@ fn assert_matches_committed_tree(target: &str, files: &BTreeMap<String, String>)
     }
 }
 
-/// Assert `emit`'s whole rendered tree equals the committed generated tree.
-///
-/// Two things differ from the single-file comparison above. The set runs to four
-/// figures, so the bodies are formatted in ONE batched `rustfmt` pass over a
-/// scratch tree — the same `rustfmt --edition 2024 --quiet <files>` invocation
-/// the `emit` handler makes over the files it has just written. And `emit`
-/// finishes each crate by WEAVING module declarations into anchors it rendered
-/// (`declare_hand_written_modules`; `emit-json` adds `mod json_serde;` the same
-/// way), so an anchor's committed bytes are the rendered bytes plus that weave.
-/// The assertion therefore pins three things: the rendered prefix byte for byte,
-/// a tail that is nothing but woven declarations, and that only a module ANCHOR
-/// (`lib.rs` / `mod.rs`) carries such a tail at all — the weave's own rule, so
-/// the tolerance cannot widen into a blanket escape. The woven set is
-/// non-empty, which is what keeps that half of the assertion honest.
+/// Asserts `emit`'s whole rendered tree equals the committed tree, allowing
+/// only woven module declarations after a `lib.rs` or `mod.rs` anchor.
 #[expect(
     clippy::panic,
     reason = "test diagnostics: a missing committed file names itself instead of \
@@ -740,11 +673,7 @@ fn is_woven_declarations(tail: &str) -> bool {
     })
 }
 
-/// Format a whole rendered tree in one `rustfmt` pass, via a scratch directory.
-///
-/// Per-file `rustfmt` over four figures of files would dominate the run, and
-/// `rustfmt` is invoked exactly as the emitter invokes it — over files on disk,
-/// batched per crate — so this is also the more faithful reproduction.
+/// Formats a whole rendered tree in one `rustfmt` pass, as the emitter does.
 #[expect(
     clippy::panic,
     reason = "test diagnostics: each scratch-tree failure mode names itself, so a red \
@@ -829,11 +758,8 @@ fn committed_relative_name(path: &str) -> String {
     format!("crates/{path}")
 }
 
-/// Format `text` with the same `rustfmt` invocation the emitter shells out to.
-///
-/// The body is written from a separate thread because a large file (the biggest
-/// emitted impl set is megabytes) fills the pipe buffer long before `rustfmt`
-/// finishes, and writing it all before reading stdout would deadlock.
+/// Formats `text` as the emitter's `rustfmt` call does, writing from a
+/// separate thread so a large body cannot deadlock the pipe.
 #[expect(
     clippy::panic,
     reason = "test diagnostics: each subprocess failure mode names itself, so a red \
@@ -870,10 +796,6 @@ fn rustfmt(label: &str, text: &str) -> String {
 }
 
 /// A one-line locator for the first place two texts diverge.
-///
-/// The emitted files run to megabytes, so a whole-body `assert_eq!` would print
-/// an unreadable pair; the first differing line is what actually identifies the
-/// defect.
 fn difference_hint(a: &str, b: &str) -> String {
     for (i, (la, lb)) in a.lines().zip(b.lines()).enumerate() {
         if la != lb {

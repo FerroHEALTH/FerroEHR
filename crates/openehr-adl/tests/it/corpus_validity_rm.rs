@@ -1,25 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Reference-model (phase-2 RM) validation corpus harness.
-//!
-//! Exercises the reference-model checks (VCORM/VCARM/VCORMT/VCAEX/VCACA/VCAM,
-//! plus RM-dependent VACSO and the interior-node half of VATID) against the two
-//! reference models the ADL2 conformance corpus authors fixtures against:
-//!
-//! - the openEHR RM 1.2.0 production model (`openehr_adl::validate::rm::
-//!   ProductionRmModel`, the generated `openehr_rm::v1_2::model`) — the
-//!   `openEHR-EHR-*` / `openEHR-DEMOGRAPHIC-*` fixtures under
-//!   `tests/corpus/adl2-reference/validity/rm_checking/`;
-//! - the openEHR `adltest`/`TEST_PKG` test schema (a BMM-loaded [`RmModel`]
-//!   built here from the vendored ODIN BMM `tests/corpus/rm/
-//!   openehr_adltest_100.bmm` via `openehr_lang::v1_1::odin`) — the
-//!   `openEHR-TEST_PKG-*` fixtures.
-//!
-//! The oracle is each file's `other_details["regression"]` tag (per
-//! `tests/corpus/INVENTORY.md`, never the filename). Spec oracle for the codes:
-//! `docs/specs/openehr/AM/docs/AOM2/master04.5-constraint_model-class_definitions.adoc`
-//! §Validity Rules + `master08-validation.adoc` §Phase 2.
+//! Reference-model validation over the ADL2 conformance corpus against each
+//! file's `regression` tag, with the production RM 1.2.0 for `openEHR-*`
+//! fixtures and the `adltest`/`TEST_PKG` BMM (`tests/corpus/rm/openehr_adltest_100.bmm`)
+//! for `openEHR-TEST_PKG-*` (`AOM2/master04.5` §Validity Rules; `master08` §Phase 2).
 
 // A test harness: vendored-fixture reads and parses are asserted to succeed.
 #![allow(
@@ -59,11 +44,8 @@ struct BmmClass {
     props: HashMap<String, RmAttr>,
 }
 
-/// The `adltest`/`TEST_PKG` reference model, loaded from the vendored ODIN BMM.
-///
-/// `adltest` declares `includes = openehr_rm_data_types_1.0.4`, so types it does
-/// not itself define (`DATA_VALUE`, `DV_CODED_TEXT`, `CODE_PHRASE`, …) resolve
-/// against the production openEHR RM data types via [`ProductionRmModel`].
+/// The `adltest`/`TEST_PKG` reference model from the vendored ODIN BMM, with the
+/// types it includes from the production RM data types.
 struct BmmRmModel {
     classes: HashMap<String, BmmClass>,
     fallback: ProductionRmModel,
@@ -296,12 +278,8 @@ const RM_FIRING: &[&str] = &[
 /// silent exclusion).
 fn adjudicated(name: &str) -> Option<&'static str> {
     if name.ends_with("ENTRY_WRONG.rm_type_wrong.v1.0.0.adls") {
-        // Definition root type `ENTRY` != identifier RM class `ENTRY_WRONG`, so
-        // VARDT (master03 §Validity Rules L238: "the typename … must match the
-        // type mentioned in the first segment of the archetype id") raises on
-        // it. The corpus tags it PASS — a documented tag/spec inconsistency
-        // (INVENTORY §3 records filename/tag contradictions). Not an RM gap;
-        // adjudicated rather than weakening VARDT.
+        // VARDT fires (master03 §Validity Rules) on `ENTRY` against `ENTRY_WRONG`; the
+        // corpus PASS tag is inconsistent (INVENTORY §3).
         Some("VARDT fires (ENTRY != ENTRY_WRONG, master03 L238); corpus PASS tag inconsistent")
     } else {
         None
@@ -615,12 +593,8 @@ fn test_model_loads_expected_classes() {
 
 // ── VCORMT generic-argument matching (production model) ─────────────────────
 
-/// The re-claimed `VCORMT_rm_non_conforming_type1` scenario, exercised directly
-/// against the production model: `HISTORY<ITEM_LIST>.events` is
-/// `EVENT<ITEM_STRUCTURE>`; a child `EVENT<CLUSTER>` conforms on the base type
-/// (`EVENT`) but its generic argument `CLUSTER` does not conform to
-/// `ITEM_STRUCTURE`, so VCORMT fires on the covariant argument match
-/// (master04.2 §`Rm_type_name` and Reference Model Type Matching).
+/// `EVENT<CLUSTER>` under `HISTORY<ITEM_LIST>.events` raises VCORMT on the
+/// covariant argument (master04.2 §`Rm_type_name`).
 #[test]
 fn vcormt_generic_argument_non_conformance() {
     let production = ProductionRmModel;
@@ -739,11 +713,8 @@ fn cluster_value(concept: &str, value_type: &str, body: &str) -> String {
     )
 }
 
-/// VCARM admits an attribute "stored or computed" (AOM2 `master04.5`
-/// §Validity Rules: `C_ATTRIBUTE`), and a function with no arguments is a
-/// computed attribute (`master04.2` §Attribute Nodes): the RM defines
-/// `is_integral()` on `DV_PROPORTION` and `DV_QUANTITY` and `offset()` on
-/// `EVENT`, so constraints on them are clean.
+/// Constraints on computed attributes (`is_integral()`, `offset()`) pass VCARM
+/// (`master04.5` §Validity Rules: `C_ATTRIBUTE`; `master04.2` §Attribute Nodes).
 #[test]
 fn vcarm_admits_rm_computed_attributes() {
     let production = ProductionRmModel;
@@ -789,13 +760,8 @@ fn vcarm_refuses_a_function_with_arguments_and_an_undefined_attribute() {
 
 // ── VCORMEN / VCORMENV / VCORMENU (enumeration-literal validity) ────────────
 
-/// A minimal reference model with two enumeration-typed attributes, for the
-/// enumeration-literal checks. The openEHR RM 1.2.0 BMM types every "enum"
-/// property as a plain `Integer`/`String` (only `PROPORTION_KIND` is an
-/// enumeration class, and no property is typed as it), so an enum-typed *slot* —
-/// the precondition these checks need — does not occur in the production model;
-/// this bespoke model supplies one (master04.2 §Constraints on Enumeration
-/// Types).
+/// A minimal reference model with two enumeration-typed attributes, which the
+/// production RM 1.2.0 has none of (master04.2 §Constraints on Enumeration Types).
 struct EnumTestModel;
 
 impl RmModel for EnumTestModel {

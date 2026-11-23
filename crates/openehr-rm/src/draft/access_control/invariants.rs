@@ -10,10 +10,6 @@
 //! The draft is FerroEHR's change proposal and no openEHR release, so these
 //! checks are our own design over our own model (#5506).
 //!
-//! The `*_valid` invariants that ask an optional list to be absent or
-//! non-empty are not checked here: the generated types hold each such list
-//! as an `Option<NonEmptyVec<_>>`, so the reader refuses an empty one.
-//!
 //! The RM data values the classes hold keep their own invariants wherever
 //! they are used: each `DV_DATE_TIME` and `DV_DURATION` is checked by its
 //! `Value_valid`, through the BASE validator the RM types use (RM Data Types,

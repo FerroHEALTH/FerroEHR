@@ -100,8 +100,7 @@ item_id_for_issue() {
   # Looked up from the ISSUE side (one cheap node query), never by listing the
   # whole project: the board keeps every closed item, so `gh project
   # item-list --limit 1000` costs enough GraphQL points that GitHub's
-  # secondary rate limit rejects it once the board is large (measured
-  # 2026-08-25 at ~2.6k items).
+  # secondary rate limit rejects it.
   # shellcheck disable=SC2016 # $owner/$name/$number are GraphQL variables, bound by the -f flags
   gh api graphql \
     -f owner="${REPO%%/*}" -f name="${REPO##*/}" -F number="$number" \

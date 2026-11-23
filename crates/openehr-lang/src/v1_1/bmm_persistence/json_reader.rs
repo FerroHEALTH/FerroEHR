@@ -20,8 +20,6 @@
 //! (`LANG/docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_class.adoc`
 //! §Attributes).
 //!
-//! The mapping, value by value:
-//!
 //! * an object carrying `_type` → a type-marked value over its other members;
 //! * an object that is the value of a keyed collection ([`KEYED_COLLECTIONS`])
 //!   → a keyed list, in document order;
@@ -35,10 +33,6 @@
 //! * a string, number or boolean → the ODIN leaf of the same kind; `null` is
 //!   refused, and so is a member name repeated within one object, as ODIN
 //!   refuses a repeated attribute.
-//!
-//! The generated canonical-JSON codec on the `P_BMM_*` types is a different
-//! thing: it (de)serialises the whole object, `uid` and `source_schema_id`
-//! included, and is not a reader of persisted schema files.
 
 use std::collections::BTreeSet;
 use std::fmt;
@@ -85,11 +79,6 @@ const TYPE_MEMBER: &str = "_type";
 const CARDINALITY: &str = "cardinality";
 
 /// Reads a P_BMM schema from its JSON serialisation.
-///
-/// The returned value is the one [`crate::v1_1::bmm_persistence::reader::read_schema`]
-/// returns for the ODIN serialisation of the same schema: unresolved includes,
-/// `None` in-memory caches, and `P_BMM_CLASS.source_schema_id`/`uid` stamped by
-/// the shared walk.
 ///
 /// # Errors
 /// Returns [`PBmmReadError::Json`] when the text is not well-formed JSON or an

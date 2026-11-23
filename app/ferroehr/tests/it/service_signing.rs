@@ -4,12 +4,6 @@
 //! End-to-end tests for version signing (`VERSION.signature`, RM common
 //! §"Digital Signature")
 //! against a real `PostgreSQL` 18 (shared testkit harness).
-//!
-//! The strongest assertion: the digest recomputes from the **served**
-//! `ORIGINAL_VERSION`'s `canonical_form` — proving commit-time and read-time
-//! object identity. Also: `EHR_STATUS` / FOLDER / contribution versions are all
-//! signed; client-supplied signatures are stored verbatim; `verify_on_read =
-//! strict` turns a tampered row into a 5xx; canonical XML carries the signature.
 
 use ferroehr::service::ehr::object::EhrObject;
 use ferroehr::service::ehr::scope::Unscoped;
@@ -412,10 +406,9 @@ fn service_with_verify(pool: &PgPool, policy: VerifyOnRead) -> FerroEhrService {
 
 #[tokio::test]
 async fn warn_and_off_verify_on_read_serve_a_tampered_row() {
-    // The other two poles of the policy (#273): `warn` logs + meters a mismatch
-    // but still serves; explicit `off` never even checks. Neither is a 5xx —
-    // together with the strict tests this proves the default is no longer the
-    // silent-pass state, and the opt-outs remain reachable.
+    // The other two poles of the policy (#273): `warn` logs and meters a
+    // mismatch but serves; explicit `off` never checks. Neither is a 5xx, and
+    // the strict tests pin the default.
     for policy in [VerifyOnRead::Warn, VerifyOnRead::Off] {
         let db = testkit::db().await.expect("testkit database");
         let pool = db.pool();
@@ -721,11 +714,6 @@ async fn creating_system_id_and_signature_survive_a_system_id_change() {
 /// excluded attribute — so the `ORIGINAL_VERSION.attestations` a version
 /// carried at committal (`UPDATE_VERSION.attestations`; master06 §Attestation,
 /// "Signing content at committal") are INSIDE the signed canonical form.
-///
-/// Asserted both ways: the served version still recomputes its own digest with
-/// the attestation present (so commit-time and read-time bytes agree), and
-/// altering that attestation in the database is caught by a strict
-/// `verify_on_read`.
 #[tokio::test]
 async fn at_committal_attestation_is_signed_and_a_tamper_is_caught() {
     let db = testkit::db().await.expect("testkit database");

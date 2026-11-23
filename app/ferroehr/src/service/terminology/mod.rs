@@ -13,8 +13,6 @@
 //! to Archetypes), so the service answers from the in-process bundle and from
 //! one FHIR terminology server.
 //!
-//! Module tree, one file per concern:
-//!
 //! - [`types`] — the extract data model (`Terminology_description`,
 //!   `Terminology_extract`, `Term_code`/`Defined_term`, relationships).
 //! - [`bundle`] — the in-process `openehr-term` bundle provider (TERM 3.1.0), the
@@ -29,8 +27,6 @@
 //!   ([`crate::aql::terminology::TerminologyExpander`] on `FerroEhrService`).
 //! - [`config`] — the `[terminology]` config section (no openEHR spec governs
 //!   configuration — our own design).
-//!
-//! # Which source answers
 //!
 //! Enumeration (`get_terminology_ids`, `has_terminology`,
 //! `get_terminology_description`) is answered only by the bundle, a FHIR TS

@@ -1,19 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `model-query` report, tested over the **real** vendored BMM inputs
-//! through `openehr_codegen::testsupport` — the same projection the CLI
-//! subcommand prints.
-//!
-//! The golden rows below are the BMM's own statement of two RM classes, and
-//! they are cross-checked against the normative UML tables
-//! (`RM/docs/UML/classes/org.openehr.rm.common.folder.adoc` §FOLDER Class and
-//! `…org.openehr.rm.common.locatable.adoc` §LOCATABLE Class): `FOLDER.items`,
-//! `FOLDER.folders` and `FOLDER.details` are all `0..1`, the first two typed
-//! `List<>`; `LOCATABLE` is abstract with `name`/`archetype_node_id` at `1..1`
-//! and `uid`/`links`/`archetype_details`/`feeder_audit` at `0..1`. A BMM pin
-//! bump that changes an existence, a cardinality, a declared type or the
-//! emitted field shape therefore fails here.
+//! The `model-query` report over the vendored BMM inputs, pinned to two RM
+//! classes as the UML tables state them (`org.openehr.rm.common.folder.adoc`,
+//! `org.openehr.rm.common.locatable.adoc`).
 
 use openehr_codegen::testsupport;
 
@@ -188,12 +178,7 @@ const LOCATABLE: [[&str; 14]; 6] = [
     ],
 ];
 
-/// The TSV text a header plus these rows must render as. The RM crate emits
-/// TWO generations (#1942: RM 1.1.0 released beside RM 1.2.0), and both
-/// declare these classes with identical shapes, so the expected report is the
-/// golden rows once per generation — `bmm` column first `openehr_rm_1.1.0`,
-/// then the pinned `openehr_rm_1.2.0` rows verbatim (the report sorts by
-/// (component, bmm, class, attribute)).
+/// The TSV a header plus these rows renders as, once per RM generation.
 fn expected_tsv(rows: &[[&str; 14]]) -> String {
     let mut out = String::new();
     out.push_str(&HEADER.join("\t"));
@@ -211,10 +196,8 @@ fn expected_tsv(rows: &[[&str; 14]]) -> String {
     out
 }
 
-/// `FOLDER`'s reported rows are exactly what the vendored RM BMM states, with
-/// the field shapes the emitter currently emits (`Option<Vec<T>>` for both
-/// `0..1 List<>` attributes — absence and present-but-emptiness are distinct
-/// model states — and `Option<T>` for the optional single one).
+/// `FOLDER`'s rows are what the RM BMM states, with `Option<Vec<T>>` for both
+/// `0..1 List<>` attributes.
 #[test]
 fn folder_rows_match_the_vendored_bmm() {
     let report = testsupport::model_query(Some("rm"), Some("FOLDER"), None, "tsv", false)
@@ -304,15 +287,8 @@ fn unknown_filter_values_are_rejected_with_the_valid_ones() {
     assert!(format.contains("table, tsv, json"), "{format}");
 }
 
-/// The flattened view reports every attribute a class CARRIES, not just the
-/// ones it declares — the inheritance dimension.
-///
-/// `LOCATABLE.links` is declared once on the abstract `LOCATABLE`
-/// (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.locatable.adoc`
-/// §Attributes) and inherited by every archetyped RM class, so the declared
-/// view reports it once PER GENERATION (both emitted RM generations declare
-/// it) while the flattened view reports it once per carrier, each naming
-/// `LOCATABLE` as the declaring class.
+/// The flattened view reports `LOCATABLE.links` once per carrying class, each
+/// naming `LOCATABLE`.
 #[test]
 fn the_flattened_view_reports_inherited_attributes_per_carrier() {
     let declared = testsupport::model_query(Some("rm"), None, Some("links"), "tsv", false)
@@ -340,10 +316,8 @@ fn the_flattened_view_reports_inherited_attributes_per_carrier() {
     }
 }
 
-/// The emission column of the flattened view is computed for the CARRYING
-/// class, so a per-descendant divergence is visible rather than assumed absent.
-/// `LOCATABLE.links` resolves identically everywhere; the assertion pins that
-/// so a future emitter change that breaks the uniformity is caught here.
+/// The flattened emission column is the same for `LOCATABLE.links` on every
+/// carrier.
 #[test]
 fn a_uniformly_inherited_container_emits_one_shape_for_every_carrier() {
     let report = testsupport::model_query(Some("rm"), None, Some("links"), "tsv", true)

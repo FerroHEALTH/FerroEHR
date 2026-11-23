@@ -10,11 +10,6 @@
 //! follows the RM data types the Web Template exposes per node (`inputs`),
 //! executed against the CDR Query API. The builder page posts this state
 //! and the BFF validates it through the same code.
-//!
-//! The lowering has an inverse: [`lift`] recognizes exactly the query shape
-//! [`lower`] emits and lifts a stored query's AQL back into the editable
-//! state, refusing anything outside that envelope rather than loading it
-//! lossily.
 
 pub mod catalog;
 pub mod lift;

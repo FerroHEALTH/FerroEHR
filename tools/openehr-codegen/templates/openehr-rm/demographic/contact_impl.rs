@@ -2,23 +2,13 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM spec functions for `CONTACT`.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.contact.adoc`
-//! §Functions + §Invariants.
+//! `CONTACT.purpose` (`org.openehr.rm.demographic.contact.adoc`).
 
 use crate::v1_2::data_types::text::dv_text::DvText;
 use crate::v1_2::demographic::contact::Contact;
 
 impl Contact {
-    /// Returns the purpose this contact is used for, e.g. mail or daytime
-    /// phone.
-    ///
-    /// Spec: `org.openehr.rm.demographic.contact.adoc` §Functions `purpose` —
-    /// "Purpose for which this contact is used, e.g. mail, daytime phone, etc.
-    /// Taken from value of inherited `name` attribute", with §Invariants
-    /// `Purpose_valid: purpose = name` making the identity exact.
+    /// The purpose of this contact: its `name` (`Purpose_valid: purpose = name`).
     #[must_use]
     pub fn purpose(&self) -> &DvText {
         &self.name

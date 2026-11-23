@@ -6,13 +6,6 @@
 //! The `[authz]` section of the one server configuration tree, with no loader of
 //! its own. No openEHR spec governs RBAC, so this is our own design.
 //!
-//! The coarse RBAC keys (`rbac.*`, always evaluated when auth is enabled), the
-//! assurance floor, the party binding and the grant ceiling. Access decisions
-//! on clinical data are the access evaluator's, over the `access_directives`
-//! of each `EHR_ACCESS` and the controller's `ACCESS_POLICY`, and take no key
-//! here. Every field has a default, so an all-defaults [`AuthzConfig`] is
-//! valid (RBAC on, `ADMIN`/`READONLY` roles).
-//!
 //! NOTE: the management surface is NOT governed here — `[management]`
 //! (`[management.endpoints]`, one level per endpoint) is its single authority,
 //! enforced by the per-route guard in `ferroehr-rest`.
@@ -240,8 +233,7 @@ mod tests {
         assert!(c.validate().is_ok());
     }
 
-    /// `user_role`, retired in v5.6 and past its one release, is an unknown
-    /// key.
+    /// `user_role` is an unknown key.
     #[test]
     fn user_role_is_an_unknown_key() {
         let err = toml::from_str::<AuthzConfig>("[rbac]\nuser_role = \"USER\"\n")

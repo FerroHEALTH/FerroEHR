@@ -1,25 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `ctx/` context vocabulary + defaulting.
-//!
-//! ITS-REST `simplified_formats/master06-context_information.adoc` (and the
-//! `ctx/` overview in `master04-basic_concepts.adoc` §Context) define a set of
-//! `ctx/`-prefixed shortcuts that set default values in the RM tree the
-//! Web Template does not surface as leaf nodes — composition/entry language and
-//! territory, the composer, the event-context time/setting/location/facility/
-//! participations, and per-ENTRY defaults (provider, workflow id, ISM state,
-//! activity timing, instruction narrative, links).
-//!
-//! [`resolve`] parses the `ctx` child of a parsed simplified document into a
-//! typed [`CtxDefaults`] carrying **ready typed RM pieces** the composition
-//! builder drops into place; [`crate::flat::ctx_emit::emit`] is the reverse
-//! (a COMPOSITION, typed or canonical JSON, → the `ctx/` keys).
-//!
-//! Terminology-coded shortcuts (`setting`, `action_ism_transition_current_state`)
-//! accept either a code or a display value (master06 §§setting,
-//! action_ism_transition_current_state) and resolve through the openEHR
-//! terminology bundle via [`crate::flat::map::coded_from_group`].
+//! The `ctx/` vocabulary (ITS-REST
+//! `simplified_formats/master06-context_information.adoc`): [`resolve`] reads
+//! the `ctx` child into typed RM pieces ([`CtxDefaults`]);
+//! [`crate::flat::ctx_emit::emit`] is the reverse. Coded shortcuts accept a
+//! code or a display value ([`crate::flat::map::coded_from_group`]).
 
 #![expect(
     clippy::disallowed_types,
@@ -70,9 +56,7 @@ const KNOWN_CTX: &[&str] = &[
     "link",
 ];
 
-/// The typed, resolved context of one simplified data instance
-/// (master06-context_information.adoc). Fields hold ready typed RM pieces
-/// (or the raw strings a piece is built from on demand).
+/// The resolved context of one simplified instance (master06).
 #[derive(Debug, Default)]
 pub(crate) struct CtxDefaults {
     /// `ENTRY.language` / `COMPOSITION.language` code (master06 §"Language and
@@ -118,9 +102,8 @@ pub(crate) struct CtxDefaults {
     pub(crate) id_namespace: Option<String>,
     /// Default external-reference scheme (master06 §"ID Namespace and Scheme").
     pub(crate) id_scheme: Option<String>,
-    /// The `COMPOSITION.language` CODE_PHRASE a `<root>/language|raw` value
-    /// carries, used when no `ctx/language` names one (master04 §Raw
-    /// canonical JSON).
+    /// The `COMPOSITION.language` from `<root>/language|raw`, used when no
+    /// `ctx/language` names one.
     pub(crate) language_phrase: Option<Obj>,
     /// The `COMPOSITION.territory` CODE_PHRASE a `<root>/territory|raw` value
     /// carries, used when no `ctx/territory` names one.
@@ -128,10 +111,8 @@ pub(crate) struct CtxDefaults {
 }
 
 impl CtxDefaults {
-    /// The `EVENT_CONTEXT.setting`: the client's, else the one context field
-    /// the spec gives a value to when it is absent, openEHR `setting` group
-    /// code `238` "other care" (master06 §setting — "will be set to 'other
-    /// care' if not set").
+    /// The `EVENT_CONTEXT.setting`: the client's, else `238` "other care"
+    /// (master06 §setting).
     ///
     /// # Errors
     /// [`FlatError::Rm`], never for these classes.
@@ -142,9 +123,8 @@ impl CtxDefaults {
         }
     }
 
-    /// The `COMPOSITION`/`ENTRY` `language` as a CODE_PHRASE in `ISO_639-1`
-    /// (master06 §"Language and Territory"), when `ctx/language` was set,
-    /// else the `<root>/language|raw` CODE_PHRASE.
+    /// The `language` CODE_PHRASE in `ISO_639-1` (master06 §"Language and
+    /// Territory") from `ctx/language`, else `<root>/language|raw`.
     ///
     /// # Errors
     /// [`FlatError::Rm`], never for these classes.
@@ -156,8 +136,8 @@ impl CtxDefaults {
         )
     }
 
-    /// The `COMPOSITION.territory` as a CODE_PHRASE in `ISO_3166-1`, when
-    /// `ctx/territory` was set, else the `<root>/territory|raw` CODE_PHRASE.
+    /// The `territory` CODE_PHRASE in `ISO_3166-1` from `ctx/territory`, else
+    /// `<root>/territory|raw`.
     ///
     /// # Errors
     /// [`FlatError::Rm`], never for these classes.
@@ -184,12 +164,8 @@ fn phrase(
 
 // ── sim → CtxDefaults ─────────────────────────────────────────────────────────
 
-/// Resolve the `ctx` child of a parsed simplified document. `now` supplies the
-/// default timestamp (master04 §Context / master06 §time: `ctx/time` defaults to
-/// `now()`).
-///
-/// Missing `language`/`territory` is NOT an error here — the caller (validation)
-/// owns the mandatory-field check (master04 §Context).
+/// Resolves the `ctx` child; `now` is the `ctx/time` default (master06
+/// §time). A missing language or territory is the caller's check.
 ///
 /// # Errors
 /// - [`FlatError::UnknownContext`] — a `ctx/` key outside the master06 vocabulary.
@@ -403,14 +379,8 @@ fn resolve_participations(ctx: &SimNode, d: &CtxDefaults) -> Result<Vec<Obj>, Fl
             continue;
         }
 
-        // `PARTICIPATION.function` is 1..1 (RM
-        // `UML/classes/org.openehr.rm.common.participation.adoc` §Attributes),
-        // and master06 §Participation supplies `participation_function:<i>` in
-        // every example it gives. The chapter is silent on omitting it, so the
-        // class table governs: a participation the client began at this index
-        // but gave no function is a client error, refused by name — never
-        // completed with a fabricated empty DV_TEXT, which would commit a
-        // participation whose mandatory attribute carries no information.
+        // `PARTICIPATION.function` is 1..1 (`org.openehr.rm.common.participation.adoc`),
+        // so a participation without one is refused by name.
         let Some(function) = function else {
             return Err(FlatError::MissingRequiredSuffix {
                 key: format!("ctx/participation_function:{i}"),
@@ -446,9 +416,8 @@ fn resolve_participations(ctx: &SimNode, d: &CtxDefaults) -> Result<Vec<Obj>, Fl
     Ok(out)
 }
 
-/// The performer identifiers for one participation, in both master06 forms:
-/// the *compact* `"issuer::assigner::id::TYPE;…"` bare string, or the
-/// *non-compact* `|issuer:j`/`|assigner:j`/`|id:j`/`|type:j` attrs.
+/// The performer identifiers of one participation, in the compact or the
+/// non-compact master06 form.
 fn participation_identifiers(node: &SimNode, index: usize) -> Result<Vec<Obj>, FlatError> {
     // Compact bare form (master06 §Participation example, index 0).
     if let Some(compact) = node.bare().and_then(Value::as_str) {
@@ -472,9 +441,8 @@ fn participation_identifiers(node: &SimNode, index: usize) -> Result<Vec<Obj>, F
         .collect()
 }
 
-/// Parse the compact `"issuer::assigner::id::TYPE;issuer2::…"` participation
-/// identifier list (master06 §Participation). Each `;`-separated entry must have
-/// exactly four `::`-separated parts.
+/// Parses the compact `"issuer::assigner::id::TYPE;…"` list (master06
+/// §Participation), four parts per entry.
 fn parse_compact_identifiers(compact: &str, index: usize) -> Result<Vec<Obj>, FlatError> {
     let mut out = Vec::new();
     for entry in compact.split(';').filter(|s| !s.is_empty()) {
@@ -498,9 +466,8 @@ fn parse_compact_identifiers(compact: &str, index: usize) -> Result<Vec<Obj>, Fl
     Ok(out)
 }
 
-/// A PARTY_IDENTIFIED (or PARTY_SELF when neither name nor id is given),
-/// honouring `ctx/id_scheme`/`ctx/id_namespace` (master06 §§Composer, "ID
-/// Namespace and Scheme").
+/// A PARTY_IDENTIFIED, or PARTY_SELF with neither name nor id, honouring
+/// `ctx/id_scheme` and `ctx/id_namespace` (master06 §Composer).
 fn party_identified(
     name: Option<&Value>,
     id: Option<&str>,
@@ -525,9 +492,8 @@ fn party_identified(
     }
 }
 
-/// A PARTY_REF for `id` honouring the ctx scheme/namespace defaults. A scheme
-/// makes the id a `GENERIC_ID`; without one it is a `HIER_OBJECT_ID` (never a
-/// fabricated scheme).
+/// A PARTY_REF for `id`: a `GENERIC_ID` under a scheme, else a
+/// `HIER_OBJECT_ID`.
 fn party_ref(id: &str, d: &CtxDefaults, party_type: &str) -> Result<Obj, FlatError> {
     let id_obj = match d.id_scheme.as_deref() {
         Some(scheme) => typed::make("GENERIC_ID", [("value", s(id)), ("scheme", s(scheme))])?,
@@ -683,9 +649,7 @@ mod tests {
         ctx.occurrence_mut("participation_name", Some(1))
             .attrs
             .insert(String::new(), json!("Lara Markham"));
-        // PARTICIPATION.function is 1..1, and master06 §Participation's own
-        // index-1 example carries `participation_function:1` (it is omitted
-        // from no example in the chapter).
+        // master06 §Participation's index-1 example carries `participation_function:1`.
         ctx.occurrence_mut("participation_function", Some(1))
             .attrs
             .insert(String::new(), json!("performer"));
@@ -723,10 +687,7 @@ mod tests {
         ));
     }
 
-    // PARTICIPATION.function is 1..1 (RM
-    // `UML/classes/org.openehr.rm.common.participation.adoc` §Attributes): a
-    // participation begun at an index with any other participation_* key but
-    // no function is refused by name, never completed with an empty DV_TEXT.
+    /// A participation without a function is refused by name.
     #[test]
     fn participation_without_function_rejected() {
         let partials = [

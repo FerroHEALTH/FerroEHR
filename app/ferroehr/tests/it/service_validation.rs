@@ -558,11 +558,6 @@ fn strip_first_element_value(v: &mut Value, path: &str) -> Option<String> {
 ///
 /// > `Inv_null_flavour_indicated`: `is_null() xor null_flavour = Void`
 /// > (`RM/docs/UML/classes/org.openehr.rm.data_structures.element.adoc`)
-///
-/// The commit choke point runs the RM class-invariant pass unconditionally
-/// (template-independent), so such a COMPOSITION is a `422` naming the
-/// invariant — never a silent accept, and never a silent drop of the element
-/// at the simplified-format seam. Nothing is persisted.
 #[tokio::test]
 async fn element_without_value_or_null_flavour_is_rejected_at_commit() {
     let db = testkit::db().await.expect("testkit database");

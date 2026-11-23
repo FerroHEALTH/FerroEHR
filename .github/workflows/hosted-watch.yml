@@ -60,8 +60,7 @@ jobs:
           # The viewer is the landing surface; a dead viewer with a live CDR
           # is still a broken sandbox. -L: the landing page 302-redirects to
           # /login, and an unfollowed redirect is an empty body that reads as
-          # a dead viewer (measured — the watch held its issue open against
-          # a healthy box).
+          # a dead viewer.
           viewer="$(curl -sSL -m 30 "${HOSTED_BASE}/" | grep -c "FerroEHR" || true)"
 
           # What it SHOULD serve: the release pointer's own version label.

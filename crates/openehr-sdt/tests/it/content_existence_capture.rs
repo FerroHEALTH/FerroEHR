@@ -1,19 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Builder-capture + walk tests for the AOM 1.4 `C_ATTRIBUTE.existence`
-//! enforcement of a mandatory structural attribute whose node-identified child
-//! is dropped by master04 §"Level Removal" compaction (so it never becomes a
-//! walkable node the occurrence check could visit): `OBSERVATION.state`,
-//! `.protocol`, `HISTORY.summary`, `EVENT.state` (issue #234, exposed by the CNF
-//! content chapter). Governing spec: AM AOM1.4
-//! `master04-constraint_model_package.adoc` §existence ("indicates whether its
-//! target object exists or not, i.e. is mandatory or not").
-//!
-//! The OPT is synthesised by injecting a mandatory (`existence 1..1`) `state`
-//! attribute — a node-identified `ITEM_TREE[at0005]` with no leaf content — into
-//! the vendored CNF base OBSERVATION template, then asserting a committed EVENT
-//! that omits `state` is rejected while one carrying it is not.
+//! AOM 1.4 `C_ATTRIBUTE.existence` on a mandatory structural attribute whose
+//! child compaction drops (`master04-constraint_model_package.adoc` §existence):
+//! an EVENT omitting a mandatory `state` is refused.
 
 #![expect(clippy::expect_used, reason = "test assertions/diagnostics")]
 

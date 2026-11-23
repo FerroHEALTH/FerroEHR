@@ -1,18 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `unique` cardinality modifier: no two members of a container may be
-//! equal by value (ADL 1.4 `master05-cadl.adoc` and ADL2
-//! `master04.3-cadl_complex_types.adoc` §Container attributes, SPECAM-111).
+//! The `unique` cardinality modifier: no two container members may be equal by
+//! value (ADL 1.4 `master05-cadl.adoc`, ADL2 `master04.3` §Container attributes,
+//! SPECAM-111).
 //!
-//! The text excludes object identity and "attributes that distinguish sibling
-//! objects anyway, such as their names". Two attributes of the RM are of that
-//! kind: `LOCATABLE.name` on the member itself, the key of the name-based path
-//! predicate that tells siblings apart (BASE `architecture_overview/
-//! master11-paths.adoc` §Name-based Predicate), and `LOCATABLE.uid` at any
-//! depth, an identifier of the node (RM `common/master03-archetyped_package.adoc`
-//! §LOCATABLE). Every other attribute, `archetype_node_id` included, is part of
-//! the value. Numbers compare by value, so `1` equals `1.0`.
+//! The member's `LOCATABLE.name` and every `LOCATABLE.uid` are excluded as
+//! "attributes that distinguish sibling objects anyway"; numbers compare by value.
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;

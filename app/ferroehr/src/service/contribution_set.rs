@@ -31,15 +31,8 @@ use crate::versioning::restriction;
 /// The most members a CONTRIBUTION commits in one statement; a larger set
 /// commits on the per-member path.
 ///
-/// Measured on #6256 (debug build, PostgreSQL 19, `pg_stat_statements` with
-/// planning tracked, median of five): the one statement answered in 4.4, 6.2,
-/// 8.7, 25.1 and 147.8 ms at 2, 4, 8, 32 and 100 members against 6.8, 9.2,
-/// 13.1, 42.6 and 123.1 ms, in 4 statements against 12 to 208, while its
-/// planning grew from 1.2 to 2.1, 6.1 and 34.4 ms against a flat 0.9 ms. Up
-/// to 8 members it saves more than its planning costs the database; past
-/// that the planning outgrows the round trips it saves. One text per member
-/// count up to this bound stays far inside the 356 statements each
-/// connection keeps prepared (`db::pool::STATEMENT_CACHE`).
+/// Past 8 members the statement's planning outgrows the round trips it saves
+/// (#6256).
 // NOTE: our own design (#6256), the bound where the measurement stops favouring one statement.
 pub(crate) const SET_LIMIT: usize = 8;
 
@@ -257,7 +250,7 @@ enum Placed {
     /// Every target is at the trunk tip this system continues, which its
     /// member names: the index of each member's target in the gate read.
     Members(Vec<Option<usize>>),
-    /// A member names a version that is no longer the trunk tip.
+    /// A member names a version that is not the trunk tip.
     Superseded(TreeId),
     /// A target is gone, deleted, of another EHR or kind, or created
     /// elsewhere.

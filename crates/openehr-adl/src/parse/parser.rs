@@ -1,20 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The cADL structure productions (`cadl2.g4`).
-//!
-//! The definition root, the type-headed object forms, attributes with their
-//! existence/cardinality clauses, and the second-order
-//! attribute/primitive tuples of `ADL2/master04.4-cadl_second_order.adoc` —
-//! one `impl` block over the `Parser` state of [`crate::parse`].
-//!
-//! The object productions dispatch into [`crate::parse::default_value`] (the
-//! `_default` value), [`crate::parse::refs`] (archetype
-//! slots, archetype roots, internal-reference proxies),
-//! [`crate::parse::primitives`] (the inline `C_PRIMITIVE` family) and — in the
-//! `Dialect::Adl14` dialect only — [`crate::adl14::lower`] (the 1.4
-//! qualified/listed terminology constraints, the pipe-ordinal shorthand and
-//! the inline dADL domain blocks).
+//! The cADL structure productions (`cadl2.g4`), with the second-order tuples of
+//! `ADL2/master04.4-cadl_second_order.adoc`, over the `Parser` of
+//! [`crate::parse`].
 
 #![expect(
     clippy::disallowed_types,
@@ -183,19 +172,11 @@ impl Parser<'_> {
         }
     }
 
-    /// A type-headed object: `c_complex_object` or `c_regular_primitive_object`
-    /// (`cadl2.g4`). Distinguished by whether the `matches { … }` body (or the
-    /// bare, body-less form) holds attribute defs or a single inline primitive.
-    /// The `'[' ID_CODE [',' archetype_ref] ']'` node bracket, if present.
+    /// The `'[' ID_CODE [',' archetype_ref] ']'` node bracket, if present; the
+    /// two-part form is the OPT-inlined `C_ARCHETYPE_ROOT` (OPT2 master03).
     ///
-    /// The two-part form is the OPT-inlined `C_ARCHETYPE_ROOT`: a flattened
-    /// slot-filler or external reference carrying the full archetype id inside
-    /// the bracket and an inline body (OPT2 master03 §Artefact Structure +
-    /// §Flattening; the same shape as `cadl14.g4` `c_archetype_root`).
-    ///
-    /// NOTE: `cadl2.g4` requires `'[' ID_CODE ']'`, but a *missing* node id is
-    /// a semantic defect (VCOID, `AOM2/master08`), not a syntax error, so an
-    /// absent `[…]` yields an empty node id that validation flags.
+    /// NOTE: a missing node id is VCOID (`AOM2/master08`), not a syntax error, so it
+    /// yields an empty id.
     ///
     /// # Errors
     /// A malformed bracket — a missing archetype id after `,`, or a missing
@@ -228,9 +209,8 @@ impl Parser<'_> {
         Ok((node_id, archetype_ref))
     }
 
-    /// The `matches { … }` body of a type-headed object: the deprecated
-    /// `matches {*}` any-form (`master04.2`), a single inline primitive
-    /// constraint, or an attribute-definition body.
+    /// The `matches { … }` body of a type-headed object: `{*}` (`master04.2`), one
+    /// inline primitive, or attribute definitions.
     ///
     /// # Errors
     /// An empty body, an unterminated body, or the nested constraint's own
@@ -364,13 +344,8 @@ impl Parser<'_> {
                     break; // default_value is last in the body (`cadl2.g4`).
                 }
                 Some(Token::LBracket) => {
-                    // ADL2-only: second-order attribute tuples
-                    // (`ADL2/master04.4-cadl_second_order.adoc` §Second Order
-                    // Constraints). ADL 1.4 expresses the same co-constraint with
-                    // an inline dADL domain type — `AOM2/master04.3` §Tuple
-                    // Constraints: "The tuple constraint type replaces all
-                    // domain-specific constraint types defined in ADL/AOM 1.4,
-                    // including `C_DV_QUANTITY` and `C_DV_ORDINAL`."
+                    // ADL2-only tuples (`ADL2/master04.4` §Second Order Constraints); ADL 1.4 uses
+                    // an inline dADL domain type (`AOM2/master04.3` §Tuple Constraints).
                     if self.dialect == Dialect::Adl14 {
                         return self.adl2_only(
                             SyntaxErrorCode::Scoat,
@@ -713,19 +688,13 @@ impl Parser<'_> {
         Ok(objs)
     }
 
-    /// The forms that constrain the WHOLE `matches {…}` body as one object.
-    ///
-    /// [`None`] means the body is a sibling list to be walked object by object.
+    /// The forms that constrain the whole `matches {…}` body as one object, or
+    /// [`None`] for a sibling list.
     ///
     /// # Errors
     /// Propagates the sub-parser's [`SyntaxError`](crate::error::SyntaxError).
     fn parse_c_objects_whole_body(&mut self) -> PResult<Option<Vec<CObject>>> {
-        // 1.4-only (converter front end; no openEHR spec — see `crate::adl14`):
-        // a qualified/listed terminology constraint (`[local::at1]`,
-        // `[local:: a, b ; c]`, `[openehr::524]`). A single `[local::code]` is
-        // one `TermCodeRef` token; a list lexes as `[` ident `::` codes …. Both
-        // must reach `parse_adl14_term_object` rather than the ADL2 inline
-        // terminology-code path (which expects a bare `[at1]`/`[ac1]`).
+        // 1.4-only qualified or listed terminology constraint (our own design).
         if self.dialect == Dialect::Adl14 && self.is_adl14_qualified_code_start() {
             return Ok(Some(vec![self.parse_adl14_term_object()?]));
         }
@@ -742,17 +711,10 @@ impl Parser<'_> {
         Ok(None)
     }
 
-    /// One ADL 1.4-only sibling form, when the cursor stands on one.
-    ///
-    /// The pipe-ordinal shorthand `0|[local::at0005], 1|[…]` (`cadl14.g4`
-    /// `c_ordinal`) and an inline dADL domain block are dispatched PER SIBLING
-    /// rather than as whole-body special cases: each is one alternative among
-    /// the siblings of its block, so it may stand beside a regular complex
-    /// object in either order (`ADL1.4/master05-cadl.adoc` §Mixed Structures:
-    /// "at any given node, all three types can co-exist"). A domain block whose
-    /// `list` rows constrain DIFFERENT member sets lowers to SEVERAL
-    /// alternatives, which is why the return is a list; a sibling-order marker
-    /// before the block still routes through the single-object shim.
+    /// One ADL 1.4-only sibling form, when the cursor stands on one: the ordinal
+    /// shorthand or an inline dADL domain block, either beside a regular object
+    /// (`ADL1.4/master05-cadl.adoc` §Mixed Structures). A domain block may lower to
+    /// several alternatives.
     ///
     /// # Errors
     /// Propagates the sub-parser's [`SyntaxError`](crate::error::SyntaxError).
@@ -790,12 +752,8 @@ impl Parser<'_> {
 
     /// `c_regular_object_ordered : sibling_order? c_regular_object`.
     ///
-    /// NOTE: the `before`/`after` sibling-order markers are NOT dialect-gated.
-    /// `ADL1.4/master05-cadl.adoc` §Keywords L53 lists `before` and `after` among
-    /// "the keywords … recognised in cADL" for the 1.4 formalism itself, so a
-    /// sibling order in a 1.4 text is legal 1.4 cADL — even though no 1.4 chapter
-    /// elaborates its semantics beyond that list. Refusing it here would
-    /// contradict the 1.4 keyword set.
+    /// NOTE: `before`/`after` are cADL 1.4 keywords too (`ADL1.4/master05-cadl.adoc`
+    /// §Keywords), so they are not dialect-gated.
     fn parse_c_regular_object_ordered(&mut self) -> PResult<CObject> {
         let sibling = if matches!(self.peek(), Some(Token::SymAfter | Token::SymBefore)) {
             Some(self.parse_sibling_order()?)
@@ -832,15 +790,9 @@ impl Parser<'_> {
 
     /// `c_regular_object : c_complex_object | c_archetype_root |
     /// c_complex_object_proxy | archetype_slot | c_regular_primitive_object`.
-    /// One object inside an attribute body.
     ///
-    /// NOTE: the `=~` / `!~` operators appear only in defective prose
-    /// (`ADL1.4/master05-cadl.adoc` §Regular Expression L691-693 — both
-    /// example regexes unterminated) while the chapter's own §Syntax
-    /// `c_string_spec` (L1244-1249) and §Symbols lexer define no such token,
-    /// so the operator is a typed refusal naming the defect — guessing a
-    /// negated-regex semantics from defective prose would be a silent wrong
-    /// answer.
+    /// NOTE: `=~` / `!~` appear only in defective prose (`ADL1.4/master05-cadl.adoc`
+    /// §Regular Expression) and no grammar defines them, so they are refused.
     fn parse_c_regular_object(&mut self) -> PResult<CObject> {
         self.nested(Self::parse_c_regular_object_at_level)
     }
@@ -863,11 +815,8 @@ impl Parser<'_> {
                     return self.parse_adl14_term_object();
                 }
                 Some(Token::LParen) => return self.parse_adl14_domain_single(true),
-                // ADL2-only: `use_archetype` (`C_ARCHETYPE_ROOT`). The 1.4 cADL
-                // keyword set (master05 §Keywords L51) has `use_node` and
-                // `allow_archetype` only — an external archetype reference is
-                // expressed in 1.4 by an `allow_archetype` slot whose assertions
-                // name the archetype id (master05 §Archetype Slots).
+                // ADL2-only `use_archetype`; 1.4 uses an `allow_archetype` slot (master05
+                // §Keywords, §Archetype Slots).
                 Some(Token::SymUseArchetype) => {
                     return self.adl2_only(SyntaxErrorCode::Sccog, "'use_archetype'");
                 }
@@ -1051,17 +1000,8 @@ mod tests {
         }
     }
 
-    /// An ODIN interval is a legal `_default` datum, encoded as the canonical
-    /// `Interval<T>` object rather than refused.
-    ///
-    /// `ADL2/master06-default_values.adoc` §Syntax: default values "are
-    /// expressed in any regular object instance syntax, including ODIN syntax",
-    /// and `LANG/docs/odin/master07-leaf_data.adoc` §Intervals of Ordered
-    /// Primitive Types lists intervals among ODIN's leaf DATA forms — so an
-    /// interval in a `_default` is an instance value, not a constraint. The
-    /// JSON object it lands in is our own design/extension (no openEHR spec
-    /// mandates the intermediate shape), mirroring the codec's `Proper_interval`
-    /// encoding.
+    /// An ODIN interval is a legal `_default` datum (`ADL2/master06-default_values.adoc`
+    /// §Syntax; `master07-leaf_data.adoc`), encoded as the canonical `Interval<T>`.
     #[test]
     fn adl2_default_value_encodes_an_interval() {
         let cco = parse(

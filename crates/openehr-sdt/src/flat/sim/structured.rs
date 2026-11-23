@@ -1,23 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The STRUCTURED wire codec: nested JSON ↔ [`SimNode`].
+//! The STRUCTURED wire codec: nested JSON ↔ [`SimNode`]
+//! (`simplified_formats/master04-basic_concepts.adoc` §Structured format). The
+//! data root is one object; everything below it is array-wrapped.
 //!
-//! Shape per ITS-REST `simplified_formats/master04-basic_concepts.adoc`
-//! §Structured format: hierarchy as nested objects; **arrays for data
-//! values always**, even at `0..1`/`1..1` cardinality (rule 5); attribute
-//! suffixes as `"|suffix"` properties (rule 3); context grouped under a
-//! `ctx` object (rule 4); empty objects omitted (rule 6). The top-level
-//! data root maps to a single object (the worked example nests
-//! `"vital_signs": { … }`, not an array); everything below it is
-//! array-wrapped.
-//!
-//! NOTE: the spec's STRUCTURED chapter shows no `ctx` entry with
-//! instance indices or suffixed parts (participations, `work_flow_id`) —
-//! no openEHR spec governs that nesting. Convention here: a `ctx` child is
-//! a scalar (bare single), an object of `"|suffix"` properties (suffixed
-//! single), or an array of those forms (indexed); this is lossless against
-//! the FLAT `ctx/` forms of `master06-context_information.adoc`.
+//! NOTE: no openEHR spec governs an indexed or suffixed `ctx` entry: our own
+//! design uses a scalar, an object of `"|suffix"` properties, or an array of
+//! those, lossless against the FLAT `ctx/` forms of master06.
 
 #![expect(
     clippy::disallowed_types,
@@ -35,12 +25,9 @@ use crate::flat::sim::{RawDatum, SimDocument, SimNode, is_present};
 /// The `ctx` grouping property (`master04 §Structured format` rule 4).
 const CTX: &str = "ctx";
 
-/// Parse a STRUCTURED document into the simplified tree.
-///
-/// Lenient on input where the spec allows equivalent forms: a property name
-/// may carry an explicit `:i` index (`master04 §Structured format` rule 2)
-/// which folds into array position; a single occurrence may appear without
-/// its array wrapper. Absent values are skipped.
+/// Parse a STRUCTURED document into the simplified tree; an explicit `:i`
+/// (`master04 §Structured format` rule 2) folds into array position, and a
+/// single occurrence may omit its array.
 ///
 /// # Errors
 /// [`FlatError::Conversion`] when the document is not a JSON object;
@@ -371,11 +358,8 @@ mod tests {
         });
         let tree = parse_structured(&structured).unwrap();
         let flat = emit_flat(&tree);
-        // A single-item STRUCTURED array carries no `:i` in its property name,
-        // so the template-free transform cannot recover a repeating `:0`
-        // (master04 §Conversion Between Formats — indices live in property
-        // names; cardinality is a template fact). `any_event` (two items)
-        // keeps its indices.
+        // A single-item array has no `:i`, so the template-free transform cannot
+        // recover a repeating `:0` (master04 §Conversion Between Formats).
         let expect: Map<String, Value> = [
             ("ctx/language", json!("en")),
             ("ctx/territory", json!("US")),

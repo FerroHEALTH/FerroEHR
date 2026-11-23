@@ -1,19 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADL 1.4 → ADL 2 meta-data rules of `AOM2/master01-preface.adoc`
-//! §Release 2.3 changes (SPECAM-107):
-//!
-//! 1. A translation's `other_details["other_contributors"]`, one translator per
-//!    line, maps to one `TRANSLATION_DETAILS.other_contributors` entry per line
-//!    (also `ADL1.4/master08-adl.adoc` §Language Section and Language
-//!    Translation).
-//! 2. The original language's copyright becomes `RESOURCE_DESCRIPTION.copyright`;
-//!    a differing translation copyright stays in that translation's
-//!    `other_details["copyright"]`, an identical one is dropped, and with no
-//!    original-language copyright the field stays empty.
-//! 3. The conversion is recorded in `RESOURCE_DESCRIPTION.conversion_details`
-//!    under `"source_model"`, `"tool"` and `"time"`.
+//! The ADL 1.4 → ADL 2 meta-data rules of `AOM2/master01-preface.adoc` §Release
+//! 2.3 changes (SPECAM-107): translator lines, copyright and the conversion
+//! record.
 
 #![allow(
     clippy::expect_used,

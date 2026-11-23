@@ -1,18 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! An OPT2 that carries an external term constraint survives print then
-//! parse, an OPT2 over unconverted ADL 1.4 constituents keeps their node codes
-//! and carries their term constraints in the ADL2 form, and an unconverted ADL
-//! 1.4 term constraint is refused by the printer.
-//!
-//! Oracle: `docs/specs/openehr/AM/docs/ADL2/master04.5-cadl_primitive_types.adoc`
-//! §Formal Terminology Constraint (`[atN]`, `[acN]`, `[acN; atN]`) and
-//! §Operational Binding Constraints (`[atN@ttttt]`, `[acN@ttttt]` in an OPT),
-//! with `AM/docs/UML/classes/org.openehr.am.aom2.c_terminology_code.adoc`
-//! (`constraint` is a local at- or ac-code). The CKM `encounter.v1` COMPOSITION
-//! constrains its `category` to the ADL 1.4 qualified `[openehr::433]`, which
-//! `adl14::convert` rewrites to an at-code bound to `openehr::433`.
+//! An OPT2 term constraint survives print then parse, and an OPT2 over
+//! unconverted ADL 1.4 constituents carries their constraints in ADL2 form
+//! (`ADL2/master04.5` §Formal Terminology Constraint, §Operational Binding
+//! Constraints); an unconverted 1.4 constraint is refused by the printer.
 
 #![allow(
     clippy::expect_used,
@@ -216,12 +208,8 @@ fn category_code(opt: &mut OperationalTemplate) -> &mut CTerminologyCode {
     }
 }
 
-/// Prints `opt`, parses the text back, and asserts the parse is the OPT it
-/// was printed from, less the specialisation parent.
-///
-/// OPT2 `master03` §Artefact Structure gives the ADL form of an OPT no
-/// `specialize` section, so the parent the model carries (AOM2 §3.6.6) is the
-/// one part the text cannot hold.
+/// Prints `opt`, parses it back, and asserts the parse equals `opt` less the
+/// parent, which the ADL form cannot hold (OPT2 `master03` §Artefact Structure).
 fn assert_round_trips(mut opt: OperationalTemplate) {
     let artefact = as_artefact(opt.clone());
     let text = print(&artefact).expect("the OPT prints");

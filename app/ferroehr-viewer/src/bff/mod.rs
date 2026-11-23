@@ -39,14 +39,6 @@ pub struct Cdr {
 
 /// The handle of the session the request carries.
 ///
-/// The errors every read and write of this module may answer start here and
-/// in [`CdrCall`]: [`ViewerError::Unauthenticated`] without a session,
-/// [`ViewerError::CdrUnreachable`] when the CDR does not answer,
-/// [`ViewerError::CdrUnauthorized`], [`ViewerError::Forbidden`] and
-/// [`ViewerError::Cdr`] for a refusal ([`CdrCall::ok`]), and
-/// [`ViewerError::Invalid`] or [`ViewerError::Internal`] for an input or an
-/// answer the function cannot use.
-///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a session, which also ends the
 /// page's session.

@@ -61,9 +61,6 @@ fn authz_for(config: &AppConfig, rbac_enabled: bool) -> Option<Arc<AuthzHandle>>
 }
 
 /// Assemble the full app over a real service on a fresh database.
-///
-/// Returns the harness guard with the router: dropping it releases the template
-/// clone the app is still serving from, so every caller binds it for the test.
 async fn build_app(
     config: AppConfig,
     authz: Option<Arc<AuthzHandle>>,
@@ -114,9 +111,8 @@ fn one_endpoint(endpoints: EndpointLevels) -> Observability {
 }
 
 /// Build an app with the management surface enabled, one endpoint (`info`) set
-/// to `level`, the Basic user granted `roles`, and RBAC on or off — the
-/// `AdminOnly` level gates on the RBAC `admin_role` (issue #1879 retired the
-/// deprecated `admin_scope` alias).
+/// to `level`, the Basic user granted `roles`, and RBAC on or off; the
+/// `AdminOnly` level gates on the RBAC `admin_role`.
 async fn app_with(
     level: AccessLevel,
     roles: &[&str],
@@ -249,12 +245,8 @@ async fn app_with_mixed_levels(roles: &[&str]) -> (testkit::TestDb, Router) {
 /// Each endpoint answers at ITS OWN level, and no endpoint's level leaks to a
 /// neighbour.
 ///
-/// This is the property an operator actually relies on when locking the surface
-/// down, and it is not implied by the per-level tests above: those set one
-/// endpoint at a time, so a guard that accidentally applied the most permissive
-/// configured level to every route would pass all of them. There is no global
-/// default to fall back to either — an endpoint left `Off` is simply not
-/// mounted.
+/// The per-level tests set one endpoint at a time, so a guard applying the most
+/// permissive level everywhere would pass them.
 #[tokio::test]
 async fn endpoint_levels_are_independent() {
     // Anonymous: only the `public` endpoint answers. The `admin_only` and

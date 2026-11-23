@@ -1,13 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Corpus lex gate: every ADL2 source (`*.adls`) in the vendored openEHR ADL2
-//! reference library must lex without producing an error token.
-//!
-//! ADL 1.4 sources (`*.adl`) are the 1.4→2 conversion input and are
-//! skipped. The library encodes semantic (V-code) failures in file names —
-//! those still lex; only genuinely lexer-level FAIL fixtures may be excluded,
-//! and each such exclusion is named with its reason in `EXCLUSIONS` below.
+//! Every ADL2 source of the vendored reference library lexes without an error
+//! token, except the named lexer-level FAIL fixtures in `EXCLUSIONS`.
 
 // A corpus test reports its pass counts on stdout for the developer running it.
 #![allow(

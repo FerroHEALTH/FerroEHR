@@ -37,13 +37,6 @@ const PROJECT_URL: &str = "https://github.com/FerroHEALTH/FerroEHR";
 
 /// Renders the banner of `build` for the ACTIVE generation set, or `None` when
 /// the console does not render `pretty`.
-///
-/// Kept parameterized so it is unit-testable; [`print()`] supplies the real
-/// values, `support` being [`crate::support::SupportPeriod::describe_on`] for
-/// today. The pins are read from the shared [`crate::telemetry::provenance`]
-/// source and the manufacturer's name, postal address and contact from
-/// [`MANUFACTURER`], so the banner can never drift from what the server
-/// actually serves.
 #[must_use]
 pub fn render(
     build: &BuildInfo,

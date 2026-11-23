@@ -5,10 +5,7 @@
 # published crates/openehr-* members (.claude/rules/crates-publishing.md).
 #
 # The one pattern both crate-version guards share: the `crate-version-guard`
-# CI job and .claude/hooks/crate_version_bump_guard.sh. Each used to carry its
-# own copy, and both copies matched `LICENSE-` only, so the bare `LICENSE` the
-# BUSL crates (openehr-adl, openehr-sdt) list in their
-# `include` passed without the lockstep bump (#3573).
+# CI job and .claude/hooks/crate_version_bump_guard.sh (#3573).
 #
 # The scope mirrors the manifests' `include` lists: sources, the embedded
 # assets and JSON schemas, the README, every licence text (bare or suffixed)

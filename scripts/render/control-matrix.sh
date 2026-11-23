@@ -85,21 +85,15 @@ FETCH_LIMIT=10000
 # two-letter code is national and applies to deployments in that country.
 #
 # Every URL here is checked BY HAND when it is added or changed, and the date
-# recorded below. Nothing in CI can do it: the link checker runs with
-# --offline deliberately, because a rate-limited publisher says nothing about
-# the change under review (#2287). That is exactly how the NEN 7510 entry sat
-# here returning 404 (#3177).
+# recorded below: the link checker runs with --offline, because a
+# rate-limited publisher says nothing about the change under review (#2287,
+# #3177).
 #
-# Last checked, all 200: 2026-09-13 (the DE and CH entries added that day;
-# the NL, EU and INT ones re-checked 2026-09-09). The EPDV entry was added and
-# checked 200 on 2026-09-16; its URL is the "whatever is current" form
-# `docs/law/ch/epdv/PROVENANCE.md` records beside the consolidation the corpus
-# vendors, the same shape the EPDG entry above carries. The EDPB 01/2025 URL
-# moved to the EDPB's public-consultations page (the old one redirects there)
-# and was checked 200 on 2026-10-06 (#3597). The CRA entry was added on
-# 2026-10-06 (#3606); its ELI is the one the vendored OJ text in
-# docs/law/eu/cra/ carries, since EUR-Lex answers a scripted request with a
-# 202 bot challenge.
+# Last checked, all 200: 2026-09-09 (NL, EU, INT), 2026-09-13 (DE, CH),
+# 2026-09-16 (EPDV), 2026-10-06 (EDPB 01/2025 and CRA; #3597, #3606). The
+# EPDV URL is the "whatever is current" form `docs/law/ch/epdv/PROVENANCE.md`
+# records; the CRA ELI is the one the vendored OJ text in docs/law/eu/cra/
+# carries, since EUR-Lex answers a scripted request with a 202 bot challenge.
 LEGAL_SOURCES=(
   "GDPR|EU|https://eur-lex.europa.eu/eli/reg/2016/679/oj"
   "EHDS|EU|https://eur-lex.europa.eu/eli/reg/2025/327/oj"

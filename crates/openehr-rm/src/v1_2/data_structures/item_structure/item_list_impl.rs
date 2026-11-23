@@ -2,12 +2,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM spec functions for `ITEM_LIST`.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_structures.item_list.adoc`
-//! §Functions. `items` is `0..1` and the page's §Description says "The list may
-//! be empty", so every accessor treats an absent list and an empty one alike.
+//! The `ITEM_LIST` functions (`org.openehr.rm.data_structures.item_list.adoc`);
+//! an absent list reads as empty.
 
 use crate::v1_2::data_structures::item_structure::item_list::ItemList;
 use crate::v1_2::data_structures::representation::cluster::Cluster;
@@ -16,17 +12,13 @@ use crate::v1_2::data_structures::representation::item::Item;
 use crate::v1_2::data_types::text::dv_text::DvText;
 
 impl ItemList {
-    /// Count of all items.
-    ///
-    /// Spec: `item_list.adoc` §Functions `item_count`.
+    /// Count of all items (`item_count`).
     #[must_use]
     pub fn item_count(&self) -> usize {
         self.items.as_deref().unwrap_or_default().len()
     }
 
-    /// The names of all items, in list order.
-    ///
-    /// Spec: `item_list.adoc` §Functions `names`.
+    /// The names of all items, in list order (`names`).
     #[must_use]
     pub fn names(&self) -> Vec<DvText> {
         self.items
@@ -37,12 +29,7 @@ impl ItemList {
             .collect()
     }
 
-    /// The item named `a_name`, or `None` when no item carries that name.
-    ///
-    /// Spec: `item_list.adoc` §Functions `named_item`. The first match wins:
-    /// nothing on the page makes item names unique within a list, so a repeated
-    /// name is a legal structure and list order is the only tie-break the model
-    /// offers.
+    /// The first item named `a_name`, or `None` (`named_item`).
     #[must_use]
     pub fn named_item(&self, a_name: &str) -> Option<&Element> {
         self.items
@@ -51,28 +38,14 @@ impl ItemList {
             .find(|item| text_of(&item.name) == a_name)
     }
 
-    /// The `i`-th item, counting from 1.
-    ///
-    /// Spec: `item_list.adoc` §Functions `ith_item`. The index is 1-based, as
-    /// everywhere else the RM indexes a container — BASE `foundation_types`
-    /// master02 §List, whose `i_th` is defined over `1 .. count`. `i = 0` and
-    /// any index past the end are `None`.
+    /// The `i`-th item, from 1 (`ith_item`; BASE master02 §List).
     #[must_use]
     pub fn ith_item(&self, i: usize) -> Option<&Element> {
         self.items.as_deref()?.get(i.checked_sub(1)?)
     }
 
-    /// A CEN EN13606-compatible hierarchy: one `CLUSTER` carrying this list's
-    /// `ELEMENT`s.
-    ///
-    /// Spec: `item_list.adoc` §Functions `as_hierarchy` — "Generate a CEN
-    /// EN13606-compatible hierarchy consisting of a single `CLUSTER` containing
-    /// the `ELEMENTs` of this list."
-    ///
-    /// `None` for an empty list: `CLUSTER.items` is `1..*`
-    /// (`…org.openehr.rm.data_structures.cluster.adoc` §Attributes), so a
-    /// cluster over no items is not a `CLUSTER`, and this page explicitly
-    /// permits the list to be empty.
+    /// One `CLUSTER` carrying this list's `ELEMENT`s (`as_hierarchy`), or `None`
+    /// for an empty list, since `CLUSTER.items` is `1..*`.
     #[must_use]
     pub fn as_hierarchy(&self) -> Option<Cluster> {
         let items: Vec<Item> = self

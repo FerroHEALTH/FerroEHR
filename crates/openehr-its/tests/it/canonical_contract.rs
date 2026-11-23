@@ -128,9 +128,8 @@ fn rm_number_typing_governs_the_output_lexeme() {
     );
 
     // DV_QUANTITY.magnitude is a Real (schema: number): whole reals keep a
-    // decimal point, and an INTEGER INPUT LEXEME is normalized to the RM
-    // typing by the typed serializer (unlike the historical Value
-    // passthrough, which echoed the input lexeme by accident).
+    // decimal point, and an integer input lexeme is normalized by the typed
+    // serializer.
     let quantity: DvQuantity =
         from_canonical_json(r#"{"_type":"DV_QUANTITY","magnitude":5,"units":"mm"}"#)
             .expect("quantity parses from an integer lexeme");

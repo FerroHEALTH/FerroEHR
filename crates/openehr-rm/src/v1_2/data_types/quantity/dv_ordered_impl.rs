@@ -2,37 +2,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM spec functions for the `DV_ORDERED` / `DV_QUANTIFIED` family.
+//! The `DV_ORDERED` and `DV_QUANTIFIED` functions and the [`OrderedLimit`]
+//! comparison `DV_INTERVAL` and `REFERENCE_RANGE` use (RM 1.2.0
+//! `org.openehr.rm.data_types.dv_*.adoc`).
 //!
-//! The surface is `magnitude()`, `is_strictly_comparable_to()`,
-//! `less_than()`, `is_simple()`, `is_normal()`, plus the [`OrderedLimit`]
-//! comparison surface `DV_INTERVAL` / `REFERENCE_RANGE` need.
+//! Magnitudes: a stored field for `DV_QUANTITY` and `DV_COUNT`, the ratio for
+//! `DV_PROPORTION`, days since `0001-01-01` for `DV_DATE`, seconds for the
+//! other temporal types, `Iso8601_duration.to_seconds` for `DV_DURATION`.
 //!
-//! Spec: RM 1.2.0 `docs/specs/openehr/RM/docs/UML/classes/`
-//! `org.openehr.rm.data_types.{dv_ordered,dv_quantified,dv_amount,dv_quantity,`
-//! `dv_count,dv_proportion,dv_ordinal,dv_scale,dv_date,dv_time,dv_date_time,`
-//! `dv_duration}.adoc`. Magnitude semantics:
-//!
-//! - `DV_QUANTITY.magnitude` / `DV_COUNT.magnitude` — stored fields.
-//! - `DV_PROPORTION.magnitude()` — "effective magnitude represented by ratio"
-//!   = `numerator / denominator`.
-//! - `DV_DATE.magnitude()` — days since the calendar origin `0001-01-01`.
-//! - `DV_TIME.magnitude()` — seconds since the start of day `00:00:00`.
-//! - `DV_DATE_TIME.magnitude()` — seconds since `0001-01-01T00:00:00Z`.
-//! - `DV_DURATION.magnitude()` — seconds, computed via `Iso8601_duration.
-//!   to_seconds()` (BASE): non-definite components use the *nominal* averages
-//!   from BASE `Time_definitions` — `Average_days_in_year` = 365.24,
-//!   `Average_days_in_month` = 30.42
-//!   (`org.openehr.base.foundation_types.{iso8601_duration,time_definitions}.adoc`).
-//!
-//! `less_than` carries the spec precondition `is_strictly_comparable_to(other)`
-//! and, for partial/malformed temporal values, an unavailable magnitude — both
-//! are surfaced as `Option::None` rather than a panic (no-`unwrap` rule).
-//!
-//! NOTE: the *indexed* query-path realisation of these ordering
-//! semantics is the AQL engine's `openehr_magnitude` SQL function; this module is the
-//! in-process RM authority the interval/reference-range invariants use, and the
-//! two must stay semantically aligned.
+//! NOTE: the AQL engine's `openehr_magnitude` SQL function realizes the same
+//! ordering on the query path; the two must agree.
 
 #![expect(
     clippy::disallowed_types,
@@ -65,14 +44,8 @@ pub const DAYS_IN_WEEK: f64 = 7.0;
 /// Seconds in a nominal day (24 × 60 × 60).
 pub const SECONDS_IN_DAY: f64 = 86_400.0;
 
-// ── ISO-8601 component extraction (partial precision permitted) ─────────────
-//
-// The inputs are first checked with the `crate::v1_2::validate` ISO-8601 subset
-// validators (the same accept-set as the `Value_valid` invariants), then
-// decomposed. Missing date parts default to month 1 / day 1; missing time
-// parts default to 0 — the natural embedding of a partial value at the start
-// of its interval (the spec leaves partial-value magnitude undefined; recorded
-// here as the deterministic choice).
+// ISO 8601 component extraction: a missing date part reads as 1 and a missing
+// time part as 0, our own design (the spec leaves partial magnitude open).
 
 fn parse_u32(s: &str) -> Option<u32> {
     s.parse::<u32>().ok()
@@ -193,9 +166,8 @@ fn time_core_seconds(s: &str) -> Option<f64> {
     Some(f64::from(h) * 3600.0 + f64::from(m) * 60.0 + f64::from(sec) + frac_val * unit)
 }
 
-/// Seconds since `00:00:00` local for an openEHR ISO-8601 time (RM
-/// `DV_TIME.magnitude` — the timezone, if any, does not shift the
-/// start-of-day origin).
+/// Seconds since local `00:00:00` for a time (`DV_TIME.magnitude`); the zone
+/// does not shift it.
 #[must_use]
 pub(crate) fn iso_time_magnitude_seconds(s: &str) -> Option<f64> {
     if !valid_iso8601_time(s) {
@@ -228,10 +200,8 @@ pub(crate) fn iso_date_time_magnitude_seconds(s: &str) -> Option<f64> {
     }
 }
 
-/// Total seconds of an openEHR ISO-8601 duration (BASE
-/// `Iso8601_duration.to_seconds`): definite components are exact; `Y`/`M`
-/// components use `Average_days_in_year` / `Average_days_in_month`. A leading
-/// `-` negates the whole value (openEHR deviation).
+/// Total seconds of a duration (`Iso8601_duration.to_seconds`), a leading `-`
+/// negating it.
 #[must_use]
 pub(crate) fn iso_duration_to_seconds(s: &str) -> Option<f64> {
     if !valid_iso8601_duration(s) {
@@ -284,17 +254,10 @@ pub(crate) fn iso_duration_to_seconds(s: &str) -> Option<f64> {
 
 // ── the OrderedLimit comparison surface ──────────────────────────────────────
 
-/// The comparison surface `DV_INTERVAL<T>` / `REFERENCE_RANGE` need from a
-/// limit.
+/// The comparison a `DV_INTERVAL` or `REFERENCE_RANGE` limit provides:
+/// `is_strictly_comparable_to` and `less_than`.
 ///
-/// A limit type provides openEHR strict comparability (RM
-/// `DV_ORDERED.is_strictly_comparable_to`) and ordered-magnitude comparison
-/// (RM `DV_ORDERED.less_than` and the derived `<=`).
-///
-/// `None` means "not decidable at this type / for this value" (e.g. a
-/// `serde_json::Value` element, or a temporal value whose magnitude is
-/// unavailable) — invariant checks treat undecidable as not-violated, leaving
-/// structural errors to the codec/schema layer.
+/// `None` is undecidable, which invariant checks treat as not violated.
 pub trait OrderedLimit {
     /// RM `DV_ORDERED.is_strictly_comparable_to(other)`.
     fn strictly_comparable(&self, other: &Self) -> Option<bool> {
@@ -339,15 +302,11 @@ impl<T: OrderedLimit> OrderedLimit for Box<T> {
     }
 }
 
-/// Generate the [`OrderedLimit`] + inherent comparison functions for a
-/// concrete `DV_ORDERED` subtype from its comparability rule and its ordering
-/// key.
+/// Generates the [`OrderedLimit`] and comparison functions of a concrete
+/// `DV_ORDERED` subtype.
 macro_rules! ordered_limit {
-    // The ordering arm, for a type whose order is NOT a per-value key: the
-    // expression yields `Option<Ordering>` for the pair directly. `DV_PROPORTION`
-    // needs it — comparing two ratios exactly is a cross-multiplication, and a
-    // key would have to divide, which is where an order and an equality drift
-    // apart.
+    // The pairwise ordering arm, for `DV_PROPORTION`, which compares ratios by
+    // cross-multiplication.
     ($ty:ty, $rm:literal, comparable($a:ident, $b:ident) = $cmp:expr, order($x:ident, $y:ident) = $ord:expr) => {
         impl OrderedLimit for $ty {
             fn strictly_comparable(&self, other: &Self) -> Option<bool> {
@@ -431,8 +390,7 @@ macro_rules! ordered_limit {
                 OrderedLimit::strictly_comparable(self, other) == Some(true)
             }
 
-            /// RM `less_than` (`<`); `None` when the precondition
-            /// `is_strictly_comparable_to(other)` fails or a magnitude is
+            /// RM `less_than`, or `None` when not strictly comparable or a magnitude is
             /// unavailable.
             #[must_use]
             #[expect(
@@ -455,10 +413,7 @@ ordered_limit!(
     key(v) = Some(v.magnitude)
 );
 
-// DV_COUNT: any two counts are comparable; ordered by `magnitude`, which is an
-// `Integer64` and is compared as one — `less_than`'s post-condition is an exact
-// integer comparison, and routing it through `f64` made two counts at 2^53 that
-// differ by one compare as neither less nor greater.
+// DV_COUNT: always comparable, ordered by its exact `Integer64`.
 ordered_limit!(
     DvCount,
     "DV_COUNT",
@@ -466,9 +421,7 @@ ordered_limit!(
     key(v) = Some(v.magnitude)
 );
 
-// DV_PROPORTION: comparable iff same `type` (PROPORTION_KIND); ordered by the
-// exact ratio comparison the class's own `is_equal` uses, so `<`, `=` and `>`
-// cannot disagree (they did when this divided in `f64`).
+// DV_PROPORTION: comparable on the same `type`, ordered as `is_equal` compares.
 ordered_limit!(
     DvProportion,
     "DV_PROPORTION",
@@ -546,26 +499,17 @@ impl DvQuantity {
 }
 
 impl DvProportion {
-    /// RM `DV_PROPORTION.magnitude`: the effective magnitude represented by
-    /// the ratio, `numerator / denominator`. `None` when `denominator` is 0
-    /// (which violates the `Valid_denominator` invariant).
+    /// RM `DV_PROPORTION.magnitude`: `numerator / denominator`, or `None` for a
+    /// zero denominator.
     #[must_use]
     pub fn magnitude(&self) -> Option<f64> {
         (self.denominator != 0.0).then(|| self.numerator / self.denominator)
     }
 
-    /// RM `DV_PROPORTION.is_integral`: `true` if the `numerator` and
-    /// `denominator` values are integers.
+    /// RM `DV_PROPORTION.is_integral`: the numerator and denominator are integers.
     ///
-    /// Spec: `dv_proportion.adoc` §Functions — "True if the `numerator` and
-    /// `denominator` values are integers, i.e. if `precision` is 0." That "i.e."
-    /// equates two tests that differ whenever `precision` is absent, and the
-    /// class's four invariants cannot both be non-vacuous under either reading.
-    /// The VALUE test wins: under the precision reading `Fraction_validity`
-    /// becomes "a fraction must declare `precision = 0`", which rejects a
-    /// perfectly good `1/2` that states no precision, and `Precision_validity`
-    /// collapses to `precision = 0 implies precision = 0`. Under this reading
-    /// only `Is_integral_validity` goes vacuous, and nothing valid is refused.
+    /// `dv_proportion.adoc` adds "i.e. if `precision` is 0"; the value reading is
+    /// taken, since the precision reading refuses a `1/2` with no precision.
     #[must_use]
     #[expect(
         clippy::float_cmp,
@@ -604,10 +548,8 @@ impl DvDateTime {
 }
 
 impl DvDuration {
-    /// RM `DV_DURATION.magnitude`: the duration as a number of seconds,
-    /// computed per BASE `Iso8601_duration.to_seconds()` (nominal-average `Y`
-    /// and `M` components). `None` when `value` is not a valid ISO-8601
-    /// duration.
+    /// RM `DV_DURATION.magnitude`: seconds by `Iso8601_duration.to_seconds()`, or
+    /// `None` when invalid.
     #[must_use]
     pub fn magnitude(&self) -> Option<f64> {
         iso_duration_to_seconds(&self.value)
@@ -645,11 +587,8 @@ impl DvOrdered {
         }
     }
 
-    /// RM `DV_QUANTIFIED.magnitude` for the quantified subtypes: `DV_QUANTITY`
-    /// / `DV_COUNT` / `DV_PROPORTION` / `DV_DATE` (days) / `DV_TIME` /
-    /// `DV_DATE_TIME` / `DV_DURATION` (seconds). `None` for the non-quantified
-    /// `DV_ORDINAL` / `DV_SCALE` (which order by `value`, not magnitude) and
-    /// for unavailable temporal magnitudes.
+    /// RM `DV_QUANTIFIED.magnitude`; `None` for `DV_ORDINAL` and `DV_SCALE` and
+    /// for an unavailable temporal magnitude.
     #[must_use]
     #[expect(
         clippy::as_conversions,
@@ -669,10 +608,8 @@ impl DvOrdered {
         }
     }
 
-    /// RM `DV_ORDERED.is_strictly_comparable_to`: `true` only when both values
-    /// are the same concrete subtype *and* that subtype's own comparability
-    /// rule holds (same units for `DV_QUANTITY`, same proportion kind for
-    /// `DV_PROPORTION`, …).
+    /// RM `DV_ORDERED.is_strictly_comparable_to`: the same concrete subtype and
+    /// that subtype's own rule.
     #[must_use]
     pub fn is_strictly_comparable_to(&self, other: &Self) -> bool {
         OrderedLimit::strictly_comparable(self, other) == Some(true)
@@ -689,10 +626,8 @@ impl DvOrdered {
         OrderedLimit::less_than(self, other)
     }
 
-    /// RM `DV_ORDERED.is_normal`: whether the value lies in its normal range
-    /// (when `normal_range` is present) or is flagged normal by
-    /// `normal_status` = `"N"`. `None` when neither is present (the spec
-    /// precondition) or the range comparison is undecidable.
+    /// RM `DV_ORDERED.is_normal`: inside `normal_range`, or `normal_status` is
+    /// `"N"`; `None` when neither is present or undecidable.
     #[must_use]
     pub fn is_normal(&self) -> Option<bool> {
         macro_rules! by_status {
@@ -827,12 +762,8 @@ impl OrderedLimit for DvOrdered {
     }
 }
 
-/// DV_ORDERED `Normal_range_and_status_consistency`:
-/// `(normal_range /= Void and normal_status /= Void) implies
-/// (normal_status.code_string.is_equal("N") xor not normal_range.has(self))`.
-/// Shared by every concrete `DV_ORDERED` subtype's `Validate` impl; an
-/// undecidable `has` (unavailable magnitude / incomparable limits) runs no
-/// check.
+/// DV_ORDERED `Normal_range_and_status_consistency`; an undecidable `has`
+/// runs no check.
 pub(crate) fn push_normal_range_consistency<T: OrderedLimit>(
     out: &mut Vec<openehr_base::validate::InvariantViolation>,
     rm_type: &str,
@@ -953,10 +884,7 @@ mod tests {
             Some(10.0 * 3600.0 + 30.0 * 60.0 + 15.0)
         );
         assert_eq!(iso_time_magnitude_seconds("10:30:15.5"), Some(37815.5));
-        // A fractional hour/minute is not a valid openEHR time — "only
-        // fractional seconds are supported" (BASE
-        // `foundation_types/master06-time_types.adoc` §"ISO 8601 semantics not
-        // included in these types") — so it has no magnitude.
+        // "only fractional seconds are supported" (BASE `master06-time_types.adoc`).
         assert_eq!(iso_time_magnitude_seconds("10.5"), None);
         assert_eq!(iso_time_magnitude_seconds("10:05.5"), None);
         // Timezone does not shift the start-of-day origin.

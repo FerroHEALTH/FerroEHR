@@ -100,21 +100,11 @@ pub(super) struct Bound {
 
 /// What the patient context of `principal` binds.
 ///
-/// A representative of a `persons` issuer reaches each EHR whose
-/// `EHR_STATUS.subject.external_ref` names the represented `PERSON` (#5086,
-/// #5634), looked up through `service`, which records each resolution on the
-/// access log. Someone a `patients` issuer's token admits for its patient, the
-/// actor of its `act` claim or a login of a representative's `PERSON` under
-/// the token's issuer, reaches the EHR of the launch context while that
-/// `PERSON` represents its subject today ([`portal`]); the `PERSON`s are
-/// named under `namespace`. The patient of a `patients` issuer's token is
-/// the person themself only when their login is a key of the `PERSON` the
-/// launch EHR's subject names. A caller the login binding bound as the
-/// person themself and whose token names a launch EHR is held to that EHR's
-/// subject being their `PERSON` ([`own_context`]). A caller the login
-/// binding bound as a representative is admitted for the subject the request
-/// `reached` names, as the person themself when that subject is their own
-/// `PERSON` ([`by_store`]).
+/// Each caller is held to its subject: a `patients` issuer's actor or
+/// representative login to the launch EHR while it represents that subject
+/// ([`portal`]), the person themself to the EHRs of their own `PERSON`
+/// ([`own_context`]), and a representative the login binding bound to the
+/// subject the request names ([`by_store`]).
 ///
 /// # Errors
 /// [`AuthError::PartyRefused`] when the bound party represents no such
@@ -515,8 +505,6 @@ pub(super) fn patient_details(
 /// details, or the `PERSON` of the patient writing the representation
 /// that authorises a proxy, as [`super::gates::patient_person`] read it
 /// (`patient`).
-///
-/// Returns it with that patient's `PERSON`.
 ///
 /// # Errors
 /// The refusal `patient` carries, or the one the binding's details meet.

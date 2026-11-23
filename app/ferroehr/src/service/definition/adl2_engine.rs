@@ -41,10 +41,9 @@ pub(super) fn missing_constituents(missing: &[String]) -> ServiceError {
 
 /// The stack the AOM engine runs on.
 ///
-/// Parsing, flattening and validating an archetype recurse over the artefact
-/// and over the stored repository (slot fillers, specialisation parents), and
-/// a well-stocked store crossed a tokio worker's 2 MiB stack (#3062). The
-/// reservation is virtual: pages are committed only as the stack grows.
+/// The engine recurses over the artefact and the stored repository, past a
+/// tokio worker's 2 MiB stack (#3062). The reservation is virtual: pages are
+/// committed only as the stack grows.
 const ENGINE_STACK_BYTES: usize = 256 * 1024 * 1024;
 
 /// Run `f` on a dedicated thread with [`ENGINE_STACK_BYTES`] of stack and await

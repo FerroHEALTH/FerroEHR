@@ -10,9 +10,6 @@
 //! conversion. Both routes are therefore our own design, mounted under the
 //! extensions root beside the archetype store, and excluded from ITS-REST wire
 //! conformance.
-//!
-//! The answer is one JSON document of the ADL 2 sources and the conversion
-//! log, so a client reads both from one response.
 
 use std::collections::BTreeMap;
 
