@@ -26,10 +26,12 @@ use super::{
     APPLICATION_JSON, APPLICATION_XML, APPLICATION_XML_V1, CANONICAL, WireFormat,
     accept_xml_namespace, resolve_accept,
 };
+use ferroehr::telemetry::stage::{self, Stage};
 
 /// A response whose body is the pre-formed `text` under the media type
 /// `media`: the one place a response body and its `Content-Type` are paired.
 pub(crate) fn body(status: StatusCode, media: &'static str, text: impl Into<Body>) -> Response {
+    let _stage = stage::enter(Stage::Encode);
     let mut resp = (status, text.into()).into_response();
     resp.headers_mut()
         .insert(header::CONTENT_TYPE, HeaderValue::from_static(media));
@@ -61,6 +63,7 @@ pub(crate) fn respond<T: Serialize>(
     status: StatusCode,
     value: &T,
 ) -> Response {
+    let _stage = stage::enter(Stage::Encode);
     // `respond` serves JSON-only, non-RM payloads: a `serde_json::Value` the
     // service already produced (already canonical), or an application DTO with
     // its own serde. These are not RM spec types, so they serialize via serde
@@ -103,6 +106,7 @@ pub(crate) fn respond_rm<T>(
 where
     T: DeserializeOwned + ToXml,
 {
+    let _stage = stage::enter(Stage::Encode);
     match resolve_accept(headers, CANONICAL, WireFormat::CanonicalJson) {
         Some(WireFormat::CanonicalJson) => canonical_json(status, value),
         Some(WireFormat::CanonicalXml) => {
@@ -138,6 +142,7 @@ pub(crate) fn respond_typed<T>(
 where
     T: Serialize + ToXml,
 {
+    let _stage = stage::enter(Stage::Encode);
     match resolve_accept(headers, CANONICAL, WireFormat::CanonicalJson) {
         Some(WireFormat::CanonicalJson) => canonical_json(status, value),
         Some(WireFormat::CanonicalXml) => respond_xml(headers, status, value, root_tag),
@@ -161,6 +166,7 @@ pub(crate) fn respond_read<T>(
 where
     T: DeserializeOwned + ToXml,
 {
+    let _stage = stage::enter(Stage::Encode);
     let text = match read {
         ReadBody::RawJson(text) => text,
         ReadBody::Value(value) => return respond_rm::<T>(headers, status, &value, root_tag),
@@ -194,6 +200,7 @@ pub(crate) fn respond_xml<T: ToXml>(
     typed: &T,
     root_tag: &str,
 ) -> Response {
+    let _stage = stage::enter(Stage::Encode);
     // The lineage is read off the winning XML media range; an unrecognized
     // `version` is an aspect of the request the service cannot fulfill → 406
     // (Resources.md §XML Format).

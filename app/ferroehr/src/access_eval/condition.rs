@@ -42,6 +42,7 @@ use crate::ids::EhrId;
 use crate::party_binding::grants::live::LiveGrants;
 use crate::service::ehr::access_settings::EhrAccessSettings;
 use crate::storage::access_projection::{EhrSubject, Revision};
+use crate::telemetry::stage::{self, Stage};
 
 task_local! {
     static REQUEST_ACCESS: Arc<RequestAccess>;
@@ -471,7 +472,7 @@ impl RequestAccess {
         ehr_id: EhrId,
         entry: &EhrEntry,
     ) -> Result<Arc<Verdict>, CareUnsettled> {
-        let judged = self.judged(ehr_id, entry).await?;
+        let judged = stage::instrument(Stage::Access, self.judged(ehr_id, entry)).await?;
         let verdict = Arc::clone(&judged.verdict);
         self.verdicts
             .lock()
@@ -493,7 +494,7 @@ impl RequestAccess {
     /// # Errors
     /// As [`Self::judge_ehr`].
     pub async fn judge_ahead(&self, ehr_id: EhrId, entry: &EhrEntry) -> Result<(), CareUnsettled> {
-        let judged = self.judged(ehr_id, entry).await?;
+        let judged = stage::instrument(Stage::Access, self.judged(ehr_id, entry)).await?;
         self.ahead
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
