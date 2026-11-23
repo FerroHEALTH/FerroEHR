@@ -319,18 +319,17 @@ impl CareCopy {
             let mut led = None;
             // NOTE: moka 0.12 `Entry::or_optionally_insert_with`, concurrent calls on one key
             // run one `init` and the others wait for it, answered `None` when it holds nothing.
-            let held = cache
-                .entry(key.clone())
-                .or_optionally_insert_with(async {
-                    let value = read.as_mut().await;
-                    let keep = match (&value, fits.take()) {
-                        (Ok(value), Some(fits)) => fits(value).then(|| value.clone()),
-                        _ => None,
-                    };
-                    led = Some(value);
-                    keep
-                })
-                .await;
+            // Boxed: moka's future is large, and a request's future holds it on its stack.
+            let held = Box::pin(cache.entry(key.clone()).or_optionally_insert_with(async {
+                let value = read.as_mut().await;
+                let keep = match (&value, fits.take()) {
+                    (Ok(value), Some(fits)) => fits(value).then(|| value.clone()),
+                    _ => None,
+                };
+                led = Some(value);
+                keep
+            }))
+            .await;
             match (led, held) {
                 (Some(value), held) => {
                     if held.is_some() && self.drops.load(Ordering::Acquire) != seen {
