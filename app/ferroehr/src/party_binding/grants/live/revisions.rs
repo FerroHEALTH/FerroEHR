@@ -80,7 +80,7 @@ impl LiveGrants {
     }
 
     /// The snapshot the facts copy holds with its install, for a read of the
-    /// store's revisions ([`crate::party_binding::request::revisions`]).
+    /// store's revisions ([`crate::party_binding::request`]).
     #[must_use]
     pub fn held_snapshot(&self) -> Option<HeldSnapshot> {
         let held = self.held_facts();

@@ -163,6 +163,7 @@ async fn an_older_snapshot_is_behind_until_the_copy_reads_again() {
     let mut conn = acquire(&pool).await.expect("a connection");
     let mut tx = sqlx::Connection::begin(&mut *conn).await.expect("a commit");
     stamp_membership(&mut tx, party).await;
+    // NOTE: our own design (#5762), a test commit of party rows that no request makes.
     tx.commit().await.expect("the commit");
     drop(conn);
     let older = live.facts_snapshot().expect("a snapshot");
@@ -199,6 +200,7 @@ async fn a_stamp_running_when_the_copy_was_read_is_read_once_it_commits() {
     let mut b = acquire(&pool).await.expect("a connection");
     let mut b_tx = sqlx::Connection::begin(&mut *b).await.expect("B");
     stamp_membership(&mut b_tx, second).await;
+    // NOTE: our own design (#5762), a test commit of party rows that no request makes.
     b_tx.commit().await.expect("B commits first");
     drop(b);
     live.refresh().await.expect("the read between them");
@@ -208,6 +210,7 @@ async fn a_stamp_running_when_the_copy_was_read_is_read_once_it_commits() {
         !behind(&pool, &live).await,
         "A's stamp is not committed, so the copy holds every one"
     );
+    // NOTE: our own design (#5762), a test commit of party rows that no request makes.
     a_tx.commit().await.expect("A commits");
     drop(a);
     assert!(behind(&pool, &live).await, "A's stamp is unseen");
