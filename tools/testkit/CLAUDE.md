@@ -19,25 +19,28 @@ own container or running its own migrations.
   applied at container CREATION: a container that already exists is adopted
   as-is, so changing the value or the settings needs
   `docker rm -f ferroehr-testkit-pg19`.
-- **Clone lifetime:** `TestDb::drop` drops the clone and JOINS the thread
-  that does it, so a passing test and a panicking one both leave nothing (a
-  detached thread died with the test process, which leaked hundreds of clones
-  per run, #3924). Each clone is leased to its process by a session-level
-  advisory lock (`CLONE_LEASE_CLASS`, keyed by the name's random suffix) held
-  on a connection of its own from before the clone exists until the guard
-  drops, so the sweep can tell a killed run's clone from a live one.
+- **Clone lifetime:** each clone is leased to its process by a session-level
+  advisory lock (`CLONE_LEASE_CLASS`, keyed by the name's random suffix),
+  held on a connection of its own from before the clone exists until the
+  guard drops or the process ends. `TestDb::drop` only closes that
+  connection and returns at once; the next startup sweep drops the clone. It
+  never runs `DROP DATABASE` itself: a drop waits until every backend on the
+  server accepts a barrier, and a backend whose client is a task of the
+  runtime the drop blocks never does, so the drop would wait for the
+  server's `authentication_timeout` (#6367).
 - **Sweep:** every test process reclaims stale harness databases **once, at
   server acquisition, before it hands out any clone** — every clone whose
-  lease is free (its process ended, however young it is), a clone name with
+  lease is free (its guard dropped or its process ended, however young it is), a clone name with
   no lease key past a short grace window, plus templates of other migration fingerprints stamped
   complete longer ago than their own grace window (or not stamped with a
   build time), so concurrent suites from different fingerprints on one server
   stop rebuilding each other's templates. Drops are
   **force-free on purpose**: a clone another process is still connected to is
   refused with SQLSTATE `55006` and skipped as benign (never
-  `WITH (FORCE)` — that would tear a live test's database out from under it;
-  force is correct only in `TestDb::drop`, which drops the caller's *own*
-  clone). `testkit::sweep_stale()` is the manual entry point.
+  `WITH (FORCE)`: that would tear a live test's database out from under it),
+  and a later sweep takes it. After a full run, the clones of the processes
+  that ended after the run's last sweep remain, and the next run's first
+  sweep drops them. `testkit::sweep_stale()` is the manual entry point.
 - **Template discipline:** the template is migrated by the platform
   library's own `db::run_migrations` and keyed on
   `db::migration_fingerprint()`; completion is stamped as the database

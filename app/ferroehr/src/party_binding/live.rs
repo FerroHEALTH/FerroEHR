@@ -20,6 +20,7 @@
 //! party: our own design.
 
 use crate::db::domain::Domain;
+use futures::FutureExt as _;
 use std::future::Future;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
@@ -66,14 +67,14 @@ pub(crate) fn note_change() {
 
 /// Runs `fut`, returning its output and whether a commit inside it changed
 /// the binding side table.
-pub async fn tracking<F: Future>(fut: F) -> (F::Output, bool) {
-    CHANGED
-        .scope(AtomicBool::new(false), async {
-            let output = fut.await;
+pub fn tracking<F: Future>(fut: F) -> impl Future<Output = (F::Output, bool)> {
+    CHANGED.scope(
+        AtomicBool::new(false),
+        fut.map(|output| {
             let changed = CHANGED.with(|changed| changed.load(Ordering::Acquire));
             (output, changed)
-        })
-        .await
+        }),
+    )
 }
 
 /// What a lookup is held under: the login's key, the group issuer its

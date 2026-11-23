@@ -249,8 +249,8 @@ pub fn defer(count: impl FnOnce() + Send + 'static) {
 
 /// Runs `fut` as one request: the first read of the store's revisions inside
 /// it serves every later one.
-pub async fn scope<F: Future>(fut: F) -> F::Output {
-    READ.scope(OnceCell::new(), fut).await
+pub fn scope<F: Future>(fut: F) -> impl Future<Output = F::Output> {
+    READ.scope(OnceCell::new(), fut)
 }
 
 /// The revisions in force in the party store: the ones the running request
