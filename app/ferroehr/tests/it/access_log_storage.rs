@@ -246,6 +246,56 @@ async fn the_iti81_total_is_counted_from_the_time_index() {
     }
 }
 
+/// The newest entries of the ITI-81 search, the person's trail and a page of
+/// the log are read through the search index in its order, merged with the
+/// few past its cursor, never by a sort of the whole index (#6319).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_newest_page_reads_the_index_in_its_order() {
+    let seeded = seed(ENTRIES).await;
+    let pool = seeded.db.pool();
+    let last: i64 = sqlx::query_scalar("SELECT max(id) FROM audit.access_log_entry")
+        .fetch_one(&pool)
+        .await
+        .expect("the last entry id reads");
+    seeded
+        .checkpoints
+        .store()
+        .index_to(last)
+        .await
+        .expect("the index moves");
+    vacuum(&pool).await;
+    for (page, index) in [
+        (
+            "SELECT chain_seq FROM audit.access_log_search ORDER BY recorded_at DESC LIMIT 21",
+            "ix_access_log_index_time",
+        ),
+        (
+            "SELECT chain_seq, content FROM audit.access_log_record \
+             ORDER BY time_recorded DESC LIMIT 21",
+            "ix_access_log_index_time",
+        ),
+        (
+            "SELECT chain_seq FROM audit.access_log_search \
+             WHERE patient_id = 'patient-000000000007' ORDER BY recorded_at DESC LIMIT 21",
+            "ix_access_log_index_patient",
+        ),
+    ] {
+        let plan = plan(&pool, page).await;
+        let nodes = plan_nodes(&serde_json::from_str(&plan).expect("a plan"));
+        assert!(
+            nodes
+                .iter()
+                .any(|(kind, read, used)| read == "access_log_index"
+                    && kind.starts_with("Index")
+                    && used == index)
+                && nodes
+                    .iter()
+                    .all(|(kind, read, _)| read != "access_log_index" || kind.starts_with("Index")),
+            "`{page}` reads {index} in its order: {plan}"
+        );
+    }
+}
+
 /// Every node of the plan `plan`: its type, the relation it reads and the
 /// index it reads it by, empty when it names none.
 fn plan_nodes(plan: &serde_json::Value) -> Vec<(String, String, String)> {

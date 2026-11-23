@@ -461,29 +461,31 @@ COMMENT ON TABLE access_log_seal_verified IS
     'The newest window a verification found intact with every window before it: where an incremental verification starts.';
 
 -- The entries no write holds, as every reader of the log reads them; an
--- entry is named by its id. The indexed entries are read through
--- access_log_index, whose columns a condition then reaches, and the entries
--- past its cursor by key (#6319). An indexed entry is held by no write: the
--- cursor stays below every hold.
+-- entry is named by its id. The keys and search columns of the indexed
+-- entries come from access_log_index, those of the entries past its cursor
+-- from their rows by key (#6319), and each entry's row is joined by its key.
+-- The index's arm is the plain table, which the planner merges in its
+-- index's order with the sorted few past the cursor, so an ordered page
+-- reads no more of the index than it serves; an arm with a join or a
+-- condition of its own is planned apart and sorted whole. An indexed entry
+-- is held by no write: the cursor stays below every hold.
 CREATE VIEW access_log_record AS
-    SELECT i.entry_id AS chain_seq, e.record_type, e.uid, i.time_recorded, e.content,
-           e.content_digest, i.ehr_id, i.party_id,
-           i.retain_until, e.time_removed, e.fold_after, e.action_terminology, e.action_code,
+    SELECT k.entry_id AS chain_seq, e.record_type, e.uid, k.time_recorded, e.content,
+           e.content_digest, k.ehr_id, k.party_id,
+           k.retain_until, e.time_removed, e.fold_after, e.action_terminology, e.action_code,
            e.result_terminology, e.result_code, e.shared, e.event_action, e.event_outcome,
-           i.principal, i.patient_id, e.resource_id, e.request_id, e.client_ip,
-           e.classified_ehr_id, e.search_tokens, i.render_policy_id, i.entry_id
-      FROM access_log_index i
-      JOIN access_log_entry e ON e.id = i.entry_id
-    UNION ALL
-    SELECT e.id AS chain_seq, e.record_type, e.uid, e.time_recorded, e.content,
-           e.content_digest, e.ehr_id, e.party_id,
-           e.retain_until, e.time_removed, e.fold_after, e.action_terminology, e.action_code,
-           e.result_terminology, e.result_code, e.shared, e.event_action, e.event_outcome,
-           e.principal, e.patient_id, e.resource_id, e.request_id, e.client_ip,
-           e.classified_ehr_id, e.search_tokens, e.render_policy_id, e.id AS entry_id
-      FROM access_log_entry e
-     WHERE e.id > (SELECT x.last_id FROM access_log_index_state x WHERE x.singleton)
-       AND NOT EXISTS (SELECT 1 FROM access_log_hold h WHERE h.entry_id = e.id);
+           k.principal, k.patient_id, e.resource_id, e.request_id, e.client_ip,
+           e.classified_ehr_id, e.search_tokens, k.render_policy_id, k.entry_id
+      FROM (SELECT i.entry_id, i.time_recorded, i.ehr_id, i.party_id, i.retain_until,
+                   i.render_policy_id, i.patient_id, i.principal
+              FROM access_log_index i
+            UNION ALL
+            SELECT e.id, e.time_recorded, e.ehr_id, e.party_id, e.retain_until,
+                   e.render_policy_id, e.patient_id, e.principal
+              FROM access_log_entry e
+             WHERE e.id > (SELECT x.last_id FROM access_log_index_state x WHERE x.singleton)
+               AND NOT EXISTS (SELECT 1 FROM access_log_hold h WHERE h.entry_id = e.id)) AS k
+      JOIN access_log_entry e ON e.id = k.entry_id;
 COMMENT ON VIEW access_log_record IS
     'The openEHR access log (draft org.openehr.rm.access_log 0.1.0): every ACCESS_LOG_ENTRY or ACCESS_LOG_TOMBSTONE no write holds, named by its id. Every reader of the log reads it here.';
 
