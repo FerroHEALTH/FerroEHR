@@ -1912,6 +1912,21 @@ fn judged(measured: u64, ceiling: u64) -> (bool, String) {
     (measured <= ceiling, format!("{measured} (<= {ceiling})"))
 }
 
+/// Whether the allocation ceilings gate this build: they are the figures
+/// Linux CI measures, and the same paths allocate a few more times elsewhere.
+// NOTE: #6338 chose Linux-only allocation gates; other platforms print the figures.
+const ALLOCATIONS_GATED: bool = cfg!(target_os = "linux");
+
+/// [`judged`] for an allocation count, which passes off Linux and reports
+/// the measured figure beside its ceiling there.
+fn judged_allocations(measured: u64, ceiling: u64) -> (bool, String) {
+    if ALLOCATIONS_GATED {
+        judged(measured, ceiling)
+    } else {
+        (true, format!("{measured} (ceiling {ceiling}, gated on Linux)"))
+    }
+}
+
 /// Measures every path of [`Path::ALL`] in the order of [`BUDGETS`] over the
 /// router `app`, counting the database wire through `wire` when one is given.
 async fn measure_all(
@@ -1976,7 +1991,7 @@ async fn every_hot_path_stays_within_its_budget() {
         let peak = m.low(|a| u64::try_from(a.peak.max(0)).unwrap());
         let cells = [
             ("conversions", judged(m.conversions(), budget.conversions)),
-            ("allocations", judged(allocations, budget.allocations)),
+            ("allocations", judged_allocations(allocations, budget.allocations)),
             ("peak bytes", judged(peak, budget.peak_bytes)),
             ("round trips", judged(m.round_trips, budget.round_trips)),
             ("nested statements", judged(m.nested, budget.nested)),
