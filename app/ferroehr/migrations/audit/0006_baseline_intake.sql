@@ -265,9 +265,12 @@ COMMENT ON FUNCTION access_log_intake_take(text[], text[], text[], text[], text[
     'One batch''s access-log entries, each written once: their search tokens, found by the digests the server computed, grouped by entry in one pass, their shared sets and shared parts stored or found, checked and kept as long as the entries, their rows in access_log_entry, and a hold per entry of a reservation until its write commits; the ids a writer names from memory are checked against their generation (#5770, #5887, #5889, #5968, #6242).';
 
 -- Releases the records held under committed reservations, counting them.
+-- Its statements run on the generic plan, which probes the reservation index
+-- for any number of ids (#6392).
 CREATE FUNCTION audit.audit_intake_release(p_ids uuid[]) RETURNS bigint
     LANGUAGE plpgsql VOLATILE SECURITY DEFINER
     SET search_path = audit, pg_catalog
+    SET plan_cache_mode = force_generic_plan
     AS $$
 DECLARE
     v_entries bigint;
