@@ -99,6 +99,8 @@ pub(crate) struct Step<'q> {
     sql: Cow<'static, str>,
     /// What its rows say; `None` for a step whose rows nobody reads.
     tag: Option<Tag>,
+    /// Whether it may write a row; `false` for an insert of no rows.
+    writes: bool,
     /// Binds its parameters.
     bind: Binder<'q>,
 }
@@ -108,6 +110,7 @@ impl std::fmt::Debug for Step<'_> {
         f.debug_struct("Step")
             .field("name", &self.name)
             .field("tag", &self.tag)
+            .field("writes", &self.writes)
             .finish_non_exhaustive()
     }
 }
@@ -126,8 +129,17 @@ impl<'q> Step<'q> {
             name,
             sql: sql.into(),
             tag,
+            writes: true,
             bind: Box::new(bind),
         }
+    }
+
+    /// The step, marked as one that writes no row when `writes` is `false`:
+    /// an insert of no rows, which a [`batch`] of such steps alone never
+    /// sends.
+    pub(crate) fn writing(mut self, writes: bool) -> Self {
+        self.writes = writes;
+        self
     }
 
     /// Runs the step alone on `tx`, returning the rows of a tagged step.
@@ -155,7 +167,7 @@ impl<'q> Step<'q> {
 }
 
 /// Runs `steps` as the CTEs of one statement on `tx`, returning the rows of
-/// the tagged ones; nothing is sent for no step.
+/// the tagged ones; nothing is sent when no step may write a row.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -163,7 +175,7 @@ pub(crate) async fn batch(
     tx: &mut PgConnection,
     steps: Vec<Step<'_>>,
 ) -> Result<Vec<Returned>, StorageError> {
-    if steps.is_empty() {
+    if !steps.iter().any(|step| step.writes) {
         return Ok(Vec::new());
     }
     let mut sql = String::with_capacity(

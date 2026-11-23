@@ -14,8 +14,10 @@
 //! party read, all over the
 //! IPS composition (128 KB, 402 node rows), and the commit of that composition
 //! as a CONTRIBUTION, its read at an instant, the `EHR_STATUS` commit and read,
-//! the commit of a PERSON, plain and with ordinal and scale values, and the
-//! update and the delete of a COMPOSITION.
+//! the commit of a PERSON, plain and with ordinal and scale values, the
+//! update and the delete of a COMPOSITION, the directory writes, and the
+//! update and the delete of a PERSON and the create of an ORGANISATION,
+//! GROUP, ROLE and AGENT (#6257).
 //!
 //! The conversions are the `trace` events under
 //! [`openehr_its::conversion::TARGET`]: the codec entry points record each
@@ -401,6 +403,24 @@ struct Budget {
 /// rose from 136,915, 138,815 and 131,027 bytes to 145,604, 143,951 and
 /// 133,880, since the access record is rendered while the prepared version is
 /// held, inside the margin.
+/// Every path has since counted its `pg_notify` calls, top-level or nested,
+/// pinned at the counts measured on main 3bf5adead7: 1 on the `EHR_STATUS`
+/// commit and on each PERSON commit, update and delete, 0 elsewhere. A PERSON
+/// update and delete, each on a PERSON of its own, and an ORGANISATION,
+/// GROUP, ROLE and AGENT create are measured last. A party create, update
+/// and delete have since been judged on one gate read and committed behind
+/// one guarded version statement after their access record (#6257): a PERSON
+/// create sends 20 round trips where it sent 29, an update and a delete 20
+/// where they sent 33, an ORGANISATION, GROUP, ROLE and AGENT create 12, 11,
+/// 21 and 10 where they sent 20, 19, 28 and 17, with 111 to 216 fewer
+/// allocations and the same WAL, measured in CI beside the merge base. The
+/// new paths' ceilings are the merge base's figures with the margins above,
+/// lowered by those drops, with their WAL over the largest of three runs.
+/// Their median peaks rose by 6 to 10 KiB, since the access record is
+/// rendered while the prepared version is held: the PERSON commits from
+/// 115,228 and 130,009 bytes to 124,725 and 139,506, and each peak ceiling of
+/// those paths is the figure measured plus 1%, the rise the orchestrator
+/// approved as the price of the records-first order.
 const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
@@ -539,7 +559,7 @@ const BUDGETS: [Budget; 31] = [
         peak_bytes: 147_242,
         round_trips: 5,
         nested: 7,
-        notifies: 0,
+        notifies: 1,
         wal: 5403,
     },
     Budget {
@@ -555,11 +575,11 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitParty,
         conversions: 8,
-        allocations: 1998,
-        peak_bytes: 117_146,
-        round_trips: 31,
+        allocations: 1856,
+        peak_bytes: 125_972,
+        round_trips: 22,
         nested: 13,
-        notifies: 0,
+        notifies: 1,
         wal: 6622,
     },
     Budget {
@@ -585,11 +605,11 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitPartyScored,
         conversions: 8,
-        allocations: 2487,
-        peak_bytes: 132_147,
-        round_trips: 31,
+        allocations: 2344,
+        peak_bytes: 140_901,
+        round_trips: 22,
         nested: 14,
-        notifies: 0,
+        notifies: 1,
         wal: 9191,
     },
     Budget {
@@ -654,63 +674,63 @@ const BUDGETS: [Budget; 31] = [
     },
     Budget {
         path: Path::PartyUpdate,
-        conversions: 99,
-        allocations: 999_999,
-        peak_bytes: 9_999_999,
-        round_trips: 99,
-        nested: 99,
-        notifies: 99,
-        wal: 999_999,
+        conversions: 8,
+        allocations: 2097,
+        peak_bytes: 129_641,
+        round_trips: 20,
+        nested: 7,
+        notifies: 1,
+        wal: 6599,
     },
     Budget {
         path: Path::PartyDelete,
-        conversions: 99,
-        allocations: 999_999,
-        peak_bytes: 9_999_999,
-        round_trips: 99,
-        nested: 99,
-        notifies: 99,
-        wal: 999_999,
+        conversions: 2,
+        allocations: 1714,
+        peak_bytes: 112_950,
+        round_trips: 20,
+        nested: 7,
+        notifies: 1,
+        wal: 4316,
     },
     Budget {
         path: Path::CommitOrganisation,
-        conversions: 99,
-        allocations: 999_999,
-        peak_bytes: 9_999_999,
-        round_trips: 99,
-        nested: 99,
-        notifies: 99,
-        wal: 999_999,
+        conversions: 8,
+        allocations: 1594,
+        peak_bytes: 126_183,
+        round_trips: 12,
+        nested: 1,
+        notifies: 0,
+        wal: 6710,
     },
     Budget {
         path: Path::CommitGroup,
-        conversions: 99,
-        allocations: 999_999,
-        peak_bytes: 9_999_999,
-        round_trips: 99,
-        nested: 99,
-        notifies: 99,
-        wal: 999_999,
+        conversions: 8,
+        allocations: 1576,
+        peak_bytes: 126_027,
+        round_trips: 11,
+        nested: 1,
+        notifies: 0,
+        wal: 6689,
     },
     Budget {
         path: Path::CommitRole,
-        conversions: 99,
-        allocations: 999_999,
-        peak_bytes: 9_999_999,
-        round_trips: 99,
-        nested: 99,
-        notifies: 99,
-        wal: 999_999,
+        conversions: 9,
+        allocations: 2159,
+        peak_bytes: 126_256,
+        round_trips: 21,
+        nested: 6,
+        notifies: 0,
+        wal: 7012,
     },
     Budget {
         path: Path::CommitAgent,
-        conversions: 99,
-        allocations: 999_999,
-        peak_bytes: 9_999_999,
-        round_trips: 99,
-        nested: 99,
-        notifies: 99,
-        wal: 999_999,
+        conversions: 8,
+        allocations: 1554,
+        peak_bytes: 126_026,
+        round_trips: 10,
+        nested: 1,
+        notifies: 0,
+        wal: 6582,
     },
 ];
 
@@ -737,6 +757,14 @@ const BUDGETS: [Budget; 31] = [
 /// ceiling fell by its path's figure; the `EHR_STATUS` commit and the delete,
 /// whose few rows go dense with a `NULL` for each group's positions, moved
 /// 15 and 16 bytes up, under their ceilings.
+/// A party create, update and delete have since been judged on one gate read
+/// and committed behind one guarded version statement (#6257): 890 and 888
+/// bytes fewer on the two PERSON commits, measured in CI beside the merge
+/// base, and both ceilings fell by those figures. The PERSON update and
+/// delete and the ORGANISATION, GROUP, ROLE and AGENT creates move 10,400,
+/// 8,951, 7,866, 7,620, 11,576 and 7,522 bytes where they moved 12,615,
+/// 11,166, 8,597, 8,352, 12,202 and 8,149, and their ceilings are the merge
+/// base's figures plus 64 bytes, lowered by those drops.
 const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::CommitJson, 202_143),
     (Path::CommitXml, 202_289),
@@ -753,22 +781,22 @@ const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::ReadAtTime, 131_699),
     (Path::CommitStatus, 5572),
     (Path::ReadStatus, 3142),
-    (Path::CommitParty, 10_461),
+    (Path::CommitParty, 9571),
     (Path::AqlMatches, 17_539),
     (Path::AqlParty, 11_509),
-    (Path::CommitPartyScored, 12_808),
+    (Path::CommitPartyScored, 11_920),
     (Path::ReadVersion, 3336),
     (Path::CommitUpdate, 202_571),
     (Path::CommitDelete, 4875),
     (Path::DirectoryCreate, 4985),
     (Path::DirectoryUpdate, 4795),
     (Path::DirectoryDelete, 4152),
-    (Path::PartyUpdate, 999_999),
-    (Path::PartyDelete, 999_999),
-    (Path::CommitOrganisation, 999_999),
-    (Path::CommitGroup, 999_999),
-    (Path::CommitRole, 999_999),
-    (Path::CommitAgent, 999_999),
+    (Path::PartyUpdate, 10_464),
+    (Path::PartyDelete, 9015),
+    (Path::CommitOrganisation, 7930),
+    (Path::CommitGroup, 7684),
+    (Path::CommitRole, 11_640),
+    (Path::CommitAgent, 7586),
 ];
 
 /// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round

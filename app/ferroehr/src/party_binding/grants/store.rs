@@ -215,6 +215,7 @@ fn clients_came(head: GrantHead<'_>) -> Step<'_> {
                 .bind(provider)
         },
     )
+    .writing(facts.is_some())
 }
 
 /// Replaces the provider row of the `ORGANISATION` `head`; whether the row
@@ -268,6 +269,7 @@ fn provider_came(head: GrantHead<'_>) -> Step<'_> {
                 .bind(identifier.map(|(_, id)| id))
         },
     )
+    .writing(identifier.is_some())
 }
 
 /// Replaces the capability rows of the `ROLE` `head`; whether any row went or
@@ -341,6 +343,7 @@ fn capabilities_came(head: GrantHead<'_>) -> Step<'_> {
                 .bind(columns.credentials)
         },
     )
+    .writing(holder.is_some())
 }
 
 /// The capabilities of a `ROLE` as the arrays the insert binds.
