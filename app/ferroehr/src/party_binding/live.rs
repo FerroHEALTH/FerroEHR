@@ -312,6 +312,18 @@ impl LiveBindings {
             Some(_) => looked_up(LOOKUPS, "behind"),
             None => looked_up(LOOKUPS, "miss"),
         }
+        // NOTE: our own design, boxed so a request's future on a 2 MiB test-thread stack stays small.
+        Box::pin(self.read_through(key, current, read)).await
+    }
+
+    /// [`Self::lookup`] past a miss: under `key`'s stripe, the lookup another
+    /// miss just held, or `read` it and hold it unless a drop overtook the read.
+    async fn read_through<E>(
+        &self,
+        key: LookupKey,
+        current: impl Fn(i64) -> bool,
+        read: impl Future<Output = Result<(Lookup, i64), E>>,
+    ) -> Result<Lookup, E> {
         let _reading = self.copy.stripe(&key).lock().await;
         if let Some((held, at)) = self.copy.lookups.get(&key).await
             && current(at)
