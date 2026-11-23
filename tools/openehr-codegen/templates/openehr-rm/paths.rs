@@ -2,46 +2,18 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! openEHR path machinery (hand-written spec behaviour).
+//! openEHR path navigation over the canonical-JSON tree: the `PATHABLE`
+//! functions (RM `org.openehr.rm.common.pathable.adoc`), the `LOCATABLE`
+//! node-id predicates, and the [`EhrUri`] parser, over the BASE
+//! `master11-paths.adoc` grammar and the `ehr:` scheme (RM
+//! `data_types/master10-uri_package` §"DV_EHR_URI Syntax").
 //!
-//! Implements the RM `PATHABLE` pathing functions — `item_at_path` /
-//! `items_at_path` / `path_exists` / `path_unique` / `path_of_item` / `parent` —
-//! over the canonical-JSON value tree, which is this workspace's uniform RM
-//! representation. It also carries the two `LOCATABLE` node-id form predicates
-//! ([`archetype_node_id_is_term_code`], [`is_archetype_root_node_id`]) and the
-//! [`EhrUri`] structural parser for the `ehr:` URI scheme.
+//! `parent` is the root-anchored [`parent_of`]. General comparison predicates
+//! are [`Comparison`] conjuncts with XPath existential semantics; other
+//! predicate text is [`PathError::UnsupportedPredicate`].
 //!
-//! Spec: RM
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.pathable.adoc`
-//! for the function signatures and parent semantics, and BASE
-//! `docs/specs/openehr/BASE/docs/architecture_overview/master11-paths.adoc`
-//! §Basic Syntax / §Predicate Expressions / §Using a Uid-based Predicate /
-//! §Using Positional Parameters for the path grammar; the `ehr:` scheme is BASE
-//! `master11-paths` §"EHR URIs" and RM `data_types/master10-uri_package`
-//! §"DV_EHR_URI Syntax".
-//!
-//! Four shape decisions:
-//!
-//! - `LOCATABLE.concept(): DV_TEXT` is absent, because it is not realisable
-//!   from an instance: `common/master03-archetyped_package.adoc` §"The
-//!   LOCATABLE Class" derives the meaning of a node from the archetype's
-//!   `ontology` section, which the instance does not carry. What the instance
-//!   does answer — whether a node id names an archetype root — is
-//!   [`is_archetype_root_node_id`].
-//! - `PATHABLE.parent()` is a back-reference, realised as the root-anchored
-//!   lookup [`parent_of`] rather than a stored pointer.
-//! - The typed RM tree is not walked directly: every consumer already holds the
-//!   canonical JSON form, so a second typed visitor would duplicate this logic
-//!   for no wire gain.
-//! - General comparison predicates (§"Other Predicates") are [`Comparison`]
-//!   conjuncts evaluated with XPath existential node-set semantics; predicate
-//!   text outside the grammar fails loud as
-//!   [`PathError::UnsupportedPredicate`].
-//!
-//! NOTE: the `//` pattern and the positional predicate `[n]` belong to the
-//! master11 PATH grammar realised here, not to the AQL 1.1 path grammar (QUERY
-//! `master03` §"Predicates" enumerates only the standard/archetype/node
-//! predicates).
+//! NOTE: `//` and `[n]` belong to the master11 grammar, not to AQL (QUERY
+//! `master03` §"Predicates").
 
 #![expect(
     clippy::disallowed_types,
@@ -70,14 +42,12 @@ pub enum PathError {
     /// A `[` predicate was not terminated by `]`.
     #[error("unterminated predicate in segment {0}")]
     UnterminatedPredicate(usize),
-    /// A predicate uses a construct outside the supported
-    /// archetype-id / name / uid / positional subset (general comparisons like
-    /// `time >= '...'` are not part of this navigation primitive).
+    /// A predicate outside the supported archetype-id, name, uid, positional and
+    /// comparison forms.
     #[error("unsupported predicate expression: {0:?}")]
     UnsupportedPredicate(String),
-    /// A positional predicate `[n]` had a value that is not a positive integer
-    /// (XPath positions are 1-based — BASE `master11-paths` §"Using Positional
-    /// Parameters").
+    /// A positional predicate `[n]` that is not a positive integer (master11
+    /// §"Using Positional Parameters").
     #[error("invalid positional predicate {0:?} (positions are 1-based integers)")]
     InvalidPosition(String),
     /// A dangling `//` with no following attribute segment.
@@ -85,19 +55,9 @@ pub enum PathError {
     DanglingDescendant,
 }
 
-/// The predicate of one path segment (a conjunction of the BASE `master11-paths`
-/// §"Predicate Expressions" shortcuts):
-/// - `archetype_node_id` — `[at0003]` / `[openEHR-EHR-OBSERVATION.x.v1]` /
-///   `[archetype_id=…]`, the shortcut for `[@archetype_node_id='…']` (at
-///   archetype chaining points the node id carries the archetype id);
-/// - `name_value` — `[at0003,'name']` / `[at0003 and name/value='name']`;
-/// - `uid` — `[uid='…']` / `[at0003 and uid='…']` (§"Using a Uid-based
-///   Predicate");
-/// - `position` — the 1-based XPath positional predicate `[n]` (§"Using
-///   Positional Parameters"), applied to the *container*, not a node attribute;
-/// - `comparisons` — general attribute comparisons (§"Other Predicates"), e.g.
-///   `[at0007 and time >= '2005-06-24T09:30:00']` or
-///   `[at0002.1 and value/defining_code/code_string = 'A04']`.
+/// The predicate of one path segment, a conjunction of the master11
+/// §"Predicate Expressions" shortcuts: archetype node id, name, uid, the
+/// 1-based position `[n]` on the container, and general comparisons.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Predicate {
     /// `archetype_node_id` (or, at archetype roots, archetype id).
@@ -158,15 +118,9 @@ impl CmpOp {
     }
 }
 
-/// The right-hand literal of a general comparison conjunct: a single-quoted
-/// string (compared byte-lexically) or an unquoted number (compared
-/// numerically).
-///
-/// BASE `master11-paths.adoc` §Predicate Expressions defines the predicate
-/// SYNTAX only, so the evaluation rule is our own design. A lexical compare
-/// coincides with temporal order only for identically-formatted, same-offset,
-/// fully-specified ISO-8601 values — master11's own example literal is
-/// day-first, where it does not.
+/// The literal of a comparison: a quoted string, compared byte-lexically, or
+/// a number, compared numerically. master11 defines only the syntax: our own
+/// design.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CmpLiteral {
     /// A `'…'` string literal.
@@ -175,16 +129,9 @@ pub enum CmpLiteral {
     Num(String),
 }
 
-/// One general comparison conjunct of a predicate.
-///
-/// BASE `master11-paths` §"Other Predicates": a relative attribute path, an
-/// operator, and a literal — e.g. `time >= '2005-06-24T09:30:00'` or
-/// `value/defining_code/code_string = 'A04'`.
-///
-/// Evaluation follows XPath 1 existential node-set semantics: the conjunct
-/// holds if ANY node the relative path selects from the candidate satisfies
-/// the comparison. An RM scalar wrapper object (e.g. a `DV_DATE_TIME`)
-/// compares by its `value` member, matching the string-value XPath would see.
+/// One comparison conjunct (master11 §"Other Predicates"), true when any node
+/// the relative path selects satisfies it; a scalar wrapper compares by its
+/// `value`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Comparison {
     /// The relative attribute path (plain attribute names, no predicates).
@@ -204,9 +151,7 @@ impl Comparison {
         leaves.iter().any(|leaf| self.satisfied_by(leaf))
     }
 
-    /// Whether one resolved leaf satisfies the comparison. An object leaf
-    /// drops to its `value` member (the RM scalar-wrapper convention, as in
-    /// [`node_uid`]).
+    /// Whether one leaf satisfies the comparison, an object by its `value`.
     fn satisfied_by(&self, leaf: &Value) -> bool {
         let leaf = match leaf {
             Value::Object(o) => match o.get("value") {
@@ -218,9 +163,8 @@ impl Comparison {
         self.satisfied_by_scalar(leaf.as_str(), leaf.as_f64())
     }
 
-    /// Whether a resolved scalar leaf, read as a string and as a number,
-    /// satisfies the comparison (a string literal compares the string, a
-    /// numeric literal the number).
+    /// Whether a scalar leaf satisfies the comparison, as string or number by
+    /// the literal's kind.
     #[must_use]
     pub fn satisfied_by_scalar(&self, as_str: Option<&str>, as_f64: Option<f64>) -> bool {
         match &self.value {
@@ -237,9 +181,7 @@ impl Comparison {
     }
 }
 
-/// Collect every node the relative attribute path selects from `node`,
-/// descending into container attributes element-wise (XPath node-set
-/// traversal).
+/// Collects every node the relative path selects, through containers.
 fn collect_leaves<'a>(node: &'a Value, path: &[String], out: &mut Vec<&'a Value>) {
     let Some((first, rest)) = path.split_first() else {
         out.push(node);
@@ -269,15 +211,8 @@ impl Predicate {
             && self.comparisons.is_empty()
     }
 
-    /// Whether a canonical-JSON RM node satisfies this predicate's
-    /// *attribute-based* conjuncts (`archetype_node_id`, `name/value`, `uid`).
-    /// The positional conjunct is orthogonal — it selects by container index
-    /// and is applied in `step`, not here.
-    ///
-    /// `archetype_node_id` matches `LOCATABLE.archetype_node_id`; `name_value`
-    /// matches `LOCATABLE.name.value` (a `DV_TEXT`); `uid` matches
-    /// `LOCATABLE.uid.value` (BASE `master11-paths` §"Name-based Predicate" /
-    /// §"Using a Uid-based Predicate"). All are exact, case-sensitive, and ANDed.
+    /// Whether a node satisfies the attribute conjuncts (`archetype_node_id`,
+    /// `name/value`, `uid`), exact and ANDed; the position is applied in `step`.
     #[must_use]
     pub fn matches(&self, node: &Value) -> bool {
         if let Some(id) = self.archetype_node_id.as_deref()
@@ -303,9 +238,7 @@ impl Predicate {
     }
 }
 
-/// The `LOCATABLE.uid.value` of a canonical-JSON node, tolerating both the
-/// object form (`{"_type":"HIER_OBJECT_ID","value":"…"}`, the canonical
-/// encoding) and a bare-string `uid`.
+/// A node's `uid.value`, from the object form or a bare string.
 fn node_uid(node: &Value) -> Option<&str> {
     match node.get("uid") {
         Some(Value::String(s)) => Some(s.as_str()),
@@ -321,10 +254,8 @@ pub struct PathSegment {
     pub attribute: String,
     /// The optional `[...]` predicate.
     pub predicate: Predicate,
-    /// `true` when this segment is reached via a `//` path pattern, i.e. it
-    /// matches at *any depth* below the current context rather than as a direct
-    /// child (BASE `master11-paths` §"Basic Syntax": the `//` pattern "can match
-    /// any number of path segments").
+    /// Whether this segment follows `//` and matches at any depth (master11
+    /// §"Basic Syntax").
     pub descendant: bool,
 }
 
@@ -332,9 +263,7 @@ pub struct PathSegment {
 /// `/`) or relative.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RmPath {
-    /// `true` for an absolute path (leading `/`): the starting point is the
-    /// top of the structure. Navigation from a given root treats both forms
-    /// identically (the root *is* the starting point).
+    /// Whether the path is absolute; navigation from a root treats both alike.
     pub absolute: bool,
     /// The segments in order.
     pub segments: Vec<PathSegment>,
@@ -351,10 +280,7 @@ impl FromStr for RmPath {
             Some(rest) => (true, rest),
             None => (false, s),
         };
-        // Split on top-level '/' only — slashes inside [...] predicates (e.g.
-        // `name/value=...`) are not separators. An *empty* raw segment marks a
-        // `//` path pattern: the following real segment is a descendant match
-        // (BASE `master11-paths` §"Basic Syntax").
+        // Split on top-level `/`; an empty segment marks `//`.
         let raw = split_top_level(body).map_err(PathError::UnterminatedPredicate)?;
         let mut segments: Vec<PathSegment> = Vec::new();
         let mut pending_descendant = false;
@@ -382,10 +308,8 @@ impl FromStr for RmPath {
     }
 }
 
-/// Split a path body on top-level `/` (slashes inside `[...]` predicates are not
-/// separators), returning the raw segment strings — including empty strings for
-/// `//` markers. On an unterminated `[` returns `Err(index)` with the 0-based
-/// index of the offending segment.
+/// Splits a path body on top-level `/`, `//` as empty segments; an
+/// unterminated `[` gives `Err(index)` of its segment.
 fn split_top_level(body: &str) -> Result<Vec<&str>, usize> {
     let bytes = body.as_bytes();
     let (mut i, n) = (0, bytes.len());
@@ -437,9 +361,8 @@ impl fmt::Display for RmPath {
 }
 
 impl Predicate {
-    /// Render this predicate in its canonical bracketed form (a normalised
-    /// re-emission of the parsed shortcuts — see the module NOTE on
-    /// round-trip stability). Emits nothing when empty.
+    /// Renders this predicate in its normalised bracketed form, nothing when
+    /// empty.
     fn render(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_empty() {
             return Ok(());
@@ -456,9 +379,7 @@ impl Predicate {
             wrote = true;
         }
         if let Some(name) = &self.name_value {
-            // Preferred openEHR shortcut `[id,'name']` when combined with an
-            // archetype id, else the explicit `name/value='name'` form (BASE
-            // `master11-paths` §"Name-based Predicate").
+            // `[id,'name']` beside an archetype id, else `name/value='name'`.
             if wrote {
                 write!(f, ",'{name}'")?;
             } else {
@@ -524,9 +445,7 @@ fn parse_segment(seg: &str, index: usize) -> Result<PathSegment, PathError> {
     })
 }
 
-/// Parse the inside of a `[...]` predicate: the archetype-id shortcut, the
-/// `,'name'` shortcut, explicit `name/value='...'` conjuncts, and the
-/// explicit `@archetype_node_id='...'` form.
+/// Parses the inside of a `[...]` predicate.
 fn parse_predicate(inner: &str) -> Result<Predicate, PathError> {
     let mut predicate = Predicate::default();
     // `[at0001, 'standing']` — the comma shortcut binds the whole remainder.
@@ -589,12 +508,8 @@ fn apply_conjunct(c: &str, predicate: &mut Predicate) -> Result<(), PathError> {
         predicate.archetype_node_id = Some(unquote(value, c)?.to_owned());
         return Ok(());
     }
-    // Explicit archetype-id predicate at a chaining point:
-    // `[archetype_id=openEHR-EHR-…]` / `[@archetype_id='…']` — the long form of
-    // the bare `[openEHR-EHR-…]` shortcut (§"Paths within Top-level
-    // Structures"). Both resolve against the node's `archetype_node_id`, which
-    // at an archetype root carries the archetype id. The value may be unquoted
-    // (it contains no `'`).
+    // `[archetype_id=…]` or `[@archetype_id='…']`, matched against
+    // `archetype_node_id` (§"Paths within Top-level Structures").
     if let Some(value) = strip_eq(c, "@archetype_id").or_else(|| strip_eq(c, "archetype_id")) {
         let value = value
             .strip_prefix('\'')
@@ -603,9 +518,7 @@ fn apply_conjunct(c: &str, predicate: &mut Predicate) -> Result<(), PathError> {
         predicate.archetype_node_id = Some(value.to_owned());
         return Ok(());
     }
-    // A general comparison conjunct (§"Other Predicates"), e.g.
-    // `time >= '2005-06-24T09:30:00'` or
-    // `value/defining_code/code_string = 'A04'`.
+    // A comparison conjunct (§"Other Predicates").
     if c.contains(['=', '<', '>']) {
         predicate.comparisons.push(parse_comparison(c)?);
         return Ok(());
@@ -615,9 +528,8 @@ fn apply_conjunct(c: &str, predicate: &mut Predicate) -> Result<(), PathError> {
     if c.contains('\'') {
         return Err(PathError::UnsupportedPredicate(c.to_owned()));
     }
-    // NOTE: the name-based bare-bracket form with a parenthesised
-    // uniqueness modifier that RM common `master05-directory_package.adoc` §Paths
-    // states has no production in BASE `master11-paths`, so it is refused, not bound.
+    // NOTE: RM `master05-directory_package.adoc` §Paths' parenthesised modifier has
+    // no master11 production, so it is refused.
     if c.contains('(') || c.contains(')') {
         return Err(PathError::UnsupportedPredicate(c.to_owned()));
     }
@@ -625,10 +537,8 @@ fn apply_conjunct(c: &str, predicate: &mut Predicate) -> Result<(), PathError> {
     Ok(())
 }
 
-/// Parse a general comparison conjunct `<relative-path> <op> <literal>`
-/// (BASE `master11-paths` §"Other Predicates"). The left side is a relative
-/// attribute path (plain names, `/`-separated, optional XPath-style leading
-/// `@`); the literal is a single-quoted string or an unquoted number.
+/// Parses a comparison conjunct `<relative-path> <op> <literal>` (master11
+/// §"Other Predicates").
 fn parse_comparison(c: &str) -> Result<Comparison, PathError> {
     // Longest operators first so `>=`/`<=`/`!=` never parse as `>`/`<`/`=`.
     let (pos, op) = ["!=", ">=", "<=", "=", ">", "<"]
@@ -700,13 +610,9 @@ fn unquote<'a>(value: &'a str, conjunct: &str) -> Result<&'a str, PathError> {
 
 // ── navigation over the canonical-JSON RM tree ───────────────────────────────
 
-/// One navigation step: from `node`, follow `segment` and append every
-/// matching child to `out`.
-///
-/// The positional conjunct `[n]` (1-based) selects the nth container element
-/// (or, on a single-valued attribute, requires `n == 1`) — BASE
-/// `master11-paths` §"Using Positional Parameters"; the attribute-based
-/// conjuncts are then still ANDed via [`Predicate::matches`].
+/// One navigation step: every child of `node` matching `segment`, `[n]`
+/// selecting the nth container member (master11 §"Using Positional
+/// Parameters").
 fn step<'a>(node: &'a Value, segment: &PathSegment, out: &mut Vec<&'a Value>) {
     let Some(child) = node.get(&segment.attribute) else {
         return;
@@ -735,10 +641,8 @@ fn step<'a>(node: &'a Value, segment: &PathSegment, out: &mut Vec<&'a Value>) {
     }
 }
 
-/// Descendant-or-self navigation for a `//`-pattern segment: apply [`step`] at
-/// `node` and at every descendant object, so the segment matches at any depth
-/// (BASE `master11-paths` §"Basic Syntax"). Each candidate node is the value of
-/// exactly one (attribute, parent) pair, so a match is produced once.
+/// Descendant-or-self navigation for a `//` segment; each match is produced
+/// once.
 fn step_descendant<'a>(node: &'a Value, segment: &PathSegment, out: &mut Vec<&'a Value>) {
     step(node, segment, out);
     if let Value::Object(map) = node {
@@ -758,17 +662,8 @@ fn step_descendant<'a>(node: &'a Value, segment: &PathSegment, out: &mut Vec<&'a
     }
 }
 
-/// One RM path step over the canonical-JSON tree: every value under
-/// `segment.attribute` on `node` that satisfies `segment.predicate`, in
-/// document order.
-///
-/// A single-valued attribute yields at most one value (kept only if the
-/// predicate matches — a predicate constrains a node regardless of the
-/// attribute's cardinality, BASE `master11-paths` §"Predicate Expressions");
-/// a container attribute yields each matching element. This is the primitive
-/// [`items_at_path`] iterates, exposed so path-walking consumers (the FLAT
-/// converters, the composition validator) compose it instead of re-deriving a
-/// walker.
+/// Every value under `segment.attribute` on `node` that satisfies the
+/// predicate, in document order, for single and container attributes alike.
 #[must_use]
 pub fn select_children<'a>(node: &'a Value, segment: &PathSegment) -> Vec<&'a Value> {
     let mut out = Vec::new();
@@ -776,9 +671,8 @@ pub fn select_children<'a>(node: &'a Value, segment: &PathSegment) -> Vec<&'a Va
     out
 }
 
-/// RM `PATHABLE.items_at_path`: every item the path resolves to, relative to
-/// `root` (document order preserved). An unresolvable path yields an empty
-/// list.
+/// RM `PATHABLE.items_at_path`: every item the path resolves to, in document
+/// order.
 #[must_use]
 pub fn items_at_path<'a>(root: &'a Value, path: &RmPath) -> Vec<&'a Value> {
     let mut current = vec![root];
@@ -799,11 +693,8 @@ pub fn items_at_path<'a>(root: &'a Value, path: &RmPath) -> Vec<&'a Value> {
     current
 }
 
-/// RM `PATHABLE.item_at_path`: the item at a path.
-///
-/// The spec precondition is `path_unique(a_path)`; for a non-unique path the
-/// *first* item in document order is returned (use [`items_at_path`] to see
-/// all), and `None` when the path does not exist.
+/// RM `PATHABLE.item_at_path`: the first item the path resolves to, or
+/// `None`.
 #[must_use]
 pub fn item_at_path<'a>(root: &'a Value, path: &RmPath) -> Option<&'a Value> {
     items_at_path(root, path).into_iter().next()
@@ -823,11 +714,8 @@ pub fn path_unique(root: &Value, path: &RmPath) -> bool {
     items_at_path(root, path).len() == 1
 }
 
-/// RM `PATHABLE.path_of_item`: the path of `item` relative to `root`, located
-/// by pointer identity (`item` must be a node *inside* `root`'s tree).
-///
-/// Container steps carry the `[archetype_node_id,'name']` predicates needed
-/// to make the returned path as selective as the data allows.
+/// RM `PATHABLE.path_of_item`: the path of `item` inside `root`, by pointer
+/// identity, with the predicates that make it selective.
 #[must_use]
 pub fn path_of_item(root: &Value, item: &Value) -> Option<String> {
     if std::ptr::eq(root, item) {
@@ -845,12 +733,8 @@ pub fn path_of_item(root: &Value, item: &Value) -> Option<String> {
     }
 }
 
-/// RM `PATHABLE.parent`: the parent RM node (nearest enclosing JSON object,
-/// skipping the container array) of `item` inside `root`'s tree, or `None`
-/// for the root itself / a node not in the tree.
-///
-/// Realised as a root-anchored search — no owning back-references are stored
-/// (repo convention).
+/// RM `PATHABLE.parent`: the nearest enclosing object of `item` in `root`,
+/// or `None` for the root or a node outside it.
 #[must_use]
 pub fn parent_of<'a>(root: &'a Value, item: &Value) -> Option<&'a Value> {
     if std::ptr::eq(root, item) {
@@ -871,9 +755,7 @@ fn walk_for_parent<'a>(node: &'a Value, item: &Value) -> Option<&'a Value> {
     }
 }
 
-/// The RM parent reached through one member of `owner`: `owner` itself when
-/// the member IS the item (or holds it directly in an array), else whatever
-/// the member's own subtree reports.
+/// The parent reached through one member of `owner`.
 fn parent_through_member<'a>(
     owner: &'a Value,
     child: &'a Value,
@@ -948,12 +830,7 @@ fn predicate_for(v: &Value) -> Predicate {
     }
 }
 
-// ── typed entry points ───────────────────────────────────────────────────────
-//
-// The navigation above is over the canonical-JSON value tree, which is what
-// every consumer already holds. A TYPED RM value reaches it by encoding
-// itself with the crate's own canonical-JSON impls first — one door, so a
-// typed path answer and a wire path answer cannot differ.
+// Typed entry points: a typed value is encoded to canonical JSON first.
 
 /// Failure to answer a path question asked of a TYPED RM value.
 #[derive(Debug, thiserror::Error)]
@@ -973,33 +850,19 @@ impl From<PathError> for TypedPathError {
     }
 }
 
-/// The canonical-JSON form of a typed RM value, as the navigation primitives
-/// above consume it.
+/// The canonical-JSON form of a typed RM value.
 ///
 /// # Errors
-/// Returns [`TypedPathError::Encode`] when the value cannot be encoded — a
-/// non-finite `Real` is the only shape the RM types admit that JSON does not.
+/// Returns [`TypedPathError::Encode`] for a non-finite `Real`.
 pub fn canonical_value<T: serde::Serialize>(value: &T) -> Result<Value, TypedPathError> {
     serde_json::to_value(value).map_err(TypedPathError::Encode)
 }
 
 // ── LOCATABLE node-id forms ──────────────────────────────────────────────────
 
-/// Whether `node_id` is an ADL **term code** — an at-code or id-code such as
-/// `at0005`, `at0002.1` or `id3`.
-///
-/// This is the interior-node form of `LOCATABLE.archetype_node_id`:
-/// `UML/classes/org.openehr.rm.common.locatable.adoc` §Attributes states it is
-/// "Always in the form of an at-code, e.g. `at0005`", and AM `ADL2`
-/// `master02-overview.adoc` §"ADL 2.4" adds the id-code alternative ("ADL 2.4
-/// introduces an option to use the **at-code coding system** of ADL1, as an
-/// alternative to the **id-code coding system** introduced in ADL2"), whose
-/// node codes carry the `id` leader (`master01-preface.adoc`: "'id-codes' are
-/// used for that purpose").
-///
-/// A term code is recognised by its leader followed by `.`-separated numeric
-/// segments; the specialisation suffix (`at0002.1`) is the depth notation of
-/// AM `ADL2` `master09.02-spec_concepts.adoc` §"Specialisation Depth".
+/// Whether `node_id` is an ADL term code (`at0005`, `at0002.1`, `id3`),
+/// the interior form of `LOCATABLE.archetype_node_id` (`locatable.adoc`
+/// §Attributes; AM `ADL2` `master02-overview.adoc` §"ADL 2.4").
 #[must_use]
 pub fn archetype_node_id_is_term_code(node_id: &str) -> bool {
     let Some(digits) = node_id
@@ -1014,34 +877,13 @@ pub fn archetype_node_id_is_term_code(node_id: &str) -> bool {
             .all(|seg| !seg.is_empty() && seg.bytes().all(|b| b.is_ascii_digit()))
 }
 
-/// RM `LOCATABLE.is_archetype_root()` decided from `archetype_node_id` alone.
+/// RM `LOCATABLE.is_archetype_root()` from `archetype_node_id` alone: an
+/// `ARCHETYPE_ID`-form node id is a root ("At an archetype root point, the
+/// value of this attribute is always the stringified form of the
+/// `archetype_id`", `locatable.adoc` §Attributes).
 ///
-/// The function answers "True if this node is the root of an archetyped
-/// structure" (`UML/classes/org.openehr.rm.common.locatable.adoc` §Functions).
-///
-/// The derivation is the one the RM itself states for the attribute: "At an
-/// archetype root point, the value of this attribute is always the stringified
-/// form of the `archetype_id` found in the `archetype_details` object"
-/// (same file, §Attributes), restated in
-/// `common/master03-archetyped_package.adoc` §"The LOCATABLE Class" ("The only
-/// exception is at archetype root points in data, where `archetype_node_id`
-/// carries the archetype identifier in string form rather than an interior node
-/// id from an archetype"). So a node id in `ARCHETYPE_ID` lexical form —
-/// `rm_originator '-' rm_name '-' rm_entity '.' concept_name { '-'
-/// specialisation }* '.v' version_id` (BASE
-/// `UML/classes/org.openehr.base.base_types.archetype_id.adoc` §Description) —
-/// is an archetype root, and an interior term code
-/// ([`archetype_node_id_is_term_code`]) never is. The two forms are disjoint:
-/// a term code carries neither the three-part RM qualifier nor a `.v` segment.
-///
-/// NOTE: the spec leaves `is_archetype_root()` itself undefined — §Functions
-/// gives only the Meaning sentence above, with no postcondition or derivation
-/// expression — so this node-id reading is one of two readings the text
-/// admits, the other being derivation from `archetype_details` presence (which
-/// would make `LOCATABLE.Archetyped_valid`, `is_archetype_root xor
-/// archetype_details = Void`, a tautology). Callers that need the
-/// `archetype_details` reading must test that attribute themselves; this
-/// function answers only the node-id question.
+/// NOTE: `locatable.adoc` §Functions leaves the function undefined; the
+/// `archetype_details` reading is the caller's to test.
 #[must_use]
 pub fn is_archetype_root_node_id(node_id: &str) -> bool {
     !archetype_node_id_is_term_code(node_id) && node_id.parse::<ArchetypeId>().is_ok()
@@ -1053,12 +895,8 @@ pub fn is_archetype_root_node_id(node_id: &str) -> bool {
 /// §Definitions: `Ehr_scheme: String = "ehr"`).
 pub const EHR_SCHEME: &str = "ehr";
 
-/// The `EHR`-class attribute names usable as a `top_level_structure_locator`
-/// (BASE `master11-paths` §"Top-level Structure Locator": "The possible values
-/// … come from attribute names of the class `EHR` … namely `compositions`,
-/// `directory` etc."; RM `ehr` `EHR` class). Only the attributes that reference
-/// a top-level `VERSIONED_OBJECT` are listed (`tags` is an `EHR` attribute but
-/// not a versioned top-level structure).
+/// The `EHR` attributes usable as a `top_level_structure_locator` (master11
+/// §"Top-level Structure Locator"), the versioned top-level ones only.
 const EHR_LOCATOR_ATTRIBUTES: [&str; 6] = [
     "compositions",
     "directory",
@@ -1074,9 +912,7 @@ pub fn is_ehr_locator_attribute(seg: &str) -> bool {
     EHR_LOCATOR_ATTRIBUTES.contains(&seg)
 }
 
-/// How a `top_level_structure_locator` identifies a version of a top-level
-/// object (BASE `master11-paths` §"Top-level Structure Locator").
-// `Eq` is omitted because `ObjectVersionId` is only `PartialEq` (BASE `openehr-base`).
+/// How a locator identifies a version of a top-level object.
 #[derive(Debug, Clone, PartialEq)]
 pub enum VersionLocator {
     /// A bare `VERSIONED_OBJECT._uid_` (a GUID). "When a URI uses the object
@@ -1111,15 +947,9 @@ impl fmt::Display for VersionLocator {
     }
 }
 
-/// A parsed `top_level_structure_locator`: an `EHR` attribute name and an
-/// optional versioned-object reference.
-///
-/// Master11 writes locators as `compositions/<uid-or-OVID>` or `directory`.
-/// The attribute is not optional: BASE `master11-paths` §"EHR Reference URIs"
-/// enumerates the locator's values — "The possible values for
-/// `top_level_structure_locator` come from attribute names of the class `EHR`
-/// … namely `compositions`, `directory` etc." — so a versioned-object id
-/// standing where the attribute belongs does not name a top-level structure.
+/// A parsed `top_level_structure_locator`: a mandatory `EHR` attribute name
+/// and an optional versioned-object reference (master11 §"EHR Reference
+/// URIs").
 #[derive(Debug, Clone, PartialEq)]
 pub struct TopLevelLocator {
     /// The `EHR` attribute name (`compositions`, `directory`, …).
@@ -1128,15 +958,8 @@ pub struct TopLevelLocator {
     pub object: Option<VersionLocator>,
 }
 
-/// A structurally parsed `ehr:` URI (BASE `master11-paths` §"EHR URIs"; RM
-/// `data_types/master10-uri_package` §"DV_EHR_URI Syntax").
-///
-/// Covers the four absolute forms plus the relative forms
-/// (`ehr:compositions/…`, `ehr:directory`).
-///
-/// This is the *structural* grammar on top of the `DV_EHR_URI` scheme
-/// invariant (`Scheme_valid`, which lives in
-/// `data_types/uri/dv_ehr_uri_impl.rs` and is not duplicated here).
+/// A structurally parsed `ehr:` URI, absolute or relative (master11 §"EHR
+/// URIs"); the scheme check is `dv_ehr_uri_impl`'s.
 #[derive(Debug, Clone, PartialEq)]
 pub struct EhrUri {
     /// The EHR system / repository (`ehr://system_id/…`); `None` for the local
@@ -1189,10 +1012,7 @@ impl FromStr for EhrUri {
         if !scheme.eq_ignore_ascii_case(EHR_SCHEME) {
             return Err(EhrUriError::WrongScheme(scheme.to_owned()));
         }
-        // The three leading forms are distinguished by what follows `ehr:`:
-        //   `//` → authority form (`//system_id/ehr_id/…`);
-        //   `/`  → absolute form  (`/ehr_id/…`);
-        //   else → relative form  (`compositions/…`, `directory`).
+        // `//` is the authority form, `/` the absolute form, else relative.
         let (system_id, ehr_id, tail) = if let Some(after) = rest.strip_prefix("//") {
             let (system, after) = split_first(after);
             let (ehr, tail) = split_first(after);
@@ -1246,9 +1066,7 @@ impl fmt::Display for EhrUri {
     }
 }
 
-/// Split `s` at its first `/` into `(before, after)`; `after` is `""` when there
-/// is no `/`. Used only for the leading `system_id`/`ehr_id` tokens, which carry
-/// no `[...]` predicates.
+/// Splits `s` at its first `/`; the second part is `""` without one.
 fn split_first(s: &str) -> (&str, &str) {
     s.split_once('/').unwrap_or((s, ""))
 }
@@ -1303,9 +1121,7 @@ fn parse_locator_and_path(
         return Ok((None, None));
     }
     let (first, rest) = segs.split_at(1);
-    // The locator's first segment is an `EHR` attribute name — master11
-    // §"EHR Reference URIs" enumerates the possible values, so anything else
-    // (a bare versioned-object id included) names no top-level structure.
+    // The first segment must be an `EHR` attribute name.
     let first = first.first().copied().unwrap_or_default();
     if !is_ehr_locator_attribute(first) {
         return Err(EhrUriError::UnrecognisedLocator(first.to_owned()));
@@ -1423,12 +1239,7 @@ mod tests {
         ));
     }
 
-    /// The parenthesised uniqueness modifier of RM common
-    /// `master05-directory_package.adoc` §Paths
-    /// (`[hospital episodes(car accident Aug 1998)]`) has no production in the
-    /// BASE `master11-paths` grammar this engine implements, so it is refused
-    /// loud rather than bound whole as an `archetype_node_id` that could never
-    /// match.
+    /// The parenthesised uniqueness modifier is refused.
     #[test]
     fn master05_uniqueness_modifier_is_refused() {
         assert!(matches!(
@@ -1441,11 +1252,8 @@ mod tests {
         ));
     }
 
-    /// The bare-bracket bindings this leaves unchanged: the master11
-    /// archetype-code and archetype-id shortcuts still bind, and a bare NAME
-    /// token keeps its master11 reading — it binds as an `archetype_node_id`
-    /// (and so matches nothing), which is the registered handling, not a
-    /// refusal.
+    /// The master11 shortcuts still bind, and a bare name binds as an
+    /// `archetype_node_id`.
     #[test]
     fn bare_bracket_tokens_keep_their_master11_binding() {
         assert_eq!(
@@ -1618,10 +1426,7 @@ mod tests {
 
     // ── `//` patterns, positional, uid, archetype_id ─────────────────────────
 
-    /// The master11 two-event blood-pressure OBSERVATION (BASE `master11-paths`
-    /// §"Using a Name-based Predicate" / §"Using Positional Parameters", JSON
-    /// form) — a container with two identically-archetyped events, the case the
-    /// spec uses to demonstrate positional and name uniqueness.
+    /// The master11 two-event blood-pressure OBSERVATION.
     fn bp_two_events() -> Value {
         json!({
             "_type": "OBSERVATION",
@@ -1749,9 +1554,7 @@ mod tests {
 
     #[test]
     fn archetype_id_predicate_long_form() {
-        // The `[archetype_id=...]` long form (unquoted, as in the CNF DV_EHR_URI
-        // fixture) resolves against `archetype_node_id` — spec §"Paths within
-        // Top-level Structures".
+        // `[archetype_id=...]` resolves against `archetype_node_id`.
         let p = path("/content[archetype_id=openEHR-EHR-SECTION.vital_signs.v1]");
         assert_eq!(
             p.segments[0].predicate.archetype_node_id.as_deref(),
@@ -1789,18 +1592,9 @@ mod tests {
         s.parse().unwrap()
     }
 
-    /// The CNF `DV_EHR_URI` §"validate_open" fixtures
-    /// (`master17.7-content_tc_data_types-uri.adoc`), adjudicated against the
-    /// released grammar.
-    ///
-    /// Each fixture that reaches beyond the EHR omits the `EHR` attribute name,
-    /// putting the versioned-object id directly after the `ehr_id`. BASE
-    /// `master11-paths.adoc` §"EHR Reference URIs" enumerates the locator's
-    /// values ("come from attribute names of the class `EHR` … namely
-    /// `compositions`, `directory` etc.") and every example in
-    /// §"Top-level Structure Locator" and §"Item URIs" carries one, so those
-    /// fixtures are refused and their attribute-bearing twins accepted. The CNF
-    /// material is a stalled guide, never the oracle — the released spec wins.
+    /// The CNF `DV_EHR_URI` fixtures (`master17.7-content_tc_data_types-uri.adoc`):
+    /// those without an `EHR` attribute name are refused, as master11 §"EHR
+    /// Reference URIs" requires.
     #[test]
     fn cnf_dv_ehr_uri_fixtures_are_adjudicated() {
         const EHR: &str = "89c0752e-0815-47d7-8b3c-b3aaea2cea7a";
@@ -1865,9 +1659,7 @@ mod tests {
         assert_eq!(u.locator, None);
         assert_eq!(u.item_path, None);
 
-        // The locator's attribute is mandatory (master11 §"EHR Reference URIs"
-        // enumerates the values), so an OVID directly after the ehr_id names no
-        // top-level structure.
+        // An OVID directly after the ehr_id names no top-level structure.
         assert!(matches!(
             format!("ehr:/{EHR}/031f2513-b9ef-47b2-bbef-8db24ae68c2f::EHRSERVER::1")
                 .parse::<EhrUri>(),
@@ -1944,9 +1736,7 @@ mod tests {
 
     #[test]
     fn ehr_uri_structural_round_trip_with_item_path() {
-        // The item-path form normalises `[archetype_id=…]` to the bare shortcut,
-        // so it round-trips *structurally* (parse == parse∘format∘parse) even
-        // when not byte-identical.
+        // Normalised, so it round-trips structurally.
         let s = "ehr:/89c0752e-0815-47d7-8b3c-b3aaea2cea7a/compositions/031f2513-b9ef-47b2-bbef-8db24ae68c2f::EHRSERVER::1/context/other_context[at0001]/items[archetype_id=openEHR-EHR-CLUSTER.sample_symptom.v1]/items[at0034]/items[at0021]/value";
         let u = ehr_uri(s);
         let reparsed: EhrUri = u.to_string().parse().unwrap();
@@ -1968,12 +1758,7 @@ mod tests {
         ));
     }
 
-    /// The two node-id forms of `LOCATABLE.archetype_node_id` are disjoint and
-    /// exhaustive over the shapes the RM defines: an interior term code
-    /// (`locatable.adoc` §Attributes, "Always in the form of an at-code, e.g.
-    /// `at0005`"; AM `ADL2` `master02-overview.adoc` for the id-code
-    /// alternative) and an archetype-root `ARCHETYPE_ID` (BASE
-    /// `archetype_id.adoc` §Description, the lexical form).
+    /// The term-code and archetype-root node-id forms are disjoint.
     #[test]
     fn node_id_forms_are_disjoint() {
         for term_code in ["at0000", "at0005", "at0002.1", "id3", "id1.1.4"] {
@@ -2002,9 +1787,7 @@ mod tests {
         }
     }
 
-    /// Neither predicate fires on a string that is in no RM node-id form —
-    /// a bare word, an at-leader with no digits, or a truncated archetype id
-    /// missing the RM qualifier or the `.vN` segment.
+    /// Neither predicate fires on a string in no node-id form.
     #[test]
     fn node_id_forms_reject_non_node_ids() {
         for other in [

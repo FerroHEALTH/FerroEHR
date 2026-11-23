@@ -2,34 +2,13 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Generic RM type names, and the type of an attribute or a path below one.
+//! Generic RM type names (`DV_INTERVAL<DV_QUANTITY>`, BASE
+//! `master04-structure_types.adoc`) and the type of an attribute
+//! ([`attribute_type`]) or a path ([`path_type`], master11 §Basic Syntax).
 //!
-//! An RM type name is a class name with its actual generic parameters,
-//! `DV_INTERVAL<DV_QUANTITY>` or `List<EVENT<ITEM_TREE>>`: BASE
-//! `docs/specs/openehr/BASE/docs/foundation_types/master04-structure_types.adoc`
-//! defines the container generics, and the RM class tables the RM ones
-//! (`DV_INTERVAL<T>`, `REFERENCE_RANGE<T>`, `EVENT<T>`, `HISTORY<T>`,
-//! `VERSION<T>`). [`RmType`] parses and prints that spelling.
-//!
-//! [`attribute_type`] types one attribute of an instantiated class: an attribute
-//! the class table writes as its formal parameter (`DV_INTERVAL.lower: T`) takes
-//! the actual argument, so `lower` of a `DV_INTERVAL<DV_QUANTITY>` is a
-//! `DV_QUANTITY`. [`path_type`] types every step of an [`RmPath`], a sequence of
-//! attribute names (BASE `docs/specs/openehr/BASE/docs/architecture_overview/master11-paths.adoc`
-//! §Basic Syntax), and reports each step's container.
-//!
-//! A path may name an attribute that only a descendant of the step's declared
-//! class carries (`ELEMENT.value` is a `DATA_VALUE`, and `magnitude` belongs to
-//! `DV_QUANTITY`), since a node holds an instance of a descendant of the
-//! declared type. Such a step takes the type every concrete descendant that
-//! declares the attribute agrees on: one that each of them gives or conforms
-//! to (`items` below an `ITEM_STRUCTURE` is a `List<ITEM>`, an `ITEM_LIST`
-//! holding `ELEMENT`s and an `ITEM_TREE` `ITEM`s), and the step is refused as
-//! ambiguous when there is none. No openEHR spec governs that narrowing: our
-//! own design.
-//!
-//! Only stored attributes are typed: a computed attribute (a BMM function) is
-//! never a member of an instance, so no instance path steps through one.
+//! A step naming an attribute only descendants carry takes the type they all
+//! agree on, or is refused as ambiguous. No openEHR spec governs that
+//! narrowing: our own design. Computed attributes are not typed.
 
 use core::fmt;
 use core::str::FromStr;
@@ -37,11 +16,8 @@ use core::str::FromStr;
 use crate::v1_2::model::{self, Container, RmAttribute, RmClass, RmTypeRef};
 use crate::v1_2::paths::RmPath;
 
-/// An RM type name with its generic arguments: `DV_INTERVAL<DV_QUANTITY>`.
-///
-/// Printed with the arguments separated by `", "`, as the RM class tables
-/// write them (`Hash<String, TRANSLATION_DETAILS>`); parsed with any spacing
-/// around the brackets and commas.
+/// An RM type name with its generic arguments, printed with `", "` as the RM
+/// class tables write them.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct RmType {
     name: String,
@@ -100,10 +76,8 @@ impl fmt::Display for RmType {
     }
 }
 
-/// The class name a type name starts with, without its generic arguments or
-/// surrounding space (`DV_INTERVAL` of `DV_INTERVAL<DV_QUANTITY>`).
-///
-/// The borrowed counterpart of [`RmType::name`] for a caller holding the text.
+/// The class name a type name starts with (`DV_INTERVAL` of
+/// `DV_INTERVAL<DV_QUANTITY>`).
 #[must_use]
 pub fn base_name(text: &str) -> &str {
     text.split('<').next().unwrap_or(text).trim()
@@ -308,8 +282,7 @@ fn checked_class(instantiated: &RmType) -> Result<&'static RmClass, TypingError>
 }
 
 /// The argument `instantiated` gives the formal parameter `formal` of `class`,
-/// `None` when it gives none (a type written without arguments, or a
-/// parameter only an ancestor declares).
+/// or `None`.
 fn argument<'t>(class: &RmClass, instantiated: &'t RmType, formal: &str) -> Option<&'t RmType> {
     let index = class.generic_params.iter().position(|p| p.name == formal)?;
     instantiated.params().get(index)
