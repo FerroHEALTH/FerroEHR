@@ -84,7 +84,7 @@ async fn riding(layer: AuthLayer, req: Request, mut next: Next) -> Response {
     // answer leaves only once they held the store's revisions its clinical statement read.
     // The rerun keeps the request's extensions (its matched route and request id), never a body.
     let again = parts.clone();
-    let door = layer.service.grants().held_snapshot();
+    let door = Some(layer.service.grants().held_snapshot());
     let (resp, ridden) = ferroehr::party_binding::request::ride(
         door,
         Box::pin(decided(

@@ -229,7 +229,7 @@ impl LocalPartySource {
         let revision = if crate::party_binding::request::riding() {
             None
         } else {
-            let held = self.facts.as_ref().and_then(|facts| facts.held_snapshot());
+            let held = self.facts.as_ref().map(|facts| facts.held_snapshot());
             Some(
                 crate::party_binding::request::revisions(&self.pool, held.as_ref())
                     .await?

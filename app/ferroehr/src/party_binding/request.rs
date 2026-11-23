@@ -64,7 +64,7 @@ struct Ride {
 
 /// The least revisions the copies a ride decided on held; `None` where it
 /// took no copy.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default)]
 struct Held {
     grants: Option<i64>,
     facts: Option<HeldSnapshot>,
@@ -93,34 +93,23 @@ impl Held {
     }
 }
 
-/// The facts a door read found against the install `door`: none unseen, or
-/// some, under a snapshot the read does not name.
+/// What a door read found against the ride's starting install `door`.
 fn door_read(door: Option<&HeldSnapshot>, behind: bool) -> FactsRead {
-    match door {
-        Some(door) if !behind => FactsRead::Seen {
-            generation: door.generation,
-        },
-        _ => FactsRead::Behind { store: None },
-    }
+    door.map_or(FactsRead::Behind { after: None }, |door| door.found(behind))
 }
 
 /// What two reads of the facts within one ride require together. Every
 /// door read is judged against the install the ride began at, which every
 /// copy it decided on is no older than, so one that found a stamp unseen
-/// decides; of two snapshots read in turn, the later covers the earlier.
+/// decides, and of two such, the later.
 fn newer(seen: FactsRead, store: FactsRead) -> FactsRead {
     match (seen, store) {
         (FactsRead::Seen { generation: a }, FactsRead::Seen { generation: b }) => FactsRead::Seen {
             generation: a.max(b),
         },
-        (FactsRead::Behind { store: Some(a) }, FactsRead::Behind { store: Some(b) }) => {
-            FactsRead::Behind {
-                store: Some(if b.covers(&a) { b } else { a }),
-            }
-        }
-        (FactsRead::Behind { store: None }, _) | (_, FactsRead::Behind { store: None }) => {
-            FactsRead::Behind { store: None }
-        }
+        (FactsRead::Behind { after: a }, FactsRead::Behind { after: b }) => FactsRead::Behind {
+            after: a.zip(b).map(|(a, b)| a.max(b)),
+        },
         (behind @ FactsRead::Behind { .. }, FactsRead::Seen { .. })
         | (FactsRead::Seen { .. }, behind @ FactsRead::Behind { .. }) => behind,
     }
@@ -235,7 +224,7 @@ pub fn reads_door() -> bool {
 /// outside a ride or before the facts copy's first read.
 #[must_use]
 pub fn door() -> Option<Arc<Snapshot>> {
-    RIDE.try_with(|ride| ride.door.as_ref().map(|door| Arc::clone(&door.snapshot)))
+    RIDE.try_with(|ride| ride.door.as_ref().and_then(|door| door.snapshot.clone()))
         .ok()
         .flatten()
 }

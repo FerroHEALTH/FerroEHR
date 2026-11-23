@@ -11,6 +11,7 @@
 //! openEHR spec governs the copy: our own design.
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use super::{GrantsUnavailable, LiveGrants};
 use crate::db::snapshot::Snapshot;
@@ -35,32 +36,53 @@ pub enum FactsRead {
         generation: u64,
     },
     /// It holds one, or the copy held no snapshot: a copy holds the facts once
-    /// its snapshot covers `store`, the read's own, and never when the read
-    /// names none.
+    /// it installed a read started after the facts reads numbered up to
+    /// `after`, which began after this read returned, and never when `after`
+    /// is unknown.
     Behind {
-        /// The snapshot the read ran under.
-        store: Option<Arc<Snapshot>>,
+        /// The facts reads the copy had started when this read returned.
+        after: Option<u64>,
     },
 }
 
-/// The snapshot the facts copy holds and the install it came with, which the
-/// store's revisions are read against.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// What the facts copy holds, which the store's revisions are read against:
+/// its snapshot and install, the number of the read it installed, and its
+/// count of facts reads started.
+#[derive(Debug, Clone)]
 pub struct HeldSnapshot {
     pub(crate) generation: u64,
-    pub(crate) snapshot: Arc<Snapshot>,
+    /// `None` before the copy's first read.
+    pub(crate) snapshot: Option<Arc<Snapshot>>,
+    /// The number of the read installed; `0` before the first.
+    pub(crate) read: u64,
+    pub(crate) started: Arc<AtomicU64>,
 }
 
 impl HeldSnapshot {
     /// Whether a copy at this install holds every stamp `read` found: the
     /// install asked or a later one when the read found none unseen, and a
-    /// snapshot that covers the read's own when it found one.
+    /// read started after `read` returned when it found one.
     pub(crate) fn holds(&self, read: &FactsRead) -> bool {
         match read {
-            FactsRead::Seen { generation } => self.generation >= *generation,
-            FactsRead::Behind { store } => store
-                .as_ref()
-                .is_some_and(|store| self.snapshot.covers(store)),
+            FactsRead::Seen { generation } => {
+                self.snapshot.is_some() && self.generation >= *generation
+            }
+            FactsRead::Behind { after } => after.is_some_and(|after| self.read > after),
+        }
+    }
+
+    /// What a read of the store's revisions that just returned found: none
+    /// unseen at this install, or a stamp, to be held once a read the copy
+    /// starts from now is installed.
+    pub(crate) fn found(&self, behind: bool) -> FactsRead {
+        if self.snapshot.is_some() && !behind {
+            FactsRead::Seen {
+                generation: self.generation,
+            }
+        } else {
+            FactsRead::Behind {
+                after: Some(self.started.load(Ordering::Acquire)),
+            }
         }
     }
 }
@@ -79,15 +101,17 @@ impl LiveGrants {
         self.held_facts().snapshot.clone()
     }
 
-    /// The snapshot the facts copy holds with its install, for a read of the
-    /// store's revisions ([`crate::party_binding::request`]).
+    /// What the facts copy holds, for a read of the store's revisions
+    /// ([`crate::party_binding::request`]).
     #[must_use]
-    pub fn held_snapshot(&self) -> Option<HeldSnapshot> {
+    pub fn held_snapshot(&self) -> HeldSnapshot {
         let held = self.held_facts();
-        held.snapshot.as_ref().map(|snapshot| HeldSnapshot {
+        HeldSnapshot {
             generation: held.generation,
-            snapshot: Arc::clone(snapshot),
-        })
+            snapshot: held.snapshot.clone(),
+            read: held.read,
+            started: Arc::clone(&self.facts_started),
+        }
     }
 
     /// The revisions in force in the store when this replica's copy is older
@@ -104,12 +128,13 @@ impl LiveGrants {
         // only once the revisions its clinical statement read are the copy's or older.
         if crate::party_binding::request::riding()
             && !self.listened.must_read()
-            && let (Some(grants), Some(facts)) = (self.revision(), held.as_ref())
+            && held.snapshot.is_some()
+            && let Some(grants) = self.revision()
         {
-            crate::party_binding::request::held(grants, facts);
+            crate::party_binding::request::held(grants, &held);
             return Ok(None);
         }
-        let store = crate::party_binding::request::revisions(&self.pool, held.as_ref()).await?;
+        let store = crate::party_binding::request::revisions(&self.pool, Some(&held)).await?;
         Ok((!self.holds(&store)).then_some(store))
     }
 
@@ -138,7 +163,7 @@ impl LiveGrants {
     /// Whether the facts copy holds every stamp `read` found
     /// ([`HeldSnapshot::holds`]); never before its first read.
     pub(crate) fn facts_hold(&self, read: &FactsRead) -> bool {
-        self.held_snapshot().is_some_and(|held| held.holds(read))
+        self.held_snapshot().holds(read)
     }
 }
 
@@ -147,7 +172,6 @@ impl LiveGrants {
     /// Hold every later read of the copy back, as a store that keeps moving
     /// past each read would.
     pub(crate) fn hold_back(&self) {
-        self.held_back
-            .store(true, std::sync::atomic::Ordering::Release);
+        self.held_back.store(true, Ordering::Release);
     }
 }
