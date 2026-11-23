@@ -1452,7 +1452,8 @@ fn infer_type(attr: &str, next: Option<&str>) -> &'static str {
     }
 }
 
-/// Whether `rm_type` inherits `LOCATABLE`, by the generated model.
+/// Whether `rm_type` inherits `LOCATABLE`, by the generated model
+/// (`RM/docs/UML/classes/org.openehr.rm.common.locatable.adoc`).
 pub(crate) fn is_locatable(rm_type: &str) -> bool {
     openehr_rm::v1_2::model::is_a(rm_type, "LOCATABLE")
 }
