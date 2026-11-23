@@ -109,10 +109,9 @@ impl AuditStore {
         Ok(policies)
     }
 
-    /// One batch on `conn`, in a transaction of its own that commits without
-    /// waiting for its flush: the entries past the cursor up to `upto`, each
-    /// rendered under its policy in `policies`, copied with their tokens;
-    /// returns the cursor.
+    /// One batch on `conn`, in a transaction of its own: the entries past the
+    /// cursor up to `upto`, each rendered under its policy in `policies`,
+    /// copied with their tokens; returns the cursor.
     async fn index_batch(
         &self,
         conn: &mut PgConnection,
@@ -120,11 +119,6 @@ impl AuditStore {
         policies: &Policies,
     ) -> Result<i64, AuditError> {
         let mut tx = conn.begin().await?;
-        // NOTE: our own design (#6319), the index is copied again from the cursor after a crash,
-        // so its batch does not wait for the flush.
-        sqlx::query("SET LOCAL synchronous_commit = off")
-            .execute(&mut *tx)
-            .await?;
         sqlx::query(LOCK).execute(&mut *tx).await?;
         let (after, last): (i64, i64) = sqlx::query_as(BOUNDS)
             .bind(upto)

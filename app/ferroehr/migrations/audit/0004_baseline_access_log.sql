@@ -299,9 +299,7 @@ COMMENT ON TABLE access_log_hold IS
 -- through this table and the entries past its cursor by a key range of
 -- access_log_entry, both in one statement and so in one snapshot: the cursor
 -- commits with the rows it covers, so every committed entry is in one of the
--- two (access_log_record, access_log_search). The table holds nothing an
--- entry's row does not, so a round lost to a crash is copied again from the
--- cursor; the round commits without waiting for its flush.
+-- two (access_log_record, access_log_search). The round commits durably.
 --
 -- No openEHR spec governs audit storage: our own design.
 CREATE TABLE access_log_index (

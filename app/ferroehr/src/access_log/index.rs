@@ -16,11 +16,8 @@
 //! only passes ids below the frontier, so every committed entry is in one of
 //! the two. An entry past the cursor carries no search tokens, so a search on
 //! a token parameter moves the frontier and the index past every entry
-//! committed before it first. A batch holds nothing the entries' rows and
-//! the render policies do not, so it commits without waiting for its flush: a
-//! batch a crash loses leaves its cursor where it was, and the next round
-//! renders and copies the entries again. No specification governs audit
-//! storage: our own design.
+//! committed before it first. A batch commits durably with its cursor. No
+//! specification governs audit storage: our own design.
 
 /// The most entry ids one batch copies: each is rendered in the batch.
 pub(crate) const BATCH: i64 = 2_000;
