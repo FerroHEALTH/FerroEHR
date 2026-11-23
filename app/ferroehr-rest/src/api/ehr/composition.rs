@@ -55,6 +55,7 @@ use crate::overview::version_id::{
 use crate::state::AppState;
 use crate::system_log::middleware::AuditObject;
 use crate::{negotiate, params};
+use ferroehr::telemetry::stage::{self, Stage};
 
 /// The representations a COMPOSITION endpoint negotiates: canonical JSON/XML
 /// plus the two Simplified data-instance forms (`Accept_LOCATABLE` /
@@ -88,7 +89,9 @@ async fn decode_composition_body(
         // of the built RM is the template-mediated 422 (master04 §Validation).
         Some(format @ (WireFormat::Flat | WireFormat::Structured)) => {
             let structured = format == WireFormat::Structured;
-            crate::formats::dispatch::composition_from_simplified(state, h, body, structured).await
+            let decoded =
+                crate::formats::dispatch::composition_from_simplified(state, h, body, structured);
+            stage::instrument(Stage::Decode, decoded).await
         }
         _ => Err(RestError::from(ApiError::UnsupportedMediaType(
             "a COMPOSITION is committed as application/json, application/xml, \
@@ -135,8 +138,8 @@ pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Respo
     )
     .await?;
     let meta = commit_meta(ehr_id, uid, &committed);
-    let mut resp =
-        composition_write_response(&state, h, &base, ehr_id, meta, created, created).await?;
+    let rendered = composition_write_response(&state, h, &base, ehr_id, meta, created, created);
+    let mut resp = stage::instrument(Stage::Encode, rendered).await?;
     stored_tags.echo(&mut resp);
     Ok(resp)
 }
@@ -253,7 +256,8 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     // NOTE: our own design (#6255), the last statement has answered, so the render holds no
     // connection; a render that needs the store again checks out through the request scope.
     ferroehr::db::acquire::release_held();
-    render_read(&state, &parts, body, meta).await
+    let rendered = render_read(&state, &parts, body, meta);
+    stage::instrument(Stage::Encode, rendered).await
 }
 
 /// Renders the COMPOSITION a `composition_get` read in the representation

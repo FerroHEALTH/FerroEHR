@@ -37,6 +37,7 @@ use crate::common::BASE;
 use ferroehr::db::pool::SESSION_SETUP_SPAN;
 
 mod care;
+mod cpu;
 mod entry;
 mod intake;
 mod paths;
