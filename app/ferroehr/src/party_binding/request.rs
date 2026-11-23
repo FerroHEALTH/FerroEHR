@@ -16,8 +16,8 @@
 //! clinical database, its clinical statement reads the store's revisions
 //! through the one function `party_door.party_revisions()`, so the request is
 //! decided on the copies as they stand, each copy noting what it holds
-//! ([`held`], [`held_binding`]), and its answer leaves only once those cover
-//! the revisions a statement read ([`observe`]), or, when none read them, one
+//! (`held`, `held_binding`), and its answer leaves only once those cover
+//! the revisions a statement read (`observe`), or, when none read them, one
 //! indexed read finds. A run the store overtook leaves nothing: what it would
 //! have counted waits in [`defer`] and goes with it. No openEHR spec governs
 //! the copies: our own design.
