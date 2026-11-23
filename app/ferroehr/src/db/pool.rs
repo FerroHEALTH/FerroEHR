@@ -11,7 +11,7 @@
 //! pool needs about the arrival rate times that hold, and room for a burst.
 //! No openEHR spec governs connection handling: our own design.
 
-use crate::db::acquire::acquire;
+use crate::db::acquire::{Checkout, acquire};
 use crate::db::domain::{Domain, DomainPools};
 use sqlx::postgres::PgPoolOptions;
 use tracing::Instrument as _;
@@ -44,10 +44,6 @@ pub const AUDIT_RUNTIME_POOL: u32 = 4;
 /// The domains whose writes notify a listened channel, so each may need a
 /// listener session of its own; no channel is notified in the audit domain.
 pub const LISTENING: [Domain; 2] = [Domain::Clinical, Domain::Party];
-
-/// The fewest connections an unset [`DbConfig::min_connections`] keeps open
-/// in a server's pool.
-pub const POOL_KEPT_FLOOR: u32 = 2;
 
 /// The named statements one connection keeps prepared.
 ///
@@ -162,8 +158,8 @@ impl DbConfig {
     /// These settings as the server runs them, for one that admits at most
     /// `max_concurrent_requests` at once: an unset pool size is bounded by
     /// that, since a request holds at most one connection of a pool, and an
-    /// unset [`Self::min_connections`] keeps one connection per core, at
-    /// least [`POOL_KEPT_FLOOR`] and at most the pool size.
+    /// unset [`Self::min_connections`] keeps every connection of the pool, so
+    /// a server that answers ready opens no connection under its first burst.
     #[must_use]
     pub fn for_serving(&self, max_concurrent_requests: u32) -> Self {
         let mut serving = self.clone();
@@ -171,10 +167,7 @@ impl DbConfig {
             .max_connections
             .unwrap_or_else(|| self.pool_size().min(max_concurrent_requests.max(1)));
         serving.max_connections = Some(size);
-        serving.min_connections = Some(
-            self.min_connections
-                .unwrap_or_else(|| cores().max(POOL_KEPT_FLOOR).min(size)),
-        );
+        serving.min_connections = Some(self.min_connections.unwrap_or(size));
         serving
     }
 }
@@ -252,23 +245,33 @@ pub(crate) fn options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
 /// of `settings`) and returns them to their pools, so they are open before
 /// the server answers ready; the pools keep them while idle.
 ///
-/// The pools open their kept connections in the background after they
-/// connect; the server waits for them here, holding each until all are open
-/// so none is handed out twice. No openEHR spec governs this: our own design
-/// (#5774).
+/// An instance restarted under 3,000 requests a second refused 122 to 252
+/// of them while its pools grew from the connections kept to their size:
+/// each connection opened under load kept its request waiting up to 100 ms
+/// (#5774). The three pools open side by side, and the server holds every
+/// connection until all are open, so none is handed out twice. No openEHR
+/// spec governs this: our own design.
 ///
 /// # Errors
 /// [`DbError::Acquire`] for the first connection that cannot be opened.
 pub async fn open_kept(settings: &DbConfig, pools: &DomainPools) -> Result<(), DbError> {
     let kept = settings.pool_kept();
-    let mut opened = Vec::new();
-    for domain in Domain::ALL {
-        for _ in 0..kept {
-            opened.push(acquire(pools.get(domain)).await?);
-        }
-    }
+    let opened = tokio::try_join!(
+        open_all(&pools.clinical, kept),
+        open_all(&pools.party, kept),
+        open_all(&pools.audit, kept),
+    )?;
     drop(opened);
     Ok(())
+}
+
+/// `kept` connections of `pool`, each held, so none is handed out twice.
+async fn open_all(pool: &sqlx::PgPool, kept: u32) -> Result<Vec<Checkout>, DbError> {
+    let mut opened = Vec::new();
+    for _ in 0..kept {
+        opened.push(acquire(pool).await?);
+    }
+    Ok(opened)
 }
 
 /// One `PostgreSQL` this instance's planned connections exceed.
