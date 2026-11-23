@@ -9,34 +9,12 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::analyze::{Model, class_paths};
 use crate::load::bmm::BmmSchema;
 
-/// Compute the closure of *upstream* (dependency-schema) classes a downstream
-/// schema must **re-emit locally**, because the downstream schema declares
-/// subtypes of upstream polymorphic classes across an `includes` boundary.
+/// The upstream classes a downstream schema must re-emit locally because its
+/// own classes extend them across an `includes` boundary.
 ///
-/// This realizes the owner ruling (2026-07-19):
-/// cross-component subtype extension (e.g. the AM 2.4 `rules` leaves
-/// `EXPR_ARCHETYPE_REF`/`EXPR_CONSTRAINT` extending LANG's `EXPR_VALUE_REF`/
-/// `EXPR_LEAF`) is re-opened at the **downstream** crate boundary — an
-/// extender-level enum composing the upstream variants + the downstream leaves —
-/// while the upstream crate stays byte-identical (dependency arrows point one
-/// way, so an upstream enum never gains a downstream variant).
-///
-/// `model` is the downstream crate's merged include-closure (BASE + LANG + AM);
-/// `schema` is the downstream schema (its own classes are "downstream"). A class
-/// `C` defined only upstream is re-emitted iff its emitted Rust form **differs**
-/// in the downstream view (a least fixpoint): (a) `C` is a polymorphic parent
-/// whose concrete-descendant (variant) set gains a downstream class or an
-/// already-in-closure class, or (b) `C` **contains**, through one of its own
-/// (flattened) field types, a downstream or already-in-closure class. This is
-/// deliberately **complete, not minimal** (owner ruling 2026-07-19): code
-/// generation exists to emit *every* cross-`includes` extension the vendored
-/// BMM implies — e.g. both the beom expression/statement subtree (extended by
-/// the AM `rules` leaves) and `AUTHORED_RESOURCE`/`RESOURCE_DESCRIPTION` (the
-/// resource metatype `AUTHORED_ARCHETYPE` etc. extend) are re-emitted. Upstream
-/// classes whose form is unchanged (they gain no downstream descendant and touch
-/// no widened type — e.g. `EXPR_LITERAL`, the whole EL/BMM3 tree) stay external.
-/// Returns the empty set when the downstream schema adds no cross-boundary
-/// subtypes (e.g. AM 1.4).
+/// A class defined only upstream is re-emitted when its Rust form differs
+/// downstream, as a least fixpoint: its variant set gains a downstream or
+/// re-emitted class, or a field type contains one. Empty for AM 1.4.
 #[must_use]
 pub(crate) fn cross_schema_reemit(model: &Model, schema: &BmmSchema) -> BTreeSet<String> {
     let downstream: BTreeSet<&str> = schema.classes.keys().map(String::as_str).collect();
@@ -75,13 +53,8 @@ pub(crate) fn cross_schema_reemit(model: &Model, schema: &BmmSchema) -> BTreeSet
     reemit
 }
 
-/// Produce an augmented copy of `schema` in which the [`cross_schema_reemit`]
-/// closure classes (pulled from the merged `model`) are added to the schema's
-/// own class set and grafted into its package tree at the **same package path
-/// they occupy in their source schema** (`sources`) — so a re-emitted
-/// `EXPRESSION` lands under `<prefix>/beom/core` mirroring LANG, an
-/// `AUTHORED_RESOURCE` under its BASE package, etc. — emitting them as
-/// crate-local types the downstream fields resolve against.
+/// An augmented copy of `schema` with the [`cross_schema_reemit`] classes
+/// grafted at the package paths they occupy in `sources`.
 #[must_use]
 pub(crate) fn augment_with_reemit(
     schema: &BmmSchema,
@@ -108,9 +81,8 @@ pub(crate) fn augment_with_reemit(
     s
 }
 
-/// Descend/create the nested [`BmmPackage`](crate::load::bmm::BmmPackage) chain named
-/// by `segments` and add `class` to the leaf package's class list (idempotent).
-/// An empty `segments` drops `class` at the schema root (no package prefix).
+/// Adds `class` to the package chain `segments` names, creating it; empty
+/// `segments` means the schema root.
 fn insert_class_into_packages(
     packages: &mut Vec<crate::load::bmm::BmmPackage>,
     segments: &[&str],

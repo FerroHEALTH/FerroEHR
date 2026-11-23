@@ -1,22 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The **draft-module table**: FerroEHR-local BMM schemas that are no openEHR
-//! release, each emitted as one generated module under the `draft` module of
-//! the openEHR crate it extends, behind that crate's `draft` cargo feature.
+//! The draft-module table: FerroEHR-local BMM schemas that are no openEHR
+//! release, each emitted as one module under the `draft` module of the openEHR
+//! crate it extends, behind its `draft` feature, with no prelude or
+//! `Generation`.
 //!
-//! A draft change proposal is still a BMM model, so the codegen rule forbids
-//! hand-transcribing it. Generated openEHR types live in the openEHR crates,
-//! never in an application crate (owner decision 2026-11-13, #5540), and a
-//! draft is no openEHR release, so it sits apart from the generations under a
-//! `draft` module the crate compiles only when a consumer enables the `draft`
-//! feature. Each entry names its FerroEHR-local input under `draft/bmm/`, the
-//! crate and package module it lands in, and the published generations it
-//! resolves against. No openEHR spec governs where a draft package is
-//! generated: our own design (#5124, #5540).
-//!
-//! A draft module carries no prelude and no `Generation` enum (a draft has no
-//! released generations); its types are named by full module path.
+//! No openEHR spec governs where a draft package is generated: our own design
+//! (#5124, #5540).
 
 use crate::analyze::{External, Model, emittable_specs};
 use crate::load::bmm::BmmSchema;
@@ -78,8 +69,7 @@ pub(crate) fn lib_declaration(crate_name: &str) -> String {
     }
 }
 
-/// Refuse a row whose target is no openEHR crate of `crates/`: a draft is an
-/// openEHR specification type, and an application crate never holds one.
+/// Refuses a row whose target is not an openEHR crate under `crates/`.
 ///
 /// # Errors
 /// Returns an error naming the row when its crate is not an `openehr-*` crate
@@ -123,9 +113,7 @@ const RM_1_2_PRELUDE_DEPS: &[DepGeneration] = &[
     },
 ];
 
-/// The module doc of a draft package that includes `openehr_rm_1.2.0`: its
-/// title, package and BMM file, then why it sits under `draft` and apart from
-/// the RM generations.
+/// The module doc of a draft package that includes `openehr_rm_1.2.0`.
 macro_rules! rm_1_2_draft_doc {
     ($title:literal, $package:literal, $file:literal) => {
         concat!(
@@ -145,9 +133,8 @@ macro_rules! rm_1_2_draft_doc {
     };
 }
 
-/// The draft access log of `docs/specifications/access-log` and the draft access
-/// control of tracker issue #5487, emitted into `openehr-rm` under
-/// `draft` until openEHR adopts the packages.
+/// The draft access log (`docs/specifications/access-log`) and draft access
+/// control (#5487), emitted into `openehr-rm`.
 pub(crate) const DRAFTS: &[DraftModule] = &[
     DraftModule {
         file: "openehr_access_log_0.1.0.bmm.json",
@@ -179,9 +166,8 @@ pub(crate) const DRAFTS: &[DraftModule] = &[
     },
 ];
 
-/// Every reference-typed attribute of the FerroEHR-local draft packages
-/// (`draft/bmm/`), with its target, read from the draft BMM's own
-/// documentation of the attribute.
+/// Every reference-typed attribute of the draft packages with its target, read
+/// from the draft BMM's documentation.
 const DRAFT_REF_TARGETS: &[RefTarget] = &[
     RefTarget {
         class: "ACCESSOR",
@@ -255,10 +241,8 @@ pub(crate) fn draft_ref_target(class: &str, attr: &str) -> Option<&'static RefTa
         .find(|r| r.class == class && r.attr == attr)
 }
 
-/// The optional draft attributes emitted as `Option<Box<T>>`, each with the
-/// ground for it. The size policy of [`crate::plan::layout`] boxes large
-/// fields of the RM only; a draft attribute that is large and usually absent
-/// on a value many of which a request holds is named here (#6075).
+/// The optional draft attributes emitted as `Option<Box<T>>`, each with its
+/// ground (#6075).
 const DRAFT_BOXED_FIELDS: &[(&str, &str, &str)] = &[(
     "ACCESS_AUTHORISATION",
     "care",
@@ -287,7 +271,7 @@ pub(crate) struct ComposedDraft {
     pub external: External,
 }
 
-/// Load one draft BMM file by its path under the draft root.
+/// Loads one draft BMM file by its path under the draft root.
 ///
 /// # Errors
 /// Returns an error if the file cannot be read or parsed.
@@ -304,15 +288,13 @@ fn schema_id(schema: &BmmSchema) -> String {
     format!("openehr_{}_{}", schema.schema_name, schema.rm_release)
 }
 
-/// Resolve a draft row into its schema, model and reference index, refusing
-/// a draft whose `includes` differ from the row or that names a type neither
-/// it nor its dependency generations define.
+/// Resolves a draft row into its schema, model and reference index.
 ///
 /// # Errors
 /// Returns an error if the row targets no openEHR crate, a BMM file cannot be
-/// loaded, the draft's `includes`
-/// differ from the declared ones or name a schema the dependencies do not
-/// load, or a class refers to a type that resolves nowhere.
+/// loaded, the draft's `includes` differ from the declared ones or name a
+/// schema the dependencies do not load, or a class refers to a type that
+/// resolves nowhere.
 pub(crate) fn compose_draft(
     draft: &'static DraftModule,
 ) -> Result<ComposedDraft, Box<dyn std::error::Error>> {
@@ -359,11 +341,7 @@ pub(crate) fn compose_draft(
 }
 
 /// Every `Class.attribute -> TYPE` a draft class refers to that neither the
-/// draft emits nor a dependency generation exports.
-///
-/// The spec-crate emitter degrades such a reference to free-form JSON; a draft
-/// refuses it, because a draft that names a type openEHR does not define is a
-/// defect in the draft.
+/// draft nor a dependency generation defines.
 fn unresolved_types(model: &Model, schema: &BmmSchema, external: &External) -> BTreeSet<String> {
     let local = emittable_specs(model, schema);
     let mut out = BTreeSet::new();
