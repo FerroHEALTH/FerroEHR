@@ -1,0 +1,1 @@
+- A burst of requests that miss the same entry of the care copy now shares one store read, and requests that find the grant copy stale at once run one load between them, so fewer party connections are held under a burst after a start or a grant change.

@@ -14,6 +14,8 @@
 use crate::db::acquire::{Checkout, acquire};
 use crate::db::domain::{Domain, DomainPools};
 use sqlx::postgres::PgPoolOptions;
+use std::sync::{Arc, Mutex, PoisonError};
+use std::time::{Duration, Instant};
 use tracing::Instrument as _;
 
 use crate::db::{DbConfig, DbError};
@@ -179,18 +181,75 @@ impl DbConfig {
 /// it, so a loaded server sends no ping; a quiet one pays one round trip per
 /// checkout of a connection idle that long. No openEHR spec governs
 /// connection handling: our own design.
-pub const IDLE_PROBE: std::time::Duration = std::time::Duration::from_secs(1);
+pub const IDLE_PROBE: Duration = Duration::from_secs(1);
 
 /// The span a new connection's session setup runs in, so its statements read
 /// as the pool's and not as the statements of the request that happened to
 /// open the connection (#5899).
 pub const SESSION_SETUP_SPAN: &str = "db_session_setup";
 
+/// How long a connection serves before the pool may retire it on a release:
+/// the `max_lifetime` sqlx 0.9 sets by default
+/// (<https://docs.rs/sqlx/0.9.0/sqlx/pool/struct.PoolOptions.html#method.max_lifetime>).
+pub const LIFETIME: Duration = Duration::from_mins(30);
+
+/// The window over which the connections of a pool past [`LIFETIME`] retire,
+/// one at a time (#6341).
+pub const RETIRE_SPREAD: Duration = Duration::from_mins(10);
+
+/// The age past which a connection retires on its next release whatever the
+/// pacing, so no connection lives unbounded.
+pub const LIFETIME_CAP: Duration = LIFETIME.saturating_add(RETIRE_SPREAD.saturating_mul(2));
+
+/// The retirements of one pool, paced so its connections past [`LIFETIME`]
+/// retire one per [`RETIRE_SPREAD`] divided by the pool size.
+///
+/// The server opens every connection of a pool before it answers ready
+/// (#5774), so their ages coincide: retired by sqlx's own `max_lifetime`,
+/// all of them would close in the same second and the requests that follow
+/// would each wait for a new connection to open (#6341). A replacement is
+/// opened at the moment its predecessor retired, so the next generation
+/// stays spread. No openEHR spec governs connection handling: our own design.
+#[derive(Debug)]
+pub(crate) struct Retirement {
+    /// The least time between two retirements of the pool.
+    spacing: Duration,
+    /// When the pool may next retire a connection; `None` before the first.
+    next: Mutex<Option<Instant>>,
+}
+
+impl Retirement {
+    /// The pacing of a pool of `size` connections.
+    pub(crate) fn new(size: u32) -> Self {
+        Self {
+            spacing: RETIRE_SPREAD
+                .checked_div(size.max(1))
+                .unwrap_or(RETIRE_SPREAD),
+            next: Mutex::new(None),
+        }
+    }
+
+    /// Whether a connection of `age`, released at `now`, retires: once past
+    /// [`LIFETIME`] when no other connection of the pool retired within the
+    /// spacing, and always once past [`LIFETIME_CAP`].
+    pub(crate) fn retires(&self, age: Duration, now: Instant) -> bool {
+        if age < LIFETIME {
+            return false;
+        }
+        let mut next = self.next.lock().unwrap_or_else(PoisonError::into_inner);
+        if age < LIFETIME_CAP && next.is_some_and(|next| now < next) {
+            return false;
+        }
+        *next = now.checked_add(self.spacing);
+        true
+    }
+}
+
 /// The pool options for one domain: sizing + acquire timeout from settings,
-/// the domain's session setup on every physical connection, and a liveness
-/// ping only for a connection idle for [`IDLE_PROBE`]. Connection retirement stays on the `sqlx` defaults (an idle
-/// reap plus a bounded lifetime — infinite-lived connections are discouraged by
-/// the driver, so we do not disable them).
+/// the domain's session setup on every physical connection, a liveness ping
+/// only for a connection idle for [`IDLE_PROBE`], and each connection retired
+/// on a release past [`LIFETIME`] at the pace of [`Retirement`]. The idle reap
+/// stays on the sqlx default.
 pub(crate) fn options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
     // Rendered once here rather than per connection. The value is an integer
     // from our own configuration, never client input, and it is bound as a
@@ -202,6 +261,7 @@ pub(crate) fn options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
         )
     });
     let search_path = domain.search_path();
+    let retirement = Arc::new(Retirement::new(settings.pool_size()));
     PgPoolOptions::new()
         .max_connections(settings.pool_size())
         .min_connections(settings.pool_kept())
@@ -222,6 +282,13 @@ pub(crate) fn options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
                 // `false` closes the connection and the pool opens another in its place.
                 Ok(sqlx::Connection::ping(conn).await.is_ok())
             })
+        })
+        // NOTE: sqlx 0.9 `PoolOptions::after_release`, `false` closes the connection; the
+        // driver's own `max_lifetime` is off so the pacing alone retires (#6341).
+        .max_lifetime(None)
+        .after_release(move |_conn, meta| {
+            let keep = !retirement.retires(meta.age, Instant::now());
+            Box::pin(std::future::ready(Ok(keep)))
         })
         .after_connect(move |conn, _meta| {
             // Cloned per call: `after_connect` takes an `Fn`, so the captured
