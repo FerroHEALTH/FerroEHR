@@ -21,14 +21,6 @@
 //! [`codes`]/[`paths`], [`validate`], [`flatten`] + [`opt`], the ADL2 serializer
 //! [`mod@print`], and [`adl14`] (1.4→2 conversion — our own design/extension, no
 //! openEHR spec).
-//!
-//! The crate has NO lexer of its own: the cADL token stream is the shared
-//! workspace lexical layer under its ADL reading
-//! ([`openehr_lang::v1_1::lexer::lex`]), and ODIN sections go through the
-//! `openehr_lang::v1_1::odin` reader. The `rules` body and the slot
-//! include/exclude assertions are BEL expression trees ([`rules`]) whose string
-//! form is rendered back from the tree ([`print::assertion_text`]), never parsed
-//! out of it.
 
 // Doctests are copy-paste templates: they must use `?`, never unwrap
 // (C-QUESTION-MARK, https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark).
@@ -52,8 +44,4 @@ pub mod source;
 pub mod validate;
 
 /// The openEHR specification version this crate implements.
-///
-/// The pin is deliberately independent of the crates.io package version,
-/// which is the crate's own `SemVer` line and moves only with this
-/// implementation's code.
 pub const SPEC_VERSION: &str = "2.4.0";

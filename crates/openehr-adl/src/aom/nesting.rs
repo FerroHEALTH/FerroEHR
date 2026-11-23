@@ -2,13 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The nesting bound over a constraint-model tree.
-//!
-//! The parser bounds what it reads, but a flat form composes structure: a
-//! specialisation's differential paths and an OPT's inlined fillers each
-//! place nodes below what any single parsed artefact carries, so every
-//! producer of a composed tree re-checks the result against the engine's one
-//! bound, [`openehr_lang::nesting::MAX_NESTING_DEPTH`], before handing it to
-//! the recursive walkers downstream.
 
 use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
@@ -18,9 +11,6 @@ use crate::aom::access::complex_attributes;
 
 /// Check that no object in the tree under `cco`, which sits at `level`, lies
 /// deeper than the engine bound; a definition root is [`Nesting::ROOT`].
-///
-/// The walk descends with the same budget it checks, so it cannot itself
-/// exceed the bound.
 ///
 /// # Errors
 /// [`NestingExceeded`] at the first object below the bound.

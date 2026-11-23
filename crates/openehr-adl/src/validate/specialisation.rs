@@ -462,10 +462,6 @@ impl<'a> ParentScan<'a> {
 
     /// VPOV: `C_TERMINOLOGY_CODE` leaf value conformance with value-set expansion
     /// (`master04.5` §`C_TERMINOLOGY_NODE` `c_value_conforms_to`).
-    ///
-    /// A child's status must not exceed the parent's; a non-required parent
-    /// constrains nothing; two required codes must be `codes_conformant`, and a
-    /// child value set must be a subset of the parent's expansion.
     fn check_terminology_leaf(
         &mut self,
         child: &CTerminologyCode,
@@ -896,8 +892,6 @@ pub(super) fn check_specialisation_depth(
 
 /// VALC: a specialised archetype's languages are a subset of the flat parent's
 /// (master03 §Validity Rules; `ADL2/master09.02` §Differential and Flat Forms).
-///
-/// Without a buildable flat parent the declared parent's own languages are used.
 pub(super) fn check_language_conformance(
     v: &ArchetypeView<'_>,
     repo: Option<&ArchetypeRepository>,

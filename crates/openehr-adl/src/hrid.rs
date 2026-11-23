@@ -3,10 +3,6 @@
 
 //! The archetype human-readable-identifier grammar (`AOM2/master07.05`
 //! §Physical Archetype Identifier).
-//!
-//! [`parse_hrid`] and `Display` are inverses over a normalised id;
-//! [`hrid_lookup_key`] and [`is_archetype_id`] are looser readings. Every reader
-//! of the `.v` boundary goes through [`version_marker`].
 
 use openehr_am::v2_4::aom2::archetype::archetype_hrid::ArchetypeHrid;
 use openehr_am::v2_4::aom2::archetype::archetype_hrid_impl::HridError;

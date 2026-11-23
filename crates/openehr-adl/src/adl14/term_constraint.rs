@@ -12,11 +12,6 @@
 //! code becomes a minted at-code bound to the code's URI. The output form is
 //! spec-governed; the rewrite procedure is our own design (no openEHR spec
 //! governs 1.4→2 conversion), pinned by the `upgrade_from_14` fixtures.
-//!
-//! The two callers differ only in the code space a 1.4 local code lands in,
-//! which is the [`CodeSpace`] seam: the converter shifts every code into the
-//! ADL2 numbering, while the OPT keeps the 1.4 codes as authored, because its
-//! template paths and the data in a CDR name the 1.4 node codes.
 
 use std::collections::BTreeMap;
 
@@ -129,11 +124,9 @@ impl<'a> TermMinter<'a> {
             Some((b, a)) => (b, Some(a)),
             None => (raw, None),
         };
-        // Not a qualified 1.4 code: a bare ac-code (a 1.4 `CONSTRAINT_REF`
-        // reference or a reference-set ac minted by the OPT front end) moves
-        // into the code space with its terminology entry (`ac0001`→`ac2` in
-        // the converter; the `ac0.K` specialisation form keeps its number —
-        // see `shift_code`). Anything else (`at5`) is already ADL2; pass through.
+        // A bare ac-code moves into the code space with its terminology entry
+        // (`ac0.K` keeps its number, see `shift_code`); anything else is
+        // already ADL2.
         let Some((terminology, codes_str)) = body.split_once("::") else {
             if AdlCodeDefinitionsData::is_value_set_code(body) {
                 let ac = codes.value_set_code(self, body);
@@ -299,10 +292,6 @@ impl<'a> TermMinter<'a> {
 /// Rewrites every 1.4 terminology constraint of an unconverted archetype's
 /// `definition` in place, keeping its 1.4 codes as authored, and adds the
 /// at-codes, value sets and bindings it mints to `terminology`.
-///
-/// Minted codes are allocated above every at- and ac-number the archetype
-/// already uses, so none collides with a 1.4 code. A definition with no 1.4
-/// constraint is left as it stands.
 pub(crate) fn rewrite_as_authored(
     definition: &mut CComplexObject,
     terminology: &mut ArchetypeTerminology,
@@ -380,10 +369,6 @@ pub(super) fn rewrite_definition(
 }
 
 /// Rewrites the terminology codes inside one `C_ATTRIBUTE_TUPLE` in place.
-///
-/// Both halves of the tuple carry constraints: the tuple MEMBERS' child
-/// objects, and the tuple ROWS, whose primitive members hold the actual
-/// terminology codes (ordinal symbols and the like).
 fn rewrite_tuple(
     tuple: &mut CAttributeTuple,
     minter: &mut TermMinter<'_>,

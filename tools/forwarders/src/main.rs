@@ -8,11 +8,6 @@
 //! `scripts/checks/forwarders.sh` runs this binary and holds its count to the
 //! committed one.
 //!
-//! The output is one line per forwarder, sorted: its key, a tab, and its
-//! place as `path:line`. The key is the path, the owner (inline modules, impl
-//! type and name) and the target call, with no line number, so a change that
-//! moves code inside a file leaves the key alone.
-//!
 //! # Examples
 //!
 //! ```text
