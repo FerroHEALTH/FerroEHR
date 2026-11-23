@@ -57,11 +57,11 @@ ITS-REST 1.1.0 has no resource for a relationship; its Demographic API (`x-statu
 
 The same resources serve memberships, representations and kinships by the code of the relationship's `_name_` (`kind=MBR`, `represents`, `related_to`).
 
-That a person is under the care of a given professional or service is data concerning health (GDPR Art 4(15), Art 9). Every read of these resources is decided per subject it reveals: a relationship of a subject whose record the caller may not read is left out of a list, and its role and context are returned only to a caller that may read the record or to the writer for its own provider. Each read is recorded in the access log once per subject it reveals.
+That a person is under the care of a given professional or service is data concerning health (GDPR Art 4(15), Art 9). Every read of these resources is decided per subject it reveals: a relationship of a subject whose record the caller may not read is left out of a list, and its role and episode are returned only to a caller that may read the record or to the writer for its own provider. Each read is recorded in the access log once per subject it reveals.
 
 == Queries and the Caseload
 
-AQL is unchanged. A query request MAY carry two members beside `q` (`POST {baseUrl}/query/aql`, and `GET` and `POST {baseUrl}/query/{qualified_query_name}`):
+AQL is unchanged. A query request MAY carry three members beside `q` (`POST {baseUrl}/query/aql`, and `GET` and `POST {baseUrl}/query/{qualified_query_name}`):
 
 [cols="1,2,3", options="header"]
 |===
@@ -74,9 +74,15 @@ AQL is unchanged. A query request MAY carry two members beside `q` (`POST {baseU
 |`caseload_roles`
 |a list of `care_role` terms, each the token `terminology_id\|code`, such as `HL7_ParticipationType\|RESP`
 |Narrows further to relationships in one of these roles. Absent means any role.
+
+|`caseload_episodes`
+|a list of episodes, each the token `issuer\|id`
+|Narrows each EHR of the caseload to the data placed in one of these episodes, the unplaced data and the data `ACCESS_POLICY._episode_shared_` names. An episode none of the caller's live relationships names is refused `400`. Absent means every episode the caller's relationships cover.
 |===
 
-The caseload only narrows: the procedure applies to every row whatever its value, and it is applied before the result is counted, limited or paged. Liveness is that of the procedure, grace included, so the caseload and the decision agree. An unknown value, `caseload_roles` with `caseload` `none`, a caseload under a purpose outside `_care_purposes_`, and a caseload where `ACCESS_POLICY._caseload_` is false are refused `400`, naming the member. The members are an addition to the REST request, so the AQL text stays portable.
+The caseload only narrows: the procedure applies to every row whatever its value, and it is applied before the result is counted, limited or paged. Liveness is that of the procedure, grace included, so the caseload and the decision agree. An unknown value, `caseload_roles` or `caseload_episodes` with `caseload` `none`, a caseload under a purpose outside `_care_purposes_`, and a caseload where `ACCESS_POLICY._caseload_` is false are refused `400`, naming the member. The members are an addition to the REST request, so the AQL text stays portable.
+
+SMART on openEHR defines an experimental `launch/episode` scope with an `episodeId` whose "semantics are currently implementation-defined" (ITS-REST, SMART App Launch, Experimental: Episode Context). A system that implements this package reads an `episodeId` of the form `issuer|id` as `caseload_episodes` of that one episode for every request of the launch, so an app launched in an episode sees that episode's data.
 
 ----
 POST {baseUrl}/query/aql

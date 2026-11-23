@@ -30,7 +30,7 @@ use crate::v1_2::data_types::text::code_phrase::CodePhrase;
 use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use openehr_base::prelude::TerminologyId;
 
-use care::{CareBasis, CareElement, CarePath};
+use care::{CareBasis, CareElement, CarePath, PlacementElement};
 use kinship::{Kinship, KinshipElement};
 use log::{AccessorKind, Action, Authorisation, CredentialBinding, Outcome, RefusalReason};
 use representation::{Representation, RepresentationElement};
@@ -126,6 +126,9 @@ pub enum Group {
     /// `record subject`: the demographic element naming an EHR subject
     /// reference the `PERSON` stands for.
     RecordSubject,
+    /// `record placement element`: the element of a composition's
+    /// `context.other_context` that places it in an episode of care.
+    RecordPlacementElement,
     /// `representation`: the demographic relationship that makes its source
     /// a representative of its target.
     Representation,
@@ -161,7 +164,7 @@ pub enum Group {
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 26] = [
+    pub const ALL: [Self; 27] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
@@ -176,6 +179,7 @@ impl Group {
         Self::CareBasis,
         Self::GroupKind,
         Self::RecordSubject,
+        Self::RecordPlacementElement,
         Self::Representation,
         Self::RepresentationElement,
         Self::Kinship,
@@ -208,6 +212,7 @@ impl Group {
             Self::CareBasis => "care basis",
             Self::GroupKind => "group kind",
             Self::RecordSubject => "record subject",
+            Self::RecordPlacementElement => "record placement element",
             Self::Representation => "representation",
             Self::RepresentationElement => "representation element",
             Self::Kinship => "kinship",
@@ -242,6 +247,7 @@ impl Group {
             Self::CareBasis => phrases::<CareBasis>(),
             Self::GroupKind => phrases::<GroupKind>(),
             Self::RecordSubject => phrases::<RecordSubject>(),
+            Self::RecordPlacementElement => phrases::<PlacementElement>(),
             Self::Representation => phrases::<Representation>(),
             Self::RepresentationElement => phrases::<RepresentationElement>(),
             Self::Kinship => phrases::<Kinship>(),

@@ -18,6 +18,7 @@
 //! a background task or a test, nothing is published and nothing is
 //! withheld. No openEHR spec governs this: our own design (#5513, #5588).
 
+use futures::FutureExt as _;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex, PoisonError};
 
@@ -738,23 +739,29 @@ pub fn current() -> Option<Arc<RequestAccess>> {
 
 /// Run `fut` with `access` as the running request's evaluator, and count
 /// its decisions when it ends.
-pub async fn with_request_access<F>(access: Arc<RequestAccess>, fut: F) -> F::Output
+pub fn with_request_access<F>(access: Arc<RequestAccess>, fut: F) -> impl Future<Output = F::Output>
 where
     F: Future,
 {
-    let output = REQUEST_ACCESS.scope(Arc::clone(&access), fut).await;
-    access.count_decisions();
-    output
+    REQUEST_ACCESS
+        .scope(Arc::clone(&access), fut)
+        .map(move |output| {
+            access.count_decisions();
+            output
+        })
 }
 
 /// Run `fut` with `access` as the running request's evaluator, its decisions
 /// left for the caller to count ([`RequestAccess::count_decisions`]) once it
 /// keeps the answer, so a run it drops counts none (#6251).
-pub async fn with_request_access_uncounted<F>(access: Arc<RequestAccess>, fut: F) -> F::Output
+pub fn with_request_access_uncounted<F>(
+    access: Arc<RequestAccess>,
+    fut: F,
+) -> impl Future<Output = F::Output>
 where
     F: Future,
 {
-    REQUEST_ACCESS.scope(access, fut).await
+    REQUEST_ACCESS.scope(access, fut)
 }
 
 /// Whether `item` of `ehr_id` may leave the store for the running request.

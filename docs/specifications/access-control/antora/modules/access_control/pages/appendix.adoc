@@ -132,6 +132,47 @@ The same record at the three levels, each caller acting for H:
 |admitted
 |===
 
+=== Episodes
+
+P1 is admitted to cardiology and seen by dermatology. The hospital's ADT system issues the episodes `H|C-17` (cardiology) and `H|D-4` (dermatology) and writes the relationships with them; the GP's relationship names none. The policy marks `_episode_required_` for every role of an organisation of type hospital, and its `_episode_shared_` names the patient summary categories.
+
+----
+patient:P1#care[ATND]@person:jansen   provider H, episode H|C-17
+patient:P1#care[ATND]@person:smit     provider H, episode H|D-4
+patient:P1#care[RESP]@person:huisman  provider G (the GP), no episode
+----
+
+[cols="2,1,1,1,1", options="header"]
+|===
+|Caller |Cardiology note (placed in `C-17`) |Skin biopsy result (placed in `D-4`) |Medication list (persistent, unplaced) |Allergy entry (placed in `D-4`, a summary category)
+
+|Dr. Jansen, cardiology
+|admitted
+|`refused-outside-episode`
+|admitted
+|admitted
+
+|Dr. Smit, dermatology
+|`refused-outside-episode`
+|admitted
+|admitted
+|admitted
+
+|Dr. Huisman, GP, acting for G
+|admitted
+|admitted
+|admitted
+|admitted
+
+|Any clinician declaring an emergency
+|admitted, marked
+|admitted, marked
+|admitted, marked
+|admitted, marked
+|===
+
+A query by Dr. Smit leaves the cardiology note out of every row, count and page. A note Dr. Smit commits in `C-17` is refused at step 7; one Dr. Smit commits in `D-4` or unplaced is admitted.
+
 == Example (informative)
 
 A restriction of mental health data with one exception for the subject's psychiatrist, which an emergency lifts:

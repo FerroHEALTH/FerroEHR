@@ -4,7 +4,7 @@ h|*Class*
 2+^h|*ACCESS_RELATIONSHIP_VALIDITY*
 
 h|*Description*
-2+a|The default and maximum period of the care relationships one entry covers. A relationship written without an end takes the default period from its start; one longer than the maximum is refused. An entry with neither period lets the relationships it covers stay open.
+2+a|The default and maximum period of the care relationships one entry covers. A relationship written without an end takes the default period from its start; one longer than the maximum is refused. An entry with neither period lets the relationships it covers stay open. An entry may also require the relationships it covers to name an episode of care.
 
 h|*Attributes*
 ^h|*Signature*
@@ -25,6 +25,10 @@ a|The period a relationship written without an end takes.
 h|*0..1*
 |*max_period*: `xref:data_types:date_time_package.adoc#_dv_duration_class[DV_DURATION]`
 a|The longest period a relationship may have.
+
+h|*0..1*
+|*episode_required*: `xref:{class_boolean}[Boolean]`
+a|Whether a relationship the entry covers must name an `episode`; one written without it is refused. Void means false.
 
 h|*Invariants*
 2+a|__Roles_valid__: `roles /= Void implies not roles.is_empty`
