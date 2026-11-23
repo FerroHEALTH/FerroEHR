@@ -932,6 +932,7 @@ pub(crate) async fn get_contribution(
             .as_ref()
             .map(decode_description)
             .transpose()?,
+        server_description: false,
         committer: party_proxy(&audit.committer)?,
         attestation: audit
             .attestation

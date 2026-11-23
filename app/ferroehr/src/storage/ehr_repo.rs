@@ -414,7 +414,7 @@ pub async fn directory_current_meta(
          FROM ehr_folder f \
          JOIN version v ON v.vo_id = f.vo_id \
          JOIN vo_head h ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
-         JOIN commit_audit a ON a.id = v.commit_audit_id \
+         JOIN commit_audit_facts a ON a.id = v.commit_audit_id \
          WHERE f.ehr_id = $1 \
          ORDER BY (v.lifecycle_state = '523'), f.rank \
          LIMIT 1",

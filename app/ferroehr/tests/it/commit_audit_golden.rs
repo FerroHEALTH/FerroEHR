@@ -10,6 +10,7 @@
 //! appearance; `FERROEHR_BLESS_GOLDEN=1` writes the goldens again.
 
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 use std::path::PathBuf;
 
 use ferroehr::ids::{EhrId, VoId};
@@ -182,6 +183,10 @@ fn normalised(value: &Value, seen: &mut BTreeMap<String, String>) -> Value {
 }
 
 /// Holds `documents` to the golden `name`, or writes it when blessing.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads its bless switch from the environment, as the access log goldens do"
+)]
 fn golden(name: &str, documents: &[(&str, Value)]) {
     let mut seen = BTreeMap::new();
     let mut text = String::new();
@@ -189,7 +194,7 @@ fn golden(name: &str, documents: &[(&str, Value)]) {
         assert_signed(document);
         let shown = serde_json::to_string_pretty(&normalised(document, &mut seen))
             .expect("a document renders");
-        text.push_str(&format!("== {label}\n{shown}\n"));
+        writeln!(text, "== {label}\n{shown}").expect("a String takes the text");
     }
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/it/golden/commit_audit")

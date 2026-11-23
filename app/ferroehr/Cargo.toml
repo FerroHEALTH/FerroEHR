@@ -84,6 +84,8 @@ sea-query.workspace = true
 sea-query-sqlx.workspace = true
 # `EHR_ACCESS` scheme-settings cache (per-ehr, invalidated on EHR_ACCESS commit).
 moka.workspace = true
+# The commit audit shared parts this process has seen (#6395).
+arc-swap.workspace = true
 serde.workspace = true
 serde_json = { workspace = true, features = ["raw_value"] }
 # OPT 1.4 upload structure validation (`service::template`): a depth-aware scan

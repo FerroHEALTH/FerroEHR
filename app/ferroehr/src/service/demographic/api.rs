@@ -179,7 +179,7 @@ impl FerroEhrService {
             (support::kind_of(kind), vo_id),
             precondition,
             request,
-            "PARTY",
+            "PARTY delete",
         )
         .await
         .map_err(ServiceError::flattened)
@@ -468,7 +468,7 @@ impl FerroEhrService {
             (Kind::PartyRelationship, vo_id),
             precondition,
             request,
-            "PARTY_RELATIONSHIP",
+            "PARTY_RELATIONSHIP delete",
         )
         .await
         .map_err(ServiceError::flattened)

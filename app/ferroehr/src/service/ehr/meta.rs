@@ -339,13 +339,33 @@ impl FerroEhrService {
     /// effective system id, the numeric `audit_change_type` code, a
     /// description, and the request's authenticated committer (RM common
     /// master04 §Audit Details).
-    pub(in crate::service) fn audit(&self, change_type: &str, description: &str) -> AuditInput {
+    pub(in crate::service) fn audit(
+        &self,
+        change_type: &str,
+        description: &'static str,
+    ) -> AuditInput {
         AuditInput {
             system_id: self.effective_system_id(),
             change_type: change_type.to_owned(),
             description: Some(crate::versioning::audit::dv_text(description)),
+            server_description: true,
             committer: crate::versioning::committer::request_committer(&self.system_id),
             attestation: None,
+        }
+    }
+
+    /// [`Self::audit`] with a description the server composed for this write,
+    /// which may name a record's subject and so stays on the audit's own row
+    /// (#6395).
+    pub(in crate::service) fn audit_composed(
+        &self,
+        change_type: &str,
+        description: &str,
+    ) -> AuditInput {
+        AuditInput {
+            description: Some(crate::versioning::audit::dv_text(description)),
+            server_description: false,
+            ..self.audit(change_type, "")
         }
     }
 }

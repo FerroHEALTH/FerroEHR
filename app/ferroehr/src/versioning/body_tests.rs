@@ -128,6 +128,7 @@ fn audit() -> AuditInput {
             }))
             .unwrap(),
         ),
+        server_description: false,
         committer: crate::versioning::audit::party_proxy(&json!({
             "_type": "PARTY_IDENTIFIED",
             "name": "Dr. Ærø",

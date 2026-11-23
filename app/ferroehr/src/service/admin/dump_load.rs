@@ -642,6 +642,7 @@ fn original_version_envelope(
                 .as_ref()
                 .map(crate::versioning::audit::decode_description)
                 .transpose()?,
+            server_description: false,
             committer: crate::versioning::audit::party_proxy(&audit.committer)?,
             attestation: audit
                 .attestation

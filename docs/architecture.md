@@ -244,6 +244,17 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   cold by writing `tier = 'hot'` as a literal, which the planner prunes at plan
   time. The cold partitions carry the primary key alone, because archived
   content leaves the queryable store until it is restored.
+- **The commit audit** is stored as its facts (`commit_audit_facts`) beside a
+  shared part (`commit_audit_shared`) and read whole through the
+  `commit_audit` view (#6395). The shared part holds what no record subject
+  can be named by, once per distinct content: the system id, the committer of
+  a caller outside a patient context, and a description the server wrote. A
+  person's committer and a description the client wrote stay on the audit's
+  own row, so an EHR erasure that deletes the row leaves none of them behind
+  (GDPR Art. 17). Each replica keeps the ids of the parts it has seen, so a
+  commit binds the id; a commit whose part it has not seen inserts it in the
+  same statement (`ON CONFLICT DO SELECT`) and learns the id once another
+  transaction committed the row. Our own design.
 - **The supporting relations** — `ehr`, `contribution` and `commit_audit`;
   `ehr_folder` and `item_tag`, which stand outside change control; the
   definition stores `template_ref`, `template_store`, `archetype_store`,
