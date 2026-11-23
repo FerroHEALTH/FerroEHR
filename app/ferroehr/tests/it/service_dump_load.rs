@@ -446,8 +446,6 @@ async fn sevenz_compressed_export_round_trips_through_the_detected_container() {
 /// item tag. Every version is server-signed by the default service config, so
 /// the round trip also proves the payload survives the XML transit unchanged:
 /// the served signature is a digest over the version's own canonical form.
-///
-/// Returns the EHR and the `OBJECT_VERSION_ID`s of every COMPOSITION version.
 async fn seed_mixed_kind_ehr(svc: &FerroEhrService) -> (EhrId, Vec<String>) {
     let ehr = crate::fixtures::create_ehr(svc).await;
 
@@ -1295,10 +1293,6 @@ async fn an_archived_ehr_and_party_round_trip_with_their_marker_and_tier() {
 /// The `(archived_at, archive_reason, tier)` of every archived versioned object
 /// the id names in `schema`: the EHR's objects by `ehr_id`, a party by its own
 /// `vo_id`. `None` when nothing under that id is archived.
-///
-/// The schema is named explicitly because the two pseudonymisation domains are
-/// two schemas over one connection here, and only a pool's `search_path`
-/// chooses between them.
 async fn archive_marker(
     pool: &PgPool,
     schema: &'static str,

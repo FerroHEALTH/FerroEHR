@@ -384,13 +384,6 @@ async fn seed_bench(svc: &FerroEhrService, pool: &PgPool) -> usize {
 /// The bench's `flat_2_sibling_leaves` and `flat_3_sibling_leaves` keep the
 /// `LIMIT` early stop: the version rows walked in uid order until 50
 /// blood-pressure observations are found (#4944).
-///
-/// With the archetype predicate's specialisation disjunct as a `LIKE` and the
-/// composition root reached through the nested-set interval, the planner put
-/// the answer at a tenth of its rows, priced the early stop at ten times its
-/// cost, and joined the whole population into a top-N sort with every answer
-/// row's leaf probes: about 53 000 pages a call on the bench's `poc` class
-/// against 3 951 before #4929.
 #[tokio::test]
 async fn a_flat_population_read_stops_at_its_limit() {
     let db = testkit::db().await.expect("testkit database");

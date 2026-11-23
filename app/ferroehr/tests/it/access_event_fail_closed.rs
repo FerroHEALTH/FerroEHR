@@ -5,10 +5,6 @@
 //! (#3235, #5747): the subject-to-EHR lookup, the EHR-Extract export and the
 //! access-log erasure each write their own record, and each withholds its
 //! result when the record cannot be written.
-//!
-//! The refusing sender is a real one whose store is unreachable, so every
-//! write of a record fails. No test hook in production code; the posture is
-//! the one an operator meets when the audit database is down.
 
 use std::time::Duration;
 

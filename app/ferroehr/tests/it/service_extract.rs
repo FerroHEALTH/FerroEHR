@@ -4,19 +4,6 @@
 //! End-to-end service tests for the EHR Extract **export** path (`export_ehrs`
 //! / `export_ehr_extracts`) against a real `PostgreSQL` 18 (shared testkit
 //! harness).
-//!
-//! Spec: RM EHR Extract IM master05 (`X_VERSIONED_*`) + master09 (creation
-//! semantics). The acceptance properties:
-//!
-//! 1. **Whole-EHR export** carries every versioned object of the EHR
-//!    (`EHR_STATUS`, `EHR_ACCESS`, directory `FOLDER`) as an
-//!    `OPENEHR_CONTENT_ITEM` wrapping the matching `X_VERSIONED_<kind>`, latest
-//!    version only, with the version data byte-equal (canonical JSON) to what
-//!    the read surface serves.
-//! 2. **Spec-driven export** honours the `EXTRACT_ENTITY_MANIFEST.item_list`
-//!    (only the named version container) and the `EXTRACT_VERSION_SPEC`
-//!    (`include_all_versions` ⇒ every version; `include_revision_history` ⇒ the
-//!    full `REVISION_HISTORY`).
 
 use crate::fixtures::{find_by_xtype, seed_extract_ehr};
 use ferroehr::error::ServiceError;
