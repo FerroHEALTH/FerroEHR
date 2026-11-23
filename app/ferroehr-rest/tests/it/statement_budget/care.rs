@@ -11,8 +11,8 @@
 //! date by the commit's delta rather than dropped (#6074). The read paths of
 //! [`super::paths`] reach none of them: the care check confirms the party
 //! store's revisions in the request (#5806, #6048), the caseload bound sits
-//! in the query's one statement, and a relationship commit moves the facts
-//! revision and notifies every replica. No openEHR spec governs the
+//! in the query's one statement, and a relationship commit stamps its party
+//! with its own xid and notifies no replica. No openEHR spec governs the
 //! statements of a request: our own design.
 
 use std::fmt::Write as _;
@@ -74,12 +74,16 @@ const CASELOAD: Ceiling = Ceiling {
 /// fewer (7,763 to 7,767), and each ceiling fell by its drop. Judged on one
 /// gate read and committed behind one guarded statement, its settle in two
 /// statements (#6257), it sent 27 round trips where it sent 41, the other
-/// counts and the WAL bytes unchanged.
+/// counts and the WAL bytes unchanged. Once it stamped the related party with
+/// its own xid, moving no `facts_revision` and notifying no replica (#6074),
+/// it sent 26 round trips, no `pg_notify` call and 79 bytes fewer (7,684
+/// against 7,763), the read that notification set off on the next request
+/// gone, and each ceiling fell by its drop.
 const COMMIT: Ceiling = Ceiling {
-    round_trips: 27,
+    round_trips: 26,
     nested: 2,
-    notifies: 1,
-    wal: 7924,
+    notifies: 0,
+    wal: 7845,
 };
 
 /// A care relationship's commit to Dr Jansen's team followed by her
@@ -90,9 +94,10 @@ const COMMIT: Ceiling = Ceiling {
 /// the care relationships read in place of the stamped teams, so the pair
 /// takes 50. The other counts are the commit's. With the commit judged on
 /// one gate read and committed behind one guarded statement (#6257), the
-/// pair takes 35, measured twice.
+/// pair takes 35, measured twice. With the commit stamping its party alone
+/// and notifying no replica (#6074), it takes 34.
 const RECARE: Ceiling = Ceiling {
-    round_trips: 35,
+    round_trips: 34,
     nested: COMMIT.nested + CASELOAD.nested,
     notifies: COMMIT.notifies + CASELOAD.notifies,
     wal: COMMIT.wal + CASELOAD.wal,
