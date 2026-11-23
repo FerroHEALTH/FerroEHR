@@ -2,24 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 #![expect(clippy::panic, reason = "test assertions/diagnostics/fixtures")]
-//! The §Validation checklist audit.
-//!
-//! A point-by-point pin of the eight SHOULD-validate bullets the Simplified
-//! Formats specification lists under
-//! `docs/specs/openehr/ITS-REST/docs/simplified_formats/master04-basic_concepts.adoc`
-//! §Validation ("Implementations SHOULD validate:") against the `openehr_sdt::flat`
-//! ingest validators. There is exactly one test per bullet; each quotes its
-//! bullet verbatim, cites `master04 §Validation`, and drives the rule through a
-//! real public seam of the crate (`sim::flat::parse_flat`,
-//! `validation::validate_context`, `validation::validate_composition`, and the
-//! `convert::composition_*` conversion seam) with a positive case (the rule is
-//! satisfied → clean / accepted) and a negative probe (a minimal violation →
-//! the expected `ValidationKind` / `FlatError`).
-//!
-//! The end-to-end corpus + per-rule seam tests live in `tests/validation.rs`
-//! and `tests/flat.rs`; this file is the dedicated audit that maps each spec
-//! bullet to the seam that enforces it, so "substantively covered" becomes
-//! pinned proof.
+//! The `master04-basic_concepts.adoc` §Validation checklist audit: one test per
+//! SHOULD-validate bullet, quoting it, with a positive case and a minimal
+//! violation through a public seam.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -139,9 +124,6 @@ fn load_composition(name: &str) -> Value {
 
 // Bullet 1 (master04 §Validation): "Get the WT for the target template and map
 // input fields to the identifiers".
-//
-// `parse_flat` maps each FLAT input key onto its hierarchical field-identifier
-// path (the `SimNode` segment tree the WT is later matched against).
 #[test]
 fn bullet1_map_input_fields_to_identifiers() {
     // POSITIVE: a valid input maps its field onto the identifier tree, reachable
@@ -176,9 +158,6 @@ fn bullet1_map_input_fields_to_identifiers() {
 
 // Bullet 2 (master04 §Validation): "Check the final segment for the pipe to
 // identify attribute suffix".
-//
-// `parse_flat` (via `path::FlatKey::parse`) splits the `|`-separated attribute
-// suffix off the final segment, keying each suffix as its own datum part.
 #[test]
 fn bullet2_pipe_identifies_attribute_suffix() {
     // POSITIVE: two pipe suffixes on one leaf are each identified as a distinct
@@ -213,9 +192,6 @@ fn bullet2_pipe_identifies_attribute_suffix() {
 
 // Bullet 3 (master04 §Validation): "Mandatory context fields (language,
 // territory) are present".
-//
-// `validation::validate_context` reports the absent mandatory `ctx/` fields on
-// a parsed simplified document.
 #[test]
 fn bullet3_mandatory_context_fields_present() {
     // POSITIVE: both language and territory present → clean.
@@ -242,10 +218,6 @@ fn bullet3_mandatory_context_fields_present() {
 
 // Bullet 4 (master04 §Validation): "Field identifiers match WT metadata
 // structure".
-//
-// `validation::validate_composition` walks the instance against the WebTemplate;
-// an archetyped child under a closed attribute whose node id is not admitted by
-// the WT structure is reported `ValidationKind::Unexpected`.
 #[test]
 fn bullet4_field_identifiers_match_wt_structure() {
     // A COMPOSITION whose `content` attribute the template closes to a single
@@ -285,10 +257,6 @@ fn bullet4_field_identifiers_match_wt_structure() {
 
 // Bullet 5 (master04 §Validation): "Data types match expected types from the
 // Operational Template".
-//
-// `validation::validate_composition` checks each matched node's RM type against
-// the WebTemplate node's `rmType`; a non-conforming datum type is
-// `ValidationKind::WrongType`.
 #[test]
 fn bullet5_data_types_match_operational_template() {
     let wt = wt_of(node("DV_QUANTITY", "/q"));
@@ -311,10 +279,6 @@ fn bullet5_data_types_match_operational_template() {
 }
 
 // Bullet 6 (master04 §Validation): "Cardinality constraints are satisfied".
-//
-// `validation::validate_composition` counts the children under each constrained
-// container attribute and reports `ValidationKind::Cardinality` when the count
-// falls outside the interval.
 #[test]
 fn bullet6_cardinality_constraints_satisfied() {
     let mut root = node("COMPOSITION", "");
@@ -347,11 +311,8 @@ fn bullet6_cardinality_constraints_satisfied() {
     );
 }
 
-// Bullet 7 (master04 §Validation): "Terminology bindings are valid".
-//
-// Two flavours of terminology binding, both via `validation::validate_composition`:
-// an archetype coded-value list (`ValidationKind::CodedValue`) and the
-// RM-mandated openEHR terminology groups (`ValidationKind::Terminology`).
+// Bullet 7 (master04 §Validation): "Terminology bindings are valid", both the
+// archetype coded list and the RM-mandated openEHR groups.
 #[test]
 fn bullet7_terminology_bindings_valid() {
     // (a) archetype coded-list binding: a DV_CODED_TEXT leaf bound to a local
@@ -410,13 +371,7 @@ fn bullet7_terminology_bindings_valid() {
 }
 
 // Bullet 8 (master04 §Validation): "RM attribute paths (underscore-prefixed) are
-// valid".
-//
-// master04 §"RM Attributes prefix": optional RM attributes are addressed with a
-// leading underscore (`_attributeName`); the valid families are the `_`-rows of
-// the master05 per-type tables. The FLAT conversion seam
-// (`convert::composition_from_flat`) rejects an underscore-prefixed segment
-// naming no RM-attribute family as `FlatError::UnknownSuffix`.
+// valid" (master04 §"RM Attributes prefix").
 #[test]
 fn bullet8_underscore_rm_attribute_paths_valid() {
     let wts = web_templates();

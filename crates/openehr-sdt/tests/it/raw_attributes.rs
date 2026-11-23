@@ -2,13 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! `|raw` on the attributes no template node holds (master04 §Raw canonical
-//! JSON): the COMPOSITION `language`, `territory` and `composer`, and the
-//! `_feeder_audit`, `_link:i`, `_participation:i`, `_other_participation:i`,
-//! `_provider` and `_health_care_facility` families.
+//! JSON), on the CNF Robot `minimal_action.en.v1` template.
 //!
-//! Each value is taken whole, survives a FLAT round trip, and a value of the
-//! wrong class or one beside another suffix is refused. The carrier is the
-//! CNF Robot `minimal_action.en.v1` template.
+//! Each value is taken whole and survives a FLAT round trip; a wrong class or a
+//! value beside another suffix is refused.
 #![expect(clippy::panic, reason = "test fixture plumbing")]
 
 use openehr_its::opt14;
@@ -234,10 +231,8 @@ fn the_underscore_families_are_taken_whole() {
     }
 }
 
-/// A party whose `external_ref.type` is not the type the builder fills in
-/// keeps it through FLAT and STRUCTURED: master05 gives the reference type no
-/// row, so the flattener writes such a party as `|raw` (master04 §Raw
-/// canonical JSON) and the builder takes it whole.
+/// A party with a non-default `external_ref.type` survives FLAT and STRUCTURED
+/// as `|raw` (master05 has no row for the reference type).
 #[test]
 fn a_party_reference_of_another_type_round_trips() {
     let wt = web_template();

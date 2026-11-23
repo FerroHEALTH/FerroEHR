@@ -2,12 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! A `C_STRING` pattern no regex engine compiles is refused when the template
-//! loads, and a value checked against one anyway is refused (#5841; AOM 1.4
-//! `C_STRING.valid_value`, ADL 1.4 `master05-cadl.adoc` §Regular Expression).
-//! No vendored OPT constrains a text value with a pattern, so the probe gives
-//! one open `DV_TEXT` of the vendored `Demo Vitals.opt` a pattern. The ADL2
-//! parser already refuses an uncompilable regex (`SCSRE`), so the OPT 1.4
-//! front end is where one can reach the Web Template.
+//! loads, and a value checked against one is refused (AOM 1.4
+//! `C_STRING.valid_value`); the probe gives `Demo Vitals.opt` such a pattern.
 
 #![expect(
     clippy::expect_used,

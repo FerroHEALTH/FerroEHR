@@ -1,17 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Leaf domain-constraint validation — the `C_DV_*` / `C_PRIMITIVE` leaf
-//! constraint checks (AOM 1.4 `master04-constraint_model_package.adoc`) applied
-//! to a `DATA_VALUE`, approximated from the WebTemplate `inputs`.
-//!
-//! For each input we validate the corresponding datum of the instance value,
-//! keyed by the input `suffix` / `type`: coded-value membership (unless the list
-//! is open or the code is from an external terminology), numeric and temporal
-//! ranges (honoring `minOp`/`maxOp`), decimal-precision intervals on
-//! `DV_QUANTITY`/`DV_PROPORTION` (#3027), string patterns, duration
-//! field/range constraints, and timezone validity. RM well-formedness of
-//! date/time/duration VALUES stays with the RM-invariant pass.
+//! Leaf domain-constraint validation: the AOM 1.4 `C_DV_*` and `C_PRIMITIVE`
+//! leaf checks (`master04-constraint_model_package.adoc`), approximated from the
+//! WebTemplate `inputs`. Value well-formedness stays with the RM-invariant pass.
 
 #![expect(
     clippy::disallowed_types,
@@ -71,10 +63,8 @@ pub(super) fn check_inputs<'i, I: Instance<'i>>(
     check_code_lists(v, instance, wt);
 }
 
-/// `C_INTEGER`/`C_REAL` ranges on a leaf's numeric datum the `inputs` do not
-/// carry (`DV_MULTIMEDIA.size`, RM `data_types` §`DV_MULTIMEDIA`; an ADL 2 union
-/// of ranges, AOM2 `master04.5-constraint_model-class_definitions.adoc`
-/// §C_ORDERED): the datum must lie within one of the ranges given for it.
+/// `C_INTEGER`/`C_REAL` ranges the `inputs` do not carry (`DV_MULTIMEDIA.size`;
+/// an ADL 2 union of ranges, AOM2 `master04.5` §C_ORDERED).
 fn check_numeric_ranges<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
     let attrs: BTreeSet<&str> = wt.numeric_ranges.iter().map(|(a, _)| a.as_str()).collect();
     for attr in attrs {
@@ -110,10 +100,8 @@ fn check_numeric_lists<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: 
     }
 }
 
-/// `C_CODE_PHRASE` code-list membership on a coded RM attribute the `inputs`
-/// mapping does not model (e.g. `DV_MULTIMEDIA.media_type` — AOM 1.4
-/// §`C_CODE_PHRASE`). Enforced only when the instance's terminology matches the
-/// constraint's (or both are `local`), biasing toward confident violations.
+/// `C_CODE_PHRASE` code-list membership on a coded RM attribute the `inputs` do
+/// not model (AOM 1.4 §`C_CODE_PHRASE`), only when the terminologies match.
 fn check_code_lists<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
     for cl in &wt.code_lists {
         let Some(cp) = instance.attr(&cl.attr) else {
@@ -184,19 +172,9 @@ fn check_code_phrase<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &W
 
 /// `DV_ORDINAL` / `DV_SCALE` against a `C_DV_ORDINAL` / `C_DV_SCALE` list.
 ///
-/// The constraint is a list of `ORDINAL{symbol: CODE_PHRASE, value:
-/// Integer}` (Real for `DV_SCALE`) entries, and validity requires the instance's
-/// **(symbol, value) PAIR** to match one entry — not the symbol alone nor the
-/// value alone (AOM 1.4 `AM/docs/UML/classes/org.openehr.am.aom14.ordinal.adoc`
-/// §ORDINAL / §`C_ORDINAL`; the pairing is normative per
-/// `AOM2/master04.3-constraint_model-second_order.adoc` §Tuple Constraints L19-21
-/// — "as pairs not just as allowable alternatives … which would incorrectly
-/// allow any mixing of the Integer and code values"; CNF
-/// `master17.3-content_tc_data_types-quantity.adoc` CONT-DV_ORDINAL/DV_SCALE-
-/// `validate_constraint`: a right symbol with a wrong value, or a right value with
-/// a wrong symbol, both reject). The `WebTemplate` `ordinal_input` carries each
-/// entry as a coded value whose `value` is the symbol code and whose `ordinal`
-/// (or `scale`) is the paired numeric value.
+/// The instance's (symbol, value) pair must match one entry
+/// (`org.openehr.am.aom14.ordinal.adoc` §ORDINAL; `AOM2/master04.3` §Tuple
+/// Constraints: "as pairs not just as allowable alternatives").
 fn check_ordinal<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
     let Some(input) = wt.inputs.first() else {
         return;
@@ -229,14 +207,9 @@ fn check_ordinal<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTe
         );
         return;
     }
-    // Generic C_COMPLEX_OBJECT form: AOM 1.4 has no `C_DV_SCALE` constrainer, so
-    // a DV_SCALE constrains its coded `symbol` through `symbol.defining_code` as a
-    // `C_CODE_PHRASE` `code_list` with no paired numeric (the builder records the
-    // codes with `ordinal`/`scale` unset). Symbol membership alone is then the
-    // coded constraint — the numeric `value` set is enforced separately via
-    // `numeric_lists` — so the (symbol, value) pair check below applies only to
-    // the C_DV_ORDINAL form, which does pin the pair (AOM 1.4 §`C_CODE_PHRASE`;
-    // RM `data_types` §`DV_SCALE`).
+    // AOM 1.4 has no `C_DV_SCALE`, so a DV_SCALE constrains only `symbol` as a
+    // `C_CODE_PHRASE` code list (RM `data_types` §`DV_SCALE`); the pair check below
+    // is for the C_DV_ORDINAL form.
     if same_symbol
         .iter()
         .all(|cv| cv.scale.is_none() && cv.ordinal.is_none())
@@ -296,24 +269,13 @@ fn paired_value_matches<'i, I: Instance<'i>>(
     )
 }
 
-/// Report a coded value that is not among the constrained options. Checked for
-/// a non-open, non-empty list whose terminology matches the instance code's —
-/// the archetype-`local` terminology when the input names none, or the exact
-/// external terminology the `C_CODE_PHRASE` names (AOM 1.4 §`C_CODE_PHRASE`: an
-/// enumerated external code list constrains membership just like a local one —
-/// master17.2 `CONT-DV_CODED_TEXT-validate_ext_term`).
+/// Report a coded value outside a closed option list whose terminology matches
+/// the instance code's (AOM 1.4 §`C_CODE_PHRASE`).
 ///
-/// When the instance code's terminology *differs* from the constraint's, the
-/// behaviour depends on how the constraint is scoped: a constraint that
-/// **explicitly** binds to the archetype-`local` terminology
-/// ([`WebTemplateNode::coded_terminology_local`]) admits ONLY local codes in its
-/// closed list, so a code from any other terminology is a violation — the
-/// C_CODE_PHRASE `code_list` is "a list of codes FROM the terminology"
-/// (`AM/docs/UML/classes/org.openehr.am.aom14.c_coded_text.adoc` §C_CODED_TEXT,
-/// the AOM1.4 form of C_CODE_PHRASE), scoped to that one terminology. For a
-/// constraint that does NOT name a terminology (or names an external one), a
-/// differently-scoped instance code is left to the terminology pass
-/// (confident-violations bias).
+/// An explicitly `local` list ([`WebTemplateNode::coded_terminology_local`])
+/// also refuses a code from any other terminology
+/// (`org.openehr.am.aom14.c_coded_text.adoc` §C_CODED_TEXT); otherwise a
+/// differently scoped code is left to the terminology pass.
 fn check_code_membership(
     v: &mut Validator,
     wt: &WebTemplateNode,
@@ -335,11 +297,7 @@ fn check_code_membership(
         }
         return;
     }
-    // Terminology mismatch: reject only when the constraint EXPLICITLY declared
-    // the archetype-`local` terminology with a closed list (the builder strips
-    // the implicit/default `local` from `input.terminology`, so an unset
-    // terminology cannot be distinguished there — the explicit-local signal is
-    // carried separately on the node).
+    // Only an explicitly `local` closed list refuses a foreign terminology.
     if wt.coded_terminology_local {
         v.push(
             &wt.aql_path,
@@ -372,14 +330,8 @@ fn check_quantity<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebT
         );
     }
 
-    // C_QUANTITY.property membership: AOM 1.4 defines `property` only as
-    // "Name of physical property for Quantities being constrained"
-    // (`AM/docs/UML/classes/org.openehr.am.aom14.c_quantity.adoc` §C_QUANTITY)
-    // with no formal valid_value (the constraint semantics live in the
-    // non-vendored Archetype Profile), so this check is our own extension on
-    // the openEHR property↔unit asset (`PropertyUnitData.xml` via
-    // `openehr_term::bundle`): a unit is rejected only on a confident
-    // dimensional mismatch; a unit absent from the table is tolerated.
+    // NOTE: `org.openehr.am.aom14.c_quantity.adoc` gives `property` no valid_value:
+    // our own check over `PropertyUnitData.xml`, refusing only a dimensional mismatch.
     if let (Some(property), Some(u)) = (&wt.quantity_property, unit)
         && !has_unit_list
     {
@@ -422,11 +374,8 @@ fn check_quantity<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebT
         }
     }
 
-    // DV_QUANTITY.precision against the constrained precision interval
-    // (`OpenehrProfile.xsd` `C_QUANTITY_ITEM.precision : IntervalOfInteger`;
-    // the Web Template surfaces it as `inputs[].validation.precision` — the
-    // ITS-REST `simplified_formats` `master04` model). The RM attribute is
-    // 0..1, so an instance that omits it violates nothing (#3027).
+    // `C_QUANTITY_ITEM.precision` (`OpenehrProfile.xsd`); an absent precision
+    // violates nothing.
     if let Some(prec) = instance.attr("precision").and_then(Instance::as_f64) {
         let range = input_with_suffix(wt, "magnitude")
             .and_then(|i| i.validation.as_ref())
@@ -491,10 +440,8 @@ fn check_count<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemp
 }
 
 fn check_proportion<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
-    // `type` kind membership (C_INTEGER.list on DV_PROPORTION.type, surfaced as
-    // the node's `proportionTypes` — AOM 1.4 §C_INTEGER; master17.3
-    // CONT-DV_PROPORTION-validate_* truth tables). An empty set means the
-    // template did not constrain the kind.
+    // `proportionTypes` (AOM 1.4 §C_INTEGER on `DV_PROPORTION.type`); empty means
+    // unconstrained.
     if !wt.proportion_types.is_empty()
         && let Some(kind) = instance.attr("type").and_then(Instance::as_i64)
     {
@@ -596,10 +543,8 @@ fn check_string_parts<'i, I: Instance<'i>>(
 
 // ── temporal (C_DATE / C_TIME / C_DATE_TIME / C_DURATION, AOM 1.4) ────────────
 
-/// `DV_DATE`/`DV_TIME`/`DV_DATE_TIME`: the `C_*` pattern (mandatory/optional/
-/// prohibited field parts, AOM 1.4 `master04-constraint_model_package.adoc`
-/// §"Constraints on dates and times") and the ISO range, both surfaced in the
-/// leaf input's `validation` by the `WebTemplate` builder.
+/// `DV_DATE`/`DV_TIME`/`DV_DATE_TIME` against the `C_*` pattern and ISO range
+/// (AOM 1.4 §"Constraints on dates and times").
 fn check_temporal<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
     let Some(value) = instance.str_at("value") else {
         return;
@@ -631,12 +576,8 @@ fn check_temporal<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebT
     check_timezone_validity(v, wt, value);
 }
 
-/// `C_TIME`/`C_DATE_TIME` `timezone_validity` (`VALIDITY_KIND`): the instance's
-/// timezone designator must be present (`1001` mandatory), may be present
-/// (`1002` optional — no check), or must be absent (`1003` disallowed). Normative
-/// and CNF-tested (CNF `master17.4-content_tc_data_types-date_time.adoc`
-/// CONT-DV_TIME-validate_constraint; AOM 1.4
-/// `AM/docs/UML/classes/org.openehr.am.aom14.c_time.adoc`/`…c_date_time.adoc`).
+/// `C_TIME`/`C_DATE_TIME` `timezone_validity`: `1001` requires a timezone
+/// designator, `1003` forbids one (`org.openehr.am.aom14.c_time.adoc`).
 fn check_timezone_validity(v: &mut Validator, wt: &WebTemplateNode, value: &str) {
     let Some(tzv) = wt.tz_validity else { return };
     let has_tz = has_timezone(value);
@@ -681,10 +622,8 @@ fn check_duration<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebT
     check_duration_range(v, value, &fields, wt);
 }
 
-/// Reports every duration field the `C_DURATION` pattern does not allow.
-///
-/// The check runs only when the builder filtered the inputs: a full 7-field set
-/// means the pattern allowed everything, or there was no pattern.
+/// Reports every duration field the `C_DURATION` pattern does not allow; a
+/// full 7-field input set means no restriction.
 fn check_duration_fields_allowed(
     v: &mut Validator,
     value: &str,
@@ -713,10 +652,8 @@ fn check_duration_fields_allowed(
     }
 }
 
-/// Reports a duration outside the node's constrained range.
-///
-/// Bound inclusivity follows the AOM interval flags carried in the range ops
-/// (BASE `foundation_types` Interval — an exclusive `> PT0S` rejects `PT0S`).
+/// Reports a duration outside the node's constrained range, honouring bound
+/// inclusivity.
 fn check_duration_range(
     v: &mut Validator,
     value: &str,
@@ -770,10 +707,8 @@ fn duration_fields(value: &str) -> Option<Vec<(&'static str, f64)>> {
     Some(out)
 }
 
-/// Appends one half of an ISO-8601 duration to `out`.
-///
-/// `in_time` selects the time-half reading of the ambiguous `M` designator
-/// (minutes rather than months). Returns [`None`] on an unparseable half.
+/// Appends one half of an ISO-8601 duration to `out`; `in_time` reads `M` as
+/// minutes. [`None`] on an unparseable half.
 fn push_duration_part(part: &str, in_time: bool, out: &mut Vec<(&'static str, f64)>) -> Option<()> {
     let mut num = String::new();
     for ch in part.chars() {
@@ -886,19 +821,13 @@ fn fields_phrase(fields: &[&str]) -> String {
     }
 }
 
-/// How a date/time/datetime instance value breaks an AOM 1.4 temporal pattern
-/// (`yyyy-mm-dd`, `HH:MM:SS`, `yyyy-mm-ddTHH:MM:SS`, with `??` = optional and
-/// `XX` = not allowed parts), or `None` when it satisfies it. Only field
-/// *presence* is judged; value well-formedness is the RM-invariant pass's job.
+/// How a temporal value breaks an AOM 1.4 pattern (`??` optional, `XX` not
+/// allowed), or `None`. Only field presence is judged.
 fn temporal_pattern_breach(pattern: &str, value: &str) -> Option<PatternBreach> {
     let (pat_date, pat_time) = split_date_time(pattern);
     let (val_date, val_time) = split_date_time(value);
-    // A colon-less bare DV_TIME value (e.g. "10" = hour only) has no `:` and is
-    // classified as a date part by `split_date_time`; but a pure-time pattern
-    // ("HH:??:??" / "HH:XX:XX") means the value IS a time, so reclassify it and
-    // judge the hour-only value against the time segments. ADL 1.4
-    // `master05-cadl.adoc` §"Date, Time and Date/Time" Patterns: `?` = optional
-    // field, `X` = disallowed field.
+    // An hour-only time ("10") against a pure-time pattern is a time (ADL 1.4
+    // `master05-cadl.adoc` §"Date, Time and Date/Time").
     let (val_date, val_time) = if pat_date.is_empty()
         && !pat_time.is_empty()
         && !val_date.is_empty()
@@ -917,13 +846,8 @@ fn temporal_pattern_breach(pattern: &str, value: &str) -> Option<PatternBreach> 
     (breach != PatternBreach::default()).then_some(breach)
 }
 
-/// Records which fields of one temporal half break its pattern half.
-///
-/// The two are split on `sep` into at most three segments; `skip` drops the
-/// leading segments that carry no optionality (the year). A `??` segment
-/// accepts either presence, an `XX` segment requires absence, and any other
-/// segment requires presence (ADL 1.4 `master05-cadl.adoc` §"Date, Time and
-/// Date/Time" Patterns).
+/// Records which fields of one temporal half break its pattern half (ADL 1.4
+/// `master05-cadl.adoc` §"Date, Time and Date/Time"); `skip` drops the year.
 fn judge_segments(
     pattern: &str,
     value: &str,
@@ -976,11 +900,9 @@ fn trim_timezone(t: &str) -> &str {
     }
 }
 
-/// Whether a date/time/datetime value lies within an ISO-string range. The
-/// comparison is lexicographic over the timezone-stripped value truncated to
-/// the shorter precision — ISO-8601 date/time strings order lexicographically
-/// at equal precision; a prefix-equal, mixed-precision pair is treated as
-/// in-range (confident-violations bias).
+/// Whether a temporal value lies within an ISO-string range, compared
+/// lexicographically at the shorter precision; a mixed-precision prefix match
+/// is in range.
 pub(crate) fn temporal_in_range(value: &str, range: &WebTemplateRange) -> bool {
     let norm = |s: &str| -> String {
         let (d, t) = split_date_time(s);
@@ -1053,12 +975,8 @@ pub(super) fn check_string_constraints(
     }
 }
 
-/// Whether `value` matches an archetype `C_STRING` regex, anchored at both ends
-/// (AOM 1.4 `C_STRING.valid_value`: a value is valid iff it matches).
-///
-/// A pattern no regex engine compiles is refused when the template loads
-/// (`FlatError::UnevaluablePattern`); one that reaches this check anyway, or
-/// that `fancy-regex` cannot finish evaluating, matches no value.
+/// Whether `value` matches an archetype `C_STRING` regex, anchored at both
+/// ends. A pattern that cannot be evaluated matches no value.
 pub(super) fn matches_pattern(pattern: &str, value: &str) -> bool {
     pattern_matches(pattern, value) == Some(true)
 }
@@ -1075,11 +993,9 @@ fn as_f64(v: &Value) -> Option<f64> {
     v.as_f64()
 }
 
-/// Whether `value` satisfies a `WebTemplate` numeric range (honoring the
-/// inclusive/exclusive `minOp`/`maxOp`; missing bounds are unbounded).
-// NOTE: realizes BASE `Interval.has(v)` semantics over `WebTemplateRange`'s
-// `minOp`/`maxOp` boundary openness (foundation_types interval.adoc); the
-// reference semantics + tests live in `openehr-base` `interval_impl.rs`.
+/// Whether `value` satisfies a `WebTemplate` numeric range; missing bounds are
+/// unbounded.
+// NOTE: BASE foundation_types `interval.adoc` `Interval.has` over `minOp`/`maxOp`.
 fn in_range(value: f64, range: &WebTemplateRange) -> bool {
     let min = range.min.as_ref().and_then(as_f64);
     let max = range.max.as_ref().and_then(as_f64);

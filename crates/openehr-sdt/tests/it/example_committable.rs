@@ -2,24 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 #![expect(clippy::panic, reason = "test assertions/diagnostics/fixtures")]
-//! Generated examples pass the server's own validation.
-//!
-//! ITS-REST Release 1.1.0, Definition API `definition_template_adl1.4_example_get`,
-//! `detail_level`: the `required` and `medium` examples are "intended to be
-//! committable". The commit path validates a COMPOSITION with exactly the
-//! passes [`validate_composition`] composes (RM invariants + terminology, then
-//! archetype conformance against the template), so every vendored template the
-//! suite loads must generate examples that pass it at both levels.
-//!
-//! Two generator rules are pinned on their own as well:
-//!
-//! * an attribute the template makes mandatory (AOM 1.4
-//!   `master04-constraint_model_package.adoc` §existence) is present even when
-//!   its structural child carries no leaf content (an EVENT `state`, an ENTRY
-//!   `protocol`), as the node its structural stub constrains;
-//! * an ELEMENT never carries `value` and `null_flavour` together, and a
-//!   value-less ELEMENT carries its `null_flavour` (RM `data_structures`
-//!   §ELEMENT `Inv_null_flavour_indicated`: `is_null() xor null_flavour = Void`).
+//! Generated `required` and `medium` examples pass [`validate_composition`]
+//! (ITS-REST Definition API `definition_template_adl1.4_example_get`: "intended
+//! to be committable").
 
 use std::path::{Path, PathBuf};
 
@@ -97,11 +82,7 @@ const NOT_COMMITTABLE: &[(&str, &str)] = &[
     ),
 ];
 
-/// Generates every committable level of `path`'s template and returns the
-/// validation messages, each prefixed with the file and level.
-///
-/// Only a COMPOSITION commits, so a template rooted in another class is outside
-/// the committable claim; the generator refuses it (#3780).
+/// The validation messages of every committable level of `path`'s template.
 fn committable_findings(path: &Path) -> Vec<String> {
     let name = file_name(path);
     if NOT_COMMITTABLE.iter().any(|(file, _)| *file == name) {
@@ -193,10 +174,8 @@ fn sdk_go_corpus_generates_committable_examples() {
 
 // ── an EVENT's data under a folded event ────────────────────────────────────
 
-/// An OBSERVATION whose one event holds only a slot gets its event `data` as
-/// the node the template constrains (`at0003`), never the `at0001`
-/// placeholder, and the example validates in canonical JSON, FLAT and
-/// STRUCTURED (#5911).
+/// An event holding only a slot gets the constrained `data` node, and the
+/// example validates in every form.
 #[test]
 fn a_folded_event_data_carries_its_constrained_node_id() {
     let wt = web_template(&sdk_go_dir().join("cluster-slot.ehrbase.org.v0.opt"));
@@ -246,10 +225,8 @@ fn a_folded_event_data_carries_its_constrained_node_id() {
 
 // ── a mandatory participations ──────────────────────────────────────────────
 
-/// A template that makes `context/participations` mandatory gets one
-/// PARTICIPATION in every example level (RM `EVENT_CONTEXT`
-/// `Participations_validity` refuses an empty list), so `required` commits
-/// apart from the template's own RM breach (#5915).
+/// A mandatory `context/participations` gets one PARTICIPATION at every level
+/// (RM `EVENT_CONTEXT` `Participations_validity`).
 #[test]
 fn a_mandatory_participations_is_written() {
     let wt = web_template(&sdk_go_dir().join("sdk_crosscheck_structure.v1.opt"));
@@ -305,12 +282,8 @@ fn annotation_elements(comp: &mut Value) -> usize {
         })
 }
 
-/// A `DV_TEXT` name where the template constrains the name to a
-/// `DV_CODED_TEXT` from an external value set does not conform (AOM 1.4
-/// `C_COMPLEX_OBJECT.rm_type_name`). The committable examples leave the
-/// optional node out rather than invent its code; the `complete` example,
-/// which ITS-REST does not expect to commit, still shows it, and the validator
-/// refuses its name (#5912).
+/// A `DV_TEXT` name where the template wants an external `DV_CODED_TEXT` does
+/// not conform; committable examples omit the optional node.
 #[test]
 fn a_text_name_where_a_coded_name_is_constrained_is_refused() {
     let wt = web_template(&sdk_go_dir().join("Referral Request.v1.opt"));
@@ -366,10 +339,8 @@ fn remove_attr(v: &mut Value, ids: &[&str], attr: &str) -> usize {
     }
 }
 
-/// AOM 1.4 `master04-constraint_model_package.adoc`: existence says whether
-/// the container is there, cardinality how many members it holds. An empty
-/// `items` under existence 1..1 and cardinality 0..* is a container that is
-/// there, and RM `ITEM_TREE.items` allows zero members, so it validates.
+/// An empty `items` under existence 1..1 and cardinality 0..* validates (AOM 1.4
+/// `master04-constraint_model_package.adoc`).
 #[test]
 fn an_empty_container_under_a_mandatory_attribute_is_present() {
     let wt = strict_existence();
@@ -672,12 +643,9 @@ fn value_less_mandatory_element_carries_its_null_flavour() {
     assert!(violations.is_empty(), "{violations:?}");
 }
 
-/// Two same-archetype siblings told apart only by name (`events[at0002,
-/// 'Baseline']` and `events[at0002,'Follow up']` under each of two
-/// `imaging_exam_result` OBSERVATIONs) stay two nodes through the FLAT build,
-/// so every level of the template's example passes the commit-path validation
-/// (BASE `architecture_overview/master11-paths.adoc` §"Using a Name-based
-/// Predicate"; #3779).
+/// Two same-archetype siblings told apart only by name stay two nodes through
+/// the FLAT build, so every level validates (BASE `master11-paths.adoc` §"Using
+/// a Name-based Predicate").
 #[test]
 fn name_distinguished_siblings_stay_apart_through_build_and_validation() {
     let path = ckm_dir().join("full/covid-19-pneumonia-diagnosis-and-treatment-7th-edition.opt");

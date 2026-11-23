@@ -1,25 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! openEHR **Simplified Formats**: FLAT and STRUCTURED data instances and
-//! the Web Template model.
+//! openEHR Simplified Formats: FLAT and STRUCTURED data instances and the Web
+//! Template model.
 //!
-//! The wire authority is the ITS-REST Simplified Formats specification
-//! (`docs/specs/openehr/ITS-REST/docs/simplified_formats/`, STABLE):
-//! field-identifier syntax and node-id generation (`master04`), the
-//! per-RM-type mapping tables (`master05`), the `ctx/` context vocabulary
-//! (`master06`), and the FLAT ↔ STRUCTURED conversion algorithms
-//! (`master04 §Conversion Between Formats`). Media types
-//! (`master02 §MIME Types`): `application/openehr.wt.flat+json`,
-//! `application/openehr.wt.structured+json`, and (for the template
-//! resource) `application/openehr.wt+json`.
-//!
-//! Both wire variants are codecs over one internal tree ([`sim::SimNode`]);
-//! the template-driven RM conversion is written once against it.
-//!
-//! Doc prose here is dense with openEHR spec class names (`COMPOSITION`,
-//! `DV_QUANTITY`, `PARTY_IDENTIFIED`, …); backticking every occurrence is
-//! noise, so `clippy::doc_markdown` is allowed module-wide.
+//! ITS-REST `simplified_formats/` is the wire authority: `master04` field
+//! identifiers and node ids, `master05` RM mappings, `master06` `ctx/`, and the
+//! media types of `master02 §MIME Types`. Both wire variants are codecs over
+//! [`sim::SimNode`].
 #![allow(
     clippy::doc_markdown,
     reason = "the module docs name openEHR RM classes and Simplified-Formats key names throughout as prose; backticking every occurrence would drown the text"

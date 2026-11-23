@@ -2,22 +2,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 #![expect(clippy::panic, reason = "test assertions/diagnostics/fixtures")]
-//! An `ELEMENT.value` constrained by several alternative objects (#4226).
+//! An `ELEMENT.value` constrained by several alternative objects (ADL 1.4
+//! `master05-cadl.adoc` §"Single-valued Attributes"), on `value_alternatives.en.v1`.
 //!
-//! ADL 1.4 `master05-cadl.adoc` §"Single-valued Attributes": the children of a
-//! single-valued attribute are "alternative constraints, only one of which
-//! needs to be matched by the data". The carrier is `value_alternatives.en.v1`,
-//! a synthetic template whose four elements each carry two alternatives:
-//!
-//! * "Nucleic acid": `DV_TEXT` beside a local `DV_CODED_TEXT`, the shape of
-//!   the reported `vcf_report` template. The web template presents it as one
-//!   coded node with an open list and an `|other` input (ITS-REST
-//!   `simplified_formats` master04 §"Open Value-Sets and the `|other` Suffix"),
-//!   and `|other` commits a `DV_TEXT`;
-//! * "Amount": `DV_QUANTITY` or `DV_COUNT`;
-//! * "Recorded": `DV_DATE` or `DV_DATE_TIME`;
-//! * "Speed": two `DV_QUANTITY` alternatives, `[mi_i]/h` up to 55 and `km/h`
-//!   up to 100, the cADL example of the same section.
+//! "Nucleic acid" is `DV_TEXT` beside a local `DV_CODED_TEXT` (one coded node
+//! with `|other`), "Amount" `DV_QUANTITY` or `DV_COUNT`, "Recorded" `DV_DATE` or
+//! `DV_DATE_TIME`, and "Speed" two `DV_QUANTITY` alternatives.
 
 use openehr_its::opt14;
 use openehr_rm::prelude::Composition;

@@ -1,15 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `unique` cardinality modifier, evaluated as value equality when a
-//! composition is validated against its template (SPECAM-111; ADL 1.4
-//! `master05-cadl.adoc` and ADL2 `master04.3-cadl_complex_types.adoc`
-//! §Container attributes: "no two members of the container may be equal by
-//! value", names and identity excluded).
-//!
-//! The template is the vendored `Demo Vitals term mapping.opt` with every
-//! `items` container read as `unique`, the composition the vendored
-//! `demo_vitals_352.json`, which validates clean against it.
+//! The `unique` cardinality modifier, evaluated as value equality (SPECAM-111;
+//! ADL 1.4 `master05-cadl.adoc`, ADL2 `master04.3` §Container attributes), over
+//! `Demo Vitals term mapping.opt` with every `items` read as `unique`.
 
 #![expect(
     clippy::expect_used,
