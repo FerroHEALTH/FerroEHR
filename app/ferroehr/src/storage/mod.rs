@@ -97,8 +97,8 @@ macro_rules! access_revision {
 /// grant, facts and binding revisions through `party_door.party_revisions()`,
 /// the one function of the party domain the clinical roles may run, where
 /// the two domains share a database (`party/0009`). One record, so a column
-/// of another type joins it as one more field. Only a request that rides
-/// selects it (`party_binding::request::ride`, #6320).
+/// of another type joins it as one more field. Only a ride that has not read
+/// them yet selects it (`party_binding::request::reads_door`, #6320).
 macro_rules! party_revisions {
     () => {
         "(SELECT ROW(pr.grants, pr.facts, pr.bindings) FROM party_door.party_revisions() pr) \

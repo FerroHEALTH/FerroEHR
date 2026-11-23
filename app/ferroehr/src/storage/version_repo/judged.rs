@@ -98,7 +98,7 @@ pub struct Judged {
 /// # Errors
 /// [`StorageError`] on a driver failure or a column that does not decode.
 pub async fn read_judged(pool: &PgPool, at: JudgedAt) -> Result<Option<Judged>, StorageError> {
-    let ride = crate::party_binding::request::riding();
+    let ride = crate::party_binding::request::reads_door();
     let (vo_id, query) = match at {
         JudgedAt::Current(vo_id) => {
             let sql = if ride {
@@ -189,7 +189,7 @@ pub async fn read_marks(
     vo_id: VoId,
     sys_version: i32,
 ) -> Result<Option<Marks>, StorageError> {
-    let sql = if crate::party_binding::request::riding() {
+    let sql = if crate::party_binding::request::reads_door() {
         MARKS_RIDE_SQL
     } else {
         MARKS_SQL

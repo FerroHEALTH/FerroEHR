@@ -146,7 +146,13 @@ impl Ridden {
 /// revisions are taken from the statements that read them. Inside a
 /// [`scope`] only.
 pub async fn ride<F: Future>(fut: F) -> (F::Output, Ridden) {
-    RIDE.scope(Ride::default(), async move {
+    // NOTE: our own design (#6320), revisions the request read before its ride (the token's
+    // standing) are what its copies are judged by, and no statement of the ride reads them again.
+    let ride = Ride {
+        read: Cell::new(READ.try_with(|held| held.get().copied()).ok().flatten()),
+        ..Ride::default()
+    };
+    RIDE.scope(ride, async move {
         let output = fut.await;
         let ridden = RIDE.with(|ride| {
             let observed = ride.observed.get();
@@ -167,6 +173,15 @@ pub async fn ride<F: Future>(fut: F) -> (F::Output, Ridden) {
 #[must_use]
 pub fn riding() -> bool {
     RIDE.try_with(|_| ()).is_ok()
+}
+
+/// Whether a statement of the running request selects the party store's
+/// revisions through `party_door.party_revisions()`: it rides and has not
+/// read them yet.
+#[must_use]
+pub fn reads_door() -> bool {
+    RIDE.try_with(|ride| ride.read.get().is_none())
+        .unwrap_or(false)
 }
 
 /// Notes that the running ride decided on the grants copy at `grants` and

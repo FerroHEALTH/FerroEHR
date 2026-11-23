@@ -292,7 +292,7 @@ pub async fn ehr_summary_read(
     pool: &PgPool,
     ehr_id: EhrId,
 ) -> Result<Option<EhrSummaryRead>, StorageError> {
-    let sql = if crate::party_binding::request::riding() {
+    let sql = if crate::party_binding::request::reads_door() {
         EHR_SUMMARY_RIDE_SQL
     } else {
         EHR_SUMMARY_SQL

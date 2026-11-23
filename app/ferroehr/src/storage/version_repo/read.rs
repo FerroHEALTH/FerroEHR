@@ -547,7 +547,7 @@ pub async fn read_one(
     at: VersionAt,
     body: Body,
 ) -> Result<Option<StoredVersion>, StorageError> {
-    let ride = crate::party_binding::request::riding();
+    let ride = crate::party_binding::request::reads_door();
     let sql = |plain: &'static str, ridden: &'static str| if ride { ridden } else { plain };
     let query = match at {
         VersionAt::Current(vo_id) => {
