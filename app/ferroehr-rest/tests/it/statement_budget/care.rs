@@ -47,11 +47,9 @@ const READ: Ceiling = Ceiling {
     wal: 0,
 };
 
-/// A query narrowed to the caller's caseload, measured over three runs
-/// (#6074): the bound and the care probe ride in its one clinical
-/// statement.
+/// A query narrowed to the caller's caseload (#6074, #6320).
 const CASELOAD: Ceiling = Ceiling {
-    round_trips: 5,
+    round_trips: 4,
     nested: 0,
     notifies: 0,
     wal: 0,
