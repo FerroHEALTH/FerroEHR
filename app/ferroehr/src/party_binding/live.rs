@@ -12,7 +12,7 @@
 //! to and its change set: the parties, the keys and the group issuers of the
 //! rows it wrote. Each replica drops the lookups whose key, group issuer or
 //! read parties the change set names, and holds the others at that revision
-//! ([`BindingCopy::apply`]); a change set it cannot apply in revision order
+//! (`BindingCopy::apply`); a change set it cannot apply in revision order
 //! drops every lookup. A write of a `PERSON`'s version drops its name. A
 //! listener that connects or loses its connection drops everything, and while
 //! it is down every request reads the store. A request whose own commit changed
