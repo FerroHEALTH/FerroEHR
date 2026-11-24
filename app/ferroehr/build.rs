@@ -137,21 +137,30 @@ fn main() {
     println!("cargo:rerun-if-env-changed=REVISION");
     println!("cargo:rerun-if-env-changed=FERROEHR_RELEASE_TAG");
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
-    // NOTE: in a linked worktree `.git` is a file, so a fixed `../../.git/HEAD`
-    // never exists and Cargo reran this script on every build; git names the
-    // real places (git-rev-parse `--git-dir`, `--git-common-dir`).
-    for (flag, entries) in [
-        ("--git-dir", &["HEAD"][..]),
-        ("--git-common-dir", &["refs", "packed-refs"][..]),
-    ] {
-        let Some(dir) = git_path(flag) else {
+    // NOTE: Cargo book build-scripts `rerun-if-changed`, a directory is scanned whole, so the
+    // script watches only `HEAD` and the one ref it names (#6512), as git places them
+    // (git-rev-parse `--git-dir`, `--git-common-dir`, `--symbolic-full-name`).
+    let head = git_rev_parse(&["--symbolic-full-name", "HEAD"]).filter(|name| name != "HEAD");
+    let git_dir = git_rev_parse(&["--path-format=absolute", "--git-dir"]);
+    let common = git_rev_parse(&["--path-format=absolute", "--git-common-dir"]);
+    let watched = [
+        (git_dir, Some("HEAD".to_owned())),
+        (common.clone(), head),
+        (common, Some("packed-refs".to_owned())),
+    ];
+    for (dir, entry) in watched {
+        let (Some(dir), Some(entry)) = (dir, entry) else {
             continue;
         };
-        for entry in entries {
-            let path = std::path::Path::new(&dir).join(entry);
-            if path.exists() {
-                println!("cargo:rerun-if-changed={}", path.display());
-            }
+        let path = std::path::Path::new(&dir).join(entry);
+        // A packed ref is written loose by its next commit, beside its siblings.
+        let path = if path.exists() {
+            Some(path)
+        } else {
+            path.parent().map(std::path::Path::to_path_buf)
+        };
+        if let Some(path) = path.filter(|path| path.exists()) {
+            println!("cargo:rerun-if-changed={}", path.display());
         }
     }
     // `sqlx::migrate!` cannot see a newly added file on stable, and the
@@ -161,11 +170,12 @@ fn main() {
     println!("cargo:rerun-if-changed=migrations");
 }
 
-/// The absolute path git reports for `flag` (`--git-dir` or
-/// `--git-common-dir`); `None` outside a git checkout or without git.
-fn git_path(flag: &str) -> Option<String> {
+/// What `git rev-parse` prints for `args`; `None` outside a git checkout or
+/// without git.
+fn git_rev_parse(args: &[&str]) -> Option<String> {
     Command::new("git")
-        .args(["rev-parse", "--path-format=absolute", flag])
+        .arg("rev-parse")
+        .args(args)
         .output()
         .ok()
         .filter(|o| o.status.success())
