@@ -64,7 +64,7 @@ A request below the floor is refused `401` with the RFC 9470 §3 step-up
 challenge, and the app sends the person back to FerroSMART to sign in at a
 higher level. The floor holds for professionals too. The whole setup behind
 FerroSMART, the `act_for_persons` grant FerroBRIDGE needs included, is on
-[Behind FerroSMART](behind-ferrosmart.md#the-patients-own-token-through-ferrobridge).
+[Behind FerroSMART](behind-ferrosmart.md).
 
 ## What FerroEHR serves the person
 
