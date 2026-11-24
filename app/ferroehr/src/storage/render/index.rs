@@ -85,7 +85,7 @@ pub struct Member {
 /// The compact canonical text of a value and the index of every value in it.
 #[derive(Debug, Clone)]
 pub struct Rendered {
-    text: Vec<u8>,
+    text: String,
     nodes: Vec<Node>,
     members: Vec<Member>,
     items: Vec<NodeId>,
@@ -111,8 +111,10 @@ pub fn render<T: Serialize + ?Sized>(value: &T) -> Result<Rendered, serde_json::
             "the rendered text is past the 4 GiB an index offset holds",
         ));
     }
+    let text = String::from_utf8(observer.out)
+        .map_err(<serde_json::Error as serde::ser::Error>::custom)?;
     Ok(Rendered {
-        text: observer.out,
+        text,
         nodes: observer.nodes,
         members: observer.members,
         items: observer.items,
@@ -123,13 +125,13 @@ pub fn render<T: Serialize + ?Sized>(value: &T) -> Result<Rendered, serde_json::
 impl Rendered {
     /// The compact canonical text.
     #[must_use]
-    pub fn text(&self) -> &[u8] {
+    pub fn text(&self) -> &str {
         &self.text
     }
 
     /// The compact canonical text, owned.
     #[must_use]
-    pub fn into_text(self) -> Vec<u8> {
+    pub fn into_text(self) -> String {
         self.text
     }
 
@@ -157,6 +159,12 @@ impl Rendered {
     /// The bytes of `id`.
     #[must_use]
     pub fn raw(&self, id: NodeId) -> &[u8] {
+        self.raw_text(id).as_bytes()
+    }
+
+    /// The text of `id`.
+    #[must_use]
+    pub fn raw_text(&self, id: NodeId) -> &str {
         self.node(id)
             .and_then(|n| self.text.get(n.span.range()))
             .unwrap_or_default()
@@ -189,15 +197,18 @@ impl Rendered {
     /// The name of `member`.
     #[must_use]
     pub fn key(&self, member: &Member) -> &str {
-        self.text
-            .get(member.key.range())
-            .and_then(|k| std::str::from_utf8(k).ok())
-            .unwrap_or_default()
+        self.text.get(member.key.range()).unwrap_or_default()
     }
 
     /// The whole bytes of `member`, `"name":value`.
     #[must_use]
     pub fn member_raw(&self, member: &Member) -> &[u8] {
+        self.member_text(member).as_bytes()
+    }
+
+    /// The whole text of `member`, `"name":value`.
+    #[must_use]
+    pub fn member_text(&self, member: &Member) -> &str {
         self.text.get(member.span.range()).unwrap_or_default()
     }
 
@@ -227,12 +238,10 @@ impl Rendered {
     /// string.
     #[must_use]
     pub fn str(&self, id: NodeId) -> Option<Cow<'_, str>> {
-        let raw = self.raw(id);
+        let raw = self.raw_text(id);
         match self.kind(id)? {
-            Kind::String => std::str::from_utf8(raw.get(1..raw.len().checked_sub(1)?)?)
-                .ok()
-                .map(Cow::Borrowed),
-            Kind::EscapedString => serde_json::from_slice::<String>(raw).ok().map(Cow::Owned),
+            Kind::String => raw.get(1..raw.len().checked_sub(1)?).map(Cow::Borrowed),
+            Kind::EscapedString => serde_json::from_str::<String>(raw).ok().map(Cow::Owned),
             Kind::Object | Kind::Array | Kind::Scalar => None,
         }
     }
@@ -295,6 +304,107 @@ impl Rendered {
             && self.get(id, "value").is_some_and(|v| {
                 self.is_string(v) && expected.is_none_or(|e| self.str(v).as_deref() == Some(e))
             })
+    }
+
+    /// Writes the RFC 8785 form of `id` to `out`, read off the rendering: the
+    /// members of each object in UTF-16 order of their names, a name given
+    /// twice with its last value, each number in its ECMAScript form, and
+    /// every string as written, since `serde_json` escapes as RFC 8785
+    /// §3.2.2.2 does.
+    ///
+    /// # Errors
+    /// A [`serde_json::Error`] for a number with no finite IEEE 754 double
+    /// form (RFC 8785 §3.2.2.3).
+    pub fn write_canonical(&self, id: NodeId, out: &mut String) -> Result<(), serde_json::Error> {
+        self.canonical_into(id, out, &mut Vec::new())
+    }
+
+    /// [`Self::write_canonical`] with `order`, the stack the members of the
+    /// open objects are sorted on.
+    fn canonical_into<'a>(
+        &'a self,
+        id: NodeId,
+        out: &mut String,
+        order: &mut Vec<(Cow<'a, str>, NodeId)>,
+    ) -> Result<(), serde_json::Error> {
+        use openehr_rm::v1_2::common::change_control::canonical_form_impl::{
+            utf16_order, write_number, write_string,
+        };
+        match self.kind(id) {
+            Some(Kind::Object) => {
+                let from = order.len();
+                order.extend(self.members(id).iter().map(|m| (self.name(m), m.value)));
+                if let Some(own) = order.get_mut(from..) {
+                    own.sort_by(|(a, _), (b, _)| utf16_order(a, b));
+                }
+                out.push('{');
+                let mut written = false;
+                for at in from..order.len() {
+                    let (Some((name, value)), next) = (order.get(at), order.get(at + 1)) else {
+                        break;
+                    };
+                    if next.is_some_and(|(next, _)| next == name) {
+                        continue;
+                    }
+                    if written {
+                        out.push(',');
+                    }
+                    written = true;
+                    match name {
+                        // NOTE: RFC 8785 §3.2.2.2, a name serde_json wrote without a
+                        // backslash holds nothing to escape.
+                        Cow::Borrowed(plain) => {
+                            out.push('"');
+                            out.push_str(plain);
+                            out.push('"');
+                        }
+                        Cow::Owned(escaped) => write_string(escaped, out),
+                    }
+                    out.push(':');
+                    let value = *value;
+                    self.canonical_into(value, out, order)?;
+                }
+                order.truncate(from);
+                out.push('}');
+            }
+            Some(Kind::Array) => {
+                out.push('[');
+                for (at, item) in self.items(id).iter().enumerate() {
+                    if at > 0 {
+                        out.push(',');
+                    }
+                    self.canonical_into(*item, out, order)?;
+                }
+                out.push(']');
+            }
+            Some(Kind::String | Kind::EscapedString) => out.push_str(self.raw_text(id)),
+            Some(Kind::Scalar) => match self.raw_text(id) {
+                literal @ ("true" | "false" | "null") => out.push_str(literal),
+                number => write_number(&number.parse()?, out)?,
+            },
+            None => {
+                return Err(<serde_json::Error as serde::ser::Error>::custom(
+                    "a value this rendering does not hold",
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// The name of `member`, unescaped.
+    fn name(&self, member: &Member) -> Cow<'_, str> {
+        let key = self.key(member);
+        if key.contains('\\') {
+            let key = member.key.range();
+            let quoted = key
+                .start
+                .checked_sub(1)
+                .and_then(|start| self.text.get(start..key.end.saturating_add(1)));
+            if let Some(Ok(name)) = quoted.map(serde_json::from_str::<String>) {
+                return Cow::Owned(name);
+            }
+        }
+        Cow::Borrowed(key)
     }
 }
 
@@ -589,11 +699,7 @@ mod tests {
             json!({ "a": { "b": { "c": [[{"d": "\\"}]] } } }),
         ] {
             let r = render(&doc).unwrap();
-            assert_eq!(
-                r.text(),
-                serde_json::to_vec(&doc).unwrap().as_slice(),
-                "{doc}"
-            );
+            assert_eq!(r.text(), serde_json::to_string(&doc).unwrap(), "{doc}");
             assert_eq!(rebuilt(&r, r.root()), doc);
             for m in r.members(r.root()) {
                 assert_eq!(
@@ -606,6 +712,28 @@ mod tests {
                     .as_bytes()
                 );
             }
+        }
+    }
+
+    /// The RFC 8785 form read off a rendering is the one built from its value.
+    #[test]
+    fn the_canonical_form_read_off_a_rendering_is_the_values() {
+        for doc in [
+            json!({ "z": 1, "é": 2, "a": { "y": [3, { "b": 1, "a": 0 }], "x": null }, "\u{10000}": true, "\u{ff61}": false }),
+            json!({ "n": [1.0, -0.0, 0.1, 1e21, 1e-7, 5e-324, f64::MAX, -12, 9_007_199_254_740_993_u64, 123_456_789_012_i64] }),
+            json!({ "s": "\"q\"\\\n\u{1}\u{1f}\u{7f}/\u{2028}é", "k\"ey": "v", "t\nab": 1 }),
+            json!([{ "b": [], "a": {} }, "x", 2.5]),
+            json!("only"),
+        ] {
+            let r = render(&doc).unwrap();
+            let mut read = String::new();
+            r.write_canonical(r.root(), &mut read).unwrap();
+            assert_eq!(
+                read,
+                openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json(&doc)
+                    .unwrap(),
+                "{doc}"
+            );
         }
     }
 }

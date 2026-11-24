@@ -264,7 +264,7 @@ struct Slimmed {
 struct Kept<'a> {
     member: &'a Member,
     /// The raw JSON of the value that replaces the member's own.
-    replaced: Option<&'a [u8]>,
+    replaced: Option<&'a str>,
 }
 
 impl<'a> Kept<'a> {
@@ -397,7 +397,7 @@ fn date_time_as_string<'a>(body: &'a Rendered, members: &mut [Kept<'a>], key: &s
     let Some(text) = body.get(value, "value") else {
         return false;
     };
-    kept.replaced = Some(body.raw(text));
+    kept.replaced = Some(body.raw_text(text));
     true
 }
 
@@ -420,29 +420,29 @@ fn fragment(body: &Rendered, members: &[Kept<'_>]) -> Option<String> {
     if last.is_empty() {
         return None;
     }
-    let mut out = Vec::with_capacity(
+    let mut out = String::with_capacity(
         last.iter()
             .map(|k| body.member_raw(k.member).len() + 1)
             .sum::<usize>()
             + 1,
     );
-    out.push(b'{');
+    out.push('{');
     for (i, kept) in last.iter().enumerate() {
         if i > 0 {
-            out.push(b',');
+            out.push(',');
         }
         match kept.replaced {
-            None => out.extend_from_slice(body.member_raw(kept.member)),
+            None => out.push_str(body.member_text(kept.member)),
             Some(value) => {
-                out.push(b'"');
-                out.extend_from_slice(body.key(kept.member).as_bytes());
-                out.extend_from_slice(b"\":");
-                out.extend_from_slice(value);
+                out.push('"');
+                out.push_str(body.key(kept.member));
+                out.push_str("\":");
+                out.push_str(value);
             }
         }
     }
-    out.push(b'}');
-    String::from_utf8(out).ok()
+    out.push('}');
+    Some(out)
 }
 
 /// The `rm_version` of an `archetype_details` the header columns rebuild
@@ -539,8 +539,7 @@ fn string(body: &Rendered, fields: NodeId, key: &str) -> Option<String> {
 fn number(body: &Rendered, fields: NodeId, key: &str) -> Option<String> {
     let value = body.get(fields, key)?;
     body.is_number(value)
-        .then(|| std::str::from_utf8(body.raw(value)).ok().map(str::to_owned))
-        .flatten()
+        .then(|| body.raw_text(value).to_owned())
 }
 
 /// The typed form of an `ELEMENT.value` ([`crate::storage::slim`]).

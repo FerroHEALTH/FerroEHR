@@ -165,7 +165,7 @@ impl ReadySet<'_> {
         for ((ready, _, head), audit) in prepared.iter().zip(&audits) {
             rows.push(SetMember {
                 audit: audit.row(),
-                version: ready.folded()?,
+                version: ready.folded(),
                 expected_head: *head,
             });
         }

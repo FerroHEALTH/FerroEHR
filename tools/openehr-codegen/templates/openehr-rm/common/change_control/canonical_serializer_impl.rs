@@ -96,15 +96,33 @@ impl CanonicalObject {
     /// Adds the member `name` whose value is `canonical`, a canonical form
     /// this module wrote.
     pub fn member_canonical(&mut self, name: &str, canonical: &str) {
+        let written: Result<(), std::convert::Infallible> = self.member_written(name, |out| {
+            out.push_str(canonical);
+            Ok(())
+        });
+        let Ok(()) = written;
+    }
+
+    /// Adds the member `name` whose value `write` appends to the form, in
+    /// RFC 8785 canonical form.
+    ///
+    /// # Errors
+    /// The error of `write`, which leaves the object unfinished.
+    pub fn member_written<E>(
+        &mut self,
+        name: &str,
+        write: impl FnOnce(&mut String) -> Result<(), E>,
+    ) -> Result<(), E> {
         let mut object = self.object();
         let from = object.canonical.names.len();
         object.canonical.names.push_str(name);
         object.named(from);
         if let Pending::Member(name, at) = std::mem::take(&mut object.pending) {
-            object.canonical.out.push_str(canonical);
+            write(&mut object.canonical.out)?;
             let text = at..object.canonical.out.len();
             object.canonical.members.push(Member { name, text });
         }
+        Ok(())
     }
 
     /// Whether no member was added.
@@ -354,6 +372,7 @@ impl Object<'_, '_> {
         }
         own.sort_by(|a, b| utf16_order(name(a), name(b)));
         scratch.clear();
+        scratch.reserve(out.len().saturating_sub(self.start));
         scratch.push('{');
         let mut written = 0_usize;
         for (index, member) in own.iter().enumerate() {
