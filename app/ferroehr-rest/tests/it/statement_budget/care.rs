@@ -78,7 +78,7 @@ const COMMIT: Ceiling = Ceiling {
 
 /// A care relationship's commit, then the caseload query that reads the copy it kept (#6074).
 const RECARE: Ceiling = Ceiling {
-    round_trips: 33,
+    round_trips: 32,
     nested: COMMIT.nested + CASELOAD.nested,
     notifies: COMMIT.notifies + CASELOAD.notifies,
     wal: COMMIT.wal + CASELOAD.wal,
