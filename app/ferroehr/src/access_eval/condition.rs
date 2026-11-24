@@ -111,13 +111,9 @@ pub struct EhrEntry {
 pub struct Judgement {
     /// The verdict.
     pub verdict: Arc<Verdict>,
-    /// The settings it was judged on.
-    pub settings: Arc<Option<EhrAccessSettings>>,
-    /// The uid of the `EHR_ACCESS` version that carries them; `None` when
-    /// it could not be read.
-    pub version: Option<String>,
-    /// The revision of the settings row they were read from.
-    pub revision: Revision,
+    /// The entry it was judged on: the settings, the version that carries
+    /// them and the revision of the row they were read from.
+    pub entry: Arc<EhrEntry>,
 }
 
 /// What the access record of a request names beside the verdicts: the
@@ -471,7 +467,7 @@ impl RequestAccess {
     pub async fn judge_ehr(
         &self,
         ehr_id: EhrId,
-        entry: &EhrEntry,
+        entry: &Arc<EhrEntry>,
     ) -> Result<Arc<Verdict>, CareUnsettled> {
         let judged = stage::instrument(Stage::Access, self.judged(ehr_id, entry)).await?;
         let verdict = Arc::clone(&judged.verdict);
@@ -494,7 +490,11 @@ impl RequestAccess {
     ///
     /// # Errors
     /// As [`Self::judge_ehr`].
-    pub async fn judge_ahead(&self, ehr_id: EhrId, entry: &EhrEntry) -> Result<(), CareUnsettled> {
+    pub async fn judge_ahead(
+        &self,
+        ehr_id: EhrId,
+        entry: &Arc<EhrEntry>,
+    ) -> Result<(), CareUnsettled> {
         let judged = stage::instrument(Stage::Access, self.judged(ehr_id, entry)).await?;
         self.ahead
             .lock()
@@ -515,7 +515,7 @@ impl RequestAccess {
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .remove(&ehr_id)
-            .filter(|judged| judged.revision == *seen)?;
+            .filter(|judged| judged.entry.revision == *seen)?;
         let verdict = Arc::clone(&judged.verdict);
         self.verdicts
             .lock()
@@ -526,7 +526,11 @@ impl RequestAccess {
 
     /// The judgement of the EHR `ehr_id` as `entry` reads it, with the
     /// caller's care read and confirmed as [`Self::judge_ehr`] describes.
-    async fn judged(&self, ehr_id: EhrId, entry: &EhrEntry) -> Result<Judgement, CareUnsettled> {
+    async fn judged(
+        &self,
+        ehr_id: EhrId,
+        entry: &Arc<EhrEntry>,
+    ) -> Result<Judgement, CareUnsettled> {
         self.bind_subject(ehr_id, entry).await?;
         let mut care = self.care_for(entry).await?;
         if care.live()
@@ -545,12 +549,10 @@ impl RequestAccess {
 
     /// The judgement of the EHR `ehr_id` as `entry` reads it, the caller's
     /// care for its subject read as `care`.
-    fn judgement_of(&self, ehr_id: EhrId, entry: &EhrEntry, care: &Cared) -> Judgement {
+    fn judgement_of(&self, ehr_id: EhrId, entry: &Arc<EhrEntry>, care: &Cared) -> Judgement {
         Judgement {
             verdict: Arc::new(self.judge(Some(ehr_id), (*entry.settings).as_ref(), care)),
-            settings: Arc::clone(&entry.settings),
-            version: entry.version.clone(),
-            revision: entry.revision.clone(),
+            entry: Arc::clone(entry),
         }
     }
 
@@ -579,7 +581,7 @@ impl RequestAccess {
             (true, Some(tie)) if !self.may_hold_care() => Cared::of(vec![tie]),
             (true, _) => left,
         };
-        let judged = self.judgement_of(ehr_id, &entry, &care);
+        let judged = self.judgement_of(ehr_id, &Arc::new(entry), &care);
         self.verdicts
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
@@ -617,7 +619,7 @@ impl RequestAccess {
         let Some(judged) = self.judgement(ehr_id) else {
             return false;
         };
-        if judged.revision == *seen {
+        if judged.entry.revision == *seen {
             return false;
         }
         tracing::warn!(

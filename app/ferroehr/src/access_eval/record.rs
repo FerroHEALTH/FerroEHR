@@ -337,8 +337,8 @@ impl RequestAccess {
     ) {
         let verdict = &judged.verdict;
         let found = &verdict.grounds;
-        let directives = directives_of((*judged.settings).as_ref());
-        let version = judged.version.as_deref();
+        let directives = directives_of((*judged.entry.settings).as_ref());
+        let version = judged.entry.version.as_deref();
         let directive = |at: usize, kind: Option<Authorisation>| {
             directives
                 .get(at)
@@ -370,7 +370,7 @@ impl RequestAccess {
                 ..self.policy_ground(Authorisation::ConflictAllowance)
             }));
         }
-        let exclusions = exclusions_of((*judged.settings).as_ref());
+        let exclusions = exclusions_of((*judged.entry.settings).as_ref());
         grounds.extend(found.lifted_exclusions.iter().filter_map(|(at, _)| {
             exclusions
                 .get(*at)
@@ -457,7 +457,7 @@ impl RequestAccess {
     /// The refusal `noted` names, with what decided it.
     fn refused(&self, noted: &Noted, judged: Option<&Judgement>) -> Refused {
         let step = Step::of(noted.refusal);
-        let version = judged.and_then(|judged| judged.version.as_deref());
+        let version = judged.and_then(|judged| judged.entry.version.as_deref());
         let carrier = || {
             version.map_or_else(
                 || EHR_ACCESS.to_owned(),
@@ -656,7 +656,7 @@ fn exclusions_of(settings: Option<&EhrAccessSettings>) -> &[AccessDirective] {
 
 /// The settings `judged` was judged on.
 fn settings_of(judged: Option<&Judgement>) -> Option<&EhrAccessSettings> {
-    judged.and_then(|judged| (*judged.settings).as_ref())
+    judged.and_then(|judged| (*judged.entry.settings).as_ref())
 }
 
 /// The ground the directive at `at` gives, of `kind`, or by its directive
