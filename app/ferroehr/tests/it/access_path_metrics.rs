@@ -60,6 +60,7 @@ fn request(emergency: Emergency) -> Arc<RequestAccess> {
             operation: OperationClass::Read,
             purpose: None,
             emergency,
+            episodes: None,
         },
         InForce {
             policy: None,

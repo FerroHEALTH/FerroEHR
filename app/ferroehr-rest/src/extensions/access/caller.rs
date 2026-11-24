@@ -32,6 +32,7 @@ use ferroehr::ids::EhrId;
 use ferroehr::party_binding::grants::agreement::Accessor;
 use ferroehr::party_binding::grants::capabilities::Capabilities;
 use ferroehr::party_binding::grants::operation::Operation;
+use ferroehr::versioning::episode::EpisodeKey;
 use ferrohealth_smart::federation::{Attribute, Field};
 use ferrohealth_smart::kind::CallerKind as SmartKind;
 use ferrohealth_smart::openehr;
@@ -71,6 +72,7 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
         operation: operation_class(op),
         emergency: emergency(state, principal, kind, purpose.as_deref()),
         purpose,
+        episodes: launched_episode(state, principal).map(|episode| Arc::from([episode])),
     };
     let server_default = state
         .authz()
@@ -94,6 +96,31 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
             .with_record_facts(record)
             .with_stale_copies(backend.stale_ehr_access_copies()),
     ))
+}
+
+/// The episode of care the request's SMART on openEHR launch context names:
+/// the token's `episodeId`, read as `issuer|id`, while `[auth.smart]
+/// episode_launch` holds (ITS-REST, SMART App Launch, Experimental: Episode
+/// Context leaves its meaning to the platform; draft access control, ITS-REST,
+/// Queries and the Caseload reads it as `caseload_episodes`).
+fn launched_episode(state: &AppState, principal: Option<&Principal>) -> Option<EpisodeKey> {
+    if !state.config().auth.smart.episode_launch {
+        return None;
+    }
+    let claim = principal?.access.caller()?.claim(EPISODE_CLAIM)?;
+    Some(episode_of(claim.as_str().unwrap_or_default()))
+}
+
+/// The claim of an access token that carries the SMART on openEHR episode
+/// launch context (ITS-REST, SMART App Launch, Experimental: Episode Context).
+const EPISODE_CLAIM: &str = "episodeId";
+
+/// The episode `named` spells as `issuer|id`; a value of another form, or a
+/// claim that is no string, names the episode of a blank issuer and id, which
+/// no composition is placed in.
+fn episode_of(named: &str) -> EpisodeKey {
+    let (issuer, id) = named.split_once('|').unwrap_or(("", ""));
+    EpisodeKey::of(issuer, id)
 }
 
 /// The evaluator's caller of the running request, as the access log's

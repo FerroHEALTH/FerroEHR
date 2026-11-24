@@ -244,6 +244,7 @@ struct Ask {
     cared: Vec<EhrSubject>,
     default: AccessDefault,
     emergency: Emergency,
+    episodes: Option<Arc<[ferroehr::versioning::episode::EpisodeKey]>>,
 }
 
 impl Ask {
@@ -281,6 +282,7 @@ impl Ask {
             cared: Vec::new(),
             default: AccessDefault::Open,
             emergency: Emergency::default(),
+            episodes: None,
         }
     }
 }
@@ -293,6 +295,7 @@ fn request_of(ask: &Ask) -> Arc<RequestAccess> {
             operation: OperationClass::Query,
             purpose: ask.purpose.map(str::to_owned),
             emergency: ask.emergency,
+            episodes: ask.episodes.clone(),
         },
         InForce {
             policy: ask.policy.clone().map(Arc::new),
@@ -1788,6 +1791,33 @@ async fn an_episode_scope_reads_the_episodes_of_the_trunk_head() {
     );
     let unplaced = world.objects(0)[0].clone();
     assert!(![&dermatology, &cardiology].contains(&&unplaced));
+    assert!(
+        world.reads(&ask, 0, &unplaced).await,
+        "an unplaced composition"
+    );
+}
+
+/// A request narrowed to an episode, as a SMART on openEHR launch in it is,
+/// reads the compositions of that episode and those placed in none, by every
+/// query shape and by a named read, and no composition of another episode
+/// (#6417).
+#[tokio::test]
+async fn a_request_narrowed_to_an_episode_reads_that_episode_and_the_unplaced() {
+    let mut world = Box::pin(World::new()).await;
+    let dermatology = world.place(0, "D-4").await;
+    let cardiology = world.place(1, "C-17").await;
+    let mut ask = Ask::professional(&world);
+    ask.episodes = Some(Arc::from([ferroehr::versioning::episode::EpisodeKey::of(
+        HOSPITAL, "C-17",
+    )]));
+    let expected = except(&world, &[], &[&dermatology]);
+    assert_reads(&world, &ask, &expected, "the cardiology launch").await;
+    assert!(
+        world.reads(&ask, 1, &cardiology).await,
+        "the launched episode"
+    );
+    assert!(!world.reads(&ask, 0, &dermatology).await, "another episode");
+    let unplaced = world.objects(0)[0].clone();
     assert!(
         world.reads(&ask, 0, &unplaced).await,
         "an unplaced composition"

@@ -179,6 +179,51 @@ impl RequestAccess {
         })
     }
 
+    /// Refuses a caseload for this request where the policy turns it off or
+    /// the declared purpose is no care purpose
+    /// ([`crate::access_eval::caseload::allowed`]).
+    ///
+    /// # Errors
+    /// [`crate::access_eval::caseload::Refused`].
+    pub fn caseload_allowed(&self) -> Result<(), crate::access_eval::caseload::Refused> {
+        crate::access_eval::caseload::allowed(self.policy.as_deref(), self.purpose.as_deref())
+    }
+
+    /// The namespace this CDR names its parties under; empty with no caller
+    /// facts copy.
+    #[must_use]
+    pub fn party_namespace(&self) -> Arc<str> {
+        self.grants
+            .as_ref()
+            .map_or_else(|| Arc::from(""), |grants| grants.namespace())
+    }
+
+    /// Whether the request is narrowed to episodes of care.
+    #[must_use]
+    pub fn narrowed(&self) -> bool {
+        self.episodes.is_some()
+    }
+
+    /// Whether a live care relationship of the caller names each episode the
+    /// request is narrowed to, as `caseload_episodes` requires of its
+    /// episodes (draft ITS-REST page, Queries and the Caseload); `true` for a
+    /// request that is not narrowed.
+    ///
+    /// # Errors
+    /// [`GrantsUnavailable`] when the care copy misses and cannot read.
+    pub async fn narrowed_held(&self) -> Result<bool, GrantsUnavailable> {
+        let Some(episodes) = self.episodes.as_deref() else {
+            return Ok(true);
+        };
+        let cared = self.cared_subjects().await?;
+        let named: std::collections::BTreeSet<_> = cared
+            .iter()
+            .flat_map(|cared| cared.ties.iter())
+            .filter_map(Tie::episode)
+            .collect();
+        Ok(episodes.iter().all(|key| named.contains(key)))
+    }
+
     /// The data `ACCESS_POLICY.episode_shared` names, read over an object's
     /// own facts.
     #[must_use]

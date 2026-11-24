@@ -257,3 +257,54 @@ fn step_8_admits_a_datum_only_through_a_relationship_that_covers_it() {
         assert_outcome(&verdict, item, outcome, name);
     }
 }
+
+/// A request narrowed to the cardiology episode, as a SMART on openEHR
+/// launch in that episode is (#6417), reads the EHR, the unplaced data, the
+/// episode's data and the data `episode_shared` names, and is refused
+/// `refused-outside-episode` the rest; a refusal of another step keeps its
+/// answer, so a restricted datum outside the episode still reads as absent.
+#[test]
+fn a_request_narrowed_to_an_episode_reads_its_episode_and_the_unplaced_and_shared_data() {
+    let both = both();
+    let narrowed = Asked {
+        episodes: Some(&CARDIOLOGY_EPISODE[..]),
+        ..read(None)
+    };
+    let outside = Outcome::Refused(Refusal::OutsideEpisode);
+    let case = Case::of(settings("open", &[], &[], &[]));
+    let verdict = case.verdict(&professional(NURSE), narrowed);
+    let expected = [
+        Outcome::Admit,
+        Outcome::Admit,
+        Outcome::Admit,
+        outside,
+        Outcome::Admit,
+    ];
+    for ((name, item), outcome) in items(&both).iter().zip(expected) {
+        assert_outcome(&verdict, item, outcome, name);
+    }
+    let shared = Case {
+        policy: Some(policy(&json!({ "episode_shared": [
+            { "_type": "ACCESS_DATA_SCOPE", "templates": ["lab_hiv.v1"] }] }))),
+        ..Case::of(settings("open", &[], &[], &[]))
+    };
+    let verdict = shared.verdict(&professional(NURSE), narrowed);
+    let lab = placed(OTHER, Some("lab_hiv.v1"), &DERMATOLOGY_EPISODE[..]);
+    let note = placed(OTHER, Some("vitals.v1"), &DERMATOLOGY_EPISODE[..]);
+    assert_outcome(&verdict, &lab, Outcome::Admit, "shared across episodes");
+    assert_outcome(&verdict, &note, outside, "not shared");
+    let restricted = Case::of(settings(
+        "open",
+        &[directive(
+            "restriction",
+            "deny",
+            &json!({ "data": [episodes(&["D-4"])] }),
+        )],
+        &[],
+        &[],
+    ));
+    let verdict = restricted.verdict(&professional(NURSE), narrowed);
+    assert_outcome(&verdict, &note, ABSENT_RESTRICTED, "restricted and outside");
+    let subject = case.verdict(&caller(CallerKind::Subject, NURSE), narrowed);
+    assert_outcome(&subject, &note, outside, "the subject's launch narrows too");
+}

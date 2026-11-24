@@ -61,6 +61,10 @@ const CASELOAD: Ceiling = Ceiling {
 /// relationship is scoped to (#6414): the same statements as [`READ`].
 const EPISODE_READ: Ceiling = READ;
 
+/// A care-gated read of a session launched in an episode (#6417): the
+/// launched episode is checked against the care copy the read holds.
+const LAUNCHED_READ: Ceiling = READ;
+
 /// A caseload query of a caller whose one live relationship is scoped to an
 /// episode (#6415): the coverage rides in its one clinical statement.
 const EPISODE_CASELOAD: Ceiling = CASELOAD;
@@ -99,6 +103,9 @@ enum Kind {
     /// Dr Jansen's caseload query, once her one live relationship to Eva is
     /// scoped to the cardiology episode.
     EpisodeCaseload,
+    /// Dr Jansen's read of a note in the cardiology episode in a SMART on
+    /// openEHR session launched in it.
+    LaunchedRead,
 }
 
 impl Kind {
@@ -110,6 +117,7 @@ impl Kind {
             Self::Recare => "care relationship commit, then the caseload query",
             Self::EpisodeRead => "care-gated read in an episode",
             Self::EpisodeCaseload => "caseload query under an episode relationship",
+            Self::LaunchedRead => "care-gated read in a launched episode",
         }
     }
 
@@ -121,12 +129,29 @@ impl Kind {
             Self::Recare => RECARE,
             Self::EpisodeRead => EPISODE_READ,
             Self::EpisodeCaseload => EPISODE_CASELOAD,
+            Self::LaunchedRead => LAUNCHED_READ,
         }
     }
 
     /// The request, its expected status and a check of the body.
     fn request(self, world: &World) -> (http::Request<axum::body::Body>, StatusCode) {
         match self {
+            Self::LaunchedRead => (
+                common::req(
+                    "GET",
+                    format!(
+                        "{BASE}/ehr/{}/composition/{}",
+                        world.ehr, world.encounter.vo
+                    ),
+                )
+                .auth(crate::hospital::episode_launch::jansen(Some(
+                    "urn:sint-example:episodes|C-17",
+                )))
+                .accept("application/json")
+                .header(PURPOSE, "TREAT")
+                .build(),
+                StatusCode::OK,
+            ),
             Self::Read | Self::EpisodeRead => (
                 common::req(
                     "GET",
@@ -234,6 +259,17 @@ async fn a_care_gated_read_in_an_episode_stays_within_its_statement_budget() {
     );
 }
 
+/// A care-gated read in a launched episode stays within its ceiling (#6417).
+#[tokio::test]
+async fn a_care_gated_read_in_a_launched_episode_stays_within_its_statement_budget() {
+    let (report, kept) = measured(Kind::LaunchedRead).await;
+    eprintln!("{report}");
+    assert!(
+        kept,
+        "a care-gated read in a launched episode exceeds its budget:\n{report}"
+    );
+}
+
 /// A caseload query under an episode relationship stays within its ceiling
 /// (#6415).
 #[tokio::test]
@@ -262,6 +298,16 @@ async fn measured(kind: Kind) -> (String, bool) {
     if matches!(kind, Kind::EpisodeRead | Kind::EpisodeCaseload) {
         scoped_to_an_episode(&mut world).await;
     }
+    let _launched = if matches!(kind, Kind::LaunchedRead) {
+        crate::hospital::episodes::relate_in(&world, "Cardiology", "C-17").await;
+        world.encounter = crate::hospital::episodes::placed(&world, "jansen", "C-17").await;
+        let (svc, app, drain) = crate::hospital::episode_launch::launching(&world).await;
+        super::listening(&world.db, &svc).await;
+        world.app = app;
+        Some((svc, drain))
+    } else {
+        None
+    };
     super::listening(&world.db, &world.svc).await;
     for extension in ["pg_stat_statements", "pg_walinspect"] {
         sqlx::query(sqlx::AssertSqlSafe(format!(

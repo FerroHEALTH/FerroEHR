@@ -4,16 +4,17 @@
 //! Whether a read selects the episodes of care each object is placed in.
 //!
 //! An `ACCESS_DATA_SCOPE` and a care relationship may name episodes (draft
-//! access control, Episodes of Care). A read selects the head row's episodes
-//! beside the other facts the evaluator judges an object by only once this
-//! replica has read settings or a policy that name one, or for a caller one
-//! of whose principals a relationship scoped to an episode may target, so a
+//! access control, Episodes of Care), and a request may be narrowed to them.
+//! A read selects the head row's episodes beside the other facts the
+//! evaluator judges an object by only once this replica has read settings or
+//! a policy that name one, for a narrowed request, or for a caller one of
+//! whose principals a relationship scoped to an episode may target, so a
 //! deployment and a caller that name none run the statements they ran
 //! before. A copy or class read later that names one turns the selection on
 //! for every later read; an object read without its episodes is judged by
 //! the fact's polarity ([`crate::access_eval::scope`]), and is covered by no
 //! relationship scoped to an episode. No openEHR spec governs this: our own
-//! design (#6414, #6416).
+//! design (#6414, #6416, #6417).
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -29,7 +30,8 @@ static NAMED: AtomicBool = AtomicBool::new(false);
 #[must_use]
 pub fn selected() -> bool {
     NAMED.load(Ordering::Acquire)
-        || crate::access_eval::condition::current().is_some_and(|access| access.episodic())
+        || crate::access_eval::condition::current()
+            .is_some_and(|access| access.narrowed() || access.episodic())
 }
 
 /// Notes `settings`, which this replica is about to judge by.

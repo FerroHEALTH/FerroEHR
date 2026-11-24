@@ -160,6 +160,7 @@ impl Reader {
             operation: OperationClass::Read,
             purpose: self.purpose.map(str::to_owned),
             emergency: Emergency::default(),
+            episodes: None,
         };
         let in_force = InForce {
             policy: self.policy.clone().map(Arc::new),
