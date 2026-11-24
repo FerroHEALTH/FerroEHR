@@ -176,6 +176,13 @@ struct Member {
     text: Range<usize>,
 }
 
+/// The [`Sorted`] objects room is made for when the first is recorded,
+/// enough for a version's signed form without growing.
+const SORTED_OBJECTS: usize = 32;
+
+/// The member texts room is made for when the first object is recorded.
+const SORTED_MEMBERS: usize = 256;
+
 /// An object whose members the canonical form writes in another order.
 #[derive(Debug)]
 struct Sorted {
@@ -438,6 +445,10 @@ impl Object<'_, '_> {
             .zip(own.iter().skip(1))
             .all(|(a, b)| utf16_order(name(a), name(b)) == Ordering::Less);
         if !ordered {
+            if sorted.capacity() == 0 {
+                sorted.reserve(SORTED_OBJECTS);
+                sorted_texts.reserve(SORTED_MEMBERS);
+            }
             own.sort_by(|a, b| utf16_order(name(a), name(b)));
             let from = sorted_texts.len();
             for (index, member) in own.iter().enumerate() {
