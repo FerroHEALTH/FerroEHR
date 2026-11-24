@@ -1,0 +1,1 @@
+- An aggregated AQL query, such as a `COUNT` over a large caseload, no longer spends time quadratic in the EHRs it counted before it answers: the EHRs one result row names are counted in constant time each. A count over the compositions of a 50,000-patient caseload fell from 4.6 to 7.8 s to 1.2 s in a local debug build, now about the time of its SQL statement.
