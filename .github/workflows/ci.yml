@@ -1722,8 +1722,12 @@ jobs:
   # the `budget` profile is the release profile without LTO. The `test` lane
   # runs the same test in a debug build, where it reports and judges nothing.
   cpu-budget:
-    name: hot-path CPU budget (optimised)
+    name: hot-path CPU budget (optimised) ${{ matrix.round }}
     needs: changes
+    strategy:
+      fail-fast: false
+      matrix:
+        round: [1, 2, 3, 4, 5, 6]
     if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'cpu-budget'))
     runs-on: ubuntu-latest
     # Room for the optimised test binary built on a cold cache on a busy runner
