@@ -1257,7 +1257,9 @@ which is what makes an optional stage safe to disable:
    subject reference that names the `PERSON`; the EHR row carries the digest
    of its own reference, written with it, and both digest columns are held to
    32 octets. A subject reference is a pseudonym, so the digest needs no key
-   (#6092, `clinical/0056`). The probe binds
+   (#6092, `clinical/0056`). `episode_digest` holds the key of the
+   relationship's episode, `NULL` when it names none, in the caseload
+   index's `INCLUDE` (#6412). The probe binds
    the caller's team ids, the day and the grace, one index probe per EHR row.
    A replica reads the projection only while the party snapshot it was read
    under covers the one the facts the replica holds were read under, so a
@@ -1847,6 +1849,24 @@ erasure move the grant revision, which reads every fact again. Migration
 `party/0042` returns the grant revision to the never-filled state, so the
 next boot refills the facts of the `ROLE`s already stored before it serves,
 with no command run (#5675).
+A care relationship's `episode` element (draft access control package,
+Episodes of Care) is kept in `binding_caller_fact.episode_issuer` and
+`episode_id`, both or neither, on an `under_care_of` row only (#6412). Only
+the care reads select them, a commit binds them only when a fact names an
+episode, and a fact without one compares by the text it had, so a commit or
+a read of no episode moves the same bytes. `CareOf`, the tie and the census
+carry the episode with its key, SHA-256 of issuer, `0x00` and id, and the
+access record's care ground names its `DV_IDENTIFIER`. A relationship the
+first covering `relationship_validity` entry marks `episode_required` is
+refused `422` without one. A COMPOSITION placed in an episode no care
+relationship of its EHR's subject names, live or ended, is refused `422`:
+a commit, a CONTRIBUTION member and an update read the placement off the
+body before the clinical transaction and, only when it is placed, the
+subject from the EHR's access copy and its episodes from the care copy, so
+no party read waits while a clinical connection is held; an EHR Extract
+import judges against the store and the extract's demographics chapter, and
+an archive load against the store and its demographic segments, before
+either writes. **Our own design.**
 `Capabilities::facts()` gives a request's caller its roles and care teams in
 force. The replica's copy holds the facts of callers
 alone: a patient's `under_care_of` relationships grow with the record, so
