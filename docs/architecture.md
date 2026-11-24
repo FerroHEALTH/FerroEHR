@@ -242,7 +242,10 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   (`orphan_nodes`), and `node_version_integrity` holds the invariant across
   commit, delete, archive, erasure and decommissioning. The per-EHR class index
   `idx_node_hot_ehr_type` leaves out the ELEMENT rows, which are reached
-  through the nested-set range of the primary key, and the subsumption index
+  through the nested-set range of the primary key, and the data-structure
+  classes (`ITEM_*`, `HISTORY`, the events, `EVENT_CONTEXT`, `ACTIVITY`), which
+  no read enters through; `idx_node_hot_value_search` keeps only the rows with
+  a search text; the subsumption index
   `idx_node_hot_arch_subsume` keeps only the rows with a parsed archetype id;
   the AQL emitter writes RM types as literals so a generic plan proves the
   partial predicates. What partitions buy over the former mirror tables:

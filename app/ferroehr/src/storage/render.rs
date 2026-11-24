@@ -63,7 +63,7 @@ pub fn decompose<T: Serialize + ?Sized>(
 #[must_use]
 pub fn content_digest(body: &Rendered) -> [u8; 32] {
     use sha2::Digest as _;
-    let text = body.text();
+    let text = body.text().as_bytes();
     let mut digest = sha2::Sha256::new();
     let uid = body
         .members(body.root())

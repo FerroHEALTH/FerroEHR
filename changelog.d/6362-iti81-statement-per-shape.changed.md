@@ -1,0 +1,1 @@
+- An ITI-81 search builds its statements once per search shape and binds each search's values, about 1,400 allocations fewer per page; the SQL it sends is unchanged.

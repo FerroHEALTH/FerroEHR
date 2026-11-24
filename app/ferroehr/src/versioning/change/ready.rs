@@ -219,7 +219,7 @@ impl Ready {
         let statement = folded_shape(
             ContributionCtx::New(Some(guard)),
             prepared.contribution_id,
-            prepared.folded()?,
+            prepared.folded(),
             ctx,
             &committed,
         );
