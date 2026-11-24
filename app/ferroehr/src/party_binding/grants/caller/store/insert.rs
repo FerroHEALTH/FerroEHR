@@ -14,7 +14,8 @@
 use serde_json::Value;
 use uuid::Uuid;
 
-use super::super::care_of::{CareFact, Cover};
+use super::super::care_of::CareFact;
+use super::super::care_ref::{Cover, Episode};
 use super::super::{CallerFact, FactValue};
 use super::{FACT_TEXT, HOLDER_VERSION, WRITER};
 use crate::party_binding::grants::derive::Bound;
@@ -62,6 +63,42 @@ fn covers_of<'a>(facts: &[&'a CallerFact]) -> CoversColumns<'a> {
     )
 }
 
+/// The issuer and the id of the episode each of a set of facts names.
+type EpisodeColumns<'a> = (Vec<Option<&'a str>>, Vec<Option<&'a str>>);
+
+/// The [`EpisodeColumns`] of `facts`, each `None` for a fact that names none;
+/// `None` when no fact names one, so the insert names no episode column.
+fn episodes_of<'a>(facts: &[&'a CallerFact]) -> Option<EpisodeColumns<'a>> {
+    let episodes: Vec<Option<&Episode>> = facts
+        .iter()
+        .map(|f| care_of(f).and_then(|care| care.episode.as_ref()))
+        .collect();
+    episodes.iter().any(Option::is_some).then(|| {
+        episodes
+            .iter()
+            .map(|e| e.map(|e| (e.issuer.as_str(), e.id.as_str())))
+            .map(|pair| (pair.map(|p| p.0), pair.map(|p| p.1)))
+            .unzip()
+    })
+}
+
+/// The container each of `facts` targets and, for a care relationship, the
+/// carer's RM type; each `None` for a fact that has none.
+fn targets_of(facts: &[&CallerFact]) -> (Vec<Option<Uuid>>, Vec<Option<&'static str>>) {
+    facts
+        .iter()
+        .map(|f| {
+            let target = match &f.value {
+                FactValue::Team(team) => Some(*team),
+                FactValue::Care(care) => Some(care.carer),
+                FactValue::Kin(kin) => Some(kin.person),
+                FactValue::Code(_) => None,
+            };
+            (target, care_of(f).map(|care| care.kind.rm_type()))
+        })
+        .unzip()
+}
+
 /// The issuer and the id of the provider each of `facts` names, each `None`
 /// for a fact that is no care relationship.
 fn providers_of<'a>(facts: &[&'a CallerFact]) -> (Vec<Option<&'a str>>, Vec<Option<&'a str>>) {
@@ -70,6 +107,21 @@ fn providers_of<'a>(facts: &[&'a CallerFact]) -> (Vec<Option<&'a str>>, Vec<Opti
         .map(|f| care_of(f).map(|care| (care.provider.issuer.as_str(), care.provider.id.as_str())))
         .map(|pair| (pair.map(|p| p.0), pair.map(|p| p.1)))
         .unzip()
+}
+
+/// The insert's column list, select list, `unnest` arguments and alias list
+/// entries of the episode columns, empty when `named` is false.
+const fn episode_sql(named: bool) -> [&'static str; 4] {
+    if named {
+        [
+            ", episode_issuer, episode_id",
+            ", t.episode_issuer, t.episode_id",
+            ", $21::text[], $22::text[]",
+            ", episode_issuer, episode_id",
+        ]
+    } else {
+        ["", "", "", ""]
+    }
 }
 
 /// The step that inserts `facts` of `head`, each about the party at its
@@ -96,19 +148,7 @@ pub(super) fn insert<'q>(
         .iter()
         .map(|f| code_of(f).map(|code| code.code.as_str()))
         .collect();
-    let target: Vec<Option<Uuid>> = facts
-        .iter()
-        .map(|f| match &f.value {
-            FactValue::Team(team) => Some(*team),
-            FactValue::Care(care) => Some(care.carer),
-            FactValue::Kin(kin) => Some(kin.person),
-            FactValue::Code(_) => None,
-        })
-        .collect();
-    let target_kind: Vec<Option<&str>> = facts
-        .iter()
-        .map(|f| care_of(f).map(|care| care.kind.rm_type()))
-        .collect();
+    let (target, target_kind) = targets_of(facts);
     let (provider_issuer, provider_id) = providers_of(facts);
     let self_declared: Vec<bool> = facts
         .iter()
@@ -122,12 +162,19 @@ pub(super) fn insert<'q>(
         .collect();
     let not_before: Vec<_> = facts.iter().map(|f| instant(f.not_before)).collect();
     let not_after: Vec<_> = facts.iter().map(|f| instant(f.not_after)).collect();
+    let episodes = episodes_of(facts);
+    let [
+        episode_columns,
+        episode_values,
+        episode_unnest,
+        episode_names,
+    ] = episode_sql(episodes.is_some());
     let statement = format!(
         "INSERT INTO binding_caller_fact \
              (holder_id, ordinal, kind, party_id, terminology_id, code_string, target_id, \
               target_kind, provider_issuer, provider_id, self_declared, writer_id, \
               lifecycle_state, role_validity, validity, not_before, not_after, \
-              holder_version, covers_issuer, covers_id, covers_kind) \
+              holder_version, covers_issuer, covers_id, covers_kind{episode_columns}) \
          SELECT $1, t.ordinal, t.kind, t.party_id, t.terminology_id, t.code_string, t.target_id, \
                 t.target_kind, t.provider_issuer, t.provider_id, t.self_declared, writer.id, $3, \
                 party.binding_validity($4::jsonb), \
@@ -137,14 +184,16 @@ pub(super) fn insert<'q>(
                      THEN daterange(lower(party.binding_validity(t.validity)), c.effective_until) \
                      ELSE party.binding_validity(t.validity) END, \
                 t.not_before, t.not_after, holder.version, t.covers_issuer, t.covers_id, \
-                t.covers_kind \
+                t.covers_kind{episode_values} \
          FROM unnest($5::integer[], $6::text[], $7::text[], $8::text[], $9::uuid[], \
                      $10::text[], $11::text[], $12::text[], \
                      $13::jsonb[], $14::boolean[], $15::timestamptz[], $16::timestamptz[], \
-                     $17::boolean[], $18::text[], $19::text[], $20::text[], $2::uuid[]) \
+                     $17::boolean[], $18::text[], $19::text[], $20::text[], $2::uuid[]\
+                     {episode_unnest}) \
               AS t(ordinal, kind, terminology_id, code_string, target_id, target_kind, \
                    provider_issuer, provider_id, validity, unreadable, not_before, not_after, \
-                   self_declared, covers_issuer, covers_id, covers_kind, party_id) \
+                   self_declared, covers_issuer, covers_id, covers_kind, party_id\
+                   {episode_names}) \
          CROSS JOIN (SELECT {WRITER} AS id) writer \
          CROSS JOIN (SELECT {HOLDER_VERSION} AS version) holder \
          LEFT JOIN binding_care_validity c ON c.vo_id = $1 \
@@ -154,7 +203,7 @@ pub(super) fn insert<'q>(
     );
     let writes = !facts.is_empty();
     Step::new("fi", statement, Some(Tag::FactsCame), move |query| {
-        query
+        let query = query
             .bind(head.vo_id)
             .bind(about)
             .bind(head.lifecycle_state)
@@ -174,7 +223,11 @@ pub(super) fn insert<'q>(
             .bind(self_declared)
             .bind(covers_issuer)
             .bind(covers_id)
-            .bind(covers_kind)
+            .bind(covers_kind);
+        match episodes {
+            Some((issuers, ids)) => query.bind(issuers).bind(ids),
+            None => query,
+        }
     })
     .writing(writes)
 }

@@ -154,7 +154,7 @@ impl FerroEhrService {
         &self,
         tx: &mut PgConnection,
         ehr_id: EhrId,
-        description: &str,
+        description: &'static str,
     ) -> Result<(), ServiceError> {
         let audit = self.audit(change_type::CREATION, description);
         commit_contribution(

@@ -20,22 +20,12 @@ use super::{Held, Polarity, Pred, Scopes, labelled};
 
 impl Scopes {
     /// The items whose confidentiality is `level` or higher: the whole EHR
-    /// when its marking is, the objects a label marks so, and the data a
-    /// classification gives such a level, an unreadable label read by
-    /// `polarity`. A classification's own scope reads no classification, so
-    /// classifications never refer to each other.
+    /// when its marking is, the objects a label marks so, and, when
+    /// `classified`, the data a classification gives such a level, an
+    /// unreadable label read by `polarity`. A classification's own scope
+    /// passes `classified` false, so classifications never refer to each other.
     #[must_use]
-    pub fn at_least(&self, level: Confidentiality, polarity: Polarity) -> Pred {
-        self.at_least_of(level, polarity, true)
-    }
-
-    /// [`Self::at_least`], with the classifications when `classified`.
-    pub(super) fn at_least_of(
-        &self,
-        level: Confidentiality,
-        polarity: Polarity,
-        classified: bool,
-    ) -> Pred {
+    pub fn at_least(&self, level: Confidentiality, polarity: Polarity, classified: bool) -> Pred {
         let mut preds = vec![Pred::of(self.marking >= level)];
         preds.extend(
             self.confidential
@@ -59,7 +49,7 @@ impl Scopes {
         Confidentiality::ALL
             .into_iter()
             .filter(|level| *level > Confidentiality::Normal)
-            .filter(|level| self.at_least(*level, Polarity::Deny) != Pred::False)
+            .filter(|level| self.at_least(*level, Polarity::Deny, true) != Pred::False)
             .collect()
     }
 
@@ -82,7 +72,7 @@ impl Scopes {
             .into_iter()
             .find(|above| *above > highest)
         {
-            Some(above) => Pred::negate(self.at_least_of(above, polarity.flipped(), classified)),
+            Some(above) => Pred::negate(self.at_least(above, polarity.flipped(), classified)),
             None => Pred::True,
         }
     }

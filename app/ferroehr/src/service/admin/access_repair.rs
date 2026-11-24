@@ -238,7 +238,7 @@ impl FerroEhrService {
         ehr_id: EhrId,
         (vo_id, tip, mut access): (VoId, TreeId, Value),
         settings: Value,
-        description: &str,
+        description: &'static str,
     ) -> Result<Committed, ServiceError> {
         if !settings.is_null() {
             check_written_settings(&settings)?;
