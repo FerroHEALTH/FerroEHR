@@ -1,0 +1,1 @@
+- The caches' upkeep (the pending reads and writes `moka` applies, its evictions and expiries) runs every 100 ms on a task of its own, which the server stops when it drains, where the first request 300 ms after the last upkeep ran it. A request that checks out connections again after a handoff no longer allocates the list it keeps them in.
