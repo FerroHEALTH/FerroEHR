@@ -55,14 +55,14 @@ const BUDGETS: [Budget; 2] = [
         round_trips: 15,
         nested: 5,
         class_statements: 1,
-        wal: 10_336,
+        wal: 9986,
     },
     Budget {
         name: "a stored class",
         round_trips: 15,
         nested: 1,
         class_statements: 1,
-        wal: 7901,
+        wal: 7551,
     },
 ];
 

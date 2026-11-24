@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# .github/workflows/actions-cache-prune.yml
+#
+# Expires the Actions cache entries no lane restores (#6388), so main's build
+# caches stay under the repository's 10 GB quota: every entry outside main,
+# every main entry a newer one of its family replaced, and every sccache object
+# main has not read for three days (scripts/watch/actions-cache-prune.sh).
+#
+# It runs when a workflow that writes main's caches completes on main, so an
+# entry a new lockfile replaced goes at once, and every six hours for the
+# sccache objects that age out. The `workflow_run` job runs main's copy of
+# this file and reads no pull-request data.
+#
+# RUN COLOUR: the run goes red only when the cache list cannot be read or a
+# delete fails.
+name: Actions cache prune
+
+on:
+  workflow_run: # zizmor: ignore[dangerous-triggers] main's own runs only; API reads and deletes, no checkout of their code
+    workflows: [CI, SonarQube Cloud, Fuzz]
+    types: [completed]
+    branches: [main]
+  schedule:
+    # Every six hours at :29, a slot of its own. Read the estate's slots with
+    # `grep -rE '^ +- cron:' .github/workflows/`.
+    - cron: "29 */6 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: actions-cache-prune
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  prune:
+    name: expire stale cache entries
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: write # list and delete the repository's cache entries
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Delete the entries no lane restores
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/watch/actions-cache-prune.sh --apply

@@ -150,6 +150,13 @@ impl PlanCache {
         }
     }
 
+    /// Runs the cache's pending upkeep ([`crate::service::upkeep`]).
+    pub(crate) async fn upkeep(&self) {
+        if let Some(inner) = &self.inner {
+            inner.run_pending_tasks().await;
+        }
+    }
+
     /// How many plans the cache holds, and their bytes (#5926).
     #[must_use]
     pub fn held(&self) -> crate::memory::Held {

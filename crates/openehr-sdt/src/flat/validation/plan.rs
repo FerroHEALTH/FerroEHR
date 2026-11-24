@@ -41,9 +41,17 @@ pub(crate) struct NodeWalk {
     /// relative path passes ([`crate::flat::build::wrapper_types`]); empty
     /// when the plan was built without the template's slots.
     pub(crate) child_wrappers: Vec<Vec<crate::flat::build::WrapperFacts>>,
-    /// Per child, the [`path_fingerprint`] its cached path and wrappers were
+    /// The node's `aqlPath` the cached paths, wrappers and stub paths were
     /// computed from, so a tree changed after preparation is read afresh.
-    pub(crate) child_fingerprints: Vec<u64>,
+    pub(crate) aql_path: String,
+    /// Each child's `aqlPath` its cached path and wrappers were computed
+    /// from, index-aligned with [`WebTemplateNode::children`].
+    pub(crate) child_paths: Vec<String>,
+    /// Per structural stub (index-aligned with
+    /// [`WebTemplateNode::structural_stubs`]), its path when the plan was
+    /// built and the path of the object it constrains relative to this node;
+    /// `None` for a stub path that names no owner.
+    pub(crate) stub_segments: Vec<Option<(String, Vec<PathSegment>)>>,
     /// The [`slots_fingerprint`] of the template the wrappers were computed
     /// from.
     pub(crate) slots_fingerprint: u64,
@@ -60,8 +68,8 @@ impl NodeWalk {
         index: usize,
         child: &WebTemplateNode,
     ) -> Option<&[PathSegment]> {
-        let fresh = self.child_fingerprints.get(index).copied()
-            == Some(path_fingerprint(&parent.aql_path, &child.aql_path));
+        let fresh = self.aql_path == parent.aql_path
+            && self.child_paths.get(index) == Some(&child.aql_path);
         fresh
             .then(|| self.child_segments.get(index).map(Vec::as_slice))
             .flatten()
@@ -83,13 +91,31 @@ impl NodeWalk {
     }
 }
 
-/// A fingerprint of a parent and child `aqlPath` pair.
-pub(crate) fn path_fingerprint(parent: &str, child: &str) -> u64 {
-    use std::hash::{Hash, Hasher};
-    let mut hasher = std::hash::DefaultHasher::new();
-    parent.hash(&mut hasher);
-    child.hash(&mut hasher);
-    hasher.finish()
+impl NodeWalk {
+    /// The cached path from `node` (this plan's node) to the object its
+    /// structural stub `index` constrains, when computed from the paths the
+    /// node and the stub carry now.
+    pub(crate) fn stub_segments_of(
+        &self,
+        node: &WebTemplateNode,
+        index: usize,
+        stub_path: &str,
+    ) -> Option<&[PathSegment]> {
+        let (path, segments) = self.stub_segments.get(index)?.as_ref()?;
+        (self.aql_path == node.aql_path && path == stub_path).then_some(segments.as_slice())
+    }
+}
+
+/// The path from a node at `aql_path` to the object the structural stub at
+/// `stub_path` constrains (`{owner}/{attr}`); `None` when the stub path does
+/// not end in `attr`.
+pub(crate) fn stub_segments(
+    aql_path: &str,
+    stub_path: &str,
+    attr: &str,
+) -> Option<Vec<PathSegment>> {
+    let owner = stub_path.strip_suffix(attr)?.strip_suffix('/')?;
+    Some(rmpath::relative(aql_path, owner))
 }
 
 /// A fingerprint of every hoisted-wrapper slot of the tree under `node`, in
@@ -234,10 +260,14 @@ impl NodeWalk {
                 .map(|c| rmpath::relative(aql, &c.aql_path))
                 .collect(),
             child_wrappers: Vec::new(),
-            child_fingerprints: node
-                .children
+            aql_path: aql.to_owned(),
+            child_paths: node.children.iter().map(|c| c.aql_path.clone()).collect(),
+            stub_segments: node
+                .structural_stubs
                 .iter()
-                .map(|c| path_fingerprint(aql, &c.aql_path))
+                .map(|stub| {
+                    stub_segments(aql, &stub.path, &stub.attr).map(|segs| (stub.path.clone(), segs))
+                })
                 .collect(),
             slots_fingerprint: 0,
             compiled,

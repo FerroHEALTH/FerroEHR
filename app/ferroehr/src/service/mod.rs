@@ -43,6 +43,7 @@ mod multimedia;
 mod party_door;
 pub mod query;
 pub mod terminology;
+pub mod upkeep;
 
 pub(crate) mod contribution;
 mod contribution_set;

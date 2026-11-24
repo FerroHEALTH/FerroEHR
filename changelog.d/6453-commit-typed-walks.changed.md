@@ -1,0 +1,1 @@
+- A typed COMPOSITION meets the data-minimisation pass's identified-party rule in the RM pass's walk, so a commit walks its body once for both, and the fed-origin scan of a rendered body that names no `FEEDER_AUDIT` reads no node. Every refusal, its findings and their order, and every stored origin are unchanged.

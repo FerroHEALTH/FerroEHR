@@ -1,0 +1,1 @@
+- A party write's binding statements settle on a generic plan within five executions on a connection, where PostgreSQL planned them again on every call: the caller facts settle of a PERSON create, update and delete, and the identifier retirement and insert of a ROLE create, read their arrays by subscript.
