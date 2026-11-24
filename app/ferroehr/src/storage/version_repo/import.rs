@@ -81,7 +81,9 @@ pub struct ImportedVersionRow<'a> {
 /// (master06 §Copying). Stores `template_id = NULL`.
 ///
 /// # Errors
-/// Returns [`StorageError::Database`] on a driver/insert failure.
+/// Returns [`StorageError::DanglingReference`] when the row's CONTRIBUTION or
+/// commit audit is not stored, and [`StorageError::Database`] on a
+/// driver/insert failure.
 pub async fn insert_imported_vo_version(
     tx: &mut PgConnection,
     row: &ImportedVersionRow<'_>,
@@ -93,14 +95,16 @@ pub async fn insert_imported_vo_version(
     // signifies the act of importing" — master06 §Digital Signature), so it is
     // ours to re-verify at read. The wrapped original's foreign signature rides
     // `wrapped_original` and is never re-verified.
-    sqlx::query(
+    let written = sqlx::query(
         "INSERT INTO version \
          (vo_id, kind, ehr_id, sys_version, trunk_version, branch_number, branch_version, \
           committed_at, lifecycle_state, creating_system_id, preceding_version_uid, \
           other_input_version_uids, contribution_id, commit_audit_id, template_id, signature, \
           signature_client_supplied, wrapped_original, body, origins) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz, \
-                 $9, $10, $11, $12, $13, $14, NULL, $15, false, $16, $17, $18)",
+         SELECT $1, $2, $3, $4, $5, $6, $7, $8::timestamptz, \
+                $9, $10, $11, $12, $13, $14, NULL, $15, false, $16, $17, $18 \
+         WHERE EXISTS (SELECT 1 FROM contribution WHERE id = $13) \
+           AND EXISTS (SELECT 1 FROM commit_audit WHERE id = $14)",
     )
     .bind(row.vo_id)
     .bind(row.kind)
@@ -133,6 +137,11 @@ pub async fn insert_imported_vo_version(
     )
     .execute(&mut *tx)
     .await?;
+    if written.rows_affected() == 0 {
+        return Err(StorageError::DanglingReference(
+            "CONTRIBUTION or commit audit",
+        ));
+    }
     Ok(())
 }
 
@@ -209,10 +218,15 @@ pub struct VerbatimVersionRow<'a> {
 /// that duplicates a trunk position within itself falls to the per-partition
 /// trunk-position unique-index backstop instead of the named error.
 ///
+/// Nothing is written when a row names a CONTRIBUTION or commit audit the
+/// store does not hold.
+///
 /// # Errors
 /// Returns [`StorageError::TrunkPositionInUse`] when another creating system
-/// already holds a batch member's trunk position, or
-/// [`StorageError::Database`] on a driver/insert failure.
+/// already holds a batch member's trunk position,
+/// [`StorageError::DanglingReference`] when a row names a CONTRIBUTION or
+/// commit audit that is not stored, or [`StorageError::Database`] on a
+/// driver/insert failure.
 pub async fn insert_versions_verbatim(
     tx: &mut PgConnection,
     rows: &[VerbatimVersionRow<'_>],
@@ -267,48 +281,61 @@ pub async fn insert_versions_verbatim(
                 .map_err(StorageError::BodyDecode)?,
         );
     }
-    sqlx::query(
-        "INSERT INTO version (vo_id, kind, ehr_id, sys_version, trunk_version, branch_number, \
-         branch_version, preceding_version_uid, other_input_version_uids, committed_at, \
-         lifecycle_state, contribution_id, commit_audit_id, template_id, signature, \
+    let dangling: i64 = sqlx::query_scalar(INSERT_VERBATIM)
+        .bind(vo_ids)
+        .bind(kinds)
+        .bind(ehr_ids)
+        .bind(sys_versions)
+        .bind(trunks)
+        .bind(branch_numbers)
+        .bind(branch_versions)
+        .bind(precedings)
+        .bind(other_inputs)
+        .bind(committed_ats)
+        .bind(lifecycles)
+        .bind(contribution_ids)
+        .bind(commit_audit_ids)
+        .bind(template_ids)
+        .bind(signatures)
+        .bind(sig_client)
+        .bind(creating)
+        .bind(wrappeds)
+        .bind(bodies)
+        .fetch_one(&mut *tx)
+        .await?;
+    if dangling > 0 {
+        return Err(StorageError::DanglingReference(
+            "CONTRIBUTION or commit audit",
+        ));
+    }
+    Ok(())
+}
+
+/// The version insert of [`insert_versions_verbatim`], returning how many
+/// rows name a CONTRIBUTION or commit audit not stored; it writes nothing when
+/// one does.
+const INSERT_VERBATIM: &str = "WITH t AS (SELECT * FROM unnest($1::uuid[], $2::text[], \
+         $3::uuid[], $4::int[], $5::int[], $6::int[], $7::int[], $8::text[], $9::jsonb[], $10::text[], $11::text[], \
+         $12::uuid[], $13::uuid[], $14::text[], $15::text[], $16::bool[], $17::text[], \
+         $18::jsonb[], $19::text[]) \
+         AS t(vo_id, kind, ehr_id, sys_version, trunk_version, branch_number, branch_version, \
+         preceding_version_uid, other_input, committed_at, lifecycle_state, contribution_id, \
+         commit_audit_id, template_id, signature, sig_client, creating_system_id, wrapped_original, \
+         body)), \
+         d AS (SELECT count(*) AS n FROM t \
+               WHERE NOT EXISTS (SELECT 1 FROM contribution c WHERE c.id = t.contribution_id) \
+                  OR NOT EXISTS (SELECT 1 FROM commit_audit a WHERE a.id = t.commit_audit_id)), \
+         i AS (INSERT INTO version (vo_id, kind, ehr_id, sys_version, trunk_version, \
+         branch_number, branch_version, preceding_version_uid, other_input_version_uids, \
+         committed_at, lifecycle_state, contribution_id, commit_audit_id, template_id, signature, \
          signature_client_supplied, creating_system_id, wrapped_original, body) \
          SELECT t.vo_id, t.kind, t.ehr_id, t.sys_version, t.trunk_version, t.branch_number, \
          t.branch_version, t.preceding_version_uid, t.other_input, \
          t.committed_at::timestamptz, t.lifecycle_state, \
          t.contribution_id, t.commit_audit_id, t.template_id, t.signature, t.sig_client, \
          t.creating_system_id, t.wrapped_original, t.body \
-         FROM unnest($1::uuid[], $2::text[], $3::uuid[], $4::int[], $5::int[], $6::int[], \
-         $7::int[], $8::text[], $9::jsonb[], $10::text[], $11::text[], \
-         $12::uuid[], $13::uuid[], $14::text[], $15::text[], $16::bool[], $17::text[], \
-         $18::jsonb[], $19::text[]) \
-         AS t(vo_id, kind, ehr_id, sys_version, trunk_version, branch_number, branch_version, \
-         preceding_version_uid, other_input, committed_at, lifecycle_state, contribution_id, \
-         commit_audit_id, template_id, signature, sig_client, creating_system_id, wrapped_original, \
-         body)",
-    )
-    .bind(vo_ids)
-    .bind(kinds)
-    .bind(ehr_ids)
-    .bind(sys_versions)
-    .bind(trunks)
-    .bind(branch_numbers)
-    .bind(branch_versions)
-    .bind(precedings)
-    .bind(other_inputs)
-    .bind(committed_ats)
-    .bind(lifecycles)
-    .bind(contribution_ids)
-    .bind(commit_audit_ids)
-    .bind(template_ids)
-    .bind(signatures)
-    .bind(sig_client)
-    .bind(creating)
-    .bind(wrappeds)
-    .bind(bodies)
-    .execute(&mut *tx)
-    .await?;
-    Ok(())
-}
+         FROM t WHERE (SELECT n FROM d) = 0) \
+         SELECT n FROM d";
 
 /// Refuse a batch whose trunk rows would land on a trunk position another
 /// creating system already holds — the named-error probe of

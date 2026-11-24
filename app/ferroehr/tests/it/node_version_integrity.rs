@@ -111,7 +111,7 @@ async fn node_rows(pool: &PgPool, schema: &str) -> i64 {
 /// Two EHRs, each with a composition committed, updated, updated to the
 /// same content and logically deleted; an EHR of every other object kind; and
 /// a person.
-async fn seeded(svc: &FerroEhrService) -> (EhrId, EhrId, EhrId, ferroehr::ids::VoId) {
+pub(crate) async fn seeded(svc: &FerroEhrService) -> (EhrId, EhrId, EhrId, ferroehr::ids::VoId) {
     let ehr = crate::fixtures::create_ehr(svc).await;
     let other = crate::fixtures::create_ehr(svc).await;
     let full = seed_full_ehr(svc).await;
@@ -175,7 +175,7 @@ async fn seeded(svc: &FerroEhrService) -> (EhrId, EhrId, EhrId, ferroehr::ids::V
 }
 
 /// A file of the workspace, relative to this crate.
-fn ips_file(rel: &str) -> String {
+pub(crate) fn ips_file(rel: &str) -> String {
     let path = format!("{}/{rel}", env!("CARGO_MANIFEST_DIR"));
     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"))
 }

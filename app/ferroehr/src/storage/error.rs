@@ -39,12 +39,19 @@ pub enum StorageError {
     #[error("what the write was judged on moved before it ran: {0:?}")]
     GuardMoved(crate::storage::version_repo::guarded::GuardFlags),
 
-    /// A client-supplied CONTRIBUTION uid is already in use (the insert hit
-    /// `ON CONFLICT (id) DO NOTHING`). ITS-REST `contribution_create`: "if the
+    /// A client-supplied CONTRIBUTION uid is already in use (`pk_contribution`
+    /// refused its insert). ITS-REST `contribution_create`: "if the
     /// `uid` is supplied it must not already be in use" — a duplicate is a
     /// conflict, never an overwrite. Mapped to 409 by the versioning layer.
     #[error("CONTRIBUTION uid {0:?} is already in use")]
     ContributionUidInUse(Option<Uuid>),
+
+    /// A version or CONTRIBUTION would name a CONTRIBUTION or commit audit the
+    /// store does not hold, or an erasure would remove an audit a stored row
+    /// still names: each writer holds the references the schema leaves
+    /// without a foreign key (#6394).
+    #[error("a stored row would name a {0} the store does not hold")]
+    DanglingReference(&'static str),
 
     /// The EHR row insert violated the one-EHR-per-subject unique index
     /// (`uq_ehr_subject`) — another EHR already names this subject
@@ -144,6 +151,14 @@ pub(crate) fn classify_storage(e: StorageError) -> ServiceError {
         }
         StorageError::ContributionUidInUse(_) | StorageError::TrunkPositionInUse { .. } => {
             ServiceError::Conflict(Refusal::new(Clash::State, e.to_string()).with_source(e))
+        }
+        // A reference the writer checks answers as the foreign key's `23503` would.
+        StorageError::DanglingReference(what) => {
+            tracing::warn!(
+                what,
+                "storage bridge: a dangling change-control reference → 409"
+            );
+            ServiceError::Conflict(Refusal::new(Clash::State, CONFLICT_MESSAGE).with_source(e))
         }
         // The one-EHR-per-subject index → `409` (normally intercepted in
         // `service::ehr` to build the ITS-REST `409_EHR` body).

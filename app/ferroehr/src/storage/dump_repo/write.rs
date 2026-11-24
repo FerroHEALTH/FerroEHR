@@ -88,13 +88,33 @@ pub async fn insert_audits(
     Ok(())
 }
 
+/// The contribution insert of [`insert_contributions`] under its conflict
+/// rule, returning how many rows name a commit audit not stored; it writes
+/// nothing when one does.
+macro_rules! insert_contributions {
+    ($conflict:literal) => {
+        concat!(
+            "WITH t AS (SELECT * FROM unnest($1::uuid[], $3::uuid[]) AS t(id, commit_audit_id)), \
+             d AS (SELECT count(*) AS n FROM t \
+                   WHERE NOT EXISTS (SELECT 1 FROM commit_audit a WHERE a.id = t.commit_audit_id)), \
+             i AS (INSERT INTO contribution (id, ehr_id, commit_audit_id) \
+                   SELECT t.id, $2, t.commit_audit_id FROM t WHERE (SELECT n FROM d) = 0",
+            $conflict,
+            ") SELECT n FROM d"
+        )
+    };
+}
+
 /// Insert contributions in one `unnest` statement: an EHR record's under
 /// `Some(ehr_id)`, each new, or the ehr-less ones under `None`, leaving an id
 /// already stored as it is.
 ///
+/// Nothing is written when one names a commit audit the store does not hold.
+///
 /// # Errors
-/// [`StorageError::Database`] on a driver failure, a stored id under
-/// `Some(ehr_id)` included.
+/// [`StorageError::DanglingReference`] when a contribution names a commit audit
+/// that is not stored, and [`StorageError::Database`] on a driver failure, a
+/// stored id under `Some(ehr_id)` included.
 pub async fn insert_contributions(
     tx: &mut PgConnection,
     ehr_id: Option<EhrId>,
@@ -106,23 +126,18 @@ pub async fn insert_contributions(
     let ids: Vec<Uuid> = contributions.iter().map(|c| c.id).collect();
     let audits: Vec<Uuid> = contributions.iter().map(|c| c.commit_audit_id).collect();
     let sql = match ehr_id {
-        Some(_) => {
-            "INSERT INTO contribution (id, ehr_id, commit_audit_id) \
-             SELECT t.id, $2, t.commit_audit_id FROM unnest($1::uuid[], $3::uuid[]) \
-             AS t(id, commit_audit_id)"
-        }
-        None => {
-            "INSERT INTO contribution (id, ehr_id, commit_audit_id) \
-             SELECT t.id, $2, t.commit_audit_id FROM unnest($1::uuid[], $3::uuid[]) \
-             AS t(id, commit_audit_id) ON CONFLICT (id) DO NOTHING"
-        }
+        Some(_) => insert_contributions!(""),
+        None => insert_contributions!(" ON CONFLICT (id) DO NOTHING"),
     };
-    sqlx::query(sql)
+    let dangling: i64 = sqlx::query_scalar(sql)
         .bind(ids)
         .bind(ehr_id)
         .bind(audits)
-        .execute(tx)
+        .fetch_one(tx)
         .await?;
+    if dangling > 0 {
+        return Err(StorageError::DanglingReference("commit audit"));
+    }
     Ok(())
 }
 

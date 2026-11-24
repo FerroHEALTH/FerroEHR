@@ -378,7 +378,7 @@ fn corpus(file: &str) -> String {
 /// run nested in it that name a clinical relation (foreign-key checks and
 /// triggers), by fixture (#6393).
 const COMMIT_CEILINGS: [(Fixture, u64, u64); 2] =
-    [(Fixture::Ips, 180_626, 8), (Fixture::Lab, 9357, 8)];
+    [(Fixture::Ips, 180_626, 8), (Fixture::Lab, 9296, 8)];
 
 /// Whether `relation` is written by a commit rather than by the access log or
 /// the audit intake beside it.
