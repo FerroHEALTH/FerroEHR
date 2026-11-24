@@ -668,7 +668,7 @@ async fn commit_import_scoped(
         ..
     } = crate::storage::version_repo::commit::commit_folded(
         tx,
-        &import_audit.row(),
+        &import_audit.row(ctx.audit_shares),
         crate::storage::version_repo::commit::Folded::Contribution {
             id: ctx.stamp.mint(),
             ehr_id,

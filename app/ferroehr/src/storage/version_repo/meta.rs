@@ -54,7 +54,7 @@ pub const ALL_VERSION_META_SQL: &str = concat!(
 /// identity of one EHR-owned object's current trunk version.
 pub const CURRENT_VERSION_META_SCOPED_SQL: &str = "SELECT v.vo_id, v.trunk_version, v.branch_number, v.branch_version, \
      v.creating_system_id, a.time_committed \
-     FROM version v JOIN commit_audit a ON a.id = v.commit_audit_id \
+     FROM version v JOIN commit_audit_facts a ON a.id = v.commit_audit_id \
      JOIN vo_head h ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
      WHERE v.vo_id = $1 AND v.ehr_id = $2";
 
@@ -156,7 +156,7 @@ pub async fn time_created(
     pool: &PgPool,
     vo_id: VoId,
 ) -> Result<Option<jiff::Timestamp>, StorageError> {
-    const SQL: &str = "SELECT a.time_committed FROM version v JOIN commit_audit a ON a.id = v.commit_audit_id \
+    const SQL: &str = "SELECT a.time_committed FROM version v JOIN commit_audit_facts a ON a.id = v.commit_audit_id \
          WHERE v.vo_id = $1 ORDER BY v.sys_version LIMIT 1";
     let stamp = sqlx::query_scalar::<_, jiff_sqlx::Timestamp>(SQL)
         .bind(vo_id)
@@ -189,7 +189,7 @@ pub async fn commit_bounds(
     const SQL: &str = "SELECT (array_agg(v.ehr_id))[1] AS ehr_id, \
                        min(a.time_committed) AS created, \
                        max(a.time_committed) AS modified \
-                       FROM version v JOIN commit_audit a ON a.id = v.commit_audit_id WHERE v.vo_id = $1";
+                       FROM version v JOIN commit_audit_facts a ON a.id = v.commit_audit_id WHERE v.vo_id = $1";
     let row = sqlx::query(SQL)
         .bind(vo_id)
         .fetch_one(&mut *acquire(pool).await?)
@@ -438,7 +438,7 @@ pub async fn current_version_meta_by_kind(
 ) -> Result<Option<CurrentMeta>, StorageError> {
     const SQL: &str = "SELECT v.vo_id, v.trunk_version, v.branch_number, v.branch_version, \
                        v.creating_system_id, a.time_committed \
-                       FROM version v JOIN commit_audit a ON a.id = v.commit_audit_id \
+                       FROM version v JOIN commit_audit_facts a ON a.id = v.commit_audit_id \
                        JOIN vo_head h ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
                        WHERE v.ehr_id = $1 AND v.kind = $2";
     let found = sqlx::query(SQL)
@@ -520,7 +520,7 @@ pub async fn current_demographic_meta(
 ) -> Result<Option<CurrentDemographicMeta>, StorageError> {
     const SQL: &str = "SELECT v.kind, v.lifecycle_state, v.trunk_version, v.branch_number, \
                        v.branch_version, v.creating_system_id, a.time_committed \
-                       FROM version v JOIN commit_audit a ON a.id = v.commit_audit_id \
+                       FROM version v JOIN commit_audit_facts a ON a.id = v.commit_audit_id \
                        JOIN vo_head h ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
                        WHERE v.vo_id = $1 AND v.ehr_id IS NULL";
     let found = sqlx::query(SQL)

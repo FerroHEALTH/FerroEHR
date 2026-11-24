@@ -2105,6 +2105,7 @@ dependencies = [
 name = "ferroehr"
 version = "5.7.1-rc1"
 dependencies = [
+ "arc-swap",
  "assert_fs",
  "async-trait",
  "axum",

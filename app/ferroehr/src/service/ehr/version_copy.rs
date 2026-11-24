@@ -177,6 +177,11 @@ impl VersionCopy {
         self.inner.invalidate(&key).await;
     }
 
+    /// Runs the copy's pending cache upkeep ([`crate::service::upkeep`]).
+    pub(crate) async fn upkeep(&self) {
+        self.inner.run_pending_tasks().await;
+    }
+
     /// How many versions the copy holds, and their bytes.
     pub(crate) fn held(&self) -> (u64, u64) {
         (self.inner.entry_count(), self.inner.weighted_size())

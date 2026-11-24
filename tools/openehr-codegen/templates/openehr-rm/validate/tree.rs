@@ -13,7 +13,6 @@
 //! attribute order; no openEHR specification orders them: our own design.
 
 use std::any::Any;
-use std::fmt::Write as _;
 
 use openehr_base::validate::{InvariantViolation, Validate};
 
@@ -122,17 +121,13 @@ impl std::fmt::Debug for Node<'_> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Pass {
-    Invariants,
-    Terminology,
-}
-
-/// The running state of one pass: the path buffer and the violations.
+/// The running state of the walk: the path buffer and the violations of
+/// each pass.
 pub struct Walker {
-    pass: Pass,
     path: String,
     out: Vec<TreeViolation>,
+    /// The terminology violations, reported after every invariant one.
+    terms: Vec<TreeViolation>,
     /// The violations of [`validate_node`], which judges the root alone.
     root: Option<Vec<InvariantViolation>>,
     /// Whether the next node is the root [`validate_below`] leaves out.
@@ -166,7 +161,11 @@ impl Walker {
             return;
         }
         let base = self.path.len();
-        let _ = write!(self.path, "/{key}[{index}]");
+        self.path.push('/');
+        self.path.push_str(key);
+        self.path.push('[');
+        push_index(&mut self.path, index);
+        self.path.push(']');
         value.walk(self);
         self.path.truncate(base);
     }
@@ -181,10 +180,8 @@ impl Walker {
             self.skip_root = false;
             return;
         }
-        match self.pass {
-            Pass::Invariants => self.invariants(node),
-            Pass::Terminology => self.terminology(node),
-        }
+        self.invariants(node);
+        self.terminology(node);
     }
 
     fn invariants(&mut self, node: &Node<'_>) {
@@ -240,7 +237,7 @@ impl Walker {
                 Binding::CodeSet(set) => !set.is_valid(openehr_term::bundle::openehr(), code),
             };
             if violated {
-                self.out.push(TreeViolation {
+                self.terms.push(TreeViolation {
                     path: format!("{}/{}", self.path, slot.field),
                     message: format!(
                         "code '{code}' is not a valid {} (openEHR terminology)",
@@ -250,6 +247,16 @@ impl Walker {
                 });
             }
         }
+    }
+}
+
+/// Appends `index` in decimal to `path`.
+fn push_index(path: &mut String, index: usize) {
+    if index >= 10 {
+        push_index(path, index.div_euclid(10));
+    }
+    if let Some(&digit) = b"0123456789".get(index.rem_euclid(10)) {
+        path.push(char::from(digit));
     }
 }
 
@@ -266,15 +273,14 @@ fn norm_path(p: &str) -> String {
 #[must_use]
 pub fn validate_tree<T: Walk + ?Sized>(root: &T) -> Vec<TreeViolation> {
     let mut w = Walker {
-        pass: Pass::Invariants,
         path: String::new(),
         out: Vec::new(),
+        terms: Vec::new(),
         root: None,
         skip_root: false,
     };
     root.walk(&mut w);
-    w.pass = Pass::Terminology;
-    root.walk(&mut w);
+    w.out.append(&mut w.terms);
     w.out
 }
 
@@ -283,16 +289,14 @@ pub fn validate_tree<T: Walk + ?Sized>(root: &T) -> Vec<TreeViolation> {
 #[must_use]
 pub fn validate_below<T: Walk + ?Sized>(value: &T) -> Vec<TreeViolation> {
     let mut w = Walker {
-        pass: Pass::Invariants,
         path: String::new(),
         out: Vec::new(),
+        terms: Vec::new(),
         root: None,
         skip_root: true,
     };
     value.walk(&mut w);
-    w.pass = Pass::Terminology;
-    w.skip_root = true;
-    value.walk(&mut w);
+    w.out.append(&mut w.terms);
     w.out
 }
 
@@ -301,9 +305,9 @@ pub fn validate_below<T: Walk + ?Sized>(value: &T) -> Vec<TreeViolation> {
 #[must_use]
 pub fn validate_node<T: Walk + ?Sized>(value: &T) -> Vec<InvariantViolation> {
     let mut w = Walker {
-        pass: Pass::Invariants,
         path: String::new(),
         out: Vec::new(),
+        terms: Vec::new(),
         root: Some(Vec::new()),
         skip_root: false,
     };

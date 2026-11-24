@@ -14,7 +14,7 @@ use openehr_sdt::flat::webtemplate::builder::build_web_template;
 use openehr_sdt::rm_instance::ValidationMessage;
 use serde_json::Value;
 
-fn opts() -> Vec<std::path::PathBuf> {
+pub(super) fn opts() -> Vec<std::path::PathBuf> {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let mut out = Vec::new();
     let mut stack = vec![
@@ -50,7 +50,7 @@ fn mutate_first(v: &mut Value, f: &mut dyn FnMut(&mut Value) -> bool) -> bool {
     }
 }
 
-fn variants(doc: &Value) -> Vec<(&'static str, Value)> {
+pub(super) fn variants(doc: &Value) -> Vec<(&'static str, Value)> {
     let mut out = vec![("as built", doc.clone())];
     let mut push = |label: &'static str, f: &mut dyn FnMut(&mut Value) -> bool| {
         let mut v = doc.clone();

@@ -19,32 +19,55 @@ use serde_json::Value;
 use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
+use super::audit_shared::{AuditShares, SharedPart, SharedPlan, SharedRef, shared_value};
 use super::head_upsert::{HeadEpisodes, HeadUpsert, Placement};
 use crate::ids::{EhrId, VoId};
 use crate::storage::error::StorageError;
 
-/// The `AUDIT_DETAILS` fields to persist, as the `commit_audit` row's own
-/// columns.
+/// The `AUDIT_DETAILS` fields to persist: the facts of the audit's own row,
+/// and its shared part (#6395).
 ///
 /// master04 §Audit Details: `change_type` is the numeric `audit_change_type`
-/// group code, never a rubric (`Change_type_valid`), and the three jsonb
-/// columns arrive as the canonical RM fragments they store
-/// (`DV_TEXT` / `PARTY_PROXY` / the `ATTESTATION`-declared attributes).
+/// group code, never a rubric (`Change_type_valid`), and the jsonb members
+/// arrive as the canonical RM fragments they store (`DV_TEXT` /
+/// `PARTY_PROXY` / the `ATTESTATION`-declared attributes).
 #[derive(Debug)]
 pub struct AuditRow<'a> {
-    /// `AUDIT_DETAILS.system_id`.
-    pub system_id: &'a str,
+    /// The ids of the shared parts this process has seen.
+    pub shares: &'a AuditShares,
+    /// The audit's shared part: its system id, and its committer and
+    /// description when no record subject can be named by them.
+    pub shared: SharedPart<'a>,
     /// The numeric `audit_change_type` group code.
     pub change_type: &'a str,
-    /// The canonical `DV_TEXT` JSON text of `AUDIT_DETAILS.description`, when
-    /// the committer supplied one.
+    /// The canonical `DV_TEXT` JSON text of a description the shared part
+    /// does not hold.
     pub description: Option<String>,
-    /// The canonical `PARTY_PROXY` JSON text of the committer.
-    pub committer: String,
+    /// The canonical `PARTY_PROXY` JSON text of a committer the shared part
+    /// does not hold.
+    pub committer: Option<String>,
     /// The canonical fragment of the `ATTESTATION`-declared attributes when
     /// this commit audit is an `ATTESTATION` (master06 §Attestation), else
     /// `None`.
     pub attestation: Option<Value>,
+}
+
+/// Binds the five parameters of `audit`, its first the id of its shared part
+/// or, when `shared` is new, the part's JSON text.
+pub(super) fn bind_audit<'q>(
+    query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
+    audit: &'q AuditRow<'_>,
+    shared: SharedRef,
+) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
+    let query = match shared {
+        SharedRef::Known(id) => query.bind(id),
+        SharedRef::New(_) => query.bind(audit.shared.content()),
+    };
+    query
+        .bind(audit.change_type)
+        .bind(&audit.description)
+        .bind(&audit.committer)
+        .bind(&audit.attestation)
 }
 
 /// Takes the per-vo transaction advisory lock that serializes concurrent
@@ -239,9 +262,9 @@ enum Shape {
 /// audit, `$6` the CONTRIBUTION uid, `$7` the owning EHR, `$8` to `$26` the
 /// version, `$27` the version's root archetype, `$28` on the node arrays and
 /// then a placed version's episodes, so one binder serves all three.
-fn folded_statement(shape: Shape, placement: Placement) -> String {
+fn folded_statement(shape: Shape, placement: Placement, plan: &SharedPlan) -> String {
     if matches!(shape, Shape::Guarded) {
-        return super::guarded::statement(super::guarded::Beside::Nothing, placement);
+        return super::guarded::statement(super::guarded::Beside::Nothing, placement, plan);
     }
     let contribution = matches!(shape, Shape::Contribution | Shape::Standalone);
     let version = matches!(shape, Shape::Standalone | Shape::Into);
@@ -273,17 +296,31 @@ fn folded_statement(shape: Shape, placement: Placement) -> String {
     } else {
         String::new()
     };
+    let learned = plan.learned_column();
     let select = if contribution {
-        " SELECT a.id AS commit_audit_id, a.time_committed, c.id AS contribution_id \
-          FROM a LEFT JOIN c ON true"
+        format!(
+            " SELECT a.id AS commit_audit_id, a.time_committed, c.id AS contribution_id{learned} \
+              FROM a LEFT JOIN c ON true"
+        )
     } else {
-        " SELECT a.id AS commit_audit_id, a.time_committed, $6::uuid AS contribution_id FROM a"
+        format!(
+            " SELECT a.id AS commit_audit_id, a.time_committed, $6::uuid AS contribution_id{learned} \
+              FROM a"
+        )
+    };
+    let shared = shared_value(plan.audit(0), 1);
+    let parts = plan.ctes(&[1]);
+    let head = if parts.is_empty() {
+        "WITH".to_owned()
+    } else {
+        format!("WITH {},", parts.trim_start_matches(", "))
     };
     format!(
-        "WITH a AS ( \
-             INSERT INTO commit_audit (system_id, change_type, description, committer, \
-                                       attestation{audit_time}) \
-             VALUES ($1, $2, $3::jsonb, $4::jsonb, $5{audit_time_value}) RETURNING id, time_committed \
+        "{head} a AS ( \
+             INSERT INTO commit_audit_facts (shared, change_type, description, committer, \
+                                             attestation{audit_time}) \
+             VALUES ({shared}, $2, $3::jsonb, $4::jsonb, $5{audit_time_value}) \
+             RETURNING id, time_committed \
          ){contribution_cte}{version_cte}{select}"
     )
 }
@@ -396,26 +433,53 @@ pub(super) fn bind_episodes<'q>(
     )
 }
 
+/// The statement texts of one shape, for an audit whose shared part is known
+/// and for one whose part the statement inserts.
+type ByPart<T> = [T; 2];
+
+/// The text of `texts` for an audit whose shared part the statement inserts
+/// when `new`.
+fn by_part<T>(texts: &ByPart<T>, new: bool) -> &T {
+    let [known, inserting] = texts;
+    if new { inserting } else { known }
+}
+
+/// The texts of one guarded shape `beside`, by part and placement.
+fn guarded_texts(beside: super::guarded::Beside) -> ByPart<[String; 3]> {
+    [false, true].map(|new| {
+        Placement::ALL.map(|p| super::guarded::statement(beside, p, &SharedPlan::single(new)))
+    })
+}
+
+/// The texts of one folded shape, by part and placement.
+fn folded_texts(shape: Shape) -> ByPart<[String; 3]> {
+    [false, true]
+        .map(|new| Placement::ALL.map(|p| folded_statement(shape, p, &SharedPlan::single(new))))
+}
+
 /// The statement text `folded` runs: its shape, what it writes beside the
-/// version, and what the version does with its object's episodes.
-fn folded_text(folded: &Folded<'_>) -> &'static str {
+/// version, what the version does with its object's episodes, and whether
+/// the statement inserts its audit's shared part (`new`).
+fn folded_text(folded: &Folded<'_>, new: bool) -> &'static str {
     use super::guarded::Beside;
-    static CONTRIBUTION: LazyLock<String> =
-        LazyLock::new(|| folded_statement(Shape::Contribution, Placement::Untouched));
-    static STANDALONE: LazyLock<[String; 3]> =
-        LazyLock::new(|| Placement::ALL.map(|p| folded_statement(Shape::Standalone, p)));
-    static INTO: LazyLock<[String; 3]> =
-        LazyLock::new(|| Placement::ALL.map(|p| folded_statement(Shape::Into, p)));
-    static GUARDED: LazyLock<[String; 3]> =
-        LazyLock::new(|| Placement::ALL.map(|p| folded_statement(Shape::Guarded, p)));
-    static STATUS: LazyLock<[String; 3]> =
-        LazyLock::new(|| Placement::ALL.map(|p| super::guarded::statement(Beside::Status, p)));
-    static FOLDER: LazyLock<[String; 3]> =
-        LazyLock::new(|| Placement::ALL.map(|p| super::guarded::statement(Beside::Folder, p)));
-    static PARTY: LazyLock<[String; 3]> =
-        LazyLock::new(|| Placement::ALL.map(|p| super::guarded::statement(Beside::Party, p)));
-    let (texts, version): (&'static LazyLock<[String; 3]>, _) = match folded {
-        Folded::Contribution { .. } => return CONTRIBUTION.as_str(),
+    static CONTRIBUTION: LazyLock<ByPart<String>> = LazyLock::new(|| {
+        [false, true].map(|new| {
+            folded_statement(
+                Shape::Contribution,
+                Placement::Untouched,
+                &SharedPlan::single(new),
+            )
+        })
+    });
+    static STANDALONE: LazyLock<ByPart<[String; 3]>> =
+        LazyLock::new(|| folded_texts(Shape::Standalone));
+    static INTO: LazyLock<ByPart<[String; 3]>> = LazyLock::new(|| folded_texts(Shape::Into));
+    static GUARDED: LazyLock<ByPart<[String; 3]>> = LazyLock::new(|| folded_texts(Shape::Guarded));
+    static STATUS: LazyLock<ByPart<[String; 3]>> = LazyLock::new(|| guarded_texts(Beside::Status));
+    static FOLDER: LazyLock<ByPart<[String; 3]>> = LazyLock::new(|| guarded_texts(Beside::Folder));
+    static PARTY: LazyLock<ByPart<[String; 3]>> = LazyLock::new(|| guarded_texts(Beside::Party));
+    let (texts, version): (&'static LazyLock<ByPart<[String; 3]>>, _) = match folded {
+        Folded::Contribution { .. } => return by_part(&CONTRIBUTION, new).as_str(),
         Folded::Standalone { version, .. } => (&STANDALONE, version),
         Folded::Into { version, .. } => (&INTO, version),
         Folded::Guarded { version, guard, .. } if guard.status.is_some() => (&STATUS, version),
@@ -423,7 +487,7 @@ fn folded_text(folded: &Folded<'_>) -> &'static str {
         Folded::Guarded { version, guard, .. } if guard.party.is_some() => (&PARTY, version),
         Folded::Guarded { version, .. } => (&GUARDED, version),
     };
-    Placement::of(version).pick(texts)
+    Placement::of(version).pick(by_part(texts, new))
 }
 
 /// Run one folded commit statement ([`Folded`]), returning the rows it wrote.
@@ -443,7 +507,18 @@ pub async fn commit_folded(
     folded: Folded<'_>,
 ) -> Result<FoldedRows, StorageError> {
     let status = matches!(&folded, Folded::Guarded { guard, .. } if guard.status.is_some());
-    let sql = folded_text(&folded);
+    let party = match &folded {
+        Folded::Contribution { ehr_id, .. } => ehr_id.is_none(),
+        Folded::Standalone { version, .. }
+        | Folded::Into { version, .. }
+        | Folded::Guarded { version, .. } => version.ehr_id.is_none(),
+    };
+    let known = audit.shares.of(party);
+    let shared = known
+        .get(audit.shared.digest())
+        .map_or(SharedRef::New(0), SharedRef::Known);
+    let new = shared == SharedRef::New(0);
+    let sql = folded_text(&folded, new);
     let (id, ehr_id, version, guard) = match folded {
         Folded::Contribution { id, ehr_id } => (id, ehr_id, None, None),
         Folded::Standalone { id, version } | Folded::Into { id, version } => {
@@ -451,12 +526,7 @@ pub async fn commit_folded(
         }
         Folded::Guarded { id, version, guard } => (id, version.ehr_id, Some(version), Some(guard)),
     };
-    let query = sqlx::query(sqlx::AssertSqlSafe(sql))
-        .bind(audit.system_id)
-        .bind(audit.change_type)
-        .bind(&audit.description)
-        .bind(&audit.committer)
-        .bind(&audit.attestation)
+    let query = bind_audit(sqlx::query(sqlx::AssertSqlSafe(sql)), audit, shared)
         .bind(id)
         .bind(ehr_id);
     let (row, blobs) = match version {
@@ -480,6 +550,13 @@ pub async fn commit_folded(
             (row, Some((v.vo_id, v.sys_version, v.blob_uris)))
         }
     };
+    if new
+        && let Some(Some(id)) = row
+            .try_get::<Vec<Option<i32>>, _>("shared_learned")?
+            .first()
+    {
+        known.remember(*audit.shared.digest(), *id);
+    }
     if guard.is_some() {
         super::guarded::GuardFlags::read(&row)?.require()?;
     }

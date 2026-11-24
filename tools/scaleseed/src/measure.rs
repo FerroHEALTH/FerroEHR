@@ -402,7 +402,7 @@ async fn analyze(pool: &PgPool, report: &mut String) -> anyhow::Result<()> {
     let rows: Vec<(String, i64, Option<String>, Option<String>)> = sqlx::query_as(
         "SELECT relname::text, n_dead_tup, last_autovacuum::text, last_autoanalyze::text \
          FROM pg_stat_user_tables WHERE schemaname = 'clinical' \
-           AND relname IN ('node_hot', 'version_hot', 'vo_head', 'commit_audit', 'contribution') \
+           AND relname IN ('node_hot', 'version_hot', 'vo_head', 'commit_audit_facts', 'contribution') \
          ORDER BY relname",
     )
     .fetch_all(pool)

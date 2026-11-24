@@ -112,6 +112,8 @@ impl FerroEhrService {
         an_extract: Extract,
     ) -> Result<EhrId, ServiceError> {
         let (containers, parties) = self.admitted(&an_extract, Operation::ImportEhr).await?;
+        self.check_imported_episodes(&containers, &parties, None)
+            .await?;
         // A whole-EHR clone must carry an EHR_STATUS (EHR.ehr_status 1..1, RM
         // ehr §"EHR Creation") — the target could not otherwise be a valid EHR.
         if !containers.iter().any(|c| c.kind == Kind::EhrStatus) {
@@ -208,6 +210,8 @@ impl FerroEhrService {
         self.admit_import_target(an_ehr_id).await?;
         let (containers, parties) = self
             .admitted(&an_extract, Operation::ImportEhrExtract)
+            .await?;
+        self.check_imported_episodes(&containers, &parties, Some(an_ehr_id))
             .await?;
 
         let mut conn = self.recorded_conn(&self.pool).await?;

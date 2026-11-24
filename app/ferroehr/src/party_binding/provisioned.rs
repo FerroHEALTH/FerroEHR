@@ -473,7 +473,7 @@ pub async fn provisional_before(
                WHERE k.selector = 'key' AND k.retired_at IS NULL \
                  AND k.lifecycle_state = '553') p \
          JOIN version v ON v.vo_id = p.party_id \
-         JOIN commit_audit a ON a.id = v.commit_audit_id \
+         JOIN commit_audit_facts a ON a.id = v.commit_audit_id \
          GROUP BY p.party_id \
          HAVING min(a.time_committed) < $1 \
          ORDER BY created, p.party_id",

@@ -34,6 +34,8 @@ BEGIN
         GRANT SELECT ON TABLE
             _sqlx_migrations,
             commit_audit,
+            commit_audit_facts,
+            commit_audit_shared,
             contribution,
             version,
             version_hot,
@@ -80,6 +82,8 @@ BEGIN
             TO ferroehr_party_reader;
         GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE
             commit_audit,
+            commit_audit_facts,
+            commit_audit_shared,
             contribution,
             version_hot,
             version_cold,

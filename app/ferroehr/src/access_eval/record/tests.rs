@@ -8,7 +8,8 @@ use openehr_rm::draft::access_control::terminology::ForeignCode;
 use super::care::care_ground;
 use super::*;
 use crate::access_eval::care_tie::Grant;
-use crate::party_binding::grants::caller::care_of::{CarerKind, Cover, ProviderKey};
+use crate::party_binding::grants::caller::care_of::{CarerKind, ProviderKey};
+use crate::party_binding::grants::caller::care_ref::Cover;
 use crate::system_log::event::{EventActionCode, EventOutcome, ObjectClass};
 
 /// The versions the stored entry's grounds name come back as the
@@ -68,6 +69,7 @@ fn the_care_ground_names_the_kind_of_the_carer_it_covers_for() {
             provider: ProviderKey::new("urn:example:providers", "hospital"),
             in_grace: false,
             covers_for: Some(Cover::new(ProviderKey::new("local", &covered), kind)),
+            episode: None,
         };
         let role = ForeignCode {
             terminology: "HL7_ParticipationType".to_owned(),

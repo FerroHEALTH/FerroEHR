@@ -142,7 +142,7 @@ impl FerroEhrService {
         let description = description(&person.login_issuer);
         Box::pin(crate::party_binding::protect::provisioning(
             person.key_issuer,
-            self.create_parties(parties, &description, Some(committer)),
+            self.create_parties(parties, description, Some(committer)),
         ))
         .await?;
         Ok(id)

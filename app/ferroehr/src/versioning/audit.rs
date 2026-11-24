@@ -185,6 +185,9 @@ pub(crate) struct AuditInput {
     /// string would discard (RM common
     /// `UML/classes/org.openehr.rm.common.audit_details.adoc` §Attributes).
     pub(crate) description: Option<DvText>,
+    /// Whether [`Self::description`] is one the server wrote, which names no
+    /// record subject and so is stored in the audit's shared part (#6395).
+    pub(crate) server_description: bool,
     /// The committer (`AUDIT_DETAILS.committer`, 1..1).
     pub(crate) committer: PartyProxy,
     /// The `ATTESTATION`-declared attributes
@@ -232,7 +235,7 @@ impl AuditInput {
     pub(crate) fn from_update(
         update: &UpdateAudit,
         operation_change_type: &str,
-        default_description: &str,
+        default_description: &'static str,
         fallback_system_id: &str,
     ) -> Result<Self, ServiceError> {
         let base = plain_audit(update, "commit_audit")?;
@@ -248,21 +251,21 @@ impl AuditInput {
             .unwrap_or_else(|| fallback_system_id.to_owned());
         validate_system_id(&system_id)?;
         let committer = check_committer(&base.committer)?;
+        let stated = base
+            .description
+            .as_ref()
+            .filter(|d| !text_value(d).is_empty())
+            .cloned();
         Ok(Self {
             system_id,
             change_type,
+            server_description: stated.is_none(),
             // The wire types `description` as `DV_TEXT`
             // (`schemas/common/UpdateAudit.yaml`), whose `DV_CODED_TEXT` subtype
             // substitutes for it, so it is kept WHOLE: reducing it to its
             // `value` would permanently drop a coded description's
             // `defining_code`.
-            description: Some(
-                base.description
-                    .as_ref()
-                    .filter(|d| !text_value(d).is_empty())
-                    .cloned()
-                    .unwrap_or_else(|| dv_text(default_description)),
-            ),
+            description: Some(stated.unwrap_or_else(|| dv_text(default_description))),
             committer,
             attestation: None,
         })
@@ -294,6 +297,7 @@ impl AuditInput {
                 .unwrap_or_else(|| default_system_id.to_owned()),
             change_type,
             description: update.description.clone(),
+            server_description: false,
             committer: update.committer.clone(),
             attestation: None,
         }
@@ -316,20 +320,43 @@ impl AuditInput {
         )
     }
 
-    /// The storage row shape ([`crate::storage::version_repo::commit::AuditRow`])
-    /// this audit persists as — the three jsonb columns encoded ONCE here, at
-    /// the versioning→storage boundary, because storage is plumbing that takes
-    /// plain values (`crate::storage::version_repo` module docs) and the
-    /// `ATTESTATION`-declared subset has no RM class of its own to hand it.
-    pub(crate) fn row(&self) -> crate::storage::version_repo::commit::AuditRow<'_> {
+    /// The storage row this audit persists as, the jsonb members encoded
+    /// once here: the system id, a server-written description and the
+    /// committer of a caller outside a patient context go to the shared part,
+    /// which names no record subject; a client's description and a person's
+    /// committer stay on the audit's own row, which an erasure deletes (#6395,
+    /// GDPR Art. 17).
+    pub(crate) fn row<'a>(
+        &'a self,
+        shares: &'a crate::storage::version_repo::audit_shared::AuditShares,
+    ) -> crate::storage::version_repo::commit::AuditRow<'a> {
+        let description = self
+            .description
+            .as_ref()
+            .map(openehr_its::json::to_canonical_json);
+        let committer = openehr_its::json::to_canonical_json(&self.committer);
+        let (shared_description, description) = if self.server_description {
+            (description, None)
+        } else {
+            (None, description)
+        };
+        let shared_committer = matches!(self.committer, PartyProxy::PartyIdentified(_))
+            && !crate::versioning::committer::inserts_for_the_person();
+        let (shared_committer, committer) = if shared_committer {
+            (Some(committer), None)
+        } else {
+            (None, Some(committer))
+        };
         crate::storage::version_repo::commit::AuditRow {
-            system_id: &self.system_id,
+            shares,
+            shared: crate::storage::version_repo::audit_shared::SharedPart::new(
+                &self.system_id,
+                shared_committer,
+                shared_description,
+            ),
             change_type: &self.change_type,
-            description: self
-                .description
-                .as_ref()
-                .map(openehr_its::json::to_canonical_json),
-            committer: openehr_its::json::to_canonical_json(&self.committer),
+            description,
+            committer,
             attestation: self.attestation.as_ref().map(|parts| parts.fragment()),
         }
     }
@@ -426,6 +453,7 @@ fn decoded(
         system_id: system_id.to_owned(),
         change_type: change_type.to_owned(),
         description: description.map(decode_description).transpose()?,
+        server_description: false,
         committer: party_proxy(committer)?,
         attestation: attestation
             .map(AttestationParts::decode)

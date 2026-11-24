@@ -36,7 +36,7 @@ impl FerroEhrService {
         kind: Kind,
         request: &WriteRequest<Body>,
         container: Option<Container>,
-        change: (&str, &str),
+        change: (&str, &'static str),
     ) -> Result<Resolved, ServiceError> {
         let rendered = demographic_rules(kind, &request.data, container)?;
         let resolved = self.resolve_write(request, change.0, change.1)?;

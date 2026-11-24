@@ -19,6 +19,11 @@ impl LiveGrants {
         self.care.held()
     }
 
+    /// Runs the care copy's pending cache upkeep ([`crate::service::upkeep`]).
+    pub(crate) async fn upkeep(&self) {
+        self.care.upkeep().await;
+    }
+
     /// How many capabilities and client `ACTOR`s the copy of the grant rows
     /// holds, and their bytes. The copy holds every grant row and is bounded
     /// by the grant register, never by a cap of its own: a grant it left out
