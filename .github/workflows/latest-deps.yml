@@ -38,6 +38,14 @@ concurrency:
 
 permissions: {}
 
+env:
+  # CI builds compile from a cache, never incrementally, with no debug
+  # info, the link weight no cache removes (#6521,
+  # https://doc.rust-lang.org/cargo/reference/profiles.html).
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
+
 jobs:
   latest-deps:
     name: build against latest in-range deps
