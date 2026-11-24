@@ -339,9 +339,9 @@ docker compose -f docker-compose.yml -f docker-compose.ferrosmart.yml \
 
 - `docker-compose.ferrosmart.yml` adds FerroSMART, pinned by digest in
   `docs/VERSIONS.md`, with its own PostgreSQL, at `http://localhost:8280`.
-  FerroEHR trusts it as the `persons` issuer with the `ferrosmart` profile,
-  binds people by FerroSMART's subject under `urn:example:ferrosmart-login`,
-  honours its `patient/` grants and describes it in the discovery document.
+  FerroEHR trusts it as a SMART App Launch issuer, binds people by
+  FerroSMART's subject under `urn:example:ferrosmart-login`, and describes it
+  in the discovery document.
   The viewer's [Launch button](../smart-app-launch.md#launching-an-app-from-the-viewer)
   registers its EHR launches there, for the example app `example-app`.
   FerroSMART's configuration is `docker/ferrosmart/ferrosmart.toml`
@@ -404,8 +404,9 @@ the CA's private key; the server (`[auth.tls] trust_roots_file`) and the viewer
 generates a new CA. Keycloak also answers plain HTTP on port 8081 for the token
 call below, and the tokens it mints there name the HTTPS issuer. Keycloak's
 access tokens carry `typ: JWT`, so the overlay adds the realm as the
-`[auth.issuer.keycloak]` table with `preset = "keycloak"`
-(`FERROEHR__AUTH__ISSUER__KEYCLOAK__PRESET=keycloak`), beside the
+`[auth.issuer.keycloak]` table accepting that type
+(`FERROEHR__AUTH__ISSUER__KEYCLOAK__PROFILE__TOKEN_TYPES=JWT`), and the realm
+puts `client_id` in every token with a hardcoded claim mapper, beside the
 quickstart's `basic_users` issuer, which its Basic user binds under, and its
 `quickstart` issuer, which signs its SCIM client's tokens.
 
@@ -727,8 +728,7 @@ Set these in your shell (or an `.env` file) to retune without editing anything:
 | `POSTGRES_PASSWORD` | `postgres` | Bootstrap superuser password (init only). |
 | `FERROEHR__TELEMETRY__FORMAT` | `pretty` | Log rendering for `docker compose logs`. Set `json` for log collectors. |
 | `FERROEHR__TELEMETRY__FILTER` | `info` | Log level filter. |
-| `FERROEHR__DATABASE__MAX_CONNECTIONS` | `20` | The size of each of the server's three pools. |
-| `FERROEHR__DATABASE__CONNECTION_BUDGET` | `70` | The most connections the server opens: three pools of 20, the audit runtime's four and its listener connection. |
+| `FERROEHR__DATABASE__MAX_CONNECTIONS` | `10` | Server connection-pool ceiling. |
 | `FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS` | `256` | Concurrent-request bound (`503` with `Retry-After` past it). |
 | `FERROEHR__RECORD__SIGNING__ENABLED` | `true` | Version signing. |
 

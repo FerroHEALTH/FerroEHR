@@ -470,11 +470,10 @@ services:
       # The server reads the file this names and searches for none.
       FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
       FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
-      # Each pool's size and the instance's connection budget (#5774): pools of
-      # 20 are the measured knee of one instance (#6237), and 3 × 20, the audit
-      # runtime's 4 and one listener fit 70, inside PostgreSQL's default 100.
-      FERROEHR__DATABASE__MAX_CONNECTIONS: ${FERROEHR__DATABASE__MAX_CONNECTIONS:-20}
-      FERROEHR__DATABASE__CONNECTION_BUDGET: ${FERROEHR__DATABASE__CONNECTION_BUDGET:-70}
+      # Connection-pool ceiling; measured comparison runs raise it in lockstep
+      # with the upstream stack's HikariCP pool (config parity — the dominant
+      # tunable must match across compared SUTs).
+      FERROEHR__DATABASE__MAX_CONNECTIONS: ${FERROEHR__DATABASE__MAX_CONNECTIONS:-10}
       # Concurrent-request bound (503 load shed past it). The comparison runs
       # raise it so overload manifests as queueing latency — the same failure
       # mode as upstream's Tomcat admission window — instead of shed errors
@@ -898,12 +897,11 @@ configs:
 
       # The issuer the Basic users bind under. A Basic user is a person and
       # maps to the PERSON carrying its binding key, which its party
-      # table places under the identifier issuer of a persons issuer. This one signs
+      # table places under the identifier issuer of an issuer's party table. This one signs
       # nothing: its key set, in every FerroEHR image, is the public half of a
       # key pair whose private key was discarded, for local lanes only.
       [auth.issuer.basic_users]
       issuer = "https://basic-users.ferroehr.invalid"
-      kind = "persons"
       audience = ["ferroehr-basic-users"]
       jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
 
@@ -938,10 +936,9 @@ configs:
 
       # The SCIM endpoint the ferroehr-provision one-shot provisions the quickstart
       # user through, with a client credentials token of the development issuer,
-      # trusted here as a machines issuer for that one client.
+      # trusted here for that one client.
       [auth.issuer.quickstart]
       issuer = "http://localhost:8180/quickstart"
-      kind = "machines"
       audience = ["ferroehr-scim"]
 
       [auth.issuer.quickstart.profile]
@@ -1038,12 +1035,11 @@ configs:
 
       # The issuer the Basic users bind under. A Basic user is a person and
       # maps to the PERSON carrying its binding key, which its party
-      # table places under the identifier issuer of a persons issuer. This one signs
+      # table places under the identifier issuer of an issuer's party table. This one signs
       # nothing: its key set, in every FerroEHR image, is the public half of a
       # key pair whose private key was discarded, for local lanes only.
       [auth.issuer.basic_users]
       issuer = "https://basic-users.ferroehr.invalid"
-      kind = "persons"
       audience = ["ferroehr-basic-users"]
       jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
 
@@ -1078,10 +1074,9 @@ configs:
 
       # The SCIM endpoint the ferroehr-provision one-shot provisions the quickstart
       # user through, with a client credentials token of the development issuer,
-      # trusted here as a machines issuer for that one client.
+      # trusted here for that one client.
       [auth.issuer.quickstart]
       issuer = "http://localhost:8180/quickstart"
-      kind = "machines"
       audience = ["ferroehr-scim"]
 
       [auth.issuer.quickstart.profile]
