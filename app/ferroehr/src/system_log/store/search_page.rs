@@ -129,20 +129,24 @@ pub(super) fn build_search_statements(
     let mut page = page(&condition, count, offset, served, cursor);
     // NOTE: our own design (#6320), the revisions ride on the page's first record alone, which
     // the confirmation reads, so the other records carry a NULL over the wire.
-    let first = |carried: &'static str| -> Expr {
+    let first = |carried: Expr| -> Expr {
         sea_query::CaseStatement::new()
             .case(
                 Expr::col((Alias::new("page_key"), Alias::new("position"))).eq(1),
-                Expr::cust(carried),
+                carried,
             )
             .into()
     };
-    page.expr_as(first(CURSOR_SQL_ITEM), Alias::new(CURSOR));
+    page.expr_as(first(Expr::cust(CURSOR_SQL_ITEM)), Alias::new(CURSOR));
     if filter.carried.policy {
         let carried = if filter.carried.reads_party() {
-            super::carried::PARTY
+            let door = crate::party_binding::request::door();
+            Expr::cust_with_values(
+                super::carried::PARTY,
+                [door.as_deref().map(|held| held.text().to_owned())],
+            )
         } else {
-            super::carried::POLICY
+            Expr::cust(super::carried::POLICY)
         };
         page.expr_as(first(carried), Alias::new(super::carried::CARRIED));
     }

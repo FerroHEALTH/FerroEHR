@@ -27,24 +27,26 @@ pub struct Carried {
 /// revisions at the statement's own snapshot, and three NULLs where a ride's
 /// party store revisions go ([`PARTY`]).
 pub(super) const POLICY: &str = "(SELECT ROW(rr.policy, rr.definitions, NULL::bigint, \
-     NULL::bigint, NULL::bigint) FROM clinical.request_revisions rr)";
+     NULL::boolean, NULL::bigint) FROM clinical.request_revisions rr)";
 
-/// The select item of [`POLICY`] with the party store's grant, facts and
-/// binding revisions, read through the party door.
-pub(super) const PARTY: &str = "(SELECT ROW(rr.policy, rr.definitions, pr.grants, pr.facts, \
-     pr.bindings) FROM clinical.request_revisions rr, party_door.party_revisions() pr)";
+/// The select item of [`POLICY`] with the party store's grant and binding
+/// revisions and whether a caller facts stamp exists that the snapshot bound
+/// at `$1` did not see, read through the party door (#6074).
+pub(super) const PARTY: &str = "(SELECT ROW(rr.policy, rr.definitions, pr.grants, \
+     pr.facts_behind, pr.bindings) FROM clinical.request_revisions rr, \
+     party_door.party_revisions($1::pg_snapshot) pr)";
 
 /// The column the page's first record carries the revisions in.
 pub(super) const CARRIED: &str = "carried_revisions";
 
 /// The record [`POLICY`] and [`PARTY`] read.
-type Revisions = (i64, i64, Option<i64>, Option<i64>, Option<i64>);
+type Revisions = (i64, i64, Option<i64>, Option<bool>, Option<i64>);
 
 /// The cluster and database a pool serves, and whether its role may read
 /// `clinical.request_revisions` and run the party door there.
 const WHERE_SQL: &str = "SELECT s.system_identifier::text, current_database()::text, \
      COALESCE(has_table_privilege(to_regclass('clinical.request_revisions'), 'SELECT'), false), \
-     COALESCE(has_function_privilege(to_regprocedure('party_door.party_revisions()'), \
+     COALESCE(has_function_privilege(to_regprocedure('party_door.party_revisions(pg_snapshot)'), \
      'EXECUTE'), false) FROM pg_control_system() s";
 
 impl Carried {
@@ -85,20 +87,15 @@ impl Carried {
         let Some(row) = rows.first().filter(|_| self.policy) else {
             return Ok(());
         };
-        let Some((policy, definitions, grants, facts, bindings)) =
+        let Some((policy, definitions, grants, facts_behind, bindings)) =
             row.try_get::<Option<Revisions>, _>(CARRIED)?
         else {
             return Ok(());
         };
         crate::policy_register::observed::observe(policy, definitions);
-        if let (Some(grants), Some(facts), Some(bindings)) = (grants, facts, bindings) {
-            crate::party_binding::request::observe(
-                crate::party_binding::grants::live::revisions::Revisions {
-                    grants,
-                    facts,
-                    bindings,
-                },
-            );
+        if let (Some(grants), Some(facts_behind), Some(bindings)) = (grants, facts_behind, bindings)
+        {
+            crate::party_binding::request::observe_door(grants, facts_behind, bindings);
         }
         Ok(())
     }

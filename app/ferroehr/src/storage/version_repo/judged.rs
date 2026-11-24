@@ -15,7 +15,7 @@ use sqlx::{PgPool, Row};
 
 use crate::db::acquire::acquire;
 use crate::ids::VoId;
-use crate::storage::access_facts::HeadFacts;
+use crate::storage::access_facts::{HeadFacts, Statements};
 use crate::storage::error::StorageError;
 use crate::storage::version_repo::read::{StoredVersion, stored_version_raw};
 use crate::versioning::object_version_id::TreeId;
@@ -55,14 +55,36 @@ pub const JUDGED_TREE_SQL: &str = judged_select!(
 );
 
 /// [`JUDGED_CURRENT_SQL`] with the party store's revisions, for a ride.
-pub const JUDGED_CURRENT_RIDE_SQL: &str = judged_select!(party_revisions!();
+pub const JUDGED_CURRENT_RIDE_SQL: &str = judged_select!(party_revisions!("$2");
     "WHERE v.vo_id = $1 AND h.trunk_head_sys_version = v.sys_version");
 
 /// [`JUDGED_TREE_SQL`] with the party store's revisions, for a ride.
-pub const JUDGED_TREE_RIDE_SQL: &str = judged_select!(party_revisions!();
+pub const JUDGED_TREE_RIDE_SQL: &str = judged_select!(party_revisions!("$5");
     "WHERE v.vo_id = $1 AND v.trunk_version = $2 \
      AND v.branch_number = $3 AND v.branch_version = $4"
 );
+
+/// [`JUDGED_CURRENT_SQL`] in each of its forms.
+pub const JUDGED_CURRENT: Statements = Statements {
+    plain: JUDGED_CURRENT_SQL,
+    ride: JUDGED_CURRENT_RIDE_SQL,
+    episodes: judged_select!(head_episodes!();
+        "WHERE v.vo_id = $1 AND h.trunk_head_sys_version = v.sys_version"),
+    ride_episodes: judged_select!(concat!(party_revisions!("$2"), head_episodes!());
+        "WHERE v.vo_id = $1 AND h.trunk_head_sys_version = v.sys_version"),
+};
+
+/// [`JUDGED_TREE_SQL`] in each of its forms.
+pub const JUDGED_TREE: Statements = Statements {
+    plain: JUDGED_TREE_SQL,
+    ride: JUDGED_TREE_RIDE_SQL,
+    episodes: judged_select!(head_episodes!();
+        "WHERE v.vo_id = $1 AND v.trunk_version = $2 \
+         AND v.branch_number = $3 AND v.branch_version = $4"),
+    ride_episodes: judged_select!(concat!(party_revisions!("$5"), head_episodes!());
+        "WHERE v.vo_id = $1 AND v.trunk_version = $2 \
+         AND v.branch_number = $3 AND v.branch_version = $4"),
+};
 
 /// The version of an object a judged read addresses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -99,43 +121,38 @@ pub struct Judged {
 /// [`StorageError`] on a driver failure or a column that does not decode.
 pub async fn read_judged(pool: &PgPool, at: JudgedAt) -> Result<Option<Judged>, StorageError> {
     let ride = crate::party_binding::request::reads_door();
+    let door = crate::party_binding::request::door();
+    let door = door.as_deref().map(crate::db::snapshot::Snapshot::text);
     let (vo_id, query) = match at {
         JudgedAt::Current(vo_id) => {
-            let sql = if ride {
-                JUDGED_CURRENT_RIDE_SQL
-            } else {
-                JUDGED_CURRENT_SQL
-            };
-            (vo_id, sqlx::query(sql).bind(vo_id))
+            let query = sqlx::query(JUDGED_CURRENT.chosen()).bind(vo_id);
+            (vo_id, if ride { query.bind(door) } else { query })
         }
         JudgedAt::Tree(vo_id, tree) => {
             let (trunk, branch, branch_version) = tree.columns();
-            let sql = if ride {
-                JUDGED_TREE_RIDE_SQL
-            } else {
-                JUDGED_TREE_SQL
-            };
-            let query = sqlx::query(sql)
+            let query = sqlx::query(JUDGED_TREE.chosen())
                 .bind(vo_id)
                 .bind(trunk)
                 .bind(branch)
                 .bind(branch_version);
-            (vo_id, query)
+            (vo_id, if ride { query.bind(door) } else { query })
         }
     };
     let Some(row) = query.fetch_optional(&mut *acquire(pool).await?).await? else {
         return Ok(None);
     };
     let facts = HeadFacts::read(&row, vo_id)?;
+    let head = row.try_get("held_head")?;
+    let digest = row.try_get("held_digest")?;
     let stored = match row.try_get::<Option<VoId>, _>("vo_id")? {
-        Some(held) => Some(stored_version_raw(held, &row)?),
+        Some(object) => Some(stored_version_raw(object, row)?),
         None => None,
     };
     Ok(Some(Judged {
         facts,
         stored,
-        head: row.try_get("held_head")?,
-        digest: row.try_get("held_digest")?,
+        head,
+        digest,
     }))
 }
 
@@ -159,7 +176,7 @@ macro_rules! marks_select {
 pub const MARKS_SQL: &str = marks_select!("");
 
 /// [`MARKS_SQL`] with the party store's revisions, for a ride.
-pub const MARKS_RIDE_SQL: &str = marks_select!(party_revisions!());
+pub const MARKS_RIDE_SQL: &str = marks_select!(party_revisions!("$3"));
 
 /// What may have changed about a version since it was read: everything a
 /// read decides by that a later commit can change while the version itself
@@ -189,17 +206,16 @@ pub async fn read_marks(
     vo_id: VoId,
     sys_version: i32,
 ) -> Result<Option<Marks>, StorageError> {
-    let sql = if crate::party_binding::request::reads_door() {
-        MARKS_RIDE_SQL
+    let door = crate::party_binding::request::door();
+    let query = if crate::party_binding::request::reads_door() {
+        sqlx::query(MARKS_RIDE_SQL)
+            .bind(vo_id)
+            .bind(sys_version)
+            .bind(door.as_deref().map(crate::db::snapshot::Snapshot::text))
     } else {
-        MARKS_SQL
+        sqlx::query(MARKS_SQL).bind(vo_id).bind(sys_version)
     };
-    let Some(row) = sqlx::query(sql)
-        .bind(vo_id)
-        .bind(sys_version)
-        .fetch_optional(&mut *acquire(pool).await?)
-        .await?
-    else {
+    let Some(row) = query.fetch_optional(&mut *acquire(pool).await?).await? else {
         return Ok(None);
     };
     Ok(Some(Marks {

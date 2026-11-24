@@ -15,12 +15,13 @@ mod examples;
 mod grounds;
 mod steps;
 mod steps_confidentiality;
+mod steps_episodes;
 mod steps_exclusion;
 mod steps_policy;
 mod steps_purpose;
 mod steps_rules;
 
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::care::CarePath;
@@ -46,6 +47,7 @@ use ferroehr::policy_register::CategoriesInForce;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
 use ferroehr::service::ehr::access_settings::EhrAccessSettings;
 use ferroehr::system_log::categories::CategoryMapConfig;
+use ferroehr::versioning::episode::EpisodeKey;
 
 /// Dr B, the ex-partner.
 pub(super) const DR_B: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f81";
@@ -515,35 +517,55 @@ impl Case {
     }
 }
 
+/// The cardiology episode.
+pub(super) static CARDIOLOGY_EPISODE: LazyLock<[EpisodeKey; 1]> =
+    LazyLock::new(|| [EpisodeKey::of(HOSPITAL, "C-17")]);
+/// The dermatology episode.
+pub(super) static DERMATOLOGY_EPISODE: LazyLock<[EpisodeKey; 1]> =
+    LazyLock::new(|| [EpisodeKey::of(HOSPITAL, "D-4")]);
+/// The issuer of the hospital's episode identifiers.
+pub(super) const HOSPITAL: &str = "urn:example:hospital";
+
 /// The items a class verdict is checked on: the EHR itself, and each test
 /// object under each test template, with and without origins and a commit
-/// time, inside and outside November 2026.
+/// time, inside and outside November 2026, unplaced, in the cardiology
+/// episode and read without its episodes.
 fn probes() -> Vec<Item<'static>> {
     const STAMPED: &[String] = &[];
     let mut items = vec![Item::Ehr];
     for id in [OBJECT, OTHER] {
         for template in [Some("psych_note.v1"), Some("lab_hiv.v1"), None] {
             for origins in [Some(STAMPED), None] {
-                for recorded in ["2026-11-12T08:00:00Z", "2025-01-01T00:00:00Z"] {
+                for episodes in [Some(&[][..]), Some(&CARDIOLOGY_EPISODE[..]), None] {
+                    for recorded in ["2026-11-12T08:00:00Z", "2025-01-01T00:00:00Z"] {
+                        items.push(Item::Object(Object {
+                            vo_id: uuid(id),
+                            template,
+                            archetype: None,
+                            origins,
+                            recorded: Some(recorded.parse().expect("an instant")),
+                            episodes,
+                        }));
+                    }
                     items.push(Item::Object(Object {
                         vo_id: uuid(id),
                         template,
                         archetype: None,
                         origins,
-                        recorded: Some(recorded.parse().expect("an instant")),
+                        recorded: None,
+                        episodes,
                     }));
                 }
-                items.push(Item::Object(Object {
-                    vo_id: uuid(id),
-                    template,
-                    archetype: None,
-                    origins,
-                    recorded: None,
-                }));
             }
         }
     }
     items
+}
+
+/// An `ACCESS_DATA_SCOPE` naming the hospital's episodes `ids`.
+pub(super) fn episodes(ids: &[&str]) -> Value {
+    json!({ "episodes": ids.iter().map(|id| json!({ "_type": "DV_IDENTIFIER",
+        "issuer": HOSPITAL, "id": id })).collect::<Vec<_>>() })
 }
 
 /// The object `id` of `template`, committed on 12 November 2026.
@@ -554,6 +576,24 @@ pub(super) fn object<'a>(id: &str, template: Option<&'a str>) -> Item<'a> {
         archetype: None,
         origins: Some(&[]),
         recorded: Some("2026-11-12T08:00:00Z".parse().expect("an instant")),
+        episodes: Some(&[]),
+    })
+}
+
+/// The object `id` of `template`, committed on 12 November 2026 and placed in
+/// `episodes`.
+pub(super) fn placed<'a>(
+    id: &str,
+    template: Option<&'a str>,
+    episodes: &'a [EpisodeKey],
+) -> Item<'a> {
+    Item::Object(Object {
+        vo_id: uuid(id),
+        template,
+        archetype: None,
+        origins: Some(&[]),
+        recorded: Some("2026-11-12T08:00:00Z".parse().expect("an instant")),
+        episodes: Some(episodes),
     })
 }
 

@@ -144,10 +144,9 @@ pub struct ServiceResponse<B = Value> {
 pub enum ReadBody {
     /// The parsed canonical value.
     Value(Value),
-    /// The stored body's own jsonb text rendering, served verbatim for a
-    /// JSON accept; a consumer needing the typed value parses it. Shared
-    /// with the version copy, so serving it copies nothing (#6205).
-    RawJson(std::sync::Arc<str>),
+    /// The stored body's bytes, served verbatim for a JSON accept; a consumer
+    /// needing the typed value parses them. Serving them copies nothing.
+    RawJson(crate::storage::stored_text::StoredText),
 }
 
 impl ReadBody {
@@ -169,7 +168,7 @@ impl ReadBody {
             ReadBody::Value(v) => Ok(v),
             ReadBody::RawJson(text) => {
                 crate::telemetry::conversion::record("stored_text_to_value");
-                serde_json::from_str(&text)
+                serde_json::from_slice(text.bytes())
             }
         }
     }
