@@ -258,7 +258,9 @@ pub fn resolve(pred: &Pred, facts: &[Value], keys: &CallerKeys) -> Pred {
             .unwrap_or_default()
     };
     match pred {
-        Pred::True | Pred::False | Pred::Care(_) => pred.clone(),
+        Pred::True | Pred::False | Pred::Care(_) | Pred::InEpisodes(_) | Pred::Covered(_) => {
+            pred.clone()
+        }
         Pred::Not(inner) => Pred::negate(resolve(inner, facts, keys)),
         Pred::All(preds) => Pred::all(preds.iter().map(|p| resolve(p, facts, keys)).collect()),
         Pred::Any(preds) => Pred::any(preds.iter().map(|p| resolve(p, facts, keys)).collect()),

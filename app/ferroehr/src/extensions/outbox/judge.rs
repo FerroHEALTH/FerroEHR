@@ -69,7 +69,7 @@ impl FerroEhrService {
         let mut verdicts: BTreeMap<EhrId, Arc<Verdict>> = BTreeMap::new();
         for (ehr_id, stored) in stored {
             let verdict = access
-                .judge_ehr(ehr_id, &entry_of(ehr_id, stored))
+                .judge_ehr(ehr_id, &Arc::new(entry_of(ehr_id, stored)))
                 .await
                 .map_err(|e| ServiceError::overloaded(UNANSWERED, e))?;
             verdicts.insert(ehr_id, verdict);

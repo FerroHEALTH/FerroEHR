@@ -15,7 +15,7 @@
 //! `PARTY_RELATIONSHIP` of a `PERSON` whose `name` or `details` carry a code
 //! of [`CareRelationship`] is a care relationship
 //! (`org.openehr.rm.demographic.party_relationship.adoc`: `source`, `target`,
-//! `time_validity`): the professional is a member (HL7 v3 `RoleClass#MBR`) of a care team, and the
+//! `time_validity`): the professional is a `member_of` a care team, and the
 //! patient is `under_care_of` a team or a unit, with the admission as its
 //! `time_validity`. The care delivery environment, such as a hospital's ADT
 //! system, writes them under a `write_care_relationship` grant
@@ -216,7 +216,7 @@ pub(crate) fn coded_name<'a, T: Tree<'a>>(body: T, kind: FactKind, facts: &mut G
 
 /// Pushes onto `facts` the care relationship or the memberships `body`, of
 /// `kind`, holds, and why one cannot be read: a care relationship is a
-/// `PARTY_RELATIONSHIP` of its own ([`care_of`]), a membership (`MBR`) is
+/// `PARTY_RELATIONSHIP` of its own ([`care_of`]), a membership (`member_of`) is
 /// held in the relationships of its member, a `PERSON` or an
 /// `ORGANISATION`, such as a provider's membership of the providers of a
 /// region, or a `GROUP`, whose membership names the `ORGANISATION` it
@@ -431,8 +431,8 @@ mod tests {
 
     const TEAM: &str = "0190a1bc-3a1e-72e4-b7c5-f78a24c01308";
 
-    /// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
-    const MEMBER: (&str, &str) = ("HL7_RoleClass", "MBR");
+    /// A professional's membership of a care team.
+    const MEMBER: (&str, &str) = (TERMINOLOGY, "member_of");
     /// A representation.
     const REPRESENTS: (&str, &str) = (TERMINOLOGY, "represents");
 
@@ -548,9 +548,10 @@ mod tests {
     }
 
     #[test]
-    fn a_membership_is_read_by_the_hl7_code_alone() {
+    fn a_membership_is_read_by_the_access_code_alone() {
         let body = json!({"_type": "PERSON", "relationships": [
-            relationship((TERMINOLOGY, "member_of"), TEAM),
+            relationship(("HL7_RoleClass", "MBR"), TEAM),
+            relationship(("HL7_RoleClass", "MBR"), "1.2.840.113619"),
             relationship(("HL7_RoleCode", "MBR"), TEAM)
         ]});
         let facts = GrantFacts::of(Kind::Person, &body);

@@ -134,9 +134,13 @@ impl std::fmt::Debug for Node<'_> {
     }
 }
 
+/// A caller's check of one node at its RM instance path, run in the walk
+/// ([`validate_tree_visiting`]).
+pub type Visit<'v> = dyn FnMut(&str, &Node<'_>) + 'v;
+
 /// The running state of the walk: the path buffer and the violations of
 /// each pass.
-pub struct Walker {
+pub struct Walker<'v> {
     path: String,
     out: Vec<TreeViolation>,
     /// The terminology violations, reported after every invariant one.
@@ -145,9 +149,11 @@ pub struct Walker {
     root: Option<Vec<InvariantViolation>>,
     /// Whether the next node is the root [`validate_below`] leaves out.
     skip_root: bool,
+    /// The caller's visitor of every node ([`validate_tree_visiting`]).
+    visit: Option<&'v mut Visit<'v>>,
 }
 
-impl std::fmt::Debug for Walker {
+impl std::fmt::Debug for Walker<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Walker")
             .field("path", &self.path)
@@ -155,7 +161,7 @@ impl std::fmt::Debug for Walker {
     }
 }
 
-impl Walker {
+impl Walker<'_> {
     /// Visit a single-valued attribute.
     pub fn attr<T: Walk + ?Sized>(&mut self, key: &str, value: &T) {
         if self.root.is_some() {
@@ -195,6 +201,9 @@ impl Walker {
         }
         self.invariants(node);
         self.terminology(node);
+        if let Some(visit) = &mut self.visit {
+            visit(&self.path, node);
+        }
     }
 
     fn invariants(&mut self, node: &Node<'_>) {
@@ -285,12 +294,32 @@ fn norm_path(p: &str) -> String {
 /// Runs the template-independent passes over a typed RM resource.
 #[must_use]
 pub fn validate_tree<T: Walk + ?Sized>(root: &T) -> Vec<TreeViolation> {
+    walk_tree(root, None)
+}
+
+/// [`validate_tree`], calling `visit` with every node and its RM instance
+/// path (empty for the root) in the same walk, so a caller's own per-node
+/// check needs no walk of its own.
+#[must_use]
+pub fn validate_tree_visiting<'v, T: Walk + ?Sized>(
+    root: &T,
+    visit: &'v mut Visit<'v>,
+) -> Vec<TreeViolation> {
+    walk_tree(root, Some(visit))
+}
+
+/// The walk of [`validate_tree`] and [`validate_tree_visiting`].
+fn walk_tree<'v, T: Walk + ?Sized>(
+    root: &T,
+    visit: Option<&'v mut Visit<'v>>,
+) -> Vec<TreeViolation> {
     let mut w = Walker {
         path: String::new(),
         out: Vec::new(),
         terms: Vec::new(),
         root: None,
         skip_root: false,
+        visit,
     };
     root.walk(&mut w);
     w.out.append(&mut w.terms);
@@ -307,6 +336,7 @@ pub fn validate_below<T: Walk + ?Sized>(value: &T) -> Vec<TreeViolation> {
         terms: Vec::new(),
         root: None,
         skip_root: true,
+        visit: None,
     };
     value.walk(&mut w);
     w.out.append(&mut w.terms);
@@ -323,6 +353,7 @@ pub fn validate_node<T: Walk + ?Sized>(value: &T) -> Vec<InvariantViolation> {
         terms: Vec::new(),
         root: Some(Vec::new()),
         skip_root: false,
+        visit: None,
     };
     value.walk(&mut w);
     w.root.unwrap_or_default()

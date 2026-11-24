@@ -266,7 +266,7 @@ impl CallerFacts {
     }
 
     /// The containers of the `GROUP`s the provider a client acts for is a
-    /// member of on the request's date, by a membership (`MBR`) relationship of the
+    /// member of on the request's date, by a membership (`member_of`) relationship of the
     /// provider `ORGANISATION`.
     #[must_use]
     pub fn provider_groups(&self) -> &[Uuid] {

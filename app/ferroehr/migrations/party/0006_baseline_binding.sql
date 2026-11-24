@@ -103,31 +103,92 @@ CREATE FUNCTION binding_fold(p_value text) RETURNS text
     );
 COMMENT ON FUNCTION binding_fold(text) IS 'The RFC 8265 UsernameCaseMapped preparation (width mapping, case mapping, NFC) a userName and a group displayName are compared by. Our own design.';
 
+CREATE FUNCTION binding_change_set(items jsonb) RETURNS text
+    LANGUAGE sql STABLE
+    RETURN CASE
+        WHEN current_setting('ferroehr.binding_changes', true) = '["*"]' THEN '["*"]'
+        WHEN length(coalesce(current_setting('ferroehr.binding_changes', true), ''))
+             + length(items::text) > 7800 THEN '["*"]'
+        ELSE (coalesce(nullif(current_setting('ferroehr.binding_changes', true), ''), '[]')::jsonb
+              || items)::text
+    END;
+COMMENT ON FUNCTION binding_change_set(jsonb) IS
+    'The transaction''s binding change set with items added, or "*" once it no longer fits a notification (#6403).';
+
 CREATE FUNCTION binding_changed() RETURNS trigger
     LANGUAGE plpgsql
     SET search_path = party, pg_catalog
     AS $$
 BEGIN
-    -- A statement trigger fires on a statement that changed no row
-    -- (PostgreSQL CREATE TRIGGER), so its transition table says whether any
-    -- did; TRUNCATE has none and a row trigger fires for a changed row.
-    IF TG_LEVEL = 'STATEMENT' AND TG_OP <> 'TRUNCATE' THEN
-        IF NOT EXISTS (SELECT FROM changed) THEN
-            RETURN NULL;
-        END IF;
+    -- Each statement adds what it changed to the transaction's change set,
+    -- which binding_revision_committed notifies at commit: the parties of the
+    -- rows, the key of each key row and the issuer of each other identifier
+    -- row. A statement trigger fires on a statement that changed no row
+    -- (PostgreSQL CREATE TRIGGER), so an empty change set returns at once; a
+    -- key space, a TRUNCATE and a row trigger change what no row names, "*".
+    IF TG_TABLE_NAME = 'binding_identifier' AND TG_OP = 'UPDATE' THEN
+        PERFORM set_config('ferroehr.binding_changes', binding_change_set(s.items), true)
+          FROM (SELECT jsonb_agg(DISTINCT x) AS items
+                  FROM (SELECT * FROM changed UNION ALL SELECT * FROM gone) b,
+                       LATERAL (VALUES (jsonb_build_object('p', b.party_id)),
+                           (CASE WHEN b.selector = 'key'
+                                 THEN jsonb_build_object('k', jsonb_build_array(
+                                          b.issuer, b.identifier_type, b.value))
+                                 ELSE jsonb_build_object('g', b.issuer) END)) v (x)) s
+         WHERE s.items IS NOT NULL;
+    ELSIF TG_TABLE_NAME = 'binding_identifier' AND TG_OP <> 'TRUNCATE' THEN
+        PERFORM set_config('ferroehr.binding_changes', binding_change_set(s.items), true)
+          FROM (SELECT jsonb_agg(DISTINCT x) AS items
+                  FROM changed b,
+                       LATERAL (VALUES (jsonb_build_object('p', b.party_id)),
+                           (CASE WHEN b.selector = 'key'
+                                 THEN jsonb_build_object('k', jsonb_build_array(
+                                          b.issuer, b.identifier_type, b.value))
+                                 ELSE jsonb_build_object('g', b.issuer) END)) v (x)) s
+         WHERE s.items IS NOT NULL;
+    ELSIF TG_TABLE_NAME = 'binding_membership' AND TG_OP = 'UPDATE' THEN
+        PERFORM set_config('ferroehr.binding_changes', binding_change_set(s.items), true)
+          FROM (SELECT jsonb_agg(DISTINCT jsonb_build_object('p', p)) AS items
+                  FROM (SELECT * FROM changed UNION ALL SELECT * FROM gone) b,
+                       LATERAL (VALUES (b.member_id), (b.group_id)) v (p)) s
+         WHERE s.items IS NOT NULL;
+    ELSIF TG_TABLE_NAME = 'binding_membership' AND TG_OP <> 'TRUNCATE' THEN
+        PERFORM set_config('ferroehr.binding_changes', binding_change_set(s.items), true)
+          FROM (SELECT jsonb_agg(DISTINCT jsonb_build_object('p', p)) AS items
+                  FROM changed b, LATERAL (VALUES (b.member_id), (b.group_id)) v (p)) s
+         WHERE s.items IS NOT NULL;
+    ELSIF TG_TABLE_NAME = 'binding_representation' AND TG_OP = 'UPDATE' THEN
+        PERFORM set_config('ferroehr.binding_changes', binding_change_set(s.items), true)
+          FROM (SELECT jsonb_agg(DISTINCT jsonb_build_object('p', p)) AS items
+                  FROM (SELECT * FROM changed UNION ALL SELECT * FROM gone) b,
+                       LATERAL (VALUES (b.representative_id), (b.subject_id)) v (p)) s
+         WHERE s.items IS NOT NULL;
+    ELSIF TG_TABLE_NAME = 'binding_representation' AND TG_OP <> 'TRUNCATE' THEN
+        PERFORM set_config('ferroehr.binding_changes', binding_change_set(s.items), true)
+          FROM (SELECT jsonb_agg(DISTINCT jsonb_build_object('p', p)) AS items
+                  FROM changed b,
+                       LATERAL (VALUES (b.representative_id), (b.subject_id)) v (p)) s
+         WHERE s.items IS NOT NULL;
+    ELSIF TG_LEVEL = 'STATEMENT' AND TG_OP <> 'TRUNCATE' THEN
+        PERFORM set_config('ferroehr.binding_changes', '["*"]', true)
+          WHERE EXISTS (SELECT FROM changed);
+    ELSE
+        PERFORM set_config('ferroehr.binding_changes', '["*"]', true);
+    END IF;
+    IF NOT FOUND THEN
+        RETURN NULL;
     END IF;
     IF current_setting('ferroehr.binding_revised', true) IS DISTINCT FROM pg_current_xact_id()::text THEN
         UPDATE binding_grant_revision
            SET binding_revision = binding_revision + 1, revised_at = now()
          WHERE singleton;
         PERFORM set_config('ferroehr.binding_revised', pg_current_xact_id()::text, true);
-        PERFORM pg_notify('ferroehr_party_binding', '');
     END IF;
     RETURN NULL;
 END;
 $$;
 COMMENT ON FUNCTION binding_changed() IS
-    'When the statement changed at least one binding row (its transition table changed is not empty, or it is a TRUNCATE or a row trigger), moves binding_grant_revision.binding_revision and notifies ferroehr_party_binding, once in the transaction, so every replica drops the lookups it holds and no request takes one read before the change; a statement that changed no row moves and notifies nothing (#6284).';
+    'When the statement changed at least one binding row (its transition table changed is not empty, or it is a TRUNCATE or a row trigger), adds what it changed to the transaction''s change set and moves binding_grant_revision.binding_revision, once in the transaction, so no request takes a lookup read before the change; a statement that changed no row moves nothing (#6284, #6403).';
 
 CREATE FUNCTION person_version_changed() RETURNS trigger
     LANGUAGE plpgsql
@@ -240,7 +301,7 @@ CREATE TRIGGER binding_identifier_inserted
     AFTER INSERT ON binding_identifier REFERENCING NEW TABLE AS changed
     FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
 CREATE TRIGGER binding_identifier_updated
-    AFTER UPDATE ON binding_identifier REFERENCING NEW TABLE AS changed
+    AFTER UPDATE ON binding_identifier REFERENCING OLD TABLE AS gone NEW TABLE AS changed
     FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
 CREATE TRIGGER binding_identifier_deleted
     AFTER DELETE ON binding_identifier REFERENCING OLD TABLE AS changed
@@ -275,7 +336,7 @@ CREATE TRIGGER binding_membership_inserted
     AFTER INSERT ON binding_membership REFERENCING NEW TABLE AS changed
     FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
 CREATE TRIGGER binding_membership_updated
-    AFTER UPDATE ON binding_membership REFERENCING NEW TABLE AS changed
+    AFTER UPDATE ON binding_membership REFERENCING OLD TABLE AS gone NEW TABLE AS changed
     FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
 CREATE TRIGGER binding_membership_deleted
     AFTER DELETE ON binding_membership REFERENCING OLD TABLE AS changed
@@ -328,7 +389,7 @@ CREATE TRIGGER binding_representation_inserted
     AFTER INSERT ON binding_representation REFERENCING NEW TABLE AS changed
     FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
 CREATE TRIGGER binding_representation_updated
-    AFTER UPDATE ON binding_representation REFERENCING NEW TABLE AS changed
+    AFTER UPDATE ON binding_representation REFERENCING OLD TABLE AS gone NEW TABLE AS changed
     FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
 CREATE TRIGGER binding_representation_deleted
     AFTER DELETE ON binding_representation REFERENCING OLD TABLE AS changed
@@ -488,6 +549,28 @@ INSERT INTO binding_grant_revision (singleton, revision) VALUES (true, 0);
 COMMENT ON TABLE binding_grant_revision IS 'The revision of binding_client and binding_capability, which moves with each change of either. Our own design.';
 COMMENT ON COLUMN binding_grant_revision.binding_revision IS 'The revision of the binding side table (binding_identifier, binding_membership, binding_representation and the state of binding_key_space), which moves once in each transaction that changes one of them.';
 
+CREATE FUNCTION binding_revision_committed() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path = party, pg_catalog
+    AS $$
+BEGIN
+    -- NOTE: PostgreSQL NOTIFY, a payload is shorter than 8000 bytes; a longer change set is "*".
+    PERFORM pg_notify('ferroehr_party_binding', CASE WHEN length(n.payload) < 7900
+                      THEN n.payload
+                      ELSE jsonb_build_object('r', NEW.binding_revision, 'c', '["*"]'::jsonb)::text END)
+      FROM (SELECT jsonb_build_object('r', NEW.binding_revision, 'c', coalesce(nullif(
+                       current_setting('ferroehr.binding_changes', true), ''), '["*"]')::jsonb)::text
+                   AS payload) n;
+    RETURN NULL;
+END;
+$$;
+COMMENT ON FUNCTION binding_revision_committed() IS
+    'Notifies ferroehr_party_binding at commit with the binding revision the transaction moved to and its change set (binding_changed), so each replica drops the lookups the change set names and holds the others at that revision (#6403).';
+CREATE CONSTRAINT TRIGGER binding_revision_moved
+    AFTER UPDATE ON binding_grant_revision DEFERRABLE INITIALLY DEFERRED
+    FOR EACH ROW WHEN (OLD.binding_revision IS DISTINCT FROM NEW.binding_revision)
+    EXECUTE FUNCTION binding_revision_committed();
+
 -- ── binding_caller_fact ─────────────────────────────────────────────────────
 -- One row per fact a party head that is not deleted holds: the roles a ROLE
 -- names for its performer, the type an ORGANISATION names for itself, the
@@ -500,8 +583,8 @@ CREATE TABLE binding_caller_fact (
     -- position in PARTY.relationships, from 0.
     ordinal         integer NOT NULL,
     -- What the fact is: role, organisation_type, or the code of a
-    -- membership (MBR of v3-RoleClass) or a care relationship (under_care_of
-    -- of openehr_access).
+    -- membership (member_of) or a care relationship (under_care_of), both of
+    -- openehr_access.
     kind            text NOT NULL,
     -- The party the fact is about: the container ROLE.performer names, or the
     -- PERSON a relationship is of, its source.
@@ -549,14 +632,14 @@ CREATE TABLE binding_caller_fact (
     episode_issuer  text,
     episode_id      text,
     CONSTRAINT ck_binding_caller_fact_kind
-        CHECK (kind IN ('role', 'organisation_type', 'MBR', 'under_care_of', 'related_to')),
+        CHECK (kind IN ('role', 'organisation_type', 'member_of', 'under_care_of', 'related_to')),
     CONSTRAINT ck_binding_caller_fact_value
         CHECK (CASE WHEN kind = 'under_care_of'
                     THEN target_id IS NOT NULL
                          AND target_kind IN ('PERSON', 'ROLE', 'GROUP', 'ORGANISATION')
                          AND terminology_id IS NOT NULL AND code_string IS NOT NULL
                          AND provider_issuer IS NOT NULL AND provider_id IS NOT NULL
-                    WHEN kind = 'MBR'
+                    WHEN kind = 'member_of'
                     THEN target_id IS NOT NULL AND target_kind IS NULL
                          AND terminology_id IS NULL AND code_string IS NULL
                          AND provider_issuer IS NULL AND provider_id IS NULL
@@ -598,7 +681,7 @@ CREATE INDEX ix_binding_caller_fact_party ON binding_caller_fact (party_id);
 -- No openEHR spec governs the side table or its index: our own design.
 CREATE INDEX ix_binding_caller_fact_care_team ON binding_caller_fact (target_id)
     WHERE kind = 'under_care_of';
-COMMENT ON COLUMN binding_caller_fact.kind IS 'What the fact is: role, the coded name of a ROLE the party performs, organisation_type, the coded name of the ORGANISATION itself, the code of a care relationship, MBR of v3-RoleClass or under_care_of of openehr_access, or related_to of openehr_access, a kinship of the party to the person target_id names (#6077).';
+COMMENT ON COLUMN binding_caller_fact.kind IS 'What the fact is: role, the coded name of a ROLE the party performs, organisation_type, the coded name of the ORGANISATION itself, the code of a care relationship, member_of or under_care_of of openehr_access, or related_to of openehr_access, a kinship of the party to the person target_id names (#6077).';
 COMMENT ON COLUMN binding_caller_fact.target_kind IS 'The RM type of a care relationship''s target: PERSON, ROLE, GROUP or ORGANISATION; NULL for every other fact.';
 COMMENT ON COLUMN binding_caller_fact.provider_issuer IS 'The issuer of a care relationship''s provider DV_IDENTIFIER; NULL for every other fact.';
 COMMENT ON COLUMN binding_caller_fact.provider_id IS 'The id of a care relationship''s provider DV_IDENTIFIER; NULL for every other fact.';

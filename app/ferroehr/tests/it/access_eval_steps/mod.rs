@@ -358,6 +358,7 @@ pub(super) fn asked(operation: OperationClass, purpose: Option<&str>) -> Asked<'
         operation,
         purpose,
         emergency: Emergency::default(),
+        episodes: None,
     }
 }
 
@@ -606,4 +607,26 @@ pub(super) fn assert_outcome(verdict: &Verdict, item: &Item<'_>, expected: Outco
         expected == Outcome::Admit,
         "{case}: the admitted predicate agrees"
     );
+}
+
+/// A team tie in the role `PART`, scoped to the hospital's episode `episode`,
+/// or to none.
+pub(super) fn tie_in(episode: Option<&str>) -> Tie {
+    use ferroehr::access_eval::care_tie::Grant;
+    use ferroehr::party_binding::grants::caller::care_of::CarerKind;
+    use ferroehr::party_binding::grants::caller::care_ref::Episode;
+    Tie {
+        path: CarePath::Team,
+        role: code("HL7_ParticipationType", "PART"),
+        grant: Some(Arc::new(Grant {
+            relationship: None,
+            version: None,
+            carer: uuid(CARDIOLOGY),
+            carer_kind: Some(CarerKind::Group),
+            provider: ProviderKey::new("urn:example:providers", "hospital"),
+            in_grace: false,
+            covers_for: None,
+            episode: episode.map(|id| Arc::new(Episode::new(HOSPITAL, id))),
+        })),
+    }
 }

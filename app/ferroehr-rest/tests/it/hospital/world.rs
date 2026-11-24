@@ -224,15 +224,13 @@ pub(crate) fn coded_in(terminology: &str, code: &str) -> Value {
 }
 
 /// A code of the access control groups: an HL7 code where the group reuses
-/// one (#5655), else a code of the draft `openehr_access` terminology.
+/// one, else a code of the draft `openehr_access` terminology.
 pub(crate) fn term(code: &str) -> Value {
     use openehr_rm::draft::access_control::terminology::{
-        TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, TERMINOLOGY_ID_ROLE_CLASS,
-        TERMINOLOGY_ID_SECURITY_ROLE_TYPE,
+        TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, TERMINOLOGY_ID_SECURITY_ROLE_TYPE,
     };
     match code {
         "permit" | "deny" => coded_in(TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, code),
-        "MBR" => coded_in(TERMINOLOGY_ID_ROLE_CLASS, code),
         "datasubject" => coded_in(TERMINOLOGY_ID_SECURITY_ROLE_TYPE, code),
         _ => coded_in(TERMINOLOGY, code),
     }
@@ -753,7 +751,7 @@ pub(crate) async fn provider(app: &Router, id: &str, groups: &[&str]) -> String 
             .iter()
             .map(|group| {
                 json!({ "_type": "PARTY_RELATIONSHIP", "archetype_node_id": "at0050",
-                        "name": term("MBR"),
+                        "name": term("member_of"),
                         "source": party_ref("ORGANISATION", &organisation_id),
                         "target": party_ref("GROUP", group) })
             })
@@ -771,7 +769,7 @@ pub(crate) async fn provider(app: &Router, id: &str, groups: &[&str]) -> String 
     organisation_id
 }
 
-/// A membership (`MBR`) of the `PERSON` `source` in the `GROUP` `team`,
+/// A membership (`member_of`) of the `PERSON` `source` in the `GROUP` `team`,
 /// from `from` to `until` (dates, each included; `None` unbounded).
 pub(crate) fn membership(source: &str, team: &str, span: (&str, Option<&str>)) -> Value {
     json!({
@@ -780,7 +778,7 @@ pub(crate) fn membership(source: &str, team: &str, span: (&str, Option<&str>)) -
         "name": text("Rostering"),
         "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": text("details"),
             "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003", "name": text("kind"),
-                        "value": term("MBR") }] },
+                        "value": term("member_of") }] },
         "time_validity": validity(span),
         "source": party_ref("PERSON", source),
         "target": party_ref("GROUP", team)
@@ -875,7 +873,7 @@ pub(crate) async fn admit(world: &mut World, stays: &[(&'static str, &str, Optio
 }
 
 /// `writer` writes the rostering of `name` on `teams` from `from` to
-/// `until`: an `MBR` membership per team on their `PERSON`, beside
+/// `until`: a `member_of` membership per team on their `PERSON`, beside
 /// the memberships SCIM keeps there; the answer.
 pub(crate) async fn roster(
     world: &World,
@@ -891,7 +889,7 @@ pub(crate) async fn roster(
         .cloned()
         .unwrap_or_default()
         .into_iter()
-        .filter(|relationship| relationship["details"]["items"][0]["value"] != term("MBR"))
+        .filter(|relationship| relationship["details"]["items"][0]["value"] != term("member_of"))
         .collect();
     relationships.extend(
         teams

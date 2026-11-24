@@ -228,7 +228,7 @@ async fn membership_providers(
         "SELECT p.issuer, p.id FROM binding_provider p WHERE p.party_id = $1 \
          UNION SELECT p.issuer, p.id FROM binding_caller_fact f \
          JOIN binding_provider p ON p.party_id = f.target_id \
-         WHERE f.party_id = $1 AND f.kind = 'MBR'",
+         WHERE f.party_id = $1 AND f.kind = 'member_of'",
     )
     .bind(team)
     .fetch_all(&mut *tx)

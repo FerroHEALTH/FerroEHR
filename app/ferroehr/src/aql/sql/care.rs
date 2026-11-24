@@ -18,7 +18,7 @@ use super::expr::col;
 use crate::access_eval::care_tie::CareNeed;
 use crate::access_eval::condition::care::{Care, CaredEhr, CaredSubject, ProjectedCare};
 use crate::access_eval::condition::{AccessCondition, ConditionGroups};
-use crate::db::iden::Ehr;
+use crate::db::iden::{Ehr, VoHead};
 use crate::storage::access_projection::EhrSubject;
 
 /// The common table that holds the subjects the caller cares for.
@@ -39,19 +39,20 @@ pub(super) fn census(condition: &AccessCondition) -> Option<WithClause> {
     if condition.pinned().is_some() {
         return None;
     }
-    let condition = condition.groups()?;
-    let pairs = std::iter::once(&condition.closed)
-        .chain(condition.groups.iter().map(|(_, pair)| pair))
-        .chain(condition.default.iter());
+    let groups = condition.groups()?;
+    let pairs = std::iter::once(&groups.closed)
+        .chain(groups.groups.iter().map(|(_, pair)| pair))
+        .chain(groups.default.iter());
     if pairs.into_iter().all(|pair| pair.cared == pair.uncared) {
         return None;
     }
+    let condition = groups;
     let Care::Census(cared) = &condition.cared else {
         return None;
     };
     let mut row = Query::select();
     row.expr_as(
-        Expr::val(census_text(cared)).cast_as(Alias::new("jsonb")),
+        Expr::val(census_text(cared, condition.episodic)).cast_as(Alias::new("jsonb")),
         Alias::new(SUBJECTS),
     );
     let mut table = CommonTableExpression::new();
@@ -63,19 +64,16 @@ pub(super) fn census(condition: &AccessCondition) -> Option<WithClause> {
 
 /// The [`census`] of the subjects `cared`: a `jsonb` object text keyed by
 /// [`census_key`], each value the array of the tokens of the ties by which
-/// the caller holds the subject ([`crate::access_eval::care_tie::Tie::tokens`]),
-/// which a [`care_need`] probe reads.
-pub(super) fn census_text(cared: &[CaredSubject]) -> String {
+/// the caller holds the subject ([`tie_tokens`]), which a [`care_need`] and
+/// a [`covered`] probe read.
+pub(super) fn census_text(cared: &[CaredSubject], episodic: bool) -> String {
     let mut keys: std::collections::BTreeMap<String, std::collections::BTreeSet<String>> =
         std::collections::BTreeMap::new();
     for cared in cared {
         let tokens = keys.entry(census_key(&cared.subject)).or_default();
-        tokens.extend(
-            cared
-                .ties
-                .iter()
-                .flat_map(crate::access_eval::care_tie::Tie::tokens),
-        );
+        for tie in cared.ties.iter() {
+            tie_tokens(tie, episodic, tokens);
+        }
     }
     serde_json::Value::Object(
         keys.into_iter()
@@ -102,18 +100,37 @@ pub(super) fn census_text_of(subjects: &[EhrSubject]) -> String {
     .to_string()
 }
 
+/// The tokens of `tie` ([`crate::access_eval::care_tie::Tie::tokens`]) into
+/// `tokens`, and for an `episodic` condition each of them again joined by
+/// U+001F to the hexadecimal key of the tie's episode, or to `*` for a tie
+/// that names none, which a [`covered`] probe reads.
+fn tie_tokens(
+    tie: &crate::access_eval::care_tie::Tie,
+    episodic: bool,
+    tokens: &mut std::collections::BTreeSet<String>,
+) {
+    let own = tie.tokens();
+    if episodic {
+        let scope = tie
+            .episode()
+            .map_or_else(|| "*".to_owned(), |key| key.hex());
+        tokens.extend(own.iter().map(|token| format!("{token}\u{1f}{scope}")));
+    }
+    tokens.extend(own);
+}
+
 /// The ties by which the caller holds each EHR of `ehrs`: a `jsonb` object
-/// text keyed by EHR id, each value the array of the tokens of its ties,
-/// which a [`care_need`] probe of a query pinned to its EHRs reads.
-pub(super) fn ehr_ties_text(ehrs: &[CaredEhr]) -> String {
+/// text keyed by EHR id, each value the array of the tokens of its ties
+/// ([`tie_tokens`]), which a [`care_need`] and a [`covered`] probe of a
+/// query pinned to its EHRs read.
+pub(super) fn ehr_ties_text(ehrs: &[CaredEhr], episodic: bool) -> String {
     serde_json::Value::Object(
         ehrs.iter()
             .map(|cared| {
-                let tokens: std::collections::BTreeSet<String> = cared
-                    .ties
-                    .iter()
-                    .flat_map(crate::access_eval::care_tie::Tie::tokens)
-                    .collect();
+                let mut tokens = std::collections::BTreeSet::new();
+                for tie in cared.ties.iter() {
+                    tie_tokens(tie, episodic, &mut tokens);
+                }
                 (
                     cared.ehr.to_string(),
                     tokens.into_iter().map(serde_json::Value::String).collect(),
@@ -145,7 +162,7 @@ pub(super) fn cared(condition: &ConditionGroups, target: Expr) -> Expr {
             let ids: Vec<Uuid> = ehrs.iter().map(|cared| cared.ehr).collect();
             return target.eq(Expr::from(PgFunc::any(Expr::val(ids))));
         }
-        Care::Projected(care) => return projected(care, target),
+        Care::Projected(care) => return projected(care, target, !condition.episodic),
         Care::Unresolved => return Expr::val(false),
     }
     census_probe(condition, target, |subjects, key| {
@@ -201,10 +218,66 @@ pub(super) fn care_need(need: &CareNeed, condition: &ConditionGroups, target: Ex
         }),
         Care::Ehrs(ehrs) => Expr::cust_with_exprs(
             "COALESCE((CAST($1 AS jsonb) -> CAST($2 AS text)) ?| CAST($3 AS text[]), false)",
-            [Expr::val(ehr_ties_text(ehrs)), target, Expr::val(tokens)],
+            [
+                Expr::val(ehr_ties_text(ehrs, condition.episodic)),
+                target,
+                Expr::val(tokens),
+            ],
         ),
-        Care::Projected(care) => projected_need(care, need, target),
+        Care::Projected(care) => projected_need(care, need, target, !condition.episodic),
     }
+}
+
+/// Whether a live tie of the caller to the subject of the EHR `target`, of
+/// those that meet `need` when one is named, covers the head row `h`: the
+/// row is placed in no episode, or the tie names none or one the row is
+/// placed in ([`crate::access_eval::scope::Pred::Covered`]). Read as
+/// `condition` reads care: from the tokens the census or a pinned query
+/// binds ([`tie_tokens`]), or from the episodes of the projection's rows,
+/// aggregated by the EHR alone so a plan may memoize it per EHR. Null-safe.
+/// No openEHR spec governs this: our own design (#6414, #6415).
+pub(super) fn covered(
+    need: Option<&CareNeed>,
+    condition: &ConditionGroups,
+    target: Expr,
+    h: &str,
+) -> Expr {
+    let any = CareNeed::new(None, None);
+    let tokens = need.unwrap_or(&any).tokens();
+    if tokens.is_empty() {
+        return Expr::val(false);
+    }
+    let placed = col(h, VoHead::Episodes);
+    let scoped = |ties: Expr, placed: Expr| {
+        Expr::cust_with_exprs(
+            "COALESCE($1 ?| ARRAY(SELECT access_need || chr(31) || access_scope \
+             FROM unnest(CAST($2 AS text[])) AS access_need \
+             CROSS JOIN unnest(array_append(ARRAY(SELECT encode(access_placed, 'hex') \
+                 FROM unnest($3) AS access_placed), '*')) AS access_scope), false)",
+            [ties, Expr::val(tokens.clone()), placed],
+        )
+    };
+    let by_ties = match &condition.cared {
+        Care::Unresolved => return Expr::val(false),
+        Care::Census(_) => census_probe(condition, target, |subjects, key| {
+            scoped(
+                Expr::cust_with_exprs("($1 -> $2)", [subjects, key]),
+                placed.clone(),
+            )
+        }),
+        Care::Ehrs(ehrs) => scoped(
+            Expr::cust_with_exprs(
+                "(CAST($1 AS jsonb) -> CAST($2 AS text))",
+                [Expr::val(ehr_ties_text(ehrs, condition.episodic)), target],
+            ),
+            placed.clone(),
+        ),
+        Care::Projected(care) => Expr::cust_with_exprs(
+            "COALESCE($1 && array_append($2, CAST('' AS bytea)), false)",
+            [projected_episodes(care, need, target), placed.clone()],
+        ),
+    };
+    Expr::cust_with_exprs("($1 IS NULL OR $2)", [placed, by_ties])
 }
 
 /// The rows of the clinical care projection, as `access_care_row`, that the
@@ -213,7 +286,7 @@ pub(super) fn care_need(need: &CareNeed, condition: &ConditionGroups, target: Ex
 /// with the dates read as
 /// [`crate::party_binding::grants::caller::care_of::CareOf::live_on`] reads
 /// them.
-const HELD: &str = "access_care_row.carer_id = ANY($2) \
+const HELD_ANY: &str = "access_care_row.carer_id = ANY($2) \
      AND (access_care_row.provider_issuer, access_care_row.provider_id) IN \
          (SELECT * FROM unnest(CAST($5 AS text[]), CAST($6 AS text[]))) \
      AND (access_care_row.care_from IS NULL OR access_care_row.care_from <= CAST($3 AS date)) \
@@ -221,14 +294,26 @@ const HELD: &str = "access_care_row.carer_id = ANY($2) \
           OR CAST($3 AS date) < access_care_row.care_until \
           OR CAST($3 AS date) < access_care_row.care_until + CAST($4 AS interval))";
 
-/// Of [`HELD`], a row that admits the caller as
+/// [`HELD_ANY`], of the rows scoped to no episode alone when `unscoped`: a
+/// condition that leaves no coverage to the statement counts no row scoped
+/// to an episode as care of the whole record, even one the projection holds
+/// before the caller facts copy does.
+fn held(unscoped: bool) -> String {
+    if unscoped {
+        format!("{HELD_ANY} AND access_care_row.episode_digest IS NULL")
+    } else {
+        HELD_ANY.to_owned()
+    }
+}
+
+/// Of [`HELD_ANY`], a row that admits the caller as
 /// [`crate::party_binding::grants::caller::care_of::CareOf::admits_writer`]
 /// does: a self-declared one only where the policy turns that path on
 /// (`$7`), any other one only when no principal of the caller wrote it.
 const ADMITS: &str = "CASE WHEN access_care_row.self_declared THEN CAST($7 AS boolean) \
      ELSE access_care_row.writer_id IS NULL OR access_care_row.writer_id <> ALL($2) END";
 
-/// The values [`HELD`] and [`ADMITS`] bind as `$2` to `$7`, after the EHR
+/// The values [`HELD_ANY`] and [`ADMITS`] bind as `$2` to `$7`, after the EHR
 /// `target` as `$1`.
 fn held_values(care: &ProjectedCare, target: Expr) -> Vec<Expr> {
     vec![
@@ -246,15 +331,16 @@ fn held_values(care: &ProjectedCare, target: Expr) -> Vec<Expr> {
 /// caller's principals, in the care of a provider it acts for, read from the
 /// clinical care projection by the EHR row's subject digest: one probe of
 /// `ix_access_care_subject`, binding the principals, the providers, the day
-/// and the grace ([`HELD`], [`ADMITS`]). No openEHR spec governs this: our
+/// and the grace ([`held`], [`ADMITS`]). No openEHR spec governs this: our
 /// own design (#5699, #6055, #6073).
-fn projected(care: &ProjectedCare, target: Expr) -> Expr {
+fn projected(care: &ProjectedCare, target: Expr, unscoped: bool) -> Expr {
+    let held = held(unscoped);
     Expr::cust_with_exprs(
         format!(
             "EXISTS (SELECT 1 FROM ehr access_care_ehr \
              JOIN access_care access_care_row \
                ON access_care_row.subject_digest = access_care_ehr.subject_digest \
-             WHERE access_care_ehr.id = $1 AND {HELD} AND {ADMITS})"
+             WHERE access_care_ehr.id = $1 AND {held} AND {ADMITS})"
         ),
         held_values(care, target),
     )
@@ -281,12 +367,13 @@ pub(super) fn caseload(condition: &ConditionGroups, target: Expr, known: Vec<i64
     };
     let mut values = held_values(care, target);
     values.push(Expr::val(known));
+    let held = held(!condition.episodic);
     Some(Expr::cust_with_exprs(
         format!(
             "$1 IN (SELECT access_care_ehr.id FROM access_care access_care_row \
              JOIN ehr access_care_ehr \
                ON access_care_ehr.subject_digest = access_care_row.subject_digest \
-             WHERE {HELD} AND {ADMITS} \
+             WHERE {held} AND {ADMITS} \
              UNION ALL SELECT access_unknown.ehr_id FROM access_settings access_unknown \
              WHERE access_unknown.class_id IN \
                  (SELECT access_known.id FROM access_class access_known \
@@ -304,42 +391,89 @@ pub(super) fn caseload(condition: &ConditionGroups, target: Expr, known: Vec<i64
 /// principal for `self_declared` where the policy turns that path on; the
 /// writer of an assigned one is never a principal of the caller. No openEHR
 /// spec governs this: our own design (#6075).
-pub(super) fn projected_need(care: &ProjectedCare, need: &CareNeed, target: Expr) -> Expr {
+pub(super) fn projected_need(
+    care: &ProjectedCare,
+    need: &CareNeed,
+    target: Expr,
+    unscoped: bool,
+) -> Expr {
+    let Some((filter, values)) = need_rows(care, Some(need), target, unscoped) else {
+        return Expr::val(false);
+    };
+    Expr::cust_with_exprs(
+        format!(
+            "EXISTS (SELECT 1 FROM ehr access_care_ehr \
+             JOIN access_care access_care_row \
+               ON access_care_row.subject_digest = access_care_ehr.subject_digest \
+             WHERE access_care_ehr.id = $1 AND {filter})"
+        ),
+        values,
+    )
+}
+
+/// The episodes of the projection's rows by which the caller holds the
+/// subject of the EHR `target`, of those that meet `need` when one is named,
+/// as [`projected_need`] reads them: an empty `bytea` for a row scoped to
+/// none; NULL when no row holds.
+fn projected_episodes(care: &ProjectedCare, need: Option<&CareNeed>, target: Expr) -> Expr {
+    let Some((filter, values)) = need_rows(care, need, target, false) else {
+        return Expr::cust("CAST(NULL AS bytea[])");
+    };
+    Expr::cust_with_exprs(
+        format!(
+            "(SELECT array_agg(COALESCE(access_care_row.episode_digest, CAST('' AS bytea))) \
+             FROM ehr access_care_ehr \
+             JOIN access_care access_care_row \
+               ON access_care_row.subject_digest = access_care_ehr.subject_digest \
+             WHERE access_care_ehr.id = $1 AND {filter})"
+        ),
+        values,
+    )
+}
+
+/// The condition on a row of the projection, joined to the EHR `$1`, by
+/// which the caller holds its subject by a relationship that meets `need`,
+/// any one it holds for `None`, with the values it binds; `None` for a need
+/// no row meets.
+fn need_rows(
+    care: &ProjectedCare,
+    need: Option<&CareNeed>,
+    target: Expr,
+    unscoped: bool,
+) -> Option<(String, Vec<Expr>)> {
     use openehr_rm::draft::access_control::terminology::care::CarePath;
     let assigned = "NOT access_care_row.self_declared \
          AND (access_care_row.writer_id IS NULL OR access_care_row.writer_id <> ALL($2))";
-    let path = match need.path() {
+    let path = match need.and_then(CareNeed::path) {
         None => ADMITS.to_owned(),
         Some(CarePath::Direct) => format!("access_care_row.carer_id = ANY($8) AND {assigned}"),
         Some(CarePath::Team) => format!("access_care_row.carer_id <> ALL($8) AND {assigned}"),
         Some(CarePath::SelfDeclared) => "access_care_row.carer_id = ANY($8) \
                  AND access_care_row.self_declared AND CAST($7 AS boolean)"
             .to_owned(),
-        Some(CarePath::Attested) => return Expr::val(false),
+        Some(CarePath::Attested) => return None,
     };
-    let (terminologies, codes): (Vec<String>, Vec<String>) = need
-        .roles()
+    let named = need.and_then(CareNeed::roles);
+    let (terminologies, codes): (Vec<String>, Vec<String>) = named
         .unwrap_or_default()
         .iter()
         .map(|role| (role.terminology.clone(), role.code.clone()))
         .unzip();
-    let roles = if need.roles().is_some() {
+    let roles = if named.is_some() {
         " AND (access_care_row.role_terminology, access_care_row.role_code) IN \
              (SELECT * FROM unnest(CAST($9 AS text[]), CAST($10 AS text[])))"
     } else {
         ""
     };
-    let statement = format!(
-        "EXISTS (SELECT 1 FROM ehr access_care_ehr \
-         JOIN access_care access_care_row \
-           ON access_care_row.subject_digest = access_care_ehr.subject_digest \
-         WHERE access_care_ehr.id = $1 AND {HELD} AND {path}{roles})"
-    );
+    let held = held(unscoped);
+    let filter = format!("{held} AND {path}{roles}");
     let mut values = held_values(care, target);
-    values.extend([
-        Expr::val(care.direct.to_vec()),
-        Expr::val(terminologies),
-        Expr::val(codes),
-    ]);
-    Expr::cust_with_exprs(statement, values)
+    if need.is_some() {
+        values.extend([
+            Expr::val(care.direct.to_vec()),
+            Expr::val(terminologies),
+            Expr::val(codes),
+        ]);
+    }
+    Some((filter, values))
 }

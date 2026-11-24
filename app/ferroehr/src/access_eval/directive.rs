@@ -19,6 +19,7 @@ use std::sync::Arc;
 
 use crate::access_eval::care_tie::{CareNeed, Cared};
 use crate::access_eval::class::{DirectiveLayout, keeper};
+use crate::access_eval::coverage::covered;
 use crate::access_eval::procedure::Judged;
 use crate::access_eval::scope::{EhrFact, Polarity, Pred, within};
 use crate::service::ehr::access_projection::{Validity, validity};
@@ -294,17 +295,20 @@ impl Reader<'_, '_> {
         judged.ehr.care.live() && judged.policy.admits_care(judged.asked.purpose)
     }
 
-    /// Whether the care relationships the caller holds meet the care roles
-    /// and path of `scope`, an actor scope naming `care`: a constant when
-    /// they are known or no relationship is held, and otherwise the fact a
-    /// query's statement reads.
+    /// The data the care relationships the caller holds cover, of those that
+    /// meet the care roles and path of `scope`, an actor scope naming `care`:
+    /// known when they are, and otherwise the fact a query's statement reads.
     fn care(&self, scope: &AccessActorScope) -> Pred {
         if !self.cared() {
             return Pred::False;
         }
         match (CareNeed::of(scope), self.judged.ehr.care) {
+            (None, Cared::Ties(ties)) => covered(self.judged, ties.iter()),
+            (need, Cared::Covering) => crate::access_eval::coverage::left(self.judged, need),
             (None, _) => Pred::True,
-            (Some(need), Cared::Ties(ties)) => Pred::of(ties.iter().any(|tie| need.met_by(tie))),
+            (Some(need), Cared::Ties(ties)) => {
+                covered(self.judged, ties.iter().filter(|tie| need.met_by(tie)))
+            }
             (Some(need), Cared::Left) => Pred::Care(Arc::new(need)),
             (Some(_), Cared::No) => Pred::False,
         }

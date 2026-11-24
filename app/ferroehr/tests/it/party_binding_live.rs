@@ -166,14 +166,66 @@ async fn a_deprovisioning_holds_on_every_replica() {
         changed,
         "the deprovisioning commit marks the side table changed"
     );
-    first.bindings().forget_all();
+    first.bindings().forget_names();
     assert_eq!(
         lookup(&first, value).await,
         Lookup::Deprovisioned,
-        "the replica that committed drops its copy before it answers"
+        "the replica that committed reads the revision its commit moved"
     );
     heard(&second, seen).await;
     assert_eq!(lookup(&second, value).await, Lookup::Deprovisioned);
+}
+
+/// A write drops on every replica only the lookups its change set reaches:
+/// a held lookup of another key reads no party-store statement after it, and
+/// the key it changed is read once and then held (#6403).
+#[tokio::test]
+async fn a_write_drops_only_the_lookups_it_changed() {
+    let (db, first, second) = replicas().await;
+    let kept = "4a5b6c7d-8e9f-4a0b-8c1d-2e3f4a5b6c7d";
+    let moved = "5b6c7d8e-9f0a-4b1c-9d2e-3f4a5b6c7d8e";
+    let (held, _) = professional(&first, kept).await;
+    let (vo, uid) = professional(&first, moved).await;
+    settled(&first).await;
+    settled(&second).await;
+    for replica in [&first, &second] {
+        assert_eq!(parties(&lookup(replica, kept).await), [person_ref(held)]);
+        assert_eq!(parties(&lookup(replica, moved).await), [person_ref(vo)]);
+    }
+    let seen = [&first, &second].map(|replica| replica.bindings().listened().notifications());
+    delete(&first, PartyKind::Person, &uid).await;
+    for (replica, seen) in [&first, &second].into_iter().zip(seen) {
+        heard(replica, seen).await;
+    }
+    unheard(
+        &db,
+        &format!("UPDATE party.binding_identifier SET value = 'elsewhere' WHERE value = '{kept}'"),
+    )
+    .await;
+    for replica in [&first, &second] {
+        assert_eq!(
+            parties(&lookup(replica, kept).await),
+            [person_ref(held)],
+            "a lookup the write did not reach reads no party-store statement"
+        );
+        assert_eq!(
+            lookup(replica, moved).await,
+            Lookup::Deprovisioned,
+            "the key the write changed is read again"
+        );
+    }
+    unheard(
+        &db,
+        &format!("UPDATE party.binding_identifier SET value = 'elsewhere' WHERE value = '{moved}'"),
+    )
+    .await;
+    for replica in [&first, &second] {
+        assert_eq!(
+            lookup(replica, moved).await,
+            Lookup::Deprovisioned,
+            "and held once read"
+        );
+    }
 }
 
 /// A new binding holds on the next lookup of a replica that held the key
@@ -275,8 +327,9 @@ async fn a_change_whose_notification_is_withheld_decides_the_next_lookup() {
 /// The binding revision moves, and `ferroehr_party_binding` hears of it,
 /// once in each transaction that changes at least one key row, membership,
 /// representation or key space state, however many statements change rows
-/// (#6048); a statement that changes no row, a key space's fill, an unchanged
-/// state and a rolled-back change move and notify nothing (#6284).
+/// (#6048), with its change set at commit (#6403); a statement that changes
+/// no row, a key space's fill, an unchanged state and a rolled-back change
+/// move and notify nothing (#6284).
 #[tokio::test]
 #[expect(
     clippy::disallowed_methods,
@@ -322,7 +375,13 @@ async fn only_a_change_of_the_side_table_moves_the_binding_revision_once() {
             "UPDATE party.binding_key_space SET state = 'active' WHERE issuer = 'urn:probe'",
         ],
     ];
-    for statements in changed {
+    let named = [
+        r#"{"k": ["urn:probe", "guid", "probe-1"]}"#,
+        r#"{"p": "#,
+        r#"{"p": "#,
+        r#""c": ["*"]"#,
+    ];
+    for (statements, named) in changed.into_iter().zip(named) {
         let before = revision().await;
         let mut tx = pool.begin().await.expect("begin");
         for statement in statements {
@@ -335,10 +394,14 @@ async fn only_a_change_of_the_side_table_moves_the_binding_revision_once() {
         }
         tx.commit().await.expect("commit");
         assert_eq!(revision().await, before + 1, "{statements:?}");
-        assert_eq!(
-            heard_now(&mut heard).await,
-            [String::new()],
-            "{statements:?}"
+        let payloads = heard_now(&mut heard).await;
+        let [payload] = payloads.as_slice() else {
+            panic!("one notification at commit for {statements:?}: {payloads:?}");
+        };
+        let moved = format!(r#""r": {}"#, before + 1);
+        assert!(
+            payload.contains(&moved) && payload.contains(named),
+            "{statements:?}: {payload}"
         );
     }
     let before = revision().await;

@@ -156,7 +156,7 @@ pub(crate) async fn care_provider(svc: &FerroEhrService, (issuer, id): (&str, &s
 }
 
 /// Commits, as an administrator, the `GROUP` `body` belonging to the
-/// provider `ORGANISATION` `provider` by an `MBR` relationship of its own, so
+/// provider `ORGANISATION` `provider` by a `member_of` relationship of its own, so
 /// [`care_writer`] writes its memberships; its container and version uid.
 pub(crate) async fn provider_team(
     svc: &FerroEhrService,
@@ -175,8 +175,8 @@ pub(crate) async fn provider_team(
         "_type": "PARTY_RELATIONSHIP", "archetype_node_id": "at0050",
         "name": { "_type": "DV_CODED_TEXT", "value": "member of",
             "defining_code": { "_type": "CODE_PHRASE",
-                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_RoleClass" },
-                "code_string": "MBR" } },
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
+                "code_string": "member_of" } },
         "source": reference("GROUP", group),
         "target": reference("ORGANISATION", provider)
     }]);

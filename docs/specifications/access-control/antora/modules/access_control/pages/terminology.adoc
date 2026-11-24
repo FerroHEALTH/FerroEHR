@@ -134,7 +134,7 @@ The groups of this package follow. The codes in `openehr_access` are proposed; a
 |`ACCESS_VALUE_SET._binding_` (`Group_id_access_value_set_binding`)
 
 |care relationship
-|`HL7_RoleClass::MBR` (a member of a care-team `GROUP` or of an organisational unit), under_care_of
+|member_of (a member of a care-team `GROUP` or of an organisational unit), under_care_of
 |The `_name_` of a `PARTY_RELATIONSHIP`: a membership, and the subject being under the care of a carer (xref:access_control_package.adoc#_care_relationships[Care Relationships])
 
 |care relationship element
@@ -163,7 +163,7 @@ The groups of this package follow. The codes in `openehr_access` are proposed; a
 
 |group kind
 |care_team
-|The `_name_` of a `GROUP`: the `GROUP` is a care team, whose members' memberships are named `HL7_RoleClass::MBR`
+|The `_name_` of a `GROUP`: the `GROUP` is a care team, whose members' memberships are named `member_of`
 
 |record subject
 |record_subject
@@ -229,7 +229,7 @@ What a care role, a basis of representation, a kinship, an organisation type or 
 
 == Mappings to Standard Codes
 
-A draft code whose closest standard code is broader or narrower stays in `openehr_access`. The terminology records the standard code as a `TERM_MAPPING` of the term, with its match (RM Data Types, `TERM_MAPPING._match_`: `>` the target is broader, `<` the target is narrower), so an exporter has the mapping and the record keeps its precision:
+A draft code whose closest standard code is broader or narrower stays in `openehr_access`. So does a code by which a system reads an access meaning into demographic content, such as `member_of`: a record coded with the broader standard code, in an archetype of its own, keeps the meaning that code system gives it and takes none from this package. The terminology records the standard code as a `TERM_MAPPING` of the term, with its match (RM Data Types, `TERM_MAPPING._match_`: `>` the target is broader, `<` the target is narrower), so an exporter has the mapping and the record keeps its precision:
 
 [cols="2,2,3,1", options="header"]
 |===
@@ -279,6 +279,11 @@ A draft code whose closest standard code is broader or narrower stays in `openeh
 |query
 |`HL7_AuditEventAction::E`
 |`<`
+
+|care relationship
+|member_of
+|`HL7_RoleClass::MBR`
+|`>`
 
 |care relationship
 |under_care_of

@@ -47,6 +47,7 @@ fn admitting() -> AccessCondition {
         },
         confined: None,
         conflicts: Arc::from([]),
+        episodic: false,
     })
 }
 

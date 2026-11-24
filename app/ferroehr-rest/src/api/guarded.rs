@@ -215,6 +215,7 @@ async fn admit(
     parts: &RequestParts,
     delay: AccessDelay,
 ) -> Result<(), Box<Response>> {
+    ehr_access::enforce_launch().await?;
     ehr_access::enforce(state, op, parts).await?;
     // NOTE: EHDS Art. 3(3), a caller reading its own record by the party binding has the
     // delay held on that record, which the decision above found (#6108).

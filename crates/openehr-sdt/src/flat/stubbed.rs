@@ -9,8 +9,10 @@ use openehr_rm::v1_2::paths::PathSegment;
 
 use crate::flat::error::FlatError;
 use crate::flat::instance::matches;
-use crate::flat::rmpath;
+use std::borrow::Cow;
+
 use crate::flat::typed::{Build, o, view};
+use crate::flat::validation::plan::stub_segments;
 use crate::flat::webtemplate::model::WebTemplateNode;
 
 /// Fills an RM-mandatory structural attribute of `node` or a folded descendant
@@ -19,15 +21,18 @@ pub(crate) fn fill_stubbed_descendants(
     obj: &mut dyn RmObject,
     node: &WebTemplateNode,
 ) -> Result<(), FlatError> {
-    for stub in &node.structural_stubs {
-        let Some(owner) = stub
-            .path
-            .strip_suffix(stub.attr.as_str())
-            .and_then(|p| p.strip_suffix('/'))
-        else {
+    for (index, stub) in node.structural_stubs.iter().enumerate() {
+        let cached = node
+            .walk
+            .as_ref()
+            .and_then(|plan| plan.stub_segments_of(node, index, &stub.path));
+        let segments = match cached {
+            Some(segments) => Some(Cow::Borrowed(segments)),
+            None => stub_segments(&node.aql_path, &stub.path, &stub.attr).map(Cow::Owned),
+        };
+        let Some(segments) = segments else {
             continue;
         };
-        let segments = rmpath::relative(&node.aql_path, owner);
         let mut owners = Vec::new();
         objects_at_mut(&mut *obj, &segments, &mut owners);
         for o_ in owners {

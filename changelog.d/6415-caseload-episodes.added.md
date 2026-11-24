@@ -1,0 +1,1 @@
+- A query's `caseload_episodes` member (`issuer|id` tokens) narrows each EHR of its caseload to the data of those episodes, the unplaced data and the shared data, inside the query's one statement; an episode none of the caller's live care relationships names is refused `400` (#6415).

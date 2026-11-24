@@ -94,12 +94,14 @@ pub const FACTS: &str = concat!(
     " ORDER BY p.party_id, f.holder_id, f.ordinal, f.kind"
 );
 
-/// Every caller fact, the read of a whole copy: the parties that hold none,
-/// patients in care among them, are not read.
+/// Every caller fact, the read of a whole copy, with every care
+/// relationship scoped to an episode, whose carers the copy holds apart:
+/// the parties that hold neither, patients in care among them, are not read.
 const HELD_FACTS: &str = concat!(
     "SELECT f.party_id AS stamped, ",
-    fact_columns!(),
-    " FROM binding_caller_fact f WHERE f.kind <> 'under_care_of' \
+    care_columns!(),
+    " FROM binding_caller_fact f \
+     WHERE f.kind <> 'under_care_of' OR f.episode_id IS NOT NULL \
      ORDER BY f.party_id, f.holder_id, f.ordinal, f.kind"
 );
 

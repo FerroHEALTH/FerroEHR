@@ -306,7 +306,7 @@ key and inside `query_parameters`, the named key wins.
 ## Narrowing a query to your caseload
 
 A professional's worklist ("my patients") is a query narrowed to the
-patients the caller holds a live care relationship to. FerroEHR takes two
+patients the caller holds a live care relationship to. FerroEHR takes three
 members beside `q` in the JSON body of `POST /query/aql` and of a stored
 query's `POST` execution. They are a FerroEHR extension (the draft access
 control package, Queries and the Caseload); the AQL text stays standard and
@@ -316,6 +316,7 @@ portable.
 |---|---|---|
 | `caseload` | `direct`, `team`, `all`, `none` (default) | `direct`: relationships that name you or a `ROLE` you perform; `team`: relationships that name a care team or unit you are a member of; `all`: either. |
 | `caseload_roles` | a list of role codes | Narrows further to relationships in one of these roles, each `terminology::code` (such as `local::lead`) or a bare code of `HL7_ParticipationType` (such as `RESP`). Absent means any role. |
+| `caseload_episodes` | a list of episodes, each `issuer\|id` | Narrows each EHR of the caseload to the data placed in one of these episodes, the data placed in none and the data your access policy's `episode_shared` names. Absent means every episode your relationships cover. |
 
 ```json
 POST /ferroehr/rest/openehr/v1/query/aql
@@ -334,8 +335,9 @@ POST /ferroehr/rest/openehr/v1/query/aql
   `relationship_grace` after its end, for a provider you act for, as the
   access decision counts it. A self-declared relationship is never part of a
   caseload, and neither is one you wrote naming yourself.
-- `400` names the member for an unknown value, for `caseload_roles` without a
-  caseload or with `none`, for an access policy whose `caseload` is `false`,
+- `400` names the member for an unknown value, for `caseload_roles` or
+  `caseload_episodes` without a caseload or with `none`, for an episode none
+  of your live care relationships names, for an access policy whose `caseload` is `false`,
   for a declared purpose outside the policy's `care_purposes`, and for a
   query rooted at a demographic class, which reads no EHR.
 - A `GET` execution takes no caseload: every member of its query string stays

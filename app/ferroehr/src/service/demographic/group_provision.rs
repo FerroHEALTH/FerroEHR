@@ -103,7 +103,7 @@ pub struct GroupState {
     /// The members' `PERSON` containers.
     pub members: Vec<VoId>,
     /// Whether the Group is a care team: its `GROUP` carries
-    /// the coded `care_team` as its `name` and each membership `MBR`
+    /// the coded `care_team` as its `name` and each membership `member_of`
     /// (#5617). Set at its creation and never changed.
     pub care_team: bool,
 }
@@ -246,7 +246,7 @@ impl FerroEhrService {
     }
 
     /// The new version of the `PERSON` `member` that adds (`join`) or drops
-    /// its membership of the `GROUP` `group`, carrying `MBR` when the
+    /// its membership of the `GROUP` `group`, carrying `member_of` when the
     /// group is a care team (`care_team`); `None` when it already holds
     /// what is asked, and for a drop from a `PERSON` that is not `complete` or
     /// `incomplete`, whose memberships its deactivation already dropped.

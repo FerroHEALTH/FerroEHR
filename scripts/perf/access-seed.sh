@@ -31,13 +31,14 @@ readonly EXT=/ferroehr/rest/extensions/v1
 # shellcheck disable=SC2034 # read by gate.sh, which sources this file
 readonly CLINICIAN_AUTH="Basic Y2xpbmljaWFuOmNsaW5pY2lhbg=="
 # The access-control codes and the grant operations (openehr_access). The
-# terminology identifiers of a directive's effect (HL7 ConsentProvisionType)
-# and of a care-team membership (HL7 RoleClass MBR) are read from the
-# terminology of the tree the seeded server is built from (access_vocabulary),
-# so a base built before a rename is seeded with the identifiers it accepts.
+# terminology identifier of a directive's effect (HL7 ConsentProvisionType)
+# and the code of a care-team membership are read from the terminology of the
+# tree the seeded server is built from (access_vocabulary), so a base built
+# before a rename is seeded with the codes it accepts.
 readonly ACCESS_TERMINOLOGY=openehr_access
 PROVISION_TERMINOLOGY=""
-ROLE_CLASS_TERMINOLOGY=""
+MEMBER_TERMINOLOGY=""
+MEMBER_CODE=""
 # Set by access_vocabulary when the tree writes a care relationship as a
 # PARTY_RELATIONSHIP of its own (#6055): the care_role terminology and the
 # provider the clinician acts for, as "<issuer> <id>". Empty for a tree that
@@ -91,13 +92,13 @@ party_json() {
 
 # care_json <under_care_of|member_of> <source-person> <team>: a care
 # relationship from the first of January this year, unbounded, coded
-# under_care_of of openehr_access or MBR of the HL7 v3 RoleClass.
+# under_care_of of openehr_access or the tree's membership code.
 care_json() {
   local from t="$ACCESS_TERMINOLOGY" coded="$1"
   from="$(date -u +%Y)-01-01"
   if [[ "$1" == member_of ]]; then
-    t="$ROLE_CLASS_TERMINOLOGY"
-    coded=MBR
+    t="$MEMBER_TERMINOLOGY"
+    coded="$MEMBER_CODE"
   fi
   jq -cn --arg code "$1" --arg coded "$coded" --arg source "$2" --arg team "$3" \
     --arg from "$from" --arg t "$t" '
@@ -118,18 +119,18 @@ care_json() {
 }
 
 # member_json <source-type> <source> <target-type> <target>: a membership,
-# HL7 v3 RoleClass#MBR, of <source> in <target>, open from the first of
-# January this year.
+# coded with the tree's membership code, of <source> in <target>, open from
+# the first of January this year.
 member_json() {
-  jq -cn --arg st "$1" --arg s "$2" --arg tt "$3" --arg t "$4" --arg c "$ROLE_CLASS_TERMINOLOGY" \
-    --arg from "$(date -u +%Y)-01-01" '
+  jq -cn --arg st "$1" --arg s "$2" --arg tt "$3" --arg t "$4" --arg c "$MEMBER_TERMINOLOGY" \
+    --arg m "$MEMBER_CODE" --arg from "$(date -u +%Y)-01-01" '
     def text($v): {_type: "DV_TEXT", value: $v};
     def ref($type; $id): {_type: "PARTY_REF", namespace: "demographic", type: $type,
       id: {_type: "HIER_OBJECT_ID", value: $id}};
     {_type: "PARTY_RELATIONSHIP",
      archetype_node_id: "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1",
      name: {_type: "DV_CODED_TEXT", value: "member of", defining_code: {_type: "CODE_PHRASE",
-       terminology_id: {_type: "TERMINOLOGY_ID", value: $c}, code_string: "MBR"}},
+       terminology_id: {_type: "TERMINOLOGY_ID", value: $c}, code_string: $m}},
      time_validity: {_type: "DV_INTERVAL", lower: {_type: "DV_DATE", value: $from},
        lower_unbounded: false, upper_unbounded: true, lower_included: true,
        upper_included: false},
@@ -350,13 +351,20 @@ access_population() {
     || die "seed: $(wc -l <"$made" | tr -d ' ') of $count access population EHRs were made: $(head -c 400 "$OUT/access-population.log")"
 }
 
-# access_vocabulary <tree>: the terminology identifiers of a directive's
-# effect and of a care-team membership, as <tree>'s openehr-rm names them.
+# access_vocabulary <tree>: the terminology identifier of a directive's
+# effect and the terminology and code of a care-team membership, as <tree>'s
+# openehr-rm names them: `MemberOf => "<code>"` is a code of openehr_access,
+# `MemberOf => "<code>" of <CONSTANT>, ...` one of the terminology <CONSTANT> names.
 access_vocabulary() {
-  local terms="$1/crates/openehr-rm/src/draft/access_control/terminology.rs"
+  local terms="$1/crates/openehr-rm/src/draft/access_control/terminology.rs" constant
   PROVISION_TERMINOLOGY=$(sed -nE 's/^pub const TERMINOLOGY_ID_CONSENT_PROVISION_TYPE: &str = "([^"]+)";$/\1/p' "$terms")
-  ROLE_CLASS_TERMINOLOGY=$(sed -nE 's/^pub const TERMINOLOGY_ID_ROLE_CLASS: &str = "([^"]+)";$/\1/p' "$terms")
-  if [[ -z "$PROVISION_TERMINOLOGY" || -z "$ROLE_CLASS_TERMINOLOGY" ]]; then
+  MEMBER_CODE=$(sed -nE 's/^ *MemberOf => "([^"]+)".*$/\1/p' "$terms")
+  constant=$(sed -nE 's/^ *MemberOf => "[^"]+" of ([A-Z_]+),.*$/\1/p' "$terms")
+  MEMBER_TERMINOLOGY="$ACCESS_TERMINOLOGY"
+  if [[ -n "$constant" ]]; then
+    MEMBER_TERMINOLOGY=$(sed -nE "s/^pub const $constant: &str = \"([^\"]+)\";\$/\\1/p" "$terms")
+  fi
+  if [[ -z "$PROVISION_TERMINOLOGY" || -z "$MEMBER_CODE" || -z "$MEMBER_TERMINOLOGY" ]]; then
     echo "access seed: $terms names no effect or membership terminology" >&2
     return 1
   fi

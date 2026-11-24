@@ -24,8 +24,8 @@ A deployment combines every attribute the model has (scope, exception, effect, t
  PERSON/AGENT --performs--> ROLE    EHR_ACCESS                         ACCESS_POLICY
      |                  name (role)   settings: ACCESS_DIRECTIVE_         controller -> ORGANISATION
      |                  +-CAPABILITY    SETTINGS                          classifications
-     +--MBR--> GROUP / unit             marking (N, R, V)                 rules (+ exceptions)
-                 ^  (one level)         exclusions                        care_relationship_required
+     +-member_of-> GROUP / unit         marking (N, R, V)                 rules (+ exceptions)
+                   ^  (one level)       exclusions                        care_relationship_required
  subject --under_care_of--+ role,       default_access                    relationship_grace
    ^         provider, covers_for       gate_keepers                      care_purposes, validity
    |         (direct, team)             directives (+ exceptions)         writers, team_targets

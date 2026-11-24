@@ -276,8 +276,8 @@ impl FerroEhrService {
     /// `GROUP` of the `ORGANISATION` it belongs to, each given as its RM class
     /// and container: an inline `PARTY_RELATIONSHIP` of `archetype_id` whose
     /// `source` is the member and whose `target` is `group`, each named
-    /// under `namespace`, named by the coded membership, HL7 v3
-    /// `RoleClass#MBR`, when the group is a care team, as RM
+    /// under `namespace`, named by the coded membership,
+    /// `openehr_access::member_of`, when the group is a care team, as RM
     /// `PARTY_RELATIONSHIP.type()` is its `name` (#5617).
     ///
     /// RM demographic master02 §Party Relationships: a relationship is stored

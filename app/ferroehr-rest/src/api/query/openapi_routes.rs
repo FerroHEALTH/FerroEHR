@@ -468,11 +468,14 @@ guarded_handler! {
                            scope is NOT a body member: it is the `ehr_id` query \
                            parameter or the `openehr-ehr-id` header. FerroEHR extension, no \
                            ITS-REST member: `caseload` (`direct`, `team`, `all` or \
-                           `none`) and `caseload_roles` (role codes, \
-                           `terminology::code` or a bare `HL7_ParticipationType` code) narrow the query to \
+                           `none`), `caseload_roles` (role codes, \
+                           `terminology::code` or a bare `HL7_ParticipationType` code) and \
+                           `caseload_episodes` (episodes, `issuer|id`) narrow the query to \
                            the EHRs whose subjects the caller holds a live care \
-                           relationship to, inside its one statement; an unknown \
-                           value, roles without a caseload, a policy that turns the \
+                           relationship to, and each to the data of the named episodes, the \
+                           unplaced and the shared data, inside its one statement; an unknown \
+                           value, roles or episodes without a caseload, an episode no live \
+                           relationship of the caller names, a policy that turns the \
                            caseload off or a purpose outside its care purposes is \
                            `400` naming the member."
         ),
@@ -973,11 +976,14 @@ guarded_handler! {
                            body member: it is the `ehr_id` query parameter or the \
                            `openehr-ehr-id` header. FerroEHR extension, no \
                            ITS-REST member: `caseload` (`direct`, `team`, `all` or \
-                           `none`) and `caseload_roles` (role codes, \
-                           `terminology::code` or a bare `HL7_ParticipationType` code) narrow the query to \
+                           `none`), `caseload_roles` (role codes, \
+                           `terminology::code` or a bare `HL7_ParticipationType` code) and \
+                           `caseload_episodes` (episodes, `issuer|id`) narrow the query to \
                            the EHRs whose subjects the caller holds a live care \
-                           relationship to, inside its one statement; an unknown \
-                           value, roles without a caseload, a policy that turns the \
+                           relationship to, and each to the data of the named episodes, the \
+                           unplaced and the shared data, inside its one statement; an unknown \
+                           value, roles or episodes without a caseload, an episode no live \
+                           relationship of the caller names, a policy that turns the \
                            caseload off or a purpose outside its care purposes is \
                            `400` naming the member."
         ),
@@ -1502,11 +1508,14 @@ guarded_handler! {
                            scope is not a body member: it is the `ehr_id` query \
                            parameter or the `openehr-ehr-id` header. FerroEHR extension, no \
                            ITS-REST member: `caseload` (`direct`, `team`, `all` or \
-                           `none`) and `caseload_roles` (role codes, \
-                           `terminology::code` or a bare `HL7_ParticipationType` code) narrow the query to \
+                           `none`), `caseload_roles` (role codes, \
+                           `terminology::code` or a bare `HL7_ParticipationType` code) and \
+                           `caseload_episodes` (episodes, `issuer|id`) narrow the query to \
                            the EHRs whose subjects the caller holds a live care \
-                           relationship to, inside its one statement; an unknown \
-                           value, roles without a caseload, a policy that turns the \
+                           relationship to, and each to the data of the named episodes, the \
+                           unplaced and the shared data, inside its one statement; an unknown \
+                           value, roles or episodes without a caseload, an episode no live \
+                           relationship of the caller names, a policy that turns the \
                            caseload off or a purpose outside its care purposes is \
                            `400` naming the member."
         ),

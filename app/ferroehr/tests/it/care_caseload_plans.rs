@@ -9,7 +9,8 @@
 //! population query over compositions reads).
 //!
 //! Each is read three ways: the check of one EHR, a caseload page and a
-//! population AQL query. The check is one probe of `ix_access_care_subject`,
+//! population AQL query, for callers holding relationships scoped to no
+//! episode and then to one (#6415). The check is one probe of `ix_access_care_subject`,
 //! read with `EXPLAIN (ANALYZE, FORMAT JSON)`
 //! (<https://www.postgresql.org/docs/18/sql-explain.html>). The queries run
 //! through the service under a policy that requires a care relationship,
@@ -26,6 +27,7 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 use sqlx::{Executor as _, PgPool};
 
+use ferroehr::access_eval::care_tie::Cared;
 use ferroehr::access_eval::condition::care::{Care, ProjectedCare};
 use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess, with_request_access};
 use ferroehr::access_eval::procedure::{Caller, Emergency};
@@ -286,6 +288,7 @@ fn access(team: uuid::Uuid) -> Arc<RequestAccess> {
             operation: OperationClass::Query,
             purpose: Some("TREAT".to_owned()),
             emergency: Emergency::default(),
+            episodes: None,
         },
         InForce {
             policy: Some(Arc::new(policy)),
@@ -301,7 +304,7 @@ fn access(team: uuid::Uuid) -> Arc<RequestAccess> {
 /// care read from the projection.
 async fn query(
     svc: &FerroEhrService,
-    team: uuid::Uuid,
+    (team, left): (uuid::Uuid, &Cared),
     aql: &str,
     fetch: Option<i64>,
 ) -> Vec<Value> {
@@ -309,7 +312,7 @@ async fn query(
     let run = async {
         let classes = svc.ehr_access_classes().await.expect("the classes read");
         let request = AqlQueryRequest {
-            ehr_access: QueryAccess::Given(access.condition(&classes, projected(team))),
+            ehr_access: QueryAccess::Given(access.condition_as(&classes, projected(team), left)),
             fetch,
             ..AqlQueryRequest::default()
         };
@@ -469,8 +472,17 @@ async fn the_caseload_plans_hold_at_practice_scale() {
             "the check of one EHR is one probe of the subject index: {read:?}"
         );
         first += patients;
+        let bound = caseload_plan(&pool, team).await;
+        eprintln!("the caseload bound over {patients} patients:\n{bound}");
+        if patients <= CASELOAD_LED {
+            assert!(
+                bound.contains("Index Only Scan using ix_access_care_caseload"),
+                "the caseload bound over {patients} patients reads the caseload index alone:\n{bound}"
+            );
+        }
+        let left = &Cared::Left;
 
-        let (scans, rows) = scans_of(&pool, query(&svc, team, PAGE, Some(50))).await;
+        let (scans, rows) = scans_of(&pool, query(&svc, (team, left), PAGE, Some(50))).await;
         assert_eq!(
             rows.len(),
             usize::try_from(50.min(patients)).expect("a page size"),
@@ -478,7 +490,7 @@ async fn the_caseload_plans_hold_at_practice_scale() {
         );
         assert_shape("a caseload page", patients, &scans);
 
-        let (scans, rows) = scans_of(&pool, query(&svc, team, POPULATION, None)).await;
+        let (scans, rows) = scans_of(&pool, query(&svc, (team, left), POPULATION, None)).await;
         assert_shape("a population query", patients, &scans);
         assert_eq!(
             rows.first().and_then(|row| row[0].as_i64()),
@@ -486,6 +498,76 @@ async fn the_caseload_plans_hold_at_practice_scale() {
             "the population query counts the caseload's compositions"
         );
     }
+    scoped_to_an_episode(&pool).await;
+    for (team, patients) in SCALES {
+        let team = id(team);
+        let left = &Cared::Covering;
+        let (scans, rows) = scans_of(&pool, query(&svc, (team, left), PAGE, Some(50))).await;
+        assert_eq!(
+            rows.len(),
+            usize::try_from(50.min(patients)).expect("a page size"),
+            "a caseload page of {patients} under episode relationships"
+        );
+        assert_shape("a caseload page under episodes", patients, &scans);
+        let (scans, rows) = scans_of(&pool, query(&svc, (team, left), POPULATION, None)).await;
+        assert_shape("a population query under episodes", patients, &scans);
+        assert_eq!(
+            rows.first().and_then(|row| row[0].as_i64()),
+            Some(patients * COMPOSITIONS),
+            "the unplaced compositions are covered under episode relationships"
+        );
+    }
+}
+
+/// Scopes every relationship of the three principal sets to one episode,
+/// rewrites the projection and takes its statistics again.
+async fn scoped_to_an_episode(pool: &PgPool) {
+    let teams: Vec<uuid::Uuid> = SCALES.iter().map(|(team, _)| id(team)).collect();
+    sqlx::query("UPDATE access_care SET episode_digest = $2 WHERE carer_id = ANY($1)")
+        .bind(&teams)
+        .bind(
+            ferroehr::versioning::episode::EpisodeKey::of("urn:h", "C-17")
+                .as_bytes()
+                .to_vec(),
+        )
+        .execute(pool)
+        .await
+        .expect("scope the relationships to an episode");
+    // NOTE: our own design, the rewrite leaves the projection as a seed writes it, with no
+    // index entries the update left behind.
+    for statement in ["VACUUM FULL access_care", "VACUUM ANALYZE access_care"] {
+        pool.execute(statement)
+            .await
+            .expect("take the statistics again");
+    }
+}
+
+/// The plan, with its buffers, of the caseload bound a query of a caller of
+/// `team` that holds no relationship scoped to an episode binds, as
+/// `aql::sql::care` renders it.
+async fn caseload_plan(pool: &PgPool, team: uuid::Uuid) -> String {
+    let lines: Vec<String> = sqlx::query_scalar(
+        "EXPLAIN (ANALYZE, BUFFERS, COSTS OFF) SELECT access_care_ehr.id \
+         FROM access_care access_care_row \
+         JOIN ehr access_care_ehr ON access_care_ehr.subject_digest = access_care_row.subject_digest \
+         WHERE access_care_row.carer_id = ANY($1) \
+         AND (access_care_row.provider_issuer, access_care_row.provider_id) IN \
+             (SELECT * FROM unnest($2::text[], $3::text[])) \
+         AND (access_care_row.care_from IS NULL OR access_care_row.care_from <= $4::date) \
+         AND (access_care_row.care_until IS NULL OR $4::date < access_care_row.care_until \
+              OR $4::date < access_care_row.care_until + '14 days'::interval) \
+         AND access_care_row.episode_digest IS NULL \
+         AND CASE WHEN access_care_row.self_declared THEN false \
+             ELSE access_care_row.writer_id IS NULL OR access_care_row.writer_id <> ALL($1) END",
+    )
+    .bind(vec![team])
+    .bind(vec![PROVIDER.0])
+    .bind(vec![PROVIDER.1])
+    .bind(DAY)
+    .fetch_all(pool)
+    .await
+    .expect("explain the caseload bound");
+    lines.join("\n")
 }
 
 /// A query bounded to the caller's caseload still reaches an EHR outside the

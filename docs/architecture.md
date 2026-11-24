@@ -240,7 +240,13 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   tier moves and the deletes name the node rows in the version's statement,
   the storage-parity sweep reports a row set no version reads
   (`orphan_nodes`), and `node_version_integrity` holds the invariant across
-  commit, delete, archive, erasure and decommissioning. The per-EHR class index
+  commit, delete, archive, erasure and decommissioning. A version's
+  `contribution_id` and `commit_audit_id` and a contribution's
+  `commit_audit_id` carry no foreign key either (#6394): a commit statement
+  inserts the rows they name, a version written into an existing
+  contribution, an imported version and an archive load write nothing unless
+  those rows are stored, the EHR erasure deletes no audit a stored row still
+  names, and `change_control_integrity` holds it across every writer. The per-EHR class index
   `idx_node_hot_ehr_type` leaves out the ELEMENT rows, which are reached
   through the nested-set range of the primary key, and the data-structure
   classes (`ITEM_*`, `HISTORY`, the events, `EVENT_CONTEXT`, `ACTIVITY`), which
@@ -1680,8 +1686,10 @@ from the party binding outcome (`BindingCode::term`). Each is a closed set of te
 by terminology id and code. A term whose meaning an HL7 code system
 publishes is that code under the code system's id: `HL7_ConsentProvisionType`
 `permit` and `deny`, `HL7_SecurityRoleType` `datasubject` (the subject
-caller kind and the subject-of-care accessor kind), `HL7_RoleClass` `MBR` (a
-care-team membership) and `HL7_AuditEventAction` `C`, `R`, `U`, `D`. A value of
+caller kind and the subject-of-care accessor kind) and `HL7_AuditEventAction`
+`C`, `R`, `U`, `D`. A care-team membership is `openehr_access` `member_of`,
+with `HL7_RoleClass` `MBR` as its broader mapping: a client's own relationship
+coded with the generic HL7 code takes no access meaning. A value of
 a terminology the group holds no term of, or a code outside the group, is
 refused. The operations gain the grants `write_care_relationship` and
 `write_access_policy`, and the care relationship codes are qualifiers, never
@@ -1824,27 +1832,32 @@ which the performance gate's transactions-per-request measure refuses
 each login key's lookup of the side table (its parties, their states,
 markers, groups and represented subjects, under the date its states were
 judged on) and each bound `PERSON`'s name, read on a miss, listening on
-`ferroehr_party_binding`. Triggers of `party/0051` notify it with an empty
-payload on any change of a key row, a membership, a representation or a key
-space's state, which drops every lookup, and with a `PERSON`'s container on
-a write of its version, which drops its name. A request whose own commit
-changed the side table drops the copy before it answers, so a deprovisioned
-key is refused on that replica's next request and on another's once the
-notification arrives; while the listener is down every request reads the
-store. A request whose caller is held makes no party-store statement to
-resolve it. **Our own design.**
+`ferroehr_party_binding`. A lookup is taken only when it answers for the
+binding revision the request reads (#6048). Each transaction that changes a
+key row, a membership, a representation or a key space's state moves the
+revision once and notifies, at commit, the revision and its change set
+(#6403): the parties of the rows it wrote, the key of each key row and the
+issuer of each other identifier row, or `*` for a key space's state or a set
+too large for a notification. A replica drops each lookup whose key, group
+issuer or read parties (found, membership groups, represented subjects) the
+set names and holds the others at the new revision; a set out of revision
+order or `*` drops every lookup. A write of a `PERSON`'s version notifies its
+container, which drops its name, and a request whose own commit changed the
+side table drops every name before it answers. While the listener is down
+every request reads the store. A request whose caller is held makes no
+party-store statement to resolve it. **Our own design.**
 
 **Caller facts** (#5511). Beside the grants, the side table holds what the
 access evaluator reads about a caller (migrations `party/0039`, `party/0042`;
-`party/0044` keys a membership by its code, `MBR`):
+a membership is keyed by its code, `member_of`):
 `binding_caller_fact`, one row per `ROLE` whose `name` is a `DV_CODED_TEXT`
 of the jurisdiction's terminology (the role its performer holds while the
 `ROLE` is in force, read with `ForeignCode::read`, #5621), per `ORGANISATION`
 whose `name` is one (its own type, `organisation_type`, `party/0046`, #5691),
 and per care
 relationship a `PERSON` holds (an inline
-`PARTY_RELATIONSHIP` whose `name` or `details` carry a membership, HL7 v3
-`RoleClass#MBR`, or `openehr_access::under_care_of`, RM demographic `party_relationship.adoc`: `source`,
+`PARTY_RELATIONSHIP` whose `name` or `details` carry a membership,
+`openehr_access::member_of`, or `openehr_access::under_care_of`, RM demographic `party_relationship.adoc`: `source`,
 `target`, `time_validity`), each with the term of its holder. The patient's
 `under_care_of` team ids are projected at the commit of the patient's
 `PERSON`. A commit whose facts changed stamps every party whose facts
@@ -1888,6 +1901,31 @@ no party read waits while a clinical connection is held; an EHR Extract
 import judges against the store and the extract's demographics chapter, and
 an archive load against the store and its demographic segments, before
 either writes. **Our own design.**
+A relationship covers a datum when it names no episode, the datum is placed
+in none, the datum is in its episode, or `ACCESS_POLICY.episode_shared`
+names it; for an `access_service` caller it also covers the data of an EHDS
+Art. 14(1) priority category through the category map (Art. 11(3)). Steps 7
+and 8 and the actor scope `care` admit on care only the data a live
+relationship covers, and refuse the rest `refused-outside-episode` at step
+7 (`access_eval::coverage`, `procedure::covering`, #6414); an emergency, the
+subject, permits and gate-keepers decide as before. The caller facts copy
+holds, beside the facts, the carers a relationship scoped to an episode
+targets, read by the same whole read and moved by the same delta
+(`live::episodic`). A caller none of whose principals is among them reads
+care as before (`Cared::Left`): its verdicts, its statements and its reads
+are the ones a deployment with no episode runs. For one that is, a query's
+cared verdicts carry the atom `Pred::Covered`, which its statement reads as
+it reads care (#6415): from tokens the census or a pinned query binds, each
+tie's tokens again joined to its episode's key or `*`, or from the episodes
+of the projection's rows aggregated per EHR, so a plan may memoize it. The
+copy the care was confirmed on decides which, and a condition built before
+it moved is built again. A statement built for a caller with no such
+relationship counts only a projection row scoped to no episode as care,
+so a row the projection holds before the copy does admits nothing. A query
+may also carry `caseload_episodes`, which narrows each EHR of its caseload
+to the data of those episodes, the unplaced and the shared data; an
+episode none of the caller's live relationships names is refused `400`.
+**Our own design.**
 `Capabilities::facts()` gives a request's caller its roles and care teams in
 force. The replica's copy holds the facts of callers
 alone: a patient's `under_care_of` relationships grow with the record, so
@@ -1909,7 +1947,7 @@ only for a caller holding `write_care_relationship` or an administrator
 (BASE Architecture Overview `master07-security.adoc` §The Problem of Roles:
 the care delivery environment evaluates "care deliverer"). A care
 relationship of another party kind or of its own container is refused
-`422`. An `ORGANISATION`'s `MBR` relationship is its membership of a
+`422`. An `ORGANISATION`'s `member_of` relationship is its membership of a
 `GROUP` (#5575): written as its own facts on the commit of the
 `ORGANISATION` under the same grant rule, and resolved for a client by
 `LiveGrants::memberships` of the provider its acts-for relationship names,
@@ -1939,7 +1977,7 @@ holder of `write_care_relationship`, and the care check decides it, so the
 ADT system rosters a provisioned professional (#5617). A SCIM Group created
 with `careTeam` in FerroEHR's Group extension is a care team: its `GROUP`
 is named by the coded `openehr_access::care_team` (group `group kind`) and
-each membership by the coded `HL7_RoleClass::MBR`, both bound in the default
+each membership by the coded `openehr_access::member_of`, both bound in the default
 definitions' `term_bindings`, since RM demographic `PARTY.type()` and
 `PARTY_RELATIONSHIP.type()` are the `name` (`Type_valid`); creating
 one needs the client's `write_care_relationship` grant, and its membership
@@ -2300,7 +2338,7 @@ first logins of a bound issuer create a provisional `PERSON` is policy,
 so it is CDR data: a `CAPABILITY` coding `create_at_login` admits the
 logins of each issuer its `login_issuer` elements name that meet every
 condition it declares (`admit_idp`, `admit_group`, `admit_role`,
-`admit_assurance`, and `admit_guests` for a guest), and any grant in force
+and `admit_assurance`), and any grant in force
 admits a login. The grant is read by its credentials, whoever performs its
 `ROLE`, from the same `LiveGrants` copy (`LiveGrants::admissions`), which
 the login binding consults only for an unbound person or delegated caller,

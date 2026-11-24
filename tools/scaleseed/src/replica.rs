@@ -7,7 +7,7 @@
 //! copy as a request reads it.
 //!
 //! The seed writes the rows the commit path derives from a patient's
-//! `under_care_of` relationship, a professional's membership (`MBR`) and the
+//! `under_care_of` relationship, a professional's membership (`member_of`) and the
 //! role its `ROLE` names straight into `party.binding_caller_fact`, as the caller
 //! facts' integration test does, stamps each party with the seeding
 //! transaction and moves the grant revision, so the copy reads every row. The measurement starts
@@ -84,13 +84,13 @@ pub(crate) async fn seed(pool: &PgPool, target: Target) -> anyhow::Result<()> {
     .execute(&mut *tx)
     .await
     .context("seed the care relationships")?;
-    // One membership (`MBR`) of a team for each professional, and the role
+    // One membership (`member_of`) of a team for each professional, and the role
     // its `ROLE` names.
     sqlx::query(
         "INSERT INTO party.binding_caller_fact \
              (holder_id, ordinal, kind, party_id, target_id, lifecycle_state, role_validity, \
               validity) \
-         SELECT md5('staff-' || n)::uuid, 0, 'MBR', md5('staff-' || n)::uuid, \
+         SELECT md5('staff-' || n)::uuid, 0, 'member_of', md5('staff-' || n)::uuid, \
                 md5('team-' || (n % $2))::uuid, '532', daterange(NULL, NULL), \
                 daterange(date '2026-01-01', NULL) \
          FROM generate_series(1, $1::bigint) AS n",

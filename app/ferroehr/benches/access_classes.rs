@@ -113,6 +113,7 @@ fn request() -> RequestAccess {
             operation: OperationClass::Query,
             purpose: None,
             emergency: Emergency::default(),
+            episodes: None,
         },
         InForce {
             policy: None,

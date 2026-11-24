@@ -509,7 +509,7 @@ async fn an_absolute_restriction_holds_in_an_emergency() {
 /// settings. A system client acting for a member `ORGANISATION` reads the
 /// record and queries it; a client of a provider outside the region is
 /// refused with the default's code and queries nothing (IHE BPPC; RM
-/// Demographic IM `PARTY_RELATIONSHIP`, coded HL7 v3 `RoleClass#MBR`; our own design,
+/// Demographic IM `PARTY_RELATIONSHIP`, coded `openehr_access::member_of`; our own design,
 /// #5575).
 #[tokio::test]
 async fn regional_sharing_admits_a_client_of_a_member_organisation() {

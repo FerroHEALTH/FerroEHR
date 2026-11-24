@@ -244,6 +244,7 @@ struct Ask {
     cared: Vec<EhrSubject>,
     default: AccessDefault,
     emergency: Emergency,
+    episodes: Option<Arc<[ferroehr::versioning::episode::EpisodeKey]>>,
 }
 
 impl Ask {
@@ -281,6 +282,7 @@ impl Ask {
             cared: Vec::new(),
             default: AccessDefault::Open,
             emergency: Emergency::default(),
+            episodes: None,
         }
     }
 }
@@ -293,6 +295,7 @@ fn request_of(ask: &Ask) -> Arc<RequestAccess> {
             operation: OperationClass::Query,
             purpose: ask.purpose.map(str::to_owned),
             emergency: ask.emergency,
+            episodes: ask.episodes.clone(),
         },
         InForce {
             policy: ask.policy.clone().map(Arc::new),
@@ -336,10 +339,6 @@ fn own() -> String {
 /// Write the care projection of `cared`, each relationship from `from` until
 /// `until`, under [`TEAM`], and every EHR row's digest: what the care
 /// projector writes from the party domain.
-#[expect(
-    clippy::disallowed_methods,
-    reason = "a test reads the database on a raw pool connection, outside any request"
-)]
 async fn project(
     world: &World,
     cared: &[(
@@ -347,6 +346,23 @@ async fn project(
         Option<jiff::civil::Date>,
         Option<jiff::civil::Date>,
     )],
+) {
+    project_in(world, cared, None).await;
+}
+
+/// [`project`], each relationship scoped to `episode`.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
+async fn project_in(
+    world: &World,
+    cared: &[(
+        EhrSubject,
+        Option<jiff::civil::Date>,
+        Option<jiff::civil::Date>,
+    )],
+    episode: Option<ferroehr::versioning::episode::EpisodeKey>,
 ) {
     use ferroehr::storage::access_care::{self, CareRow, cared_key, subject_digest, subject_key};
     let pool = world.db.pool();
@@ -372,7 +388,7 @@ async fn project(
                 terminology: "HL7_ParticipationType".to_owned(),
                 code: "PART".to_owned(),
             },
-            episode: None,
+            episode,
         })
         .collect();
     access_care::clear(&mut tx)
@@ -1460,7 +1476,9 @@ async fn a_pinned_verdict_judged_on_an_older_copy_is_judged_again_or_refused() {
                 let condition = unresolved(world, &access)
                     .await
                     .with_care(Care::Ehrs(Vec::new().into()));
-                let mut entry = svc.ehr_access_entry(ehr_id).await.expect("the copy reads");
+                let mut entry = Arc::unwrap_or_clone(
+                    svc.ehr_access_entry(ehr_id).await.expect("the copy reads"),
+                );
                 if older {
                     entry.revision.settings = entry.revision.settings.map(|ordinal| ordinal - 1);
                 }
@@ -1825,6 +1843,33 @@ async fn an_episode_scope_reads_the_episodes_of_the_trunk_head() {
     );
 }
 
+/// A request narrowed to an episode, as a SMART on openEHR launch in it is,
+/// reads the compositions of that episode and those placed in none, by every
+/// query shape and by a named read, and no composition of another episode
+/// (#6417).
+#[tokio::test]
+async fn a_request_narrowed_to_an_episode_reads_that_episode_and_the_unplaced() {
+    let mut world = Box::pin(World::new()).await;
+    let dermatology = world.place(0, "D-4").await;
+    let cardiology = world.place(1, "C-17").await;
+    let mut ask = Ask::professional(&world);
+    ask.episodes = Some(Arc::from([ferroehr::versioning::episode::EpisodeKey::of(
+        HOSPITAL, "C-17",
+    )]));
+    let expected = except(&world, &[], &[&dermatology]);
+    assert_reads(&world, &ask, &expected, "the cardiology launch").await;
+    assert!(
+        world.reads(&ask, 1, &cardiology).await,
+        "the launched episode"
+    );
+    assert!(!world.reads(&ask, 0, &dermatology).await, "another episode");
+    let unplaced = world.objects(0)[0].clone();
+    assert!(
+        world.reads(&ask, 0, &unplaced).await,
+        "an unplaced composition"
+    );
+}
+
 /// A caller every known class, an EHR held closed and an EHR with no
 /// settings admit in full reads every EHR of a known class, by every query
 /// shape, and an EHR of a class its condition does not hold once the
@@ -1950,4 +1995,47 @@ async fn a_pinned_query_reads_the_settings_the_caller_may_read() {
             "{role}: the pinned answers are the census's"
         );
     }
+}
+
+/// A relationship scoped to an episode that the care projection holds before
+/// the caller facts copy does, so the condition was built as for a caller who
+/// holds none, admits nothing of that subject's record: the statement counts
+/// only a relationship scoped to no episode as care of the whole record
+/// (#6415).
+#[tokio::test]
+async fn a_projected_episode_relationship_the_copy_has_not_seen_admits_nothing() {
+    let world = Box::pin(World::new()).await;
+    let mut ask = Ask::professional(&world);
+    ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
+    ask.cared = vec![world.subject(0)];
+    let episode = ferroehr::versioning::episode::EpisodeKey::of("urn:example:episodes", "C-17");
+    project_in(&world, &[(world.subject(0), None, None)], Some(episode)).await;
+    let access = request_of(&ask);
+    for aql in [COMPOSITIONS, UNLINKED] {
+        let outcome = run_query_as(&world, &ask, &access, aql, None, CareForm::Projected).await;
+        let rows = outcome.result_set.to_value().unwrap()["rows"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        assert!(rows.is_empty(), "{aql}: {rows:?}");
+    }
+    project(&world, &[(world.subject(0), None, None)]).await;
+    let outcome = run_query_as(
+        &world,
+        &ask,
+        &access,
+        COMPOSITIONS,
+        None,
+        CareForm::Projected,
+    )
+    .await;
+    let rows = outcome.result_set.to_value().unwrap()["rows"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert_eq!(
+        rows.len(),
+        world.objects(0).len(),
+        "a whole-record relationship"
+    );
 }

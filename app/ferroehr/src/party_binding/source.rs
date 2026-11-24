@@ -30,7 +30,7 @@ use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::party_binding::grants::admission::Admission;
 use crate::party_binding::grants::live::GrantsUnavailable;
-use crate::party_binding::live::{LiveBindings, LookupKey};
+use crate::party_binding::live::{Filled, LiveBindings, LookupKey};
 use crate::party_binding::lookup::{self, KeyRow, LookupError};
 use crate::service::FerroEhrService;
 use crate::service::demographic::jit::ProvisionalPerson;
@@ -222,7 +222,7 @@ impl LocalPartySource {
     ) -> Result<Lookup, LookupError> {
         let store = self.read_store(issuer, identifier_type, value, group_issuer, today);
         let Some(live) = self.live.as_ref().filter(|live| !live.unlistened()) else {
-            return Ok(store.await?.0);
+            return Ok(store.await?.lookup);
         };
         // NOTE: our own design (#6048), a held lookup is taken only at the binding revision the
         // request reads from the store, or, in a ride, judged against it after the run (#6320).
@@ -247,7 +247,8 @@ impl LocalPartySource {
     }
 
     /// [`Self::read`] from the party pool, with the binding revision of the
-    /// store the first statement read, which the later ones are never behind.
+    /// store the first statement read, which the later ones are never behind,
+    /// and the parties of the rows it read.
     async fn read_store(
         &self,
         issuer: &str,
@@ -255,10 +256,11 @@ impl LocalPartySource {
         value: &str,
         group_issuer: Option<&str>,
         today: &str,
-    ) -> Result<(Lookup, i64), LookupError> {
+    ) -> Result<Filled, LookupError> {
         let mut conn = acquire(&self.pool).await.map_err(StorageError::from)?;
         let (rows, revision) =
             lookup::key_rows(&mut conn, issuer, identifier_type, value, today).await?;
+        let mut parties: Vec<Uuid> = rows.iter().map(|row| row.party_id).collect();
         let (live, tombstones): (Vec<KeyRow>, Vec<KeyRow>) =
             rows.into_iter().partition(|row| row.live);
         if live.is_empty() {
@@ -267,12 +269,17 @@ impl LocalPartySource {
             } else {
                 Lookup::Deprovisioned
             };
-            return Ok((lookup, revision));
+            return Ok(Filled {
+                lookup,
+                revision,
+                parties,
+            });
         }
         let ids: Vec<Uuid> = live.iter().map(|row| row.party_id).collect();
         let mut groups: BTreeMap<Uuid, Vec<Membership>> = BTreeMap::new();
         if let Some(issuer) = group_issuer {
             for row in lookup::memberships(&mut conn, &ids, issuer).await? {
+                parties.push(row.group);
                 groups.entry(row.member).or_default().push(Membership::new(
                     self.party(GROUP, row.group),
                     row.external_id,
@@ -287,6 +294,7 @@ impl LocalPartySource {
         let mut subjects: BTreeMap<Uuid, Vec<Represented>> = BTreeMap::new();
         if !representatives.is_empty() {
             for row in lookup::representations(&mut conn, &representatives, today).await? {
+                parties.push(row.subject_id);
                 let subject = Represented::new(self.party(PERSON, row.subject_id));
                 subjects
                     .entry(row.representative_id)
@@ -313,7 +321,11 @@ impl LocalPartySource {
                 .with_represents(subjects.remove(&row.party_id).unwrap_or_default())
             })
             .collect();
-        Ok((Lookup::Parties(records), revision))
+        Ok(Filled {
+            lookup: Lookup::Parties(records),
+            revision,
+            parties,
+        })
     }
 
     /// The reference to the party `id` of `class`.

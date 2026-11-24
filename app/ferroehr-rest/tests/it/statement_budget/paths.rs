@@ -521,7 +521,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 186_868,
+        wal: 186_814,
         wire: 201_274,
     },
     Budget {
@@ -533,7 +533,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 187_195,
+        wal: 187_141,
         wire: 201_274,
     },
     Budget {
@@ -545,7 +545,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 187_662,
+        wal: 187_608,
         wire: 201_270,
     },
     Budget {
@@ -599,7 +599,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlSingle,
         conversions: 2,
-        least: 1731,
+        least: 1730,
         allocations: 1789,
         peak_bytes: 118_273,
         round_trips: 2,
@@ -611,8 +611,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlPopulation,
         conversions: 2,
-        least: 2323,
-        allocations: 2436,
+        least: 2318,
+        allocations: 2431,
         peak_bytes: 158_823,
         round_trips: 1,
         nested: 1,
@@ -653,7 +653,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 188_024,
+        wal: 187_918,
         wire: 201_500,
     },
     Budget {
@@ -677,7 +677,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 1,
-        wal: 4331,
+        wal: 4285,
         wire: 4171,
     },
     Budget {
@@ -695,20 +695,20 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitParty,
         conversions: 8,
-        least: 1630,
-        allocations: 1702,
+        least: 1565,
+        allocations: 1637,
         peak_bytes: 125_972,
-        round_trips: 12,
+        round_trips: 10,
         nested: 3,
         notifies: 1,
-        wal: 6121,
-        wire: 7927,
+        wal: 6067,
+        wire: 7594,
     },
     Budget {
         path: Path::AqlMatches,
         conversions: 2,
-        least: 3767,
-        allocations: 3867,
+        least: 3762,
+        allocations: 3862,
         peak_bytes: 192_267,
         round_trips: 2,
         nested: 1,
@@ -731,20 +731,20 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitPartyScored,
         conversions: 8,
-        least: 2067,
-        allocations: 2188,
+        least: 2002,
+        allocations: 2123,
         peak_bytes: 140_901,
-        round_trips: 12,
+        round_trips: 10,
         nested: 3,
         notifies: 1,
-        wal: 8672,
-        wire: 10_279,
+        wal: 8618,
+        wire: 9946,
     },
     Budget {
         path: Path::ReadVersion,
         conversions: 0,
-        least: 922,
-        allocations: 997,
+        least: 914,
+        allocations: 989,
         peak_bytes: 162_800,
         round_trips: 1,
         nested: 1,
@@ -761,7 +761,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 186_370,
+        wal: 186_331,
         wire: 201_557,
     },
     Budget {
@@ -773,7 +773,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 3811,
+        wal: 3757,
         wire: 3748,
     },
     Budget {
@@ -785,7 +785,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 5251,
+        wal: 5197,
         wire: 4455,
     },
     Budget {
@@ -797,7 +797,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 4350,
+        wal: 4297,
         wire: 4268,
     },
     Budget {
@@ -809,32 +809,32 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 3623,
+        wal: 3569,
         wire: 3625,
     },
     Budget {
         path: Path::PartyUpdate,
         conversions: 8,
-        least: 1925,
-        allocations: 1957,
+        least: 1860,
+        allocations: 1892,
         peak_bytes: 129_641,
-        round_trips: 12,
+        round_trips: 10,
         nested: 3,
         notifies: 1,
-        wal: 6021,
-        wire: 8862,
+        wal: 5967,
+        wire: 8529,
     },
     Budget {
         path: Path::PartyDelete,
         conversions: 2,
-        least: 1546,
-        allocations: 1584,
+        least: 1481,
+        allocations: 1519,
         peak_bytes: 112_950,
-        round_trips: 12,
+        round_trips: 10,
         nested: 3,
         notifies: 1,
-        wal: 3805,
-        wire: 7413,
+        wal: 3751,
+        wire: 7080,
     },
     Budget {
         path: Path::CommitOrganisation,
@@ -845,7 +845,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 10,
         nested: 0,
         notifies: 0,
-        wal: 6301,
+        wal: 6247,
         wire: 7245,
     },
     Budget {
@@ -857,20 +857,20 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 10,
         nested: 0,
         notifies: 0,
-        wal: 6105,
+        wal: 6051,
         wire: 7074,
     },
     Budget {
         path: Path::CommitRole,
         conversions: 9,
-        least: 2105,
-        allocations: 2133,
+        least: 2040,
+        allocations: 2068,
         peak_bytes: 126_256,
-        round_trips: 19,
+        round_trips: 17,
         nested: 5,
         notifies: 0,
-        wal: 6418,
-        wire: 10_869,
+        wal: 6364,
+        wire: 10_536,
     },
     Budget {
         path: Path::CommitAgent,
@@ -881,7 +881,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 10,
         nested: 0,
         notifies: 0,
-        wal: 6192,
+        wal: 6138,
         wire: 7054,
     },
 ];
@@ -2376,9 +2376,9 @@ async fn cared_ehrs(app: &Router, pool: &PgPool, count: usize) -> Vec<(String, S
 /// no round trip, no nested statement and no row more than its unplaced twin
 /// while the copies hold the EHR and its subject, and one round trip more,
 /// the care copy's read of the subject's relationships, when they do not; at
-/// most 64 WAL bytes in its head row and, held, 21 allocations: the
-/// placement read before the transaction and the EHR's copied entry (#6413,
-/// #6412). The node indexes split
+/// most 64 WAL bytes in its head row and, held, 17 allocations: the
+/// placement read before the transaction and the episode keys (#6413, #6412,
+/// #6478). The node indexes split
 /// their pages as they fill, so the head row is judged on its own, and the
 /// pair is judged on its second window, after each path's first.
 #[tokio::test]
@@ -2453,7 +2453,7 @@ async fn a_placed_commit_costs_its_projection_alone() {
     }
     let head = |m: &Measure| relation_wal(m, "vo_head").0.div_euclid(REQUESTS);
     assert!(head(&placed) <= head(&twin) + 64, "{report}");
-    assert!(placed_allocations <= twin_allocations + 21, "{report}");
+    assert!(placed_allocations <= twin_allocations + 17, "{report}");
 
     let fresh = usize::try_from(WARM + REQUESTS).unwrap();
     world.ehrs = cared_ehrs(&app, &pool, fresh).await;
@@ -2580,4 +2580,81 @@ async fn a_read_under_an_episode_scope_selects_one_column_more() {
         "{report}"
     );
     assert!(scoped_allocations <= plain_allocations + 2, "{report}");
+}
+
+/// The allocations a read of a composition in an EHR whose subject names a
+/// `PERSON` under care may make beyond the same read in an EHR that names
+/// none (#6478).
+const SUBJECT_READ_ALLOCATIONS: u64 = 9;
+
+/// A read of a composition in an EHR whose subject names a `PERSON` under
+/// care takes no copy of the EHR's access entry: the access copy and the
+/// judgement share it (#6478). It is judged against the same read in the
+/// budget world's EHRs, which name no subject, measured in the same run.
+#[tokio::test]
+async fn a_read_in_an_ehr_with_a_subject_stays_within_its_allocations() {
+    let counter = Counter::default();
+    let _guard =
+        tracing::subscriber::set_default(tracing_subscriber::registry().with(counter.clone()));
+    ferroehr::aql::sql::without_reference_cells();
+    let (_db, pool, _svc, app, pools) = Box::pin(super::steady()).await;
+    for extension in ["pg_stat_statements", "pg_walinspect"] {
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "CREATE EXTENSION IF NOT EXISTS {extension}"
+        )))
+        .execute(&pool)
+        .await
+        .expect("the extension");
+    }
+    super::wal::kept(&pool).await;
+    let mut world = World::build(&app).await;
+    let mut ehrs = cared_ehrs(&app, &pool, EHRS).await;
+    for (ehr, vo) in &mut ehrs {
+        *vo = created(
+            &app,
+            format!("{BASE}/ehr/{ehr}/composition"),
+            common::ips_canonical_composition().to_string(),
+        )
+        .await;
+    }
+    let plain_ehrs = world.ehrs.clone();
+    let mut plain = Measure::default();
+    let mut subject = Measure::default();
+    for _ in 0..2 {
+        world.ehrs.clone_from(&plain_ehrs);
+        plain = Box::pin(measure(
+            &app,
+            &pool,
+            &pools,
+            None,
+            &world,
+            &counter,
+            Path::ReadJson,
+        ))
+        .await;
+        world.ehrs.clone_from(&ehrs);
+        subject = Box::pin(measure(
+            &app,
+            &pool,
+            &pools,
+            None,
+            &world,
+            &counter,
+            Path::ReadJson,
+        ))
+        .await;
+    }
+    let (plain_allocations, subject_allocations) =
+        (plain.low(|a| a.count), subject.low(|a| a.count));
+    let report = format!(
+        "read JSON: {} round trips, {plain_allocations} allocations\n\
+         read JSON, subject: {} round trips, {subject_allocations} allocations\n{}",
+        plain.round_trips, subject.round_trips, subject.statements
+    );
+    eprintln!("{report}");
+    assert_eq!(subject.round_trips, plain.round_trips, "{report}");
+    assert!(
+        subject_allocations <= plain_allocations + SUBJECT_READ_ALLOCATIONS,
+        "{report}"
+    );
 }

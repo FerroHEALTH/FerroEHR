@@ -620,7 +620,7 @@ mod tests {
             "no role, no provider: {:?}",
             refused.unread
         );
-        let membership = relationship("HL7_RoleClass", "MBR");
+        let membership = relationship(TERMINOLOGY, "member_of");
         assert_eq!(
             GrantFacts::of(Kind::PartyRelationship, &membership)
                 .unread

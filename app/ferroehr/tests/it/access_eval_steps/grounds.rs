@@ -53,6 +53,7 @@ fn request(caller: Caller, asked: Asked<'_>, policy: Option<AccessPolicy>) -> Re
             operation: asked.operation,
             purpose: asked.purpose.map(str::to_owned),
             emergency: asked.emergency,
+            episodes: asked.episodes.map(Arc::from),
         },
         InForce {
             policy: policy.map(Arc::new),
@@ -90,6 +91,7 @@ fn bound(
             operation: asked.operation,
             purpose: asked.purpose.map(str::to_owned),
             emergency: asked.emergency,
+            episodes: asked.episodes.map(Arc::from),
         },
         InForce {
             policy: policy.map(Arc::new),
@@ -159,12 +161,12 @@ fn decide_on_subject(
 ) -> (Outcome, Decision) {
     let ehr_id = EhrId(uuid(EHR));
     let version = settings.as_ref().map(|_| EHR_ACCESS_VERSION.to_owned());
-    let entry = EhrEntry {
+    let entry = Arc::new(EhrEntry {
         settings: Arc::new(settings),
         subject,
         version,
         revision: ferroehr::storage::access_projection::Revision::default(),
-    };
+    });
     // NOTE: an EHR with no subject reads no care relationship, so the judgement awaits nothing.
     let verdict = futures::executor::block_on(access.judge_ehr(ehr_id, &entry))
         .expect("an EHR with no subject reads no care relationship");
@@ -522,9 +524,18 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
             Refusal::NoCareRelationship,
             professional(DR_B),
             None,
-            Some(care),
+            Some(care.clone()),
             settings("open", &[], &[], &[]),
             Item::Ehr,
+            "ACCESS_POLICY",
+        ),
+        (
+            Refusal::OutsideEpisode,
+            professional(DR_B),
+            None,
+            Some(care),
+            settings("open", &[], &[], &[]),
+            placed(OBJECT, None, &DERMATOLOGY_EPISODE[..]),
             "ACCESS_POLICY",
         ),
         (
@@ -640,7 +651,17 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
         } else {
             (request(who, read(declared), policy), None)
         };
-        let (outcome, decision) = decide_on_subject(&access, Some(settings), &item, subject);
+        let (outcome, decision) = if refusal == Refusal::OutsideEpisode {
+            let ehr_id = EhrId(uuid(EHR));
+            let cared = Cared::of(vec![tie_in(Some("C-17"))]);
+            let verdict = access.judge(Some(ehr_id), Some(&settings), &cared);
+            (
+                access.note(ehr_id, &verdict, &item),
+                access.decision(Some(ehr_id)),
+            )
+        } else {
+            decide_on_subject(&access, Some(settings), &item, subject)
+        };
         let expected = if refusal.is_invisible() {
             Outcome::Absent(refusal)
         } else {

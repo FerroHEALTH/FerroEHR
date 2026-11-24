@@ -20,7 +20,7 @@
 
 use futures::FutureExt as _;
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::{Arc, LazyLock, Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
@@ -44,6 +44,7 @@ use crate::party_binding::grants::live::LiveGrants;
 use crate::service::ehr::access_settings::EhrAccessSettings;
 use crate::storage::access_projection::{EhrSubject, Revision};
 use crate::telemetry::stage::{self, Stage};
+use crate::versioning::episode::EpisodeKey;
 
 task_local! {
     static REQUEST_ACCESS: Arc<RequestAccess>;
@@ -61,6 +62,7 @@ mod records;
 pub struct RequestAccess {
     caller: Caller,
     operation: OperationClass,
+    episodes: Option<Arc<[EpisodeKey]>>,
     purpose: Option<String>,
     emergency: Emergency,
     pub(super) policy: Option<Arc<AccessPolicy>>,
@@ -106,18 +108,23 @@ pub struct EhrEntry {
     pub revision: Revision,
 }
 
+/// The settings-less, subject-less entry every unsettled judgement shares.
+static UNSETTLED: LazyLock<Arc<EhrEntry>> = LazyLock::new(|| {
+    Arc::new(EhrEntry {
+        settings: Arc::new(None),
+        subject: None,
+        version: None,
+        revision: Revision::default(),
+    })
+});
+
 /// One EHR's verdict in a request, with what it was judged from.
 #[derive(Debug, Clone)]
 pub struct Judgement {
     /// The verdict.
     pub verdict: Arc<Verdict>,
-    /// The settings it was judged on.
-    pub settings: Arc<Option<EhrAccessSettings>>,
-    /// The uid of the `EHR_ACCESS` version that carries them; `None` when
-    /// it could not be read.
-    pub version: Option<String>,
-    /// The revision of the settings row they were read from.
-    pub revision: Revision,
+    /// The entry it was judged on.
+    pub entry: Arc<EhrEntry>,
 }
 
 /// What the access record of a request names beside the verdicts: the
@@ -161,6 +168,9 @@ pub struct Asking {
     pub purpose: Option<String>,
     /// What the caller declared in an emergency.
     pub emergency: Emergency,
+    /// The episodes of care the request is narrowed to, sorted; `None` when
+    /// it is not narrowed.
+    pub episodes: Option<Arc<[EpisodeKey]>>,
 }
 
 /// What the request reads beside the caller and the ask.
@@ -188,6 +198,7 @@ impl RequestAccess {
             operation: asking.operation,
             purpose: asking.purpose,
             emergency: asking.emergency,
+            episodes: asking.episodes,
             policy: in_force.policy,
             categories: in_force.categories,
             server_default: in_force.server_default,
@@ -327,25 +338,6 @@ impl RequestAccess {
         Policy::of(self.policy.as_deref())
     }
 
-    /// Refuses a caseload for this request where the policy turns it off or
-    /// the declared purpose is no care purpose
-    /// ([`crate::access_eval::caseload::allowed`]).
-    ///
-    /// # Errors
-    /// [`crate::access_eval::caseload::Refused`].
-    pub fn caseload_allowed(&self) -> Result<(), crate::access_eval::caseload::Refused> {
-        crate::access_eval::caseload::allowed(self.policy.as_deref(), self.purpose.as_deref())
-    }
-
-    /// The namespace this CDR names its parties under; empty with no caller
-    /// facts copy.
-    #[must_use]
-    pub fn party_namespace(&self) -> Arc<str> {
-        self.grants
-            .as_ref()
-            .map_or_else(|| Arc::from(""), |grants| grants.namespace())
-    }
-
     /// The moment the request began.
     #[must_use]
     pub fn now(&self) -> jiff::Timestamp {
@@ -442,6 +434,7 @@ impl RequestAccess {
                 operation: self.operation,
                 purpose: self.purpose.as_deref(),
                 emergency: self.emergency,
+                episodes: self.episodes.as_deref(),
             },
             policy: self.policy(),
             rules: rules_of(self.policy.as_deref()),
@@ -471,7 +464,7 @@ impl RequestAccess {
     pub async fn judge_ehr(
         &self,
         ehr_id: EhrId,
-        entry: &EhrEntry,
+        entry: &Arc<EhrEntry>,
     ) -> Result<Arc<Verdict>, CareUnsettled> {
         let judged = stage::instrument(Stage::Access, self.judged(ehr_id, entry)).await?;
         let verdict = Arc::clone(&judged.verdict);
@@ -494,7 +487,11 @@ impl RequestAccess {
     ///
     /// # Errors
     /// As [`Self::judge_ehr`].
-    pub async fn judge_ahead(&self, ehr_id: EhrId, entry: &EhrEntry) -> Result<(), CareUnsettled> {
+    pub async fn judge_ahead(
+        &self,
+        ehr_id: EhrId,
+        entry: &Arc<EhrEntry>,
+    ) -> Result<(), CareUnsettled> {
         let judged = stage::instrument(Stage::Access, self.judged(ehr_id, entry)).await?;
         self.ahead
             .lock()
@@ -515,7 +512,7 @@ impl RequestAccess {
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .remove(&ehr_id)
-            .filter(|judged| judged.revision == *seen)?;
+            .filter(|judged| judged.entry.revision == *seen)?;
         let verdict = Arc::clone(&judged.verdict);
         self.verdicts
             .lock()
@@ -526,7 +523,11 @@ impl RequestAccess {
 
     /// The judgement of the EHR `ehr_id` as `entry` reads it, with the
     /// caller's care read and confirmed as [`Self::judge_ehr`] describes.
-    async fn judged(&self, ehr_id: EhrId, entry: &EhrEntry) -> Result<Judgement, CareUnsettled> {
+    async fn judged(
+        &self,
+        ehr_id: EhrId,
+        entry: &Arc<EhrEntry>,
+    ) -> Result<Judgement, CareUnsettled> {
         self.bind_subject(ehr_id, entry).await?;
         let mut care = self.care_for(entry).await?;
         if care.live()
@@ -545,12 +546,10 @@ impl RequestAccess {
 
     /// The judgement of the EHR `ehr_id` as `entry` reads it, the caller's
     /// care for its subject read as `care`.
-    fn judgement_of(&self, ehr_id: EhrId, entry: &EhrEntry, care: &Cared) -> Judgement {
+    fn judgement_of(&self, ehr_id: EhrId, entry: &Arc<EhrEntry>, care: &Cared) -> Judgement {
         Judgement {
             verdict: Arc::new(self.judge(Some(ehr_id), (*entry.settings).as_ref(), care)),
-            settings: Arc::clone(&entry.settings),
-            version: entry.version.clone(),
-            revision: entry.revision.clone(),
+            entry: Arc::clone(entry),
         }
     }
 
@@ -564,12 +563,6 @@ impl RequestAccess {
     /// care ground is named. Which roles and paths it holds is not known, so
     /// the care ground names no relationship. Our own design (#5581).
     pub fn judge_unsettled(&self, ehr_id: EhrId) {
-        let entry = EhrEntry {
-            settings: Arc::new(None),
-            subject: None,
-            version: None,
-            revision: Revision::default(),
-        };
         let at = Some(ehr_id);
         let left = self.care_left();
         let cared = self.judge(at, None, &left).admits_any()
@@ -579,7 +572,7 @@ impl RequestAccess {
             (true, Some(tie)) if !self.may_hold_care() => Cared::of(vec![tie]),
             (true, _) => left,
         };
-        let judged = self.judgement_of(ehr_id, &entry, &care);
+        let judged = self.judgement_of(ehr_id, &UNSETTLED, &care);
         self.verdicts
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
@@ -617,7 +610,7 @@ impl RequestAccess {
         let Some(judged) = self.judgement(ehr_id) else {
             return false;
         };
-        if judged.revision == *seen {
+        if judged.entry.revision == *seen {
             return false;
         }
         tracing::warn!(
@@ -707,6 +700,11 @@ pub struct ConditionGroups {
     /// professional is in conflict with and no conflict rule lets it read,
     /// whose EHRs the query reads no row of (#6077).
     pub conflicts: Arc<[(String, String)]>,
+    /// Whether the cared verdicts leave to the statement which data the
+    /// caller's relationships cover, as a caller one of whose principals a
+    /// relationship scoped to an episode may target reads them
+    /// ([`crate::access_eval::care_tie::Cared::Covering`]).
+    pub episodic: bool,
 }
 
 /// What the facts of a class are read against: the moment of the request,

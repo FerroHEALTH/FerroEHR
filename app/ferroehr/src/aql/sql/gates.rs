@@ -132,9 +132,14 @@ impl<'a> Gates<'a> {
         // request's caseload contributes none, inside the one statement (#6056).
         if let Some(caseload) = self.caseload {
             predicates.push(super::caseload::in_caseload(
-                caseload,
+                &caseload.reach,
                 col(h, VoHead::EhrId),
             ));
+            // NOTE: draft access control, Queries and the Caseload, `caseload_episodes`
+            // narrows each EHR to the data of its episodes, the unplaced and the shared (#6415).
+            if let Some(within) = &caseload.within {
+                predicates.push(super::access::item_pred(within, h));
+            }
         }
         // NOTE: EHDS Art. 8, an EHR_ACCESS whose settings the caller may not read
         // contributes no row, so a restriction stays invisible (our own design).
@@ -168,7 +173,7 @@ impl<'a> Gates<'a> {
             .and_then(|access| super::access::on_ehr_id(access, target));
         let caseload = self
             .caseload
-            .map(|caseload| super::caseload::in_caseload(caseload, target.clone()));
+            .map(|caseload| super::caseload::in_caseload(&caseload.reach, target.clone()));
         match (access, caseload) {
             (Some(access), Some(caseload)) => Some(access.and(caseload)),
             (access, caseload) => access.or(caseload),

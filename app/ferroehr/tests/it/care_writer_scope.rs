@@ -78,7 +78,7 @@ fn rostered(name: &str, member: VoId, team: VoId) -> Value {
         "name": text("Rostering"),
         "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": text("details"),
             "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003", "name": text("kind"),
-                        "value": coded("HL7_RoleClass", "MBR") }] },
+                        "value": coded("openehr_access", "member_of") }] },
         "time_validity": { "_type": "DV_INTERVAL",
             "lower": { "_type": "DV_DATE", "value": "2026-10-01" },
             "lower_unbounded": false, "upper_unbounded": true, "lower_included": true },
