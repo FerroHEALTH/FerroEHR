@@ -89,8 +89,11 @@ jobs:
           ref: ${{ steps.release.outputs.tag }}
 
       # The e2e test binaries compile from this checkout; nothing here is
-      # release input, so an ordinary test-lane cache applies.
+      # release input. A weekly run writes no cache: nothing restores it
+      # before it expires (#6388).
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          cache-save-if: false
       - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
           tool: cargo-nextest

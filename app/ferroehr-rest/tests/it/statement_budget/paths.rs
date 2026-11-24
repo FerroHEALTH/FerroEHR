@@ -521,7 +521,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 186_868,
+        wal: 186_814,
         wire: 201_274,
     },
     Budget {
@@ -533,7 +533,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 187_195,
+        wal: 187_141,
         wire: 201_274,
     },
     Budget {
@@ -545,7 +545,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 187_662,
+        wal: 187_608,
         wire: 201_270,
     },
     Budget {
@@ -653,7 +653,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 188_024,
+        wal: 187_918,
         wire: 201_500,
     },
     Budget {
@@ -677,7 +677,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 1,
-        wal: 4331,
+        wal: 4285,
         wire: 4171,
     },
     Budget {
@@ -701,7 +701,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 12,
         nested: 3,
         notifies: 1,
-        wal: 6121,
+        wal: 6067,
         wire: 7927,
     },
     Budget {
@@ -737,7 +737,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 12,
         nested: 3,
         notifies: 1,
-        wal: 8672,
+        wal: 8618,
         wire: 10_279,
     },
     Budget {
@@ -761,7 +761,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 186_370,
+        wal: 186_331,
         wire: 201_557,
     },
     Budget {
@@ -773,7 +773,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 3811,
+        wal: 3757,
         wire: 3748,
     },
     Budget {
@@ -785,7 +785,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 5251,
+        wal: 5197,
         wire: 4455,
     },
     Budget {
@@ -797,7 +797,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 4350,
+        wal: 4297,
         wire: 4268,
     },
     Budget {
@@ -809,7 +809,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 3623,
+        wal: 3569,
         wire: 3625,
     },
     Budget {
@@ -821,7 +821,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 12,
         nested: 3,
         notifies: 1,
-        wal: 6021,
+        wal: 5967,
         wire: 8862,
     },
     Budget {
@@ -833,7 +833,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 12,
         nested: 3,
         notifies: 1,
-        wal: 3805,
+        wal: 3751,
         wire: 7413,
     },
     Budget {
@@ -845,7 +845,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 10,
         nested: 0,
         notifies: 0,
-        wal: 6301,
+        wal: 6247,
         wire: 7245,
     },
     Budget {
@@ -857,7 +857,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 10,
         nested: 0,
         notifies: 0,
-        wal: 6105,
+        wal: 6051,
         wire: 7074,
     },
     Budget {
@@ -869,7 +869,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 19,
         nested: 5,
         notifies: 0,
-        wal: 6418,
+        wal: 6364,
         wire: 10_869,
     },
     Budget {
@@ -881,7 +881,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 10,
         nested: 0,
         notifies: 0,
-        wal: 6192,
+        wal: 6138,
         wire: 7054,
     },
 ];

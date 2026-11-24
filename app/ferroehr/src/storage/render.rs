@@ -85,6 +85,11 @@ pub fn content_digest(body: &Rendered) -> [u8; 32] {
 /// leaving out a blank one ([`crate::versioning::origins::fed`]).
 #[must_use]
 pub fn fed_origins(body: &Rendered) -> BTreeSet<String> {
+    // The rendering writes every string as serde_json does, escaping no
+    // ASCII letter, so a body naming no `"FEEDER_AUDIT"` holds no such object.
+    if !body.text().contains("\"FEEDER_AUDIT\"") {
+        return BTreeSet::new();
+    }
     body.all()
         .filter(|n| body.kind(*n) == Some(Kind::Object))
         .filter(|n| body.rm_type(*n).as_deref() == Some("FEEDER_AUDIT"))
