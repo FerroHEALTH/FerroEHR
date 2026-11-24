@@ -17,7 +17,7 @@
 //! eHDSI SAML Profile 10.0.0 §2.3), each a code of the system it names (#5691).
 //! It acts for its care teams, the
 //! provider its client acts for and the `GROUP`s that provider is a member
-//! of (RM demographic `PARTY_RELATIONSHIP`, coded HL7 v3 `RoleClass#MBR`; #5575). The
+//! of (RM demographic `PARTY_RELATIONSHIP`, coded `openehr_access::member_of`; #5575). The
 //! purpose is the declared code the audit layer accepted, and an emergency
 //! is that code being one of `[audit] emergency_purpose_codes`, with
 //! `[authz.rbac] emergency_access_role` for the break-glass steps (EHDS Art. 11(5)). No openEHR spec governs the

@@ -26,7 +26,7 @@ pub const CARE_TEAM: &str = "openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0";
 pub const MEMBERSHIP: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1";
 
 /// The care-team membership `PARTY_RELATIONSHIP` archetype, in its interface
-/// form: carries the membership code, HL7 v3 `RoleClass#MBR`.
+/// form: carries the membership code, `openehr_access::member_of`.
 pub const MEMBER_OF: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1";
 
 /// The care `PARTY_RELATIONSHIP` archetype of a patient, in its interface

@@ -506,8 +506,8 @@ CREATE TABLE binding_caller_fact (
     -- position in PARTY.relationships, from 0.
     ordinal         integer NOT NULL,
     -- What the fact is: role, organisation_type, or the code of a
-    -- membership (MBR of v3-RoleClass) or a care relationship (under_care_of
-    -- of openehr_access).
+    -- membership (member_of) or a care relationship (under_care_of), both of
+    -- openehr_access.
     kind            text NOT NULL,
     -- The party the fact is about: the container ROLE.performer names, or the
     -- PERSON a relationship is of, its source.
@@ -555,14 +555,14 @@ CREATE TABLE binding_caller_fact (
     episode_issuer  text,
     episode_id      text,
     CONSTRAINT ck_binding_caller_fact_kind
-        CHECK (kind IN ('role', 'organisation_type', 'MBR', 'under_care_of', 'related_to')),
+        CHECK (kind IN ('role', 'organisation_type', 'member_of', 'under_care_of', 'related_to')),
     CONSTRAINT ck_binding_caller_fact_value
         CHECK (CASE WHEN kind = 'under_care_of'
                     THEN target_id IS NOT NULL
                          AND target_kind IN ('PERSON', 'ROLE', 'GROUP', 'ORGANISATION')
                          AND terminology_id IS NOT NULL AND code_string IS NOT NULL
                          AND provider_issuer IS NOT NULL AND provider_id IS NOT NULL
-                    WHEN kind = 'MBR'
+                    WHEN kind = 'member_of'
                     THEN target_id IS NOT NULL AND target_kind IS NULL
                          AND terminology_id IS NULL AND code_string IS NULL
                          AND provider_issuer IS NULL AND provider_id IS NULL
@@ -604,7 +604,7 @@ CREATE INDEX ix_binding_caller_fact_party ON binding_caller_fact (party_id);
 -- No openEHR spec governs the side table or its index: our own design.
 CREATE INDEX ix_binding_caller_fact_care_team ON binding_caller_fact (target_id)
     WHERE kind = 'under_care_of';
-COMMENT ON COLUMN binding_caller_fact.kind IS 'What the fact is: role, the coded name of a ROLE the party performs, organisation_type, the coded name of the ORGANISATION itself, the code of a care relationship, MBR of v3-RoleClass or under_care_of of openehr_access, or related_to of openehr_access, a kinship of the party to the person target_id names (#6077).';
+COMMENT ON COLUMN binding_caller_fact.kind IS 'What the fact is: role, the coded name of a ROLE the party performs, organisation_type, the coded name of the ORGANISATION itself, the code of a care relationship, member_of or under_care_of of openehr_access, or related_to of openehr_access, a kinship of the party to the person target_id names (#6077).';
 COMMENT ON COLUMN binding_caller_fact.target_kind IS 'The RM type of a care relationship''s target: PERSON, ROLE, GROUP or ORGANISATION; NULL for every other fact.';
 COMMENT ON COLUMN binding_caller_fact.provider_issuer IS 'The issuer of a care relationship''s provider DV_IDENTIFIER; NULL for every other fact.';
 COMMENT ON COLUMN binding_caller_fact.provider_id IS 'The id of a care relationship''s provider DV_IDENTIFIER; NULL for every other fact.';
