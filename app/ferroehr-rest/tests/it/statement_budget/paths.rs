@@ -599,7 +599,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlSingle,
         conversions: 2,
-        least: 1731,
+        least: 1730,
         allocations: 1789,
         peak_bytes: 118_273,
         round_trips: 2,
@@ -611,8 +611,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlPopulation,
         conversions: 2,
-        least: 2323,
-        allocations: 2436,
+        least: 2318,
+        allocations: 2431,
         peak_bytes: 158_823,
         round_trips: 1,
         nested: 1,
@@ -707,8 +707,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlMatches,
         conversions: 2,
-        least: 3767,
-        allocations: 3867,
+        least: 3762,
+        allocations: 3862,
         peak_bytes: 192_267,
         round_trips: 2,
         nested: 1,
@@ -743,8 +743,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadVersion,
         conversions: 0,
-        least: 922,
-        allocations: 997,
+        least: 914,
+        allocations: 989,
         peak_bytes: 162_800,
         round_trips: 1,
         nested: 1,
@@ -2376,9 +2376,9 @@ async fn cared_ehrs(app: &Router, pool: &PgPool, count: usize) -> Vec<(String, S
 /// no round trip, no nested statement and no row more than its unplaced twin
 /// while the copies hold the EHR and its subject, and one round trip more,
 /// the care copy's read of the subject's relationships, when they do not; at
-/// most 64 WAL bytes in its head row and, held, 21 allocations: the
-/// placement read before the transaction and the EHR's copied entry (#6413,
-/// #6412). The node indexes split
+/// most 64 WAL bytes in its head row and, held, 17 allocations: the
+/// placement read before the transaction and the episode keys (#6413, #6412,
+/// #6478). The node indexes split
 /// their pages as they fill, so the head row is judged on its own, and the
 /// pair is judged on its second window, after each path's first.
 #[tokio::test]
@@ -2453,7 +2453,7 @@ async fn a_placed_commit_costs_its_projection_alone() {
     }
     let head = |m: &Measure| relation_wal(m, "vo_head").0.div_euclid(REQUESTS);
     assert!(head(&placed) <= head(&twin) + 64, "{report}");
-    assert!(placed_allocations <= twin_allocations + 21, "{report}");
+    assert!(placed_allocations <= twin_allocations + 17, "{report}");
 
     let fresh = usize::try_from(WARM + REQUESTS).unwrap();
     world.ehrs = cared_ehrs(&app, &pool, fresh).await;
@@ -2580,4 +2580,81 @@ async fn a_read_under_an_episode_scope_selects_one_column_more() {
         "{report}"
     );
     assert!(scoped_allocations <= plain_allocations + 2, "{report}");
+}
+
+/// The allocations a read of a composition in an EHR whose subject names a
+/// `PERSON` under care may make beyond the same read in an EHR that names
+/// none (#6478).
+const SUBJECT_READ_ALLOCATIONS: u64 = 9;
+
+/// A read of a composition in an EHR whose subject names a `PERSON` under
+/// care takes no copy of the EHR's access entry: the access copy and the
+/// judgement share it (#6478). It is judged against the same read in the
+/// budget world's EHRs, which name no subject, measured in the same run.
+#[tokio::test]
+async fn a_read_in_an_ehr_with_a_subject_stays_within_its_allocations() {
+    let counter = Counter::default();
+    let _guard =
+        tracing::subscriber::set_default(tracing_subscriber::registry().with(counter.clone()));
+    ferroehr::aql::sql::without_reference_cells();
+    let (_db, pool, _svc, app, pools) = Box::pin(super::steady()).await;
+    for extension in ["pg_stat_statements", "pg_walinspect"] {
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "CREATE EXTENSION IF NOT EXISTS {extension}"
+        )))
+        .execute(&pool)
+        .await
+        .expect("the extension");
+    }
+    super::wal::kept(&pool).await;
+    let mut world = World::build(&app).await;
+    let mut ehrs = cared_ehrs(&app, &pool, EHRS).await;
+    for (ehr, vo) in &mut ehrs {
+        *vo = created(
+            &app,
+            format!("{BASE}/ehr/{ehr}/composition"),
+            common::ips_canonical_composition().to_string(),
+        )
+        .await;
+    }
+    let plain_ehrs = world.ehrs.clone();
+    let mut plain = Measure::default();
+    let mut subject = Measure::default();
+    for _ in 0..2 {
+        world.ehrs.clone_from(&plain_ehrs);
+        plain = Box::pin(measure(
+            &app,
+            &pool,
+            &pools,
+            None,
+            &world,
+            &counter,
+            Path::ReadJson,
+        ))
+        .await;
+        world.ehrs.clone_from(&ehrs);
+        subject = Box::pin(measure(
+            &app,
+            &pool,
+            &pools,
+            None,
+            &world,
+            &counter,
+            Path::ReadJson,
+        ))
+        .await;
+    }
+    let (plain_allocations, subject_allocations) =
+        (plain.low(|a| a.count), subject.low(|a| a.count));
+    let report = format!(
+        "read JSON: {} round trips, {plain_allocations} allocations\n\
+         read JSON, subject: {} round trips, {subject_allocations} allocations\n{}",
+        plain.round_trips, subject.round_trips, subject.statements
+    );
+    eprintln!("{report}");
+    assert_eq!(subject.round_trips, plain.round_trips, "{report}");
+    assert!(
+        subject_allocations <= plain_allocations + SUBJECT_READ_ALLOCATIONS,
+        "{report}"
+    );
 }
