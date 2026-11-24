@@ -141,10 +141,22 @@ macro_rules! policy_revisions {
 }
 
 /// The columns of [`access_facts::HeadFacts`], read off the `vo_head` row
-/// aliased `h`: what the access evaluator judges an object by.
+/// aliased `h`: what the access evaluator judges an object by; `episodes`
+/// adds the head's episodes ([`crate::access_eval::episodes`]).
 macro_rules! head_facts {
     () => {
         concat!(head_object_facts!(), access_revision!("h.ehr_id"))
+    };
+    (episodes) => {
+        concat!(head_episodes!(), head_facts!())
+    };
+}
+
+/// The select-list item that reads the episodes of the `vo_head` row aliased
+/// `h`, for a read that selects them ([`crate::access_eval::episodes`]).
+macro_rules! head_episodes {
+    () => {
+        "h.episodes AS access_episodes, "
     };
 }
 
