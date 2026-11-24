@@ -1,0 +1,1 @@
+- **Breaking:** the access record carries no guest (#6490). `ferrohealth-smart` 0.34 reads no guest, so the `refused-guest` binding code, the `guest` field of the binding record and of its content digest, and the `audit_event.guest` column with its `access_trail` view column are removed; the `ehds-accessor` entity names no `guest` detail.

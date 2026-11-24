@@ -587,13 +587,13 @@ beside it hold what each outcome needs:
 
 | `binding` | The caller | Recorded beside it |
 |---|---|---|
-| `bound` | a person bound to a `complete` `PERSON` | `party`, `party_groups`, `provider`, `guest` for an admitted guest, `representation` for a representative, `actor_chain` for a delegated token |
+| `bound` | a person bound to a `complete` `PERSON` | `party`, `party_groups`, `provider`, `representation` for a representative, `actor_chain` for a delegated token |
 | `provisional` | a person bound to an `incomplete` `PERSON` | `party`, `party_groups`, `provider` |
 | `external` | a verified external person of a `federation` issuer | `external_fields`, `agreement`, `provider` |
 | `organisation` | an organisation under an agreement with `accessor = "organisation"` | `external_fields`, `agreement` (with its legal ground and access class, and for a `chained` request `correlation_id` and `correlation_source`), `provider` |
 | `system` | a client acting for nobody | `party`, the client's `ACTOR` in the policy parties; `provider`, the identifier of the `ORGANISATION` its acts-for relationship targets; `facilities` of the compositions it committed |
 | `self` | the record's person, whose login the party binding binds to the `PERSON` an EHR's subject names | the principal; `party`, that `PERSON` |
-| `refused-*` | a refusal of the binding or of a caller kind: `unbound`, `ambiguous`, `inactive`, `abandoned`, `deprovisioned`, `wrong-marker`, `representation-unrecorded`, `key-claim-missing`, `groups-unavailable`, `guest`, `external-incomplete`, `trc-patient-mismatch`, `trc-missing`; and of a caller kind, `system-personal-scope` (a system caller holding a `user/` or `patient/` scope), `no-agreement` (no federation agreement admits the accessor) and `scope-beyond-agreement` (an external caller holding a scope its agreement does not read) and `correlation-missing` (a `chained` organisation request without an attested correlation id) | `party` for a party refused for its state or marker, `binding_detail` for what else the refusal names (`represented`, the subject a representative asserted; `claim`, the name of the key claim a token lacked, never its value) |
+| `refused-*` | a refusal of the binding or of a caller kind: `unbound`, `ambiguous`, `inactive`, `abandoned`, `deprovisioned`, `wrong-marker`, `representation-unrecorded`, `key-claim-missing`, `groups-unavailable`, `external-incomplete`, `trc-patient-mismatch`, `trc-missing`; and of a caller kind, `system-personal-scope` (a system caller holding a `user/` or `patient/` scope), `no-agreement` (no federation agreement admits the accessor) and `scope-beyond-agreement` (an external caller holding a scope its agreement does not read) and `correlation-missing` (a `chained` organisation request without an attested correlation id) | `party` for a party refused for its state or marker, `binding_detail` for what else the refusal names (`represented`, the subject a representative asserted; `claim`, the name of the key claim a token lacked, never its value) |
 
 `acting_mode` is `person`, `delegated` for a person through a declared client
 or actor, `external` for a verified external accessor and `system` for a client
@@ -619,7 +619,7 @@ sends that message. Both renderings take the detail list from
 
 | Recorded field | Rendered as |
 |---|---|
-| `binding` | `ehds-accessor`: `binding`, with `guest` for an admitted guest and `security-event` for `refused-trc-patient-mismatch` and `refused-trc-missing` |
+| `binding` | `ehds-accessor`: `binding`, with `security-event` for `refused-trc-patient-mismatch` and `refused-trc-missing` |
 | `party` | `ehds-accessor`: `party` as `<namespace>\|<type>\|<id>`; in the FHIR `AuditEvent` also the person's `otherId` typed `PRN` |
 | `party_groups` | `ehds-accessor`: one `group` per group, in the party's namespace with type `GROUP` |
 | `provider` | `ehds-accessor`: `acts-for` as `<issuer>\|<id>` |
