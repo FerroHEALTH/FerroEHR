@@ -13,7 +13,9 @@
 //! notification or a lost listener asks for it, so a request adds no
 //! transaction, and the replica's refresher reads it on each notification for
 //! the commits of every other request; a store that cannot answer is the
-//! server's failure and answers `503`. A request whose own commit changed a
+//! server's failure and answers `503`. The capabilities resolved for a caller
+//! are kept until the copy moves or a term they read starts or ends
+//! ([`LiveGrants::resolved`]). A request whose own commit changed a
 //! grant reads the copy again before it answers, so the caller's next request
 //! runs under the change. A Basic user holds the roles and scopes its
 //! `hold_roles` and `hold_scopes` grants name, and the first administrator
@@ -27,7 +29,6 @@ use std::future::Future;
 use std::sync::Arc;
 
 use axum::response::Response;
-use ferroehr::party_binding::grants::caller::care_of::ProviderKey;
 use ferroehr::party_binding::grants::capabilities::{Actor, Capabilities, with_capabilities};
 use ferroehr::party_binding::grants::live::{LiveGrants, tracking};
 use ferroehr::party_binding::grants::operation::Operation;
@@ -78,14 +79,8 @@ pub(crate) async fn resolve(
         );
         return Err(AuthError::PartyUnavailable { retry_after: None });
     }
-    let capabilities = grants.capabilities(actor, jiff::Timestamp::now());
-    Ok(Arc::new(match actor {
-        Actor::Party(_) => {
-            let provider = deployment.and_then(|deployment| deployment.provider_of(caller));
-            capabilities.acting_for(provider.map(|(issuer, id)| ProviderKey::new(issuer, id)))
-        }
-        Actor::Client { .. } => capabilities,
-    }))
+    let provider = deployment.and_then(|deployment| deployment.provider_named(caller));
+    Ok(grants.resolved(actor, provider, jiff::Timestamp::now()))
 }
 
 /// The principal of `principal` under its capabilities `granted`: a Basic

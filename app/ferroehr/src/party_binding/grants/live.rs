@@ -56,6 +56,7 @@ use openehr_rm::draft::access_control::terminology::ForeignCode;
 
 mod episodic;
 mod held;
+mod resolved;
 pub mod revisions;
 #[cfg(test)]
 mod sharing;
@@ -217,6 +218,8 @@ pub struct LiveGrants {
     listened: Arc<Listened>,
     /// The subjects' care relationships and the teams' patients held.
     care: Arc<CareCopy>,
+    /// The capabilities resolved from the copy, by actor.
+    resolved: RwLock<resolved::Resolved>,
 }
 
 impl fmt::Debug for LiveGrants {
@@ -253,12 +256,14 @@ impl LiveGrants {
             held_back: AtomicBool::new(false),
             #[cfg(test)]
             loads: std::sync::atomic::AtomicUsize::new(0),
+            resolved: RwLock::default(),
         }
     }
 
     /// Honour the grants under `ceiling`: `[authz.grants] allowed`.
     pub fn set_ceiling(&self, ceiling: GrantCeiling) {
         *self.ceiling.write().unwrap_or_else(PoisonError::into_inner) = Arc::new(ceiling);
+        self.forget_resolved();
     }
 
     /// The ceiling in force.
@@ -278,6 +283,7 @@ impl LiveGrants {
             .namespace
             .write()
             .unwrap_or_else(PoisonError::into_inner) = Arc::from(namespace);
+        self.forget_resolved();
     }
 
     /// The namespace this CDR names its parties under.

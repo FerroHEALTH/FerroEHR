@@ -39,6 +39,7 @@
 use std::sync::Arc;
 
 use axum::Router;
+use axum::extract::State;
 use axum::middleware::from_fn_with_state;
 use axum::response::Response;
 use ferroehr::telemetry::stage::{self, Stage};
@@ -102,6 +103,34 @@ pub(crate) async fn one_connection_per_request(
     next: axum::middleware::Next,
 ) -> Response {
     ferroehr::db::acquire::request_scope(next.run(request)).await
+}
+
+/// The one layer around the authentication of every API request (#6329):
+/// the body bounded by its route family's limit before it is read, buffered
+/// or audited ([`crate::limits`]), the ATNA audit ([`crate::system_log`]),
+/// and the bound `PERSON`s' names dropped when the request's commit changed
+/// the binding side table, which a first login may do
+/// ([`crate::binding_changes`]).
+async fn request_layer(
+    State(state): State<AppState>,
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> Response {
+    let audited = async {
+        let request = match crate::limits::bounded(&state, request).await {
+            Ok(request) => request,
+            Err(refusal) => return *refusal,
+        };
+        let audit = crate::system_log::middleware::middleware(State(state.clone()), request, next);
+        stage::instrument(Stage::Entry, audit).await
+    };
+    let (response, changed) =
+        ferroehr::party_binding::request::scope(ferroehr::party_binding::live::tracking(audited))
+            .await;
+    if changed {
+        state.backend().bindings().forget_names();
+    }
+    response
 }
 
 /// Returns the request's connections to their pools once the handler has
@@ -184,7 +213,7 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
             post_rides: Arc::new(authn::run::PostRides::new(&namespaces)),
             service: state.backend_handle(),
         },
-        |layer: axum::extract::State<authn::AuthLayer>,
+        |layer: State<authn::AuthLayer>,
          req: axum::extract::Request,
          next: axum::middleware::Next| {
             stage::instrument(
@@ -193,27 +222,7 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
             )
         },
     ));
-    // Always installed: the layer early-returns when the `SystemLog` reports
-    // auditing off, so the no-audit case costs one check per request.
-    let api = api.layer(from_fn_with_state(
-        state.clone(),
-        |state: axum::extract::State<AppState>,
-         req: axum::extract::Request,
-         next: axum::middleware::Next| {
-            stage::instrument(
-                Stage::Entry,
-                crate::system_log::middleware::middleware(state, req, next),
-            )
-        },
-    ));
-    // Above the audit layer so an over-large body is refused before it is read,
-    // buffered or audited; the stack's body limit is the ceiling of every route.
-    let api = api.layer(from_fn_with_state(state.clone(), crate::limits::middleware));
-    // Around the authentication, whose first login may create a PERSON.
-    let api = api.layer(from_fn_with_state(
-        state.backend_handle(),
-        crate::binding_changes::middleware,
-    ));
+    let api = api.layer(from_fn_with_state(state.clone(), request_layer));
     // Outermost, so every statement of the request, its authorization
     // lookups included, runs on the one connection each pool lent it.
     let api = api.layer(axum::middleware::from_fn(one_connection_per_request));

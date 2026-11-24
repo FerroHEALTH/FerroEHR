@@ -317,6 +317,51 @@ async fn a_grant_changed_through_the_demographic_api_decides_the_next_request() 
     );
 }
 
+/// A caller's capabilities are kept between its requests while the copy
+/// stands, and a grant another replica ends decides the caller's next request
+/// on this one: the request's confirm read finds the moved revision, which no
+/// kept capability holds for (#6329).
+#[tokio::test]
+async fn kept_capabilities_give_way_to_a_grant_ended_on_another_replica() {
+    let (_db, pool) = common::migrated_pool().await;
+    let writer = Box::pin(replica(&pool, None, true, GrantCeiling::default())).await;
+    let reader = Box::pin(replica(&pool, None, true, GrantCeiling::default())).await;
+    let (role_uid, lab) = granted_client(&writer, "lab", "Lab.v1").await;
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    let first = loop {
+        let read = capabilities(&reader, &system("lab")).await;
+        if read.holds(Operation::CommitComposition) {
+            break read;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the grant reaches the other replica"
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    };
+    let kept = capabilities(&reader, &system("lab")).await;
+    assert!(
+        Arc::ptr_eq(&first, &kept),
+        "the next request of the caller takes the capabilities kept for it"
+    );
+    let ended = role(&lab, "commit_composition", "Lab.v1", Some(&yesterday()));
+    let (status, _, body) = write(
+        &writer,
+        "PUT",
+        &format!("role/{}", vo(&role_uid)),
+        Some(&role_uid),
+        &ended,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+    let after = capabilities(&reader, &system("lab")).await;
+    assert_eq!(
+        after.grants(),
+        [],
+        "the request after the grant ended is judged on the ended grant"
+    );
+}
+
 #[tokio::test]
 async fn a_capability_above_the_ceiling_is_refused_at_the_wire() {
     let (_db, pool) = common::migrated_pool().await;

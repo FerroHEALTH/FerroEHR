@@ -188,8 +188,14 @@ impl Deployment {
     /// The healthcare provider `caller` acts for, as `(issuer, id)`: the one
     /// provider, or the table of the tenant its token names.
     pub(super) fn provider_of(&self, caller: &Caller) -> Option<(String, String)> {
+        let (issuer, id) = self.provider_named(caller)?;
+        Some((issuer.to_owned(), id.to_owned()))
+    }
+
+    /// [`Self::provider_of`], borrowed from the deployment's configuration.
+    pub(super) fn provider_named(&self, caller: &Caller) -> Option<(&str, &str)> {
         match self.provider.as_ref()? {
-            Providers::One(one) => Some((one.issuer.clone(), one.id.clone())),
+            Providers::One(one) => Some((one.issuer.as_str(), one.id.as_str())),
             Providers::ByTenant(tables) => {
                 let tenant = caller
                     .issuer()
@@ -199,7 +205,7 @@ impl Deployment {
                 tables
                     .iter()
                     .find(|table| Some(table.tenant.as_str()) == tenant)
-                    .map(|table| (table.issuer.clone(), table.id.clone()))
+                    .map(|table| (table.issuer.as_str(), table.id.as_str()))
             }
         }
     }
