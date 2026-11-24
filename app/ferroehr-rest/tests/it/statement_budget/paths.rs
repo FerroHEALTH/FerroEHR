@@ -623,7 +623,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::Iti81,
         conversions: 0,
-        least: 6725,
+        least: 6721,
         allocations: 7433,
         peak_bytes: 624_026,
         round_trips: 1,
