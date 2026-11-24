@@ -66,29 +66,27 @@ config:
     # A token issuer, the mechanism a real deployment supplies; the server reads
     # its metadata and key set at boot and accepts asymmetric algorithms only.
     issuer:
-      # One table per issuer: `kind` says whose tokens it signs, and a
-      # persons token is admitted only through a client the CDR
-      # grants `sign_in_persons`.
+      # One table per issuer; the authorization server's registry is the one
+      # list of clients.
       keycloak:
         issuer: https://keycloak.example.com/realms/ferroehr
-        kind: persons
         audience: [ferroehr]
-        profile:
-          patient_context: true
         # The issuer's logins bind to the PERSON carrying their `sub` under this
         # identifier issuer.
         party:
           identifier_issuer: urn:example:ferroehr-login
           identifier_type: uuid
-      # The machines issuer FerroBRIDGE's client credentials tokens come from
+      # The issuer FerroBRIDGE's client credentials tokens come from
       # (RFC 6749 §4.4): the CDR trusts its tokens, and bridge.cdr.oauth
       # names FerroBRIDGE's client at it.
       machines:
         issuer: https://machines.example.org/realms/ferroehr
-        kind: machines
         audience: [ferroehr-machines]
     # FerroEHR's product scope, which admits the ADMIN and DEMOGRAPHIC APIs.
     product_scope: __ferroehr.platform
+    # The machines issuer signs only its clients' tokens, so the discovery
+    # document names the keycloak issuer.
+    described_issuer: keycloak
     smart:
       # Serves the discovery document, built at boot from the [auth] issuer's
       # metadata, so it needs no endpoint list of its own.
@@ -128,7 +126,7 @@ config:
     grants:
       allowed: [commit_composition, read_change_feed, scim_provision]
   # Microsoft Entra ID provisions the professionals through SCIM with a
-  # token of the machines issuer; the logins of the persons issuer then bind
+  # token of the machines issuer; the logins of the keycloak issuer then bind
   # to the PERSON carrying their key under the same identifier issuer.
   management:
     enabled: true

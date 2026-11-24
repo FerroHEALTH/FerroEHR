@@ -15,7 +15,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
-use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, StoreConfig};
 use ferroehr::system_log::sender::start;
@@ -46,9 +45,8 @@ fn assurance() -> AssuranceSection {
     }
 }
 
-/// The app whose CDR grants each client of `delegates` `act_for_persons`,
-/// auditing into the store when `audited`.
-async fn app(delegates: &[&str], audited: bool) -> (testkit::TestDb, PgPool, Router) {
+/// The app trusting the test issuer, auditing into the store when `audited`.
+async fn app(audited: bool) -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
     let mut config = common::api_config(false);
     config.auth = common::trusting(vec![IssuerEntry {
@@ -57,9 +55,6 @@ async fn app(delegates: &[&str], audited: bool) -> (testkit::TestDb, PgPool, Rou
     }]);
     config.assurance = assurance();
     let mut service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    for client in delegates {
-        common::grant_standing(&service, ISSUER, client, Operation::ActForPersons).await;
-    }
     if audited {
         let audit = AuditConfig {
             enabled: true,
@@ -100,7 +95,7 @@ fn ehr_path() -> String {
 /// `401` and the step-up challenge naming the accepted values.
 #[tokio::test]
 async fn a_token_below_the_minimum_gets_the_step_up_challenge() {
-    let (_db, _pool, app) = app(&[], false).await;
+    let (_db, _pool, app) = app(false).await;
     for extra in [
         json!({ "sub": "dr-a", "acr": "loa-low" }),
         json!({ "sub": "dr-a", "acr": "not-mapped" }),
@@ -127,7 +122,7 @@ async fn a_token_below_the_minimum_gets_the_step_up_challenge() {
 /// reaches a definition route, which carries no patient data.
 #[tokio::test]
 async fn a_token_at_or_above_the_minimum_passes() {
-    let (_db, _pool, app) = app(&[], false).await;
+    let (_db, _pool, app) = app(false).await;
     for acr in ["loa-substantial", "loa-high"] {
         let status = common::send_status(
             &app,
@@ -147,28 +142,29 @@ async fn a_token_at_or_above_the_minimum_passes() {
     assert_eq!(status, StatusCode::OK);
 }
 
-/// A person's token through a client its issuer lists neither as first-party
-/// nor as a delegate is refused, and the same person through the first-party
-/// client passes.
+/// A person's token through any client of its issuer whose `aud` names this
+/// server passes: the authorization server's registry admits the client.
 #[tokio::test]
-async fn a_person_token_through_an_unlisted_client_is_refused() {
-    let (_db, _pool, app) = app(&[], false).await;
+async fn a_person_token_through_any_client_of_its_issuer_passes() {
+    let (_db, _pool, app) = app(false).await;
     let token = bearer(&json!({ "sub": "dr-a", "client_id": "app-1", "acr": "loa-high" }));
-    let (status, _headers, body) =
-        common::send(&app, common::get_authorized(&ehr_path(), &token)).await;
-    assert_eq!(status, StatusCode::UNAUTHORIZED, "{body}");
+    let status = common::send_status(&app, common::get_authorized(&ehr_path(), &token)).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
     let person = bearer(&json!({ "sub": "dr-a", "acr": "loa-high" }));
     let status = common::send_status(&app, common::get_authorized(&ehr_path(), &person)).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
-/// A third-party client the CDR grants `act_for_persons` acts for the person
-/// its token names, and the access record carries the delegated mode, the
-/// professional and the level.
+/// A token naming an RFC 8693 §4.1 actor acts for the person its `sub`
+/// names, and the access record carries the delegated mode, the professional
+/// and the level.
 #[tokio::test]
 async fn a_delegate_acting_for_a_professional_passes_and_is_recorded() {
-    let (_db, pool, app) = app(&["app-1"], true).await;
-    let token = bearer(&json!({ "sub": "prof-007", "client_id": "app-1", "acr": "loa-high" }));
+    let (_db, pool, app) = app(true).await;
+    let token = bearer(
+        &json!({ "sub": "prof-007", "client_id": "app-1", "acr": "loa-high",
+                                "act": { "sub": "app-1" } }),
+    );
     let status = common::send_status(&app, common::get_authorized(&ehr_path(), &token)).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 

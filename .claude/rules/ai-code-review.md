@@ -4,8 +4,9 @@ paths: ["sonar-project.properties", ".github/workflows/sonar.yml", "scripts/sona
 
 # Machine review (SonarQube Cloud) — what it is and what it is not
 
-Every pull request and every main push is analyzed by SonarQube Cloud
-(`.github/workflows/sonar.yml`; scope in `sonar-project.properties`; #2630).
+SonarQube Cloud analyzes `main` nightly, with coverage, and on a dispatch
+(`.github/workflows/sonar.yml`; scope in `sonar-project.properties`; #2630,
+#6515). Pull requests and pushes get no analysis.
 It exists because the local gates catch what a lint can catch, review is one
 person, and a deterministic multi-language sweep also covers trees the Rust
 gates never see: shell scripts, workflow YAML, the website's JS/HTML/CSS,

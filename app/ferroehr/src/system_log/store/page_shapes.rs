@@ -66,6 +66,8 @@ impl AuditStore {
             .fetch_all(&mut *conn)
             .await?;
         drop(conn);
+        // NOTE: our own design (#5774), the page renders with no connection kept.
+        crate::db::acquire::release_held();
         self.cursor.saw(&rows)?;
         filter.carried.observe(&rows)?;
         let more = rows.len() > search_page::page_size(filter);

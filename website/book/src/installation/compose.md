@@ -339,9 +339,9 @@ docker compose -f docker-compose.yml -f docker-compose.ferrosmart.yml \
 
 - `docker-compose.ferrosmart.yml` adds FerroSMART, pinned by digest in
   `docs/VERSIONS.md`, with its own PostgreSQL, at `http://localhost:8280`.
-  FerroEHR trusts it as the `persons` issuer with the `ferrosmart` profile,
-  binds people by FerroSMART's subject under `urn:example:ferrosmart-login`,
-  honours its `patient/` grants and describes it in the discovery document.
+  FerroEHR trusts it as a SMART App Launch issuer, binds people by
+  FerroSMART's subject under `urn:example:ferrosmart-login`, and describes it
+  in the discovery document.
   The viewer's [Launch button](../smart-app-launch.md#launching-an-app-from-the-viewer)
   registers its EHR launches there, for the example app `example-app`.
   FerroSMART's configuration is `docker/ferrosmart/ferrosmart.toml`
@@ -404,8 +404,9 @@ the CA's private key; the server (`[auth.tls] trust_roots_file`) and the viewer
 generates a new CA. Keycloak also answers plain HTTP on port 8081 for the token
 call below, and the tokens it mints there name the HTTPS issuer. Keycloak's
 access tokens carry `typ: JWT`, so the overlay adds the realm as the
-`[auth.issuer.keycloak]` table with `preset = "keycloak"`
-(`FERROEHR__AUTH__ISSUER__KEYCLOAK__PRESET=keycloak`), beside the
+`[auth.issuer.keycloak]` table accepting that type
+(`FERROEHR__AUTH__ISSUER__KEYCLOAK__PROFILE__TOKEN_TYPES=JWT`), and the realm
+puts `client_id` in every token with a hardcoded claim mapper, beside the
 quickstart's `basic_users` issuer, which its Basic user binds under, and its
 `quickstart` issuer, which signs its SCIM client's tokens.
 

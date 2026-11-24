@@ -4,59 +4,36 @@
 //! What each local caller kind may do (#5100), driven through the assembled
 //! router over a real `FerroEhrService` on a real `PostgreSQL` 18: a system
 //! caller holds `system/` scopes only and commits only as a client the policy
-//! parties grant `commit_composition` (#5436),
-//! a guest is admitted only where its issuer's `[auth.issuer.<name>.party]` table admits
-//! guests, and a delegated person is bound to their own `PERSON`, which
-//! covers a Keycloak impersonation (#5167).
+//! parties grant `commit_composition` (#5436), and a person a token names
+//! beside an actor is bound to their own `PERSON`.
 //!
 //! RFC 9068 §2.2 and §5 name the person in `sub` and mark an app-only token;
 //! RFC 8693 §4.1 names an actor in `act`; SMART on openEHR
 //! `master08-scopes.adoc` §Resource Scopes gives the `patient`, `user` and
-//! `system` contexts. Each case runs against the standards-only `rfc9068`
-//! profile first, then the `entra` and `keycloak` example profiles. What a
-//! caller kind may do here is our own design.
+//! `system` contexts. What a caller kind may do here is our own design.
 
 use std::sync::Arc;
 
 use axum::Router;
-use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
 use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::state::AppState;
 use ferrohealth_smart::config::{AuthSection, IssuerEntry};
-use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::party::config::PartySection;
-use ferrohealth_smart::profile::{Marker, Preset};
 use http::StatusCode;
 use serde_json::{Value, json};
 
 use crate::common::{self, BASE};
 use crate::party_binding_http::{
-    AUDIENCE, ISSUER, LOGIN, audited_service, list, professional, professional_of, refusal_rows,
-    refused, service,
+    AUDIENCE, ISSUER, LOGIN, audited_service, list, professional, refusal_rows, refused, service,
 };
 
 /// The standards-only machines issuer.
 const MACHINES: &str = "https://machines.example";
-/// The Entra ID machines issuer.
-const ENTRA: &str = "https://login.microsoftonline.example/tenant/v2.0";
-/// The Keycloak machines issuer.
-const KEYCLOAK: &str = "https://keycloak.example/realms/care";
-/// The Keycloak service account of the client `lab`.
-const SERVICE_ACCOUNT: &str = "service-account-lab";
 /// The actor a delegated token names.
 const GATEWAY: &str = "gateway";
-/// The Keycloak realm whose staff sign in, a `persons` issuer.
-const KEYCLOAK_STAFF: &str = "https://keycloak.example/realms/staff";
-/// The `identifier_issuer` of that realm's `[auth.issuer.<name>.party]` table.
-const KEYCLOAK_LOGIN: &str = "https://keycloak.example/realms/staff/users";
-/// The realm's first-party client, named in `azp`.
-const VIEWER: &str = "ferroehr-viewer";
-/// The Keycloak user id of the administrator the realm declares may
-/// impersonate.
-const SUPPORT_ADMIN: &str = "0e1f2a3b-4c5d-4e6f-8a7b-9c0d1e2f3a4b";
 /// The SMART scopes of a backend client that reads templates and writes EHRs.
 const SYSTEM_SCOPES: &str = "system/composition-*.cruds system/template-*.r";
 
@@ -65,92 +42,32 @@ pub(crate) fn audience(issuer: &str) -> String {
     format!("{AUDIENCE}-{}", issuer.trim_start_matches("https://"))
 }
 
-/// A `machines` issuer at `issuer` under `profile`.
-pub(crate) fn machines(issuer: &str, preset: Preset) -> IssuerEntry {
+/// An issuer of client credentials tokens at `issuer`.
+pub(crate) fn machines(issuer: &str) -> IssuerEntry {
     IssuerEntry {
         issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
-        kind: Some(IssuerKind::Machines),
-        preset,
         audience: vec![audience(issuer)],
         jwks_file: common::jwks_file().display().to_string(),
-        // NOTE: the test key signs RFC 9068 `at+jwt` tokens, which each
-        // profile's overridable `token_types` admits here.
-        profile: ferrohealth_smart::profile::ProfileKeys {
-            token_types: Some(vec!["at+jwt".to_owned()]),
-            ..ferrohealth_smart::profile::ProfileKeys::default()
-        },
         ..IssuerEntry::default()
     }
 }
 
-/// The Keycloak `persons` issuer whose staff log in through [`VIEWER`], with
-/// `impersonation_marker` set over the profile; [`router`] grants the viewer
-/// and [`SUPPORT_ADMIN`] their standing.
-fn keycloak_staff(impersonation_marker: Option<&str>) -> IssuerEntry {
-    IssuerEntry {
-        kind: Some(IssuerKind::Persons),
-        profile: ferrohealth_smart::profile::ProfileKeys {
-            app_only: Some(vec![Marker::Subjects(vec![
-                "service-account-viewer".to_owned(),
-            ])]),
-            impersonation_marker: impersonation_marker.map(str::to_owned),
-            ..machines(KEYCLOAK_STAFF, Preset::Keycloak).profile
-        },
-        ..machines(KEYCLOAK_STAFF, Preset::Keycloak)
-    }
-}
-
-/// The configuration trusting the persons issuer, whose guests the
-/// `[auth.issuer.<name>.party]` table admits when `guests`, and the three machines
-/// issuers.
-fn config(guests: bool) -> AppConfig {
-    config_marked(guests, None)
-}
-
-/// [`config`], with the Keycloak staff realm's `impersonation_marker`.
-fn config_marked(guests: bool, impersonation_marker: Option<&str>) -> AppConfig {
+/// The configuration trusting the bound persons issuer and the machines
+/// issuer.
+fn config() -> AppConfig {
     let persons = IssuerEntry {
         jwks_file: common::jwks_file().display().to_string(),
-        profile: ferrohealth_smart::profile::ProfileKeys {
-            guest: Some(vec![Marker::Claim {
-                claim: "acct".to_owned(),
-                value: "1".to_owned(),
-            }]),
-            ..ferrohealth_smart::profile::ProfileKeys::default()
-        },
         ..common::entry(ISSUER, AUDIENCE)
-    };
-    let keycloak = IssuerEntry {
-        profile: ferrohealth_smart::profile::ProfileKeys {
-            app_only: Some(vec![Marker::Subjects(vec![SERVICE_ACCOUNT.to_owned()])]),
-            ..machines(KEYCLOAK, Preset::Keycloak).profile
-        },
-        ..machines(KEYCLOAK, Preset::Keycloak)
     };
     let mut auth = common::auth(AuthSection {
         issuer: common::bound(
-            vec![
-                persons,
-                machines(MACHINES, Preset::Rfc9068),
-                machines(ENTRA, Preset::Entra),
-                keycloak,
-                keycloak_staff(impersonation_marker),
-            ],
-            vec![
-                PartySection {
-                    issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
-                    identifier_issuer: LOGIN.to_owned(),
-                    identifier_type: "guid".to_owned(),
-                    guests,
-                    ..PartySection::default()
-                },
-                PartySection {
-                    issuer: ferrohealth_secret::secret_url::SecretUrl::new(KEYCLOAK_STAFF),
-                    identifier_issuer: KEYCLOAK_LOGIN.to_owned(),
-                    identifier_type: "guid".to_owned(),
-                    ..PartySection::default()
-                },
-            ],
+            vec![persons, machines(MACHINES)],
+            vec![PartySection {
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
+                identifier_issuer: LOGIN.to_owned(),
+                identifier_type: "guid".to_owned(),
+                ..PartySection::default()
+            }],
         ),
         ..AuthSection::default()
     });
@@ -162,25 +79,14 @@ fn config_marked(guests: bool, impersonation_marker: Option<&str>) -> AppConfig 
     }
 }
 
-/// The router over `svc` under `config`, with the standing the CDR grants:
-/// the test client and the staff realm's [`VIEWER`] are first party, and the
-/// RFC 8693 actors [`GATEWAY`] and [`SUPPORT_ADMIN`] act for persons.
+/// The router over `svc` under `config`.
 async fn router(svc: Arc<FerroEhrService>, config: AppConfig) -> Router {
     common::open_configured_key_spaces(&config).await;
-    for (issuer, client, operation) in [
-        (ISSUER, common::TEST_CLIENT, Operation::SignInPersons),
-        (ISSUER, GATEWAY, Operation::ActForPersons),
-        (KEYCLOAK_STAFF, VIEWER, Operation::SignInPersons),
-        (KEYCLOAK_STAFF, SUPPORT_ADMIN, Operation::ActForPersons),
-    ] {
-        common::grant_standing(&svc, issuer, client, operation).await;
-    }
     let source = Arc::new(svc.party_source("demographic"));
     let authenticator = Authenticator::new(
         &config,
         Some(source),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
-        common::standing(&svc),
     )
     .await
     .expect("the authenticator builds");
@@ -200,37 +106,17 @@ pub(crate) fn bearer(issuer: &str, audience: &str, claims: &Value) -> String {
     common::bearer(&all)
 }
 
-/// An app-only token of each machines issuer for the client `lab`, carrying
-/// `scope` in the claim its profile reads app scopes from.
-fn app_only(scope: &str) -> [(&'static str, String); 3] {
-    [
-        (
-            "rfc9068",
-            bearer(
-                MACHINES,
-                &audience(MACHINES),
-                &json!({ "sub": "lab", "client_id": "lab", "scope": scope }),
-            ),
+/// An app-only token of the machines issuer for the client `lab`, carrying
+/// `scope`.
+fn app_only(scope: &str) -> [(&'static str, String); 1] {
+    [(
+        "rfc9068",
+        bearer(
+            MACHINES,
+            &audience(MACHINES),
+            &json!({ "sub": "lab", "client_id": "lab", "scope": scope }),
         ),
-        (
-            "entra",
-            bearer(
-                ENTRA,
-                &audience(ENTRA),
-                &json!({ "sub": "8f1c", "azp": "lab", "tid": "tenant", "uti": "u1",
-                         "ver": "2.0", "idtyp": "app",
-                         "roles": scope.split(' ').collect::<Vec<_>>() }),
-            ),
-        ),
-        (
-            "keycloak",
-            bearer(
-                KEYCLOAK,
-                &audience(KEYCLOAK),
-                &json!({ "sub": SERVICE_ACCOUNT, "azp": "lab", "scope": scope }),
-            ),
-        ),
-    ]
+    )]
 }
 
 /// Creates an EHR as `credential`; returns the status and body.
@@ -248,7 +134,7 @@ async fn create_ehr(app: &Router, credential: &str) -> (StatusCode, String) {
 #[tokio::test]
 async fn a_system_caller_holds_system_scopes_only() {
     let (_db, svc) = service().await;
-    let app = router(svc, config(false)).await;
+    let app = router(svc, config()).await;
     for (profile, credential) in app_only("user/template-*.r") {
         let (status, body) = list(&app, &credential).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "{profile}: {body}");
@@ -267,13 +153,13 @@ async fn a_system_caller_holds_system_scopes_only() {
     }
 }
 
-/// The client `lab` of each machines issuer, granted to commit and acting
+/// The client `lab` of the machines issuer, granted to commit and acting
 /// for the provider `90000001`, as the policy parties name it (#5436); the
 /// container of its `AGENT`.
 async fn grant_lab(svc: &FerroEhrService) -> ferroehr::ids::VoId {
     crate::system_grants::system_client(
         svc,
-        &[(MACHINES, "lab"), (ENTRA, "lab"), (KEYCLOAK, "lab")],
+        &[(MACHINES, "lab")],
         Some(("urn:oid:2.16.528.1.1007.3.3", "90000001")),
         &[crate::system_grants::relays(
             "Lab result",
@@ -286,7 +172,7 @@ async fn grant_lab(svc: &FerroEhrService) -> ferroehr::ids::VoId {
 #[tokio::test]
 async fn only_a_granted_system_client_commits() {
     let (_db, svc) = service().await;
-    let app = router(Arc::clone(&svc), config(false)).await;
+    let app = router(Arc::clone(&svc), config()).await;
     for (profile, credential) in app_only(SYSTEM_SCOPES) {
         let (status, body) = create_ehr(&app, &credential).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "{profile}: {body}");
@@ -299,28 +185,11 @@ async fn only_a_granted_system_client_commits() {
 }
 
 #[tokio::test]
-async fn a_guest_is_refused_unless_its_issuer_admits_guests() {
-    let (_db, svc) = service().await;
-    let key = "7c8d9e0f-1a2b-4c3d-8e4f-5a6b7c8d9e0f";
-    professional(&svc, key, "532").await;
-    let guest = bearer(
-        ISSUER,
-        AUDIENCE,
-        &json!({ "sub": key, "acct": "1", "scope": common::FULL_SCOPES }),
-    );
-    let refusing = router(Arc::clone(&svc), config(false)).await;
-    refused(&refusing, &guest, "refused-guest").await;
-    let admitting = router(svc, config(true)).await;
-    let (status, body) = list(&admitting, &guest).await;
-    assert_eq!(status, StatusCode::OK, "an admitted guest binds: {body}");
-}
-
-#[tokio::test]
 async fn a_delegated_person_commits_as_their_own_person() {
     let (_db, svc) = service().await;
     let key = "8d9e0f1a-2b3c-4d4e-9f5a-6b7c8d9e0f1a";
     professional(&svc, key, "532").await;
-    let app = router(Arc::clone(&svc), config(false)).await;
+    let app = router(Arc::clone(&svc), config()).await;
     let delegated = bearer(
         ISSUER,
         AUDIENCE,
@@ -351,178 +220,21 @@ async fn a_delegated_person_commits_as_their_own_person() {
     assert_eq!(committer["identifiers"][0]["id"], key, "{committer}");
 }
 
-/// A Keycloak 26.8.2 token of an impersonation session for `key`: the
-/// impersonator in `act` (`sub`, `preferred_username`), and, when
-/// `mapped`, the `impersonator` claim of the built-in `IMPERSONATOR_ID` and
-/// `IMPERSONATOR_USERNAME` user session note mappers beside it.
-fn impersonated(key: &str, impersonator: &str, mapped: bool) -> String {
-    let mut claims = json!({
-        "sub": key, "azp": VIEWER,
-        "act": { "sub": impersonator, "preferred_username": "support" },
-    });
-    if mapped && let Some(claims) = claims.as_object_mut() {
-        claims.insert(
-            "impersonator".to_owned(),
-            json!({ "id": impersonator, "username": "support" }),
-        );
-    }
-    bearer(KEYCLOAK_STAFF, &audience(KEYCLOAK_STAFF), &claims)
-}
-
-/// The `(acting_mode, actor_chain, party id)` of the stored records of
-/// `operation` whose principal is `principal`, waiting for `count`.
-async fn delegated_rows(
-    pool: &sqlx::PgPool,
-    operation: &str,
-    principal: &str,
-    count: usize,
-) -> Vec<(Option<String>, Option<Value>, Option<String>)> {
-    for _ in 0..50 {
-        let rows: Vec<(Option<String>, Option<Value>, Option<String>)> = sqlx::query_as(
-            "SELECT acting_mode, actor_chain, party ->> 'id' FROM audit.access_trail \
-             WHERE operation = $1 AND principal = $2 ORDER BY recorded_at",
-        )
-        .bind(operation)
-        .bind(principal)
-        .fetch_all(pool)
-        .await
-        .expect("query");
-        if rows.len() >= count {
-            return rows;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    }
-    panic!("fewer than {count} {operation} records of {principal} were stored");
-}
-
-/// Keycloak 26.8.2 names the impersonator of an impersonation session in an
-/// RFC 8693 §4.1 `act` claim, "always present and cannot be disabled"
-/// (Keycloak 26.8.0 release notes, "Track impersonation across token
-/// lifecycle and downstream services"). An impersonator the CDR grants
-/// `act_for_persons` acts as a delegate: the request is bound to the
-/// impersonated person, commits as that person, and the access record names
-/// the impersonator as the actor, whether or not the `impersonator` claim
-/// rides along.
+/// A `RelatedPerson`, someone acting for the patient in their launch context
+/// (EHDS Art. 4(2)), whose login no party binds is refused `403`
+/// (`refused-unbound`): a representation is read from the store alone.
 #[tokio::test]
-async fn a_keycloak_impersonation_is_recorded_with_the_impersonator_as_actor() {
-    let (db, _audit, svc) = audited_service().await;
-    let key = "9e0f1a2b-3c4d-4e5f-8a6b-7c8d9e0f1a2b";
-    let (person_uid, _) = professional_of(&svc, KEYCLOAK_LOGIN, key, "532").await;
-    let person = person_uid
-        .split("::")
-        .next()
-        .expect("the PERSON id")
-        .to_owned();
-    let app = router(Arc::clone(&svc), config(false)).await;
-    for mapped in [false, true] {
-        let token = impersonated(key, SUPPORT_ADMIN, mapped);
-        let (status, body) = create_ehr(&app, &token).await;
-        assert_eq!(status, StatusCode::CREATED, "mapped {mapped}: {body}");
-        let ehr: Value = serde_json::from_str(&body).expect("an EHR");
-        let ehr_id = ehr
-            .pointer("/ehr_id/value")
-            .and_then(Value::as_str)
-            .expect("the EHR id")
-            .to_owned();
-        let (status, version) = common::send_json(
-            &app,
-            common::req(
-                "GET",
-                format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/version"),
-            )
-            .auth(&token)
-            .accept("application/json")
-            .build(),
-        )
-        .await;
-        assert_eq!(status, StatusCode::OK, "{version}");
-        let committer = &version["commit_audit"]["committer"];
-        assert_eq!(
-            committer["external_ref"]["id"]["value"], person,
-            "{committer}"
-        );
-        assert_eq!(committer["identifiers"][0]["id"], key, "{committer}");
-    }
-    let rows = delegated_rows(&db.pool(), "ehr_create", key, 2).await;
-    let actor = json!([format!("{KEYCLOAK_STAFF} {SUPPORT_ADMIN}")]);
-    for (mode, chain, party) in rows {
-        assert_eq!(mode.as_deref(), Some("delegated"));
-        assert_eq!(
-            chain.as_ref(),
-            Some(&actor),
-            "the impersonator is the actor"
-        );
-        assert_eq!(
-            party.as_deref(),
-            Some(person.as_str()),
-            "bound to the person"
-        );
-    }
-}
-
-/// An impersonation by a user the CDR does not grant `act_for_persons` is
-/// refused as any undeclared actor is, and a realm that names Keycloak's
-/// `impersonator` claim in `impersonation_marker` refuses every
-/// impersonation that carries it, a declared impersonator's included.
-#[tokio::test]
-async fn an_undeclared_or_marked_keycloak_impersonation_is_refused() {
+async fn a_related_person_no_party_binds_is_refused() {
     let (_db, svc) = service().await;
-    let key = "a0b1c2d3-e4f5-4a6b-9c7d-8e9f0a1b2c3d";
-    professional_of(&svc, KEYCLOAK_LOGIN, key, "532").await;
-    let app = router(Arc::clone(&svc), config(false)).await;
-    let stranger = "1f2a3b4c-5d6e-4f7a-8b9c-0d1e2f3a4b5c";
-    for mapped in [false, true] {
-        let (status, body) = list(&app, &impersonated(key, stranger, mapped)).await;
-        assert_eq!(status, StatusCode::UNAUTHORIZED, "mapped {mapped}: {body}");
-    }
-    let marked = router(svc, config_marked(false, Some("impersonator"))).await;
-    let (status, body) = list(&marked, &impersonated(key, SUPPORT_ADMIN, true)).await;
-    assert_eq!(status, StatusCode::UNAUTHORIZED, "{body}");
-    let (status, body) = list(&marked, &impersonated(key, SUPPORT_ADMIN, false)).await;
-    assert_eq!(status, StatusCode::OK, "without the marker claim: {body}");
-}
-
-/// Someone acting for a patient (RFC 8693 §4.1 `act` on a `patients` token)
-/// whom no representation binds is refused `403`
-/// (`refused-representation-unrecorded`) where the issuer sets
-/// `act_represents_patient`, and such a token is refused `401` by
-/// `ferrohealth-smart` on an issuer that does not set it.
-#[tokio::test]
-async fn a_token_acting_for_a_patient_without_a_representation_is_refused() {
-    const PATIENTS: &str = "https://patients.example";
-    let (_db, svc) = service().await;
-    for (represents, expected) in [
-        (Some(true), StatusCode::FORBIDDEN),
-        (None, StatusCode::UNAUTHORIZED),
-    ] {
-        let mut config = config(false);
-        common::add_issuer(
-            &mut config,
-            IssuerEntry {
-                kind: Some(IssuerKind::Patients),
-                jwks_file: common::jwks_file().display().to_string(),
-                profile: ferrohealth_smart::profile::ProfileKeys {
-                    act_represents_patient: represents,
-                    ..ferrohealth_smart::profile::ProfileKeys::default()
-                },
-                ..common::entry(PATIENTS, AUDIENCE)
-            },
-        );
-        let app = router(Arc::clone(&svc), config).await;
-        let token = bearer(
-            PATIENTS,
-            AUDIENCE,
-            &json!({ "sub": "patient-1", "act": { "sub": "carer-7" }, "scope": "patient/template-*.r" }),
-        );
-        let (status, body) = list(&app, &token).await;
-        assert_eq!(
-            status, expected,
-            "act_represents_patient {represents:?}: {body}"
-        );
-        if represents.is_some() {
-            assert!(body.contains("refused-representation-unrecorded"), "{body}");
-        }
-    }
+    let app = router(Arc::clone(&svc), config()).await;
+    let token = bearer(
+        ISSUER,
+        AUDIENCE,
+        &json!({ "sub": "c3d4e5f6-a7b8-4c9d-8e0f-1a2b3c4d5e6f", "client_id": "portal",
+                 "fhirUser": "RelatedPerson/carer-7", "patient": "patient-1",
+                 "scope": "patient/template-*.r" }),
+    );
+    refused(&app, &token, "refused-unbound").await;
 }
 
 /// A system caller refused for a personal scope is recorded under
@@ -530,7 +242,7 @@ async fn a_token_acting_for_a_patient_without_a_representation_is_refused() {
 #[tokio::test]
 async fn a_system_caller_with_a_personal_scope_is_recorded_with_its_code() {
     let (db, _audit, svc) = audited_service().await;
-    let app = router(svc, config(false)).await;
+    let app = router(svc, config()).await;
     let tokens = app_only("user/template-*.r");
     for (profile, credential) in &tokens {
         assert_eq!(
@@ -580,23 +292,20 @@ async fn stored_rows(
 
 /// Every access record of a system caller carries `binding = system`, the
 /// acting mode `system`, the client, its `AGENT` as the party and the
-/// healthcare provider that `AGENT` acts for in the policy parties, under
-/// each profile (EHDS Annex II
-/// 3.2(a), "identification of the healthcare provider"; the fields are our
-/// own design, #5008). The test tokens all carry `client_id`, so under the
-/// `entra` and `keycloak` profiles the record names the `azp` client the
-/// profile reads, never that stray claim (#5194).
+/// healthcare provider that `AGENT` acts for in the policy parties (EHDS
+/// Annex II 3.2(a), "identification of the healthcare provider"; the fields
+/// are our own design, #5008).
 #[tokio::test]
 async fn a_system_callers_records_carry_its_client_and_provider() {
     let (db, _audit, svc) = audited_service().await;
     let agent = grant_lab(&svc).await;
-    let app = router(svc, config(false)).await;
+    let app = router(svc, config()).await;
     let tokens = app_only(SYSTEM_SCOPES);
     for (profile, credential) in &tokens {
         let (status, body) = create_ehr(&app, credential).await;
         assert_eq!(status, StatusCode::CREATED, "{profile}: {body}");
     }
-    for principal in ["lab", "8f1c", SERVICE_ACCOUNT] {
+    for principal in ["lab"] {
         let rows = stored_rows(&db.pool(), "ehr_create", principal, 1).await;
         assert_eq!(
             rows,
@@ -639,7 +348,7 @@ async fn a_system_clients_write_and_read_are_recorded_under_one_client_identity(
     );
     let (db, _audit, svc) = audited_service().await;
     let agent = grant_lab(&svc).await;
-    let app = router(svc, config(false)).await;
+    let app = router(svc, config()).await;
     let [(_, credential), ..] = app_only(SYSTEM_SCOPES);
     let (status, body) = create_ehr(&app, &credential).await;
     assert_eq!(status, StatusCode::CREATED, "the write: {body}");
@@ -723,17 +432,15 @@ async fn a_system_clients_write_and_read_are_recorded_under_one_client_identity(
 }
 
 /// An RFC 7523 JWT-bearer onward token names the person in `sub` and the
-/// middle-tier client in its client claim, with no `act`: the client the
-/// CDR grants `act_for_persons` acts for the person, who is bound and commits
-/// as their own `PERSON`, and the record carries the delegated mode and the
-/// client (#5008).
+/// middle-tier client in its client claim, with no `act`: the person is
+/// bound and commits as their own `PERSON`, and the record carries the
+/// person's mode and the client (#5008).
 #[tokio::test]
 async fn a_jwt_bearer_onward_token_commits_as_the_person_and_records_its_client() {
     let (db, _audit, svc) = audited_service().await;
     let key = "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e";
     professional(&svc, key, "532").await;
-    common::grant_standing(&svc, ISSUER, "bridge", Operation::ActForPersons).await;
-    let app = router(Arc::clone(&svc), config(false)).await;
+    let app = router(Arc::clone(&svc), config()).await;
     let onward = bearer(
         ISSUER,
         AUDIENCE,
@@ -763,10 +470,6 @@ async fn a_jwt_bearer_onward_token_commits_as_the_person_and_records_its_client(
     assert_eq!(committer["external_ref"]["type"], "PERSON", "{committer}");
     assert_eq!(committer["identifiers"][0]["id"], key, "{committer}");
     let rows = stored_rows(&db.pool(), "ehr_create", key, 1).await;
-    assert_eq!(
-        rows[0].1.as_deref(),
-        Some("delegated"),
-        "the delegated mode"
-    );
+    assert_eq!(rows[0].1.as_deref(), Some("person"), "the person's mode");
     assert_eq!(rows[0].2.as_deref(), Some("bridge"), "the client");
 }

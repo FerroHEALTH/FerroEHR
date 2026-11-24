@@ -315,7 +315,10 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     }
     // NOTE: our own design (#5747), an access whose record cannot be written durably is
     // refused, so no response reports an access the log does not hold; the sender logs why.
-    if state.backend().record_events(records).await.is_err() {
+    let written_down = state.backend().record_events(records).await;
+    // NOTE: our own design (#5774), the record is the request's last statement.
+    ferroehr::db::acquire::release_held();
+    if written_down.is_err() {
         let mut resp = RestError::from(ApiError::ServiceUnavailable(
             "audit trail unavailable".to_owned(),
         ))

@@ -34,6 +34,7 @@ branch plus `/docs/latest/`, exactly as CI does before deploy.
 
 ## Rules
 
-- Never hand-edit the vendored `book/theme/mermaid*` assets.
+- Never hand-edit the vendored `book/theme/mermaid*` assets; their pin and
+  sha256 are in `book/MERMAID-PROVENANCE.md`.
 - Authoring voice is end-user and task-first; never publish internal trees
   (plans, rules, the vendored spec oracle).

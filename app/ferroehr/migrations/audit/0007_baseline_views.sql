@@ -174,7 +174,7 @@ CREATE VIEW access_trail AS
            e.acting_mode, e.assurance_level, e.assurance_value, e.professional_id,
            e.emergency_access, e.permit, e.issuer, e.client_id, e.ehr_id,
            e.subject_namespace, e.subject_lookup_failed, e.review, e.category_content,
-           e.binding, e.guest, e.party, e.party_groups, e.provider, e.representation,
+           e.binding, e.party, e.party_groups, e.provider, e.representation,
            e.external_fields, e.agreement, e.actor_chain, e.facilities, e.binding_detail,
            e.summary, e.token_attributes,
            NULL::text AS entry_uid, 'system'::text AS chain
@@ -242,7 +242,6 @@ CREATE VIEW access_trail AS
            audit.access_detail(t.doc, 'id40') #>> '{defining_code,code_string}',
            (audit.access_detail(t.doc, 'id31') ->> 'value')::jsonb,
            t.binding ->> 'code',
-           coalesce((t.binding ->> 'guest')::boolean, false),
            nullif(t.binding -> 'party', 'null'::jsonb),
            nullif(t.binding -> 'groups', '[]'::jsonb),
            nullif(t.binding -> 'provider', 'null'::jsonb),

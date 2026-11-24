@@ -49,7 +49,7 @@ fn mapping(issuers: &[&str]) -> BindingMapping {
 /// The `[auth]` table of a replica trusting `ISSUER` and, with `added`, the
 /// added issuer too, each with its `[auth.issuer.<name>.party]` table.
 fn trusting(added: bool) -> AppConfig {
-    let mut config = config(None);
+    let mut config = config();
     if added {
         common::add_issuer(
             &mut config,

@@ -6,20 +6,18 @@
 
 use ferrohealth_smart::assurance::{AssuranceError, AssuranceLevel, AssuranceSection};
 use ferrohealth_smart::config::{BasicSection, BasicUser, IssuerEntry};
-use ferrohealth_smart::kind::IssuerKind;
 use secrecy::SecretString;
 
 use super::*;
 
-/// An `[auth]` section trusting the `machines` issuer `issuer` for the
-/// `ferroehr` audience.
+/// An `[auth]` section trusting the issuer `issuer` for the `ferroehr`
+/// audience.
 fn section(issuer: &str) -> AuthSection {
     AuthSection {
         issuer: [(
             "idp".to_owned(),
             IssuerEntry {
                 issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
-                kind: Some(IssuerKind::Machines),
                 audience: vec!["ferroehr".to_owned()],
                 ..IssuerEntry::default()
             },
@@ -45,7 +43,7 @@ fn resolve(section: &AuthSection) -> Result<Resolved, AuthConfigError> {
 }
 
 /// The `[auth.issuer.idp]` table head of the parsed cases.
-const ISSUER: &str = "[issuer.idp]\nissuer = \"https://idp.example\"\nkind = \"machines\"\naudience = [\"ferroehr\"]\n";
+const ISSUER: &str = "[issuer.idp]\nissuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\n";
 
 /// A section that satisfies every boot rule.
 fn valid() -> AuthSection {
@@ -117,20 +115,6 @@ fn a_symmetric_algorithm_is_a_boot_error() {
         Err(AuthConfigError::Section { .. })
     ));
     assert!(validate(&valid()).is_ok(), "the asymmetric default boots");
-}
-
-/// The HMAC key source is gone with the move to the shared crate: an
-/// `hmac_secret` is an unknown key, refused like any typo.
-#[test]
-fn an_hmac_secret_is_refused_as_an_unknown_key() {
-    for body in [
-        "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\nhmac_secret = \"0123456789abcdef0123456789abcdef\"\n",
-        "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\nhmac_secret_file = \"/run/secrets/hmac\"\n",
-        "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\njwks_json = \"{}\"\n",
-    ] {
-        let err = parse(body).expect_err("an unknown key must be refused");
-        assert!(err.to_string().contains("unknown field"), "{err}");
-    }
 }
 
 /// RFC 7517 §4.1 / RFC 7518 §6.4: a symmetric key in the handed-over key
@@ -425,24 +409,6 @@ fn auth_enabled_without_a_mechanism_is_a_boot_error() {
         ..AuthSection::default()
     };
     assert!(require_mechanism(&disabled).is_ok());
-}
-
-/// The policy grants answer which subjects are admitted without a scope
-/// and which clients a person signs in through, so a list set in code
-/// beside them is refused at boot, never read in two places.
-#[test]
-fn a_client_list_beside_the_policy_grants_is_refused() {
-    let mut scopeless = valid();
-    entry(&mut scopeless).scopeless_subjects = vec!["svc".to_owned()];
-    let mut first_party = valid();
-    entry(&mut first_party).profile.first_party_clients = Some(vec!["portal".to_owned()]);
-    for cfg in [scopeless, first_party] {
-        assert!(
-            matches!(validate(&cfg), Err(AuthConfigError::Section { .. })),
-            "{:?}",
-            validate(&cfg)
-        );
-    }
 }
 
 /// An enabled section with Basic users and no issuer resolves to a

@@ -26,8 +26,7 @@ when the per-probe layer attribution and the not-exercised ledger are worth
 reading.
 
 The **hospital** family (#5610) runs a hospital scenario on two instances
-with Keycloak as the `persons` issuer, the quickstart's `machines` issuer and a
-patient portal's `patients` issuer. It sets everything up through public
+behind FerroSMART, with the quickstart's issuer for its SCIM client. It sets everything up through public
 interfaces (SCIM, the demographic API, ITS-REST and the admin API) and checks
 RBAC, the access evaluator, AQL, the SCIM lifecycle, the access log and SMART
 discovery over HTTP, each change made on one instance and read on the other.

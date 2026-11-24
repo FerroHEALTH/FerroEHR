@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Building the [`Authenticator`]: the issuers of `[auth]`, each read in the
-//! background from the start and asking the policy grants for a client's
-//! standing, the `DPoP` proof
-//! check of `[auth.dpop]`, the Basic store, the issuers whose role claims may
+//! background from the start, the `DPoP` proof check of `[auth.dpop]`, the Basic store, the issuers whose role claims may
 //! grant a privileged role (`[authz.rbac] role_issuers`) and the first
 //! administrator (`[authz.rbac] first_admin`). No openEHR spec governs
 //! authentication mechanics: our own design.
@@ -14,7 +12,6 @@ use std::sync::Arc;
 use ferroehr::party_binding::source::BindingSource;
 use ferrohealth_smart::config::Resolved;
 use ferrohealth_smart::guard::Gate;
-use ferrohealth_smart::kind::standing::Standing;
 use ferrohealth_smart::resource::described::{Candidate, DescribeError, Metadata, describe};
 use ferrohealth_smart::resource::introspection::{IntrospectionSettings, Introspector};
 use ferrohealth_smart::resource::{
@@ -66,8 +63,8 @@ pub(super) struct FirstAdmin {
 
 impl RoleIssuers {
     /// Returns the rule of `config`'s `[authz.rbac]`, its issuer names read
-    /// through `resolved`; the configuration check holds each to a
-    /// `persons` issuer.
+    /// through `resolved`; the configuration check holds each to a SMART
+    /// issuer.
     ///
     /// # Errors
     /// A message naming a role issuer that names no table of `[auth]`.
@@ -139,9 +136,8 @@ impl Authenticator {
     /// whose key set is a `jwks_file`, so its discovery document can name a
     /// `token_endpoint`. When the SMART discovery document is served, it
     /// describes the issuer `ferrohealth-smart`'s `describe` chooses:
-    /// `[auth] described_issuer`, else the one issuer of a user-token kind whose
-    /// metadata is available, else, with only `machines` issuers trusted, the one
-    /// `machines` issuer, for SMART Backend Services alone. The `DPoP` proof
+    /// `[auth] described_issuer`, else the one SMART issuer whose metadata is
+    /// available. The `DPoP` proof
     /// check of `[auth.dpop]` compares a proof's `htu` with the server's
     /// public root (`[server] public_base_url` with `server.base_path`) and
     /// the request path, and records each accepted proof in `replay`, which
@@ -155,23 +151,19 @@ impl Authenticator {
     /// described_issuer` that names no issuer the document can describe, or
     /// no `described_issuer` and several or no issuers it can describe), an
     /// `[auth.dpop]` table without a public root, a role issuer that names no
-    /// `persons` issuer, or a party binding the shared crate refuses or that
+    /// SMART issuer, or a party binding the shared crate refuses or that
     /// has party tables and no `source`.
     pub async fn new(
         config: &AppConfig,
         source: Option<Arc<dyn BindingSource>>,
         replay: Arc<dyn ReplayStore>,
-        standing: Arc<dyn Standing>,
     ) -> Result<Arc<Self>, String> {
-        let resolved = ferroehr::config::auth::resolve_with(
-            &config.auth.shared,
-            standing,
-            &config.audience_bases(),
-        )
-        .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
+        let resolved =
+            ferroehr::config::auth::resolve(&config.auth.shared, &config.audience_bases())
+                .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
         let party = super::party::binding(config, &resolved, source)
             .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
-        let deployment = super::party::Deployment::of(config, &resolved);
+        let deployment = super::party::Deployment::of(config);
         let role_issuers = RoleIssuers::of(config, &resolved)?;
         let patient = patient_context(&resolved);
         let mut gate = Gate::open();
@@ -359,20 +351,10 @@ async fn introspected(
 }
 
 /// Returns the identifiers of the issuers trusted to assert a patient
-/// context: those whose profile sets `patient_context` (SMART App Launch
-/// 2.2.0, Scopes and Launch Context, `launch/patient`).
+/// context: every trusted issuer, whose `patient` claim is the launch context
+/// (SMART App Launch 2.2.0, Scopes and Launch Context, `launch/patient`).
 fn patient_context(resolved: &Resolved) -> Vec<String> {
-    let jwt = resolved
-        .issuers
-        .iter()
-        .filter(|settings| settings.profile.patient_context)
-        .map(|settings| settings.issuer.clone());
-    let introspected = resolved
-        .introspection
-        .iter()
-        .filter(|settings| settings.profile.patient_context)
-        .map(|settings| settings.issuer.clone());
-    jwt.chain(introspected).collect()
+    resolved.kinds.keys().cloned().collect()
 }
 
 /// Returns what FerroEHR honours for a caller: a `patient/` grant of an

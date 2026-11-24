@@ -39,7 +39,7 @@ const KEY: &str = "5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b";
 /// The router over `svc`, the issuer reading its tokens' attributes by the
 /// IUA mapping.
 async fn router(svc: Arc<FerroEhrService>) -> Router {
-    let mut config = config(None);
+    let mut config = config();
     common::issuer_table(&mut config, ISSUER).attributes = Some(AttributesSection {
         mapping: Some(Mapping::Iua),
         ..AttributesSection::default()
