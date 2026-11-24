@@ -241,6 +241,9 @@ pub enum VoHead {
     RootArchetype,
     /// `committed_at` — the trunk head's commit instant.
     CommittedAt,
+    /// `episodes` — the keys of the episodes of care the trunk head is placed
+    /// in; `NULL` when it is placed in none (#6413).
+    Episodes,
     /// `restricted_at` — when restriction of processing was recorded for this
     /// object; `NULL` = unrestricted.
     RestrictedAt,
