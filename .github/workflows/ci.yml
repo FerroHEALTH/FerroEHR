@@ -1747,12 +1747,23 @@ jobs:
       DATABASE_URL: postgres://openehr:openehr@localhost:5432/openehr_test
       FERROEHR_TEST_PG_URL: postgres://openehr:openehr@localhost:5432/postgres
     steps:
+      # The optimised build lost its runner with no log three times (#6497):
+      # free the preinstalled toolchains it never uses, and record the disk
+      # after the restore, the build and the test.
+      - name: Free the runner's disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          sudo docker image prune --all --force > /dev/null
+          df -h /
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Disk after the cache restore
+        run: df -h / && du -sh target 2>/dev/null || true
       - name: Non-durable test tuning
         env:
           PG_SERVICE: ${{ job.services.postgres.id }}
@@ -1762,8 +1773,16 @@ jobs:
       - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
           tool: cargo-nextest
+      - name: Build the optimised test binary
+        run: cargo nextest run --locked --cargo-profile budget -p ferroehr-rest --all-features --no-run
+      - name: Disk after the build
+        if: ${{ !cancelled() }}
+        run: df -h / && du -sh target/budget 2>/dev/null || true
       - name: Every hot path within its CPU budget, optimised
         run: cargo nextest run --locked --cargo-profile budget -p ferroehr-rest --all-features --no-capture -E 'test(every_hot_path_stays_within_its_cpu_budget)'
+      - name: Disk after the test
+        if: ${{ !cancelled() }}
+        run: df -h / && du -sh target/budget 2>/dev/null || true
 
   # ── Build + tests against PostgreSQL 19.0 ──────────────────────────────────
   # The critical-path job, split so linking, the viewer, compiling the test
