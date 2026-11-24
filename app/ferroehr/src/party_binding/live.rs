@@ -274,6 +274,12 @@ impl LiveBindings {
         )
     }
 
+    /// Runs the copy's pending cache upkeep ([`crate::service::upkeep`]).
+    pub(crate) async fn upkeep(&self) {
+        self.copy.lookups.run_pending_tasks().await;
+        self.copy.names.run_pending_tasks().await;
+    }
+
     /// Drop every lookup and name this replica holds.
     pub fn forget_all(&self) {
         self.copy.forget_all();

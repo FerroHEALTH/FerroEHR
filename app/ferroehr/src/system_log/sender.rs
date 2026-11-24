@@ -148,6 +148,12 @@ impl AuditSender {
         crate::memory::held(&self.inner.subjects)
     }
 
+    /// Runs the subject memo's pending cache upkeep
+    /// ([`crate::service::upkeep`]).
+    pub(crate) async fn upkeep(&self) {
+        self.inner.subjects.run_pending_tasks().await;
+    }
+
     /// Whether auditing is on (the master switch).
     #[must_use]
     pub fn enabled(&self) -> bool {
