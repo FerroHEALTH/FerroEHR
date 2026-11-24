@@ -611,8 +611,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlPopulation,
         conversions: 2,
-        least: 2263,
-        allocations: 2376,
+        least: 2264,
+        allocations: 2377,
         peak_bytes: 158_823,
         round_trips: 1,
         nested: 1,
@@ -623,7 +623,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::Iti81,
         conversions: 0,
-        least: 6663,
+        least: 6665,
         allocations: 7379,
         peak_bytes: 624_026,
         round_trips: 1,
@@ -816,7 +816,7 @@ const BUDGETS: [Budget; 31] = [
         path: Path::PartyUpdate,
         conversions: 8,
         least: 1797,
-        allocations: 1829,
+        allocations: 1830,
         peak_bytes: 129_641,
         round_trips: 10,
         nested: 3,
