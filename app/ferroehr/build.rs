@@ -137,6 +137,16 @@ fn main() {
     println!("cargo:rerun-if-env-changed=REVISION");
     println!("cargo:rerun-if-env-changed=FERROEHR_RELEASE_TAG");
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
+    watch_checked_out_ref();
+    // `sqlx::migrate!` cannot see a newly added file on stable, and the
+    // directives above switch off Cargo's rerun-on-any-change, so the
+    // embedded migration sets follow the directory here
+    // (https://docs.rs/sqlx/latest/sqlx/macro.migrate.html).
+    println!("cargo:rerun-if-changed=migrations");
+}
+
+/// Rerun this script when the checked-out commit moves, so `REVISION` names it.
+fn watch_checked_out_ref() {
     // NOTE: Cargo book build-scripts `rerun-if-changed`, a directory is scanned whole, so the
     // script watches only `HEAD` and the one ref it names (#6512), as git places them
     // (git-rev-parse `--git-dir`, `--git-common-dir`, `--symbolic-full-name`).
@@ -163,11 +173,6 @@ fn main() {
             println!("cargo:rerun-if-changed={}", path.display());
         }
     }
-    // `sqlx::migrate!` cannot see a newly added file on stable, and the
-    // directives above switch off Cargo's rerun-on-any-change, so the
-    // embedded migration sets follow the directory here
-    // (https://docs.rs/sqlx/latest/sqlx/macro.migrate.html).
-    println!("cargo:rerun-if-changed=migrations");
 }
 
 /// What `git rev-parse` prints for `args`; `None` outside a git checkout or
