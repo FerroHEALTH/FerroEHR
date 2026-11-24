@@ -73,8 +73,8 @@ pub struct RbacConfig {
     pub emergency_access_role: Option<String>,
     /// The issuers whose role claims may grant `admin_role` and
     /// `emergency_access_role`, each the name of an `[auth.issuer.<name>]`
-    /// table of a `persons` issuer; empty, the default, lets no token grant
-    /// them.
+    /// table of an issuer other than a `federation` one; empty, the default,
+    /// lets no token grant them.
     pub role_issuers: Vec<String>,
     /// The Basic user of `[[auth.basic.users]]` that holds `admin_role` and
     /// `[auth] product_scope` from this file

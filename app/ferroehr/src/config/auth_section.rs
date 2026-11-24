@@ -4,15 +4,13 @@
 //! The `[auth]` table: the shared `ferrohealth-smart` section and what
 //! FerroEHR keeps beside it: `[auth.smart]` and `[auth.scim]`.
 //!
-//! `ferrohealth-smart` owns every other key of `[auth]`, `[auth.idp.entra]`
-//! included, and reads it with `deny_unknown_fields`; `config::beside` reads
-//! FerroEHR's keys beside it. The section is read as the crate's
-//! `ProductStandingSection`. No openEHR spec governs configuration: our own
-//! design.
+//! `ferrohealth-smart` owns every other key of `[auth]` and reads it with
+//! `deny_unknown_fields`; `config::beside` reads FerroEHR's keys beside it.
+//! No openEHR spec governs configuration: our own design.
 
 use std::fmt;
 
-use ferrohealth_smart::config::{AuthSection, ProductStandingSection};
+use ferrohealth_smart::config::AuthSection;
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -28,14 +26,13 @@ const SCIM: &str = "scim";
 /// The `[auth]` table.
 #[derive(Debug, Clone, Default, Serialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = {"enabled": "trust", "realm": "optional", "capabilities": "optional", "scopes_supported": "optional", "product_scope": "trust", "described_issuer": "trust", "issuer": "trust", "basic": "trust", "basic.cache_ttl": "optional", "dpop": "trust", "tls": "trust", "idp": "infrastructure"})))]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = {"enabled": "trust", "realm": "optional", "capabilities": "optional", "scopes_supported": "optional", "product_scope": "trust", "described_issuer": "trust", "issuer": "trust", "basic": "trust", "basic.cache_ttl": "optional", "dpop": "trust", "tls": "trust"})))]
 #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = ["issuer.<name>.issuer"])))]
 pub struct AuthConfig {
     /// Every key `ferrohealth-smart` reads: the issuers, the party and
-    /// federation tables, the vendor adapter tables (`[auth.idp]`), the Basic
-    /// users, `[auth.dpop]` and the discovery options.
+    /// federation tables, the Basic users, `[auth.dpop]` and the discovery
+    /// options.
     #[serde(flatten)]
-    #[cfg_attr(feature = "schema", schemars(with = "ProductStandingSection"))]
     pub shared: Box<AuthSection>,
     /// `[auth.smart]` — the SMART App Launch resource-server posture.
     pub smart: SmartConfig,
@@ -62,9 +59,9 @@ impl<'de> Visitor<'de> for AuthVisitor {
     }
 
     fn visit_map<A: MapAccess<'de>>(self, map: A) -> Result<AuthConfig, A::Error> {
-        let (shared, own) = split::<ProductStandingSection, Own, A>(map)?;
+        let (shared, own) = split::<AuthSection, Own, A>(map)?;
         Ok(AuthConfig {
-            shared: Box::new(shared.0),
+            shared: Box::new(shared),
             smart: own.smart.unwrap_or_default(),
             scim: own.scim,
         })
@@ -99,13 +96,12 @@ impl beside::Own for Own {
     }
 }
 
-/// Returns the table of one `machines` issuer `issuer` for the `ferroehr`
-/// audience, the table the configuration tests trust.
+/// Returns the table of one issuer `issuer` for the `ferroehr` audience, the
+/// table the configuration tests trust.
 #[cfg(test)]
 pub(crate) fn machine(issuer: &str) -> ferrohealth_smart::config::IssuerEntry {
     ferrohealth_smart::config::IssuerEntry {
         issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
-        kind: Some(ferrohealth_smart::kind::IssuerKind::Machines),
         audience: vec!["ferroehr".to_owned()],
         ..ferrohealth_smart::config::IssuerEntry::default()
     }
@@ -125,37 +121,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_idp_table_is_read_beside_the_crate_s_keys() {
-        let auth: AuthConfig = toml::from_str(
-            "realm = \"r\"\n[idp.entra]\nbase_url = \"https://graph.example/v1.0\"\n\
-             [idp.entra.credentials]\nclient_id = \"reader\"\n",
-        )
-        .expect("parses");
-        assert_eq!(auth.shared.realm, "r");
-        let entra = auth.shared.idp.entra.expect("the entra table");
-        assert_eq!(entra.base_url, "https://graph.example/v1.0");
-        assert_eq!(entra.credentials.client_id, "reader");
-    }
-
-    #[test]
     fn an_unknown_key_is_refused_with_the_crate_s_field_list() {
         let err = toml::from_str::<AuthConfig>("isser = \"x\"\n").expect_err("unknown key");
         let text = err.to_string();
         assert!(text.contains("unknown field `isser`"), "{text}");
         assert!(text.contains("`issuer`"), "{text}");
-        let err = toml::from_str::<AuthConfig>("[idp.okta]\n").expect_err("unknown adapter");
-        assert!(err.to_string().contains("unknown field `okta`"), "{err}");
     }
 
     #[test]
-    fn the_section_renders_flat_with_the_crate_s_idp_table() {
+    fn the_section_renders_flat() {
         let rendered = serde_json::to_value(AuthConfig::default()).expect("renders");
         assert!(rendered.get("enabled").is_some(), "{rendered}");
-        assert_eq!(
-            rendered.get("idp"),
-            Some(&serde_json::json!({})),
-            "{rendered}"
-        );
         assert!(rendered.get("scim").is_none(), "{rendered}");
     }
 

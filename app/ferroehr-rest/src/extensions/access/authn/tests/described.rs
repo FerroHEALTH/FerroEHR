@@ -3,16 +3,14 @@
 
 //! The issuer the SMART discovery document describes, chosen by
 //! `ferrohealth-smart`'s `describe`: `[auth] described_issuer`, else the one
-//! issuer that serves a user launch and whose metadata FerroEHR has, else, with
-//! only `machines` issuers trusted, the one `machines` issuer for SMART Backend
-//! Services alone; never by the names of the `[auth.issuer.<name>]` tables. SMART
+//! SMART issuer whose metadata FerroEHR has; never by the names of the
+//! `[auth.issuer.<name>]` tables. SMART
 //! App Launch 2.2.0, Conformance, §Metadata requires the
 //! `authorization_endpoint` a user launch starts at, and Backend Services,
 //! §Retrieve `.well-known/smart-configuration`, the `token_endpoint` a backend
 //! client reads; which of several issuers is described is our own design.
 
 use ferrohealth_smart::config::{AuthSection, IssuerEntry};
-use ferrohealth_smart::kind::IssuerKind;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -43,16 +41,13 @@ async fn issuer_server() -> MockServer {
     server
 }
 
-/// The `[auth.issuer.<name>]` table of a `kind` issuer at `issuer`, its metadata
+/// The `[auth.issuer.<name>]` table of an issuer at `issuer`, its metadata
 /// read from it.
-fn read(issuer: &str, kind: IssuerKind) -> IssuerEntry {
-    IssuerEntry {
-        kind: Some(kind),
-        ..test_support::entry(issuer)
-    }
+fn read(issuer: &str) -> IssuerEntry {
+    test_support::entry(issuer)
 }
 
-/// The `[auth.issuer.<name>]` table of a `persons` issuer whose key set is a file,
+/// The `[auth.issuer.<name>]` table of an issuer whose key set is a file,
 /// so FerroEHR has none of its metadata.
 fn file_only(issuer: &str) -> IssuerEntry {
     IssuerEntry {
@@ -92,8 +87,7 @@ async fn authenticator(
         ..AppConfig::default()
     };
     config.auth.smart.discovery = served;
-    let authenticator =
-        Authenticator::new(&config, None, memory(), test_support::standing()).await?;
+    let authenticator = Authenticator::new(&config, None, memory()).await?;
     read_issuers(&authenticator).await;
     Ok(authenticator)
 }
@@ -127,77 +121,16 @@ fn endpoints(authenticator: &Authenticator) -> (Value, Value) {
     )
 }
 
-/// The quickstart's shape: a `persons` issuer read from a key-set file and a
-/// `machines` issuer whose metadata is read. Only the `machines` issuer has
-/// metadata, and it signs no user token, so no issuer can be described.
-#[tokio::test]
-async fn a_machines_issuer_is_never_described() {
-    let machines = issuer_server().await;
-    let Err(message) = authenticator(
-        vec![
-            file_only("https://basic-users.ferroehr.invalid"),
-            read(&machines.uri(), IssuerKind::Machines),
-        ],
-        true,
-        None,
-    )
-    .await
-    else {
-        panic!("a document only a machines issuer could describe is refused");
-    };
-    assert!(message.contains("can describe no issuer"), "{message}");
-    assert!(message.contains("machines"), "{message}");
-}
-
-/// A deployment that trusts only a `machines` issuer describes it for SMART
-/// Backend Services alone: the token endpoint, the client credentials grant and
-/// `private_key_jwt`, with no `authorization_endpoint`, whatever the issuer's
-/// metadata names.
-#[tokio::test]
-async fn a_machines_only_deployment_is_described_for_backend_services() {
-    let machines = issuer_server().await;
-    let authenticator = authenticator(
-        vec![read(&machines.uri(), IssuerKind::Machines)],
-        true,
-        None,
-    )
-    .await
-    .expect("a machines-only deployment boots");
-    let document = document(&authenticator);
-    assert_eq!(
-        document["token_endpoint"],
-        json!(format!("{}/token", machines.uri()))
-    );
-    assert_eq!(
-        document["grant_types_supported"],
-        json!(["client_credentials"])
-    );
-    assert_eq!(
-        document["token_endpoint_auth_methods_supported"],
-        json!(["private_key_jwt"])
-    );
-    assert_eq!(
-        document["capabilities"],
-        json!(["client-confidential-asymmetric"])
-    );
-    assert!(
-        document.get("authorization_endpoint").is_none(),
-        "{document}"
-    );
-}
-
 /// One eligible issuer is described whichever table comes first.
 #[tokio::test]
 async fn the_one_eligible_issuer_is_described_in_any_table_order() {
-    let machines = issuer_server().await;
     let persons = issuer_server().await;
     let expected = (
         json!(format!("{}/authorize", persons.uri())),
         json!(format!("{}/token", persons.uri())),
     );
     let tables = [
-        read(&machines.uri(), IssuerKind::Machines),
-        read(&persons.uri(), IssuerKind::Persons),
+        read(&persons.uri()),
         file_only("https://basic-users.ferroehr.invalid"),
     ];
     let mut reversed = tables.to_vec();
@@ -210,26 +143,6 @@ async fn the_one_eligible_issuer_is_described_in_any_table_order() {
     }
 }
 
-/// A `patients` issuer serves a patient standalone launch, so it is eligible.
-#[tokio::test]
-async fn a_patients_issuer_is_eligible() {
-    let patients = issuer_server().await;
-    let authenticator = authenticator(
-        vec![
-            file_only("https://basic-users.ferroehr.invalid"),
-            read(&patients.uri(), IssuerKind::Patients),
-        ],
-        true,
-        None,
-    )
-    .await
-    .expect("a patients issuer is described");
-    assert_eq!(
-        endpoints(&authenticator).1,
-        json!(format!("{}/token", patients.uri()))
-    );
-}
-
 /// Several eligible issuers and no `described_issuer` refuse the start,
 /// naming each issuer and the key.
 #[tokio::test]
@@ -237,10 +150,7 @@ async fn several_eligible_issuers_without_the_key_are_refused() {
     let persons = issuer_server().await;
     let patients = issuer_server().await;
     let Err(message) = authenticator(
-        vec![
-            read(&persons.uri(), IssuerKind::Persons),
-            read(&patients.uri(), IssuerKind::Patients),
-        ],
+        vec![read(&persons.uri()), read(&patients.uri())],
         true,
         None,
     )
@@ -258,10 +168,7 @@ async fn several_eligible_issuers_without_the_key_are_refused() {
 async fn the_named_issuer_is_described() {
     let persons = issuer_server().await;
     let patients = issuer_server().await;
-    let entries = vec![
-        read(&persons.uri(), IssuerKind::Persons),
-        read(&patients.uri(), IssuerKind::Patients),
-    ];
+    let entries = vec![read(&persons.uri()), read(&patients.uri())];
     for named in [persons.uri(), patients.uri()] {
         let authenticator = authenticator(entries.clone(), true, Some(&named))
             .await
@@ -276,38 +183,11 @@ async fn the_named_issuer_is_described() {
     }
 }
 
-/// `described_issuer` naming a `machines` issuer is refused, though its
-/// metadata is read.
-#[tokio::test]
-async fn a_named_machines_issuer_is_refused() {
-    let machines = issuer_server().await;
-    let persons = issuer_server().await;
-    let Err(message) = authenticator(
-        vec![
-            read(&machines.uri(), IssuerKind::Machines),
-            read(&persons.uri(), IssuerKind::Persons),
-        ],
-        true,
-        Some(&machines.uri()),
-    )
-    .await
-    else {
-        panic!("a named machines issuer is refused");
-    };
-    assert!(message.contains("auth.described_issuer"), "{message}");
-    assert!(message.contains("machines issuer"), "{message}");
-}
-
 /// `described_issuer` naming no `[auth]` issuer is refused.
 #[tokio::test]
 async fn a_named_unknown_issuer_is_refused() {
     let persons = issuer_server().await;
-    let Err(message) = authenticator(
-        vec![read(&persons.uri(), IssuerKind::Persons)],
-        true,
-        Some("elsewhere"),
-    )
-    .await
+    let Err(message) = authenticator(vec![read(&persons.uri())], true, Some("elsewhere")).await
     else {
         panic!("a named unknown issuer is refused");
     };
@@ -324,7 +204,7 @@ async fn a_named_issuer_without_metadata_is_refused() {
     let persons = issuer_server().await;
     let Err(message) = authenticator(
         vec![
-            read(&persons.uri(), IssuerKind::Persons),
+            read(&persons.uri()),
             file_only("https://basic-users.ferroehr.invalid"),
         ],
         true,
@@ -345,10 +225,7 @@ async fn an_unserved_document_refuses_nothing() {
     let persons = issuer_server().await;
     let patients = issuer_server().await;
     let authenticator = authenticator(
-        vec![
-            read(&persons.uri(), IssuerKind::Persons),
-            read(&patients.uri(), IssuerKind::Patients),
-        ],
+        vec![read(&persons.uri()), read(&patients.uri())],
         false,
         None,
     )

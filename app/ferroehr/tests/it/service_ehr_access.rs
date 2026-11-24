@@ -321,8 +321,9 @@ async fn a_guardian_named_without_the_subject_takes_the_subjects_write_away() {
         .expect("the subject named PARTY_SELF writes again");
 }
 
-/// A body of the removed scheme, and one breaking an invariant, are refused
-/// `400` naming the defect, even to the administrator.
+/// A body of the removed scheme is refused `400` and one breaking an
+/// invariant `422` (RFC 9110 §15.5.21), each naming the defect, even to the
+/// administrator.
 #[tokio::test]
 async fn a_body_of_the_old_scheme_or_breaking_an_invariant_is_refused() {
     let (_db, svc, ehr_id, _guardian) = setup().await;
@@ -336,9 +337,9 @@ async fn a_body_of_the_old_scheme_or_breaking_an_invariant_is_refused() {
     let broken = json!({ "_type": "ACCESS_DIRECTIVE_SETTINGS", "default_access": term("closed") });
     let refused = write(&svc, ehr_id, &administrator(), 1, &broken).await;
     assert!(
-        matches!(&refused, Err(ServiceError::BadRequest(r))
-            if r.message.contains("Default_access_valid")),
-        "a broken invariant is a 400: {refused:?}"
+        matches!(&refused, Err(ServiceError::Unprocessable { violation, .. })
+            if violation.to_string().contains("Default_access_valid")),
+        "a broken invariant is a 422: {refused:?}"
     );
 }
 

@@ -1,1 +1,0 @@
-- A patient-portal representative's login now binds in a deployment that also has a `persons` issuer with an `[[auth.party]]` table. The server compiles the person mapping from one key-issuer set, the `[[auth.party]]` identifier issuers plus every `patients` issuer, which the SCIM gate reads too. Before, the representative's key was dropped.

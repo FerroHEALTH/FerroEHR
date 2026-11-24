@@ -502,9 +502,10 @@ async fn only_an_emergency_access_reads_restricted_data_and_is_marked() {
     }
 }
 
-/// A malformed EHR id, or a restriction naming an object by an id that names
-/// no versioned object, is refused `400` naming it, on recording, lifting and
-/// reading an access restriction alike; nothing is committed.
+/// A malformed EHR id is refused `400` naming it, on recording, lifting and
+/// reading an access restriction alike, and a restriction naming an object by
+/// an id that names no versioned object is refused `422` naming it, content
+/// that reads but breaks a rule (RFC 9110 §15.5.21); nothing is committed.
 #[tokio::test]
 async fn a_malformed_id_is_refused_on_every_restriction_route() {
     let (_db, _pool, app) = Box::pin(app()).await;
@@ -519,7 +520,7 @@ async fn a_malformed_id_is_refused_on_every_restriction_route() {
     let object =
         common::directive_settings(&[common::access_directive("restriction", &["not-a-uuid"])]);
     let (status, answer) = commit_settings(&app, &ehr, &preceding, &object).await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "{answer}");
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{answer}");
     assert!(
         answer.contains("not-a-uuid") && answer.contains("names no versioned object"),
         "{answer}"

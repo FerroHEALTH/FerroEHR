@@ -1037,22 +1037,22 @@ spec governs this; FerroBRIDGE's own configuration reference defines the keys.
 */}}
 {{- /*
 FerroBRIDGE reaches the CDR as a machine: a client credentials token
-(RFC 6749 §4.4) of a `machines` issuer this release's CDR trusts. From
-ferrohealth-smart 0.9 a Basic credential is a person's and holds no `system/`
-scope, so the chart offers no Basic machine user. Refused here: no client,
-and an issuer no table of the CDR's config.auth.issuer names as `machines`.
+(RFC 6749 §4.4) of an issuer this release's CDR trusts. A Basic credential is
+a person's and holds no `system/` scope, so the chart offers no Basic machine
+user. Refused here: no client, and an issuer no table of the CDR's
+config.auth.issuer names, or one of kind `federation`.
 */}}
 {{- define "ferroehr.bridgeCdrClient" -}}
 {{- $oauth := .Values.bridge.cdr.oauth -}}
 {{- if not (and $oauth.issuer $oauth.clientId) -}}
-{{- fail "bridge.enabled=true without bridge.cdr.oauth.issuer and bridge.cdr.oauth.clientId: FerroBRIDGE reaches the CDR under a client credentials token (RFC 6749 §4.4) of a `machines` issuer the CDR trusts. Name that issuer and FerroBRIDGE's client at it; a Basic user is a person and holds no system/ scope." -}}
+{{- fail "bridge.enabled=true without bridge.cdr.oauth.issuer and bridge.cdr.oauth.clientId: FerroBRIDGE reaches the CDR under a client credentials token (RFC 6749 §4.4) of an issuer the CDR trusts. Name that issuer and FerroBRIDGE's client at it; a Basic user is a person and holds no system/ scope." -}}
 {{- end -}}
 {{- $trusted := false -}}
 {{- range $issuer := (.Values.config.auth.issuer | default list) -}}
-{{- if and (kindIs "map" $issuer) (eq (toString $issuer.issuer) (toString $oauth.issuer)) (eq (toString $issuer.kind) "machines") -}}{{- $trusted = true -}}{{- end -}}
+{{- if and (kindIs "map" $issuer) (eq (toString $issuer.issuer) (toString $oauth.issuer)) (ne (toString $issuer.kind) "federation") -}}{{- $trusted = true -}}{{- end -}}
 {{- end -}}
 {{- if not $trusted -}}
-{{- fail (printf "bridge.cdr.oauth.issuer %s is not a `machines` issuer of config.auth.issuer, so the CDR would refuse every token FerroBRIDGE presents. Add it there with kind: machines and the audience its tokens carry." (toString $oauth.issuer)) -}}
+{{- fail (printf "bridge.cdr.oauth.issuer %s is not an issuer of config.auth.issuer, so the CDR would refuse every token FerroBRIDGE presents. Add it there with the audience its tokens carry." (toString $oauth.issuer)) -}}
 {{- end -}}
 {{- end }}
 
