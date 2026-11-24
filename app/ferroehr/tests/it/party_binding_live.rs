@@ -44,7 +44,7 @@ fn named() -> ferroehr::party_binding::BindingMapping {
 /// Two replicas over one fresh store, each listening on its own connection.
 async fn replicas() -> (testkit::TestDb, FerroEhrService, FerroEhrService) {
     let (db, first) = crate::fixtures::service().await;
-    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false)]).await;
+    crate::fixtures::open_key_spaces(&db, &[LOGIN]).await;
     let first = first.with_binding_mapping(named());
     let second =
         FerroEhrService::new(&DomainPools::from_shared(&db.pool())).with_binding_mapping(named());
@@ -213,7 +213,7 @@ async fn a_rename_holds_on_every_replica() {
 #[tokio::test]
 async fn with_the_listener_down_every_lookup_reads_the_store() {
     let (db, svc) = crate::fixtures::service().await;
-    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false)]).await;
+    crate::fixtures::open_key_spaces(&db, &[LOGIN]).await;
     let svc = svc.with_binding_mapping(named());
     assert!(!svc.bindings().listened().is_listening());
     let value = "4e5f6071-8293-4da4-9ec5-d6e7f8091a2b";
@@ -240,7 +240,7 @@ async fn deaf_second() -> (
     testkit::TestDb,
 ) {
     let (db, first) = crate::fixtures::service().await;
-    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false)]).await;
+    crate::fixtures::open_key_spaces(&db, &[LOGIN]).await;
     let first = first.with_binding_mapping(named());
     let second =
         FerroEhrService::new(&DomainPools::from_shared(&db.pool())).with_binding_mapping(named());
@@ -318,8 +318,7 @@ async fn only_a_change_of_the_side_table_moves_the_binding_revision_once() {
             "DELETE FROM party.binding_representation WHERE basis_code = 'probe'",
         ],
         [
-            "INSERT INTO party.binding_key_space (issuer, portal, state) \
-             VALUES ('urn:probe', false, 'pending')",
+            "INSERT INTO party.binding_key_space (issuer, state) VALUES ('urn:probe', 'pending')",
             "UPDATE party.binding_key_space SET state = 'active' WHERE issuer = 'urn:probe'",
         ],
     ];

@@ -83,8 +83,8 @@ impl Shape {
 /// Holds the caller of `principal` to its agreement's `caller_rate`, then to
 /// the patient it may reach on `req`: a contact point's caller to the EHR of
 /// its TRC patient ([`confine`]), then the treatment context an external
-/// person attests ([`super::attested::attest`]), then a bound representative, of a `persons`
-/// or a `patients` issuer, to the EHR of its subject, and the person
+/// person attests ([`super::attested::attest`]), then a bound representative to the EHR
+/// of its subject, and the person
 /// themself to their own `PERSON` ([`super::portal::bound`]); the refusal of
 /// any, before any patient lookup of the request itself.
 pub(super) fn patient_context<'a>(

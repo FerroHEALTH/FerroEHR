@@ -128,7 +128,7 @@ async fn world(delayed: bool) -> World {
 /// professional `ROLE`; its container id.
 async fn patient_person(pool: &PgPool) -> uuid::Uuid {
     let logins = common::logins_of(ISSUER);
-    common::open_key_spaces(pool, &[(logins.as_str(), false)]).await;
+    common::open_key_spaces(pool, &[logins.as_str()]).await;
     let created = Box::pin(common::binding_service(pool).party_create(
         PartyKind::Person,
         crate::party_binding_http::write(

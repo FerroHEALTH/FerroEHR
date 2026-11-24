@@ -34,8 +34,8 @@ pub(crate) const PERSONS: &str = "https://keycloak.sint-example.example/realms/h
 /// The hospital's own authorization server, the `machines` issuer of its
 /// SCIM client and its system clients.
 pub(crate) const MACHINES: &str = "https://machines.sint-example.example";
-/// The patient portal, the issuer of the patient and her
-/// representative.
+/// The patient's app's authorization server, the issuer of the patient's and
+/// her representative's tokens.
 pub(crate) const PATIENTS: &str = "https://portal.sint-example.example";
 /// The audience of every token.
 pub(crate) const AUDIENCE: &str = "ferroehr";
@@ -44,9 +44,8 @@ pub(crate) const AUDIENCE: &str = "ferroehr";
 pub(crate) const LOGIN: &str = "urn:sint-example:keycloak";
 /// The scope the SCIM clients' tokens carry.
 pub(crate) const SCIM_SCOPE: &str = "ferroehr/scim";
-/// The hospital's SCIM client, and the patient portal's.
+/// The hospital's SCIM client.
 pub(crate) const SCIM: &str = "scim-hospital";
-pub(crate) const PORTAL_SCIM: &str = "scim-portal";
 /// The terminology the hospital codes its roles in, which its SCIM client
 /// sends as the values of a User's `roles` (RFC 7643 §4.1.2).
 pub(crate) const ROLES: &str = "urn:sint-example:roles";
@@ -279,8 +278,8 @@ pub(crate) fn capability(operation: &str, items: &[Value]) -> Value {
 }
 
 /// The deployment's configuration: the three issuers, the staff's logins
-/// bound by the keys SCIM provisions, the patient portal's `patient/`
-/// grants honoured, the break-glass role and the emergency purpose, and
+/// bound by the keys SCIM provisions, the patient's and her representative's
+/// logins bound to their `PERSON`s, the break-glass role and the emergency purpose, and
 /// `root` the first administrator.
 pub(crate) fn config() -> AppConfig {
     let machines = IssuerEntry {
@@ -309,14 +308,14 @@ pub(crate) fn config() -> AppConfig {
         group_claim: "groups".to_owned(),
         group_identifier_issuer: format!("{LOGIN}/groups"),
     };
-    let portal = PartySection {
+    let patient = PartySection {
         issuer: SecretUrl::new(PATIENTS),
         identifier_issuer: PATIENTS.to_owned(),
         identifier_type: "login".to_owned(),
         ..PartySection::default()
     };
     let mut auth = common::auth(AuthSection {
-        issuer: common::bound(vec![machines, persons, patients], vec![staff, portal]),
+        issuer: common::bound(vec![machines, persons, patients], vec![staff, patient]),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
@@ -401,9 +400,10 @@ fn exp() -> i64 {
 
 /// The credential of the caller `name`: a member of staff's Keycloak token
 /// (any other name a new member of staff's, holding `USER`),
-/// the patient's or her representative's portal token naming her EHR
-/// (`eva:<ehr>`, `frank:<ehr>`), or a system client's app-only token
-/// (`client:<id>`).
+/// the patient's own token or her representative's naming her EHR
+/// (`eva:<ehr>`, `frank:<ehr>`), each `fhirUser` the `Patient` or the
+/// `RelatedPerson` acting for her (SMART App Launch 2.2 §fhirUser), or a
+/// system client's app-only token (`client:<id>`).
 pub(crate) fn credential(name: &str) -> String {
     if let Some(client) = name.strip_prefix("client:") {
         return common::bearer(&json!({
@@ -413,8 +413,14 @@ pub(crate) fn credential(name: &str) -> String {
         }));
     }
     if let Some((who, ehr)) = name.split_once(':') {
+        let user = if who == "eva" {
+            "Patient/eva".to_owned()
+        } else {
+            format!("RelatedPerson/{who}")
+        };
         return common::bearer(&json!({
             "iss": PATIENTS, "aud": AUDIENCE, "exp": exp(), "sub": format!("{who}-login"),
+            "fhirUser": user, "patient": "eva",
             "ehrId": ehr, "scope": "patient/composition-*.cruds patient/aql-*.s",
             "roles": ["PATIENT"],
         }));

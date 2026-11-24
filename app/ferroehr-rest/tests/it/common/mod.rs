@@ -596,7 +596,7 @@ pub(crate) async fn grant_basic_users(
     pool: &PgPool,
     users: &[(&str, &[&str])],
 ) {
-    open_key_spaces(pool, &[(BASIC_LOGIN, false)]).await;
+    open_key_spaces(pool, &[BASIC_LOGIN]).await;
     let honoured = [Operation::HoldRoles, Operation::HoldScopes];
     allowing(service, &honoured);
     let committer = binding_service(pool)
@@ -858,7 +858,7 @@ pub(crate) async fn bind_subjects(pool: &PgPool, bound: &[(&str, &str)]) {
     let committer = binding_service(pool);
     for (issuer, sub) in bound {
         let logins = logins_of(issuer);
-        open_key_spaces(pool, &[(logins.as_str(), false)]).await;
+        open_key_spaces(pool, &[logins.as_str()]).await;
         if !bound_already(pool, &logins, sub).await {
             crate::party_binding_http::professional_of(&committer, &logins, sub, "532").await;
         }
@@ -871,7 +871,7 @@ pub(crate) async fn bind_subjects(pool: &PgPool, bound: &[(&str, &str)]) {
 /// patient only when its login is a key of the launch EHR's subject (#6080).
 pub(crate) async fn patient_person(pool: &PgPool, issuer: &str, login: &str) -> uuid::Uuid {
     let logins = logins_of(issuer);
-    open_key_spaces(pool, &[(logins.as_str(), false)]).await;
+    open_key_spaces(pool, &[logins.as_str()]).await;
     if let Some(person) = bound_person(pool, &logins, login).await {
         return person;
     }
@@ -884,6 +884,57 @@ pub(crate) async fn patient_person(pool: &PgPool, issuer: &str, login: &str) -> 
     .await
     .expect("the patient's PERSON commits");
     crate::party_binding_http::vo(&crate::party_binding_http::uid(&created)).0
+}
+
+/// Commits through `svc` the `PERSON` of the shipped patient template named
+/// `display`, whose binding key is `login` under `issuer`, as the default
+/// person mapping writes it; its container id.
+pub(crate) async fn shipped_patient(
+    svc: &FerroEhrService,
+    (issuer, login): (&str, &str),
+    display: &str,
+) -> String {
+    let binding = ferroehr::config::binding::PartyBindingConfig::default();
+    let template_id = ferroehr::party_binding::shipped::PATIENT;
+    let template = binding
+        .person()
+        .template
+        .iter()
+        .find(|template| template.template_id == template_id)
+        .expect("the shipped mapping names the patient template");
+    let name = binding
+        .person()
+        .attribute
+        .iter()
+        .find(|attribute| attribute.name)
+        .and_then(|attribute| attribute.path_for(template_id))
+        .expect("the shipped mapping names the patient's name");
+    let mut values = Vec::new();
+    for (path, text, identifier_type) in [
+        (
+            template.key.path.as_str(),
+            login,
+            template.key.identifier_type.as_str(),
+        ),
+        (name, display, ""),
+    ] {
+        let value = svc
+            .mapped_text_value(template_id, path, text, (issuer, identifier_type))
+            .await
+            .expect("the template draws the value");
+        values.push((path.to_owned(), value));
+    }
+    let body = svc
+        .mapped_party_body(None, template_id, &values)
+        .await
+        .expect("the patient's PERSON body");
+    let created = Box::pin(svc.party_create(
+        ferroehr::service::demographic::types::PartyKind::Person,
+        crate::party_binding_http::write(&body, "532", None),
+    ))
+    .await
+    .expect("the patient's PERSON commits");
+    crate::party_binding_http::vo(&crate::party_binding_http::uid(&created)).to_string()
 }
 
 /// An `EHR_STATUS` whose subject is the `PERSON` `person` of this CDR's
@@ -1065,15 +1116,13 @@ pub(crate) async fn commit_access_settings(svc: &FerroEhrService, ehr_id: EhrId,
 /// replica's first fill does for its mapping's key issuers: a key binds only
 /// under an active key space (`ferroehr::party_binding::key_space`), and a
 /// test service takes no lease.
-pub(crate) async fn open_key_spaces(pool: &PgPool, issuers: &[(&str, bool)]) {
-    for (issuer, portal) in issuers {
+pub(crate) async fn open_key_spaces(pool: &PgPool, issuers: &[&str]) {
+    for issuer in issuers {
         sqlx::query(
-            "INSERT INTO party.binding_key_space (issuer, portal, state) \
-             VALUES ($1, $2, 'active') \
-             ON CONFLICT (issuer) DO UPDATE SET portal = EXCLUDED.portal, state = 'active'",
+            "INSERT INTO party.binding_key_space (issuer, state) VALUES ($1, 'active') \
+             ON CONFLICT (issuer) DO UPDATE SET state = 'active'",
         )
         .bind(issuer)
-        .bind(portal)
         .execute(pool)
         .await
         .expect("the key space is recorded");
@@ -1091,15 +1140,14 @@ pub(crate) async fn open_configured_key_spaces(config: &AppConfig) {
     else {
         return;
     };
-    let spaces: Vec<(String, bool)> = ferroehr::config::binding::key_issuers(&resolved)
+    let spaces: Vec<String> = ferroehr::config::binding::key_issuers(&resolved)
         .into_iter()
-        .map(|issuer| (issuer, false))
         .collect();
     let pools = TEST_POOLS
         .lock()
         .map(|pools| pools.clone())
         .unwrap_or_default();
-    let spaces: Vec<(&str, bool)> = spaces.iter().map(|(i, p)| (i.as_str(), *p)).collect();
+    let spaces: Vec<&str> = spaces.iter().map(String::as_str).collect();
     for pool in &pools {
         // A database whose test dropped it answers no query and serves no
         // request, so it is no database to record the key spaces in.

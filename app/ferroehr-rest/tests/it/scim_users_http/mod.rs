@@ -36,9 +36,9 @@ mod groups;
 mod groups_entra;
 mod jit;
 mod migration;
-mod portal;
 mod records;
 mod refusals;
+mod representations;
 mod roles;
 
 /// The deployment's own authorization server, which issues the clients' tokens.

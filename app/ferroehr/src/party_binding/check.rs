@@ -210,8 +210,9 @@ pub struct IssuerPersons {
 /// What the side table answers once refilled.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 pub struct SideTable {
-    /// The key-bearing `PERSON`s that perform no professional `ROLE`, which
-    /// `adopt` has not reached.
+    /// The key-bearing `PERSON`s that perform no professional `ROLE`: a
+    /// professional `adopt` has not reached, or a person who signs in to
+    /// their own record.
     pub unadopted: Vec<Uuid>,
     /// The provisional `PERSON`s, `553|incomplete|` with a binding key, created
     /// more than `provisional_report_days` days ago, oldest first.
@@ -408,7 +409,7 @@ async fn read_candidates(
     let administrators = named_administrators(input, &keys)?;
     let admin_parties: BTreeSet<Uuid> = administrators.iter().map(|a| a.party).collect();
     store::refill(tx, mapping).await?;
-    let unadopted = side_table(tx, (mapping, parties), input, &|issuer: &str, key: &str| {
+    let unadopted = side_table(tx, parties, input, &|issuer: &str, key: &str| {
         canonical(input, issuer, key)
     })
     .await?
@@ -474,7 +475,7 @@ async fn run(
     };
     let side_table = if duplicates.is_empty() {
         store::refill(tx, mapping).await?;
-        Some(side_table(tx, (mapping, &bearers), input, &canonical_of).await?)
+        Some(side_table(tx, &bearers, input, &canonical_of).await?)
     } else {
         None
     };
@@ -572,24 +573,19 @@ async fn head_states(
 }
 
 /// What the refilled side table on `tx` answers for the key-bearing
-/// `bearers` and the mapped Basic users under `mapping`.
-///
-/// A `PERSON` whose key is a portal login performs no professional `ROLE` by
-/// design (#5622), so it is never reported unadopted, and `adopt` never gives
-/// it one.
+/// `bearers` and the mapped Basic users.
 async fn side_table(
     tx: &mut PgConnection,
-    (mapping, bearers): (&BindingMapping, &[Uuid]),
+    bearers: &[Uuid],
     input: &CheckInput,
     canonical: &impl Fn(&str, &str) -> String,
 ) -> Result<SideTable, CheckError> {
     let professionals: BTreeSet<Uuid> = sqlx::query_scalar(
         "SELECT DISTINCT party_id FROM binding_identifier \
          WHERE selector = 'key' AND retired_at IS NULL \
-           AND (NOT isempty(professional) OR issuer = ANY($2)) AND party_id = ANY($1)",
+           AND NOT isempty(professional) AND party_id = ANY($1)",
     )
     .bind(bearers)
-    .bind(mapping.portal_issuers())
     .fetch_all(&mut *tx)
     .await?
     .into_iter()

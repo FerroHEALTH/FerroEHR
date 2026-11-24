@@ -77,17 +77,6 @@ impl PartyBindingConfig {
         self.person.as_ref().unwrap_or(&person::NO_PERSON)
     }
 
-    /// The person template a patient portal's SCIM client provisions its
-    /// representatives in: the `[authz.party_binding.patient]` template, when
-    /// a `[[authz.party_binding.person.template]]` names it too (#5622).
-    #[must_use]
-    pub fn portal_person_template(&self) -> Option<&person::PersonTemplate> {
-        let wanted = crate::templates::identity::canonical_key(&self.patient.as_ref()?.template_id);
-        self.person().template.iter().find(|template| {
-            crate::templates::identity::canonical_key(&template.template_id) == wanted
-        })
-    }
-
     /// The mapping sections of the table.
     #[must_use]
     pub fn sections(&self) -> person::Sections<'_> {

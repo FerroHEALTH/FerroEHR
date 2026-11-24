@@ -79,8 +79,8 @@ pub(super) fn refused(
 /// A system caller's record names its client `ACTOR` as the party, and the
 /// identifier of the provider its acts-for relationship targets or, when it
 /// names none, the deployment's provider (EHDS Annex II 3.2(a)). A
-/// patient-portal representative's record names their `PERSON` as the party
-/// and the subject they represent.
+/// representative's record names their `PERSON` as the party and the subject
+/// they represent.
 pub(super) fn of_request(
     principal: &super::Principal,
     committer: &ferroehr::versioning::committer::CommitterIdentity,
@@ -185,7 +185,7 @@ fn of(
     }
 }
 
-/// The record of the patient-portal representative `portal`: bound to their
+/// The record of the representative `portal`: bound to their
 /// `PERSON`, representing the subject's `PERSON` (EHDS Annex II 3.2(a)).
 fn portal_record(
     portal: &super::portal::PortalRepresentative,

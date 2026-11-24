@@ -87,7 +87,7 @@ pub(crate) fn mapping() -> BindingMapping {
 /// A service over a fresh database with the mapping installed.
 async fn service() -> (testkit::TestDb, FerroEhrService) {
     let (db, svc) = crate::fixtures::service().await;
-    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false)]).await;
+    crate::fixtures::open_key_spaces(&db, &[LOGIN]).await;
     (db, svc.with_binding_mapping(mapping()))
 }
 
@@ -466,7 +466,7 @@ async fn a_key_of_another_issuer_type_or_path_does_not_match() {
     let (db, svc) = service().await;
     // The other issuer is an active key space too, so the issuer the row
     // carries is what keeps it from matching.
-    crate::fixtures::open_key_spaces(&db, &[("https://other.example", false)]).await;
+    crate::fixtures::open_key_spaces(&db, &["https://other.example"]).await;
     let value = "0b9e6c2a-5d4f-4e8a-9b1c-2d3e4f5a6b7c";
     professional(&svc, value).await;
 
@@ -1432,7 +1432,7 @@ async fn the_lookup_runs_on_the_party_role_only() {
     let pools = ferroehr::db::connect_domains(&storage)
         .await
         .expect("each pool connects on its own credential");
-    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false)]).await;
+    crate::fixtures::open_key_spaces(&db, &[LOGIN]).await;
     let svc = FerroEhrService::new(&pools).with_binding_mapping(mapping());
     let (vo, _) = professional(&svc, UPPER_KEY).await;
 

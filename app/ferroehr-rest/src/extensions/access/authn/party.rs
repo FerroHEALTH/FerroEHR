@@ -475,9 +475,9 @@ pub(super) fn kind_refusal(caller: &Caller) -> Option<AuthError> {
 /// Bearer subject was minted by the identity provider, so the audit records the
 /// validated token issuer; Basic credentials are local and carry none. A
 /// system caller's client `ACTOR` is `granted`'s client, the party its issuer
-/// and `client_id` name in the policy parties, when one does. A patient-portal
-/// representative commits as the representative, writing through a
-/// patient-context credential, their `PERSON` in the details.
+/// and `client_id` name in the policy parties, when one does. A
+/// representative admitted on a stored representation commits as the
+/// representative, their `PERSON` in the details.
 pub(super) fn committer_identity(
     principal: &super::Principal,
     granted: &Capabilities,

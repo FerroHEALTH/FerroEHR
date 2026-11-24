@@ -91,10 +91,6 @@ pub struct ScimClient {
     /// The issuer its Groups' `externalId`s are written under
     /// ([`ferroehr::config::scim::group_issuer`]).
     pub group_issuer: String,
-    /// Whether the client provisions a patient portal's representatives: its
-    /// `binding_issuer` is a `patients` issuer, so its Users are `PERSON`s of
-    /// the patient template with no professional `ROLE` (#5622).
-    pub portal: bool,
     /// The roles its Users may hold: the terminology its `scim_provision`
     /// grants code them in, and the codes they admit.
     pub roles: RoleCeiling,
@@ -386,7 +382,7 @@ fn provisioning_client(
     {
         return Err(forbidden(format!(
             "the scim_provision grant names the binding_issuer {binding_issuer:?}, which is the \
-             identifier_issuer of no party table and no patients issuer"
+             identifier_issuer of no party table"
         )));
     }
     let own = capabilities.client().map(|client| client.party);
@@ -443,8 +439,6 @@ fn provisioning_client(
         client_id,
         binding_issuer: binding_issuer.to_owned(),
         group_issuer: ferroehr::config::scim::group_issuer(binding_issuer, &gate.parties),
-        // TODO(#6484): remove the portal client with the patient-portal key spaces.
-        portal: false,
         roles: RoleCeiling {
             terminology,
             allowed,
