@@ -41,8 +41,6 @@ on:
   # would re-measure unchanged settings.
   schedule:
     - cron: '37 5 * * 1'
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions: {}

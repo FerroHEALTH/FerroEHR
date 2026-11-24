@@ -117,7 +117,6 @@ fn config(mapping: &str) -> FerroEhrConfig {
         r#"
 [auth.issuer.staff]
 issuer = "https://idp.example/realms/staff"
-kind = "persons"
 audience = ["ferroehr"]
 
 [auth.issuer.staff.party]

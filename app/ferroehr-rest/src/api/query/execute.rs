@@ -22,8 +22,9 @@ use crate::overview::error::RestError;
 
 use super::response::{self, QueryScope};
 use super::{adhoc, cohort, stored};
+use crate::overview::negotiate;
 use crate::state::AppState;
-use ferroehr::telemetry::stage::{self, Stage};
+use ferroehr::telemetry::stage::Stage;
 
 /// The execution path of one query operation.
 #[derive(Debug, Clone, Copy)]
@@ -83,7 +84,7 @@ pub(crate) async fn serve(
     };
 
     let mut resp = {
-        let _stage = stage::enter(Stage::Encode);
+        let _stage = negotiate::off_the_pool(Stage::Encode);
         response::respond_result_set(&parts.headers, &outcome.result_set)
     };
     if let Some(log_read) = &outcome.log_read {

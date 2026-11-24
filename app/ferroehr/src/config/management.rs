@@ -182,26 +182,14 @@ mod tests {
         assert_eq!(c.profiling.max_frequency, 999);
     }
 
-    /// The probes are not part of this section (they are the always-on public
-    /// `/health` family), so a config carrying the removed probe switch or a
-    /// probe level must fail loudly at boot rather than be silently ignored
-    /// (`deny_unknown_fields`).
     #[test]
-    fn removed_probe_keys_are_rejected() {
-        let err = toml::from_str::<ManagementConfig>("probes_enabled = true")
-            .expect_err("probes_enabled must be an unknown field");
-        assert!(
-            err.to_string().contains("probes_enabled"),
-            "the error must name the offending key: {err}"
-        );
-        for probe in ["liveness", "readiness"] {
-            let err = toml::from_str::<EndpointLevels>(&format!("{probe} = \"public\""))
-                .expect_err("a probe level must be an unknown field");
-            assert!(
-                err.to_string().contains(probe),
-                "the error must name the offending key: {err}"
-            );
-        }
+    fn an_unknown_key_is_refused() {
+        let err =
+            toml::from_str::<ManagementConfig>("colour = \"blue\"").expect_err("an unknown key");
+        assert!(err.to_string().contains("colour"), "{err}");
+        let err =
+            toml::from_str::<EndpointLevels>("colour = \"public\"").expect_err("an unknown key");
+        assert!(err.to_string().contains("colour"), "{err}");
     }
 
     /// The health detail and the full status document are endpoints like the

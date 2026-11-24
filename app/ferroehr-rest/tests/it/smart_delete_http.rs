@@ -107,7 +107,7 @@ async fn delete(
 async fn a_delete_of_a_version_behind_the_tip_answers_as_before() {
     let issuer = issuer().await;
     let uri = issuer.uri();
-    let (db, app) = common::app(config(&uri, false, false)).await;
+    let (db, app) = common::app(config(&uri, false)).await;
     let s = seed(&db).await;
     let path = format!("/ehr/{}/composition/{}", s.ehr, s.v1);
     let (status, challenged, body) = delete(&app, &uri, COVERED, &path, None).await;
@@ -125,7 +125,7 @@ async fn a_delete_of_a_version_behind_the_tip_answers_as_before() {
 async fn a_delete_of_another_ehrs_version_answers_as_before() {
     let issuer = issuer().await;
     let uri = issuer.uri();
-    let (db, app) = common::app(config(&uri, false, false)).await;
+    let (db, app) = common::app(config(&uri, false)).await;
     let s = seed(&db).await;
     let path = format!("/ehr/{}/composition/{}", s.ehr, s.other);
     let (status, challenged, body) = delete(&app, &uri, COVERED, &path, None).await;
@@ -152,7 +152,7 @@ async fn a_delete_of_another_ehrs_version_answers_as_before() {
 async fn a_delete_of_a_version_the_store_lacks_answers_as_before() {
     let issuer = issuer().await;
     let uri = issuer.uri();
-    let (db, app) = common::app(config(&uri, false, false)).await;
+    let (db, app) = common::app(config(&uri, false)).await;
     let s = seed(&db).await;
     let absent = s.v2.replace("::2", "::9");
     let path = format!("/ehr/{}/composition/{absent}", s.ehr);
@@ -172,7 +172,7 @@ async fn a_delete_of_a_version_the_store_lacks_answers_as_before() {
 async fn a_stale_condition_and_a_malformed_delete_answer_as_before() {
     let issuer = issuer().await;
     let uri = issuer.uri();
-    let (db, app) = common::app(config(&uri, false, false)).await;
+    let (db, app) = common::app(config(&uri, false)).await;
     let s = seed(&db).await;
     let tip = format!("/ehr/{}/composition/{}", s.ehr, s.v2);
     let (status, challenged, body) = delete(&app, &uri, COVERED, &tip, Some(&s.v1)).await;

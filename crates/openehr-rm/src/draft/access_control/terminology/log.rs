@@ -150,8 +150,6 @@ group! {
         KeyClaimMissing => "key claim missing",
         /// The credential's groups could not be read.
         GroupsUnavailable => "groups unavailable",
-        /// The credential is a guest's.
-        Guest => "guest",
         /// The credential of a person of another organisation lacks what
         /// binding it needs.
         ExternalCredentialIncomplete => "external credential incomplete",

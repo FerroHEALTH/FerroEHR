@@ -1,0 +1,1 @@
+- A care relationship commit, and every other write that names an ADL2 template, no longer reads the OPT 1.4 template store on each request: a replica remembers that no OPT 1.4 template is stored under an id at the definition revision the request read, and forgets it when that revision moves.

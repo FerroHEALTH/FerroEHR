@@ -74,12 +74,12 @@ async fn walk() -> Walk {
     }
 }
 
-/// A request as the representative of `subject`.
-fn as_representative(subject: &str, method: &str, uri: &str) -> http::request::Builder {
+/// A request as the representative launched for the EHR `ehr`.
+fn as_representative(ehr: &str, method: &str, uri: &str) -> http::request::Builder {
     Request::builder()
         .method(method)
         .uri(common::full(uri))
-        .header("authorization", representative(subject))
+        .header("authorization", representative(ehr))
         .header("content-type", "application/json")
 }
 
@@ -128,7 +128,7 @@ async fn every_route_naming_another_subjects_ehr_refuses_and_records_alike() {
         "the walk covers the directory, tag, export and import routes: {routes:?}"
     );
     for (n, (method, template)) in routes.iter().enumerate() {
-        let req = as_representative(&walk.subject, method, &concrete(template, &walk.stranger))
+        let req = as_representative(&walk.child, method, &concrete(template, &walk.stranger))
             .body(Body::from("{}"))
             .expect("request");
         assert_refused(&walk, req, n + 1, &format!("{method} {template}")).await;
@@ -143,7 +143,7 @@ async fn every_route_naming_another_subjects_ehr_refuses_and_records_alike() {
 async fn no_route_naming_the_represented_subjects_ehr_refuses() {
     let walk = walk().await;
     for (method, template) in ehr_routes(&config()) {
-        let req = as_representative(&walk.subject, &method, &concrete(&template, &walk.child))
+        let req = as_representative(&walk.child, &method, &concrete(&template, &walk.child))
             .body(Body::from("{}"))
             .expect("request");
         let answer = status(&walk.app, req).await;
@@ -167,21 +167,21 @@ async fn an_ehr_named_outside_the_path_refuses_and_records_alike() {
     let named = [
         (
             "a query scoped by its ehr_id parameter",
-            as_representative(&walk.subject, "GET", &query).body(Body::empty()),
+            as_representative(&walk.child, "GET", &query).body(Body::empty()),
         ),
         (
             "a query scoped by its openehr-ehr-id header",
-            as_representative(&walk.subject, "POST", "/query/aql")
+            as_representative(&walk.child, "POST", "/query/aql")
                 .header("openehr-ehr-id", stranger)
                 .body(Body::from(aql)),
         ),
         (
             "an import naming the EHR by its ehr_id parameter",
-            as_representative(&walk.subject, "POST", &import).body(Body::from("{}")),
+            as_representative(&walk.child, "POST", &import).body(Body::from("{}")),
         ),
         (
             "a manifest export naming another subject's EHR",
-            as_representative(&walk.subject, "POST", "/message/export")
+            as_representative(&walk.child, "POST", "/message/export")
                 .body(Body::from(manifest(&[&walk.child, stranger]).to_string())),
         ),
     ];
@@ -200,15 +200,15 @@ async fn an_operation_naming_no_ehr_refuses_and_records_alike() {
     let unnamed = [
         (
             "an EHR create",
-            as_representative(&walk.subject, "POST", "/ehr").body(Body::from("{}")),
+            as_representative(&walk.child, "POST", "/ehr").body(Body::from("{}")),
         ),
         (
             "a query with no single-EHR scope",
-            as_representative(&walk.subject, "POST", "/query/aql").body(Body::from(aql)),
+            as_representative(&walk.child, "POST", "/query/aql").body(Body::from(aql)),
         ),
         (
             "an import naming no EHR",
-            as_representative(&walk.subject, "POST", "/message/import").body(Body::from("{}")),
+            as_representative(&walk.child, "POST", "/message/import").body(Body::from("{}")),
         ),
     ];
     for (n, (label, req)) in unnamed.into_iter().enumerate() {
@@ -223,7 +223,7 @@ async fn a_lookup_by_subject_finds_only_the_represented_ehr() {
     let walk = walk().await;
     let lookup = |subject: &str| {
         as_representative(
-            &walk.subject,
+            &walk.child,
             "GET",
             &format!("/ehr?subject_id={subject}&subject_namespace=demographic"),
         )
