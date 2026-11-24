@@ -239,6 +239,9 @@ pub struct AuditStore {
     group: Arc<crate::access_log::intake::Gathered>,
     #[cfg(feature = "fhir")]
     cursor: search_page::IndexCursor,
+    /// The ITI-81 statements of each search shape this store has run.
+    #[cfg(feature = "fhir")]
+    page_shapes: Arc<search_page::PageShapes>,
     /// The catch-up of the access log's search index the token searches run.
     catch_up: Arc<access_index::CatchUp>,
 }
@@ -264,6 +267,8 @@ impl AuditStore {
             group: Arc::default(),
             #[cfg(feature = "fhir")]
             cursor: search_page::IndexCursor::default(),
+            #[cfg(feature = "fhir")]
+            page_shapes: Arc::default(),
             catch_up: Arc::default(),
         }
     }
@@ -825,21 +830,25 @@ impl AuditStore {
         };
         let mut conn = acquire(&self.pool).await?;
         let cursor = self.cursor.bound(&mut conn).await?;
-        let (count_sql, count_values, sql, values) =
-            search_page::build_search_statements(filter, &resolved, cursor);
+        let search_page::Statements {
+            template,
+            count_values,
+            values,
+        } = self.page_shapes.statements(filter, &resolved, cursor);
         // NOTE: our own design (#6005), a shape's text is a named statement that PostgreSQL may
         // plan once per connection (plan_cache_mode auto); any other text goes unnamed.
         let shaped = search_page::shaped(filter);
         let total = if filter.total {
-            let total: i64 = sqlx::query_scalar_with(sqlx::AssertSqlSafe(count_sql), count_values)
-                .persistent(shaped)
-                .fetch_one(&mut *conn)
-                .await?;
+            let total: i64 =
+                sqlx::query_scalar_with(sqlx::AssertSqlSafe(template.count_sql()), count_values)
+                    .persistent(shaped)
+                    .fetch_one(&mut *conn)
+                    .await?;
             Some(total)
         } else {
             None
         };
-        let mut rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
+        let mut rows = sqlx::query_with(sqlx::AssertSqlSafe(template.sql()), values)
             .persistent(shaped)
             .fetch_all(&mut *conn)
             .await?;

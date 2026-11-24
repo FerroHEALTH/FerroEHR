@@ -424,3 +424,98 @@ fn a_carried_page_selects_the_policy_revisions() {
     let (_, _, plain, _) = build_search_statements(&filter_with("benign"), &RESOLVED, 0);
     assert!(!plain.contains("request_revisions"), "{plain}");
 }
+
+/// The searches of [`a_shapes_statements_are_the_built_ones`]: each shape
+/// twice, with other values the second time.
+fn shaped_searches() -> Vec<(
+    AuditSearchFilter,
+    Vec<Option<crate::system_log::search::TokenMatch>>,
+)> {
+    use crate::system_log::search::{ColumnMatch, IdentifierColumn, TokenMatch};
+    let at = |second: i64| Some(jiff::Timestamp::from_second(second).expect("an instant"));
+    let mut searches = Vec::new();
+    for round in 0..2_i64 {
+        let text = |name: &str| format!("{name}-{round}");
+        searches.push((
+            AuditSearchFilter {
+                count: 20 + round,
+                offset: round * 7,
+                ..AuditSearchFilter::default()
+            },
+            Vec::new(),
+        ));
+        searches.push((
+            AuditSearchFilter {
+                from: at(1_700_000_000 + round),
+                until: at(1_800_000_000 + round),
+                until_inclusive: round == 1,
+                criteria: vec![
+                    AuditCriterion::Patient(vec![text("p"), text("q")]),
+                    AuditCriterion::Outcome(vec![0, 4 * i16::try_from(round).expect("a round")]),
+                    AuditCriterion::Action(vec![text("R")]),
+                ],
+                count: 50,
+                total: true,
+                ..AuditSearchFilter::default()
+            },
+            Vec::new(),
+        ));
+        searches.push((
+            AuditSearchFilter {
+                until: at(1_900_000_000 - round),
+                criteria: vec![
+                    AuditCriterion::Agent(vec![text("agent")]),
+                    AuditCriterion::Element(AuditElement::EntityIdentifier, Vec::new()),
+                ],
+                ..AuditSearchFilter::default()
+            },
+            vec![
+                None,
+                Some(TokenMatch {
+                    ids: vec![3, i32::try_from(round).expect("a round") + 5],
+                    columns: vec![
+                        ColumnMatch {
+                            column: IdentifierColumn::ResourceId,
+                            sets: vec![-1],
+                            value: Some(text("resource")),
+                        },
+                        ColumnMatch {
+                            column: IdentifierColumn::RequestId,
+                            sets: vec![-2, -3],
+                            value: None,
+                        },
+                    ],
+                }),
+            ],
+        ));
+    }
+    searches
+}
+
+/// Each search's statements, from its shape's template or built for it, are
+/// byte for byte the statements built for it, and so are their values
+/// (#6362).
+#[test]
+fn a_shapes_statements_are_the_built_ones() {
+    let shapes = super::search_page::PageShapes::default();
+    let mut templates = Vec::new();
+    for (filter, resolved) in shaped_searches() {
+        let cursor = 40 + filter.offset;
+        let (count_sql, count_values, sql, values) =
+            build_search_statements(&filter, &resolved, cursor);
+        let statements = shapes.statements(&filter, &resolved, cursor);
+        assert_eq!(statements.template.count_sql(), count_sql);
+        assert_eq!(statements.template.sql(), sql);
+        assert_eq!(statements.count_values.0, count_values.0);
+        assert_eq!(statements.values.0, values.0);
+        templates.push(statements.template);
+    }
+    // The page alone and the token search are each one shape across their
+    // values, so the second search of each runs the first one's template.
+    for (first, second) in [(0, 3), (2, 5)] {
+        assert!(std::sync::Arc::ptr_eq(
+            &templates[first],
+            &templates[second]
+        ));
+    }
+}
