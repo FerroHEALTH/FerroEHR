@@ -33,7 +33,7 @@
 //!
 //! The bytes a request moves over the database wire are counted on their own
 //! run, through a relay that splits the protocol messages by statement
-//! ([`super::wire`], #6244), and held to [`WIRE_BUDGETS`].
+//! ([`super::wire`], #6244), and held to its [`Budget`] `wire` ceiling.
 //!
 //! Each figure is held to the ceiling [`BUDGETS`] names: the measured end
 //! state of the core rewrite (#6001) plus a small margin. A ceiling only ever
@@ -228,6 +228,11 @@ struct Budget {
     /// The `pg_notify` calls, top-level or nested.
     notifies: u64,
     wal: u64,
+    /// The bytes the path may move over the database wire per request, both
+    /// directions together, as [`every_hot_path_stays_within_its_wire_budget`]
+    /// counts them (#6244). Each path binds the facts snapshot, counted as 4
+    /// bytes (#6462).
+    wire: u64,
 }
 
 /// The ceilings by path. Before the core rewrite (feat/core-rewrite at
@@ -514,6 +519,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 0,
         notifies: 0,
         wal: 187_262,
+        wire: 201_605,
     },
     Budget {
         path: Path::CommitXml,
@@ -524,6 +530,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 0,
         notifies: 0,
         wal: 187_591,
+        wire: 201_605,
     },
     Budget {
         path: Path::CommitFlat,
@@ -534,6 +541,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 0,
         notifies: 0,
         wal: 188_061,
+        wire: 201_601,
     },
     Budget {
         path: Path::ReadJson,
@@ -544,6 +552,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 1,
         notifies: 0,
         wal: 775,
+        wire: 130_834,
     },
     Budget {
         path: Path::ReadXml,
@@ -554,6 +563,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 1,
         notifies: 0,
         wal: 775,
+        wire: 130_834,
     },
     Budget {
         path: Path::ReadFlat,
@@ -564,6 +574,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 1,
         notifies: 0,
         wal: 775,
+        wire: 130_834,
     },
     Budget {
         path: Path::EhrRead,
@@ -574,6 +585,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 1,
         notifies: 0,
         wal: 575,
+        wire: 1555,
     },
     Budget {
         path: Path::AqlSingle,
@@ -584,6 +596,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 0,
         notifies: 0,
         wal: 1758,
+        wire: 4526,
     },
     Budget {
         path: Path::AqlPopulation,
@@ -594,6 +607,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 0,
         notifies: 0,
         wal: 4762,
+        wire: 6138,
     },
     Budget {
         path: Path::Iti81,
@@ -604,6 +618,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 1,
         notifies: 0,
         wal: 567,
+        wire: 26_759,
     },
     Budget {
         path: Path::PartyRead,
@@ -614,6 +629,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 1,
         notifies: 0,
         wal: 1035,
+        wire: 5291,
     },
     Budget {
         path: Path::CommitContribution,
@@ -624,6 +640,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 0,
         notifies: 0,
         wal: 188_700,
+        wire: 202_062,
     },
     Budget {
         path: Path::ReadAtTime,
@@ -634,6 +651,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 1,
         notifies: 0,
         wal: 775,
+        wire: 130_865,
     },
     Budget {
         path: Path::CommitStatus,
@@ -644,6 +662,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 0,
         notifies: 1,
         wal: 4725,
+        wire: 4499,
     },
     Budget {
         path: Path::ReadStatus,
@@ -654,6 +673,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 1,
         notifies: 0,
         wal: 703,
+        wire: 2760,
     },
     Budget {
         path: Path::CommitParty,
@@ -664,6 +684,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 3,
         notifies: 1,
         wal: 6511,
+        wire: 8252,
     },
     Budget {
         path: Path::AqlMatches,
@@ -674,6 +695,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 0,
         notifies: 0,
         wal: 5274,
+        wire: 15_637,
     },
     Budget {
         path: Path::AqlParty,
@@ -684,6 +706,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 0,
         notifies: 0,
         wal: 1027,
+        wire: 11_339,
     },
     Budget {
         path: Path::CommitPartyScored,
@@ -694,6 +717,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 3,
         notifies: 1,
         wal: 9062,
+        wire: 10_604,
     },
     Budget {
         path: Path::ReadVersion,
@@ -704,6 +728,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 1,
         notifies: 0,
         wal: 775,
+        wire: 1684,
     },
     Budget {
         path: Path::CommitUpdate,
@@ -714,6 +739,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 0,
         notifies: 0,
         wal: 186_756,
+        wire: 201_886,
     },
     Budget {
         path: Path::CommitDelete,
@@ -724,6 +750,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 0,
         notifies: 0,
         wal: 4205,
+        wire: 4077,
     },
     Budget {
         path: Path::DirectoryCreate,
@@ -734,6 +761,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 1,
         notifies: 0,
         wal: 5645,
+        wire: 4784,
     },
     Budget {
         path: Path::DirectoryUpdate,
@@ -744,6 +772,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 1,
         notifies: 0,
         wal: 4740,
+        wire: 4595,
     },
     Budget {
         path: Path::DirectoryDelete,
@@ -754,6 +783,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 1,
         notifies: 0,
         wal: 4013,
+        wire: 3952,
     },
     Budget {
         path: Path::PartyUpdate,
@@ -764,6 +794,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 3,
         notifies: 1,
         wal: 6407,
+        wire: 9185,
     },
     Budget {
         path: Path::PartyDelete,
@@ -774,6 +805,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 3,
         notifies: 1,
         wal: 4191,
+        wire: 7736,
     },
     Budget {
         path: Path::CommitOrganisation,
@@ -784,6 +816,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 0,
         notifies: 0,
         wal: 6691,
+        wire: 7570,
     },
     Budget {
         path: Path::CommitGroup,
@@ -794,6 +827,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 0,
         notifies: 0,
         wal: 6495,
+        wire: 7399,
     },
     Budget {
         path: Path::CommitRole,
@@ -804,6 +838,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 5,
         notifies: 0,
         wal: 6808,
+        wire: 11_194,
     },
     Budget {
         path: Path::CommitAgent,
@@ -814,6 +849,7 @@ const BUDGETS: [Budget; 31] = [
         nested: 0,
         notifies: 0,
         wal: 6582,
+        wire: 7379,
     },
 ];
 
@@ -822,46 +858,6 @@ const BUDGETS: [Budget; 31] = [
 pub(super) fn order() -> impl Iterator<Item = Path> {
     BUDGETS.iter().map(|budget| budget.path)
 }
-
-/// The bytes each path may move over the database wire per request, both
-/// directions together, as [`every_hot_path_stays_within_its_wire_budget`]
-/// counts them (#6244).
-// NOTE: our own design (#6074, #6462), each path binds the facts snapshot, counted as 4 bytes.
-const WIRE_BUDGETS: [(Path, u64); 31] = [
-    (Path::CommitJson, 201_605),
-    (Path::CommitXml, 201_605),
-    (Path::CommitFlat, 201_601),
-    (Path::ReadJson, 130_834),
-    (Path::ReadXml, 130_834),
-    (Path::ReadFlat, 130_834),
-    (Path::EhrRead, 1555),
-    (Path::AqlSingle, 4526),
-    (Path::AqlPopulation, 6138),
-    (Path::Iti81, 26_759),
-    (Path::PartyRead, 5291),
-    (Path::CommitContribution, 202_062),
-    (Path::ReadAtTime, 130_865),
-    (Path::CommitStatus, 4499),
-    (Path::ReadStatus, 2760),
-    (Path::CommitParty, 8252),
-    (Path::AqlMatches, 15_637),
-    (Path::AqlParty, 11_339),
-    (Path::CommitPartyScored, 10_604),
-    (Path::ReadVersion, 1684),
-    (Path::CommitUpdate, 201_886),
-    (Path::CommitDelete, 4077),
-    (Path::DirectoryCreate, 4784),
-    (Path::DirectoryUpdate, 4595),
-    (Path::DirectoryDelete, 3952),
-    // NOTE: #6392, the party gate returns the tip_cold flag its own promotion reads.
-    (Path::PartyUpdate, 9185),
-    // NOTE: #6392, the party gate returns the tip_cold flag its own promotion reads.
-    (Path::PartyDelete, 7736),
-    (Path::CommitOrganisation, 7570),
-    (Path::CommitGroup, 7399),
-    (Path::CommitRole, 11_194),
-    (Path::CommitAgent, 7379),
-];
 
 /// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round
 /// trips) and the conversion events by their `op`.
@@ -2216,12 +2212,7 @@ async fn every_hot_path_stays_within_its_wire_budget() {
     let mut over = Vec::new();
     for (budget, m) in &measured {
         let path = budget.path;
-        let ceiling = WIRE_BUDGETS
-            .iter()
-            .find(|(of, _)| *of == path)
-            .map(|(_, ceiling)| *ceiling)
-            .expect("every path has its wire budget");
-        let (ok, cell) = judged(median(&m.wire_each), ceiling);
+        let (ok, cell) = judged(median(&m.wire_each), budget.wire);
         if !ok {
             over.push(format!("{}: wire bytes {cell}", path.name()));
         }
@@ -2240,11 +2231,6 @@ async fn every_hot_path_stays_within_its_wire_budget() {
     assert!(
         over.is_empty(),
         "a hot path exceeds its wire budget: {over:?}\n{report}\n{ledgers}"
-    );
-    assert_eq!(
-        WIRE_BUDGETS.len(),
-        Path::ALL.len(),
-        "every path has its wire budget"
     );
 }
 
