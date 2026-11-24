@@ -1,0 +1,1 @@
+- The RFC 8785 writer behind signatures and digests records the name order of each object it closes and writes the form once at the end, so its cost per byte no longer grows with how deep objects nest. The canonical bytes are unchanged.
