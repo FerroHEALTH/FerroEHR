@@ -378,7 +378,6 @@ CREATE TABLE audit_event (
     party                  jsonb,
     party_groups           jsonb,
     provider               jsonb,
-    guest                  boolean     NOT NULL DEFAULT false,
     representation         jsonb,
     external_fields        jsonb,
     agreement              jsonb,
@@ -433,7 +432,7 @@ CREATE TABLE audit_event (
             'refused-unbound', 'refused-ambiguous', 'refused-inactive', 'refused-abandoned',
             'refused-deprovisioned', 'refused-wrong-marker',
             'refused-representation-unrecorded', 'refused-key-claim-missing',
-            'refused-groups-unavailable', 'refused-guest', 'refused-external-incomplete',
+            'refused-groups-unavailable', 'refused-external-incomplete',
             'refused-trc-patient-mismatch', 'refused-trc-missing',
             'refused-system-personal-scope', 'refused-no-agreement',
             'refused-scope-beyond-agreement', 'refused-correlation-missing')),
@@ -567,8 +566,6 @@ COMMENT ON COLUMN audit_event.party_groups IS
     'The ids of the GROUP parties the token names that the bound party belongs to.';
 COMMENT ON COLUMN audit_event.provider IS
     'The healthcare provider the access is attributed to, {issuer, id} (EHDS Annex II 3.2(a)).';
-COMMENT ON COLUMN audit_event.guest IS
-    'Whether the bound caller is a guest its issuer admits (GDPR Art. 9(3), Art. 29).';
 COMMENT ON COLUMN audit_event.representation IS
     'For a representative: whom they act for, on which asserted ground, and the subject_relationship code of their committer.';
 COMMENT ON COLUMN audit_event.external_fields IS

@@ -154,8 +154,6 @@ pub struct Record<'a> {
     pub search_tokens: &'a str,
     /// `binding`.
     pub binding: Option<&'a str>,
-    /// `guest`.
-    pub guest: bool,
     /// `party`.
     pub party: Option<&'a Value>,
     /// `party_groups`.
@@ -227,7 +225,6 @@ pub fn of(record: &Record<'_>) -> Result<[u8; 32], Unwritable> {
     w.text("event_code", record.event_code);
     w.json("external_fields", record.external_fields)?;
     w.json("facilities", record.facilities)?;
-    w.boolean("guest", record.guest);
     w.uuid("id", record.id);
     w.optional_text("issuer", record.issuer);
     w.optional_text("legal_basis", record.legal_basis);
@@ -491,7 +488,7 @@ pub const STORED: &str = "jsonb_build_object(\
      'category_content', e.category_content, \
      'render_policy', encode(e.render_policy, 'hex'), \
      'search_tokens', to_jsonb(e.search_tokens::text[]), \
-     'binding', e.binding, 'guest', e.guest) \
+     'binding', e.binding) \
      || jsonb_build_object(\
      'party', e.party, 'party_groups', e.party_groups, 'provider', e.provider, \
      'representation', e.representation, 'external_fields', e.external_fields, \
@@ -554,7 +551,6 @@ mod tests {
             render_policy: &[0x00, 0xff],
             search_tokens: "{3,-1}",
             binding: None,
-            guest: false,
             party: None,
             party_groups: None,
             provider: None,
@@ -617,7 +613,6 @@ mod tests {
             ("render_policy", text("00ff")),
             ("search_tokens", serde_json::json!(["3", "-1"])),
             ("binding", Value::Null),
-            ("guest", Value::Bool(false)),
             ("party", Value::Null),
             ("party_groups", Value::Null),
             ("provider", Value::Null),
