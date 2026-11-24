@@ -462,20 +462,36 @@ async fn found(seeded: &Seeded, criteria: Vec<AuditCriterion>) -> i64 {
     found_in(seeded.sender.store(), criteria).await
 }
 
-/// The ITI-81 total of the records `criteria` match in `store`.
+/// The ITI-81 total of the records `criteria` match in `store`, asked again
+/// while it is refused as behind until [`SETTLED`] passes.
+///
+/// The frontier follows the `xmin` of the whole server, so a transaction
+/// another test holds open can keep the index behind for longer than one
+/// search waits (#6475).
 async fn found_in(store: &AuditStore, criteria: Vec<AuditCriterion>) -> i64 {
-    store
-        .search(&AuditSearchFilter {
-            criteria,
-            count: 1,
-            total: true,
-            ..AuditSearchFilter::default()
-        })
-        .await
+    let filter = AuditSearchFilter {
+        criteria,
+        count: 1,
+        total: true,
+        ..AuditSearchFilter::default()
+    };
+    let deadline = std::time::Instant::now() + SETTLED;
+    let answered = loop {
+        match store.search(&filter).await {
+            Err(ferroehr::system_log::AuditError::IndexBehind(_))
+                if std::time::Instant::now() < deadline => {}
+            answered => break answered,
+        }
+    };
+    answered
         .expect("the ITI-81 search answers")
         .total
         .expect("the search counts")
 }
+
+/// How long [`found_in`] asks again while other tests' transactions hold
+/// the server's `xmin` back.
+const SETTLED: Duration = Duration::from_secs(120);
 
 /// The reads of the seed `0..entries` that `keep` keeps, counted.
 fn reads(entries: u32, keep: impl Fn(&AuditEvent) -> bool) -> i64 {
@@ -985,36 +1001,14 @@ async fn cursor_at(pool: &sqlx::PgPool, cursor: i64) {
         .expect("the cursor stands behind");
 }
 
-/// The ITI-81 address search of `address`, counted, asked again while it is
-/// refused as behind until [`SETTLED`] passes.
-///
-/// The frontier follows the `xmin` of the whole server, so a transaction
-/// another test holds open can keep the index behind for longer than one
-/// search waits (#6475).
+/// The ITI-81 address search of `address`, counted ([`found_in`]).
 async fn by_address(store: &AuditStore, address: &str) -> i64 {
-    let filter = AuditSearchFilter {
-        criteria: vec![AuditCriterion::Address(vec![address.to_owned()])],
-        count: 1,
-        total: true,
-        ..AuditSearchFilter::default()
-    };
-    let deadline = std::time::Instant::now() + SETTLED;
-    let answered = loop {
-        match store.search(&filter).await {
-            Err(ferroehr::system_log::AuditError::IndexBehind(_))
-                if std::time::Instant::now() < deadline => {}
-            answered => break answered,
-        }
-    };
-    answered
-        .expect("the ITI-81 search answers")
-        .total
-        .expect("the search counts")
+    found_in(
+        store,
+        vec![AuditCriterion::Address(vec![address.to_owned()])],
+    )
+    .await
 }
-
-/// How long [`by_address`] asks again while other tests' transactions hold
-/// the server's `xmin` back.
-const SETTLED: Duration = Duration::from_secs(120);
 
 /// A read from `address`, recorded through the sender as a request records
 /// it.
