@@ -143,24 +143,9 @@ pub(crate) async fn commit_version_set(
         }
         let index = v.index;
         let change = build_change(cx, &target_kinds, v, ehr_id, party_only).await?;
-        if let (
-            Some(ehr_id),
-            Change::Create {
-                kind: Kind::Composition,
-                body,
-                ..
-            }
-            | Change::Modify {
-                kind: Kind::Composition,
-                body,
-                ..
-            },
-        ) = (ehr_id, &change.1)
-        {
-            cx.placement_declared(ehr_id, body)
-                .await
-                .map_err(|e| e.for_version_member(index))?;
-        }
+        placement_declared(cx, ehr_id, &change.1)
+            .await
+            .map_err(|e| e.for_version_member(index))?;
         changes.push(change);
     }
 
@@ -475,6 +460,35 @@ async fn read_target_kinds(
             .filter_map(|(id, kind)| Kind::from_type(&kind).map(|k| (id, k)))
             .collect(),
     )
+}
+
+/// Refuses a COMPOSITION member `change` of a CONTRIBUTION into `ehr_id`
+/// placed in an episode no care relationship of the EHR's subject names
+/// ([`FerroEhrService::placement_declared`]).
+///
+/// # Errors
+/// As [`FerroEhrService::placement_declared`].
+async fn placement_declared(
+    cx: &FerroEhrService,
+    ehr_id: Option<EhrId>,
+    change: &Change,
+) -> Result<(), ServiceError> {
+    match (ehr_id, change) {
+        (
+            Some(ehr_id),
+            Change::Create {
+                kind: Kind::Composition,
+                body,
+                ..
+            }
+            | Change::Modify {
+                kind: Kind::Composition,
+                body,
+                ..
+            },
+        ) => cx.placement_declared(ehr_id, body).await,
+        _ => Ok(()),
+    }
 }
 
 /// Resolves one non-attestation plan entry into the [`Change`] the commit

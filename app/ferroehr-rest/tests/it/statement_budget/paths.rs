@@ -2334,7 +2334,7 @@ async fn cared_ehrs(app: &Router, pool: &PgPool, count: usize) -> Vec<(String, S
         .await;
         assert_eq!(code, StatusCode::CREATED, "the EHR: {answer}");
         let ehr = headers
-            .get(http::header::LOCATION)
+            .get(header::LOCATION)
             .and_then(|location| location.to_str().ok())
             .and_then(|location| location.rsplit('/').next())
             .expect("the EHR's location")

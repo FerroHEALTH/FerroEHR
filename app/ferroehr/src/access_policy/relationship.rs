@@ -120,10 +120,11 @@ pub fn effective_end(
     }
 }
 
-/// Why a care relationship with no `episode` is refused at write: the first
-/// `ACCESS_POLICY._relationship_validity_` entry covering its role and
-/// provider type marks `_episode_required_` (draft access control decision
-/// procedure, Writing Relationships).
+/// Why a care relationship with no `episode` is refused at write.
+///
+/// The first `ACCESS_POLICY._relationship_validity_` entry covering its role
+/// and provider type marks `_episode_required_` (draft access control
+/// decision procedure, Writing Relationships).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error(
     "a care relationship in the role {role} names an episode: the relationship_validity entry of \

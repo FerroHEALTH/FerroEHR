@@ -62,12 +62,12 @@ fn covers_of<'a>(facts: &[&'a CallerFact]) -> CoversColumns<'a> {
     )
 }
 
-/// The issuer and the id of the episode each of `facts` names, each `None`
-/// for a fact that names none; `None` when no fact names one, so the insert
-/// names no episode column.
-fn episodes_of<'a>(
-    facts: &[&'a CallerFact],
-) -> Option<(Vec<Option<&'a str>>, Vec<Option<&'a str>>)> {
+/// The issuer and the id of the episode each of a set of facts names.
+type EpisodeColumns<'a> = (Vec<Option<&'a str>>, Vec<Option<&'a str>>);
+
+/// The [`EpisodeColumns`] of `facts`, each `None` for a fact that names none;
+/// `None` when no fact names one, so the insert names no episode column.
+fn episodes_of<'a>(facts: &[&'a CallerFact]) -> Option<EpisodeColumns<'a>> {
     let episodes: Vec<Option<&Episode>> = facts
         .iter()
         .map(|f| care_of(f).and_then(|care| care.episode.as_ref()))
@@ -81,6 +81,23 @@ fn episodes_of<'a>(
     })
 }
 
+/// The container each of `facts` targets and, for a care relationship, the
+/// carer's RM type; each `None` for a fact that has none.
+fn targets_of(facts: &[&CallerFact]) -> (Vec<Option<Uuid>>, Vec<Option<&'static str>>) {
+    facts
+        .iter()
+        .map(|f| {
+            let target = match &f.value {
+                FactValue::Team(team) => Some(*team),
+                FactValue::Care(care) => Some(care.carer),
+                FactValue::Kin(kin) => Some(kin.person),
+                FactValue::Code(_) => None,
+            };
+            (target, care_of(f).map(|care| care.kind.rm_type()))
+        })
+        .unzip()
+}
+
 /// The issuer and the id of the provider each of `facts` names, each `None`
 /// for a fact that is no care relationship.
 fn providers_of<'a>(facts: &[&'a CallerFact]) -> (Vec<Option<&'a str>>, Vec<Option<&'a str>>) {
@@ -89,6 +106,21 @@ fn providers_of<'a>(facts: &[&'a CallerFact]) -> (Vec<Option<&'a str>>, Vec<Opti
         .map(|f| care_of(f).map(|care| (care.provider.issuer.as_str(), care.provider.id.as_str())))
         .map(|pair| (pair.map(|p| p.0), pair.map(|p| p.1)))
         .unzip()
+}
+
+/// The insert's column list, select list, `unnest` arguments and alias list
+/// entries of the episode columns, empty when `named` is false.
+const fn episode_sql(named: bool) -> [&'static str; 4] {
+    if named {
+        [
+            ", episode_issuer, episode_id",
+            ", t.episode_issuer, t.episode_id",
+            ", $21::text[], $22::text[]",
+            ", episode_issuer, episode_id",
+        ]
+    } else {
+        ["", "", "", ""]
+    }
 }
 
 /// The step that inserts `facts` of `head`, each about the party at its
@@ -115,19 +147,7 @@ pub(super) fn insert<'q>(
         .iter()
         .map(|f| code_of(f).map(|code| code.code.as_str()))
         .collect();
-    let target: Vec<Option<Uuid>> = facts
-        .iter()
-        .map(|f| match &f.value {
-            FactValue::Team(team) => Some(*team),
-            FactValue::Care(care) => Some(care.carer),
-            FactValue::Kin(kin) => Some(kin.person),
-            FactValue::Code(_) => None,
-        })
-        .collect();
-    let target_kind: Vec<Option<&str>> = facts
-        .iter()
-        .map(|f| care_of(f).map(|care| care.kind.rm_type()))
-        .collect();
+    let (target, target_kind) = targets_of(facts);
     let (provider_issuer, provider_id) = providers_of(facts);
     let self_declared: Vec<bool> = facts
         .iter()
@@ -142,16 +162,12 @@ pub(super) fn insert<'q>(
     let not_before: Vec<_> = facts.iter().map(|f| instant(f.not_before)).collect();
     let not_after: Vec<_> = facts.iter().map(|f| instant(f.not_after)).collect();
     let episodes = episodes_of(facts);
-    let (episode_columns, episode_values, episode_unnest, episode_names) = if episodes.is_some() {
-        (
-            ", episode_issuer, episode_id",
-            ", t.episode_issuer, t.episode_id",
-            ", $21::text[], $22::text[]",
-            ", episode_issuer, episode_id",
-        )
-    } else {
-        ("", "", "", "")
-    };
+    let [
+        episode_columns,
+        episode_values,
+        episode_unnest,
+        episode_names,
+    ] = episode_sql(episodes.is_some());
     let statement = format!(
         "INSERT INTO binding_caller_fact \
              (holder_id, ordinal, kind, party_id, terminology_id, code_string, target_id, \

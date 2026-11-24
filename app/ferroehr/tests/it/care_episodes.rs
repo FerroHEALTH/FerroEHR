@@ -122,7 +122,7 @@ async fn a_malformed_episode_and_a_missing_required_one_are_refused() {
 }
 
 /// A COMPOSITION member of a CONTRIBUTION.
-fn member(data: Value) -> Value {
+fn member(data: &Value) -> Value {
     json!({ "data": data,
         "lifecycle_state": crate::fixtures::lifecycle("532"),
         "commit_audit": { "change_type": { "value": "creation",
@@ -164,7 +164,7 @@ async fn an_undeclared_episode_is_refused_on_every_commit() {
     let refused = svc
         .create_ehr_contribution(
             ehr_id,
-            json!({ "versions": [member(composition("a")), member(undeclared.clone())],
+            json!({ "versions": [member(&composition("a")), member(&undeclared)],
                 "audit": commit_audit("249", "creation", "T") }),
         )
         .await
@@ -172,7 +172,7 @@ async fn an_undeclared_episode_is_refused_on_every_commit() {
     assert!(unprocessable(&refused), "{refused:?}");
     svc.create_ehr_contribution(
         ehr_id,
-        json!({ "versions": [member(composition("b")), member(declared)],
+        json!({ "versions": [member(&composition("b")), member(&declared)],
             "audit": commit_audit("249", "creation", "T") }),
     )
     .await
