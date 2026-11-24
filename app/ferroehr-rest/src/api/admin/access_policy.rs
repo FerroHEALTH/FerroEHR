@@ -105,11 +105,8 @@ guarded_handler! {
              body = serde_json::Value),
             (status = 400, description = "Neither `If-Match` nor `If-None-Match: *`, an \
                                           `If-Match` that is no `OBJECT_VERSION_ID`, or a \
-                                          body refused whole: no canonical-JSON \
-                                          `ACCESS_POLICY`, a broken invariant of the draft \
-                                          BMM, a root that is no `ACCESS_POLICY` archetype \
-                                          root, or a controller that is no `ORGANISATION` or \
-                                          not the policy's. The version in force stays.",
+                                          body that is no canonical-JSON `ACCESS_POLICY`. \
+                                          The version in force stays.",
              body = serde_json::Value),
             (status = 403, description = "Not in the Admin class, or holding no policy grant \
                                           of `write_access_policy`.",
@@ -119,6 +116,15 @@ guarded_handler! {
                                           `If-None-Match: *` while one is.",
              body = serde_json::Value),
             (status = 415, description = "The body is not `application/json`.",
+             body = serde_json::Value),
+            (status = 422, description = "The `ACCESS_POLICY` reads but breaks a rule: an \
+                                          invariant of the draft BMM, a root that is no \
+                                          `ACCESS_POLICY` archetype root, a controller \
+                                          that is no `ORGANISATION` or not the policy's, \
+                                          a code of the draft access terminology where \
+                                          the jurisdiction's belongs, the template it \
+                                          names, or a value set it binds. The version in \
+                                          force stays.",
              body = serde_json::Value),
             AdminRefusal
         )

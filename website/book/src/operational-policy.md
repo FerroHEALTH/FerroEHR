@@ -473,7 +473,7 @@ an EHDS Art. 10 access service: an EHR whose person opted out reads as
 absent to it at every route, query and export, unless it declares one of
 `[audit] emergency_purpose_codes` and acts for no person (Art. 10(2)).
 While `[authz.grants] allowed` does not allow `access_service`, recording an
-opt-out is refused with `400`, since it would hold for nobody
+opt-out is refused with `422`, since it would hold for nobody
 ([Opt-out from the access services](security.md#opt-out-from-the-access-services-ehds-art-10)).
 
 A role a token names never grants any of these four: each comes from its
@@ -2266,13 +2266,13 @@ one, nothing is tightened.
 - **Whole, over a version.** Name the version you replace in `If-Match`, or
   create the first with `If-None-Match: *`. A stale condition is `412`.
 - **Checked when written.** A body that is no canonical-JSON `ACCESS_POLICY`
-  or breaks an invariant of the draft model is refused whole with `400`, as
-  is a rule of another kind than `controller_rule`, a catalogue entry of that
-  kind, and a rule naming a role, purpose, sensitivity, category or legal
-  ground in `openehr_access`. A policy that holds as a model but breaks the
-  template its `archetype_details.template_id` names, or names a code
-  outside a value set it binds, is refused whole with `422`, naming the
-  attribute.
+  is refused whole with `400`. A policy that reads but breaks a rule is
+  refused whole with `422`, naming the rule or the attribute: an invariant
+  of the draft model, a rule of another kind than `controller_rule`, a
+  catalogue entry of that kind, a rule naming a role, purpose, sensitivity,
+  category or legal ground in `openehr_access`, the template its
+  `archetype_details.template_id` names, or a code outside a value set it
+  binds.
 - **Effective without a restart**, as the registers above.
 - **Read by the access evaluator** on every request: `purpose_required` is
   step 4, checked before any rule, the rules are step 5, a classification
@@ -2322,7 +2322,7 @@ Two more attributes say when a relationship is a ground at all:
 | Attribute | What it says | Left out |
 | --- | --- | --- |
 | `care_purposes` | The purposes of use for which a care relationship is a ground: an access declaring another purpose, such as research, rests on no relationship and matches no rule scope naming `care` | `TREAT`, `ETREAT` and `CAREMGT` of `HL7_ActReason` |
-| `time_zone` | The IANA time zone in which the dates of a relationship's `time_validity` are read, such as `Europe/Amsterdam`; a name the zone database does not hold is refused `400` | UTC |
+| `time_zone` | The IANA time zone in which the dates of a relationship's `time_validity` are read, such as `Europe/Amsterdam`; a name the zone database does not hold is refused `422` | UTC |
 
 #### The attested care path
 
