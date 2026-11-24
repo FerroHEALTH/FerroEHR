@@ -498,7 +498,7 @@ fn shaped_searches() -> Vec<(
 /// (#6362).
 #[test]
 fn a_shapes_statements_are_the_built_ones() {
-    let shapes = super::search_page::PageShapes::default();
+    let shapes = super::page_shapes::PageShapes::default();
     let mut templates = Vec::new();
     for (filter, resolved) in shaped_searches() {
         let cursor = 40 + filter.offset;
