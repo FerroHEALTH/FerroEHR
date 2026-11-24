@@ -1589,7 +1589,7 @@ jobs:
     # on every main push is cheap insurance. A push the merge queue verified
     # needs none of it (the queue run is never cancelled, its group is the
     # commit), so there it is skipped.
-    if: (needs.changes.outputs.code == 'true' || github.ref == 'refs/heads/main') && needs.changes.outputs.queue_verified != 'true'
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true' || github.ref == 'refs/heads/main') && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
