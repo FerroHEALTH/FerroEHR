@@ -57,7 +57,7 @@ pub(crate) mod lax;
 #[cfg(feature = "fhir")]
 pub mod outbox;
 #[cfg(feature = "fhir")]
-mod page_shapes;
+pub(crate) mod page_shapes;
 #[cfg(feature = "fhir")]
 mod review;
 #[cfg(feature = "fhir")]
