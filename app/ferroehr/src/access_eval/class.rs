@@ -11,8 +11,8 @@
 //! every value the decision reads that is particular to the EHR replaced by a
 //! fixed value: the instants of a validity or a `recorded` interval, the
 //! party of an actor scope, an exclusion's included, or a gate-keeper, the
-//! objects of a data scope, its origins and the objects each sensitivity
-//! labels. What the decision does
+//! objects of a data scope, its origins, its episodes and the objects each
+//! sensitivity labels. What the decision does
 //! not read, such as a directive's name or its evidence, is left out, and
 //! every coded value keeps only its code phrase. The facts are the values
 //! set aside, in the order of a depth-first walk ([`Layout`]).
@@ -47,10 +47,11 @@ use sha2::{Digest as _, Sha256};
 use crate::access_eval::condition::CallerKeys;
 use crate::access_eval::procedure::{Rule, Verdict};
 use crate::access_eval::scope::confidential::label_level;
-use crate::access_eval::scope::{DataMatch, Edge, EhrFact, Held, Pred, Recorded};
+use crate::access_eval::scope::{DataMatch, Edge, EhrFact, Held, Pred, Recorded, episode_key};
 use crate::service::ehr::access_projection::{Validity, validity};
 use crate::service::ehr::access_rule::{SettingsCaller, party_key, proxy_key};
 use crate::service::ehr::access_settings::{EhrAccessSettings, UnreadableSettings, object_id};
+use crate::versioning::episode::EpisodeKey;
 
 mod normalize;
 
@@ -102,6 +103,8 @@ pub struct DataLayout {
     pub objects: Option<usize>,
     /// The origins.
     pub origins: Option<usize>,
+    /// The episodes, when every one names an issuer, as hex episode keys.
+    pub episodes: Option<usize>,
     /// The lower bound of `recorded`.
     pub from: Option<usize>,
     /// The upper bound of `recorded`.
@@ -310,6 +313,15 @@ pub fn resolve(pred: &Pred, facts: &[Value], keys: &CallerKeys) -> Pred {
                     Held::Fact(at) => Held::Known(strings(*at)),
                     Held::Known(_) => origins.clone(),
                 }),
+                episodes: data.episodes.as_ref().map(|episodes| match episodes {
+                    Held::Fact(at) => Held::Known(
+                        strings(*at)
+                            .iter()
+                            .filter_map(|key| EpisodeKey::from_hex(key))
+                            .collect(),
+                    ),
+                    Held::Known(_) => episodes.clone(),
+                }),
                 recorded: data.recorded.map(|r| Recorded {
                     from: edge(r.from),
                     until: edge(r.until),
@@ -398,6 +410,8 @@ enum Edit {
     Objects(String),
     /// Hold the list of origins as one fixed origin.
     Origins(String),
+    /// Hold the list of episodes as one fixed episode.
+    Episodes(String),
 }
 
 impl Edit {
@@ -414,17 +428,24 @@ impl Edit {
                     nil_reference(at);
                 }
             }
-            Self::Objects(pointer) | Self::Origins(pointer) => {
+            Self::Objects(pointer) | Self::Origins(pointer) | Self::Episodes(pointer) => {
                 let Some(Value::Array(items)) = class.pointer_mut(pointer) else {
                     return;
                 };
                 items.truncate(1);
                 if let Some(first) = items.first_mut() {
-                    if matches!(self, Self::Origins(_)) {
-                        *first = Value::String("-".to_owned());
-                    } else {
-                        nil_reference(first);
-                        set(first, "_type", "OBJECT_REF");
+                    match self {
+                        Self::Origins(_) => *first = Value::String("-".to_owned()),
+                        Self::Episodes(_) => {
+                            retain(first, &["_type", "issuer", "id"]);
+                            set(first, "_type", "DV_IDENTIFIER");
+                            set(first, "issuer", "-");
+                            set(first, "id", "-");
+                        }
+                        _ => {
+                            nil_reference(first);
+                            set(first, "_type", "OBJECT_REF");
+                        }
                     }
                 }
             }
@@ -588,6 +609,18 @@ impl Walk {
                 data.origins = Some(self.edited(
                     Value::from(origins.to_vec()),
                     Edit::Origins(format!("{pointer}/origins")),
+                ));
+            }
+            let episodes: Option<Option<Vec<String>>> = scope.episodes.as_deref().map(|named| {
+                named
+                    .iter()
+                    .map(|e| episode_key(e).map(|key| key.hex()))
+                    .collect()
+            });
+            if let Some(Some(episodes)) = episodes {
+                data.episodes = Some(self.edited(
+                    Value::from(episodes),
+                    Edit::Episodes(format!("{pointer}/episodes")),
                 ));
             }
             if let Some(Validity::Within { from, until }) = scope.recorded.as_ref().map(validity) {

@@ -85,9 +85,9 @@ impl EhrAccessSettings {
         let Some(settings) = access.get("settings").filter(|s| !s.is_null()) else {
             return Ok(None);
         };
-        read_settings(settings)
-            .map(|read| Some(Self::Directives(Box::new(read))))
-            .map_err(UnreadableSettings)
+        let read = read_settings(settings).map_err(UnreadableSettings)?;
+        crate::access_eval::episodes::note_settings(&read);
+        Ok(Some(Self::Directives(Box::new(read))))
     }
 
     /// Reads the settings the projection stored as their canonical JSON
@@ -97,9 +97,10 @@ impl EhrAccessSettings {
     /// # Errors
     /// [`UnreadableSettings`] when the text does not decode as the class.
     pub fn from_projected(settings: &str) -> Result<Self, UnreadableSettings> {
-        serde_json::from_str::<AccessDirectiveSettings>(settings)
-            .map(|read| Self::Directives(Box::new(read)))
-            .map_err(|error| UnreadableSettings(Defect::Decode(error)))
+        let read = serde_json::from_str::<AccessDirectiveSettings>(settings)
+            .map_err(|error| UnreadableSettings(Defect::Decode(error)))?;
+        crate::access_eval::episodes::note_settings(&read);
+        Ok(Self::Directives(Box::new(read)))
     }
 
     /// The settings `access` carries, or [`Self::HeldClosed`] for settings
