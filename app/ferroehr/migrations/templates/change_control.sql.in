@@ -31,42 +31,58 @@
 -- AUDIT_DETAILS of every committed change (RM common
 -- master04-generic_package.adoc §Audit Details: system_id / time_committed /
 -- change_type / committer 1..1, description 0..1), including the ATTESTATION
--- subtype a version may be committed with (master06 §Attestation).
-CREATE TABLE commit_audit (
+-- subtype a version may be committed with (master06 §Attestation), stored as
+-- its facts beside a shared part and read through the commit_audit view.
+--
+-- The shared part holds what no record subject can be named by, once per
+-- distinct content (#6395): the system id, the committer of a caller outside
+-- a patient context and a description the server wrote. A person's committer
+-- and a description the client wrote stay on the audit's own row, so an
+-- erasure that deletes the row leaves none of them behind (GDPR Art. 17). A
+-- shared part is never rewritten. No openEHR spec governs the storage: our
+-- own design.
+CREATE TABLE commit_audit_shared (
+    id          integer GENERATED ALWAYS AS IDENTITY,
+    -- The SHA-256 of the part's JSON text as its first writer sent it.
+    digest      bytea NOT NULL,
+    system_id   text NOT NULL,
+    description jsonb COMPRESSION lz4,
+    committer   jsonb COMPRESSION lz4,
+    CONSTRAINT pk_commit_audit_shared PRIMARY KEY (id),
+    CONSTRAINT uq_commit_audit_shared_digest UNIQUE (digest),
+    -- AUDIT_DETAILS.System_id_valid: `not system_id.is_empty`.
+    CONSTRAINT ck_commit_audit_shared_system_id_nonempty CHECK (system_id <> ''),
+    -- DV_TEXT.value is 1..1 (RM data_types
+    -- UML/classes/org.openehr.rm.data_types.dv_text.adoc §Attributes).
+    CONSTRAINT ck_commit_audit_shared_description_shape CHECK
+        (description IS NULL OR description ? 'value')
+);
+COMMENT ON TABLE commit_audit_shared IS 'The parts of commit audits that name no record subject (system id, a committer outside a patient context, a server-written description), once per distinct content; never rewritten.';
+
+CREATE TABLE commit_audit_facts (
     id             uuid NOT NULL DEFAULT uuidv7(),
     -- RM common master06 §Committal and Audits: time_committed "should reflect
     -- the time of committal to an EHR server ... It should therefore be
     -- computed on the server". Never client-supplied.
     time_committed timestamptz NOT NULL DEFAULT now(),
-    system_id      text NOT NULL,
-    -- The openEHR `audit change type` group code — the code_string of
-    -- AUDIT_DETAILS.change_type (Change_type_valid, RM common
-    -- UML/classes/org.openehr.rm.common.audit_details.adoc §Invariants). The
-    -- codes are TERM SupportTerminology
-    -- codesets/openehr_terminology-vocabularies.adoc §Audit Change Type.
+    -- The openEHR `audit change type` group code: the code_string of
+    -- AUDIT_DETAILS.change_type (Change_type_valid, TERM SupportTerminology
+    -- codesets/openehr_terminology-vocabularies.adoc §Audit Change Type).
     change_type    text NOT NULL,
-    -- AUDIT_DETAILS.description is a DV_TEXT (0..1) whose DV_CODED_TEXT subtype
-    -- carries a defining_code, so the whole canonical fragment is stored — a
-    -- bare text column would discard the concrete _type and every coded
-    -- attribute.
+    -- The commit_audit_shared row of the audit.
+    shared         integer NOT NULL,
+    -- The canonical DV_TEXT (or DV_CODED_TEXT) the client wrote, when the
+    -- shared part holds no description.
     description    jsonb COMPRESSION lz4,
-    -- The canonical PARTY_PROXY of the committer (AUDIT_DETAILS.committer
-    -- 1..1). PostgreSQL grammar: the COMPRESSION clause precedes column
-    -- constraints.
-    committer      jsonb COMPRESSION lz4 NOT NULL,
+    -- The canonical PARTY_PROXY of a committer in a patient context, when the
+    -- shared part holds no committer.
+    committer      jsonb COMPRESSION lz4,
     -- The ATTESTATION-declared attributes (attested_view, proof, items, reason,
-    -- is_pending — RM common UML/classes/org.openehr.rm.common.attestation.adoc
-    -- §Attributes) when this commit audit is an ATTESTATION rather than a plain
-    -- AUDIT_DETAILS ("ORIGINAL_VERSION.commit_audit is of type ATTESTATION
-    -- rather than AUDIT_DETAILS", master06 §Attestation), else NULL.
-    -- ATTESTATION is the only AUDIT_DETAILS subtype RM 1.2.0 declares and both
-    -- attributes are mandatory on it, so presence is the concrete class.
+    -- is_pending: RM common UML/classes/org.openehr.rm.common.attestation.adoc
+    -- §Attributes) when this commit audit is an ATTESTATION, else NULL
+    -- (master06 §Attestation).
     attestation    jsonb COMPRESSION lz4,
     CONSTRAINT pk_commit_audit PRIMARY KEY (id),
-    -- AUDIT_DETAILS.System_id_valid: `not system_id.is_empty`.
-    CONSTRAINT ck_commit_audit_system_id_nonempty CHECK (system_id <> ''),
-    -- DV_TEXT.value is 1..1 (RM data_types
-    -- UML/classes/org.openehr.rm.data_types.dv_text.adoc §Attributes).
     CONSTRAINT ck_commit_audit_description_shape CHECK
         (description IS NULL OR description ? 'value'),
     -- ATTESTATION.reason and ATTESTATION.is_pending are both 1..1.
@@ -76,20 +92,30 @@ CREATE TABLE commit_audit (
     -- 251 modification, 252 synthesis, 253 unknown, 523 deleted, 666
     -- attestation, 816 restoration, 817 format conversion (TERM
     -- SupportTerminology codesets/openehr_terminology-vocabularies.adoc §Audit
-    -- Change Type), not the narrower subset master06 §Contributions enumerates
-    -- in prose.
+    -- Change Type).
     CONSTRAINT ck_commit_audit_change_type CHECK (change_type IN
         ('249', '250', '251', '252', '253', '523', '666', '816', '817'))
 );
 -- The admin statistics' time-bounded paths filter and order on the commit
 -- instant. No openEHR spec governs indexing: our own design.
-CREATE INDEX idx_commit_audit_time_committed ON commit_audit (time_committed);
-COMMENT ON TABLE commit_audit IS 'AUDIT_DETAILS of every committed change (RM common master04-generic_package.adoc §Audit Details), including the ATTESTATION subtype a version may be committed with (master06 §Attestation).';
-COMMENT ON COLUMN commit_audit.time_committed IS 'Server-computed commit instant: RM common master06 §Committal and Audits — time_committed "should reflect the time of committal to an EHR server ... It should therefore be computed on the server".';
-COMMENT ON COLUMN commit_audit.change_type IS 'openEHR `audit change type` group code (AUDIT_DETAILS.Change_type_valid); the CHECK carries the full group as published in TERM SupportTerminology codesets/openehr_terminology-vocabularies.adoc §Audit Change Type.';
-COMMENT ON COLUMN commit_audit.committer IS 'Canonical PARTY_PROXY of the committer (AUDIT_DETAILS.committer 1..1).';
-COMMENT ON COLUMN commit_audit.description IS 'Canonical AUDIT_DETAILS.description fragment (DV_TEXT or its DV_CODED_TEXT subtype), stored whole so the concrete _type and defining_code survive.';
-COMMENT ON COLUMN commit_audit.attestation IS 'The ATTESTATION-declared attributes when the commit audit is an ATTESTATION, else NULL (RM common master06 §Attestation).';
+CREATE INDEX idx_commit_audit_time_committed ON commit_audit_facts (time_committed);
+COMMENT ON TABLE commit_audit_facts IS 'The facts of every commit audit (RM common master04-generic_package.adoc §Audit Details), with its shared part and what only it states.';
+COMMENT ON COLUMN commit_audit_facts.time_committed IS 'Server-computed commit instant: RM common master06 §Committal and Audits.';
+COMMENT ON COLUMN commit_audit_facts.change_type IS 'openEHR `audit change type` group code (AUDIT_DETAILS.Change_type_valid).';
+COMMENT ON COLUMN commit_audit_facts.attestation IS 'The ATTESTATION-declared attributes when the commit audit is an ATTESTATION, else NULL (RM common master06 §Attestation).';
+
+-- Every commit audit whole, as its readers read it. The shared part is read
+-- by one probe of its key per audit: a subquery that carries a LIMIT is never
+-- flattened into the join (PostgreSQL 19, prepjointree.c is_simple_subquery).
+-- A reader of the commit instant alone reads commit_audit_facts.
+CREATE VIEW commit_audit AS
+    SELECT f.id, f.time_committed, s.system_id, f.change_type,
+           coalesce(f.description, s.description) AS description,
+           coalesce(f.committer, s.committer) AS committer, f.attestation
+      FROM commit_audit_facts f
+      LEFT JOIN LATERAL (SELECT p.system_id, p.description, p.committer
+                           FROM commit_audit_shared p WHERE p.id = f.shared LIMIT 1) s ON true;
+COMMENT ON VIEW commit_audit IS 'AUDIT_DETAILS of every committed change (RM common master04-generic_package.adoc §Audit Details), including the ATTESTATION subtype (master06 §Attestation).';
 
 -- ── contribution ─────────────────────────────────────────────────────────────
 -- The change-set envelope (RM common master06 §Contributions: "a CONTRIBUTION
@@ -108,7 +134,7 @@ CREATE TABLE contribution (
     CONSTRAINT fk_contribution_ehr FOREIGN KEY (ehr_id) REFERENCES ehr (id) ON DELETE CASCADE,
 --@clinical-end
     CONSTRAINT fk_contribution_commit_audit FOREIGN KEY (commit_audit_id)
-        REFERENCES commit_audit (id)
+        REFERENCES commit_audit_facts (id)
 );
 CREATE INDEX idx_contribution_ehr_id ON contribution (ehr_id);
 CREATE INDEX idx_contribution_commit_audit_id ON contribution (commit_audit_id);
@@ -287,7 +313,7 @@ CREATE TABLE version (
         CHECK (content_sys_version IS NULL
                OR (content_sys_version >= 1 AND content_sys_version < sys_version AND body IS NOT NULL)),
     CONSTRAINT fk_version_commit_audit FOREIGN KEY (commit_audit_id)
-        REFERENCES commit_audit (id)
+        REFERENCES commit_audit_facts (id)
 ) PARTITION BY LIST (tier);
 CREATE TABLE version_hot  PARTITION OF version FOR VALUES IN ('hot');
 CREATE TABLE version_cold PARTITION OF version FOR VALUES IN ('cold');
@@ -472,13 +498,11 @@ CREATE TABLE vo_head (
                AND (trunk_head_content_key IS NULL
                     OR trunk_head_content_key BETWEEN 1 AND trunk_head_sys_version))
 ) WITH (fillfactor = 90);
--- The two access paths that are not the primary key: an EHR's objects of one
--- kind (status and directory reads, EHR summaries, the persistent-duplicate
--- probe) and the template-scoped listing. Neither names a column a commit
--- updates, so neither de-optimises the HOT path.
+-- The access path that is not the primary key: an EHR's objects of one kind
+-- (status and directory reads, EHR summaries, the persistent-duplicate
+-- probe). It names no column a commit updates, so it does not de-optimise the
+-- HOT path.
 CREATE INDEX idx_vo_head_ehr_kind ON vo_head (ehr_id, kind);
-CREATE INDEX idx_vo_head_ehr_template ON vo_head (ehr_id, template_id)
-    WHERE template_id IS NOT NULL;
 COMMENT ON TABLE vo_head IS 'The one mutable row per versioned object: the current trunk and any-branch heads, the lifecycle state, the tier, and the restriction and retention marks. Its updated columns are in no index, so a commit updates it heap-only (PostgreSQL 18, "Heap-Only Tuples (HOT)").';
 COMMENT ON COLUMN vo_head.head_sys_version IS 'The greatest sys_version on any lineage — the RM''s latest_version (RM common master06 §The ''Virtual Version Tree'').';
 COMMENT ON COLUMN vo_head.trunk_head_sys_version IS 'The greatest sys_version on the trunk — LATEST_VERSION.';

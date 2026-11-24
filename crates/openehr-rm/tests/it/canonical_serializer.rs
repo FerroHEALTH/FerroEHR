@@ -261,6 +261,32 @@ impl Serialize for Repeated {
     }
 }
 
+/// Objects nested `depth` deep, each with members out of name order, some
+/// given twice, beside an array of them and a variant whose member is left out.
+#[derive(Debug, Serialize)]
+struct Nested {
+    zeta: Repeated,
+    inner: Option<Box<Nested>>,
+    items: Vec<Shape>,
+    alpha: u8,
+}
+
+fn nested(depth: u8) -> Nested {
+    Nested {
+        zeta: Repeated(vec![
+            ("b".to_owned(), Value::from(depth)),
+            ("a".to_owned(), serde_json::json!({ "y": 1, "x": [2] })),
+            ("b".to_owned(), Value::from("last")),
+        ]),
+        inner: (depth > 0).then(|| Box::new(nested(depth - 1))),
+        items: vec![Shape::Struct {
+            zeta: depth,
+            alpha: vec![1, 2],
+        }],
+        alpha: depth,
+    }
+}
+
 /// A map whose keys are floats, which `serde_json` writes as their text.
 #[derive(Debug)]
 struct FloatKeys(Vec<f64>);
@@ -350,6 +376,28 @@ fn a_raw_json_value_is_written_as_its_canonical_form() {
         agrees(&raw);
         let nested: BTreeMap<&str, &RawValue> = [("raw", raw.as_ref())].into_iter().collect();
         agrees(&nested);
+    }
+}
+
+#[test]
+fn objects_nested_deep_out_of_name_order_are_written_as_the_value_path_writes_them() {
+    for depth in [0, 1, 2, 7, 64] {
+        agrees(&nested(depth));
+        let value = serde_json::to_value(nested(depth)).expect("a JSON value");
+        let reference = match &value {
+            Value::Object(members) => canonical_object(
+                members
+                    .iter()
+                    .filter(|(name, _)| name.as_str() != "zeta")
+                    .map(|(name, member)| (name.as_str(), member)),
+            ),
+            other => canonical_json(other),
+        }
+        .expect("a JSON value canonicalises");
+        assert_eq!(
+            current::canonical_object_without(&nested(depth), &["zeta"]).expect("it writes"),
+            reference
+        );
     }
 }
 

@@ -164,8 +164,8 @@ impl ReadySet<'_> {
         let mut rows = Vec::with_capacity(prepared.len());
         for ((ready, _, head), audit) in prepared.iter().zip(&audits) {
             rows.push(SetMember {
-                audit: audit.row(),
-                version: ready.folded()?,
+                audit: audit.row(ctx.audit_shares),
+                version: ready.folded(),
                 expected_head: *head,
             });
         }
@@ -184,7 +184,7 @@ impl ReadySet<'_> {
         let head = SetHead {
             id: uid,
             ehr_id: set.ehr_id,
-            audit: set.audit.row(),
+            audit: set.audit.row(ctx.audit_shares),
             time_committed: set.now,
         };
         let guard = Guard {

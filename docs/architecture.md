@@ -142,7 +142,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   episodes. The import and archive load recompute it from the trunk
   head's body. A placed persistent
   composition and a malformed episode are refused `422` on every write path
-  (draft access control, Episodes of Care: our own design).
+  (draft access control, Episodes of Care: our own design). A data scope
+  naming episodes (`ACCESS_DATA_SCOPE.episodes`, #6416) compares the key of
+  each `DV_IDENTIFIER` it names with this column: a query's condition reads
+  it as `h.episodes && $keys`, and a settings class holds the keys as one
+  fact. A named read selects the column only once this replica has read
+  settings or a policy naming an episode (`access_eval::episodes`), so a
+  deployment that names none runs its statements unchanged; an object read
+  without it is judged by the fact's polarity.
 - **`node`** — one unified table for all versioned-object content
   (COMPOSITION / EHR_STATUS / FOLDER). One row per RM structure node with a
   **nested-set index** (`num`, `num_cap`, `parent_num`): AQL CONTAINS is an
@@ -235,7 +242,10 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   (`orphan_nodes`), and `node_version_integrity` holds the invariant across
   commit, delete, archive, erasure and decommissioning. The per-EHR class index
   `idx_node_hot_ehr_type` leaves out the ELEMENT rows, which are reached
-  through the nested-set range of the primary key, and the subsumption index
+  through the nested-set range of the primary key, and the data-structure
+  classes (`ITEM_*`, `HISTORY`, the events, `EVENT_CONTEXT`, `ACTIVITY`), which
+  no read enters through; `idx_node_hot_value_search` keeps only the rows with
+  a search text; the subsumption index
   `idx_node_hot_arch_subsume` keeps only the rows with a parsed archetype id;
   the AQL emitter writes RM types as literals so a generic plan proves the
   partial predicates. What partitions buy over the former mirror tables:
@@ -244,6 +254,17 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   cold by writing `tier = 'hot'` as a literal, which the planner prunes at plan
   time. The cold partitions carry the primary key alone, because archived
   content leaves the queryable store until it is restored.
+- **The commit audit** is stored as its facts (`commit_audit_facts`) beside a
+  shared part (`commit_audit_shared`) and read whole through the
+  `commit_audit` view (#6395). The shared part holds what no record subject
+  can be named by, once per distinct content: the system id, the committer of
+  a caller outside a patient context, and a description the server wrote. A
+  person's committer and a description the client wrote stay on the audit's
+  own row, so an EHR erasure that deletes the row leaves none of them behind
+  (GDPR Art. 17). Each replica keeps the ids of the parts it has seen, so a
+  commit binds the id; a commit whose part it has not seen inserts it in the
+  same statement (`ON CONFLICT DO SELECT`) and learns the id once another
+  transaction committed the row. Our own design.
 - **The supporting relations** — `ehr`, `contribution` and `commit_audit`;
   `ehr_folder` and `item_tag`, which stand outside change control; the
   definition stores `template_ref`, `template_store`, `archetype_store`,
@@ -1000,8 +1021,8 @@ which is what makes an optional stage safe to disable:
    class is the settings with what the decision does not read left out and
    every value particular to the EHR replaced by a fixed one: the instants of
    a validity or a `recorded` interval, the party of an actor scope or a
-   gate-keeper, the objects and origins of a data scope, and the objects each
-   sensitivity labels. The facts are those values, in the order of a
+   gate-keeper, the objects, origins and episodes of a data scope, and the
+   objects each sensitivity labels. The facts are those values, in the order of a
    depth-first walk. A value the decision cannot read stays in the class. One
    `access_class` row holds each distinct class, so every opt-out from a date
    shares one. A trigger on `access_settings` notifies `ferroehr_ehr_access`
@@ -1230,8 +1251,9 @@ which is what makes an optional stage safe to disable:
    be read (a validity bound with no offset, an undeclared purpose, an
    unstamped origin) is in force for a deny and not for a permit. A verdict
    is an ordered list of rules over the EHR's data (objects, templates, root
-   archetypes, categories through the category map, origins, commit time,
-   sensitivities), so one verdict answers a named object, the EHR itself,
+   archetypes, categories through the category map, origins, episodes of
+   care, commit time, sensitivities), so one verdict answers a named object,
+   the EHR itself,
    and every row of a query: the version reads, contributions, exports, the
    subject lookup and the write guard judge each object by its head row
    (`storage::access_facts`), and a query renders the verdict of every
@@ -1378,7 +1400,7 @@ attributes and conditions". FerroEHR places each term in openEHR content:
 | NIST SP 800-162 | FerroEHR | Where it lives |
 |---|---|---|
 | Subject attributes | the caller facts: the coded `name` of each `ROLE` in force it performs, its care-team memberships, the `ORGANISATION` its client acts for with that organisation's coded type and `GROUP` memberships, its caller kind, its recorded representation | the demographic service (RM Demographic IM), held per replica by `party_binding::grants::live` |
-| Object attributes | the data facts: the object, its template, root archetype, category through the category map, origins, commit time, and the sensitivities its labels and the controller's classifications give it | the record, read by its head row (`storage::access_facts`) |
+| Object attributes | the data facts: the object, its template, root archetype, category through the category map, origins, the episodes of care it is placed in, commit time, and the sensitivities its labels and the controller's classifications give it | the record, read by its head row (`storage::access_facts`) |
 | Environment conditions | the request instant, the declared purpose of use, an emergency purpose | the request |
 | Policy | the subject's directives and labels; the controller's rules, classifications and requirements | `EHR_ACCESS.settings` per EHR, `ACCESS_POLICY` per controller |
 | PDP | the fixed evaluator | `access_eval` |
@@ -2019,17 +2041,34 @@ confirm after they ran the same way (#6320): the version read of the EHR
 object selects the revisions, and a clinical query a request judges reads
 them on the one-row read of the versions it served, or, when it serves none,
 as two hidden columns of its own statement (`aql::sql::Layout::revisions`); a
-query that served no row reads them once after it ran. An ITI-81 page does
+query that served no row reads them once after it ran. Only the first row a
+query serves carries those columns, guarded by `row_number()` over the
+query's own order, so the plan gains one `WindowAgg` and no sort; a
+`DISTINCT`, an aggregate and an ordered query with a `LIMIT`, whose bounded
+sort a window would make whole, carry them on every row. An ITI-81 page does
 the same where the audit store shares the clinical database and its role may
 read `clinical.request_revisions`: the page statement selects them beside its
-records, and elsewhere the search reads them in a statement of their own.
+records, and elsewhere the search reads them in a statement of their own. A party read and a
+demographic query run on the party pool, whose schema holds no policy: where
+the two domains share one database, the party read's version read and the
+demographic query's read of the versions it served select the revisions
+through `clinical_door.policy_revisions()`, a `SECURITY DEFINER` function
+owned by the clinical schema's owner in a schema that holds nothing else,
+which returns the two counters and which the party roles may run; they still
+read no clinical table, and the boot gate refuses anything else in that
+schema and the function once it runs on the caller's `search_path` or as the
+caller. Where the party domain lives in a database of its own, such a read
+reads them once after it ran. **Our own design**, the mirror of the party
+door below.
 
 **The party copies on a read, where the party domain shares the clinical
 database** (#6320). Every decision rests on the party copies too (the binding
 lookups, the grants and the caller facts, #6048), confirmed by a read of
 `binding_grant_revision` on the party pool. Where the two domains share one
-database (the quickstart, the chart default), a `GET` without a body instead
-rides: authentication verifies the credential once, and the binding, the
+database (the quickstart, the chart default), a `GET` without a body, and an
+AQL execution by `POST` (the ad hoc and the two stored query operations, by
+their matched route; no other `POST` rides), instead rides: authentication
+verifies the credential once, and the binding, the
 grants and the decision run on the copies as they stand, each copy noting the
 revision it held (`party_binding::request::ride`). The read's own clinical
 statement selects the party store's revisions through
@@ -2044,6 +2083,10 @@ revisions one indexed read then finds; otherwise that run is dropped with
 everything it would have counted (its decisions, a lookup hit, an
 authentication failure) and the request runs once more from the binding on,
 on the path that reads the revisions first, which answers whatever they are.
+A query's run again reads the body the first run read: the body limit
+buffered it into one chunk, which the ride keeps by reference until it ends.
+A query reads the revisions on the one-row read of the versions it served,
+or, when it serves none, as a hidden column of its own statement.
 `access_policy_reruns_total{op}` counts it. The topology is read once per
 service; where the party domain lives in a database of its own, no clinical
 statement can reach it and the confirm stays a statement of its own. **Our

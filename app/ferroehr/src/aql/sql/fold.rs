@@ -66,7 +66,7 @@ fn two_valued(pred: &Pred) -> bool {
 }
 
 /// Whether the data scope names an empty list of objects, templates,
-/// archetypes or categories, which no object is among.
+/// archetypes, categories or episodes, which no object is among.
 fn covers_nothing(data: &DataMatch) -> bool {
     let empty = |list: Option<usize>| list == Some(0);
     empty(
@@ -77,6 +77,12 @@ fn covers_nothing(data: &DataMatch) -> bool {
     ) || empty(data.templates.as_ref().map(Vec::len))
         || empty(data.archetypes.as_ref().map(Vec::len))
         || empty(data.categories.as_ref().map(Vec::len))
+        || empty(
+            data.episodes
+                .as_ref()
+                .and_then(|episodes| episodes.known())
+                .map(Vec::len),
+        )
 }
 
 #[cfg(test)]

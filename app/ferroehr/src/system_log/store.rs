@@ -57,6 +57,8 @@ pub(crate) mod lax;
 #[cfg(feature = "fhir")]
 pub mod outbox;
 #[cfg(feature = "fhir")]
+mod page_shapes;
+#[cfg(feature = "fhir")]
 mod review;
 #[cfg(feature = "fhir")]
 pub mod search_page;
@@ -239,6 +241,9 @@ pub struct AuditStore {
     group: Arc<crate::access_log::intake::Gathered>,
     #[cfg(feature = "fhir")]
     cursor: search_page::IndexCursor,
+    /// The ITI-81 statements of each search shape this store has run.
+    #[cfg(feature = "fhir")]
+    page_shapes: Arc<page_shapes::PageShapes>,
     /// The catch-up of the access log's search index the token searches run.
     catch_up: Arc<access_index::CatchUp>,
 }
@@ -264,6 +269,8 @@ impl AuditStore {
             group: Arc::default(),
             #[cfg(feature = "fhir")]
             cursor: search_page::IndexCursor::default(),
+            #[cfg(feature = "fhir")]
+            page_shapes: Arc::default(),
             catch_up: Arc::default(),
         }
     }
@@ -794,66 +801,6 @@ impl AuditStore {
         .fetch_one(&mut *acquire(&self.pool).await?)
         .await?;
         u64::try_from(removed).map_err(|e| AuditError::Store(sqlx::Error::Decode(Box::new(e))))
-    }
-
-    /// The RESTful-ATNA ITI-81 retrieval: the FHIR `AuditEvent` documents of
-    /// the matching records, newest first, rendered from their columns,
-    /// whether a match follows the page, and the total match count when
-    /// [`AuditSearchFilter::total`] asks for it. The filter is the supported
-    /// ITI-81 search-parameter subset ([`AuditSearchFilter`]).
-    ///
-    /// A criterion on a column is applied to that column. A criterion on an
-    /// element of the document (`address` and the token parameters) first
-    /// catches the access log's search index up ([`Self::catch_up`]), then keeps
-    /// the records whose `search_keys` hold a stored token it names. Only the page is rendered.
-    ///
-    /// # Errors
-    /// [`AuditError::Store`] when a query fails, the rendering errors of a
-    /// record that cannot be read back, and [`AuditError::IndexBehind`] when
-    /// the index does not catch up within its wait.
-    #[cfg(feature = "fhir")]
-    pub async fn search(&self, filter: &AuditSearchFilter) -> Result<AuditPage, AuditError> {
-        // NOTE: our own design (#6322), an access-log entry's search tokens are rendered by the
-        // frontier round, so a token search first moves the index past every entry before it.
-        if filter.names_tokens() {
-            self.catch_up().await?;
-        }
-        let Some(resolved) =
-            crate::system_log::search::resolve_criteria(&self.pool, filter).await?
-        else {
-            return Ok(AuditPage::empty(filter));
-        };
-        let mut conn = acquire(&self.pool).await?;
-        let cursor = self.cursor.bound(&mut conn).await?;
-        let (count_sql, count_values, sql, values) =
-            search_page::build_search_statements(filter, &resolved, cursor);
-        // NOTE: our own design (#6005), a shape's text is a named statement that PostgreSQL may
-        // plan once per connection (plan_cache_mode auto); any other text goes unnamed.
-        let shaped = search_page::shaped(filter);
-        let total = if filter.total {
-            let total: i64 = sqlx::query_scalar_with(sqlx::AssertSqlSafe(count_sql), count_values)
-                .persistent(shaped)
-                .fetch_one(&mut *conn)
-                .await?;
-            Some(total)
-        } else {
-            None
-        };
-        let mut rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
-            .persistent(shaped)
-            .fetch_all(&mut *conn)
-            .await?;
-        drop(conn);
-        self.cursor.saw(&rows)?;
-        filter.carried.observe(&rows)?;
-        let more = rows.len() > search_page::page_size(filter);
-        rows.truncate(search_page::page_size(filter));
-        let documents = self.page_documents(&rows).await?;
-        Ok(AuditPage {
-            total,
-            documents,
-            more,
-        })
     }
 }
 

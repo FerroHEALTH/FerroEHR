@@ -22,7 +22,7 @@ publish = false
 # workspace.
 default = ["fhir", "multimedia"]
 fhir = ["dep:ferrobridge-term", "dep:fhir-types", "ehds-logging/balp", "ihe-atna/balp", "ihe-atna/feed"]
-multimedia = ["dep:bytes", "dep:ferroehr-ext", "ferroehr-ext/multimedia"]
+multimedia = ["dep:ferroehr-ext", "ferroehr-ext/multimedia"]
 # The stage spans the hot-path budget times with the thread's CPU clock
 # (#6321): only ferroehr-rest's tests turn it on, so a server build carries
 # no stage mark.
@@ -48,8 +48,8 @@ schemars = { workspace = true, optional = true }
 ferrohealth-server = { workspace = true, features = ["otlp", "platform-verifier", "reqwest"] }
 ferrohealth-health = { workspace = true, features = ["registry"] }
 ferroehr-ext = { path = "../ferroehr-ext", optional = true }
-# The `multimedia` load path hands archived blobs to the store as shared slices.
-bytes = { workspace = true, optional = true }
+# A stored body and an archived blob travel as shared slices.
+bytes = { workspace = true }
 http.workspace = true
 secrecy.workspace = true
 urlencoding.workspace = true
@@ -84,6 +84,8 @@ sea-query.workspace = true
 sea-query-sqlx.workspace = true
 # `EHR_ACCESS` scheme-settings cache (per-ehr, invalidated on EHR_ACCESS commit).
 moka.workspace = true
+# The commit audit shared parts this process has seen (#6395).
+arc-swap.workspace = true
 serde.workspace = true
 serde_json = { workspace = true, features = ["raw_value"] }
 # OPT 1.4 upload structure validation (`service::template`): a depth-aware scan

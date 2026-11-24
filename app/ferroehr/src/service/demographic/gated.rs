@@ -29,7 +29,7 @@ use crate::versioning::object_version_id::object_version_id;
 
 impl FerroEhrService {
     /// Commits the first version of a new demographic object of `kind` from
-    /// `request`, as part of `container`; `what` names it in the audit's
+    /// `request`, as part of `container`; `description` is the audit's
     /// description and `change` builds the version from the body it stores
     /// and its envelope. The committed version and the body it serves, `None`
     /// when the commit rewrites it.
@@ -41,7 +41,7 @@ impl FerroEhrService {
         &self,
         (kind, container): (Kind, Option<Container>),
         request: WriteRequest<Body>,
-        what: &str,
+        description: &'static str,
         change: impl FnOnce(Body, WriteEnvelope) -> Change,
     ) -> Result<(Committed, Option<Body>), ServiceError> {
         // The caller's request merges with the server rules, BOTH halves the
@@ -50,7 +50,6 @@ impl FerroEhrService {
         // with the default VERSION and `VERSION.audit_details` attributes on
         // commit runtime", ITS-REST overview `Requests_and_responses.md`
         // §"openehr-version and openehr-audit-details").
-        let description = format!("{what} creation");
         let Resolved {
             audit, envelope, ..
         } = self
@@ -58,7 +57,7 @@ impl FerroEhrService {
                 kind,
                 &request,
                 container,
-                (change_type::CREATION, &description),
+                (change_type::CREATION, description),
             )
             .await?;
         // The large media go to the blob store before a connection is held.
@@ -86,7 +85,7 @@ impl FerroEhrService {
     /// Commits `request` as a new version of the demographic object `vo_id`
     /// of `kind`, as part of `container`: a missing object or one of another
     /// kind is `404`, then `precondition` is judged against the tip, then a
-    /// deleted tip is `404`, then the body checks; `what` names it in the
+    /// deleted tip is `404`, then the body checks; `description` is the
     /// audit's description. The committed version and the body it serves,
     /// `None` when the commit rewrites it.
     ///
@@ -97,15 +96,14 @@ impl FerroEhrService {
         ((kind, vo_id), container): ((Kind, VoId), Option<Container>),
         precondition: Precondition,
         request: WriteRequest<Body>,
-        what: &str,
+        description: &'static str,
     ) -> Result<(Committed, Option<Body>), ServiceError> {
-        let description = format!("{what} update");
         let checked = self
             .demographic_write_checks(
                 kind,
                 &request,
                 container,
-                (change_type::MODIFICATION, &description),
+                (change_type::MODIFICATION, description),
             )
             .await;
         // A valid body's large media go to the blob store before a connection is held.
@@ -148,7 +146,8 @@ impl FerroEhrService {
                     ) = materials.take()?
                     else {
                         return Err(ServiceError::exception(format!(
-                            "an unchecked {what} update reached its write"
+                            "an unchecked {} update reached its write",
+                            kind.as_str()
                         )));
                     };
                     let change = Change::modify(vo_id, kind, body, None, None, envelope);
@@ -162,7 +161,7 @@ impl FerroEhrService {
     /// Commits the logical delete of the demographic object `vo_id` of
     /// `kind` as a new `523|deleted|` version (RM common master06 §Logical
     /// Deletion); `precondition` (the `If-Match`, else the path version) is
-    /// judged against the tip, and `what` names it in the audit's
+    /// judged against the tip, and `description` is the audit's
     /// description. The deleted version's `ETag`/`Location` metadata.
     ///
     /// # Errors
@@ -173,10 +172,9 @@ impl FerroEhrService {
         (kind, vo_id): (Kind, VoId),
         precondition: Precondition,
         request: WriteRequest,
-        what: &str,
+        description: &'static str,
     ) -> Result<ServiceResponse, ServiceError> {
-        let description = format!("{what} delete");
-        let (request, precondition, description) = (&request, &precondition, &description);
+        let (request, precondition) = (&request, &precondition);
         let committed = self
             .commit_gated(&self.demographic_pool, move || {
                 async move |conn| {
@@ -228,17 +226,12 @@ impl FerroEhrService {
     fn party_guard(&self, head: Option<i32>, prior: Prior) -> Guard {
         Guard {
             expected_head: head,
-            policy: None,
-            definitions: None,
-            outbox: None,
-            reservation: None,
-            status: None,
-            directory: None,
             party: Some(Box::new(PartySync {
                 key_space: !self.binding.is_empty(),
                 reverse: None,
                 prior,
             })),
+            ..Guard::default()
         }
     }
 }

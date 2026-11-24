@@ -89,7 +89,7 @@ pub(crate) fn of_root(
                     body.str(at).map(std::borrow::Cow::into_owned)
                 }
                 crate::storage::render::index::Kind::Scalar if body.raw(at) != b"null" => {
-                    std::str::from_utf8(body.raw(at)).ok().map(str::to_owned)
+                    Some(body.raw_text(at).to_owned())
                 }
                 crate::storage::render::index::Kind::Scalar
                 | crate::storage::render::index::Kind::Object
