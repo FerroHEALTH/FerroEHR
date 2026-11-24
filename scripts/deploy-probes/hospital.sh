@@ -33,23 +33,17 @@ H_ROLES="urn:example:hospital-roles"
 
 # ── The stack ─────────────────────────────────────────────────────────────────
 
-# The overlay of this family, written to `out`: FerroSMART trusted as the
-# `persons` issuer and as an issuer of roles on both instances, break-glass
-# and the purposes, the one-shot that grants the SCIM client, and, with
-# `patients` set, FerroSMART's patient/ grants honoured (the issuer's
-# `patient_context`, on under the `ferrosmart` preset and off here without
-# `patients`). FerroSMART's audience is the openEHR base the server derives
-# from its public URL.
+# The overlay of this family, written to `out`: FerroSMART trusted as an
+# issuer of persons and of roles on both instances, break-glass and the
+# purposes, and the one-shot that grants the SCIM client. FerroSMART's
+# audience is the openEHR base the server derives from its public URL.
 hospital_overlay() {
-  local out="$1" patients="${2:-}" honoured="false"
-  [[ -n "$patients" ]] && honoured="true"
+  local out="$1"
   {
     cat <<YAML
 x-hospital-env: &hospital-env
   FERROEHR__AUTH__ISSUER__QUICKSTART__AUDIENCE: ferroehr-scim,ferroehr-system
   FERROEHR__AUTH__ISSUER__FERROSMART__ISSUER: $HS_ISSUER
-  FERROEHR__AUTH__ISSUER__FERROSMART__KIND: persons
-  FERROEHR__AUTH__ISSUER__FERROSMART__PRESET: ferrosmart
   FERROEHR__AUTH__ISSUER__FERROSMART__PARTY__IDENTIFIER_ISSUER: $HS_LOGIN_ISSUER
   FERROEHR__AUTH__ISSUER__FERROSMART__PARTY__IDENTIFIER_TYPE: login
   FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: ferrosmart
@@ -57,10 +51,10 @@ x-hospital-env: &hospital-env
   FERROEHR__AUTHZ__RBAC__EMERGENCY_ACCESS_ROLE: EMERGENCY
   FERROEHR__AUDIT__PURPOSE_CODES: TREAT,ETREAT
   FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES: ETREAT
-  FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,query_system_wide,scim_provision,hold_scopes,sign_in_persons,act_for_persons,access_service,write_access_policy,write_care_relationship
+  FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,query_system_wide,scim_provision,hold_scopes,access_service,write_access_policy,write_care_relationship
   FERROEHR__AUTH__SMART__DISCOVERY: "true"
+  FERROEHR__AUTH__DESCRIBED_ISSUER: ferrosmart
   FERROEHR__SERVER__PUBLIC_BASE_URL: http://localhost:8080
-  FERROEHR__AUTH__ISSUER__FERROSMART__PROFILE__PATIENT_CONTEXT: "$honoured"
   # ferrohealth-smart logs why it refuses a token at debug, and nowhere else;
   # the telemetry key is set because compose sets it, which outranks RUST_LOG.
   FERROEHR__TELEMETRY__FILTER: info,ferrohealth_smart=debug
@@ -133,14 +127,12 @@ YAML
   printf '%s' "$out"
 }
 
-# The compose files of the stack, FerroSMART's patient/ grants honoured when
-# `patients` is set; the key overlay is written once per run.
+# The compose files of the stack; the key overlay is written once per run.
 hospital_files() {
-  local patients="${1:-}"
   HOSPITAL_FILES=(-f docker-compose.yml -f docker-compose.ferrosmart.yml
     -f "docker-compose.ferrosmart-$HS_UPSTREAM.yml"
     -f docker-compose.replicas.yml -f "$HOSPITAL_KEY_OVERLAY"
-    -f "$(hospital_overlay "$PROBE_TMP/hospital${patients:+-patients}.yml" "$patients")")
+    -f "$(hospital_overlay "$PROBE_TMP/hospital.yml")")
 }
 
 hdc() { dc "${HOSPITAL_FILES[@]}" --profile replicas --profile s3 --profile viewer "$@"; }
@@ -798,10 +790,6 @@ hospital_setup() {
   h_client access access-service "$(hv member_org)" \
     "$(j_capability "$query")" "$(j_capability "$(j_operation access_service)")" \
     || h_fail_call "the access service"
-  # The hospital's SMART app, whose tokens act for the person who signed in
-  # (FerroSMART docs/architecture.md §13.21; the CDR grants act_for_persons).
-  h_client app "$HS_APP" "$(hv hospital)" "$(j_capability "$(j_operation act_for_persons)")" \
-    || h_fail_call "the hospital's SMART app"
 
   # The patients: Eva under the care of three teams since ten days ago,
   # Frank her representative, Gina a patient too, and Piet, anybody else.
@@ -1137,7 +1125,6 @@ probes_hospital() {
   hospital_portal
   hospital_ehr_launch
   hospital_log
-  hospital_portal_remove
   hospital_pixm
 
   hospital_down
@@ -1398,18 +1385,16 @@ ${H_BODY:0:300}"
   probe_done
 }
 
-# Restarts both instances, one after the other, with FerroSMART's
-# `patient_context` on, so the patient/ grants of Eva's and Frank's
-# standalone launches count; the discovery document still names FerroSMART.
-# The owner approved this re-plan on 2026-11-19 (#5832): behind FerroSMART
-# patients and professionals sign in through one issuer, so the separate
-# `patients` issuer this probe added (#5688) has no counterpart.
+# Restarts both instances, one after the other, and reads Eva's EHR through
+# her standalone launch on each; the discovery document still names
+# FerroSMART. Behind FerroSMART patients and professionals sign in through
+# one issuer (#5832).
 hospital_portal_boot() {
   probe "P-HOSP-PORTAL-BOOT" "$PROBE_WORKING" "deployment" "#5610 #5688 #5832" \
-    "both instances restart one after the other honouring FerroSMART's patient/ grants, and a patient's launch reads"
-  hospital_files patients
+    "both instances restart one after the other, and a patient's launch reads on each"
+  hospital_files
   if ! hospital_restart; then
-    probe_fail "two serving instances honouring FerroSMART's patient/ grants" "$(replica_state "${HOSPITAL_FILES[@]}")"
+    probe_fail "two serving instances after a rolling restart" "$(replica_state "${HOSPITAL_FILES[@]}")"
     h_boot_log
     probe_done
     return 1
@@ -1418,7 +1403,7 @@ hospital_portal_boot() {
   eva="$(hv ehr_eva)"
   for n in 1 2; do
     h_portal_bound "$n" "pt:eva:$eva" "$eva"
-    assert_eq 200 "$H_CODE" "Eva's launch reads her EHR on instance $n once both honour FerroSMART: ${H_BODY:0:300}"
+    assert_eq 200 "$H_CODE" "Eva's launch reads her EHR on instance $n after the restart: ${H_BODY:0:300}"
   done
   probe_done
   hospital_discovery
@@ -1434,45 +1419,6 @@ h_portal_bound() {
     [[ "$H_CODE" != 503 ]] && return 0
     sleep 2
   done
-}
-
-# Restarts the first instance with FerroSMART's `patient_context` off: there
-# a patient's launch is refused for its patient/
-# grant (403, `insufficient_scope`, RFC 6750 §3.1), the second instance still
-# honours it, and the professionals read on both. Owner-approved re-plan of
-# #5688's issuer removal, 2026-11-19 (#5832): the setting is each instance's
-# own, so no state crosses to the other.
-hospital_portal_remove() {
-  probe "P-HOSP-PORTAL-REMOVE" "$PROBE_WORKING" "deployment" "#5688 #5731 #5832" \
-    "an instance that stops honouring FerroSMART's patient/ grants refuses a patient's launch; the other still reads"
-  local eva
-  eva="$(hv ehr_eva)"
-  hospital_files
-  if ! hdc up -d --wait --force-recreate --no-deps ferroehr >/dev/null 2>&1 \
-    || ! wait_http "$H1/health/readiness" 120; then
-    probe_fail "the first instance serving without FerroSMART's patient/ grants" \
-      "$(replica_state "${HOSPITAL_FILES[@]}")"
-    h_boot_log
-    probe_done
-    return 0
-  fi
-  h_call 2 "pt:eva:$eva" GET "/ehr/$eva/composition/$(hv c_vitals)"
-  assert_eq 200 "$H_CODE" "Eva on the instance that still honours FerroSMART: ${H_BODY:0:300}"
-  h_call 2 "pt:frank:$eva" GET "/ehr/$eva/composition/$(hv c_vitals)"
-  assert_eq 200 "$H_CODE" "Frank on the instance that still honours FerroSMART: ${H_BODY:0:300}"
-  local who
-  for who in eva frank; do
-    h_call 1 "pt:$who:$eva" GET "/ehr/$eva/composition/$(hv c_vitals)"
-    assert_eq 403 "$H_CODE" "$who on the instance that no longer honours FerroSMART: ${H_BODY:0:300}"
-    assert_contains "$(grep -i '^www-authenticate:' <<<"$H_HEADERS")" "insufficient_scope" \
-      "$who's refusal names the patient/ grant that no longer counts"
-  done
-  local n
-  for n in 1 2; do
-    h_call "$n" p:anna GET "/ehr/$eva/composition/$(hv c_encounter)" "" TREAT
-    assert_eq 200 "$H_CODE" "Dr. Jansen on instance $n after the removal: ${H_BODY:0:300}"
-  done
-  probe_done
 }
 
 # The EHR launch through the viewer's Launch button (#5880): the viewer
@@ -1672,7 +1618,7 @@ hospital_pixm() {
   # FerroEHR serves TLS in this leg (hospital_pix_up), so the base FerroSMART
   # names in `aud` and its picker reads is the https one.
   HS_BASE="https://localhost:8080/ferroehr/rest/openehr/v1"
-  hospital_files patients
+  hospital_files
   probe "P-HOSP-PIXM-BOOT" "$PROBE_WORKING" "deployment" "#5610" \
     "the stack boots again with the default pixm subject index and the portal issuer"
   if ! hospital_up urn:oid:2.999.7.1 || ! hospital_pix_up; then
@@ -1697,8 +1643,6 @@ hospital_pixm() {
   scim_user 2 controller "Ferro EHR" || h_fail_call "SCIM creates the controller's administrator"
   h_party cardiology group "$(j_named_party GROUP Cardiology)" || h_fail_call "the Cardiology team"
   h_hospital || h_fail_call "the controller, which the SCIM client acts for"
-  h_client app "$HS_APP" "$(hv hospital)" "$(j_capability "$(j_operation act_for_persons)")" \
-    || h_fail_call "the hospital's SMART app"
   h_facts_role anna PHYSICIAN || h_fail_call "Dr. Jansen's role"
   h_party role_controller_policy role "$(j_role "controller administrator" PERSON "$(hv person_controller)" \
     "$(j_capability "$(j_operation write_access_policy)")")" || h_fail_call "the controller's policy grant"

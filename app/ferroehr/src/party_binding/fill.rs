@@ -170,8 +170,7 @@ impl Lease {
     ) -> Result<Self, FillError> {
         let running = mapping.digest();
         let spaces = mapping.key_spaces();
-        let issuers: Vec<&String> = spaces.keys().collect();
-        let portal: Vec<&String> = spaces.iter().filter(|(_, p)| **p).map(|(i, _)| i).collect();
+        let issuers: Vec<&String> = spaces.iter().collect();
         let mut conn = acquire(pool).await?;
         let mut tx = conn.begin().await?;
         lock(&mut tx).await?;
@@ -186,15 +185,14 @@ impl Lease {
             }
         };
         sqlx::query(
-            "INSERT INTO binding_lease (replica, digest, issuers, portal) \
-             VALUES ($1, $2, $3, $4) \
+            "INSERT INTO binding_lease (replica, digest, issuers) \
+             VALUES ($1, $2, $3) \
              ON CONFLICT (replica) DO UPDATE SET digest = EXCLUDED.digest, \
-                 issuers = EXCLUDED.issuers, portal = EXCLUDED.portal, renewed_at = now()",
+                 issuers = EXCLUDED.issuers, renewed_at = now()",
         )
         .bind(replica)
         .bind(&running)
         .bind(&issuers)
-        .bind(&portal)
         .execute(&mut *tx)
         .await?;
         if !first {

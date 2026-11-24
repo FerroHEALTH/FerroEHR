@@ -73,10 +73,10 @@ honour **refuses to boot** rather than degrading at the first request:
 | a `password_hash` below `m=19456,t=2,p=1` argon2id | error: the OWASP Argon2id floor |
 | `[authz.assurance] minimum` with an empty `levels` map, or with no mapped value at or above it | error: every patient-data request would be refused |
 | an `[authz.assurance] levels` value that is blank or carries whitespace, a quote or a backslash | error: the step-up challenge names the values in one quoted `acr_values` parameter (RFC 9470 §3) |
-| `[authz.professional]` | error: removed; the issuer's `kind` and profile classify the caller |
-| a `persons` issuer with no `[auth.issuer.<name>.party]` table, two issuers sharing an audience, or no `[authz.party_binding] provider` | error: every person is bound to a party, under the provider the deployment acts for |
+| `[authz.professional]` | error: removed; the token's `fhirUser` classifies the caller |
+| two issuers sharing an audience, or no `[authz.party_binding] provider` | error: every person is bound to a party, under the provider the deployment acts for |
 | a Basic user with no `[[authz.party_binding.basic_user]]` mapping | error: a Basic user is a person, bound by its key |
-| an `[authz.rbac] role_issuers` entry that is not a `persons` issuer | error: only a person holds an administrator or emergency role |
+| an `[authz.rbac] role_issuers` entry that names a `federation` issuer | error: only the deployment's own people hold an administrator or emergency role |
 
 Successfully verified Basic credentials are cached for
 `FERROEHR__AUTH__BASIC__CACHE_TTL` (default `5min`; `0s` turns the cache off
@@ -93,8 +93,7 @@ The bearer settings:
 | Environment variable | Default | Meaning |
 |---|---|---|
 | `FERROEHR__AUTH__ISSUER__<NAME>__ISSUER` | unset (required for bearer tokens) | the expected `iss` of the `[auth.issuer.<name>]` table `<name>` names, and where the metadata is read, in the background from the start: RFC 8414 §3 first, OpenID Connect Discovery 1.0 §4 after a `404` |
-| `FERROEHR__AUTH__ISSUER__<NAME>__KIND` | the preset's | `persons`, `patients`, `machines` or `federation`: whose tokens the issuer signs; required under `rfc9068` |
-| `FERROEHR__AUTH__ISSUER__<NAME>__PRESET` | `rfc9068` | the preset of the issuer's token shape: `rfc9068`, `ferrosmart`, `entra`, `keycloak` or `okta` |
+| `FERROEHR__AUTH__ISSUER__<NAME>__KIND` | unset | `federation` for an issuer of another party's professionals or organisation; unset, a SMART App Launch 2.2 authorization server |
 | `FERROEHR__AUTH__ISSUER__<NAME>__AUDIENCE` | the openEHR base | accepted `aud` values; unset, the openEHR REST API's `baseUrl` under `server.public_base_url` |
 | `FERROEHR__AUTH__ISSUER__<NAME>__ALGORITHMS` | `RS256,RS384,PS256,PS384,ES256,ES384` | accepted signing algorithms, asymmetric only |
 | `FERROEHR__AUTH__ISSUER__<NAME>__CLOCK_SKEW` | `60s` | leeway on `exp`, `nbf` and `iat`; capped at `5min` |
@@ -120,23 +119,17 @@ Basic user whose scopes do not grant the operation is refused with `403`. See
 >
 > ```bash
 > export FERROEHR__AUTH__ISSUER__KEYCLOAK__ISSUER=https://keycloak.example/realms/ferroehr
-> export FERROEHR__AUTH__ISSUER__KEYCLOAK__KIND=persons
-> export FERROEHR__AUTH__ISSUER__KEYCLOAK__PRESET=keycloak
 > export FERROEHR__AUTH__ISSUER__KEYCLOAK__AUDIENCE=ferroehr-api
+> export FERROEHR__AUTH__ISSUER__KEYCLOAK__PROFILE__TOKEN_TYPES=JWT
 > ```
 >
-> A person signs in through a client the CDR grants `sign_in_persons`, such
-> as the viewer, on the `AGENT` carrying its client id under the realm.
+> Keycloak's access tokens carry `typ: JWT`, outside the RFC 9068 default,
+> and need a mapper per client that puts `client_id` in every token. The
+> client's default client scopes put the SMART on openEHR scopes the routes
+> need into each token's `scope` claim.
 >
-> Keycloak's access tokens carry `typ: JWT`, outside the RFC 9068 profile the
-> server expects by default, which the `keycloak` profile admits. The client's
-> default client scopes put the SMART on openEHR scopes the routes need into
-> each token's `scope` claim.
->
-> The same pattern works for Active Directory or any standards-compliant
-> identity provider; walkthroughs for Entra ID and AD FS (and the answer for
-> plain-LDAP directories) are in
-> [Enterprise identity providers](identity-providers.md). User accounts,
+> Entra ID, AD FS, Okta and plain-LDAP directories run upstream of FerroSMART
+> ([Enterprise identity providers](identity-providers.md)). User accounts,
 > roles, and lifecycle are administered in the IdP; the CDR has no user API.
 
 An unauthenticated request to a protected route is refused with `401`; an
@@ -182,17 +175,15 @@ asks an EHR system used by health professionals for reliable identification and
 authentication of them; Implementing Regulation (EU) 2026/2099 Art. 6(3) sets
 `substantial` for cross-border exchange, and `high` from 26 March 2032.
 
-**The natural person** behind a token is the issuer's to say. Each
-`[auth.issuer.<name>]` declares its `kind`, and `ferrohealth-smart` classifies every
-token by it and by the issuer's profile: a `persons` token through a client
-the CDR grants `sign_in_persons` is the person, a token through a client the
-CDR grants `act_for_persons` is that client acting for the person the token
-names, and an app-only token is a system. The server asks the policy grants
-while it classifies the token, from the copy each replica holds, so a grant
-takes effect on the next request. A `persons` token through any other
-client is refused with `401`. The access record names the person by the
-profile's `person_key`, and a delegated token as the client acting for that
-person; see [Audit trail](audit.md#the-ehds-logging-elements-mapped).
+**The natural person** behind a token is the issuer's to say.
+`ferrohealth-smart` reads every token's caller from its standard claims: a
+user by the type of their `fhirUser`, a client credentials token, whose
+`sub` is its `client_id`, as a system, and an RFC 8693 `act` as the actor
+acting for the user (RFC 9068 §2.2, RFC 8693 §4.1). The authorization
+server's registry is the one list of clients, so a token whose `aud` names
+FerroEHR admits its client. The access record names the person by their
+`sub`, and a delegated token's actor beside them; see [Audit
+trail](audit.md#the-ehds-logging-elements-mapped).
 
 What counts as **patient data**: every API route except the definition family
 (`/definition/...`: templates, archetypes, stored-query texts), terminology,
@@ -465,7 +456,7 @@ write a directive or a rule refuses changes nothing:
   refused at step 0 on any other. A caller bound to the person reads their own
   record as the person, unless it performs a professional `ROLE`: then its
   read is a professional's, refused at step 5 as a conflict of interest, and
-  the staff member reads their own record through the patient portal. A
+  the staff member reads their own record under their own login. A
   representative reaches only the EHR of the subject it represents, refused
   at step 0 on any other, and is held there to steps 1 to 3 and 5 and skips
   the others (Art. 4(2)): a controller rule can keep, say, a minor's confidential
@@ -775,21 +766,15 @@ health professionals". FerroEHR keeps both rules at the commit. No openEHR
 specification governs who may change what, so the rules are our own design;
 the marker is the RM's own.
 
-- **Who counts as the person.** A bearer token with a `patient/` scope and no
-  `user/` or `system/` scope (for example `patient/composition-*.cruds`), from an
-  issuer whose [`patient_context`](smart-app-launch.md#launch-context-binding-to-one-ehr) is on.
-  The SMART scope grammar reserves `patient/` for "applications acting in the
-  context of a specific patient/EHR" and `user/` for those acting for a
-  logged-in practitioner, so a clinician's app uses `user/` scopes and keeps
-  every professional right. A patient claim in the token does not make a
-  caller the person, because a professional's token in a patient's context
-  carries it too. The rule is the FerroHEALTH family's strict answer, shared through
-  `ferrohealth-smart`; the Art. 3(3) delay below asks its broad one.
+- **Who counts as the person.** A caller the party binding binds to the
+  `PERSON` an EHR's subject names, with no professional `ROLE`. A patient
+  claim or a `patient/` scope in the token does not make a caller the person,
+  because a professional's token in a patient's context carries both (SMART
+  on openEHR master08 §Resource Scopes).
 - **Who counts as the representative.** A person bound to their own `PERSON`
   who acts for the patient through a representation relationship FerroEHR has
   recorded ([how a login is looked up](installation/config-auth.md#how-a-login-is-looked-up)),
-  through a `persons` issuer or the patient portal
-  ([representatives in the patient portal](operational-policy.md#representatives-in-the-patient-portal)).
+  ([Representatives](operational-policy.md#representatives)).
   The rules below hold for the representative exactly as for the person.
 - **The marker.** Every version and CONTRIBUTION the person commits records
   `PARTY_SELF` with no `external_ref` as `AUDIT_DETAILS.committer`, the RM's
@@ -847,8 +832,8 @@ default, so the person's access stays immediate.
   amended, and a professional holds an amendment by hand if it needs
   explaining. A composition the person commits is never held from them.
 - **Who it is held from.** A request that may be the person's own: a bearer
-  token that `ferrohealth-smart` classifies as the person or a representative,
-  or a representative the patient portal binds. Such a token is treated as the
+  token the party binding binds as the person or a representative. Such a
+  token is treated as the
   person's, whatever `user/` or `system/` grant it also carries, so a mixed
   token is withheld from rather than shown the data too early. The rule is the
   FerroHEALTH family's, shared with the other products through
@@ -882,7 +867,7 @@ default, so the person's access stays immediate.
   server writes the expiry record within a minute of the limit passing.
 - **The person's access trail (Art. 9).** A record about a held composition
   would tell the person a result exists. The subject-scoped ITI-81 read, the
-  one a patient portal serves the person's own trail from, leaves out every
+  one an app serves the person's own trail from, leaves out every
   record that names a held composition, its hold included, until the hold is
   released or expires; the records then appear unchanged, with their original
   times. The filter is `ehds-logging`'s, the FerroHEALTH family's EHDS
@@ -906,7 +891,7 @@ Admin operation) and `READONLY` (`readonly_role`, refused on every write).
 | `FERROEHR__AUTHZ__RBAC__ADMIN_ROLE` | `ADMIN` | role required for admin operations |
 | `FERROEHR__AUTHZ__RBAC__READONLY_ROLE` | `READONLY` | role marking a principal read-only: refused on every write |
 | `FERROEHR__AUTH__ISSUER__<NAME>__ROLE_CLAIMS` | `["roles","groups","entitlements"]` | JWT claim paths mined for roles, per issuer; a Keycloak issuer adds `realm_access.roles` |
-| `FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS` | empty | the names of the `persons` issuers whose role claims may grant the administrator and emergency roles; a token of any other issuer never holds them |
+| `FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS` | empty | the names of the issuers whose role claims may grant the administrator and emergency roles; a token of any other issuer never holds them |
 
 Roles come from the JWT claims listed in `ROLE_CLAIMS`, or from a Basic user's
 configured roles. The defaults are the carriers
@@ -926,7 +911,7 @@ bearer token whose SMART on openEHR resource scopes are all `system/` scopes,
 such as `system/template-*.r`, is a backend client and needs no role for a
 Clinical operation: its scopes decide what it reaches. The record's person and
 their representative need no role either: a caller the party binding binds
-to the `PERSON` they are, through a `patients` or a `persons` issuer, and a
+to the `PERSON` they are, and a
 caller acting for the person pass the Clinical class, and the access
 evaluator decides from who they are (EHDS Art. 3 and 4(2)), confining them
 to their own records. A token's own reading of the patient never counts
@@ -984,9 +969,8 @@ role gate).
 
 A caller is the patient, the `subject` caller kind of the
 [access evaluator](#access-directives), through a SMART App Launch
-patient-context credential: a bearer token with a `patient/` scope and no
-`user/` or `system/` one, from an issuer whose
-[`patient_context`](smart-app-launch.md#launch-context-binding-to-one-ehr) is on.
+patient-context credential: a bearer token whose `patient/` grants name the
+launch EHR in `ehrId` (master07 §Context Selection).
 The patient's own EHR is the `ehrId` of that token's launch context
 (ITS-REST SMART App Launch §Context Selection). The evaluator skips every step
 of the decision procedure for the patient on their own EHR (EHDS Art. 3) and

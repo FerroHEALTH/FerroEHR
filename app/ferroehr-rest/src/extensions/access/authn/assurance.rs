@@ -25,6 +25,7 @@
 use ferroehr::system_log::event::{ActingMode, ActorAuthentication};
 use ferrohealth_smart::assurance::AssuranceSection;
 use ferrohealth_smart::kind::CallerKind;
+use ferrohealth_smart::resource::{Caller, Via};
 use http::HeaderValue;
 
 use super::Principal;
@@ -111,17 +112,14 @@ impl PatientDataGate {
             return ActorAuthentication::default();
         };
         let assessment = self.assurance.assess(caller.claims());
-        let mode = match caller.kind() {
-            CallerKind::Guest(inner) => acting(inner),
-            kind => acting(kind),
-        };
+        let mode = acting(caller);
         ActorAuthentication {
             mode,
             assurance_level: assessment.level,
             assurance_value: assessment.value,
-            professional_id: matches!(mode, Some(ActingMode::Person | ActingMode::Delegated))
-                .then(|| caller.person_key().map(str::to_owned))
-                .flatten(),
+            professional_id: (matches!(mode, Some(ActingMode::Person | ActingMode::Delegated))
+                && caller.via() == Via::Bearer)
+                .then(|| caller.subject().to_owned()),
         }
     }
 
@@ -165,20 +163,17 @@ impl PatientDataGate {
     }
 }
 
-/// How a caller of `kind` acts for the person its token names: as that
-/// person, or as a client the person delegated to; `None` for a caller that
-/// names no person of this deployment (the patient, someone acting for the
-/// patient, and a guest, whose inner kind the caller reads).
-const fn acting(kind: &CallerKind) -> Option<ActingMode> {
-    match kind {
-        CallerKind::Person | CallerKind::Representative { .. } => Some(ActingMode::Person),
-        CallerKind::Delegated { .. } => Some(ActingMode::Delegated),
+/// How `caller` acts for the person its token names: as that person, or
+/// through the RFC 8693 §4.1 actor its token names; `None` for the patient,
+/// who names no person of this deployment.
+fn acting(caller: &Caller) -> Option<ActingMode> {
+    match caller.kind() {
+        CallerKind::Patient => None,
+        kind if kind.is_user() && caller.actor().is_some() => Some(ActingMode::Delegated),
+        kind if kind.is_user() => Some(ActingMode::Person),
         CallerKind::System => Some(ActingMode::System),
         CallerKind::ExternalPerson(_) | CallerKind::ExternalOrganisation(_) => {
             Some(ActingMode::External)
-        }
-        CallerKind::Patient | CallerKind::PatientRepresentative { .. } | CallerKind::Guest(_) => {
-            None
         }
         // NOTE: ferrohealth-smart `kind::CallerKind` is `#[non_exhaustive]`; a kind
         // a later release adds names no person here until it is matched above.
@@ -199,10 +194,10 @@ mod tests {
     const BASE: &str = "/ferroehr/rest/openehr/v1";
 
     fn bearer(claims: &Value) -> Principal {
-        as_kind(claims, CallerKind::Person)
+        as_kind(claims, CallerKind::User)
     }
 
-    /// A bearer principal of `kind` whose person key is its `sub`.
+    /// A bearer principal of `kind`.
     fn as_kind(claims: &Value, kind: CallerKind) -> Principal {
         let claims = claims.as_object().cloned().expect("object");
         let subject = claims
@@ -210,9 +205,7 @@ mod tests {
             .and_then(Value::as_str)
             .unwrap_or_default()
             .to_owned();
-        let caller = Caller::new(subject.clone(), None, "", None, false, kind)
-            .with_person_key(Some(subject), None)
-            .with_claims(claims);
+        let caller = Caller::new(subject, None, "", None, kind).with_claims(claims);
         Principal::new(
             Access::Caller(Arc::new(caller)),
             vec!["USER".to_owned()],
@@ -338,16 +331,21 @@ mod tests {
         );
     }
 
-    /// A delegated token is recorded as delegated, naming its person, and a
-    /// person's own token as that person, each by the issuer profile's
-    /// person key.
+    /// A token naming an actor is recorded as delegated, naming its person,
+    /// and a person's own token as that person, each by its `sub`.
     #[test]
     fn the_caller_kind_names_the_person() {
         let substantial = gate(Some(AssuranceLevel::Substantial));
-        let delegated = as_kind(
+        let mut delegated = as_kind(
             &json!({ "sub": "prof-007", "acr": "loa-high" }),
-            CallerKind::Delegated { actor: None },
+            CallerKind::Practitioner,
         );
+        let actor = ferrohealth_smart::kind::Actor {
+            issuer: "https://login.example".to_owned(),
+            sub: "agent".to_owned(),
+        };
+        let caller = delegated.access.caller().cloned().expect("a caller");
+        delegated.access = Access::Caller(Arc::new(caller.with_actor(actor)));
         assert_eq!(
             substantial.judge(&delegated, Some(EHR)).expect("passes"),
             ActorAuthentication {
