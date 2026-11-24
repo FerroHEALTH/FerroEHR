@@ -84,6 +84,9 @@ config:
         audience: [ferroehr-machines]
     # FerroEHR's product scope, which admits the ADMIN and DEMOGRAPHIC APIs.
     product_scope: __ferroehr.platform
+    # The machines issuer signs only its clients' tokens, so the discovery
+    # document names the keycloak issuer.
+    described_issuer: keycloak
     smart:
       # Serves the discovery document, built at boot from the [auth] issuer's
       # metadata, so it needs no endpoint list of its own.

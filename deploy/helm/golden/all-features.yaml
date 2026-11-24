@@ -640,6 +640,7 @@ data:
         url = "tls://arr.example.com:6514"
     
     [auth]
+      described_issuer = "keycloak"
       enabled = true
       product_scope = "__ferroehr.platform"
       [auth.issuer]
@@ -1569,7 +1570,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 3720b0845416c725281303b5239ca0e5f579cbb0797962443b0604a0c77b2948
+        checksum/config: eee35cc348c3a4ed0f5b04d6b507e2fc21dc51e5b790527ca59f81a344f5f833
         prometheus.io/scrape: "true"
         prometheus.io/port: "9100"
         prometheus.io/path: "/management/prometheus"
