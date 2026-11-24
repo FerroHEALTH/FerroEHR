@@ -128,11 +128,11 @@ CREATE TABLE contribution (
     -- The owning EHR, or NULL where no EHR owns the change set (RM demographic
     -- content is not EHR-owned).
     ehr_id          uuid,
+    -- No foreign key: each writer inserts the audit in the same statement or
+    -- checks that it is stored (#6394).
     commit_audit_id uuid NOT NULL,
-    CONSTRAINT pk_contribution PRIMARY KEY (id),
     CONSTRAINT fk_contribution_ehr FOREIGN KEY (ehr_id) REFERENCES ehr (id) ON DELETE CASCADE,
-    CONSTRAINT fk_contribution_commit_audit FOREIGN KEY (commit_audit_id)
-        REFERENCES commit_audit_facts (id)
+    CONSTRAINT pk_contribution PRIMARY KEY (id)
 );
 CREATE INDEX idx_contribution_ehr_id ON contribution (ehr_id);
 CREATE INDEX idx_contribution_commit_audit_id ON contribution (commit_audit_id);
@@ -239,6 +239,8 @@ CREATE TABLE version (
     -- at read. EHDS Annex II 3.2(e) (Regulation (EU) 2025/327,
     -- https://eur-lex.europa.eu/eli/reg/2025/327/oj); our own design.
     origins         jsonb,
+    -- The CONTRIBUTION and the commit audit carry no foreign key, as
+    -- contribution.commit_audit_id (#6394).
     contribution_id uuid NOT NULL,
     -- This version's own commit_audit. The RM copies the contribution audit
     -- into every version (master06 §Committal and Audits), which is what makes
@@ -301,15 +303,11 @@ CREATE TABLE version (
     -- definition surface provisioned it (template_ref).
     CONSTRAINT fk_version_template FOREIGN KEY (template_id)
         REFERENCES template_ref (template_id),
-    CONSTRAINT fk_version_contribution FOREIGN KEY (contribution_id)
-        REFERENCES contribution (id),
     CONSTRAINT ck_version_content_digest_length
         CHECK (content_digest IS NULL OR octet_length(content_digest) = 32),
     CONSTRAINT ck_version_content_sys_version
         CHECK (content_sys_version IS NULL
-               OR (content_sys_version >= 1 AND content_sys_version < sys_version AND body IS NOT NULL)),
-    CONSTRAINT fk_version_commit_audit FOREIGN KEY (commit_audit_id)
-        REFERENCES commit_audit_facts (id)
+               OR (content_sys_version >= 1 AND content_sys_version < sys_version AND body IS NOT NULL))
 ) PARTITION BY LIST (tier);
 CREATE TABLE version_hot  PARTITION OF version FOR VALUES IN ('hot');
 CREATE TABLE version_cold PARTITION OF version FOR VALUES IN ('cold');

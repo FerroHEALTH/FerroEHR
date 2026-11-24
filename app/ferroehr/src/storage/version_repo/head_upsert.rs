@@ -72,7 +72,11 @@ impl Placement {
 ///
 /// `{branch}`, `{ordinal}`, `{lifecycle}`, `{template}`, `{archetype}` and
 /// the episodes of [`HeadEpisodes::Placed`] are the caller's parameter
-/// placeholders; `FROM {version}` orders this CTE after the version insert.
+/// placeholders; `FROM {version}` orders each CTE after the version insert.
+///
+/// A create, the object's first version (ordinal 1, which the placement read
+/// gives only an object with no version), inserts the row with a plain insert
+/// ([`Self::insert`]); every later version updates it ([`Self::advance`]).
 ///
 /// The update is MONOTONIC: it applies only when the committing version's
 /// ordinal is greater than the one the head already records, and a trunk commit
@@ -107,8 +111,46 @@ pub(crate) struct HeadUpsert<'a> {
 }
 
 impl HeadUpsert<'_> {
-    /// Render the CTE body with this statement's placeholders substituted.
-    pub(crate) fn sql(&self) -> String {
+    /// The monotonic upsert of a later version's head row, which writes a row
+    /// for an ordinal above 1 alone.
+    pub(crate) fn advance(&self) -> String {
+        let Self {
+            branch, episodes, ..
+        } = *self;
+        let (set_open, set_branch, set_close) = match episodes {
+            HeadEpisodes::Untouched => ("", "", ""),
+            HeadEpisodes::Cleared | HeadEpisodes::Placed(_) => (
+                ", episodes = CASE WHEN ",
+                branch,
+                " = 0 THEN EXCLUDED.episodes ELSE vo_head.episodes END",
+            ),
+        };
+        format!(
+            "{} \
+         ON CONFLICT (vo_id) DO UPDATE SET \
+             head_sys_version = EXCLUDED.head_sys_version, \
+             committed_at = EXCLUDED.committed_at, \
+             trunk_head_sys_version = CASE WHEN {branch} = 0 \
+                 THEN EXCLUDED.head_sys_version ELSE vo_head.trunk_head_sys_version END, \
+             trunk_head_content_key = CASE WHEN {branch} = 0 \
+                 THEN EXCLUDED.trunk_head_content_key ELSE vo_head.trunk_head_content_key END, \
+             lifecycle_state = CASE WHEN {branch} = 0 \
+                 THEN EXCLUDED.lifecycle_state ELSE vo_head.lifecycle_state END, \
+             template_id = CASE WHEN {branch} = 0 \
+                 THEN EXCLUDED.template_id ELSE vo_head.template_id END, \
+             root_archetype = CASE WHEN {branch} = 0 \
+                 THEN EXCLUDED.root_archetype ELSE vo_head.root_archetype END{set_open}{set_branch}{set_close} \
+         WHERE EXCLUDED.head_sys_version > vo_head.head_sys_version \
+           AND ({branch} <> 0 \
+                OR vo_head.trunk_head_sys_version IS NULL \
+                OR EXCLUDED.head_sys_version > vo_head.trunk_head_sys_version)",
+            self.insert("> 1")
+        )
+    }
+
+    /// The head row's insert, which writes a row for an ordinal `ordinals`
+    /// admits (`= 1`, a create).
+    pub(crate) fn insert(&self, ordinals: &str) -> String {
         let Self {
             vo,
             kind,
@@ -126,14 +168,6 @@ impl HeadUpsert<'_> {
             HeadEpisodes::Placed(at) => (", episodes", Cow::Owned(format!(", ${at}::bytea[]"))),
             HeadEpisodes::Untouched | HeadEpisodes::Cleared => ("", Cow::Borrowed("")),
         };
-        let (set_open, set_branch, set_close) = match episodes {
-            HeadEpisodes::Untouched => ("", "", ""),
-            HeadEpisodes::Cleared | HeadEpisodes::Placed(_) => (
-                ", episodes = CASE WHEN ",
-                branch,
-                " = 0 THEN EXCLUDED.episodes ELSE vo_head.episodes END",
-            ),
-        };
         format!(
             "INSERT INTO vo_head (vo_id, kind, ehr_id, head_sys_version, \
              trunk_head_sys_version, trunk_head_content_key, lifecycle_state, template_id, \
@@ -142,24 +176,7 @@ impl HeadUpsert<'_> {
                 CASE WHEN {branch} = 0 THEN {ordinal} ELSE NULL END, \
                 CASE WHEN {branch} = 0 THEN {version}.content_key ELSE NULL END, \
                 {lifecycle}, {template}, {archetype}{episodes_value}, {committed_at}::timestamptz \
-         FROM {version} \
-         ON CONFLICT (vo_id) DO UPDATE SET \
-             head_sys_version = EXCLUDED.head_sys_version, \
-             committed_at = EXCLUDED.committed_at, \
-             trunk_head_sys_version = CASE WHEN {branch} = 0 \
-                 THEN EXCLUDED.head_sys_version ELSE vo_head.trunk_head_sys_version END, \
-             trunk_head_content_key = CASE WHEN {branch} = 0 \
-                 THEN EXCLUDED.trunk_head_content_key ELSE vo_head.trunk_head_content_key END, \
-             lifecycle_state = CASE WHEN {branch} = 0 \
-                 THEN EXCLUDED.lifecycle_state ELSE vo_head.lifecycle_state END, \
-             template_id = CASE WHEN {branch} = 0 \
-                 THEN EXCLUDED.template_id ELSE vo_head.template_id END, \
-             root_archetype = CASE WHEN {branch} = 0 \
-                 THEN EXCLUDED.root_archetype ELSE vo_head.root_archetype END{set_open}{set_branch}{set_close} \
-         WHERE EXCLUDED.head_sys_version > vo_head.head_sys_version \
-           AND ({branch} <> 0 \
-                OR vo_head.trunk_head_sys_version IS NULL \
-                OR EXCLUDED.head_sys_version > vo_head.trunk_head_sys_version)"
+         FROM {version} WHERE {ordinal}::int {ordinals}"
         )
     }
 }
