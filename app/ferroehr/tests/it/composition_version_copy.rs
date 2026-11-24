@@ -116,7 +116,8 @@ async fn read(
 /// The span a counted read is made in.
 const READ_SPAN: &str = "version_copy_read";
 
-/// The statements sqlx sends inside a [`READ_SPAN`] span.
+/// The statements sqlx sends inside a [`READ_SPAN`] span, without the session
+/// setup of a connection the pool opens there (#6431).
 #[derive(Clone, Default)]
 struct Statements(Arc<std::sync::Mutex<Vec<String>>>);
 
@@ -146,9 +147,10 @@ where
         if event.metadata().target() != "sqlx::query" {
             return;
         }
-        let in_read = ctx
-            .event_scope(event)
-            .is_some_and(|mut scope| scope.any(|span| span.name() == READ_SPAN));
+        let in_read = ctx.event_scope(event).is_some_and(|scope| {
+            let names: Vec<&str> = scope.map(|span| span.name()).collect();
+            names.contains(&READ_SPAN) && !names.contains(&ferroehr::db::pool::SESSION_SETUP_SPAN)
+        });
         if in_read {
             let mut text = Text::default();
             event.record(&mut text);
