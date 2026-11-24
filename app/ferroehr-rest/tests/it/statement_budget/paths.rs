@@ -2348,9 +2348,9 @@ async fn cared_ehrs(app: &Router, pool: &PgPool, count: usize) -> Vec<(String, S
 /// no round trip, no nested statement and no row more than its unplaced twin
 /// while the copies hold the EHR and its subject, and one round trip more,
 /// the care copy's read of the subject's relationships, when they do not; at
-/// most 64 WAL bytes in its head row and, held, 21 allocations: the
-/// placement read before the transaction and the EHR's copied entry (#6413,
-/// #6412). The node indexes split
+/// most 64 WAL bytes in its head row and, held, 17 allocations: the
+/// placement read before the transaction and the episode keys (#6413, #6412,
+/// #6478). The node indexes split
 /// their pages as they fill, so the head row is judged on its own, and the
 /// pair is judged on its second window, after each path's first.
 #[tokio::test]
@@ -2425,7 +2425,7 @@ async fn a_placed_commit_costs_its_projection_alone() {
     }
     let head = |m: &Measure| relation_wal(m, "vo_head").0.div_euclid(REQUESTS);
     assert!(head(&placed) <= head(&twin) + 64, "{report}");
-    assert!(placed_allocations <= twin_allocations + 21, "{report}");
+    assert!(placed_allocations <= twin_allocations + 17, "{report}");
 
     let fresh = usize::try_from(WARM + REQUESTS).unwrap();
     world.ehrs = cared_ehrs(&app, &pool, fresh).await;
