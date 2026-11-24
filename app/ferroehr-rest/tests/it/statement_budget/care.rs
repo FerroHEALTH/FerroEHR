@@ -48,9 +48,10 @@ const READ: Ceiling = Ceiling {
 };
 
 /// A query narrowed to the caller's caseload (#6074, #6320).
+// NOTE: #6432 and #6320, the revisions ride the query's statement through the party door.
 const CASELOAD: Ceiling = Ceiling {
-    round_trips: 4,
-    nested: 0,
+    round_trips: 3,
+    nested: 1,
     notifies: 0,
     wal: 0,
 };
@@ -65,7 +66,7 @@ const COMMIT: Ceiling = Ceiling {
 
 /// A care relationship's commit, then the caseload query that reads the copy it kept (#6074).
 const RECARE: Ceiling = Ceiling {
-    round_trips: 34,
+    round_trips: 33,
     nested: COMMIT.nested + CASELOAD.nested,
     notifies: COMMIT.notifies + CASELOAD.notifies,
     wal: COMMIT.wal + CASELOAD.wal,
