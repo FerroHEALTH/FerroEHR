@@ -129,41 +129,6 @@ mod tests {
     }
 
     #[test]
-    fn the_client_lists_and_presets_are_unknown_keys() {
-        for body in [
-            "scopeless_subjects = []\n",
-            "[issuer.idp]\nissuer = \"https://idp.example\"\nscopeless_subjects = [\"svc\"]\n",
-            "[issuer.idp]\nissuer = \"https://idp.example\"\n[issuer.idp.profile]\nfirst_party_clients = [\"portal\"]\n",
-            "[issuer.idp]\nissuer = \"https://idp.example\"\n[issuer.idp.profile]\ndelegates = [{ client = \"bridge\" }]\n",
-            "[issuer.idp]\nissuer = \"https://idp.example\"\n[issuer.idp.profile]\naudience_delegates = true\n",
-            "[issuer.idp]\nissuer = \"https://idp.example\"\nprofile_file = \"p.toml\"\n",
-            "[issuer.idp]\nissuer = \"https://idp.example\"\npreset = \"ferrosmart\"\n",
-            "[idp.entra]\nbase_url = \"https://graph.example/v1.0\"\n",
-        ] {
-            let err = toml::from_str::<AuthConfig>(body).expect_err("a removed key");
-            assert!(err.to_string().contains("unknown field"), "{body}: {err}");
-        }
-        let err = toml::from_str::<AuthConfig>(
-            "[issuer.idp]\nissuer = \"https://idp.example\"\nkind = \"persons\"\n",
-        )
-        .expect_err("a removed issuer kind");
-        assert!(err.to_string().contains("unknown variant"), "{err}");
-    }
-
-    /// The token-claim patient scope is removed: a patient is confined to
-    /// their own EHR by the access evaluator alone (#5586).
-    #[test]
-    fn the_removed_patient_binding_keys_are_unknown() {
-        for body in [
-            "patient_claim = \"patient_id\"\n",
-            "patient_namespace = \"nl.bsn\"\n",
-        ] {
-            let err = toml::from_str::<AuthConfig>(body).expect_err("a removed key");
-            assert!(err.to_string().contains("unknown field"), "{body}: {err}");
-        }
-    }
-
-    #[test]
     fn the_section_renders_flat() {
         let rendered = serde_json::to_value(AuthConfig::default()).expect("renders");
         assert!(rendered.get("enabled").is_some(), "{rendered}");

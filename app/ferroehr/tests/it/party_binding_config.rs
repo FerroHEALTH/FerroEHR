@@ -307,38 +307,31 @@ fn two_issuers_sharing_an_audience_are_refused() {
     assert!(text.contains("share the audience \"ferroehr\""), "{text}");
 }
 
+/// Each section of `[auth]` and `[authz]` refuses a key it does not define.
 #[test]
-fn a_removed_key_is_refused_as_unknown() {
-    let text = refusal(&with(
+fn an_unknown_key_in_each_section_is_refused() {
+    for header in [
+        "[record]\n",
+        "[auth.issuer.staff]\n",
+        "[auth.issuer.staff.party]\n",
+        "[auth.issuer.federation.federation]\n",
+        "[[auth.basic.users]]\n",
+        "[authz.rbac]\n",
         "[authz.party_binding]\n",
-        "[authz.party_binding]\nenabled = true\n",
-    ));
-    assert!(text.contains("unknown field `enabled`"), "{text}");
-    let text = refusal("[auth]\nissuer = \"https://idp.example\"\n");
-    assert!(text.contains("issuer"), "{text}");
-    for (key, name) in [
-        ("acting_for_claim = \"act.sub\"", "acting_for_claim"),
-        ("client_tokens = \"claim_absent\"", "client_tokens"),
+        "[[authz.party_binding.basic_user]]\n",
     ] {
-        let text = refusal(&with(
-            "audience = [\"ferroehr\"]",
-            &format!("audience = [\"ferroehr\"]\n{key}"),
-        ));
-        assert!(
-            text.contains(&format!("unknown field `{name}`")),
-            "{key}: {text}"
-        );
+        let text = refusal(&with(header, &format!("{header}colour = \"blue\"\n")));
+        assert!(text.contains("unknown field `colour`"), "{header}: {text}");
     }
-    let text = refusal(&format!(
-        "{}\n[authz.professional]\nclaim = \"sub\"\n",
-        full()
-    ));
-    assert!(text.contains("unknown field `professional`"), "{text}");
-    let text = refusal(&format!(
-        "{}\n[[authz.federation.agreement]]\nissuer = \"https://federation.example\"\n",
-        full()
-    ));
-    assert!(text.contains("unknown field `federation`"), "{text}");
+    for table in [
+        "[auth]",
+        "[authz]",
+        "[auth.issuer.staff.profile]",
+        "[auth.scim]",
+    ] {
+        let text = refusal(&format!("{}\n{table}\ncolour = \"blue\"\n", full()));
+        assert!(text.contains("colour"), "{table}: {text}");
+    }
 }
 
 #[test]
@@ -383,146 +376,12 @@ fn a_missing_provider_or_a_provider_list_is_refused() {
 }
 
 #[test]
-fn a_party_claim_and_a_token_profile_are_refused() {
-    let text = refusal(&with(
-        "identifier_type = \"guid\"",
-        "identifier_type = \"guid\"\nclaim = \"oid\"",
-    ));
-    assert!(text.contains("unknown field `claim`"), "{text}");
-    let text = refusal(&with(
-        "audience = [\"ferroehr\"]",
-        "audience = [\"ferroehr\"]\ntoken_profile = \"jwt\"",
-    ));
-    assert!(text.contains("unknown field `token_profile`"), "{text}");
-}
-
-/// The system clients are policy parties in the CDR (#5436): the table that
-/// declared them is an unknown key, with each of its keys.
-#[test]
-fn a_system_client_table_is_refused_as_unknown() {
-    for table in [
-        "issuer = \"https://idp.example/realms/machines\"\nclient_id = \"ferrobridge\"",
-        "provider = { issuer = \"urn:oid:2.16.528.1.1007.3.3\", id = \"12345678\" }",
-        "facilities = [{ issuer = \"urn:example:facility\", id_prefix = \"ward-\" }]",
-        "writes = [\"Vital signs.v1\"]",
-        "origins = [\"relay\", \"device\"]",
-        "device_identifier_issuers = [\"urn:oid:2.999.9\"]",
-    ] {
-        let text = refusal(&format!("{}\n[[authz.system_client]]\n{table}\n", full()));
-        assert!(
-            text.contains("unknown field `system_client`"),
-            "{table}: {text}"
-        );
-    }
-}
-
-/// The client lists the policy grants answer (#5437) and a Basic user's
-/// roles and scopes, which its PERSON's grants carry (#5438), are unknown
-/// keys, refused like any other.
-#[test]
-fn the_client_lists_and_basic_roles_are_refused_as_unknown() {
-    for (old, key, name) in [
-        (
-            "audience = [\"ferroehr\"]",
-            "first_party_clients = [\"ferroehr-viewer\"]",
-            "first_party_clients",
-        ),
-        (
-            "audience = [\"ferroehr\"]",
-            "delegates = [{ client = \"ferrobridge\" }]",
-            "delegates",
-        ),
-        (
-            "audience = [\"ferroehr\"]",
-            "\n[auth.issuer.staff.profile]\nfirst_party_clients = [\"ferroehr-viewer\"]",
-            "first_party_clients",
-        ),
-        (
-            "audience = [\"ferroehr\"]",
-            "\n[auth.issuer.staff.profile]\ndelegates = [{ client = \"ferrobridge\" }]",
-            "delegates",
-        ),
-        (
-            "audience = [\"ferroehr\"]",
-            "\n[auth.issuer.staff.profile]\naudience_delegates = true",
-            "audience_delegates",
-        ),
-    ] {
-        let text = refusal(&with(old, &format!("{old}\n{key}")));
-        assert!(
-            text.contains(&format!("unknown field `{name}`")),
-            "{key}: {text}"
-        );
-    }
-    let text = refusal(&with(
-        "[auth.issuer.staff]\n",
-        "[auth]\nscopeless_subjects = []\n\n[auth.issuer.staff]\n",
-    ));
-    assert!(
-        text.contains("unknown field `scopeless_subjects`"),
-        "{text}"
-    );
-    for key in ["roles = [\"USER\"]", "scopes = [\"user/aql-*.cruds\"]"] {
-        let text = refusal(&with(
-            "[[auth.basic.users]]\n",
-            &format!("[[auth.basic.users]]\n{key}\n"),
-        ));
-        assert!(text.contains("unknown field"), "{key}: {text}");
-    }
-}
-
-#[test]
 fn a_namespace_outside_the_object_ref_pattern_is_refused() {
     let text = refusal(&with(
         "[authz.party_binding]\n",
         "[authz.party_binding]\nnamespace = \"9 not a namespace\"\n",
     ));
     assert!(text.contains("OBJECT_REF.namespace pattern"), "{text}");
-}
-
-/// The keys of trusted import systems, registered origins, change-feed readers
-/// and SCIM clients are unknown keys, refused like any other: they are grants
-/// of the policy parties (#5439).
-#[test]
-fn the_keys_the_cdr_now_holds_are_refused_as_unknown() {
-    for (removed, key) in [
-        (
-            "[authz.import]\ntrusted_systems = [\"legacy.example\"]\n",
-            "import",
-        ),
-        ("[[authz.origin]]\nid = \"lab.example\"\n", "origin"),
-        (
-            "[record.change_feed]\nreaders = [\"ferrobridge\"]\n",
-            "readers",
-        ),
-        (
-            "[auth.scim]\n[[auth.scim.client]]\nclient_id = \"entra\"\n",
-            "client",
-        ),
-    ] {
-        let text = refusal(&format!("{}\n{removed}", full()));
-        assert!(text.contains(key), "{key}: {text}");
-    }
-}
-
-/// The privileged role names of the subject audit, the access service, the
-/// import and the identifier read are unknown keys: they are grants of the
-/// policy parties (#5521).
-#[test]
-fn the_privileged_roles_the_cdr_now_grants_are_refused_as_unknown() {
-    let issuers = "role_issuers = [\"staff\"]\n";
-    for (key, value) in [
-        ("subject_audit_role", "\"PORTAL\""),
-        ("access_service_roles", "[\"EHDS-ACCESS-SERVICE\"]"),
-        ("import_role", "\"IMPORTER\""),
-        ("identifier_reader_role", "\"IDENTIFIER_READER\""),
-    ] {
-        let text = refusal(&with(issuers, &format!("{issuers}{key} = {value}\n")));
-        assert!(
-            text.contains(&format!("unknown field `{key}`")),
-            "{key}: {text}"
-        );
-    }
 }
 
 /// The shared party mapping of #5013: one person template with its three
@@ -595,17 +454,6 @@ fn an_unknown_key_in_a_mapping_section_is_refused() {
         let text = refusal(&mapped(old, new));
         assert!(text.contains("unknown field"), "{old}: {text}");
     }
-}
-
-/// A representation is recognised by its code, so the representation
-/// section is gone and refused as any unknown key is.
-#[test]
-fn the_representation_section_is_an_unknown_key() {
-    let text = refusal(&format!(
-        "{}{MAPPING}\n[authz.party_binding.representation]\narchetype_id = \"x\"\n",
-        full()
-    ));
-    assert!(text.contains("unknown field `representation`"), "{text}");
 }
 
 /// Asserts the mapping with `old` replaced by `new` is refused with a
@@ -694,12 +542,6 @@ fn a_scim_table_with_no_client_loads() {
     .expect("assembles");
     config.validate().expect("validates");
     assert!(config.auth.scim.is_some());
-}
-
-#[test]
-fn an_unknown_scim_key_is_named() {
-    let unknown = refusal(&format!("{}\n[auth.scim]\nmax_deactivation = 3\n", full()));
-    assert!(unknown.contains("max_deactivation"), "{unknown}");
 }
 
 /// The person mapping the server installs holds the keys of each

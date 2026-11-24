@@ -3,11 +3,14 @@
 
 //! Capture build-time provenance for `/management/info` and the
 //! `ferroehr_build_info` gauge: the git commit, the version the server
-//! reports, the build timestamp, the `rustc` version, and the release date the support period runs from. All are best-effort — a checkout without git, or a build
-//! from a tarball, degrades to `unknown` rather than failing the build.
+//! reports, the build timestamp, the `rustc` version, and the release date the
+//! support period runs from. All are best-effort: a checkout without git, or a
+//! build from a tarball, degrades to `unknown` rather than failing the build.
+//!
+//! Every value is a function of the checkout and the environment, so an
+//! unchanged tree reruns nothing and recompiles nothing.
 
 use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 #[path = "src/telemetry/conformance_record.rs"]
 mod conformance_record;
@@ -16,9 +19,7 @@ mod conformance_record;
     clippy::disallowed_methods,
     reason = "a build script's ONLY input channel is the process environment \
               Cargo populates for it (Cargo book, build-scripts §Inputs), so the \
-              config tree cannot apply here; `SystemTime` is likewise the right \
-              clock for a build-time epoch — jiff is a runtime dependency, not a \
-              build-dependency"
+              config tree cannot apply here"
 )]
 fn main() {
     // Git short SHA: the OCI-standard REVISION value (the same one that fills
@@ -53,18 +54,21 @@ fn main() {
     };
     println!("cargo:rustc-env=FERROEHR_SERVER_VERSION={server_version}");
 
-    // Build timestamp (epoch seconds), honouring SOURCE_DATE_EPOCH for
-    // reproducible builds; rendered to an ISO-8601 string at runtime (jiff).
+    // NOTE: reproducible-builds.org SOURCE_DATE_EPOCH, falling back to the
+    // commit time it recommends, so the timestamp moves only with the tree.
     let epoch = std::env::var("SOURCE_DATE_EPOCH")
         .ok()
-        .and_then(|v| v.parse::<i64>().ok())
-        .unwrap_or_else(|| {
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
+        .filter(|v| v.parse::<i64>().is_ok())
+        .or_else(|| {
+            Command::new("git")
+                .args(["log", "-1", "--format=%ct", "HEAD"])
+                .output()
                 .ok()
-                .and_then(|d| i64::try_from(d.as_secs()).ok())
-                .unwrap_or(0)
-        });
+                .filter(|o| o.status.success())
+                .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
+                .filter(|v| v.parse::<i64>().is_ok())
+        })
+        .unwrap_or_default();
     println!("cargo:rustc-env=FERROEHR_BUILD_EPOCH={epoch}");
 
     // rustc version string.
