@@ -93,7 +93,7 @@ impl FerroEhrService {
     ) -> Result<Arc<Verdict>, ServiceError> {
         access.read_in_store(ehr_id, seen);
         match access.judgement(ehr_id) {
-            Some(judged) if judged.revision == *seen => Ok(judged.verdict),
+            Some(judged) if judged.entry.revision == *seen => Ok(judged.verdict),
             Some(_) => {
                 self.ehr_access.forget(ehr_id).await;
                 let entry = Box::pin(self.ehr_access_entry(ehr_id)).await?;
@@ -147,7 +147,7 @@ impl FerroEhrService {
                 subject: subject.cloned(),
             },
         };
-        Ok(access.judge_ahead(ehr_id, &entry).await?)
+        Ok(access.judge_ahead(ehr_id, &Arc::new(entry)).await?)
     }
 
     /// What the evaluator reads of each of `vo_ids` this store holds.
