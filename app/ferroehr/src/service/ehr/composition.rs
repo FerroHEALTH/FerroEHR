@@ -727,11 +727,7 @@ pub(super) fn guard_of(gate: &Gate, head: Option<i32>) -> Guard {
         expected_head: head,
         policy: gate.policy,
         definitions: gate.definitions,
-        outbox: None,
-        reservation: None,
-        status: None,
-        directory: None,
-        party: None,
+        ..Guard::default()
     }
 }
 
