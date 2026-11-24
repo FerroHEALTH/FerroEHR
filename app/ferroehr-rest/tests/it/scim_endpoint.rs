@@ -17,9 +17,7 @@ use ferroehr::config::scim::ScimConfig;
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_server::section::CallerRate;
 use ferrohealth_smart::config::{AuthSection, IssuerEntry};
-use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::party::config::PartySection;
-use ferrohealth_smart::profile::Preset;
 use http::{StatusCode, header};
 use serde_json::{Value, json};
 
@@ -66,8 +64,6 @@ fn binding() -> PartyBindingConfig {
 fn config(rate: Option<CallerRate>) -> AppConfig {
     let machines = IssuerEntry {
         issuer: ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
-        kind: Some(IssuerKind::Machines),
-        preset: Preset::Rfc9068,
         audience: vec![AUDIENCE.to_owned()],
         jwks_file: common::jwks_file().display().to_string(),
         profile: ferrohealth_smart::profile::ProfileKeys {

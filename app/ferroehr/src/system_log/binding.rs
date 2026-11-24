@@ -38,7 +38,7 @@ pub enum BindingCode {
     Organisation,
     /// A client acting for nobody.
     System,
-    /// A patient token of a `patients` issuer.
+    /// The record's person, bound to their own `PERSON`.
     SelfPatient,
     /// Refused: no party carries the login.
     RefusedUnbound,

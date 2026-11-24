@@ -81,7 +81,7 @@ pub(crate) async fn resolve(
     let capabilities = grants.capabilities(actor, jiff::Timestamp::now());
     Ok(Arc::new(match actor {
         Actor::Party(_) => {
-            let provider = deployment.and_then(|deployment| deployment.provider_of(caller));
+            let provider = deployment.and_then(super::party::Deployment::provider);
             capabilities.acting_for(provider.map(|(issuer, id)| ProviderKey::new(issuer, id)))
         }
         Actor::Client { .. } => capabilities,

@@ -413,11 +413,11 @@ async fn import_ehr_refuses_access_settings_that_do_not_parse() {
             with_settings("bogus"),
         )
         .await
-        .expect_err("settings that do not parse are refused");
+        .expect_err("settings that break an invariant are refused");
     assert!(
-        matches!(&refused, ServiceError::BadRequest(r)
-            if r.message.contains("ACCESS_DIRECTIVE_SETTINGS.Default_access_valid")),
-        "a 400 naming the invariant: {refused:?}"
+        matches!(&refused, ServiceError::Unprocessable { violation, .. }
+            if violation.to_string().contains("ACCESS_DIRECTIVE_SETTINGS.Default_access_valid")),
+        "a 422 naming the invariant: {refused:?}"
     );
     svc.import_ehr(
         Some(ferroehr::ids::EhrId(uuid::Uuid::now_v7())),
