@@ -354,11 +354,11 @@ of the access control groups of the draft openEHR access terminology `openehr_ac
   `EHR_STATUS` reads ([Resource walkthroughs](using-the-api/resources.md#ehr_access)),
   which another product uses to exchange the directives.
 - **Every write is checked:** a CONTRIBUTION, an EHR Extract import and an
-  admin archive load that carry settings are refused whole with `400` naming
-  the first defect: settings of another scheme (the removed
-  `FERROEHR_ACCESS_CONTROL_V1` among them), a member the class does not
-  declare, or a broken invariant of the draft package, named as
-  `CLASS.Invariant`, such as `ACCESS_DIRECTIVE.Restriction_denies`, or a
+  admin archive load that carry settings are refused whole naming the first
+  defect: with `400` for settings of another scheme (the removed
+  `FERROEHR_ACCESS_CONTROL_V1` among them) or a member the class does not
+  declare, and with `422` for a broken invariant of the draft package, named
+  as `CLASS.Invariant`, such as `ACCESS_DIRECTIVE.Restriction_denies`, or a
   `DV_DATE_TIME` or `DV_DURATION` that is no ISO 8601 value
   (`DV_DATE_TIME.Value_valid`). The
   same writes, and the controller's commit, refuse with `422` a directive
