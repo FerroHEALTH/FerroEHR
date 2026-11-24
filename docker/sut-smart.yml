@@ -45,7 +45,9 @@ services:
       # no Authorization Server has to be running for the scope cases to
       # execute. It is the issuer named `smart`, beside the `basic_users` and `scim`
       # issuers of docker/ferroehr.dev.toml. The runner mints plain RS256 JWTs
-      # (`typ` JWT), so the issuer accepts that type.
+      # (`typ` JWT), so the issuer accepts that type, and each names the client
+      # `cnf-smart-sut` in `client_id` (RFC 9068 §2.2), which the IXIT's
+      # `scoped_tokens.mint.claims` declares.
       FERROEHR__AUTH__ISSUER__SMART__ISSUER: "https://as.cnf.test"
       FERROEHR__AUTH__ISSUER__SMART__AUDIENCE: "cnf-smart-sut"
       FERROEHR__AUTH__ISSUER__SMART__ALGORITHMS: "RS256"
