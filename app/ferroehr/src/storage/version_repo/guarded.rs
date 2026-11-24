@@ -23,7 +23,10 @@ use crate::storage::error::StorageError;
 
 /// What a guarded commit ([`super::commit::Folded::Guarded`]) still requires when it runs:
 /// the facts its gate read judged the write on.
-#[derive(Debug, Clone)]
+///
+/// Every field is optional, so a writer names the ones it sets and takes the
+/// rest from [`Guard::default`].
+#[derive(Debug, Clone, Default)]
 pub struct Guard {
     /// The object's head ordinal the write was placed after (`None` for a
     /// create, whose object has no head yet).

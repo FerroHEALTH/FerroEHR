@@ -73,7 +73,7 @@ pub struct QueryResult {
     /// served versions, which the access record's category classification
     /// reads (EHDS Annex II 3.2(c), #3621); empty when no row could be
     /// attributed to a version.
-    pub served_content: Vec<crate::storage::version_repo::read::ServedContent>,
+    pub served_content: Vec<crate::storage::version_repo::content::ServedContent>,
     /// The query's positive archetype and template constraints, which classify
     /// an answer that carries no version: leaf columns of a `DISTINCT` or
     /// aggregate projection, or zero rows.

@@ -18,7 +18,7 @@
 //! missing path reads `NULL`, so a test of it is unknown under SQL's
 //! three-valued logic, and a read never multiplies rows.
 
-use sea_query::{Alias, Expr, ExprTrait as _, Order, Query};
+use sea_query::{Alias, Expr, ExprTrait as _, Order, Query, WindowStatement};
 
 use crate::aql::error::{AnalysisError, AqlError, SqlError};
 use crate::aql::ir::{
@@ -652,8 +652,10 @@ impl Builder<'_> {
 
     /// ORDER BY (QUERY master03 §ORDER BY): multi-key, ASC/DESC, Ordered types
     /// compared by ordered-magnitude via the key's own [`Coercion`], and a
-    /// mixed-type leaf by the keys of `coerce::raw_order_modes`.
-    pub(super) fn build_order_by(&mut self) -> Result<(), AqlError> {
+    /// mixed-type leaf by the keys of `coerce::raw_order_modes`. Returns the
+    /// window that orders as the statement does.
+    pub(super) fn build_order_by(&mut self) -> Result<WindowStatement, AqlError> {
+        let mut window = WindowStatement::new();
         for key in self.ir.order_by.clone() {
             let OrderKey { path, ascending } = key;
             let order = if ascending { Order::Asc } else { Order::Desc };
@@ -667,7 +669,9 @@ impl Builder<'_> {
                 );
                 match selected {
                     Some(i) => {
-                        self.q.order_by(Alias::new(format!("col{i}")), order);
+                        let output = Alias::new(format!("col{i}"));
+                        window.order_by(output.clone(), order.clone());
+                        self.q.order_by(output, order);
                         continue;
                     }
                     None => {
@@ -680,27 +684,30 @@ impl Builder<'_> {
             // base_types master05 §Basic Types — Uuid), so text and binary
             // order coincide and the index serves the sort without a per-row
             // cast. The projection path keeps the text cast.
-            if let PathTarget::Ehr {
+            let exprs = if let PathTarget::Ehr {
                 source,
                 field: EhrField::EhrId | EhrField::Whole,
             } = &path
                 && let Some(alias) = self.ehr_alias.get(&source.0).cloned()
             {
-                self.q.order_by_expr(col(&alias, Ehr::Id), order);
-                continue;
-            }
-            let coercion = order_coercion(&path);
-            if coercion == Coercion::Raw {
-                for mode in raw_order_modes(target_types(&path)) {
-                    let expr = self.value_expr(&path, mode)?;
-                    self.q.order_by_expr(expr, order.clone());
+                vec![col(&alias, Ehr::Id)]
+            } else {
+                let coercion = order_coercion(&path);
+                if coercion == Coercion::Raw {
+                    raw_order_modes(target_types(&path))
+                        .into_iter()
+                        .map(|mode| self.value_expr(&path, mode))
+                        .collect::<Result<Vec<_>, _>>()?
+                } else {
+                    vec![self.value_expr(&path, ValueMode::Value(coercion))?]
                 }
-                continue;
+            };
+            for expr in exprs {
+                window.order_by_expr(expr.clone(), order.clone());
+                self.q.order_by_expr(expr, order.clone());
             }
-            let expr = self.value_expr(&path, ValueMode::Value(coercion))?;
-            self.q.order_by_expr(expr, order);
         }
-        Ok(())
+        Ok(window)
     }
 
     /// LIMIT/OFFSET (QUERY master03 §LIMIT): the effective window is pre-composed

@@ -8,7 +8,8 @@
 -- bookkeeping is read-only to both, so a runtime credential cannot make an
 -- unmigrated or altered database pass `[database] migrations = "verify"`. The
 -- default privileges extend the same grants to every table a later file
--- creates here. The party roles are granted nothing in this schema.
+-- creates here. The party roles are granted nothing in this schema; they may
+-- run the one function of clinical_door.
 --
 -- The role grants run only when the runtime roles exist (see the role block
 -- of ext); without them the block is skipped with a NOTICE.
@@ -151,6 +152,13 @@ BEGIN
             node_shared_member(a_key text, a_num integer, a_tier text, a_vo_id uuid, a_sys_version integer),
             node_shared(a_shared jsonb, a_tier text, a_vo_id uuid, a_sys_version integer)
             TO ferroehr_clinical, ferroehr_clinical_reader;
+        -- The one door the party roles may pass (#6320): USAGE on the door's
+        -- schema and EXECUTE on its one function, nothing of the clinical schema.
+        IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'ferroehr_party') THEN
+            GRANT USAGE ON SCHEMA clinical_door TO ferroehr_party, ferroehr_party_reader;
+            GRANT EXECUTE ON FUNCTION clinical_door.policy_revisions()
+                TO ferroehr_party, ferroehr_party_reader;
+        END IF;
         ALTER DEFAULT PRIVILEGES IN SCHEMA clinical GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO ferroehr_clinical;
         ALTER DEFAULT PRIVILEGES IN SCHEMA clinical GRANT SELECT ON TABLES TO ferroehr_clinical_reader;
     ELSE
