@@ -19,13 +19,15 @@
 //! counting allocator of the allocation budget is installed in the test
 //! binary. Each figure is the lower-quartile request of [`REQUESTS`], as the
 //! allocation budget judges its figures (#6291). Runners differ in their CPU,
-//! so each path's total is judged as a share of a [`reference`] work timed on
-//! the same thread, against the ceiling [`CPU_BUDGETS`] names; a reference
-//! that moved past [`REFERENCE_BAND`] between the start and the end fails the
-//! run as too noisy to judge. Only an optimised build is judged, the `budget`
-//! profile CI's `cpu-budget` job runs: a debug build distorts the share serde
-//! and the encoders take, so there the test reports its figures and judges
-//! none.
+//! so each request is judged as a share of the [`Reference`] work timed on the
+//! same thread right after it, so contention slows both alike (#6438), and a
+//! path's share is the lower quartile of its requests' shares, against the
+//! ceiling [`CPU_BUDGETS`] names. A path whose references read past
+//! [`REFERENCE_BAND`] above the quietest path's was measured on a contended
+//! runner, which fails the run as too noisy to judge. Only an optimised build
+//! is judged, the `budget` profile CI's `cpu-budget` job runs: a debug build
+//! distorts the share serde and the encoders take, so there the test reports
+//! its figures and judges none.
 //!
 //! No openEHR spec governs the cost of a request: our own design.
 
@@ -50,9 +52,9 @@ use super::paths::{Path, REQUESTS, World, exchange, order};
 /// most (the `EHR_STATUS` commit, the delete and the directory writes; every
 /// other path within 30%).
 const CPU_BUDGETS: [(Path, u64); 31] = [
-    (Path::CommitJson, 8070),
-    (Path::CommitXml, 9850),
-    (Path::CommitFlat, 11_930),
+    (Path::CommitJson, 7640),
+    (Path::CommitXml, 9420),
+    (Path::CommitFlat, 11_500),
     (Path::ReadJson, 975),
     (Path::ReadXml, 2125),
     (Path::ReadFlat, 2865),
@@ -61,7 +63,7 @@ const CPU_BUDGETS: [(Path, u64); 31] = [
     (Path::AqlPopulation, 1100),
     (Path::Iti81, 2400),
     (Path::PartyRead, 920),
-    (Path::CommitContribution, 9090),
+    (Path::CommitContribution, 8660),
     (Path::ReadAtTime, 835),
     (Path::CommitStatus, 2220),
     (Path::ReadStatus, 690),
@@ -70,7 +72,7 @@ const CPU_BUDGETS: [(Path, u64); 31] = [
     (Path::AqlParty, 1180),
     (Path::CommitPartyScored, 2880),
     (Path::ReadVersion, 840),
-    (Path::CommitUpdate, 8170),
+    (Path::CommitUpdate, 7740),
     (Path::CommitDelete, 2130),
     (Path::DirectoryCreate, 2250),
     (Path::DirectoryUpdate, 2270),
@@ -83,9 +85,13 @@ const CPU_BUDGETS: [(Path, u64); 31] = [
     (Path::CommitAgent, 2360),
 ];
 
-/// How far apart, in thousandths, the [`reference`] may read at the start and
-/// at the end of the run before the runner counts as too noisy to judge.
+/// How far, in thousandths, a path's [`Reference`] may read above the
+/// quietest path's before its window counts as contended.
 const REFERENCE_BAND: u64 = 1100;
+
+/// The reference rounds timed after each measured request, of which the
+/// fastest is its reference.
+const REFERENCE_ROUNDS: usize = 3;
 
 /// Whether the ceilings are judged: in an optimised build only.
 const JUDGED: bool = !cfg!(debug_assertions);
@@ -316,23 +322,37 @@ fn clock_read() -> u64 {
     runs[runs.len().div_euclid(2)]
 }
 
-/// The CPU nanoseconds of the reference work: one serde round trip of the IPS
-/// composition's canonical JSON (128 KB), the fastest of thirty.
-///
-/// Runners differ in their CPU, so a path is judged by its CPU as a share of
-/// this work on the same thread, which is CPU-bound and allocates as the
-/// paths do.
-fn reference() -> u64 {
-    let text = crate::common::ips_canonical_composition().to_string();
-    (0..30)
-        .map(|_| {
-            let started = thread_cpu();
-            let value: serde_json::Value = serde_json::from_str(&text).unwrap();
-            std::hint::black_box(value.to_string());
-            thread_cpu().saturating_sub(started)
-        })
-        .min()
-        .unwrap()
+/// The reference work: one serde round trip of the IPS composition's
+/// canonical JSON (128 KB), which is CPU-bound and allocates as the paths do.
+struct Reference {
+    text: String,
+}
+
+impl Reference {
+    fn new() -> Self {
+        Self {
+            text: crate::common::ips_canonical_composition().to_string(),
+        }
+    }
+
+    /// The CPU nanoseconds of the fastest of [`REFERENCE_ROUNDS`] round trips.
+    fn time(&self) -> u64 {
+        (0..REFERENCE_ROUNDS)
+            .map(|_| {
+                let started = thread_cpu();
+                let value: serde_json::Value = serde_json::from_str(&self.text).unwrap();
+                std::hint::black_box(value.to_string());
+                thread_cpu().saturating_sub(started)
+            })
+            .min()
+            .unwrap()
+    }
+}
+
+/// One measured request with the [`Reference`] timed right after it.
+struct Sample {
+    charged: Charged,
+    reference: u64,
 }
 
 /// `nanos` in thousandths of `reference`.
@@ -340,13 +360,15 @@ fn share(nanos: u64, reference: u64) -> u64 {
     (nanos * 1000).div_euclid(reference.max(1))
 }
 
-/// Sends the [`REQUESTS`] measured requests of `path`, after its warm ones.
+/// Sends the [`REQUESTS`] measured requests of `path`, after its warm ones,
+/// each followed by its [`Reference`].
 async fn measure(
     app: &axum::Router,
     pool: &sqlx::PgPool,
     world: &World,
+    reference: &Reference,
     path: Path,
-) -> Vec<Charged> {
+) -> Vec<Sample> {
     world.warm(app, path).await;
     drained(pool).await;
     LEDGER.with_borrow_mut(Ledger::take);
@@ -370,7 +392,10 @@ async fn measure(
         world.observe(path, n, &headers);
         let mut charged = LEDGER.with_borrow_mut(Ledger::take);
         charged.polls = polls;
-        each.push(charged);
+        each.push(Sample {
+            charged,
+            reference: reference.time(),
+        });
         drained(pool).await;
         LEDGER.with_borrow_mut(Ledger::take);
     }
@@ -386,37 +411,47 @@ async fn every_hot_path_stays_within_its_cpu_budget() {
     let (_db, pool, svc, app) = Box::pin(super::served()).await;
     let world = World::build(&app).await;
     let read = clock_read();
-    let before = reference();
+    let reference = Reference::new();
     let mut measured = Vec::new();
     for path in order() {
         world.prepare(&app, &svc, path).await;
-        let each = Box::pin(measure(&app, &pool, &world, path)).await;
-        measured.push((path, each));
+        let samples = Box::pin(measure(&app, &pool, &world, &reference, path)).await;
+        let window = low(samples.iter().map(|s| s.reference));
+        let each: Vec<Charged> = samples.iter().map(|s| s.charged).collect();
+        let ratio = low(samples
+            .iter()
+            .map(|s| share(s.charged.total(), s.reference)));
+        measured.push((path, window, ratio, each));
     }
-    let after = reference();
-    let reference = before.midpoint(after);
-    let drift = share(before.max(after), before.min(after));
-    let mut report = String::from("path | share ‰ | total µs | ");
+    let quietest = measured
+        .iter()
+        .map(|(_, window, _, _)| *window)
+        .min()
+        .unwrap();
+    let mut report = String::from("path | share ‰ | reference ‰ | total µs | ");
     for stage in Stage::ALL {
         write!(report, "{} | ", stage.name()).unwrap();
     }
     report.push_str("rest | clock reads\n");
     let mut over = Vec::new();
-    for (path, each) in &measured {
-        let path = *path;
+    let mut contended = Vec::new();
+    for (path, window, ratio, each) in &measured {
+        let (path, ratio) = (*path, *ratio);
         let total = low(each.iter().map(Charged::total));
-        let ratio = share(total, reference);
+        let moved = share(*window, quietest);
         let ceiling = CPU_BUDGETS
             .iter()
             .find(|(of, _)| *of == path)
             .map(|(_, ceiling)| *ceiling)
             .expect("every path has its CPU budget");
-        if JUDGED && ratio > ceiling {
+        if moved > REFERENCE_BAND {
+            contended.push(format!("{}: {moved} ‰", path.name()));
+        } else if JUDGED && ratio > ceiling {
             over.push(format!("{}: {ratio} ‰ (<= {ceiling})", path.name()));
         }
         write!(
             report,
-            "{} | {ratio} (<= {ceiling}) | {} | ",
+            "{} | {ratio} (<= {ceiling}) | {moved} | {} | ",
             path.name(),
             total.div_euclid(1000)
         )
@@ -439,19 +474,18 @@ async fn every_hot_path_stays_within_its_cpu_budget() {
     };
     eprintln!(
         "thread CPU per request by stage, the lower-quartile request of {REQUESTS} ({judged}); \
-         one clock read costs {read} ns; the reference took {} µs before and {} µs after \
-         ({drift} ‰)\n{report}",
-        before.div_euclid(1000),
-        after.div_euclid(1000),
-    );
-    assert!(
-        !JUDGED || drift <= REFERENCE_BAND,
-        "the runner was too noisy to judge: the reference took {before} ns before the paths and \
-         {after} ns after, {drift} ‰ apart against a band of {REFERENCE_BAND} ‰\n{report}"
+         one clock read costs {read} ns; the quietest path's reference took {} µs, and each \
+         path's reference is in thousandths of it\n{report}",
+        quietest.div_euclid(1000),
     );
     assert!(
         over.is_empty(),
         "a hot path exceeds its CPU budget: {over:?}\n{report}"
+    );
+    assert!(
+        !JUDGED || contended.is_empty(),
+        "the runner was too noisy to judge: these paths' references read above the quietest \
+         path's by more than the band of {REFERENCE_BAND} ‰: {contended:?}\n{report}"
     );
     assert_eq!(
         CPU_BUDGETS.len(),

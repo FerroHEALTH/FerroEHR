@@ -13,8 +13,8 @@
 //! verdict leaves to the EHR is read from the row's facts; an EHR of a class
 //! the condition does not know contributes no row. Each [`Pred`] reads the
 //! same row attributes the in-memory check reads: the object id, the
-//! template, the root archetype, the origins of the trunk head and its commit
-//! time. Every atom is null-safe, so a missing attribute decides by the
+//! template, the root archetype, the origins of the trunk head, its episodes
+//! and its commit time. Every atom is null-safe, so a missing attribute decides by the
 //! polarity of the fact and never by SQL's unknown. No openEHR spec governs
 //! this: our own design (#5513, #5588).
 
@@ -30,6 +30,7 @@ use crate::access_eval::scope::{
     CategoryMatch, DataMatch, Edge, EhrFact, Held, Polarity, Pred, Recorded,
 };
 use crate::db::iden::{AccessSettings, Ehr, VersionRow, VoHead};
+use crate::versioning::episode::EpisodeKey;
 
 /// The alias of the trunk head version an origin probe reads.
 const TRUNK: &str = "access_trunk";
@@ -529,6 +530,9 @@ fn data_match(data: &DataMatch, polarity: Polarity, h: &str) -> Expr {
     if let Some(origins) = &data.origins {
         atoms.push(origin_in(h, origins, polarity));
     }
+    if let Some(episodes) = &data.episodes {
+        atoms.push(episode_in(h, episodes));
+    }
     if let Some(recorded) = &data.recorded {
         atoms.push(null_safe(recorded_in(h, recorded), polarity.unreadable()));
     }
@@ -595,6 +599,36 @@ fn origin_in(h: &str, origins: &Held<Vec<String>>, polarity: Polarity) -> Expr {
             ],
         ));
     Expr::exists(probe)
+}
+
+/// The trunk head of `h` is placed in one of `episodes`; a head placed in
+/// none is in none of them.
+fn episode_in(h: &str, episodes: &Held<Vec<EpisodeKey>>) -> Expr {
+    match episodes {
+        Held::Known(episodes) => null_safe(
+            Expr::cust_with_exprs(
+                "$1 && $2",
+                [
+                    col(h, VoHead::Episodes),
+                    Expr::val(
+                        episodes
+                            .iter()
+                            .map(|key| key.as_bytes().to_vec())
+                            .collect::<Vec<_>>(),
+                    )
+                    .cast_as(Alias::new("bytea[]")),
+                ],
+            ),
+            false,
+        ),
+        Held::Fact(at) => Expr::cust_with_exprs(
+            "EXISTS (SELECT 1 FROM unnest($1) AS e(key) WHERE $2)",
+            [
+                col(h, VoHead::Episodes),
+                in_fact(*at, Expr::cust("encode(e.key, 'hex')")),
+            ],
+        ),
+    }
 }
 
 /// The object of `h` is of `category`: its template is the category's, or

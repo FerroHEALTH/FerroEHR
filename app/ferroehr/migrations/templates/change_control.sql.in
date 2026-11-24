@@ -472,13 +472,11 @@ CREATE TABLE vo_head (
                AND (trunk_head_content_key IS NULL
                     OR trunk_head_content_key BETWEEN 1 AND trunk_head_sys_version))
 ) WITH (fillfactor = 90);
--- The two access paths that are not the primary key: an EHR's objects of one
--- kind (status and directory reads, EHR summaries, the persistent-duplicate
--- probe) and the template-scoped listing. Neither names a column a commit
--- updates, so neither de-optimises the HOT path.
+-- The access path that is not the primary key: an EHR's objects of one kind
+-- (status and directory reads, EHR summaries, the persistent-duplicate
+-- probe). It names no column a commit updates, so it does not de-optimise the
+-- HOT path.
 CREATE INDEX idx_vo_head_ehr_kind ON vo_head (ehr_id, kind);
-CREATE INDEX idx_vo_head_ehr_template ON vo_head (ehr_id, template_id)
-    WHERE template_id IS NOT NULL;
 COMMENT ON TABLE vo_head IS 'The one mutable row per versioned object: the current trunk and any-branch heads, the lifecycle state, the tier, and the restriction and retention marks. Its updated columns are in no index, so a commit updates it heap-only (PostgreSQL 18, "Heap-Only Tuples (HOT)").';
 COMMENT ON COLUMN vo_head.head_sys_version IS 'The greatest sys_version on any lineage — the RM''s latest_version (RM common master06 §The ''Virtual Version Tree'').';
 COMMENT ON COLUMN vo_head.trunk_head_sys_version IS 'The greatest sys_version on the trunk — LATEST_VERSION.';

@@ -25,5 +25,10 @@ Syslog	text:RFC 5424 over RFC 5425 TLS
 OAuth 2.0 bearer tokens, JWT, OpenID Connect	text:RFC 6750, RFC 7519, OpenID Connect Core 1.0
 OAuth 2.0 Step Up Authentication Challenge	text:RFC 9470
 SMART App Launch	text:the version is not pinned; PKCE per RFC 7636
+OAuth 2.0 Token Exchange	text:RFC 8693, the patient's own token FerroSMART exchanges for FerroBRIDGE
+HL7 International Patient Summary (IPS), served by FerroBRIDGE	text:2.0.1
+HL7 Europe Patient Summary, served by FerroBRIDGE on request	text:1.0.0-ballot
+xShare Yellow Button implementation guide (hl7.eu.fhir.xshare-yb)	text:0.3.0, the Provider conformance statements
+SMART Health Cards and Links, served by FerroBRIDGE	text:1.0.0
 TLS	text:1.3 by default
 PostgreSQL	database
