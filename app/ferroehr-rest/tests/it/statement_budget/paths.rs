@@ -2468,3 +2468,61 @@ async fn a_placed_commit_costs_its_projection_alone() {
     );
     assert_eq!(fresh_placed.nested, fresh_twin.nested, "{report}");
 }
+
+/// The allocations a read of a composition makes in an EHR whose subject
+/// names a `PERSON` under care (#6478).
+const SUBJECT_READ_ALLOCATIONS: u64 = 0;
+
+/// A read of a composition in an EHR whose subject names a `PERSON` under
+/// care takes no copy of the EHR's access entry: the access copy and the
+/// judgement share it (#6478). The budget world's EHRs name no subject, so
+/// their entries hold nothing to copy.
+#[tokio::test]
+async fn a_read_in_an_ehr_with_a_subject_stays_within_its_allocations() {
+    let counter = Counter::default();
+    let _guard =
+        tracing::subscriber::set_default(tracing_subscriber::registry().with(counter.clone()));
+    ferroehr::aql::sql::without_reference_cells();
+    let (_db, pool, _svc, app, pools) = Box::pin(super::steady()).await;
+    for extension in ["pg_stat_statements", "pg_walinspect"] {
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "CREATE EXTENSION IF NOT EXISTS {extension}"
+        )))
+        .execute(&pool)
+        .await
+        .expect("the extension");
+    }
+    super::wal::kept(&pool).await;
+    let mut world = World::build(&app).await;
+    let mut ehrs = cared_ehrs(&app, &pool, EHRS).await;
+    for (ehr, vo) in &mut ehrs {
+        *vo = created(
+            &app,
+            format!("{BASE}/ehr/{ehr}/composition"),
+            common::ips_canonical_composition().to_string(),
+        )
+        .await;
+    }
+    world.ehrs = ehrs;
+    let mut read = Measure::default();
+    for _ in 0..2 {
+        read = Box::pin(measure(
+            &app,
+            &pool,
+            &pools,
+            None,
+            &world,
+            &counter,
+            Path::ReadJson,
+        ))
+        .await;
+    }
+    let allocations = read.low(|a| a.count);
+    let report = format!(
+        "read JSON, subject: {} round trips, {allocations} allocations\n{}",
+        read.round_trips, read.statements
+    );
+    eprintln!("{report}");
+    let (within, cell) = judged_allocations(allocations, SUBJECT_READ_ALLOCATIONS);
+    assert!(within, "read JSON, subject: allocations {cell}\n{report}");
+}
