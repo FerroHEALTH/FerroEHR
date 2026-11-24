@@ -25,7 +25,7 @@ fn step(read: &Reader<'_, '_>, permits: &[&Permit<'_>], verdict: &mut Verdict) {
         let refusal = Refusal::Confidentiality;
         verdict.rules.push(Rule {
             when: Pred::all(vec![
-                scopes.at_least(level, Polarity::Deny),
+                scopes.at_least(level, Polarity::Deny, true),
                 Pred::negate(Pred::any(clearing)),
             ]),
             then: if read.judged.policy.conceals(level) {

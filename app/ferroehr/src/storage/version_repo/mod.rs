@@ -108,6 +108,7 @@ macro_rules! version_select {
 }
 
 pub mod attestation;
+pub mod audit_shared;
 pub mod commit;
 pub mod content;
 pub mod contribution;

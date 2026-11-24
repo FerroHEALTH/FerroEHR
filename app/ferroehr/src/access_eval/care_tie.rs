@@ -36,7 +36,8 @@ use openehr_rm::draft::access_control::terminology::{
 };
 use uuid::Uuid;
 
-use crate::party_binding::grants::caller::care_of::{CareOf, CarerKind, Cover, ProviderKey};
+use crate::party_binding::grants::caller::care_of::{CareOf, CarerKind, ProviderKey};
+use crate::party_binding::grants::caller::care_ref::{Cover, Episode};
 use crate::party_binding::grants::caller::facts::CallerFacts;
 
 /// One live care relationship by which the caller holds the subject.
@@ -68,6 +69,8 @@ pub struct Grant {
     pub in_grace: bool,
     /// The carer it covers for, with its kind.
     pub covers_for: Option<Cover>,
+    /// The episode of care it is scoped to.
+    pub episode: Option<Arc<Episode>>,
 }
 
 impl Tie {
@@ -106,6 +109,7 @@ impl Tie {
                 provider: care.provider().clone(),
                 in_grace: care.in_grace_on(day),
                 covers_for: care.covers_for().cloned(),
+                episode: care.episode().cloned(),
             })),
         })
     }
