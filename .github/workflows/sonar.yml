@@ -20,18 +20,17 @@
 # (SonarSource/sonarqube-scan-action README, v8.2.1).
 name: SonarQube Cloud
 
+# Nightly on main, never on a pull request or a push (owner decision D-5,
+# 2026-11-24, #6515): the analysis and its coverage run gate nothing, so a
+# day's merges are analysed together. A dispatch runs it on demand.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    types: [opened, synchronize, reopened]
+  schedule:
+    - cron: "17 1 * * *" # daily 01:17 UTC, off the hour
+  workflow_dispatch:
 
-# A newer push to a pull request cancels its running analysis (#5380). On main
-# a running analysis finishes, and a queued one gives way to the newer merge,
-# so main is analyzed at its latest commit.
 concurrency:
   group: sonar-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
 
 permissions: {}
 
@@ -48,14 +47,7 @@ env:
   COVERAGE_SHARDS: "3"
 
 jobs:
-  # ── Change detection (pull requests only) ───────────────────────────────────
-  # The scan below carries a 90-minute instrumented test suite against a real
-  # PostgreSQL, because coverage rides this lane. A pull request that changes
-  # no scanned code has nothing for it to measure (#2777).
-  #
-  # In-workflow, never a workflow-level `paths:` filter — the same required-check
-  # reasoning `ci.yml` and `docs.yml` record. A main push is NEVER gated:
-  # coverage and the New Code baseline are wanted on every merge.
+  # The database image and the shard list the coverage jobs read.
   changes:
     name: change detection
     runs-on: ubuntu-latest
@@ -64,7 +56,6 @@ jobs:
       contents: read
     outputs:
       postgres_image: ${{ steps.postgres.outputs.image }}
-      code: ${{ steps.filter.outputs.code }}
       shards: ${{ steps.shards.outputs.list }}
       shard_count: ${{ steps.shards.outputs.count }}
     steps:
@@ -92,43 +83,6 @@ jobs:
           set -euo pipefail
           echo "count=$COUNT" >> "$GITHUB_OUTPUT"
           echo "list=[$(seq 1 "$COUNT" | paste -sd, -)]" >> "$GITHUB_OUTPUT"
-      - name: The path classifier finds a match first and last in a 2000-path list
-        run: bash scripts/lib/change-lanes.sh --self-test
-      - id: filter
-        shell: bash
-        # Context reaches the shell through env, never `${{ }}`-inline.
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          PR_BASE: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT_NAME" != "pull_request" ]; then
-            echo "$EVENT_NAME is not a pull request — scanning unconditionally."
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # The pull request's own paths, from its merge base (#4129).
-          if ! git rev-parse --verify --quiet "$PR_BASE" >/dev/null \
-            || ! changed=$(bash scripts/lib/changed-paths.sh "$PR_BASE" "$PR_HEAD"); then
-            echo "Base $PR_BASE unavailable — treating as a code change."
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "Changed files:"; echo "$changed"
-          # The scanned trees, the manifests that decide what they resolve
-          # against, the two files that decide what the analyzer's own Clippy
-          # run reports (the pinned toolchain and its configuration), the
-          # properties file that decides the scan SCOPE, and this workflow
-          # itself — a change to the lane's own recipe exercises the lane it
-          # changes.
-          # The list is in scripts/lib/change-lanes.sh, matched from a
-          # here-string so a long change list cannot read as a miss (#4208).
-          result=$(bash scripts/lib/change-lanes.sh sonar <<<"$changed")
-          echo "$result" | tee -a "$GITHUB_OUTPUT"
-          if [ "$result" = "code=false" ]; then
-            echo "No scanned code touched — the analysis will be skipped."
-          fi
 
   # ── Coverage, sharded (#3131) ──────────────────────────────────────────────
   # Coverage rides this lane by owner directive (2026-08-24), sharded (#3123).
@@ -145,7 +99,6 @@ jobs:
   coverage:
     name: coverage ${{ matrix.shard }}/${{ needs.changes.outputs.shard_count }}
     needs: changes
-    if: github.event_name == 'push' || (github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository && needs.changes.outputs.code == 'true')
     runs-on: ubuntu-26.04
     timeout-minutes: 45
     permissions:
@@ -205,7 +158,6 @@ jobs:
   coverage-viewer:
     name: coverage (viewer)
     needs: changes
-    if: github.event_name == 'push' || (github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository && needs.changes.outputs.code == 'true')
     runs-on: ubuntu-26.04
     timeout-minutes: 45
     permissions:
@@ -232,20 +184,11 @@ jobs:
   scan:
     name: analyze
     needs: [changes, coverage, coverage-viewer]
-    # PR analysis authenticates with SONAR_TOKEN, which fork PRs cannot read —
-    # and neither can DEPENDABOT PRs: a dependabot-actor pull_request run reads
-    # Dependabot secrets, not Actions secrets, so the scan died on
-    # "Not authorized" for every dependency bump (#3024's red batch). A lock
-    # bump has nothing to decorate anyway, and the post-merge main push scans
-    # the merged result in full. A main push always scans; a pull request scans
-    # only when it touched scanned code (#2777).
-    if: github.event_name == 'push' || (github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository && needs.changes.outputs.code == 'true')
     runs-on: ubuntu-26.04
     timeout-minutes: 90
     permissions:
       contents: read
-      pull-requests: read # PR decoration reads the PR metadata
-      security-events: write # the push-only SARIF mirror below (#3032)
+      security-events: write # the SARIF mirror below (#3032)
     # Coverage rides this lane (owner directive 2026-08-24): the `coverage`
     # shards and `coverage-viewer` above produce the lcov this scan imports
     # (sonar.rust.lcov.reportPaths,
@@ -313,17 +256,12 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      # The findings mirror into GitHub code scanning (#3032). Sonar's own
-      # GitHub App uploads SECURITY-only analyses that arrive empty here, so
-      # the tools page listed SonarCloud with 0 results while the dashboard
-      # carried the real set. Push-only: a pull request keeps Sonar's own
-      # decoration, and the alert set is main's. The script waits on this
-      # run's compute task and excludes ACCEPTED/FALSE_POSITIVE, so a
-      # disposition recorded in the dashboard closes its GitHub alert on the
-      # next push — the two surfaces cannot disagree for longer than one
-      # analysis. The mirror gates nothing (ai-code-review.md).
+      # The findings mirror into GitHub code scanning (#3032): Sonar's own
+      # GitHub App uploads security-only analyses that arrive empty. The script
+      # waits on this run's compute task and leaves out ACCEPTED and
+      # FALSE_POSITIVE, so a disposition in the dashboard closes its alert on
+      # the next analysis. The mirror gates nothing (ai-code-review.md).
       - name: Export the analysis' open findings as SARIF
-        if: github.event_name == 'push'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
@@ -331,7 +269,6 @@ jobs:
           test -n "$project_key"
           bash scripts/sonar/issues-to-sarif.sh "$project_key" sonar-findings.sarif
       - name: Upload the findings to code scanning
-        if: github.event_name == 'push'
         uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: sonar-findings.sarif

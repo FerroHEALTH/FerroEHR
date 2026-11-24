@@ -17,21 +17,14 @@
 # Docs: https://docs.github.com/en/code-security/code-scanning
 name: CodeQL
 
-# Push/PR runs are path-filtered to what the two analyzers can actually read,
-# and each matrix leg is then scoped by the in-workflow `changes` gate (#2798,
-# the estate's standard pattern): the rust leg runs when Rust inputs changed,
-# the actions leg when workflow/action files changed, and the weekly scheduled
-# run analyses both unconditionally, so full-tree coverage is never lost.
-# (CodeQL is not a required status check, so a skipped leg cannot block a merge.)
+# Pull-request runs are path-filtered to what the two analyzers read, and each
+# matrix leg is then scoped by the in-workflow `changes` gate (#2798): the rust
+# leg runs when Rust inputs changed, the actions leg when workflow or action
+# files changed. The daily run on main analyses both, so main's alert set is at
+# most a day old; a push to main starts nothing, because the pull request was
+# analysed (#6515). CodeQL is not a required check, so a skipped leg blocks no
+# merge.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "**/*.rs"
-      - "**/Cargo.toml"
-      - "Cargo.lock"
-      - ".github/workflows/**"
-      - ".github/actions/**"
   pull_request:
     branches: [main]
     paths:
@@ -41,14 +34,10 @@ on:
       - ".github/workflows/**"
       - ".github/actions/**"
   schedule:
-    - cron: "23 5 * * 1" # Mondays 05:23 UTC (off-the-hour to dodge load spikes)
+    - cron: "23 5 * * *" # daily 05:23 UTC, off the hour
+  workflow_dispatch:
 
 concurrency:
-  # A pull request's runs supersede each other; a push or scheduled run gets a
-  # group of its own commit, so every main commit keeps its analysis. A per-ref
-  # group on main cancelled the newest commit's run whenever an older push
-  # started after it, and pending runs in a shared group are replaced even with
-  # cancel-in-progress off (workflow syntax, `concurrency`).
   group: codeql-${{ case(github.event_name == 'pull_request', github.ref, github.sha) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -59,7 +48,7 @@ permissions: {}
 jobs:
   # The per-leg scope (#2798): the workflow-level paths filter decides whether
   # CodeQL runs AT ALL; this job decides WHICH leg has anything to read. On
-  # schedule (no diff to inspect) and on an unresolvable base it answers
+  # a schedule, a dispatch and an unresolvable base it answers
   # true/true — a gate that cannot decide runs everything, never nothing.
   changes:
     name: change detection
@@ -80,20 +69,13 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
-          PUSH_BEFORE: ${{ github.event.before }}
-          PUSH_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            base="$PR_BASE"; head="$PR_HEAD"
-          else
-            base="$PUSH_BEFORE"; head="$PUSH_SHA"
-          fi
-          # The change's own paths, from its merge base (#4129).
-          if [ "$EVENT_NAME" = "schedule" ] \
-            || ! git rev-parse --verify --quiet "$base" >/dev/null \
-            || ! changed="$(bash scripts/lib/changed-paths.sh "$base" "$head")"; then
-            echo "No diff to scope (schedule, or base unavailable) — both legs run."
+          # The pull request's own paths, from its merge base (#4129).
+          if [ "$EVENT_NAME" != "pull_request" ] \
+            || ! git rev-parse --verify --quiet "$PR_BASE" >/dev/null \
+            || ! changed="$(bash scripts/lib/changed-paths.sh "$PR_BASE" "$PR_HEAD")"; then
+            echo "No diff to scope (schedule, dispatch, or base unavailable): both legs run."
             echo 'languages=["rust","actions"]' >> "$GITHUB_OUTPUT"
             exit 0
           fi
