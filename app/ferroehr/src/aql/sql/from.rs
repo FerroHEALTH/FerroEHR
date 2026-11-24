@@ -776,8 +776,9 @@ impl Builder<'_> {
             (Some(EdgeKind::Structural), Some(parent)) => Some(parent),
             _ => None,
         };
-        // A node read inside its object with the source's conditions keeps
-        // only the rows they admit, so the statement states none of them again.
+        // A node read inside its object is already hot and inside its parent's
+        // interval, and with the source's conditions keeps only the rows they admit.
+        let mut fenced = false;
         let mut kept_inside = false;
         match structural {
             Some(parent) if self.ctx.names_ehrs() => {
@@ -785,6 +786,7 @@ impl Builder<'_> {
                     contained_rows(&node, &parent.node, Vec::new()),
                     Alias::new(node.as_str()),
                 );
+                fenced = true;
             }
             // NOTE: our own design (#6243, #6263), with an anchor the anchor is the entry and a
             // contained node is read inside its object.
@@ -795,13 +797,14 @@ impl Builder<'_> {
                     contained_rows(&node, &parent.node, conds),
                     Alias::new(node.as_str()),
                 );
+                fenced = true;
                 kept_inside = true;
             }
             _ => {
                 self.q.from_as(Node::Table, Alias::new(node.as_str()));
             }
         }
-        if !kept_inside {
+        if !fenced {
             self.q.and_where(hot(&node, Node::Tier));
         }
         self.node_alias.insert(sid, node.clone());
@@ -810,6 +813,8 @@ impl Builder<'_> {
                 for cond in self.rm_conds(&node, r)? {
                     self.q.and_where(cond);
                 }
+            }
+            if !fenced {
                 self.q
                     .and_where(descendant_in_from(&node, &parent.node, &parent.types));
             }

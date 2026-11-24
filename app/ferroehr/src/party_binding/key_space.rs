@@ -5,18 +5,17 @@
 //! added and removed while the replicas serve.
 //!
 //! A key row under an issuer depends only on whether the mapping lists the
-//! issuer and whether it is a `patients` issuer, so each issuer's key rows
-//! are a space of their own. A replica that names a new issuer records it
-//! `pending`; once every live lease lists it with one portal flag, its rows
-//! are filled online and it turns `active`. A replica that drops an issuer,
-//! or names it with the other flag, turns it `retiring`, and its rows are
-//! deleted once no live lease lists it so. A key row binds only while its
+//! issuer, so each issuer's key rows are a space of their own. A replica
+//! that names a new issuer records it `pending`; once every live lease lists
+//! it, its rows are filled online and it turns `active`. A replica that drops
+//! an issuer turns it `retiring`, and its rows are deleted once no live lease
+//! lists it. A key row binds only while its
 //! issuer's key space is `active`, and an issuer no key space records binds
 //! nothing, so no replica reads a key space some live replica does not
 //! maintain. No openEHR spec governs the side table: our
 //! own design.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::time::Duration;
 
 use sqlx::{PgConnection, PgPool, Row};
@@ -103,8 +102,6 @@ impl KeySpaceClosed {
 pub struct KeySpace {
     /// The issuer.
     pub issuer: String,
-    /// Whether it is a `patients` issuer.
-    pub portal: bool,
     /// Where it stands.
     pub state: KeySpaceState,
 }
@@ -115,7 +112,7 @@ pub struct KeySpace {
 /// [`StorageError::Database`] on a driver failure.
 pub async fn list(pool: &PgPool) -> Result<Vec<KeySpace>, StorageError> {
     let mut conn = acquire(pool).await?;
-    let rows = sqlx::query("SELECT issuer, portal, state FROM binding_key_space ORDER BY issuer")
+    let rows = sqlx::query("SELECT issuer, state FROM binding_key_space ORDER BY issuer")
         .fetch_all(&mut *conn)
         .await?;
     rows.iter().map(stored).collect()
@@ -126,7 +123,6 @@ fn stored(row: &sqlx::postgres::PgRow) -> Result<KeySpace, StorageError> {
     let state: String = row.try_get("state")?;
     Ok(KeySpace {
         issuer: row.try_get("issuer")?,
-        portal: row.try_get("portal")?,
         state: KeySpaceState::parse(&state).ok_or_else(|| {
             StorageError::InvalidRows(format!("the key space state {state:?} is not one of four"))
         })?,
@@ -168,13 +164,12 @@ pub(crate) async fn reset(
     sqlx::query("DELETE FROM binding_key_space")
         .execute(&mut *tx)
         .await?;
-    let (issuers, portal): (Vec<String>, Vec<bool>) = mapping.key_spaces().into_iter().unzip();
+    let issuers: Vec<String> = mapping.key_spaces().into_iter().collect();
     sqlx::query(
-        "INSERT INTO binding_key_space (issuer, portal, state) \
-         SELECT i, p, 'active' FROM unnest($1::text[], $2::boolean[]) AS t(i, p)",
+        "INSERT INTO binding_key_space (issuer, state) \
+         SELECT i, 'active' FROM unnest($1::text[]) AS t(i)",
     )
     .bind(&issuers)
-    .bind(&portal)
     .execute(&mut *tx)
     .await?;
     Ok(())
@@ -185,22 +180,19 @@ pub(crate) async fn reset(
 struct Maintained {
     /// Every key issuer of the replica.
     issuers: BTreeSet<String>,
-    /// The `patients` issuers among them.
-    portal: BTreeSet<String>,
 }
 
 impl Maintained {
-    /// Whether the replica derives the key rows of `issuer` with the portal
-    /// flag `portal`.
-    fn lists(&self, issuer: &str, portal: bool) -> bool {
-        self.issuers.contains(issuer) && self.portal.contains(issuer) == portal
+    /// Whether the replica derives the key rows of `issuer`.
+    fn lists(&self, issuer: &str) -> bool {
+        self.issuers.contains(issuer)
     }
 }
 
 /// The leases renewed within `ttl`, in replica order.
 async fn live(tx: &mut PgConnection, ttl: Duration) -> Result<Vec<Maintained>, StorageError> {
     let rows = sqlx::query(
-        "SELECT issuers, portal FROM binding_lease \
+        "SELECT issuers FROM binding_lease \
          WHERE renewed_at > now() - make_interval(secs => $1) ORDER BY replica",
     )
     .bind(ttl.as_secs_f64())
@@ -209,10 +201,8 @@ async fn live(tx: &mut PgConnection, ttl: Duration) -> Result<Vec<Maintained>, S
     let mut out = Vec::with_capacity(rows.len());
     for row in rows {
         let issuers: Vec<String> = row.try_get("issuers")?;
-        let portal: Vec<String> = row.try_get("portal")?;
         out.push(Maintained {
             issuers: issuers.into_iter().collect(),
-            portal: portal.into_iter().collect(),
         });
     }
     Ok(out)
@@ -222,12 +212,12 @@ async fn live(tx: &mut PgConnection, ttl: Duration) -> Result<Vec<Maintained>, S
 /// holds the fill lock, returning the `pending` issuers every live lease now
 /// lists, ready to fill.
 ///
-/// An `active` or `filling` key space some live lease does not list with its
-/// flag turns `retiring`; a `pending` or `retiring` one no live lease lists
-/// with its flag goes, its rows with it; a `retiring` one every live lease
-/// lists again turns `pending`, since a replica that did not maintain its
-/// rows ran meanwhile, so it fills anew; an issuer a live lease lists and no
-/// key space records is recorded `pending`, with that lease's flag.
+/// An `active` or `filling` key space some live lease does not list turns
+/// `retiring`; a `pending` or `retiring` one no live lease lists goes, its
+/// rows with it; a `retiring` one every live lease lists again turns
+/// `pending`, since a replica that did not maintain its rows ran meanwhile,
+/// so it fills anew; an issuer a live lease lists and no key space records is
+/// recorded `pending`.
 ///
 /// # Errors
 /// [`StorageError`] on a driver failure or a stored state of no known name.
@@ -240,17 +230,16 @@ pub(crate) async fn reconcile(
     if leases.is_empty() {
         return Ok(Vec::new());
     }
-    let rows = sqlx::query(
-        "SELECT issuer, portal, state FROM binding_key_space ORDER BY issuer FOR UPDATE",
-    )
-    .fetch_all(&mut *tx)
-    .await?;
+    let rows =
+        sqlx::query("SELECT issuer, state FROM binding_key_space ORDER BY issuer FOR UPDATE")
+            .fetch_all(&mut *tx)
+            .await?;
     let mut known = BTreeSet::new();
     let mut ready = Vec::new();
     for space in rows.iter().map(stored) {
         let space = space?;
-        let all = leases.iter().all(|l| l.lists(&space.issuer, space.portal));
-        let any = leases.iter().any(|l| l.lists(&space.issuer, space.portal));
+        let all = leases.iter().all(|l| l.lists(&space.issuer));
+        let any = leases.iter().any(|l| l.lists(&space.issuer));
         match space.state {
             KeySpaceState::Active | KeySpaceState::Filling if !all => {
                 set_state(tx, &space.issuer, KeySpaceState::Retiring).await?;
@@ -268,27 +257,22 @@ pub(crate) async fn reconcile(
         }
         known.insert(space.issuer);
     }
-    let mut added: BTreeMap<&str, bool> = BTreeMap::new();
-    for lease in &leases {
-        for issuer in &lease.issuers {
-            if !known.contains(issuer) {
-                added
-                    .entry(issuer)
-                    .or_insert_with(|| lease.portal.contains(issuer));
-            }
-        }
-    }
-    for (issuer, portal) in added {
+    let added: BTreeSet<&str> = leases
+        .iter()
+        .flat_map(|lease| lease.issuers.iter())
+        .filter(|issuer| !known.contains(*issuer))
+        .map(String::as_str)
+        .collect();
+    for issuer in added {
         sqlx::query(
-            "INSERT INTO binding_key_space (issuer, portal, state) VALUES ($1, $2, 'pending') \
+            "INSERT INTO binding_key_space (issuer, state) VALUES ($1, 'pending') \
              ON CONFLICT (issuer) DO NOTHING",
         )
         .bind(issuer)
-        .bind(portal)
         .execute(&mut *tx)
         .await?;
-        tracing::info!(issuer, portal, "a binding key space is pending");
-        if leases.iter().all(|l| l.lists(issuer, portal)) {
+        tracing::info!(issuer, "a binding key space is pending");
+        if leases.iter().all(|l| l.lists(issuer)) {
             ready.push(issuer.to_owned());
         }
     }
@@ -337,8 +321,8 @@ async fn prune(tx: &mut PgConnection, issuer: &str) -> Result<(), StorageError> 
 }
 
 /// Starts the online fill of the `pending` key space of `issuer` on `tx`,
-/// which holds the fill lock, once every lease renewed within `ttl` lists it
-/// with the flag `mapping` gives it: its key rows go, so the fill writes
+/// which holds the fill lock, once `mapping` and every lease renewed within
+/// `ttl` list it: its key rows go, so the fill writes
 /// each from the party versions, and it turns `filling`. Returns whether it
 /// started.
 ///
@@ -351,20 +335,18 @@ pub(crate) async fn start_fill(
     ttl: Duration,
 ) -> Result<bool, StorageError> {
     crate::party_binding::live::note_change();
-    let Some(&portal) = mapping.key_spaces().get(issuer) else {
+    if !mapping.key_spaces().contains(issuer) {
         return Ok(false);
-    };
+    }
     let leases = live(tx, ttl).await?;
-    let state: Option<String> = sqlx::query_scalar(
-        "SELECT state FROM binding_key_space WHERE issuer = $1 AND portal = $2 FOR UPDATE",
-    )
-    .bind(issuer)
-    .bind(portal)
-    .fetch_optional(&mut *tx)
-    .await?;
+    let state: Option<String> =
+        sqlx::query_scalar("SELECT state FROM binding_key_space WHERE issuer = $1 FOR UPDATE")
+            .bind(issuer)
+            .fetch_optional(&mut *tx)
+            .await?;
     if state.as_deref() != Some(KeySpaceState::Pending.as_str())
         || leases.is_empty()
-        || !leases.iter().all(|l| l.lists(issuer, portal))
+        || !leases.iter().all(|l| l.lists(issuer))
     {
         return Ok(false);
     }
@@ -384,8 +366,8 @@ pub(crate) enum Progress {
     More,
     /// The last page was written and the key space is `active`.
     Done,
-    /// The key space is no longer `filling` under `mapping`'s flag, so this
-    /// replica writes no page of it.
+    /// The key space is no longer `filling` or `mapping` no longer lists it,
+    /// so this replica writes no page of it.
     Stopped,
 }
 
@@ -400,17 +382,14 @@ pub(crate) async fn fill_page(
     mapping: &BindingMapping,
     issuer: &str,
 ) -> Result<Progress, StorageError> {
-    let Some(&portal) = mapping.key_spaces().get(issuer) else {
+    if !mapping.key_spaces().contains(issuer) {
         return Ok(Progress::Stopped);
-    };
-    let row = sqlx::query(
-        "SELECT state, fill_after FROM binding_key_space \
-         WHERE issuer = $1 AND portal = $2 FOR UPDATE",
-    )
-    .bind(issuer)
-    .bind(portal)
-    .fetch_optional(&mut *tx)
-    .await?;
+    }
+    let row =
+        sqlx::query("SELECT state, fill_after FROM binding_key_space WHERE issuer = $1 FOR UPDATE")
+            .bind(issuer)
+            .fetch_optional(&mut *tx)
+            .await?;
     let Some(row) = row else {
         return Ok(Progress::Stopped);
     };
@@ -452,7 +431,7 @@ pub(crate) async fn stall(tx: &mut PgConnection, issuer: &str) -> Result<(), Sto
     Ok(())
 }
 
-/// The `filling` key spaces `mapping` names with their stored flag.
+/// The `filling` key spaces `mapping` names.
 ///
 /// # Errors
 /// [`StorageError`] on a driver failure.
@@ -464,10 +443,7 @@ pub(crate) async fn filling(
     Ok(list(pool)
         .await?
         .into_iter()
-        .filter(|space| {
-            space.state == KeySpaceState::Filling
-                && spaces.get(&space.issuer) == Some(&space.portal)
-        })
+        .filter(|space| space.state == KeySpaceState::Filling && spaces.contains(&space.issuer))
         .map(|space| space.issuer)
         .collect())
 }

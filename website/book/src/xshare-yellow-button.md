@@ -27,7 +27,7 @@ component does, what you configure in FerroEHR, and what the person sees.
 | FerroEHR | Holds the record. Serves the person's own EHR to the exchanged token and records every access naming the person. |
 | FerroTERM | Answers the code lookups the summary needs. |
 
-The system has no patient portal of its own. The person uses any SMART app
+The system has no app of its own. The person uses any SMART app
 that signs them in at FerroSMART with a standalone patient launch, and the
 app calls FerroBRIDGE. FerroBRIDGE's
 [Yellow Button API guide](https://github.com/FerroHEALTH/FerroBRIDGE/blob/main/website/book/src/integrate/yellow-button.md)
@@ -63,8 +63,7 @@ minimum = "substantial"
 A request below the floor is refused `401` with the RFC 9470 §3 step-up
 challenge, and the app sends the person back to FerroSMART to sign in at a
 higher level. The floor holds for professionals too. The whole setup behind
-FerroSMART, the `act_for_persons` grant FerroBRIDGE needs included, is on
-[Behind FerroSMART](behind-ferrosmart.md).
+FerroSMART is on [Behind FerroSMART](behind-ferrosmart.md).
 
 ## What FerroEHR serves the person
 

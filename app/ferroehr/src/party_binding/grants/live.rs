@@ -320,11 +320,12 @@ impl LiveGrants {
         &self.listened
     }
 
-    /// Read the copy again in a detached task whenever a notification marks
-    /// it stale, and at least every `every` while the listener is down, so a
-    /// commit of a request that resolves no caller, or of no request at all,
-    /// decides under the grants in force (whether it writes its outbox row)
-    /// without a read on its own path.
+    /// Confirm the copy ([`Self::confirm`]) in a detached task on each
+    /// notification and at least every `every`, so a commit of a request that
+    /// resolves no caller, or of no request at all, decides under the grants
+    /// in force (whether it writes its outbox row) without a read on its own
+    /// path, and a request after a caller facts stamp, which sends no
+    /// notification, finds the stamp held.
     pub fn spawn_refresher(self: &Arc<Self>, every: std::time::Duration) {
         tokio::spawn(refresher(Arc::clone(self), every));
     }
@@ -758,10 +759,10 @@ async fn refresher(grants: Arc<LiveGrants>, every: std::time::Duration) {
     loop {
         let seen = grants.listened.notifications();
         let _notified = grants.listened.notified_after(seen, every).await;
-        if let Err(error) = grants.refresh_if_stale().await {
+        if let Err(error) = grants.confirm().await {
             tracing::warn!(
                 error = %crate::error::ErrorChain::new(&error),
-                "the policy grants could not be read; the next notification reads them again"
+                "the policy grants could not be read; the next round reads them again"
             );
         }
     }

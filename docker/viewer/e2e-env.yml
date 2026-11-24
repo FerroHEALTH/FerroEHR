@@ -36,13 +36,10 @@ services:
       # The realm is the issuer named `keycloak`, beside the `basic_users` and
       # `scim` issuers of docker/ferroehr.dev.toml.
       FERROEHR__AUTH__ISSUER__KEYCLOAK__ISSUER: https://keycloak:8443/auth/realms/ferroehr
-      FERROEHR__AUTH__ISSUER__KEYCLOAK__KIND: persons
-      FERROEHR__AUTH__ISSUER__KEYCLOAK__PRESET: keycloak
       FERROEHR__AUTH__ISSUER__KEYCLOAK__AUDIENCE: ferroehr
-      # A person signs in through the viewer, the client scripts/ui-e2e.sh
-      # grants sign_in_persons in the CDR.
-      FERROEHR__AUTH__ISSUER__KEYCLOAK__PROFILE__APP_ONLY__0__CLAIM: client_id
-      FERROEHR__AUTH__ISSUER__KEYCLOAK__PROFILE__APP_ONLY__0__VALUE: ferroehr-service
+      # Keycloak signs its access tokens with `typ: JWT`; the realm's mappers put
+      # `client_id` in every token and the service client's id in its `sub`.
+      FERROEHR__AUTH__ISSUER__KEYCLOAK__PROFILE__TOKEN_TYPES: JWT
       FERROEHR__AUTH__ISSUER__KEYCLOAK__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles
       FERROEHR__AUTH__ISSUER__KEYCLOAK__PARTY__IDENTIFIER_ISSUER: urn:example:keycloak-dev-login
       FERROEHR__AUTH__ISSUER__KEYCLOAK__PARTY__IDENTIFIER_TYPE: login

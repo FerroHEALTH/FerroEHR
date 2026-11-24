@@ -217,8 +217,8 @@ async fn the_policy_is_read_written_and_versioned() {
     );
 }
 
-/// A body that is no access policy, or breaks the draft BMM, is refused whole
-/// and the version in force stays.
+/// A body that is no access policy is refused `400`, and one that breaks the
+/// draft BMM `422` (RFC 9110 §15.5.21); either way the version in force stays.
 #[tokio::test]
 async fn a_policy_that_does_not_hold_is_refused_whole() {
     let (_db, pool) = common::migrated_pool().await;
@@ -231,10 +231,10 @@ async fn a_policy_that_does_not_hold_is_refused_whole() {
         .as_object_mut()
         .expect("an object")
         .remove("archetype_details");
-    for body in [
-        json!({ "_type": "EHR_STATUS" }),
-        negative_grace,
-        unarchetyped,
+    for (body, refusal) in [
+        (json!({ "_type": "EHR_STATUS" }), StatusCode::BAD_REQUEST),
+        (negative_grace, StatusCode::UNPROCESSABLE_ENTITY),
+        (unarchetyped, StatusCode::UNPROCESSABLE_ENTITY),
     ] {
         let (status, _, answer) = call(
             &app,
@@ -245,7 +245,7 @@ async fn a_policy_that_does_not_hold_is_refused_whole() {
             Some(&body),
         )
         .await;
-        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}: {answer}");
+        assert_eq!(status, refusal, "{body}: {answer}");
     }
     let (_, headers, body) = call(&app, "GET", "root", "", None, None).await;
     assert_eq!(common::header(&headers, header::ETAG), Some(first.as_str()));
@@ -408,7 +408,7 @@ fn with_retention(period: Option<&str>, ceiling: &str) -> Value {
 }
 
 /// A log retention whose period breaks a bound it declares, as calendar
-/// years count, is refused whole; one that holds is installed with the
+/// years count, is refused whole with `422`; one that holds is installed with the
 /// policy version it came from, and the period applies from the next write
 /// (#5660).
 #[tokio::test]
@@ -431,7 +431,11 @@ async fn a_log_retention_that_breaks_a_bound_is_refused_and_one_that_holds_appli
             Some(&refused),
         )
         .await;
-        assert_eq!(status, StatusCode::BAD_REQUEST, "{refused}: {answer}");
+        assert_eq!(
+            status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{refused}: {answer}"
+        );
     }
     create(&app, &with_retention(Some("P3Y"), "P3Y")).await;
     svc.read_access_policy().await.expect("read the policy");

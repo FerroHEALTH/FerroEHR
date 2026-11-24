@@ -21,7 +21,6 @@ use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::policy_register::listen::Listeners;
 use ferroehr::service::FerroEhrService;
-use ferrohealth_smart::profile::Preset;
 use http::{StatusCode, header};
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -76,7 +75,7 @@ async fn replica(
     }
     let mut app = common::api_config(true);
     common::first_admin_only(&mut app, "root");
-    common::add_issuer(&mut app, machines(MACHINES, Preset::Rfc9068));
+    common::add_issuer(&mut app, machines(MACHINES));
     common::router_with(app, svc).await
 }
 

@@ -44,18 +44,15 @@ services:
       # The lane validates the runner-minted tokens against a STATIC key set, so
       # no Authorization Server has to be running for the scope cases to
       # execute. It is the issuer named `smart`, beside the `basic_users` and `scim`
-      # issuers of docker/ferroehr.dev.toml. The
-      # runner mints plain RS256 JWTs (`typ` JWT, no `client_id` or `jti`), so
-      # the issuer accepts that type and those claims, and its audience stands
-      # in for the client the tokens do not name; scripts/conformance.sh grants
-      # that client sign_in_persons in the CDR.
+      # issuers of docker/ferroehr.dev.toml. The runner mints plain RS256 JWTs
+      # (`typ` JWT), so the issuer accepts that type, and each names the client
+      # `cnf-smart-sut` in `client_id` (RFC 9068 §2.2), which the IXIT's
+      # `scoped_tokens.mint.claims` declares.
       FERROEHR__AUTH__ISSUER__SMART__ISSUER: "https://as.cnf.test"
-      FERROEHR__AUTH__ISSUER__SMART__KIND: "persons"
       FERROEHR__AUTH__ISSUER__SMART__AUDIENCE: "cnf-smart-sut"
       FERROEHR__AUTH__ISSUER__SMART__ALGORITHMS: "RS256"
       FERROEHR__AUTH__ISSUER__SMART__PROFILE__TOKEN_TYPES: "JWT"
       FERROEHR__AUTH__ISSUER__SMART__PROFILE__REQUIRED_CLAIMS: "iss,exp,aud,sub"
-      FERROEHR__AUTH__ISSUER__SMART__PROFILE__CLIENT_CLAIMS: "client_id,azp,aud"
       FERROEHR__AUTH__ISSUER__SMART__JWKS_FILE: /etc/ferroehr/cnf-smart-jwks.json
       FERROEHR__AUTH__ISSUER__SMART__PARTY__IDENTIFIER_ISSUER: "urn:example:cnf-smart-login"
       FERROEHR__AUTH__ISSUER__SMART__PARTY__IDENTIFIER_TYPE: "login"

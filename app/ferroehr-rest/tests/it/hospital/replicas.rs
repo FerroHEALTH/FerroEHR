@@ -14,6 +14,7 @@ use std::time::Duration;
 
 use axum::Router;
 use ferroehr::policy_register::listen::Listeners;
+use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use http::StatusCode;
 use serde_json::json;
@@ -214,6 +215,15 @@ async fn a_scim_deactivation_on_one_replica_refuses_on_the_other() {
 /// listener connects to a database of its own, so what its requests decide
 /// rests on what they read (#6048). With its audit drain, and that database.
 pub(crate) async fn deaf(world: &World) -> (Router, AuditHandle, testkit::TestDb) {
+    let (svc, drain, elsewhere) = deaf_service(world).await;
+    (router(&world.config, &svc).await, drain, elsewhere)
+}
+
+/// The service of a [`deaf`] replica, with its audit drain and the database
+/// its listeners connect to.
+pub(crate) async fn deaf_service(
+    world: &World,
+) -> (Arc<FerroEhrService>, AuditHandle, testkit::TestDb) {
     let (sender, drain) = start(audit(), None, world.pool.clone())
         .await
         .expect("the audit sender");
@@ -237,7 +247,7 @@ pub(crate) async fn deaf(world: &World) -> (Router, AuditHandle, testkit::TestDb
         );
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
-    (router(&world.config, &svc).await, drain, elsewhere)
+    (svc, drain, elsewhere)
 }
 
 /// SCIM's deactivation of the nurse through the first replica refuses her

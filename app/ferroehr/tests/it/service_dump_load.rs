@@ -1813,12 +1813,12 @@ fn store_access_settings_of(dir: &str, trunk: i64, settings: &Value) {
 }
 
 /// An archive whose `EHR_ACCESS` settings break an invariant is refused with
-/// the `400` a CONTRIBUTION writing them gets, naming the invariant and the
+/// the `422` a CONTRIBUTION writing them gets, naming the invariant and the
 /// EHR, and nothing of it is written; the same archive with settings that
 /// hold loads.
 /// Stored, the first would hold the EHR closed.
 #[tokio::test]
-async fn an_archive_whose_access_settings_do_not_parse_is_refused() {
+async fn an_archive_whose_access_settings_break_an_invariant_is_refused() {
     let (_src_db, _src_pool, source) = repository().await;
     let (_dst_db, dst_pool, target) = repository().await;
     let (dir, ehr) = exported(&source).await;
@@ -1835,9 +1835,9 @@ async fn an_archive_whose_access_settings_do_not_parse_is_refused() {
     let err = target
         .load_ehrs(dir.clone())
         .await
-        .expect_err("settings that do not parse are refused");
+        .expect_err("settings that break an invariant are refused");
     assert!(
-        matches!(err, ServiceError::BadRequest(_)),
+        matches!(err, ServiceError::Unprocessable { .. }),
         "the write path's refusal, got {err:?}"
     );
     assert!(

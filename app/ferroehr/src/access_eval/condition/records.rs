@@ -55,9 +55,10 @@ impl RequestAccess {
         care: &Cared,
     ) -> Verdict {
         let subject = self.is_record(ehr_id);
-        // NOTE: our own design (#6106), a confined caller with no launch context reaches the
-        // records the party binding names as its own, and one with a context only that EHR.
-        let own = self.owns(ehr_id) || (subject && self.caller.own_ehrs.is_empty());
+        // NOTE: SMART on openEHR master08 §Resource Scopes, a `patient/` grant reaches only the
+        // launch context's EHR, so only `user/` grants reach the person's records by identity.
+        let own = self.owns(ehr_id)
+            || (subject && self.caller.own_ehrs.is_empty() && !self.caller.patient_grants_only);
         let kinships = ehr_id
             .and_then(|ehr_id| {
                 self.kinships

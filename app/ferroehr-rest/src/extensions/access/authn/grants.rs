@@ -79,7 +79,7 @@ pub(crate) async fn resolve(
         );
         return Err(AuthError::PartyUnavailable { retry_after: None });
     }
-    let provider = deployment.and_then(|deployment| deployment.provider_named(caller));
+    let provider = deployment.and_then(super::party::Deployment::provider_named);
     Ok(grants.resolved(actor, provider, jiff::Timestamp::now()))
 }
 

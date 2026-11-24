@@ -45,13 +45,16 @@ governs maintenance and extension, not initial build.
   — one place, never per-handler. The authenticated principal goes into
   request extensions; the `access` PEP consumes it.
 - **Config-driven** (one TOML file, `ferroehr.toml`, with environment-variable
-  overrides): the crate's `[auth]` section (`[auth.issuer.<name>]` tables with
-  their `preset`, `kind`, `profile` and the `party`, `federation` and
-  `attributes` tables under each,
-  `[auth.dpop]`, the Basic user store, the product scope), FerroEHR's
-  `[auth.idp]` beside it (`config::auth_section`), FerroEHR's `[authz]`
+  overrides): the crate's `[auth]` section (`[auth.issuer.<name>]` tables
+  naming an `issuer`, a `kind = "federation"` for another party's issuer, a
+  `profile`, and the `party`, `federation` and `attributes` tables under each,
+  `[auth.dpop]`, the Basic user store, the product scope), FerroEHR's keys
+  beside it (`config::auth_section`), FerroEHR's `[authz]`
   (`party_binding`, `federation.agreement`, `import`, `grants`,
-  `rbac.role_issuers`); system clients are policy parties in the CDR and `[smart]`. Every person is bound to a party with
+  `rbac.role_issuers`); system clients are policy parties in the CDR and `[smart]`. The authorization server's
+  registry is the one list of clients: the caller is read from the token's
+  standard claims (`sub`, `fhirUser`, the `patient` launch context, `act`,
+  `aud`), and FerroEHR keeps no client list. Every person is bound to a party with
   no switch; a Basic user is a person, mapped by its key. Config changes are
   user-visible → same-PR website-book + changelog entries.
 - **Layer order is load-bearing:** authn → `access` (RBAC/ABAC) → SMART
