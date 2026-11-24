@@ -57,7 +57,7 @@ env:
   # matrix, the job name and the `--partition` divisor are all derived from it,
   # so they cannot drift apart. When one needs raising, the pipeline-budget
   # watcher says so rather than someone noticing a slow pull request (#3131).
-  TEST_SHARDS: "3"
+  TEST_SHARDS: "6"
   UI_E2E_SHARDS: "3"
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
@@ -301,7 +301,7 @@ jobs:
           # The jobs that save a rust-cache entry on main. rust-cache names it
           # `v0-rust-<job id>-<os>-<arch>-…`, or after its `shared-key` when a
           # job sets one, as each msrv shard does (github.com/Swatinem/rust-cache).
-          CACHE_JOBS: deny clippy feature-combos its-wasm its-rest-features msrv-core msrv-server msrv-others codegen-drift cpu-budget build-tests test-viewer
+          CACHE_JOBS: deny clippy feature-combos its-wasm its-rest-features msrv-core msrv-server msrv-others codegen-drift cpu-budget build build-tests test-viewer
         run: |
           set -euo pipefail
           verified=false
@@ -1765,13 +1765,13 @@ jobs:
         if: ${{ !cancelled() }}
         run: df -h / && du -sh target/budget 2>/dev/null || true
 
-  # ── One build, then the tests against PostgreSQL 19.0 in shards ─────────────
-  # build-tests compiles once: it links every bin (clippy type-checks and
-  # nextest compiles test targets, so nothing else proves a bin links) and
-  # writes the nextest archive of the workspace's tests, the viewer excluded
-  # (it has its own job). Each shard runs its partition of that archive and
-  # compiles nothing (https://nexte.st/docs/ci-features/archiving/, #6516).
-  # A verified push builds alone, for main's cache.
+  # ── One test build, then the tests against PostgreSQL 19.0 in shards ────────
+  # build-tests compiles the workspace's tests once, the viewer excluded (it
+  # has its own job), and writes their nextest archive. Each shard runs its
+  # partition of that archive and compiles nothing
+  # (https://nexte.st/docs/ci-features/archiving/, #6516), so the shard count
+  # buys wall clock at about a minute of setup a shard. A verified push builds
+  # alone, for main's cache.
   build-tests:
     name: build tests
     needs: changes
@@ -1792,8 +1792,6 @@ jobs:
           tool: cargo-nextest
       - name: The vendor cache uses a held file at its pin with no download and refuses one off it
         run: bash scripts/vendor/lib/pinned.sh --self-test
-      - name: Link every bin
-        run: cargo build --locked --workspace --exclude ferroehr-viewer --all-features
       - name: Build the tests (a verified push writes the cache alone)
         if: needs.changes.outputs.queue_verified == 'true'
         run: cargo nextest run --locked --workspace --exclude ferroehr-viewer --all-features --no-run
@@ -1876,6 +1874,27 @@ jobs:
         env:
           SHARD: ${{ matrix.shard }}
           SHARD_COUNT: ${{ needs.changes.outputs.test_shard_count }}
+
+  # ── Every workspace BIN links here ──────────────────────────────────────────
+  # `cargo clippy` type-checks but never links, and nextest compiles test
+  # targets only, so without this a broken bin reaches main. Beside
+  # build-tests, so the shards wait on the test build alone.
+  build:
+    name: build (link every bin)
+    needs: changes
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'build'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: cargo build --locked --workspace --exclude ferroehr-viewer --all-features
 
   # ── CPU instructions of the codec micro-paths ──────────────────────────────
   # The canonical JSON and XML parse and render of the lab and IPS
@@ -3442,6 +3461,7 @@ jobs:
       - codegen-drift
       - nesting-release
       - cpu-budget
+      - build
       - build-tests
       - instructions
       - test
