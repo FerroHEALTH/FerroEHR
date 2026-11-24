@@ -42,7 +42,7 @@ use crate::storage::access_projection::{CHANNEL, NEW_CLASS, Revision};
 /// No openEHR spec governs this copy — our own design/extension.
 #[derive(Debug)]
 pub(crate) struct EhrAccessCache {
-    inner: Cache<EhrId, EhrEntry>,
+    inner: Cache<EhrId, Arc<EhrEntry>>,
     classes: Cache<(), Arc<Classes>>,
     /// Moved by every drop, so a load that started before one keeps nothing.
     drops: AtomicU64,
@@ -95,7 +95,7 @@ impl EhrAccessCache {
     }
 
     /// The copied entry of `ehr_id`, if this replica holds one.
-    pub(in crate::service) async fn entry(&self, ehr_id: EhrId) -> Option<EhrEntry> {
+    pub(in crate::service) async fn entry(&self, ehr_id: EhrId) -> Option<Arc<EhrEntry>> {
         self.inner.get(&ehr_id).await
     }
 
@@ -107,7 +107,7 @@ impl EhrAccessCache {
 
     /// Copy `entry` for `ehr_id`, read after `seen` drops, unless a drop
     /// overtook the read.
-    pub(in crate::service) async fn keep(&self, ehr_id: EhrId, entry: EhrEntry, seen: u64) {
+    pub(in crate::service) async fn keep(&self, ehr_id: EhrId, entry: Arc<EhrEntry>, seen: u64) {
         self.inner.insert(ehr_id, entry).await;
         if self.drops() != seen {
             self.inner.invalidate(&ehr_id).await;
@@ -125,9 +125,9 @@ impl EhrAccessCache {
         &self,
         ehr_id: EhrId,
         init: Fut,
-    ) -> Result<EhrEntry, Arc<ServiceError>>
+    ) -> Result<Arc<EhrEntry>, Arc<ServiceError>>
     where
-        Fut: Future<Output = Result<EhrEntry, ServiceError>>,
+        Fut: Future<Output = Result<Arc<EhrEntry>, ServiceError>>,
     {
         let seen = self.drops.load(Ordering::Acquire);
         let ran = AtomicBool::new(false);
@@ -148,7 +148,7 @@ impl EhrAccessCache {
     /// Seed the copy with a value for `ehr_id` without a DB read — the
     /// pre-warm path of a freshly-created EHR, which is default-open. Any
     /// later `EHR_ACCESS` commit drops this entry via [`Self::forget`].
-    pub(in crate::service) async fn insert(&self, ehr_id: EhrId, entry: EhrEntry) {
+    pub(in crate::service) async fn insert(&self, ehr_id: EhrId, entry: Arc<EhrEntry>) {
         self.inner.insert(ehr_id, entry).await;
     }
 
@@ -449,7 +449,7 @@ mod tests {
             for (n, ehr_id) in (0_u64..).zip(&ehrs) {
                 let load = async {
                     loads.fetch_add(1, Ordering::Relaxed);
-                    Ok(stored(n))
+                    Ok(Arc::new(stored(n)))
                 };
                 let entry = cache
                     .get_or_load(*ehr_id, load)

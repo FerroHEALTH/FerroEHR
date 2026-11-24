@@ -371,7 +371,7 @@ impl RequestAccess {
     /// [`GrantsUnavailable`] when the care copy misses and cannot read.
     pub async fn cared_ehrs(
         &self,
-        entries: &[(EhrId, EhrEntry)],
+        entries: &[(EhrId, Arc<EhrEntry>)],
     ) -> Result<Vec<CaredEhr>, GrantsUnavailable> {
         let mut cared = Vec::new();
         for (ehr_id, entry) in entries {

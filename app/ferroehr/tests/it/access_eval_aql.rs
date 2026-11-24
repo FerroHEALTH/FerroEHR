@@ -1460,7 +1460,9 @@ async fn a_pinned_verdict_judged_on_an_older_copy_is_judged_again_or_refused() {
                 let condition = unresolved(world, &access)
                     .await
                     .with_care(Care::Ehrs(Vec::new().into()));
-                let mut entry = svc.ehr_access_entry(ehr_id).await.expect("the copy reads");
+                let mut entry = Arc::unwrap_or_clone(
+                    svc.ehr_access_entry(ehr_id).await.expect("the copy reads"),
+                );
                 if older {
                     entry.revision.settings = entry.revision.settings.map(|ordinal| ordinal - 1);
                 }
