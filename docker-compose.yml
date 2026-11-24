@@ -1151,6 +1151,7 @@ configs:
       # client in `client_id`, so the issuer takes the claims it carries.
       [auth.issuer.quickstart]
       issuer = "http://localhost:8180/quickstart"
+      kind = "machines"
       audience = ["http://localhost:8090/fhir"]
 
       [auth.issuer.quickstart.profile]

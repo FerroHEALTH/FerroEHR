@@ -101,6 +101,7 @@ configs:
 
       [[auth.issuer]]
       issuer = "http://localhost:8180/quickstart"
+      kind = "machines"
       audience = ["http://localhost:8090/fhir"]
       token_types = ["JWT"]
       required_claims = ["iss", "exp", "aud", "sub"]
