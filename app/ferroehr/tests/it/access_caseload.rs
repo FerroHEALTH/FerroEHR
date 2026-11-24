@@ -190,6 +190,7 @@ fn ask(path: Path, roles: &[(Option<&str>, &str)]) -> Option<Ask> {
     ferroehr::access_eval::caseload::read(
         Some(path),
         (!roles.is_empty()).then_some(roles.as_slice()),
+        None,
     )
     .expect("the caseload reads")
 }
@@ -325,7 +326,7 @@ async fn the_projected_caseload_probe_starts_from_the_caseload_index() {
     let ward = Ward::new().await;
     ward.svc.project_care().await.expect("the projector runs");
     let ask = ask(Path::All, &[]).expect("a caseload");
-    let caseload = ferroehr::access_eval::caseload::Caseload::Projected {
+    let reach = ferroehr::access_eval::caseload::Reach::Projected {
         care: ferroehr::access_eval::condition::care::ProjectedCare {
             principals: vec![ward.doctor.0].into(),
             direct: vec![ward.doctor.0].into(),
@@ -356,7 +357,10 @@ async fn the_projected_caseload_probe_starts_from_the_caseload_index() {
         policy_parties: ferroehr::aql::sql::readers::PolicyParties::Served,
         access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records: None,
-        caseload: Some(Arc::new(caseload)),
+        caseload: Some(Arc::new(ferroehr::access_eval::caseload::Caseload {
+            reach,
+            within: None,
+        })),
     };
     let prepared = ferroehr::aql::sql::build(&ir, &params, &ctx).expect("the AQL lowers");
     assert!(prepared.sql.contains("access_care"), "{}", prepared.sql);

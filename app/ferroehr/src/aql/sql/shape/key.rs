@@ -186,6 +186,7 @@ fn same_groups(a: &ConditionGroups, b: &ConditionGroups) -> bool {
             && a.confined.is_some() == b.confined.is_some()
             && a.facts.keeper == b.facts.keeper
             && a.subject_namespace == b.subject_namespace
+            && a.episodic == b.episodic
             && a.closed == b.closed
             && a.default == b.default
             && a.groups == b.groups)

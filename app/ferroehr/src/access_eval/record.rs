@@ -107,7 +107,7 @@ impl Step {
             Refusal::PolicyDenied => Self::ControllerRule,
             Refusal::Sensitivity => Self::Sensitivity,
             Refusal::Confidentiality => Self::Confidentiality,
-            Refusal::NoCareRelationship => Self::CareRelationship,
+            Refusal::NoCareRelationship | Refusal::OutsideEpisode => Self::CareRelationship,
             Refusal::PurposeMissing => Self::Purpose,
             Refusal::ConsentRequired => Self::DefaultDisposition,
             Refusal::NotSubject => Self::Subject,

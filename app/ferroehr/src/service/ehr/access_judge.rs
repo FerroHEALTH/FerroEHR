@@ -16,11 +16,11 @@ use std::sync::Arc;
 
 use openehr_rm::draft::access_control::terminology::{AccessDefault, Refusal};
 
-use crate::access_eval::caseload::{Ask, Caseload};
+use crate::access_eval::caseload::{Ask, Caseload, Reach};
 use crate::access_eval::condition::care::{Care, CareUnsettled};
 use crate::access_eval::condition::{AccessCondition, EhrEntry, InForce, RequestAccess, current};
 use crate::access_eval::procedure::{Lifted, Outcome, Verdict};
-use crate::access_eval::scope::{CategoryIndex, Item};
+use crate::access_eval::scope::{CategoryIndex, Item, Pred};
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
@@ -357,6 +357,19 @@ impl FerroEhrService {
         if binds_any(&care) && !access.care_in_force(std::future::ready(())).await? {
             care = self.care_of(&access, pinned).await?;
         }
+        // NOTE: our own design (#6414), the copy the care was confirmed on decides whether a
+        // relationship scoped to an episode may hold, so a condition built before it moved is
+        // built again.
+        if access.episodic() && condition.groups().is_some_and(|groups| !groups.episodic) {
+            let classes = self.ehr_access_classes().await?;
+            let conflicts = condition
+                .groups()
+                .map_or_else(|| Arc::from([]), |groups| Arc::clone(&groups.conflicts));
+            let rebuilt = access
+                .condition(&classes, Care::Unresolved)
+                .with_conflicts(conflicts);
+            return Ok(rebuilt.with_care(care));
+        }
         Ok(condition.with_care(care))
     }
 
@@ -386,9 +399,12 @@ impl FerroEhrService {
             return Err(ServiceError::bad_request(refused.to_string(), refused));
         }
         let Some(access) = current() else {
-            return Ok(Some(Arc::new(Caseload::Census {
-                namespace: Arc::from(""),
-                subjects: Vec::new().into(),
+            return Ok(Some(Arc::new(Caseload {
+                reach: Reach::Census {
+                    namespace: Arc::from(""),
+                    subjects: Vec::new().into(),
+                },
+                within: None,
             })));
         };
         access
@@ -397,23 +413,28 @@ impl FerroEhrService {
         // NOTE: our own design (#5806, #5891), the caseload rests on the copy found to hold the
         // store's revisions, so a discharge another replica committed narrows it at once.
         access.care_in_force(std::future::ready(())).await?;
-        if let Some(care) = projected_care(&access).filter(|_| self.care_projection_current()) {
-            return Ok(Some(Arc::new(Caseload::Projected {
+        let projected = projected_care(&access).filter(|_| self.care_projection_current());
+        let cared = if projected.is_none() || !ask.episodes.is_empty() {
+            access.cared_subjects().await?
+        } else {
+            Vec::new()
+        };
+        let within = within_episodes(&access, ask, &cared)?;
+        let reach = match projected {
+            Some(care) => Reach::Projected {
                 care,
                 needs: ask.needs(),
-            })));
-        }
-        let subjects: Vec<EhrSubject> = access
-            .cared_subjects()
-            .await?
-            .into_iter()
-            .filter(|cared| ask.holds(&cared.ties))
-            .map(|cared| cared.subject)
-            .collect();
-        Ok(Some(Arc::new(Caseload::Census {
-            namespace: access.party_namespace(),
-            subjects: subjects.into(),
-        })))
+            },
+            None => Reach::Census {
+                namespace: access.party_namespace(),
+                subjects: cared
+                    .into_iter()
+                    .filter(|cared| ask.holds(&cared.ties))
+                    .map(|cared| cared.subject)
+                    .collect(),
+            },
+        };
+        Ok(Some(Arc::new(Caseload { reach, within })))
     }
 
     /// The caller's own records the Art. 3(3) delay reads
@@ -675,6 +696,37 @@ fn projected_care(
         grace: grace.to_string(),
         self_declared: access.policy().self_declared,
     })
+}
+
+/// The data `ask` narrows each EHR of its caseload to when it names
+/// episodes: theirs, the unplaced data and the data
+/// `ACCESS_POLICY.episode_shared` names; `None` when it names none. An
+/// episode no live relationship of the caller to any of `cared` names is
+/// refused (draft ITS-REST page, Queries and the Caseload).
+///
+/// # Errors
+/// `bad_request` (`400`) naming `caseload_episodes` for such an episode.
+fn within_episodes(
+    access: &RequestAccess,
+    ask: &Ask,
+    cared: &[crate::access_eval::condition::care::CaredSubject],
+) -> Result<Option<Pred>, ServiceError> {
+    if ask.episodes.is_empty() {
+        return Ok(None);
+    }
+    let named: std::collections::BTreeSet<_> = cared
+        .iter()
+        .flat_map(|cared| cared.ties.iter())
+        .filter_map(crate::access_eval::care_tie::Tie::episode)
+        .collect();
+    if !ask.episodes.iter().all(|key| named.contains(key)) {
+        let refused = crate::access_eval::caseload::Refused::UnknownEpisode;
+        return Err(ServiceError::bad_request(refused.to_string(), refused));
+    }
+    Ok(Some(Pred::any(vec![
+        Pred::InEpisodes(Arc::from(ask.episodes.as_slice())),
+        access.episode_shared(),
+    ])))
 }
 
 /// Whether `care` admits any EHR, so the copy it was read from must hold the

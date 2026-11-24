@@ -302,6 +302,14 @@ pub enum Pred {
     /// meets the need, which only a query's statement reads; it holds for
     /// every item of the EHR or for none.
     Care(Arc<CareNeed>),
+    /// The EHR itself and the objects placed in no episode or in one of
+    /// these, sorted; an object read without its episodes is in none.
+    InEpisodes(Arc<[EpisodeKey]>),
+    /// The EHR itself and the objects a live care relationship of the caller
+    /// to the EHR's subject covers, of those that meet the need when one is
+    /// named: it names no episode, the object is placed in none, or in its
+    /// episode. Only a query's statement reads it.
+    Covered(Option<Arc<CareNeed>>),
 }
 
 /// A fact of one EHR, named by its position in the EHR's projected facts,
@@ -377,10 +385,13 @@ impl Pred {
     #[must_use]
     pub fn maybe(&self) -> Self {
         match self {
-            Self::True | Self::Data(..) => Self::True,
+            Self::True | Self::Data(..) | Self::InEpisodes(_) => Self::True,
             Self::False => Self::False,
             Self::Ehr(fact) => Self::Ehr(*fact),
             Self::Care(need) => Self::Care(Arc::clone(need)),
+            Self::Covered(need) => need
+                .as_ref()
+                .map_or(Self::True, |need| Self::Care(Arc::clone(need))),
             Self::Not(inner) => Self::negate(inner.always()),
             Self::All(preds) => Self::all(preds.iter().map(Self::maybe).collect()),
             Self::Any(preds) => Self::any(preds.iter().map(Self::maybe).collect()),
@@ -393,7 +404,7 @@ impl Pred {
     pub fn always(&self) -> Self {
         match self {
             Self::True => Self::True,
-            Self::False | Self::Data(..) => Self::False,
+            Self::False | Self::Data(..) | Self::InEpisodes(_) | Self::Covered(_) => Self::False,
             Self::Ehr(fact) => Self::Ehr(*fact),
             Self::Care(need) => Self::Care(Arc::clone(need)),
             Self::Not(inner) => Self::negate(inner.maybe()),
@@ -426,13 +437,19 @@ impl Pred {
             Self::True => true,
             // NOTE: our own design (#5588), a direct read resolves every fact, so only a
             // query reads one; read in memory it covers nothing.
-            Self::False | Self::Ehr(_) | Self::Care(_) => false,
+            Self::False | Self::Ehr(_) | Self::Care(_) | Self::Covered(_) => false,
             Self::Not(inner) => !inner.holds(item),
             Self::All(preds) => preds.iter().all(|pred| pred.holds(item)),
             Self::Any(preds) => preds.iter().any(|pred| pred.holds(item)),
             Self::Data(data, polarity) => match item {
                 Item::Ehr => false,
                 Item::Object(object) => data.holds(object, *polarity),
+            },
+            Self::InEpisodes(named) => match item {
+                Item::Ehr => true,
+                Item::Object(object) => object.episodes.is_some_and(|placed| {
+                    placed.is_empty() || placed.iter().any(|key| named.binary_search(key).is_ok())
+                }),
             },
         }
     }
@@ -655,6 +672,28 @@ impl Scopes {
             }
         }
         Pred::any(preds)
+    }
+
+    /// The items of an EHDS Art. 14(1) priority category, through the
+    /// category map, as a permit reads them.
+    #[must_use]
+    pub fn priority(&self) -> Pred {
+        let categories = ehds_logging::category::Category::PRIORITY
+            .iter()
+            .map(|category| {
+                self.categories.category(&ForeignCode {
+                    terminology: category.system().to_owned(),
+                    code: category.code().to_owned(),
+                })
+            })
+            .collect();
+        Pred::Data(
+            Arc::new(DataMatch {
+                categories: Some(categories),
+                ..DataMatch::default()
+            }),
+            Polarity::Permit,
+        )
     }
 
     /// The layout of the settings class these scopes read; `None` for one

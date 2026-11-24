@@ -144,7 +144,10 @@ impl LiveGrants {
                 let Some(tie) = Tie::of(care, facts, principals, day) else {
                     continue;
                 };
-                let tie = Tie { grant: None, ..tie };
+                // NOTE: our own design (#6415), a census tie keeps the relationship only for its
+                // episode, which a query's coverage reads.
+                let grant = tie.grant.filter(|grant| grant.episode.is_some());
+                let tie = Tie { grant, ..tie };
                 let own = EhrSubject::new(&*namespace, person.to_string());
                 let declared = census
                     .declared

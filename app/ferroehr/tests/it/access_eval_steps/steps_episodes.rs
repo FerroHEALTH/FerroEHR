@@ -170,3 +170,90 @@ fn a_classification_naming_an_episode_marks_its_data_alone() {
         assert_outcome(&verdict, item, outcome, name);
     }
 }
+
+/// The cardiology and dermatology case (#6414): under a policy that requires
+/// care, a specialist holding only the cardiology episode relationship reads
+/// that episode, the unplaced and the shared data, and is refused
+/// `refused-outside-episode` the dermatology episode; a whole-record
+/// relationship, a permit, an emergency and the subject decide as before.
+#[test]
+fn step_7_admits_a_datum_only_through_a_relationship_that_covers_it() {
+    let care = |shared: bool| {
+        let mut members = json!({ "care_relationship_required": true });
+        if shared {
+            members["episode_shared"] =
+                json!([{ "_type": "ACCESS_DATA_SCOPE", "templates": ["lab_hiv.v1"] }]);
+        }
+        policy(&members)
+    };
+    let both = both();
+    let outside = Outcome::Refused(Refusal::OutsideEpisode);
+    let cardiologist = |ties: Vec<Tie>, shared: bool| Case {
+        policy: Some(care(shared)),
+        ties: Some(ties),
+        ..Case::of(settings("open", &[], &[], &[]))
+    };
+    let verdict =
+        cardiologist(vec![tie_in(Some("C-17"))], false).verdict(&professional(NURSE), read(None));
+    let expected = [
+        Outcome::Admit,
+        Outcome::Admit,
+        Outcome::Admit,
+        outside,
+        Outcome::Admit,
+    ];
+    for ((name, item), outcome) in items(&both).iter().zip(expected) {
+        assert_outcome(&verdict, item, outcome, name);
+    }
+    let lab = placed(OTHER, Some("lab_hiv.v1"), &DERMATOLOGY_EPISODE[..]);
+    let shared =
+        cardiologist(vec![tie_in(Some("C-17"))], true).verdict(&professional(NURSE), read(None));
+    assert_outcome(&shared, &lab, Outcome::Admit, "shared across episodes");
+    let whole = cardiologist(vec![tie_in(Some("C-17")), tie_in(None)], false)
+        .verdict(&professional(NURSE), read(None));
+    for (name, item) in items(&both) {
+        assert_outcome(&whole, &item, Outcome::Admit, name);
+    }
+    let dermatology = placed(OTHER, Some("vitals.v1"), &DERMATOLOGY_EPISODE[..]);
+    let lifted = cardiologist(vec![tie_in(Some("C-17"))], false)
+        .verdict(&professional(NURSE), break_glass(read(Some("ETREAT"))));
+    assert_outcome(&lifted, &dermatology, Outcome::Admit, "an emergency");
+    let subject = cardiologist(vec![tie_in(Some("C-17"))], false)
+        .verdict(&caller(CallerKind::Subject, NURSE), read(None));
+    assert_outcome(&subject, &dermatology, Outcome::Admit, "the subject");
+    let permit = directive(
+        "consent",
+        "permit",
+        &json!({ "applies_to": [{ "party": party("PERSON", NURSE) }] }),
+    );
+    let permitted = Case {
+        policy: Some(care(false)),
+        ties: Some(vec![tie_in(Some("C-17"))]),
+        ..Case::of(settings("open", &[permit], &[], &[]))
+    };
+    let verdict = permitted.verdict(&professional(NURSE), read(None));
+    assert_outcome(&verdict, &dermatology, Outcome::Admit, "a permit");
+}
+
+/// Under a `restricted` default, care admits only the data it covers and
+/// refuses the rest `refused-outside-episode` (step 8, #6414).
+#[test]
+fn step_8_admits_a_datum_only_through_a_relationship_that_covers_it() {
+    let case = Case {
+        ties: Some(vec![tie_in(Some("C-17"))]),
+        ..Case::of(settings("restricted", &[], &[], &[]))
+    };
+    let verdict = case.verdict(&professional(NURSE), read(None));
+    let both = both();
+    let outside = Outcome::Refused(Refusal::OutsideEpisode);
+    let expected = [
+        Outcome::Admit,
+        Outcome::Admit,
+        Outcome::Admit,
+        outside,
+        Outcome::Admit,
+    ];
+    for ((name, item), outcome) in items(&both).iter().zip(expected) {
+        assert_outcome(&verdict, item, outcome, name);
+    }
+}
