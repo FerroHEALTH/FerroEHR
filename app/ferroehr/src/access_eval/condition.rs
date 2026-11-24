@@ -20,7 +20,7 @@
 
 use futures::FutureExt as _;
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::{Arc, LazyLock, Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
@@ -106,9 +106,8 @@ pub struct EhrEntry {
     pub revision: Revision,
 }
 
-/// The entry of an EHR with no settings whose subject is not known, which
-/// every unsettled judgement shares ([`RequestAccess::judge_unsettled`]).
-static UNSETTLED: std::sync::LazyLock<Arc<EhrEntry>> = std::sync::LazyLock::new(|| {
+/// The settings-less, subject-less entry every unsettled judgement shares.
+static UNSETTLED: LazyLock<Arc<EhrEntry>> = LazyLock::new(|| {
     Arc::new(EhrEntry {
         settings: Arc::new(None),
         subject: None,
@@ -122,8 +121,7 @@ static UNSETTLED: std::sync::LazyLock<Arc<EhrEntry>> = std::sync::LazyLock::new(
 pub struct Judgement {
     /// The verdict.
     pub verdict: Arc<Verdict>,
-    /// The entry it was judged on: the settings, the version that carries
-    /// them and the revision of the row they were read from.
+    /// The entry it was judged on.
     pub entry: Arc<EhrEntry>,
 }
 
