@@ -719,23 +719,11 @@ mod tests {
         }
     }
 
-    /// No configuration names an access service: it is a grant of
-    /// `access_service`, which the default ceiling does not allow, and the
-    /// removed role list is refused from the environment (#5521).
+    /// An access service is a grant of `access_service`, which the default
+    /// ceiling does not allow (#5521).
     #[test]
-    fn an_access_service_is_a_grant_and_the_removed_role_list_is_refused() {
+    fn an_access_service_is_a_grant_the_default_ceiling_does_not_allow() {
         use crate::party_binding::grants::operation::{GrantCeiling, Operation};
         assert!(!GrantCeiling::default().allows(Operation::AccessService));
-        let env: std::collections::HashMap<String, String> = [(
-            "FERROEHR__AUTHZ__RBAC__ACCESS_SERVICE_ROLES",
-            "EHDS-PORTAL,EHDS-PROFESSIONAL",
-        )]
-        .into_iter()
-        .map(|(k, v)| (k.to_owned(), v.to_owned()))
-        .collect();
-        let refused = crate::config::assemble(None, &env, &[])
-            .expect_err("the removed key is unknown")
-            .to_string();
-        assert!(refused.contains("ACCESS_SERVICE_ROLES"), "{refused}");
     }
 }

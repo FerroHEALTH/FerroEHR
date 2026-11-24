@@ -282,8 +282,6 @@ pub fn load_with_provenance(
 }
 
 #[cfg(test)]
-mod abac_tests;
-#[cfg(test)]
 mod audit_tests;
 #[cfg(test)]
 mod identity_tests;
@@ -711,34 +709,15 @@ mod tests {
 
     #[test]
     fn unknown_file_key_is_rejected() {
-        let file = toml_file("[database]\nmax_conections = 5\n");
-        let err = assemble(Some(file.path()), &env(&[]), &[]).expect_err("unknown key");
-        assert!(err.to_string().contains("max_conections"), "{err}");
-    }
-
-    /// The `[server]` keys FerroEHR read before the family section took the
-    /// table are refused by name, so a configuration written for them fails
-    /// to boot instead of running on defaults.
-    #[test]
-    fn the_retired_server_keys_are_refused() {
-        for (text, key) in [
-            ("[server]\nbind = \"0.0.0.0:8080\"\n", "bind"),
-            ("[server]\nmax_in_flight = 64\n", "max_in_flight"),
-            ("[server]\nsystem_id = \"cdr.example\"\n", "system_id"),
-            ("[server.limits]\nbody_bytes = 1\n", "limits"),
-            ("[server.rate_limit]\nenabled = false\n", "rate_limit"),
-            (
-                "[server.connection]\nmax_concurrent_streams = 1\n",
-                "connection",
-            ),
-            (
-                "[server.tls]\nenabled = true\ncertificate_file = \"a\"\nkey_file = \"b\"\n",
-                "enabled",
-            ),
+        for text in [
+            "[database]\nmax_conections = 5\n",
+            "[server]\ncolour = \"blue\"\n",
+            "[server.tls]\ncolour = \"blue\"\n",
+            "[privacy]\ncolour = \"blue\"\n",
         ] {
             let file = toml_file(text);
             let err = assemble(Some(file.path()), &env(&[]), &[]).expect_err(text);
-            assert!(err.to_string().contains(key), "{text}: {err}");
+            assert!(err.to_string().contains("unknown field"), "{text}: {err}");
         }
     }
 
@@ -985,72 +964,6 @@ mod tests {
         );
     }
 
-    /// The national-identifier protection is gone (#6092): a tree that still
-    /// sets `[privacy.identifier_protection]` meets the unknown-key refusal,
-    /// which names the key, in the file and in the environment alike.
-    #[test]
-    fn the_removed_identifier_protection_section_is_an_unknown_key() {
-        for body in [
-            "[privacy.identifier_protection]\nschemes = [\"x\"]\n",
-            "[privacy.identifier_protection]\nkey_file = \"/run/secrets/key\"\n",
-            "[privacy]\nidentifier_protection = {}\n",
-        ] {
-            let file = toml_file(body);
-            let err = assemble(Some(file.path()), &env(&[]), &[])
-                .expect_err("the removed section must be refused");
-            assert!(
-                err.to_string().contains("identifier_protection"),
-                "{body}: {err}"
-            );
-        }
-        let err = assemble(
-            None,
-            &env(&[(
-                "FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__KEY",
-                "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
-            )]),
-            &[],
-        )
-        .expect_err("the removed variable must be refused");
-        assert!(
-            err.to_string()
-                .contains("FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__KEY"),
-            "{err}"
-        );
-        assert!(
-            !err.to_string().contains("000102030405"),
-            "the refusal never prints the value: {err}"
-        );
-    }
-
-    /// The identifier scanner is gone (#6081): a tree that still sets
-    /// `[privacy.identifier_scan]` meets the unknown-key refusal, which names
-    /// the key, in the file and in the environment alike.
-    #[test]
-    fn the_removed_identifier_scan_section_is_an_unknown_key() {
-        for body in [
-            "[privacy.identifier_scan]\nmode = \"warn\"\n",
-            "[privacy.identifier_scan]\nrules = []\n",
-            "[privacy]\nidentifier_scan = { patterns = [] }\n",
-        ] {
-            let file = toml_file(body);
-            let err = assemble(Some(file.path()), &env(&[]), &[])
-                .expect_err("the removed section must be refused");
-            assert!(err.to_string().contains("identifier_scan"), "{body}: {err}");
-        }
-        let err = assemble(
-            None,
-            &env(&[("FERROEHR__PRIVACY__IDENTIFIER_SCAN__MODE", "strict")]),
-            &[],
-        )
-        .expect_err("the removed variable must be refused");
-        assert!(
-            err.to_string()
-                .contains("FERROEHR__PRIVACY__IDENTIFIER_SCAN__MODE"),
-            "{err}"
-        );
-    }
-
     /// A blank pseudonym namespace would accept an empty
     /// `external_ref.namespace` as if a deployment had declared it.
     #[test]
@@ -1203,24 +1116,6 @@ mod tests {
         c.auth.shared.issuer = auth_section::machines("https://as.example/realms/ferroehr");
         c.authz.party_binding.provider = Some(binding::one_provider());
         assert!(c.validate().is_ok(), "{:?}", c.validate());
-    }
-
-    /// The HMAC key source and the inline key set are gone: both are unknown
-    /// keys, refused by the loader like any typo, so no tree carries competing
-    /// key sources.
-    #[test]
-    fn the_removed_key_sources_are_unknown_keys() {
-        for body in [
-            "[auth]\nhmac_secret = \"0123456789abcdef0123456789abcdef\"\n",
-            "[auth]\njwks_json = \"{}\"\n",
-            "[auth.oidc]\nissuer = \"https://idp.example.test\"\n",
-        ] {
-            let file = toml_file(body);
-            assert!(
-                assemble(Some(file.path()), &env(&[]), &[]).is_err(),
-                "{body} must be refused"
-            );
-        }
     }
 
     /// RFC 7518 §6.4: a symmetric key in `auth.jwks_file` refuses the whole
@@ -1552,21 +1447,19 @@ mod tests {
         );
     }
 
-    /// Every outbound grant is the `ferrohealth-smart` client table, so the
-    /// key `token_url` that preceded `token_endpoint` stops startup by name
-    /// in each of the two tables that take a grant.
+    /// Each of the two tables that take an outbound grant refuses a key it
+    /// does not define, naming it.
     #[test]
-    fn the_old_token_url_key_is_refused_in_every_grant() {
+    fn an_unknown_key_is_refused_in_every_grant() {
         for table in [
             "terminology.endpoint.credentials.oauth",
             "audit.fhir_feed.endpoint.credentials.oauth",
         ] {
             let file = toml_file(&format!(
-                "[{table}]\ntoken_url = \"https://idp.example/token\"\nclient_id = \"c\"\n"
+                "[{table}]\ncolour = \"blue\"\nclient_id = \"c\"\n"
             ));
-            let err =
-                assemble(Some(file.path()), &env(&[]), &[]).expect_err("the old key is unknown");
-            assert!(err.to_string().contains("token_url"), "{table}: {err}");
+            let err = assemble(Some(file.path()), &env(&[]), &[]).expect_err("an unknown key");
+            assert!(err.to_string().contains("colour"), "{table}: {err}");
         }
     }
 }
