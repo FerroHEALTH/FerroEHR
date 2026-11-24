@@ -82,6 +82,7 @@
   - [Enterprise identity providers](identity-providers.md)
   - [SMART App Launch](smart-app-launch.md)
   - [Behind FerroSMART](behind-ferrosmart.md)
+  - [The xShare Yellow Button](xshare-yellow-button.md)
   - [Audit trail (IHE ATNA)](audit.md)
   - [Version signing](signing/index.md)
     - [Digest signing](signing/digest.md)
