@@ -27,7 +27,7 @@ use uuid::Uuid;
 use crate::db::acquire::acquire;
 use crate::party_binding::derive::{Facts, container};
 use crate::party_binding::grants::derive::{Bound, GrantFacts};
-use crate::party_binding::grants::live::revisions::Revisions;
+use crate::party_binding::grants::live::revisions::{FactsRead, HeldSnapshot, Revisions};
 use crate::party_binding::grants::operation::Operation;
 use crate::party_binding::step::{Step, Tag};
 use crate::storage::error::StorageError;
@@ -407,17 +407,29 @@ pub(crate) async fn refilled(tx: &mut PgConnection) -> Result<(), StorageError> 
     Ok(())
 }
 
-/// The grant revision, the facts revision and the binding revision, on
-/// `conn`, in one read.
+/// The grant revision and the binding revision, and whether the store holds
+/// a caller facts stamp the snapshot of `held` did not see
+/// (`party.facts_behind`), on `conn`, in one read.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
-pub(crate) async fn revisions(conn: &mut PgConnection) -> Result<Revisions, StorageError> {
-    let (grants, facts, bindings) = sqlx::query_as(
-        "SELECT revision, facts_revision, binding_revision FROM binding_grant_revision",
+pub(crate) async fn revisions(
+    conn: &mut PgConnection,
+    held: Option<&HeldSnapshot>,
+) -> Result<Revisions, StorageError> {
+    // NOTE: PostgreSQL plan cache, a scan of the function evaluates the snapshot's cast once, so
+    // the statement settles on its generic plan (#6392).
+    let (grants, bindings, behind): (i64, i64, bool) = sqlx::query_as(
+        "SELECT r.revision, r.binding_revision, b.behind \
+         FROM binding_grant_revision r, party.facts_behind($1::pg_snapshot) b(behind)",
+    )
+    .bind(
+        held.and_then(|held| held.snapshot.as_deref())
+            .map(crate::db::snapshot::Snapshot::text),
     )
     .fetch_one(&mut *conn)
     .await?;
+    let facts = held.map_or(FactsRead::Behind { after: None }, |held| held.found(behind));
     Ok(Revisions {
         grants,
         facts,
@@ -617,7 +629,7 @@ impl Dates {
 /// Everything the grant rows hold, read in one snapshot: the revision, every
 /// client identifier with its provider, every capability, and every caller
 /// fact.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub(crate) struct Loaded {
     pub(crate) revision: i64,
     pub(crate) clients: Vec<ClientRow>,
