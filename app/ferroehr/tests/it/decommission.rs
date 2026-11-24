@@ -23,8 +23,16 @@ use crate::pseudonymisation_boundary::a_person;
 use crate::typed_body::typed;
 
 /// The schemas the migrations create, as `erase_schema` drops them: each
-/// domain's, the party set's `party_door` (#6320), and `ext`.
-const SCHEMAS: [&str; 5] = ["audit", "party_door", "party", "clinical", "ext"];
+/// domain's, the party set's `party_door` and the clinical set's
+/// `clinical_door` (#6320), and `ext`.
+const SCHEMAS: [&str; 6] = [
+    "audit",
+    "party_door",
+    "party",
+    "clinical_door",
+    "clinical",
+    "ext",
+];
 
 /// A decommissioning over the testkit clone, every domain on its one DSN.
 fn decommission(db: &testkit::TestDb) -> Decommission {

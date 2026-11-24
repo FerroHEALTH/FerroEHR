@@ -33,6 +33,7 @@ use crate::ids::{EhrId, VoId};
 use crate::storage::access_facts::{Statements, visible, with_episodes};
 use crate::storage::error::StorageError;
 use crate::storage::stored_text::StoredText;
+use crate::storage::version_repo::content::ServedContent;
 use crate::versioning::object_version_id::TreeId;
 
 /// A loaded `version`⋈`audit` row plus its reassembled content and
@@ -169,7 +170,9 @@ fn served(rows: Vec<PgRow>) -> Result<Vec<StoredVersion>, StorageError> {
 /// Defines a point read's statement, its twin for a ride, which also
 /// selects the party store's revisions (`party_revisions!`, #6320) with the
 /// facts copy's snapshot bound at the placeholder after the read's own, and
-/// the four forms a request chooses from ([`Statements`]).
+/// the four forms a request chooses from ([`Statements`]), and for a read the
+/// party pool runs, its plain and ride forms reading the policy and
+/// definition revisions through the clinical door (`policy_revisions!`).
 macro_rules! point_reads {
     ($(#[$doc:meta])* $vis:vis $plain:ident, $ride:ident, $all:ident ($held:literal) = $tail:literal) => {
         $(#[$doc])*
@@ -184,19 +187,32 @@ macro_rules! point_reads {
             ride_episodes: version_select!(concat!(party_revisions!($held), head_episodes!()); $tail),
         };
     };
+    (
+        $(#[$doc:meta])* $vis:vis $plain:ident, $ride:ident, $all:ident, $door:ident, $both:ident
+        ($held:literal) = $tail:literal
+    ) => {
+        point_reads!($(#[$doc])* $vis $plain, $ride, $all ($held) = $tail);
+        #[doc = concat!("[`", stringify!($plain), "`] with the policy and definition revisions \
+            read through the clinical door.")]
+        $vis const $door: &str = version_select!(policy_revisions!(); $tail);
+        #[doc = concat!("[`", stringify!($ride), "`] on the party pool, with the policy and \
+            definition revisions read through the clinical door.")]
+        $vis const $both: &str =
+            version_select!(concat!(party_revisions_here!($held), policy_revisions!()); $tail);
+    };
 }
 
 point_reads! {
     /// The statement [`read_one`] runs for [`VersionAt::Current`]: the current trunk version of an object
     /// by id, resolved through the head row's `trunk_head_sys_version`.
-    pub READ_CURRENT_SQL, READ_CURRENT_RIDE_SQL, READ_CURRENT ("$2") =
+    pub READ_CURRENT_SQL, READ_CURRENT_RIDE_SQL, READ_CURRENT, READ_CURRENT_DOOR_SQL, READ_CURRENT_RIDE_DOOR_SQL ("$2") =
         "WHERE v.vo_id = $1 AND h.trunk_head_sys_version = v.sys_version"
 }
 
 point_reads! {
     /// The statement [`read_one`] runs for [`VersionAt::Instant`]: the trunk version of an object in force
     /// at an instant.
-    pub VERSION_AT_SQL, VERSION_AT_RIDE_SQL, VERSION_AT ("$3") = "WHERE v.vo_id = $1 AND v.branch_number = 0 \
+    pub VERSION_AT_SQL, VERSION_AT_RIDE_SQL, VERSION_AT, VERSION_AT_DOOR_SQL, VERSION_AT_RIDE_DOOR_SQL ("$3") = "WHERE v.vo_id = $1 AND v.branch_number = 0 \
      AND v.committed_at <= $2::timestamptz \
      AND NOT EXISTS (SELECT 1 FROM version s \
                      WHERE s.vo_id = v.vo_id AND s.branch_number = 0 \
@@ -207,14 +223,14 @@ point_reads! {
 point_reads! {
     /// The statement [`read_one`] runs for [`VersionAt::Ordinal`]: one version of an object by
     /// its storage ordinal, addressed on the partitioned parent.
-    pub READ_VERSION_BY_ORDINAL_SQL, READ_VERSION_BY_ORDINAL_RIDE_SQL, READ_VERSION_BY_ORDINAL ("$3") =
+    pub READ_VERSION_BY_ORDINAL_SQL, READ_VERSION_BY_ORDINAL_RIDE_SQL, READ_VERSION_BY_ORDINAL, READ_VERSION_BY_ORDINAL_DOOR_SQL, READ_VERSION_BY_ORDINAL_RIDE_DOOR_SQL ("$3") =
         "WHERE v.vo_id = $1 AND v.sys_version = $2"
 }
 
 point_reads! {
     /// The statement [`read_one`] runs for [`VersionAt::Tree`]: one version of an object by its
     /// `VERSION_TREE_ID` columns, addressed on the partitioned parent.
-    pub READ_VERSION_SQL, READ_VERSION_RIDE_SQL, READ_VERSION ("$5") = "WHERE v.vo_id = $1 AND v.trunk_version = $2 \
+    pub READ_VERSION_SQL, READ_VERSION_RIDE_SQL, READ_VERSION, READ_VERSION_DOOR_SQL, READ_VERSION_RIDE_DOOR_SQL ("$5") = "WHERE v.vo_id = $1 AND v.trunk_version = $2 \
      AND v.branch_number = $3 AND v.branch_version = $4"
 }
 
@@ -570,22 +586,47 @@ pub async fn read_one(
 ) -> Result<Option<StoredVersion>, StorageError> {
     let ride = crate::party_binding::request::reads_door();
     let door = crate::party_binding::request::door();
+    let through = crate::policy_register::observed::reads_clinical_door();
+    // A read the party pool runs behind the clinical door takes one of its door forms.
+    let chosen =
+        |all: &Statements, door_sql: &'static str, both: &'static str| match (through, ride) {
+            (false, _) => all.chosen(),
+            (true, false) => door_sql,
+            (true, true) => both,
+        };
     let query = match at {
-        VersionAt::Current(vo_id) => sqlx::query(READ_CURRENT.chosen()).bind(vo_id),
+        VersionAt::Current(vo_id) => sqlx::query(chosen(
+            &READ_CURRENT,
+            READ_CURRENT_DOOR_SQL,
+            READ_CURRENT_RIDE_DOOR_SQL,
+        ))
+        .bind(vo_id),
         VersionAt::Tree(vo_id, tree) => {
             let (trunk, branch, branch_version) = tree.columns();
-            sqlx::query(READ_VERSION.chosen())
-                .bind(vo_id)
-                .bind(trunk)
-                .bind(branch)
-                .bind(branch_version)
+            sqlx::query(chosen(
+                &READ_VERSION,
+                READ_VERSION_DOOR_SQL,
+                READ_VERSION_RIDE_DOOR_SQL,
+            ))
+            .bind(vo_id)
+            .bind(trunk)
+            .bind(branch)
+            .bind(branch_version)
         }
-        VersionAt::Ordinal(vo_id, ordinal) => sqlx::query(READ_VERSION_BY_ORDINAL.chosen())
-            .bind(vo_id)
-            .bind(ordinal),
-        VersionAt::Instant(vo_id, at) => sqlx::query(VERSION_AT.chosen())
-            .bind(vo_id)
-            .bind(at.to_string()),
+        VersionAt::Ordinal(vo_id, ordinal) => sqlx::query(chosen(
+            &READ_VERSION_BY_ORDINAL,
+            READ_VERSION_BY_ORDINAL_DOOR_SQL,
+            READ_VERSION_BY_ORDINAL_RIDE_DOOR_SQL,
+        ))
+        .bind(vo_id)
+        .bind(ordinal),
+        VersionAt::Instant(vo_id, at) => sqlx::query(chosen(
+            &VERSION_AT,
+            VERSION_AT_DOOR_SQL,
+            VERSION_AT_RIDE_DOOR_SQL,
+        ))
+        .bind(vo_id)
+        .bind(at.to_string()),
         VersionAt::CurrentOfKind(ehr_id, kind) => sqlx::query(READ_CURRENT_OF_KIND.chosen())
             .bind(ehr_id)
             .bind(kind),
@@ -657,121 +698,13 @@ pub struct ServedFacts {
 /// aggregate decodes into.
 type ContentTuple = (Option<Uuid>, String, Option<String>, Option<String>);
 
-/// One distinct identity tuple of a served version.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ServedContent {
-    /// The owning EHR, `None` for EHR-less content.
-    pub ehr_id: Option<EhrId>,
-    /// The RM kind of the versioned object.
-    pub kind: String,
-    /// The `template_id` the version was committed against.
-    pub template_id: Option<String>,
-    /// The archetype id of the version's root node, as the composition wrote it.
-    pub root_archetype: Option<String>,
-}
-
-/// The content identities of the latest version of each object in `vo_ids`
-/// that carries content, distinct.
-///
-/// A logically deleted head (NULL `body`, RM common master06 §Logical
-/// Deletion) is read through to the newest version before it that has a body,
-/// so a delete and a container read are classified by the data they address.
-///
-/// # Errors
-/// [`StorageError::Database`] when the read fails.
-pub async fn content_of_objects(
-    conn: &mut sqlx::PgConnection,
-    vo_ids: &[VoId],
-) -> Result<Vec<ServedContent>, StorageError> {
-    if vo_ids.is_empty() {
-        return Ok(Vec::new());
-    }
-    let ids: Vec<Uuid> = vo_ids.iter().map(|vo_id| vo_id.0).collect();
-    let rows = sqlx::query(
-        "SELECT DISTINCT c.ehr_id, c.kind, c.template_id, c.archetype \
-         FROM unnest($1::uuid[]) AS a(vo_id) \
-         CROSS JOIN LATERAL ( \
-             SELECT v.ehr_id, v.kind, v.template_id, COALESCE(n.data->>'archetype_node_id', ext.node_archetype_node_id(n.archetype, n.rm_version)) AS archetype \
-             FROM version v \
-             LEFT JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id \
-                  AND n.sys_version = v.content_key AND n.num = 0 \
-             WHERE v.vo_id = a.vo_id AND v.body IS NOT NULL \
-             ORDER BY v.sys_version DESC LIMIT 1 \
-         ) c \
-         ORDER BY c.ehr_id, c.kind, c.template_id, c.archetype",
-    )
-    .bind(&ids)
-    .fetch_all(&mut *conn)
-    .await?;
-    rows.iter().map(served_content_row).collect()
-}
-
-/// The content identities of the versions one CONTRIBUTION committed,
-/// distinct, each logical delete read through to the version it deleted.
-///
-/// # Errors
-/// [`StorageError::Database`] when the read fails.
-pub async fn content_of_contribution(
-    pool: &PgPool,
-    contribution_id: Uuid,
-) -> Result<Vec<ServedContent>, StorageError> {
-    let rows = sqlx::query(
-        "SELECT DISTINCT v.ehr_id, v.kind, c.template_id, c.archetype \
-         FROM version v \
-         LEFT JOIN LATERAL ( \
-             SELECT p.template_id, COALESCE(n.data->>'archetype_node_id', ext.node_archetype_node_id(n.archetype, n.rm_version)) AS archetype \
-             FROM version p \
-             LEFT JOIN node n ON n.tier = p.tier AND n.vo_id = p.vo_id \
-                  AND n.sys_version = p.content_key AND n.num = 0 \
-             WHERE p.vo_id = v.vo_id AND p.sys_version <= v.sys_version \
-               AND p.body IS NOT NULL \
-             ORDER BY p.sys_version DESC LIMIT 1 \
-         ) c ON true \
-         WHERE v.contribution_id = $1 \
-         ORDER BY v.ehr_id, v.kind, c.template_id, c.archetype",
-    )
-    .bind(contribution_id)
-    .fetch_all(&mut *acquire(pool).await?)
-    .await?;
-    rows.iter().map(served_content_row).collect()
-}
-
-/// Decodes one `(ehr_id, kind, template_id, archetype)` row.
-fn served_content_row(row: &PgRow) -> Result<ServedContent, StorageError> {
-    Ok(ServedContent {
-        ehr_id: row.try_get::<Option<Uuid>, _>("ehr_id")?.map(EhrId),
-        kind: row.try_get("kind")?,
-        template_id: row.try_get("template_id")?,
-        root_archetype: row.try_get("archetype")?,
-    })
-}
-
-/// The origins and the content identities of a set of versions, for the
-/// access record, in one statement.
-///
-/// The commit-time origin stamps are unioned in SQL, an unstamped row
-/// contributing its creating system, and capped at `cap` with the true
-/// distinct count beside them. The template id and the root node's archetype
-/// id are aggregated distinct per EHR, so a population page of many versions
-/// carries one tuple per template rather than one per row. The same row
-/// reads the policy and definition revisions, which a query that confirms
-/// its policy copies after it ran checks them against (#6320).
-///
-/// # Errors
-/// [`StorageError::Database`] when the aggregate fails; [`StorageError::InvalidRows`]
-/// when the aggregated content does not decode or the distinct count is negative.
-pub async fn read_served(
-    pool: &PgPool,
-    versions: &[(VoId, i32)],
-    cap: usize,
-) -> Result<ServedFacts, StorageError> {
-    if versions.is_empty() {
-        return Ok(ServedFacts::default());
-    }
-    let vo_ids: Vec<Uuid> = versions.iter().map(|(vo_id, _)| vo_id.0).collect();
-    let sys_versions: Vec<i32> = versions.iter().map(|(_, sv)| *sv).collect();
-    let row = sqlx::query(
-        "WITH s AS ( \
+/// The statement [`read_served`] runs, with `$head` first in its select
+/// list: the party store's revisions in a ride, the policy and definition
+/// revisions through the clinical door on the party pool (#6320).
+macro_rules! served_select {
+    ($head:expr) => {
+        concat!(
+            "WITH s AS ( \
              SELECT v.tier, v.vo_id, v.sys_version, v.ehr_id, v.kind, v.template_id, \
                     v.origins, v.creating_system_id, v.content_key \
              FROM unnest($1::uuid[], $2::int[]) AS a(vo_id, sys_version) \
@@ -786,20 +719,78 @@ pub async fn read_served(
              FROM s LEFT JOIN node n ON n.tier = s.tier AND n.vo_id = s.vo_id \
                   AND n.sys_version = s.content_key AND n.num = 0 \
          ) \
-         SELECT (SELECT count(*) FROM o) AS total, \
+         SELECT ", $head, "(SELECT count(*) FROM o) AS total, \
                 (SELECT rr.policy FROM request_revisions rr) AS policy_revision, \
                 (SELECT rr.definitions FROM request_revisions rr) AS definition_revision, \
                 (SELECT coalesce(jsonb_agg(x.origin ORDER BY x.origin), '[]'::jsonb) \
                  FROM (SELECT origin FROM o ORDER BY origin LIMIT $3) x) AS origins, \
                 (SELECT coalesce(jsonb_agg(jsonb_build_array(c.ehr_id, c.kind, c.template_id, \
                      c.archetype) ORDER BY c.ehr_id, c.kind, c.template_id, c.archetype), \
-                     '[]'::jsonb) FROM c) AS content",
-    )
-    .bind(&vo_ids)
-    .bind(&sys_versions)
-    .bind(i64::try_from(cap).unwrap_or(i64::MAX))
-    .fetch_one(&mut *acquire(pool).await?)
-    .await?;
+                     '[]'::jsonb) FROM c) AS content"
+        )
+    };
+}
+
+/// The statement [`read_served`] runs.
+const READ_SERVED_SQL: &str = served_select!("");
+/// [`READ_SERVED_SQL`] with the party store's revisions.
+const READ_SERVED_RIDE_SQL: &str = served_select!(party_revisions!("$4"));
+/// [`READ_SERVED_SQL`] with the policy and definition revisions read through
+/// the clinical door.
+const READ_SERVED_DOOR_SQL: &str = served_select!(policy_revisions!());
+/// [`READ_SERVED_RIDE_SQL`] on the party pool, with the policy and definition
+/// revisions read through the clinical door.
+const READ_SERVED_RIDE_DOOR_SQL: &str =
+    served_select!(concat!(party_revisions_here!("$4"), policy_revisions!()));
+
+/// The origins and the content identities of a set of versions, for the
+/// access record, in one statement.
+///
+/// The commit-time origin stamps are unioned in SQL, an unstamped row
+/// contributing its creating system, and capped at `cap` with the true
+/// distinct count beside them. The template id and the root node's archetype
+/// id are aggregated distinct per EHR, so a population page of many versions
+/// carries one tuple per template rather than one per row. The same row
+/// reads the policy and definition revisions, which a query that confirms
+/// its policy copies after it ran checks them against, through the clinical
+/// door on the party pool, and in a ride the party store's revisions
+/// (#6320).
+///
+/// # Errors
+/// [`StorageError::Database`] when the aggregate fails; [`StorageError::InvalidRows`]
+/// when the aggregated content does not decode or the distinct count is negative.
+pub async fn read_served(
+    pool: &PgPool,
+    versions: &[(VoId, i32)],
+    cap: usize,
+) -> Result<ServedFacts, StorageError> {
+    if versions.is_empty() {
+        return Ok(ServedFacts::default());
+    }
+    let vo_ids: Vec<Uuid> = versions.iter().map(|(vo_id, _)| vo_id.0).collect();
+    let sys_versions: Vec<i32> = versions.iter().map(|(_, sv)| *sv).collect();
+    let ride = crate::party_binding::request::reads_door();
+    let through = crate::policy_register::observed::reads_clinical_door();
+    let sql = match (ride, through) {
+        (false, false) => READ_SERVED_SQL,
+        (true, false) => READ_SERVED_RIDE_SQL,
+        (false, true) => READ_SERVED_DOOR_SQL,
+        (true, true) => READ_SERVED_RIDE_DOOR_SQL,
+    };
+    let query = sqlx::query(sql)
+        .bind(&vo_ids)
+        .bind(&sys_versions)
+        .bind(i64::try_from(cap).unwrap_or(i64::MAX));
+    let query = if ride {
+        query.bind(
+            crate::party_binding::request::door()
+                .as_deref()
+                .map(crate::db::snapshot::Snapshot::text),
+        )
+    } else {
+        query
+    };
+    let row = query.fetch_one(&mut *acquire(pool).await?).await?;
     crate::storage::access_projection::observe_revisions(&row)?;
     let total: i64 = row.try_get("total")?;
     let set: Value = row.try_get("origins")?;

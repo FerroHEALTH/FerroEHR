@@ -16,6 +16,25 @@ use crate::access_eval::condition::{AccessCondition, ConditionGroups};
 use crate::aql::ir::{ParamValue, Params, QueryIr};
 use crate::aql::lineage::ArchetypeLineage;
 
+/// What the running request's task decides of the text: whether the EHDS
+/// Art. 3(3) delay withholds held data, and whether a statement of its ride
+/// reads the party store's revisions (#6320).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct Ambient {
+    person_withheld: bool,
+    ride: bool,
+}
+
+impl Ambient {
+    /// The running request's.
+    pub(super) fn now() -> Self {
+        Self {
+            person_withheld: crate::system_log::access_context::access_delay_enforced(),
+            ride: crate::party_binding::request::reads_door(),
+        }
+    }
+}
+
 /// The inputs of one statement shape.
 ///
 /// Each list of a [`super::Live`] source counts only by whether it is there,
@@ -33,7 +52,7 @@ pub(super) struct Key {
     policy_parties: PolicyParties,
     access_settings: EhrAccessReaders,
     condition: AccessCondition,
-    person_withheld: bool,
+    ambient: Ambient,
     own_records: Option<OwnRecords>,
     caseload: Option<Arc<Caseload>>,
 }
@@ -54,7 +73,7 @@ impl Key {
         live_params: &[String],
         params: &Params,
         ctx: &SqlCtx,
-        person_withheld: bool,
+        ambient: Ambient,
     ) -> Self {
         Self {
             params: ir
@@ -70,7 +89,7 @@ impl Key {
             policy_parties: ctx.policy_parties,
             access_settings: ctx.access_settings.clone(),
             condition: ctx.ehr_access.clone(),
-            person_withheld,
+            ambient,
             own_records: ctx.own_records.clone(),
             caseload: ctx.caseload.clone(),
         }
@@ -84,9 +103,9 @@ impl Key {
         live_params: &[String],
         params: &Params,
         ctx: &SqlCtx,
-        person_withheld: bool,
+        ambient: Ambient,
     ) -> bool {
-        self.person_withheld == person_withheld
+        self.ambient == ambient
             && self.ehr_scope == ehr_scope(ctx)
             && self.limit == limit(ctx)
             && self.offset == offset(ctx)
@@ -108,7 +127,7 @@ impl Key {
 
 impl PartialEq for Key {
     fn eq(&self, other: &Self) -> bool {
-        self.person_withheld == other.person_withheld
+        self.ambient == other.ambient
             && self.ehr_scope == other.ehr_scope
             && self.limit == other.limit
             && self.offset == other.offset
