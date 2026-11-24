@@ -321,7 +321,7 @@ attributes a person, and `enabled` is refused at boot.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `provider` | `{ issuer, id }`, or `[[authz.party_binding.provider]]` tables | **required** once `[auth]` admits a credential | The healthcare provider this deployment acts for, as an identifier issuer and id (in the Netherlands the URA). Every access record of a bound or provisional person and every version a person commits name it (EHDS Art. 13(4), Annex II 3.2(a)). A deployment that serves several providers declares one table per value of its issuers' `tenant_claim` (`tenant`, `issuer`, `id`) instead; the two forms cannot be combined, and a bound issuer that names no `tenant_claim` is refused beside the table form. |
+| `provider` | `{ issuer, id }` | **required** once `[auth]` admits a credential | The healthcare provider this deployment acts for, as an identifier issuer and id (in the Netherlands the URA). Every access record of a bound or provisional person and every version a person commits name it (EHDS Art. 13(4), Annex II 3.2(a)). |
 | `namespace` | string | `demographic` | The `PARTY_REF.namespace` a bound party is written under, the value of the ITS-REST overview example (`committer.external_ref.namespace="demographic"`), held to the `OBJECT_REF.namespace` pattern `[a-zA-Z][a-zA-Z0-9_.:/&?=+-]*`. |
 | `basic_user` | `[[authz.party_binding.basic_user]]` tables | `[]` | One per Basic user: `user`, `key_issuer` (the `identifier_issuer` of an `[auth.issuer.<name>.party]` table) and `key`, the binding key the user's `PERSON` carries. A Basic user with no table, a table naming no Basic user and a `key_issuer` no table names refuse the start. |
 | `issuer` | `[[authz.party_binding.issuer]]` tables | `[]` | How the tokens of one issuer are read when a first login creates a provisional `PERSON`; see [Just-in-time creation](#just-in-time-creation). |
@@ -1156,8 +1156,8 @@ The SMART on openEHR scopes are enforced on **every route** whenever
 table, which the `ferrohealth-smart` crate checks against the token's scopes
 or a Basic user's `scopes`. There is no switch for it. This section decides
 what beside the route table: whether and where the discovery document is
-served. Whose `patient/` grants count is each issuer's profile key
-[`patient_context`](#authissuernameprofile-the-token-shape). See [SMART App Launch](../smart-app-launch.md).
+served. A `patient/` grant of any trusted issuer counts, confined to the EHR
+its token's `ehrId` names. See [SMART App Launch](../smart-app-launch.md).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -1168,17 +1168,12 @@ served. Whose `patient/` grants count is each issuer's profile key
 
 The `launch-base64-json` capability (master09) is advertised by listing it in
 `[auth] capabilities`; the base64 JSON launch object is the application's to
-consume. `discovery` alone turns the document on. `patient_issuers` is an
-unknown key and refuses the start: an issuer's `patient_context` says whether
-its `patient/` grants count.
+consume. `discovery` alone turns the document on.
 
 Which clients count as backend clients and which reach the DEMOGRAPHIC API is
 policy the CDR holds, never a key here: the `query_system_wide` and
 `access_demographic` grants of the client's `AGENT`
 ([Operational policy](../operational-policy.md#a-backend-client-and-a-demographic-client)).
-`patient_context` stays in the file because it is trust: it says which
-issuer's `ehrId` claim names an EHR of this platform, which the server needs
-before it can believe a `patient/` token at all.
 
 No `smart` URL may carry a user name or password, whether or not the document
 is served: the discovery document publishes these URLs to every application,

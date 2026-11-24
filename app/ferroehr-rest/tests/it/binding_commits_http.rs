@@ -49,7 +49,7 @@ const COLLEAGUE: &str = "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e";
 const ADMINISTRATOR: &str = "3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f";
 
 /// The binding configuration of `party_binding_http`, also trusting the
-/// machines issuer and the patients issuer, with `ISSUER`'s role claims
+/// clients' issuer and the persons' own issuer, with `ISSUER`'s role claims
 /// granting the administrator role.
 fn deployment() -> AppConfig {
     let mut config = config();

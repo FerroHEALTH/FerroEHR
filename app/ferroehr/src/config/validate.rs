@@ -569,9 +569,7 @@ fn multimedia_endpoint_errors(
 
 /// The refusal of `[auth] described_issuer` when `ferrohealth-smart`'s
 /// `describe` refuses it before any issuer is read: it names no `[auth]`
-/// issuer, or a `machines` issuer, which signs client credentials tokens only
-/// and so serves no user launch (SMART App Launch 2.2.0, Conformance,
-/// §Metadata: `authorization_endpoint`).
+/// issuer (SMART App Launch 2.2.0, Conformance, §Metadata).
 fn described_issuer_error(
     named: &ferrohealth_secret::secret_url::SecretUrl,
     resolved: &ferrohealth_smart::config::Resolved,

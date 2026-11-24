@@ -29,7 +29,7 @@ identifier_issuer = "urn:example:basic-user"
 identifier_type = "login"
 
 # The issuer of the provisioning client scripts/perf/gate.sh binds the Basic
-# user through: a machines issuer over the COMMITTED TEST key set of
+# user through, over the COMMITTED TEST key set of
 # docs/conformance/party/scim/ (never production material).
 [auth.issuer.scim]
 issuer = "https://scim.ferroehr.invalid"

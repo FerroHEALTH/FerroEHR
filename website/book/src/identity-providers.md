@@ -255,8 +255,7 @@ RFC 9068 §2.2; RFC 8693 §4.1), and the server acts on the kind:
 A `federation` issuer with `contact_point = true` in its `[auth.issuer.<name>.federation]`
 table is a MyHealth@EU national contact point (NCPeH-A's authorization
 server). Its person agreement names the service it serves in `ehdsi_service`
-(`patient_summary`, `eprescription` or `orcd`), and its issuer goes into
-sets `patient_context` in its `[auth.issuer.<name>.profile]` table. Every
+(`patient_summary`, `eprescription` or `orcd`). Every
 request runs with a sender-constrained token
 (`sender_constraint = "required"`). On every patient-data route:
 

@@ -654,8 +654,7 @@ const PATIENTS: &str = "https://patients.example";
 /// The subject of the service account the persons issuer declares app-only.
 const SERVICE_ACCOUNT: &str = "service-account-lab";
 
-/// [`jit_config`] beside a patients issuer, whose persons issuer marks a
-/// guest by `acct = 1` and its service account app-only, its party table admitting guests.
+/// [`jit_config`] beside a second issuer.
 fn callers_config() -> AppConfig {
     let mut config = jit_config();
     common::add_issuer(

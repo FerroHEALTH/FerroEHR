@@ -56,8 +56,6 @@ store, or before it can trust anything:
   first_admin`, the one Basic user that holds `admin_role` and the product
   scope from the file: the first administrator, who writes the first policy
   parties;
-- each issuer's `patient_context`, whether the server believes its `ehrId`
-  claim, which is issuer trust;
 - the grant ceiling, `[authz.grants] allowed`: the operations the party store
   may grant at all, so a compromised administrator account cannot grant
   more than the operator allows ([The grant ceiling](#the-grant-ceiling)).

@@ -16,13 +16,11 @@
 # FerroSMART issues every token FerroEHR reads under this overlay; the
 # provider serves only the login (FerroSMART docs/architecture.md §13.21, A
 # product behind FerroSMART). FerroEHR trusts it in the `[auth.issuer.ferrosmart]`
-# table under the `ferrosmart` preset, which reads it as a `persons` issuer:
-# the persons it issues tokens for bind to their PERSONs under their
+# table: the persons it issues tokens for bind to their PERSONs under their
 # FerroSMART subject (the pairwise `sub`, §13.6 item 9), its patient/ grants
-# count (the preset's `patient_context`), so a standalone launch with
-# `launch/patient` through FerroSMART's picker reads the EHR it chose, and a
-# token of the picker itself is read as the person who signed in (the
-# preset's `issuer_client_is_person`), with no grant of its own in the CDR.
+# reach the EHR their `ehrId` names, so a standalone launch with
+# `launch/patient` through FerroSMART's picker reads the EHR it chose, and
+# FerroSMART's registry is the one list of clients.
 # FerroEHR starts before FerroSMART answers: it reads FerroSMART's metadata in
 # the background and reports ready once it has.
 #

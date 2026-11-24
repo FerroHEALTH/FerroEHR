@@ -196,7 +196,7 @@ The whole set is described at
 the FHIR and openEHR bridge, as its own workload pointed at this release's CDR
 Service (and at the chart's FerroTERM when `terminology.enabled` is set). It
 needs three things the render refuses to go without: `bridge.cdr.oauth`, its
-client credentials client (RFC 6749 §4.4) at a `machines` issuer the CDR's
+client credentials client (RFC 6749 §4.4) at an issuer the CDR's
 `config.auth.issuer` lists, `bridge.cdr.existingSecret`, a Secret holding that
 client's `client_secret`, and at least one peer in
 `bridge.networkPolicy.ingressFrom`. FerroBRIDGE checks the caller of its
@@ -286,12 +286,12 @@ each one holds.
 | bridge.cdr.existingSecret | string | `""` | Name of an EXISTING Secret holding the client secret of FerroBRIDGE's OAuth client for this release's CDR, under the key `client_secret`. Required. The secret is mounted as a FILE and named by `client_secret_file` in config.toml, so it never enters the ConfigMap or the pod's environment. |
 | bridge.cdr.oauth.audience | string | `""` | An `audience` parameter, for an authorization server that selects the CDR's audience by it. Empty sends none. |
 | bridge.cdr.oauth.clientId | string | `""` | FerroBRIDGE's client identifier at that issuer (RFC 6749 §2.2). Required. |
-| bridge.cdr.oauth.issuer | string | `""` | The issuer identifier of the authorization server, an https URL (RFC 8414 §2); FerroBRIDGE reads its token endpoint from the issuer's metadata. Required, and it must be a `config.auth.issuer` entry with `kind: machines`, or the render is refused: the CDR trusts no token of an issuer it does not list. |
+| bridge.cdr.oauth.issuer | string | `""` | The issuer identifier of the authorization server, an https URL (RFC 8414 §2); FerroBRIDGE reads its token endpoint from the issuer's metadata. Required, and it must be a `config.auth.issuer` entry, or the render is refused: the CDR trusts no token of an issuer it does not list. |
 | bridge.cdr.oauth.resource | string | `""` | A `resource` parameter (RFC 8707 §2), for an authorization server that selects the CDR by it. Empty sends none. |
 | bridge.cdr.oauth.scope | string | `""` | The `scope` FerroBRIDGE asks for (RFC 6749 §3.3), the SMART `system/` scopes the CDR grants it. Empty sends none. |
 | bridge.cdr.oauth.tokenEndpoint | string | `""` | The token endpoint (RFC 6749 §3.2), for an authorization server whose metadata FerroBRIDGE cannot read at `issuer`. Set, FerroBRIDGE requests its token here and reads no metadata; `issuer` still names the issuer the CDR trusts. |
 | bridge.config | object | `{}` | Further FerroBRIDGE configuration, rendered into its config.toml beside the keys the chart writes (FerroBRIDGE's configuration reference: https://ferrobridge.eu/docs/operate/configuration.html). FerroBRIDGE refuses an unknown key at boot, so a typo here is a crash loop, not a silent default. Refused at render: `cdr.endpoint`, `server.listen`, `terminology` while `terminology.enabled` is on, `mappings.directory` while `mappings.existingConfigMap` is set, and any secret-shaped key (a password, a token, `cdm.url`), whose `_file` sibling takes a file you mount with `extraVolumes`. A mapping set turns the FHIRconnect operations on, and FerroBRIDGE then refuses to start until an `auth.issuer.<name>` table names the issuer of its callers' tokens, or `auth.enabled` is false. |
-| bridge.enabled | bool | `false` | Deploy FerroBRIDGE alongside the CDR. Needs `bridge.cdr.oauth`, a client of a `machines` issuer in `config.auth.issuer`, `bridge.cdr.existingSecret` with its client secret, and at least one `bridge.networkPolicy.ingressFrom` peer; the render is refused without any of them. |
+| bridge.enabled | bool | `false` | Deploy FerroBRIDGE alongside the CDR. Needs `bridge.cdr.oauth`, a client of an issuer in `config.auth.issuer`, `bridge.cdr.existingSecret` with its client secret, and at least one `bridge.networkPolicy.ingressFrom` peer; the render is refused without any of them. |
 | bridge.extraEnv | list | `[]` | Extra environment for FerroBRIDGE (escape hatch). |
 | bridge.extraVolumeMounts | list | `[]` | Extra volume mounts for the FerroBRIDGE container. |
 | bridge.extraVolumes | list | `[]` | Extra volumes for the FerroBRIDGE pod, such as a Secret holding a `_file` credential named in `config`. |

@@ -201,7 +201,7 @@ image, and FerroTERM.
 That install alone **boots but answers `401` to everything**, deliberately:
 `config.auth.enabled` is on and no mechanism is configured yet, and a server that
 authenticates nothing is not a safe default. Add a `config.auth.issuer` table
-by name (with its `issuer` and its `preset` or `kind`) or a `config.auth.basic.users` entry before expecting a
+by name (with its `issuer`) or a `config.auth.basic.users` entry before expecting a
 request to succeed. Every route also checks the SMART on openEHR scopes of the
 caller: a Basic user's `scopes`, a token's `scope` claim.
 
@@ -763,8 +763,9 @@ config:
     issuer:
       keycloak:
         issuer: https://keycloak.example.org/realms/ferroehr
-        preset: keycloak
         audience: [ferroehr]
+        profile:
+          token_types: [JWT]
         party:
           identifier_issuer: urn:example:staff-login
           identifier_type: uuid
@@ -778,9 +779,9 @@ config:
 or Basic auth, whose password hashes go in `secrets.basicUserPasswordHashes`
 while the user stays under `config.auth.basic.users`; its scopes and roles
 are grants on its `PERSON`, and `config.authz.rbac.first_admin` names the
-Basic user that holds `admin_role`. A person's token is admitted only through
-a client the CDR grants `sign_in_persons`
-([Operational policy](../operational-policy.md)).
+Basic user that holds `admin_role`. The authorization server's registry is
+the one list of clients, so a token whose `aud` names FerroEHR admits its
+client ([Authentication & access](config-auth.md)).
 A Basic user is a person: each maps to the binding key of its `PERSON` under
 `config.authz.party_binding.basic_user`, under the identifier issuer of the
 `party` table under its issuer in `config.auth.issuer` (see
@@ -802,7 +803,7 @@ is empty by default. `deploy/helm/ci/basic-auth-values.yaml` keeps the
 default mapping and provisions its user through `/scim/v2/Users` (see
 [`[auth.scim]`](config-auth.md#authscim)).
 
-A `persons` issuer with `sender_constraint: required` runs on any number of
+An issuer with `sender_constraint: required` runs on any number of
 replicas: each records the DPoP proofs it accepts in the database they all
 share, so a proof replayed to another replica is refused there (RFC 9449
 §11.1).
@@ -866,7 +867,7 @@ is an explicit, auditable decision:
 | ADMIN API | `config.api.admin` | off | Physical, irreversible delete. Gate behind admin RBAC. |
 | Terminology extension API | `config.api.terminology` | off | 404 when off. |
 | Outbox feed | `config.authz.grants.allowed` admitting `read_change_feed` | none | The commit-event feed for the readers a `read_change_feed` grant in the CDR names; FerroBRIDGE delivers it to a broker. See [Change events](../beyond-core/outbox-feed.md). |
-| Bearer tokens | `config.auth.issuer` | unset | The issuer tables by name, each with its `issuer`, its `preset` or `kind`, and a `party` table under a `persons` issuer; each issuer's metadata and key set are read in the background from the start, and the pod is not ready until they are; asymmetric algorithms only. |
+| Bearer tokens | `config.auth.issuer` | unset | The issuer tables by name, each with its `issuer` and, for an issuer whose users sign in, a `party` table; each issuer's metadata and key set are read in the background from the start, and the pod is not ready until they are; asymmetric algorithms only. |
 | Party binding | `config.authz.party_binding.provider` | unset | Required once authentication admits a credential: the healthcare provider the deployment acts for. Each Basic user maps to its binding key under `config.authz.party_binding.basic_user`. |
 | RBAC | `config.authz.rbac.enabled` | **on** | The coarse role gate (active while `config.auth.enabled`). |
 | S3 multimedia | `config.record.multimedia.enabled` | off | ⚠ Offloaded blobs are PHI. Private, encrypted, HTTPS bucket; keys via `secrets.multimediaAccessKeyId` and `secrets.multimediaSecretAccessKey`. |
@@ -1150,15 +1151,15 @@ The chart writes three sections of that file for you:
 - **`[mappings]`:** `directory` is where the mapping files below are mounted.
 
 **FerroBRIDGE reaches the CDR as a machine.** It obtains and renews a token
-with the OAuth 2.0 client credentials grant (RFC 6749 §4.4) from a `machines`
-issuer the CDR trusts, and the CDR checks it as it checks every token. A Basic
+with the OAuth 2.0 client credentials grant (RFC 6749 §4.4) from an issuer
+the CDR trusts, and the CDR checks it as it checks every token. A Basic
 user is a person and holds no `system/` scope, so the chart has no Basic mode.
-Add the issuer to `config.auth.issuer` with `kind: machines`, name
+Add the issuer to `config.auth.issuer`, name
 FerroBRIDGE's client in `bridge.cdr.oauth`, and, when it commits what
 `$toopenehr` maps, grant the client in the CDR: an `AGENT` carrying its
 `client_id` and performing a `ROLE` that grants `commit_composition`, as
 [A system client](../operational-policy.md#a-system-client) shows. The
-render is refused when `bridge.cdr.oauth.issuer` is not a `machines` issuer of
+render is refused when `bridge.cdr.oauth.issuer` is not an issuer of
 `config.auth.issuer`. FerroBRIDGE reads the token endpoint from that issuer's
 metadata; when the authorization server serves none there, set
 `bridge.cdr.oauth.tokenEndpoint`, and `issuer` still names the issuer the CDR
@@ -1169,7 +1170,6 @@ config:
   auth:
     issuer:
       - issuer: https://idp.example.org/realms/machines
-        kind: machines
         audience: [ferroehr-machines]
 bridge:
   cdr:

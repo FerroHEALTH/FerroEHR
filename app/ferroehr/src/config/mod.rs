@@ -81,8 +81,8 @@ pub struct FerroEhrConfig {
     /// `[usage_report]` — the installation report to `FerroPULSE` (on by default).
     pub usage_report: ferrohealth_usage_report::section::UsageReportSection,
     /// `[auth]` — authentication: the `ferrohealth-smart` section, whose
-    /// serialization writes every secret as `***`, `[auth.idp]`,
-    /// `[auth.smart]` and `[auth.scim]`.
+    /// serialization writes every secret as `***`, `[auth.smart]` and
+    /// `[auth.scim]`.
     pub auth: auth_section::AuthConfig,
     /// `[authz]` — RBAC, assurance, the party binding, the system
     /// clients and the grant ceiling.

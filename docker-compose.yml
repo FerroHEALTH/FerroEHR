@@ -897,7 +897,7 @@ configs:
 
       # The issuer the Basic users bind under. A Basic user is a person and
       # maps to the PERSON carrying its binding key, which its party
-      # table places under the identifier issuer of a persons issuer. This one signs
+      # table places under the identifier issuer of an issuer's party table. This one signs
       # nothing: its key set, in every FerroEHR image, is the public half of a
       # key pair whose private key was discarded, for local lanes only.
       [auth.issuer.basic_users]
@@ -936,7 +936,7 @@ configs:
 
       # The SCIM endpoint the ferroehr-provision one-shot provisions the quickstart
       # user through, with a client credentials token of the development issuer,
-      # trusted here as a machines issuer for that one client.
+      # trusted here for that one client.
       [auth.issuer.quickstart]
       issuer = "http://localhost:8180/quickstart"
       audience = ["ferroehr-scim"]
@@ -1035,7 +1035,7 @@ configs:
 
       # The issuer the Basic users bind under. A Basic user is a person and
       # maps to the PERSON carrying its binding key, which its party
-      # table places under the identifier issuer of a persons issuer. This one signs
+      # table places under the identifier issuer of an issuer's party table. This one signs
       # nothing: its key set, in every FerroEHR image, is the public half of a
       # key pair whose private key was discarded, for local lanes only.
       [auth.issuer.basic_users]
@@ -1074,7 +1074,7 @@ configs:
 
       # The SCIM endpoint the ferroehr-provision one-shot provisions the quickstart
       # user through, with a client credentials token of the development issuer,
-      # trusted here as a machines issuer for that one client.
+      # trusted here for that one client.
       [auth.issuer.quickstart]
       issuer = "http://localhost:8180/quickstart"
       audience = ["ferroehr-scim"]

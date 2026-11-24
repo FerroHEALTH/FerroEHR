@@ -269,7 +269,6 @@ data:
         [auth.issuer.idp]
           audience = ["ferroehr"]
           issuer = "https://idp.example.com/realms/ferroehr"
-          kind = "persons"
           [auth.issuer.idp.party]
             identifier_issuer = "urn:example:ferroehr-login"
             identifier_type = "uuid"
@@ -546,7 +545,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 16c93f397f7b27b85b5a97a73787d97ab03b450062e02718c3665030663e3c46
+        checksum/config: 467680b0a3bef841ba37da410303329ac912c0b281c635e8c0701b459932251c
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

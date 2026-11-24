@@ -37,12 +37,12 @@ struct Ceiling {
     wal: u64,
 }
 
-/// A care-gated read: the party store's revisions and the version read,
-/// which carries the policy revision (#6251). Its nested statements fell
-/// to 0 once the access-log entry was written by one plain insert (#6242).
+/// A care-gated read: the version read, carrying the policy revision and the
+/// party store's revisions.
+// NOTE: #6432 and #6320, the revisions ride the read's one statement through the party door.
 const READ: Ceiling = Ceiling {
-    round_trips: 2,
-    nested: 0,
+    round_trips: 1,
+    nested: 1,
     notifies: 0,
     wal: 0,
 };

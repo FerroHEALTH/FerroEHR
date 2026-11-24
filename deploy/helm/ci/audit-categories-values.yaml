@@ -18,12 +18,10 @@ config:
   # this overlay renders another surface and runs no identity source.
   auth:
     issuer:
-      # One table per issuer: `kind` says whose tokens it signs, and a
-      # persons token is admitted only through a client the CDR
-      # grants `sign_in_persons`.
+      # One table per issuer; the authorization server's registry is the one
+      # list of clients.
       idp:
         issuer: https://idp.example.com/realms/ferroehr
-        kind: persons
         audience: [ferroehr]
         # The issuer's logins bind to the PERSON carrying their `sub` under this
         # identifier issuer.

@@ -60,7 +60,7 @@ pub struct PartyBindingConfig {
     pub membership: Option<person::MembershipSection>,
     /// The patient's `PERSON` template.
     pub patient: Option<person::PatientSection>,
-    /// How FerroEHR reads each `persons` issuer's tokens when it creates a
+    /// How FerroEHR reads each bound issuer's tokens when it creates a
     /// provisional `PERSON` at a first login
     /// (`[[authz.party_binding.issuer]]`).
     pub issuer: Vec<jit::IssuerBinding>,

@@ -186,7 +186,6 @@ data:
           audience = ["ferroehr-basic-users"]
           issuer = "https://basic-users.ferroehr.invalid"
           jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
-          kind = "persons"
           [auth.issuer.basic_users.party]
             identifier_issuer = "urn:example:basic-user"
             identifier_type = "login"
@@ -194,7 +193,6 @@ data:
           audience = ["ferroehr-scim"]
           issuer = "https://scim.ferroehr.invalid"
           jwks_file = "/etc/ferroehr/scim-jwks.json"
-          kind = "machines"
           [auth.issuer.scim.profile]
             token_types = ["at+jwt"]
       [auth.scim]
@@ -302,7 +300,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 90ab35d55c67b31dc8b9c49f4cc235501397fede6a4aaf8264a5fa0bfb80fb29
+        checksum/config: 858a7923c655f8c32fd8e7a14f6181e930937e9ed4000bc1b67f092febfcb960
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

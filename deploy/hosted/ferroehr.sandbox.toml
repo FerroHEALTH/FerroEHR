@@ -28,7 +28,7 @@ admin = true
 terminology = true
 # The issuer the Basic users bind under. A Basic user is a person and maps to
 # the PERSON carrying its binding key, which its party table places under the
-# identifier issuer of a persons issuer. This one signs nothing: its key set,
+# identifier issuer of an issuer's party table. This one signs nothing: its key set,
 # deploy/hosted/basic-users-jwks.json, which every FerroEHR image carries, is
 # the public half of a key pair whose private key was discarded, for local
 # lanes only, so no token of it exists.
@@ -71,8 +71,8 @@ key = "ferroehr"
 # an identity provider provisions people: the ferroehr-grant service of the
 # box's compose file grants the `sandbox-scim` client scim_provision in the
 # CDR, and the ferroehr-provision service holds its client credentials token
-# (RFC 6749 §4.4) from the development issuer, trusted here as a machines
-# issuer for that one client, and creates the User whose binding key
+# (RFC 6749 §4.4) from the development issuer, trusted here for that one
+# client, and creates the User whose binding key
 # `ferroehr` the Basic user above is mapped by. The issuer publishes no port,
 # so only the containers on the box obtain its tokens.
 [auth.issuer.sandbox]
