@@ -32,8 +32,12 @@ const SHAPES_KEPT: usize = 64;
 
 /// The statement of each shape run, or `None` for a shape that builds its
 /// statement on every run.
-static SHAPES: LazyLock<RwLock<BTreeMap<String, Option<Arc<Template>>>>> =
+static SHAPES: LazyLock<RwLock<BTreeMap<ShapeKey, Option<Arc<Template>>>>> =
     LazyLock::new(RwLock::default);
+
+/// The key of a shape: what it reads under and its parameters' kinds, and
+/// the query text.
+type ShapeKey = (String, String);
 
 /// The statement of one shape, and where each of its parameters comes from.
 #[derive(Debug)]
@@ -102,9 +106,9 @@ fn run_values(plan: &LogPlan, params: &Params) -> Option<Vec<ParamValue>> {
 }
 
 /// The key of the shape of a run of `aql` for `scope` with `values`.
-fn shape_key(aql: &str, scope: &LogScope<'_>, values: &[ParamValue]) -> String {
+fn shape_key(aql: &str, scope: &LogScope<'_>, values: &[ParamValue]) -> ShapeKey {
     use std::fmt::Write as _;
-    let mut key = String::with_capacity(aql.len().saturating_add(64));
+    let mut key = String::with_capacity(64);
     let _ = write!(
         key,
         "{:?}|{:?}|{}|{}{}|",
@@ -117,9 +121,7 @@ fn shape_key(aql: &str, scope: &LogScope<'_>, values: &[ParamValue]) -> String {
     for value in values {
         key.push(kind_of(value));
     }
-    key.push('|');
-    key.push_str(aql);
-    key
+    (key, aql.to_owned())
 }
 
 /// The kind of `value` a shape depends on: its type, and for a string
@@ -361,7 +363,7 @@ mod tests {
             assert!(
                 shapes
                     .iter()
-                    .any(|(key, template)| key.ends_with(aql) && template.is_some()),
+                    .any(|((_, text), template)| text == aql && template.is_some()),
                 "{aql} keeps its statement"
             );
         }
