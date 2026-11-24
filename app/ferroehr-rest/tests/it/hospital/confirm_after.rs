@@ -316,6 +316,67 @@ async fn a_commit_decided_on_a_policy_copy_behind_the_store_runs_once_more() {
     );
 }
 
+/// A party commit decided on a policy copy behind the store is refused before
+/// it writes, by the revisions its own party gate read returns through the
+/// clinical door, and runs once more behind the up-front confirm (#6252): the
+/// commit after the policy change lands once, with the records of one commit,
+/// and the run again is counted once.
+#[tokio::test]
+async fn a_party_commit_decided_on_a_policy_copy_behind_the_store_runs_once_more() {
+    let (provider, exporter) = instruments();
+    let mut world = Box::pin(world()).await;
+    let (other, _drain, _elsewhere) = deaf(&world).await;
+    let uri = format!("{BASE}/demographic/group");
+    let archetype = "openEHR-DEMOGRAPHIC-GROUP.region.v1";
+    let body = |name: &str| {
+        json!({
+            "_type": "GROUP", "archetype_node_id": archetype,
+            "archetype_details": { "_type": "ARCHETYPED",
+                "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+                "rm_version": "1.1.0" },
+            "name": text(name),
+            "identities": crate::hospital::world::identities(name)
+        })
+    };
+    let commit = |name: &str| {
+        let body = body(name);
+        let (other, uri) = (other.clone(), uri.clone());
+        async move { call(&other, ROOT, "POST", &uri, None, Some(&body)).await }
+    };
+    let first = commit("North").await;
+    assert_eq!(first.status, StatusCode::CREATED, "{}", first.body);
+    let before = reruns(&provider, &exporter);
+    let settled = commit("East").await;
+    assert_eq!(settled.status, StatusCode::CREATED, "{}", settled.body);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before,
+        "a copy in force commits once"
+    );
+    let one_commit = recorded(&world, &settled.request_id()).await.len();
+
+    world.policy = classify_the_encounter(&world).await;
+    let again = commit("South").await;
+    assert_eq!(again.status, StatusCode::CREATED, "{}", again.body);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "the commit ran once more, and only once"
+    );
+    assert_eq!(
+        recorded(&world, &again.request_id()).await.len(),
+        one_commit,
+        "the first run left no record"
+    );
+    let next = commit("West").await;
+    assert_eq!(next.status, StatusCode::CREATED, "{}", next.body);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "the confirmed copy decides the next commit at once"
+    );
+}
+
 /// The records of the request `request_id` in the system log and the access
 /// log together, as `(store, outcome)`, once one has landed, or none after
 /// ten seconds.

@@ -184,6 +184,27 @@ impl FerroEhrService {
         }
     }
 
+    /// [`Self::ensure_gate_policy_held`] for a party write (#6252): its gate
+    /// read returns the revisions through the clinical door, and where the
+    /// door is closed one indexed read finds them, before anything is
+    /// written.
+    ///
+    /// # Errors
+    /// `access-refreshing` (`503`) when a copy is behind, and
+    /// `service_overloaded` (`503`) when the store does not answer.
+    pub(crate) async fn ensure_party_gate_policy_held(&self) -> Result<(), ServiceError> {
+        if !crate::policy_register::observed::confirming_after() {
+            return Ok(());
+        }
+        if crate::policy_register::observed::current().is_none() {
+            let read = store::revisions(self.registers.pool())
+                .await
+                .map_err(|error| ServiceError::overloaded("the policy could not be read", error))?;
+            crate::policy_register::observed::observe(read.policy, read.definitions);
+        }
+        self.ensure_gate_policy_held().await
+    }
+
     /// Bring the register and access-policy copies to `heads`, read inside
     /// the policy write this replica just committed, after its write moved
     /// `policy_revision` (#6265). That read saw every earlier writer's change
