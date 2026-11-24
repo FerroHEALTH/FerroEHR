@@ -46,6 +46,30 @@ async fn hold(db: &testkit::TestDb, ehr: EhrId) -> sqlx::Transaction<'static, sq
     tx
 }
 
+/// Waits until `writers` sessions of the database of `db` wait on a lock,
+/// so the writers spawned so far stand queued in their order.
+async fn queued(db: &testkit::TestDb, writers: usize) {
+    let writers = i64::try_from(writers).expect("a writer count");
+    let deadline = std::time::Instant::now() + Duration::from_secs(60);
+    loop {
+        let waiting: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM pg_stat_activity \
+             WHERE datname = current_database() AND wait_event_type = 'Lock'",
+        )
+        .fetch_one(&db.pool())
+        .await
+        .expect("read the waiting sessions");
+        if waiting >= writers {
+            return;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "{waiting} of {writers} writers queued on the hold"
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+}
+
 /// Lets the spawned writers reach their commit statement.
 async fn settle() {
     tokio::time::sleep(Duration::from_millis(400)).await;
@@ -167,9 +191,10 @@ async fn unmodifiable_status(svc: &FerroEhrService, ehr: EhrId) -> (Value, Strin
     (body, uid)
 }
 
-/// A status commit that makes the EHR not modifiable, queued ahead of
-/// `writers` directory updates: it commits, and each update, judged on a
-/// modifiable EHR, reads the flip, is judged again and answers `409`.
+/// A status commit that makes the EHR not modifiable, seen queued on the
+/// hold before `writers` directory updates queue behind it: it commits, and
+/// each update, judged on a modifiable EHR, reads the flip, is judged again
+/// and answers `409`.
 async fn directory_writes_behind_a_status_flip_answer_409(writers: usize) {
     let (db, svc, ehr) = ehr().await;
     let uid = directory(&svc, ehr).await;
@@ -181,7 +206,7 @@ async fn directory_writes_behind_a_status_flip_answer_409(writers: usize) {
             Box::pin(svc.replace_ehr_status(ehr, uv(&body, "251", Some(&status_uid)))).await
         })
     };
-    settle().await;
+    queued(&db, 1).await;
     let updates: Vec<_> = (0..writers)
         .map(|n| {
             let svc = Arc::clone(&svc);
@@ -189,7 +214,7 @@ async fn directory_writes_behind_a_status_flip_answer_409(writers: usize) {
             tokio::spawn(async move { Box::pin(svc.update_directory(ehr, request)).await })
         })
         .collect();
-    settle().await;
+    queued(&db, 1 + writers).await;
     held.commit().await.expect("release the hold");
     flip.await
         .expect("the status writer completes")

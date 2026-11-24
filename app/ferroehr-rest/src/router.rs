@@ -181,6 +181,7 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
                 ferroehr::config::auth::product_scope(&cfg.auth.shared),
             )),
             served: Arc::new(crate::api::served::ServedMethods::new(&namespaces)),
+            post_rides: Arc::new(authn::run::PostRides::new(&namespaces)),
             service: state.backend_handle(),
         },
         |layer: axum::extract::State<authn::AuthLayer>,

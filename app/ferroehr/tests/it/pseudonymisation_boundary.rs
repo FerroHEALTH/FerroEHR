@@ -733,3 +733,88 @@ async fn the_party_door_holds_its_one_function_and_nothing_else() {
         gate().await.expect("the mended door passes the boot gate");
     }
 }
+
+/// The one door the party roles may pass into the clinical domain (#6320):
+/// the party role may run `clinical_door.policy_revisions()` and reads no
+/// clinical table, and the boot gate refuses anything else in the door's
+/// schema, and the function itself once it stops running as its owner with a
+/// fixed `search_path`.
+#[tokio::test]
+async fn the_clinical_door_holds_its_one_function_and_nothing_else() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let gate = || async {
+        ferroehr::db::verify_domain_isolation(
+            &crate::fixtures::shared_pools(&pool),
+            &crate::fixtures::shared_layout(),
+            ferroehr::config::deployment::DeploymentProfile::Sandbox,
+        )
+        .await
+    };
+    gate()
+        .await
+        .expect("a correctly migrated database passes the boot gate");
+    let (door, tables): (bool, bool) = sqlx::query_as(
+        "SELECT has_function_privilege('ferroehr_party', 'clinical_door.policy_revisions()', \
+         'EXECUTE'), has_table_privilege('ferroehr_party', 'clinical.policy_revision', 'SELECT')",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the party role's privileges");
+    assert!(door, "the party role may run the door");
+    assert!(!tables, "and reads no table behind it");
+
+    for (breach, mend, problem) in [
+        (
+            "CREATE TABLE clinical_door.smuggled (id int)",
+            "DROP TABLE clinical_door.smuggled",
+            "is a relation",
+        ),
+        (
+            "CREATE TYPE clinical_door.smuggled AS ENUM ('kept')",
+            "DROP TYPE clinical_door.smuggled",
+            "is a type",
+        ),
+        (
+            "CREATE FUNCTION clinical_door.other() RETURNS int LANGUAGE sql AS 'SELECT 1'",
+            "DROP FUNCTION clinical_door.other()",
+            "is not the door's function",
+        ),
+        (
+            "CREATE FUNCTION clinical_door.policy_revisions(p int) RETURNS int \
+             LANGUAGE sql SECURITY DEFINER SET search_path = clinical, pg_catalog AS 'SELECT p'",
+            "DROP FUNCTION clinical_door.policy_revisions(int)",
+            "is not the door's function",
+        ),
+        (
+            "ALTER FUNCTION clinical_door.policy_revisions() SECURITY INVOKER",
+            "ALTER FUNCTION clinical_door.policy_revisions() SECURITY DEFINER",
+            "does not run as its owner",
+        ),
+        (
+            "ALTER FUNCTION clinical_door.policy_revisions() RESET search_path",
+            "ALTER FUNCTION clinical_door.policy_revisions() \
+             SET search_path = clinical, pg_catalog",
+            "runs on the caller's search_path",
+        ),
+    ] {
+        sqlx::query(sqlx::AssertSqlSafe(breach))
+            .execute(&pool)
+            .await
+            .expect("open the door wider");
+        let error = gate().await.expect_err("a wider door must refuse the boot");
+        assert!(
+            matches!(
+                &error,
+                ferroehr::db::DbError::ClinicalDoorBreached { problem: found, .. }
+                    if *found == problem
+            ),
+            "{breach}: {error}"
+        );
+        sqlx::query(sqlx::AssertSqlSafe(mend))
+            .execute(&pool)
+            .await
+            .expect("close it again");
+        gate().await.expect("the mended door passes the boot gate");
+    }
+}

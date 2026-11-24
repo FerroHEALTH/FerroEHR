@@ -233,9 +233,10 @@ impl Revision {
 /// Notes the policy and definition revisions a row selecting
 /// `access_revision!` read beside the settings revision, for the running
 /// request (`policy_register::observed`, #6251), or the hidden revision
-/// columns of a judged AQL statement (#6320), and in a ride the party store's
-/// revisions (`party_binding::request`, #6320). A row of the party schema, or
-/// of a statement that selects the view itself, holds none.
+/// columns of a judged AQL statement (#6320), or those a party statement read
+/// through the clinical door, and in a ride the party store's revisions
+/// (`party_binding::request`, #6320). A row of the party schema, or of a
+/// statement that selects the view itself, holds none.
 ///
 /// # Errors
 /// [`sqlx::Error`] when a column does not decode.
@@ -250,6 +251,17 @@ pub(crate) fn observe_revisions(row: &sqlx::postgres::PgRow) -> Result<(), sqlx:
         (read("policy_revision")?, read("definition_revision")?)
     {
         crate::policy_register::observed::observe(policy, definitions);
+    }
+    // Outside a party statement behind the clinical door no statement selects them.
+    if crate::policy_register::observed::reads_clinical_door() {
+        match row.try_get::<Option<(i64, i64)>, _>(POLICY_REVISIONS) {
+            Ok(Some((policy, definitions))) => {
+                crate::policy_register::observed::observe(policy, definitions);
+            }
+            // NOTE: sqlx Error::ColumnNotFound, only a door statement selects them.
+            Ok(None) | Err(sqlx::Error::ColumnNotFound(_)) => {}
+            Err(error) => return Err(error),
+        }
     }
     // Outside a ride no statement selects them, and a missing column's error is an allocation.
     let party = if crate::party_binding::request::riding() {
@@ -271,6 +283,10 @@ pub(crate) fn observe_revisions(row: &sqlx::postgres::PgRow) -> Result<(), sqlx:
 /// The column a ride's statement reads the party store's grant and binding
 /// revisions and its facts flag into ([`party_revisions!`], #6320).
 const PARTY_REVISIONS: &str = "party_revisions";
+
+/// The column a party statement reads the policy and definition revisions
+/// into through the clinical door ([`policy_revisions!`], #6320).
+const POLICY_REVISIONS: &str = "policy_revisions";
 
 /// One EHR's settings row and subject as stored.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
