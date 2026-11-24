@@ -35,6 +35,7 @@ mod admission;
 pub mod https;
 pub mod json_literals;
 pub mod roles;
+pub mod seeded;
 mod server_settings;
 pub mod statements;
 pub mod syslog_tls;
@@ -48,10 +49,11 @@ use testcontainers_modules::postgres::Postgres;
 use tokio::sync::OnceCell;
 
 use ferroehr::db::{self, DbConfig, domain::Domain};
+use seeded::Source;
 
 /// Prefix for every database the harness creates (templates + clones), so a
 /// sweep can never touch anything else.
-const DB_PREFIX: &str = "ferroehr_tk_";
+pub(crate) const DB_PREFIX: &str = "ferroehr_tk_";
 
 /// The fixed name of the reusable local `PostgreSQL` container.
 const CONTAINER_NAME: &str = "ferroehr-testkit-pg19";
@@ -205,7 +207,7 @@ impl Drop for TestDb {
 pub async fn db() -> Result<TestDb, TestkitError> {
     let server = server().await?;
     let template = TEMPLATE.get_or_try_init(|| ensure_template(server)).await?;
-    provision(server, Some(template)).await
+    provision(server, Source::Migrated(template)).await
 }
 
 /// Returns a fresh, pristine (non-migrated) database on the shared test server,
@@ -217,7 +219,7 @@ pub async fn db() -> Result<TestDb, TestkitError> {
 /// database/pool creation fails.
 pub async fn empty_db() -> Result<TestDb, TestkitError> {
     let server = server().await?;
-    provision(server, None).await
+    provision(server, Source::Empty).await
 }
 
 /// Creates a uniquely named database (a clone of `template`, or empty) and
@@ -226,7 +228,7 @@ pub async fn empty_db() -> Result<TestDb, TestkitError> {
 /// A clone is verified against the migrations this build embeds before it is
 /// handed out, so a database that is not fully migrated fails here, named as
 /// harness breakage, rather than inside the test that received it.
-async fn provision(server: &str, template: Option<&str>) -> Result<TestDb, TestkitError> {
+pub(crate) async fn provision(server: &str, source: Source<'_>) -> Result<TestDb, TestkitError> {
     const POOL_DEADLINE: Duration = Duration::from_secs(15);
     let name = fresh_name();
     // The lease is taken before the clone exists, so no sweep ever sees the
@@ -241,13 +243,10 @@ async fn provision(server: &str, template: Option<&str>) -> Result<TestDb, Testk
             .await?;
     }
     let mut admin = connect_ready(server).await?;
-    if let Some(template) = template {
-        create_clone(&mut admin, server, &name, template).await?;
-    } else {
-        let sql = format!("CREATE DATABASE {name}");
-        sqlx::raw_sql(sqlx::AssertSqlSafe(sql))
-            .execute(&mut admin)
-            .await?;
+    match source {
+        Source::Migrated(template) => create_clone(&mut admin, server, &name, template).await?,
+        Source::Seeded(template) => seeded::clone(&mut admin, &name, Some(template)).await?,
+        Source::Empty => seeded::clone(&mut admin, &name, None).await?,
     }
     drop(admin.close().await);
 
@@ -277,7 +276,7 @@ async fn provision(server: &str, template: Option<&str>) -> Result<TestDb, Testk
         name,
         lease: Some(lease),
     };
-    if template.is_some() {
+    if !matches!(source, Source::Empty) {
         db::verify_migrations(&db.pool).await?;
     }
     Ok(db)
@@ -296,11 +295,11 @@ static CONTAINER: OnceCell<ContainerAsync<Postgres>> = OnceCell::const_new();
 
 /// The template database name, ensured once per test process (and, via the
 /// advisory lock inside, once per server across processes).
-static TEMPLATE: OnceCell<String> = OnceCell::const_new();
+pub(crate) static TEMPLATE: OnceCell<String> = OnceCell::const_new();
 
 /// The shared server's admin DSN, acquired once per test process, including
 /// the readiness wait and the startup sweep.
-async fn server() -> Result<&'static str, TestkitError> {
+pub(crate) async fn server() -> Result<&'static str, TestkitError> {
     SERVER
         .get_or_try_init(|| async {
             let url = resolve_server_url().await?;
@@ -443,7 +442,7 @@ async fn start_container() -> Result<ContainerAsync<Postgres>, TestkitError> {
 }
 
 /// Connects to the admin database, retrying while the server finishes booting.
-async fn connect_ready(admin_url: &str) -> Result<PgConnection, TestkitError> {
+pub(crate) async fn connect_ready(admin_url: &str) -> Result<PgConnection, TestkitError> {
     const DEADLINE: Duration = Duration::from_mins(1);
     let start = Instant::now();
     loop {
@@ -469,7 +468,7 @@ async fn connect_ready(admin_url: &str) -> Result<PgConnection, TestkitError> {
 
 /// Returns the migrated template database for the current migration
 /// fingerprint, building it under an advisory lock when absent.
-async fn ensure_template(admin_url: &str) -> Result<String, TestkitError> {
+pub(crate) async fn ensure_template(admin_url: &str) -> Result<String, TestkitError> {
     let fingerprint = db::migration_fingerprint();
     let template = format!("{DB_PREFIX}tpl_{fingerprint}");
 
@@ -507,7 +506,7 @@ async fn ensure_template(admin_url: &str) -> Result<String, TestkitError> {
 
 /// The completion stamp a template of migration `fingerprint` carries as its
 /// database comment, recording `built_secs` (Unix seconds) as its build time.
-fn template_stamp(fingerprint: &str, built_secs: u64) -> String {
+pub(crate) fn template_stamp(fingerprint: &str, built_secs: u64) -> String {
     format!("{STAMP_PREFIX}{fingerprint} complete at={built_secs}")
 }
 
@@ -543,7 +542,7 @@ fn parse_stamp(comment: &str) -> Option<TemplateStamp<'_>> {
 
 /// Whether `template` exists and carries the completion stamp of
 /// `fingerprint`.
-async fn template_complete(
+pub(crate) async fn template_complete(
     admin: &mut PgConnection,
     template: &str,
     fingerprint: &str,
@@ -779,7 +778,7 @@ fn redacted(url: &str) -> String {
 ///
 /// A negative timestamp (a clock set before 1970) floors at 0 so a clone name
 /// always parses back.
-fn now_secs() -> u64 {
+pub(crate) fn now_secs() -> u64 {
     u64::try_from(jiff::Timestamp::now().as_second()).unwrap_or(0)
 }
 
