@@ -25,9 +25,11 @@
 #      (docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching).
 #   2. sccache per compilation unit for a miss, with rust-cache keeping the
 #      cargo registry only (github.com/Swatinem/rust-cache, `cache-targets:
-#      false`). Only main writes sccache: a pull-request entry is readable by
-#      that pull request alone, and its writes evicted main's from the 10 GB
-#      quota (github.com/mozilla/sccache, docs/Configuration.md).
+#      false`).
+# Only a run on main with `write-cache` writes any of them: a pull-request
+# entry is readable by that pull request alone, and its writes evicted main's
+# from the 10 GB quota (#6388; github.com/mozilla/sccache,
+# docs/Configuration.md).
 #
 # Requires the repository to be checked out (a local action resolves against
 # the runner's workspace).
@@ -43,7 +45,7 @@ inputs:
     required: false
     default: ""
   write-cache:
-    description: Whether a run on main writes its compile units to sccache ('true' or 'false').
+    description: Whether a run on main writes the binary, registry and sccache caches ('true' or 'false').
     required: false
     default: "true"
   artifact-name:
@@ -87,7 +89,7 @@ runs:
           exit 1
         fi
     - id: binary-cache
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: bin/amd64/ferroehr
         key: ui-e2e-server-bin-1.99.1-${{ hashFiles(format('{0}Cargo.toml', steps.tree.outputs.prefix), format('{0}Cargo.lock', steps.tree.outputs.prefix), format('{0}rust-toolchain.toml', steps.tree.outputs.prefix), format('{0}.cargo/**', steps.tree.outputs.prefix), format('{0}crates/**', steps.tree.outputs.prefix), format('{0}app/ferroehr/**', steps.tree.outputs.prefix), format('{0}app/ferroehr-rest/**', steps.tree.outputs.prefix), format('{0}app/ferroehr-server/**', steps.tree.outputs.prefix), format('{0}tools/**', steps.tree.outputs.prefix)) }}
@@ -96,6 +98,7 @@ runs:
       with:
         shared-key: ui-e2e-server-binary
         cache-targets: false
+        save-if: ${{ inputs.write-cache == 'true' && github.ref == 'refs/heads/main' }}
         workspaces: ${{ steps.tree.outputs.workspace }}
     - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
       if: steps.binary-cache.outputs.cache-hit != 'true'
@@ -124,6 +127,11 @@ runs:
         strip target/e2e/ferroehr
         mkdir -p "$out"
         install -m0755 target/e2e/ferroehr "$out/ferroehr"
+    - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      if: steps.binary-cache.outputs.cache-hit != 'true' && inputs.write-cache == 'true' && github.ref == 'refs/heads/main'
+      with:
+        path: bin/amd64/ferroehr
+        key: ${{ steps.binary-cache.outputs.cache-primary-key }}
     # Cache-hit visibility in the job log.
     - name: sccache statistics
       if: always() && steps.binary-cache.outputs.cache-hit != 'true'
