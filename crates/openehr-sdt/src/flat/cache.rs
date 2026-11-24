@@ -100,6 +100,12 @@ impl WebTemplateCache {
         self.inner.invalidate(template_id).await;
     }
 
+    /// Runs the cache's pending upkeep: what `moka` would otherwise run on
+    /// the first call 300 ms after its last upkeep.
+    pub async fn upkeep(&self) {
+        self.inner.run_pending_tasks().await;
+    }
+
     /// How many templates the cache holds, and an estimate of their bytes.
     #[must_use]
     pub fn held(&self) -> (u64, u64) {

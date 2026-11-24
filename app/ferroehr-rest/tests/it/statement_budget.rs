@@ -130,14 +130,15 @@ async fn wired() -> (
 }
 
 /// Connects the `LISTEN` session of every copy `svc` holds over the database
-/// of `db`, as `ferroehr-server` `policy::listen` does, and waits until each
-/// one listens.
-async fn listening(db: &testkit::TestDb, svc: &ferroehr::service::FerroEhrService) {
+/// of `db`, as `ferroehr-server` `policy::listen` does, waits until each
+/// one listens, and starts the caches' upkeep as the server does.
+async fn listening(db: &testkit::TestDb, svc: &Arc<ferroehr::service::FerroEhrService>) {
     listening_at(db.url(), svc).await;
 }
 
 /// [`listening`] over the database URL `url`.
-async fn listening_at(url: &str, svc: &ferroehr::service::FerroEhrService) {
+async fn listening_at(url: &str, svc: &Arc<ferroehr::service::FerroEhrService>) {
+    svc.spawn_upkeep();
     let listened: Vec<_> = svc
         .policy_listeners()
         .into_iter()
