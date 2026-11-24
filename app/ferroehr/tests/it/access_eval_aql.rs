@@ -1679,6 +1679,108 @@ async fn an_archetype_scope_reads_the_root_of_the_trunk_head() {
     assert_reads(&world, &ask, &expected, "the encounters and the report").await;
 }
 
+/// The issuer of the hospital's episode identifiers.
+const HOSPITAL: &str = "urn:example:hospital";
+
+impl World {
+    /// Commits to EHR `index` a composition placed in the hospital's episode
+    /// `episode`, and returns its id.
+    async fn place(&mut self, index: usize, episode: &str) -> String {
+        let mut body = composition(episode);
+        body["context"] = json!({ "_type": "EVENT_CONTEXT",
+            "start_time": { "_type": "DV_DATE_TIME", "value": "2026-11-23T10:00:00Z" },
+            "setting": { "_type": "DV_CODED_TEXT", "value": "secondary medical care",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                    "code_string": "232" } },
+            "other_context": { "_type": "ITEM_TREE", "archetype_node_id": "at0001",
+                "name": { "_type": "DV_TEXT", "value": "Tree" },
+                "items": [{ "_type": "ELEMENT", "archetype_node_id": "at9001",
+                    "name": { "_type": "DV_CODED_TEXT", "value": "episode",
+                        "defining_code": { "_type": "CODE_PHRASE",
+                            "terminology_id": { "_type": "TERMINOLOGY_ID",
+                                "value": "openehr_access" },
+                            "code_string": "episode" } },
+                    "value": { "_type": "DV_IDENTIFIER", "issuer": HOSPITAL,
+                        "id": episode } }] } });
+        let (ehr_id, _, objects) = &mut self.ehrs[index];
+        let id = self
+            .svc
+            .create_composition(*ehr_id, uv(&body, "249", None))
+            .await
+            .expect("the placed composition commits")
+            .vo_id
+            .0
+            .to_string();
+        objects.push(id.clone());
+        objects.sort();
+        id
+    }
+
+    /// Whether a named read of the composition `vo` of EHR `index` by `ask`
+    /// is admitted.
+    async fn reads(&self, ask: &Ask, index: usize, vo: &str) -> bool {
+        use ferroehr::service::ehr::composition_read::JudgedRead;
+        let access = request_of(ask);
+        let ehr_id = self.ehrs[index].0;
+        let vo = VoId(vo.parse().expect("a composition id"));
+        let run = self.svc.composition_judged(&access, ehr_id, vo, None);
+        match Box::pin(with_request_access(Arc::clone(&access), run)).await {
+            JudgedRead::Admitted(read) => read.is_ok(),
+            JudgedRead::Absent | JudgedRead::Refused { .. } => false,
+            JudgedRead::Unheld(error) | JudgedRead::Unjudged(error) => {
+                panic!("the read is judged: {error}")
+            }
+        }
+    }
+}
+
+/// A restriction naming an episode withholds the compositions placed in it,
+/// from a query and from a named read, and nothing else; two EHRs whose
+/// restrictions name different episodes share one class, and the query
+/// reads each EHR's own episode from its facts (#6416).
+#[tokio::test]
+async fn an_episode_scope_reads_the_episodes_of_the_trunk_head() {
+    let mut world = Box::pin(World::new()).await;
+    let dermatology = world.place(0, "D-4").await;
+    let cardiology = world.place(0, "C-17").await;
+    let elsewhere = world.place(1, "D-4").await;
+    let ask = Ask::professional(&world);
+    assert_reads(&world, &ask, &world.every(), "no scope").await;
+    let restriction = |episode: &str| {
+        directive(
+            "restriction",
+            "deny",
+            &json!({ "data": [{ "episodes": [{ "_type": "DV_IDENTIFIER",
+                "issuer": HOSPITAL, "id": episode }] }] }),
+        )
+    };
+    world
+        .settings(0, &settings("open", &[restriction("D-4")], &[]))
+        .await;
+    world
+        .settings(1, &settings("open", &[restriction("C-17")], &[]))
+        .await;
+    assert_eq!(classes(&world).await, 1, "one class for both restrictions");
+    let expected = except(&world, &[], &[&dermatology]);
+    assert_reads(&world, &ask, &expected, "each EHR's own episode").await;
+    assert!(
+        !world.reads(&ask, 0, &dermatology).await,
+        "the episode named"
+    );
+    assert!(world.reads(&ask, 0, &cardiology).await, "another episode");
+    assert!(
+        world.reads(&ask, 1, &elsewhere).await,
+        "another EHR's scope"
+    );
+    let unplaced = world.objects(0)[0].clone();
+    assert!(![&dermatology, &cardiology].contains(&&unplaced));
+    assert!(
+        world.reads(&ask, 0, &unplaced).await,
+        "an unplaced composition"
+    );
+}
+
 /// A caller every known class, an EHR held closed and an EHR with no
 /// settings admit in full reads every EHR of a known class, by every query
 /// shape, and an EHR of a class its condition does not hold once the
