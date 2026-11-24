@@ -7,6 +7,7 @@
 use openehr_rm::v1_2::paths::PathSegment;
 
 use super::SiblingNameIndex;
+use super::compiled::{Compiled, Compiler};
 use crate::flat::rmpath;
 use crate::flat::webtemplate::model::WebTemplateNode;
 
@@ -17,8 +18,6 @@ pub(crate) struct NodeWalk {
     /// Child sibling groups, in first-seen order (grouping the node's `children`
     /// by `aqlPath`).
     pub(crate) child_groups: Vec<ChildGroup>,
-    /// Name-based sibling routing index over the child groups.
-    pub(crate) child_names: SiblingNameIndex,
     /// Parsed relative segments per `existence` constraint (index-aligned with
     /// [`WebTemplateNode::existence`]).
     pub(crate) existence: Vec<Option<Vec<PathSegment>>>,
@@ -30,8 +29,6 @@ pub(crate) struct NodeWalk {
     pub(crate) closed: Vec<Option<Vec<PathSegment>>>,
     /// Slot groups (grouped by slot path, first-seen order).
     pub(crate) slot_groups: Vec<SlotGroup>,
-    /// Name-based sibling routing index over the slot groups.
-    pub(crate) slot_names: SiblingNameIndex,
     /// Per-step id-only name fallback over every template path under this node
     /// ([`rmpath::NameFallback`]), so a step whose name conjunct a renamed
     /// instance does not match still reaches it when the name is redundant.
@@ -50,6 +47,8 @@ pub(crate) struct NodeWalk {
     /// The [`slots_fingerprint`] of the template the wrappers were computed
     /// from.
     pub(crate) slots_fingerprint: u64,
+    /// The constraint paths compiled for the conformance walk.
+    pub(crate) compiled: Compiled,
 }
 
 impl NodeWalk {
@@ -193,19 +192,41 @@ impl NodeWalk {
         );
 
         let rel = |p: &str| p.strip_prefix(aql).map(rmpath::parse);
+        let existence: Vec<_> = node.existence.iter().map(|e| rel(&e.path)).collect();
+        let cardinalities: Vec<_> = node.card_all.iter().map(|c| rel(&c.path)).collect();
+        let closed: Vec<_> = node
+            .closed_attributes
+            .iter()
+            .map(|c| rel(&c.path))
+            .collect();
+
+        let mut paths = Compiler::new(&name_fallback);
+        for group in &child_groups {
+            let first = group.members.first().and_then(|&i| node.children.get(i));
+            let first_type = first.map_or("", |c| c.rm_type.as_str());
+            paths.group(&group.segments, &child_names, first_type);
+        }
+        for group in &slot_groups {
+            paths.slot(&group.segments, &slot_names);
+        }
+        let (on_existence, on_cardinalities, on_closed) = (
+            paths.constraints(&existence),
+            paths.constraints(&cardinalities),
+            paths.constraints(&closed),
+        );
+        let compiled = Compiled {
+            existence: on_existence,
+            cardinalities: on_cardinalities,
+            closed: on_closed,
+            ..paths.finish()
+        };
 
         Self {
             child_groups,
-            child_names,
-            existence: node.existence.iter().map(|e| rel(&e.path)).collect(),
-            cardinalities: node.card_all.iter().map(|c| rel(&c.path)).collect(),
-            closed: node
-                .closed_attributes
-                .iter()
-                .map(|c| rel(&c.path))
-                .collect(),
+            existence,
+            cardinalities,
+            closed,
             slot_groups,
-            slot_names,
             name_fallback,
             child_segments: node
                 .children
@@ -219,6 +240,7 @@ impl NodeWalk {
                 .map(|c| path_fingerprint(aql, &c.aql_path))
                 .collect(),
             slots_fingerprint: 0,
+            compiled,
         }
     }
 }

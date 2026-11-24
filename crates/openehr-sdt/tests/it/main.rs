@@ -47,6 +47,7 @@ mod typed_validation_parity;
 mod untagged_nodes;
 mod validation;
 mod validation_checklist;
+mod validation_golden;
 mod validation_rules;
 mod value_alternatives;
 mod value_without_input;
