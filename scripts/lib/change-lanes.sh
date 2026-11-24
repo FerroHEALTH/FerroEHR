@@ -31,8 +31,6 @@ readonly ROOT
 # only scripts a code-gated job runs (the drift check and the e2e harness);
 # any other script costs no Rust run. The sandbox viewer posture is read by a
 # viewer test (#4985).
-# ci msrv (#3120): what can move the minimum Rust version, a manifest, the
-# lockfile, the toolchain, or the recipe; a source edit cannot.
 # ci viewer (#335, #3190): the viewer, its harness, the stack it drives, the
 # inputs to the server it runs against and the boot-installed policy and
 # access configuration.
@@ -60,7 +58,6 @@ readonly ROOT
 # pipeline scripts and the recipe, conformance.yml, which ci.yml calls.
 readonly LANES='ci|deploy|^(scripts/deploy-probe|docker-compose|docker/|deploy/hosted/|scripts/checks/shipped-configs\.sh$)
 ci|code|^scripts/(checks/codegen-drift|ui-e2e)\.sh$|^deploy/hosted/ferroehr-viewer\.sandbox\.toml$|^(app/|crates/|tools/|corpus/|\.cargo/|\.config/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|rustfmt\.toml$|clippy\.toml$|deny\.toml$)
-ci|msrv|(^|/)Cargo\.toml$|^Cargo\.lock$|^rust-toolchain\.toml$|^clippy\.toml$|^\.github/workflows/ci\.yml$
 ci|viewer|^(app/ferroehr-viewer/|app/ferroehr-server/src/|app/ferroehr/src/privacy/|app/ferroehr/src/config/|app/ferroehr-rest/src/extensions/access/|app/ferroehr-rest/src/smart/|app/ferroehr-rest/src/config\.rs$|app/ferroehr-rest/src/router\.rs$|docker/ferroehr\.dev\.toml$|app/ferroehr/assets/ferroehr\.default\.toml$|scripts/ui-e2e\.sh$|docker-compose\.yml$|docker-compose\.override\.yml$|docker-compose\.dev\.yml$|docker-compose\.keycloak\.yml$|docker/Dockerfile$|docker/viewer/|docker/keycloak/|docker/postgres/|Cargo\.lock$|\.github/workflows/ci\.yml$)
 ci|server_dockerfile|^(docker/Dockerfile|\.dockerignore)$
 ci|viewer_dockerfile|^(docker/viewer/Dockerfile|\.dockerignore)$
@@ -192,8 +189,8 @@ a crate source runs the cargo lanes, the gate and the harnesses|ci|crates/openeh
 a crate the harnesses reach only through another builds them|ci|crates/openehr-lang/src/lib.rs|code,perf,semver,fuzz
 a crate the harnesses never build runs no harness build|ci|app/ferroehr/src/lib.rs|code,perf
 a harness runs the harness build alone|ci|fuzz/fuzz_targets/aql_query.rs|fuzz
-a nested manifest moves the msrv and the cache|ci|crates/openehr-rm/Cargo.toml|code,msrv,perf,cache,semver,fuzz
-the lockfile reaches the viewer, the msrv, the gate and the cache|ci|Cargo.lock|code,msrv,viewer,perf,cache,semver
+a nested manifest moves the cache|ci|crates/openehr-rm/Cargo.toml|code,perf,cache,semver,fuzz
+the lockfile reaches the viewer, the gate and the cache|ci|Cargo.lock|code,viewer,perf,cache,semver
 the cargo configuration moves the gate and the cache|ci|.cargo/config.toml|code,perf,cache
 the e2e harness runs the cargo lanes and the viewer|ci|scripts/ui-e2e.sh|code,viewer
 the sandbox viewer posture runs its viewer test|ci|deploy/hosted/ferroehr-viewer.sandbox.toml|deploy,code
@@ -205,7 +202,7 @@ the server Dockerfile reaches six lanes|ci|docker/Dockerfile|deploy,viewer,serve
 the viewer Dockerfile reaches its own image lane|ci|docker/viewer/Dockerfile|deploy,viewer,viewer_dockerfile
 the chart runs helm and chart boot|ci|deploy/helm/ferroehr/values.yaml|helm,chart_boot
 the configuration tree reboots the chart|ci|app/ferroehr/src/config/mod.rs|code,viewer,chart_boot,perf
-the ci recipe reaches its recipe lanes|ci|.github/workflows/ci.yml|msrv,viewer,helm,chart_boot,perf,workflows,cache,semver,fuzz
+the ci recipe reaches its recipe lanes|ci|.github/workflows/ci.yml|viewer,helm,chart_boot,perf,workflows,cache,semver,fuzz
 a VEX document runs the vex lane|ci|security/vex/rust.openvex.json|vex
 the plan runs the gate alone|ci|perf/plan.toml|perf
 the gate script runs the gate alone|ci|scripts/perf/gate.sh|perf

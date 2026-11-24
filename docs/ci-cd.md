@@ -24,7 +24,7 @@ changes no threshold, corpus or test.
 | Gate | `pull_request`, `merge_group` | change detection, fmt, lint and guards, clippy, the test build and its shards, rustdoc, codegen drift, cargo-deny, the exact budgets, conformance, the deployment harness, chart boot | yes, through `conclusion` |
 | Pull request | `pull_request` | the guards that read pull-request context (changelog, crate and chart versions, migrations, screenshots, privacy boundary), the browser lanes when the viewer changed, CodeQL when Rust or workflow paths changed | yes for the guards and the browser lanes; CodeQL is advisory |
 | Main | `push` to `main` | the caches pull requests read, the docs deploy, the images | no |
-| Nightly | `schedule` on `main`, `workflow_dispatch`, the `ci:perf` and `ci:heavy` labels | perf A/B, the CPU budget, coverage with SonarQube Cloud, fuzzing, CodeQL's baseline | no |
+| Nightly | `schedule` on `main`, `workflow_dispatch`, the `ci:perf` and `ci:heavy` labels | every `ci.yml` lane with the browser lanes in full, perf A/B, the CPU budget, the feature-combination and MSRV sweeps, coverage with SonarQube Cloud, fuzzing, CodeQL's baseline | no |
 
 The merge queue checks the exact tree that lands
 (<https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue>),
@@ -34,8 +34,14 @@ lane only builds. A push no merge-group run passed runs every lane.
 
 ## The nightly tier
 
+- **`ci.yml`:** every lane, as if the change touched everything, the browser
+  lanes in full included.
 - **`nightly.yml`:** perf A/B (`scripts/perf/gate.sh ab`) against the commit
-  the previous night measured, and the hot-path CPU budget on optimised code.
+  the previous night measured, the hot-path CPU budget on optimised code, the
+  clippy feature-combination sweeps (the slim server, `openehr-its` and
+  `openehr-sdt` on wasm32, the ITS-REST features) and the MSRV check with
+  cargo-hack
+  (<https://doc.rust-lang.org/cargo/guide/continuous-integration.html#verifying-rust-version>).
 - **`sonar.yml`:** coverage over the whole test suite and the SonarQube Cloud
   analysis.
 - **`fuzz.yml`:** each fuzz target for its time budget.
