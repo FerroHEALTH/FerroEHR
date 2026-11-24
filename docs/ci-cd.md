@@ -32,6 +32,27 @@ so a push to `main` whose tree a merge-group run passed re-runs nothing: the
 `changes` job finds that run (`scripts/lib/queue-runs.sh`), and each cache
 lane only builds. A push no merge-group run passed runs every lane.
 
+## Which packages a change builds
+
+`scripts/lib/affected.sh` maps the changed paths to workspace packages
+through the `cargo metadata` graph
+(<https://doc.rust-lang.org/cargo/commands/cargo-metadata.html>), and
+clippy, the test build and its shards, and rustdoc run for those packages
+alone. A path under a member reaches that member; any other path reaches the
+members whose Rust sources name its top-level directory or file in a string
+literal; a reached package reaches its dependants, transitively, and their
+dev-dependants. The toolchain, `.cargo/`, `.config/`, the lint, format and
+cargo-deny configurations, `ci.yml`, an orphan under `app/`, `crates/` or
+`tools/`, and a third-party line of `Cargo.toml` or `Cargo.lock` reach every
+package.
+
+A pull request measures its own change. A merge group measures the whole
+group, from where it forked from the base branch to its head: a group's
+`base_sha` is the head of the entry ahead of it, and GitHub merges every
+entry of a group once its last entry passes (#5741). A push, a schedule and
+a base that cannot be resolved build every package, and the nightly full run
+is the backstop for a read the literal scan cannot see.
+
 ## The nightly tier
 
 - **`ci.yml`:** every lane, as if the change touched everything, the browser

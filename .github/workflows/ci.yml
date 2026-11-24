@@ -173,6 +173,13 @@ jobs:
       fuzz: ${{ steps.filter.outputs.fuzz }}
       semver: ${{ steps.filter.outputs.semver }}
       queue_verified: ${{ steps.push.outputs.queue_verified }}
+      rust: ${{ steps.affected.outputs.rust }}
+      packages: ${{ steps.affected.outputs.packages }}
+      instructions: ${{ steps.filter.outputs.instructions }}
+      server: ${{ steps.affected.outputs.server }}
+      viewer_crate: ${{ steps.affected.outputs.viewer }}
+      cargo_args: ${{ steps.affected.outputs.cargo_args }}
+      all_args: ${{ steps.affected.outputs.all_args }}
       cache_refresh: ${{ steps.push.outputs.cache_refresh }}
       test_shards: ${{ steps.shards.outputs.test_list }}
       test_shard_count: ${{ steps.shards.outputs.test_count }}
@@ -254,6 +261,7 @@ jobs:
               echo "conformance=true"
               echo "fuzz=true"
               echo "semver=true"
+              echo "instructions=true"
             } >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -323,6 +331,38 @@ jobs:
             echo "queue_verified=$verified"
             echo "cache_refresh=$refresh"
           } >> "$GITHUB_OUTPUT"
+      # The packages the cargo lanes build, from the cargo metadata graph
+      # (#6519). A pull request measures its own change; a merge group the
+      # whole group, from where it forked from the base branch, since GitHub
+      # merges every entry of a group once its last entry passes (#5741). A
+      # push, a schedule and an unresolvable base select every package. The
+      # runner's stable cargo reads the metadata, so no toolchain downloads.
+      - id: affected
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          QUEUE_BASE_REF: ${{ github.event.merge_group.base_ref }}
+          HEAD_SHA: ${{ github.sha }}
+          RUSTUP_TOOLCHAIN: stable
+        run: |
+          set -euo pipefail
+          bash scripts/lib/affected.sh --self-test
+          base=""; head=""
+          if [ "$EVENT_NAME" = pull_request ]; then
+            base="$PR_BASE"; head="$PR_HEAD"
+          elif [ "$EVENT_NAME" = merge_group ]; then
+            base="$(git merge-base "origin/${QUEUE_BASE_REF#refs/heads/}" "$HEAD_SHA" 2>/dev/null || true)"
+            head="$HEAD_SHA"
+          fi
+          if [ -n "$base" ] && git rev-parse --verify --quiet "$base" >/dev/null \
+            && out="$(bash scripts/lib/affected.sh "$base" "$head")"; then
+            :
+          else
+            out="$(bash scripts/lib/affected.sh --all)"
+          fi
+          echo "$out" | tee -a "$GITHUB_OUTPUT"
       # Each lane's shard list and its divisor, both from the one constant, so a
       # matrix and its `--partition n/N` can never disagree.
       - id: shards
@@ -1363,7 +1403,7 @@ jobs:
     needs: changes
     # The lane below is this file's own recipe, so a change to it runs it
     # (#2373).
-    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'clippy'))
+    if: needs.changes.outputs.rust == 'true' && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'clippy'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1383,7 +1423,13 @@ jobs:
       # (FerroUI 0.6), so the workspace lane covers it. `--locked`: CI must
       # fail on new commits only, never on registry drift
       # (https://doc.rust-lang.org/cargo/faq.html#why-have-cargolock-in-version-control).
-      - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+      - name: clippy over the reached packages
+        env:
+          PACKAGES: ${{ needs.changes.outputs.all_args }}
+        run: |
+          set -euo pipefail
+          read -r -a packages <<<"$PACKAGES"
+          cargo clippy --locked "${packages[@]}" --all-targets --all-features -- -D warnings
 
   # ── Rustdoc: intra-doc links + doc lints are inert unless rustdoc runs ──────
   # [workspace.lints.rustdoc] levels apply to every `cargo doc`; the -D
@@ -1392,15 +1438,8 @@ jobs:
   doc:
     name: rustdoc
     needs: changes
-    # Path-filtered on PRs (a PR touching no Rust cannot introduce a doc
-    # defect), but ALWAYS run on a main push: the filter is a per-push
-    # DELTA, so a code commit whose run was cancelled or whose successor push
-    # is docs-only would otherwise never have its docs evaluated at all. This
-    # job is ~1/10 the length of the test job, so re-evaluating the whole tree
-    # on every main push is cheap insurance. A push the merge queue verified
-    # needs none of it (the queue run is never cancelled, its group is the
-    # commit), so there it is skipped.
-    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true' || github.ref == 'refs/heads/main') && needs.changes.outputs.queue_verified != 'true'
+    # The reached packages (#6519); a push the merge queue verified skips it.
+    if: needs.changes.outputs.rust == 'true' && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
@@ -1418,18 +1457,28 @@ jobs:
           cache-save-if: false
       # --document-private-items on both runs: stale intra-doc links can hide
       # behind non-pub items the public build never evaluates (#1838).
-      - run: cargo doc --locked --workspace --all-features --no-deps --document-private-items
+      - name: rustdoc over the reached packages
         env:
           RUSTDOCFLAGS: -D warnings
+          PACKAGES: ${{ needs.changes.outputs.all_args }}
+        run: |
+          set -euo pipefail
+          read -r -a packages <<<"$PACKAGES"
+          cargo doc --locked "${packages[@]}" --all-features --no-deps --document-private-items
       # Doc tests live HERE, not in the pg19 test job: nextest cannot run
       # doctests, so `cargo test --doc` is its own compile (default features —
       # doctests document what a default consumer gets), and this job is ~1/10
       # the length of the test job, so the extra configuration rides the short
       # lane instead of the critical path. No DB: doctests are examples, never
       # integration tests.
-      - run: cargo test --locked --workspace --doc
+      - name: doc tests of the reached packages
         env:
           RUSTDOCFLAGS: -D warnings
+          PACKAGES: ${{ needs.changes.outputs.all_args }}
+        run: |
+          set -euo pipefail
+          read -r -a packages <<<"$PACKAGES"
+          cargo test --locked "${packages[@]}" --doc
 
   # ── Generated code must stay in sync with the vendored specs ──
   codegen-drift:
@@ -1467,7 +1516,7 @@ jobs:
   nesting-release:
     name: nesting limit (release)
     needs: changes
-    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true'
+    if: (contains(format(' {0} ', needs.changes.outputs.packages), ' openehr-its ') || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1498,7 +1547,7 @@ jobs:
   build-tests:
     name: build tests
     needs: changes
-    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'build-tests'))
+    if: needs.changes.outputs.server == 'true' && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'build-tests'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -1516,13 +1565,28 @@ jobs:
       - name: The vendor cache uses a held file at its pin with no download and refuses one off it
         run: bash scripts/vendor/lib/pinned.sh --self-test
       - name: Link every bin
-        run: cargo build --locked --workspace --exclude ferroehr-viewer --all-features
+        env:
+          PACKAGES: ${{ needs.changes.outputs.cargo_args }}
+        run: |
+          set -euo pipefail
+          read -r -a packages <<<"$PACKAGES"
+          cargo build --locked "${packages[@]}" --all-features
       - name: Build the tests (a verified push writes the cache alone)
         if: needs.changes.outputs.queue_verified == 'true'
-        run: cargo nextest run --locked --workspace --exclude ferroehr-viewer --all-features --no-run
+        env:
+          PACKAGES: ${{ needs.changes.outputs.cargo_args }}
+        run: |
+          set -euo pipefail
+          read -r -a packages <<<"$PACKAGES"
+          cargo nextest run --locked "${packages[@]}" --all-features --no-run
       - name: Archive the tests
         if: needs.changes.outputs.queue_verified != 'true'
-        run: cargo nextest archive --locked --workspace --exclude ferroehr-viewer --all-features --archive-file "$RUNNER_TEMP/tests.tar.zst"
+        env:
+          PACKAGES: ${{ needs.changes.outputs.cargo_args }}
+        run: |
+          set -euo pipefail
+          read -r -a packages <<<"$PACKAGES"
+          cargo nextest archive --locked "${packages[@]}" --all-features --archive-file "$RUNNER_TEMP/tests.tar.zst"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: needs.changes.outputs.queue_verified != 'true'
         with:
@@ -1545,7 +1609,7 @@ jobs:
       fail-fast: false
       matrix:
         shard: ${{ fromJSON(needs.changes.outputs.test_shards) }}
-    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true'
+    if: needs.changes.outputs.server == 'true' && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -1603,7 +1667,7 @@ jobs:
   instructions:
     name: codec instructions (callgrind)
     needs: changes
-    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true'
+    if: (contains(format(' {0} ', needs.changes.outputs.packages), ' openehr-its ') || needs.changes.outputs.instructions == 'true' || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -1628,7 +1692,7 @@ jobs:
   test-viewer:
     name: build & test (viewer)
     needs: changes
-    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'test-viewer'))
+    if: needs.changes.outputs.viewer_crate == 'true' && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'test-viewer'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

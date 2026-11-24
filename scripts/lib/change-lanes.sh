@@ -46,6 +46,8 @@ readonly ROOT
 # ci cache (#4546): what the rust-cache key hashes, every manifest, the
 # lockfile, the toolchain, the cargo configuration, and the recipe's env, so a
 # push that moves one writes main's cargo caches again.
+# ci instructions (#6519): the callgrind ceilings and their script, which no
+# Rust source names.
 # ci semver (#5353): what the published openehr-* crates package or the SemVer
 # judge reads: the crates, the manifests the members inherit from, the lock,
 # the toolchain, the judge, its pin and the recipe.
@@ -67,6 +69,7 @@ ci|perf|^(app/ferroehr(-rest|-server|-ext)?/|crates/|\.cargo/|Cargo\.toml$|Cargo
 ci|workflows|^\.github/workflows/ci\.yml$
 ci|vex|^(security/vex/|scripts/checks/(vex-reachability|advisory-exceptions|vex-linkage)\.sh$)
 ci|cache|(^|/)Cargo\.(toml|lock)$|^rust-toolchain\.toml$|^\.cargo/config\.toml$|^\.github/workflows/ci\.yml$
+ci|instructions|^(perf/instructions\.ceilings|scripts/perf/instructions\.sh)$
 ci|semver|^(crates/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|docs/VERSIONS\.md$|scripts/checks/semver\.sh$|scripts/lib/public-deps\.sh$|\.github/workflows/ci\.yml$)
 docs|docs|^(website/|docs/conformance/|docs/benchmarks/|scripts/(render|site)/|scripts/lib/veredictum\.sh$|scripts/checks/(docs-claims|conformance-numbers)\.sh$|\.github/workflows/docs\.yml$|\.github/actions/docs-toolchain/)
 conformance|conformance|^(app/ferroehr(-rest|-server|-ext)?/|crates/|tools/|\.cargo/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|\.dockerignore$|docker/Dockerfile$|docker/sut-[^/]+\.yml$|docker/ferroehr\.dev\.toml$|docker/postgres/|docker/terminology/|docs/conformance/party/|scripts/conformance\.sh$|scripts/lib/(veredictum|cnf-compose)\.sh$|\.github/workflows/conformance\.yml$)'
@@ -206,6 +209,7 @@ the ci recipe reaches its recipe lanes|ci|.github/workflows/ci.yml|viewer,helm,c
 a VEX document runs the vex lane|ci|security/vex/rust.openvex.json|vex
 the plan runs the gate alone|ci|perf/plan.toml|perf
 the gate script runs the gate alone|ci|scripts/perf/gate.sh|perf
+the callgrind ceilings run the instruction count|ci|perf/instructions.ceilings|perf,instructions
 the access seed runs the gate alone|ci|scripts/perf/access-seed.sh|perf
 the pin table runs the gate and the SemVer judge|ci|docs/VERSIONS.md|perf,semver
 the SemVer judge runs its lane alone|ci|scripts/checks/semver.sh|semver
