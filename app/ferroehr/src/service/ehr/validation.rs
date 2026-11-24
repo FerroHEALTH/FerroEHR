@@ -174,10 +174,14 @@ impl FerroEhrService {
     /// both the template-driven and RM-driven layers. Every other check stays at
     /// full strictness ("data may be missing, but it may not be wrong").
     ///
+    /// `party_rule` runs the data-minimisation pass's identified-party rule
+    /// on a typed COMPOSITION in the RM pass's walk ([`crate::privacy`]); a
+    /// finding of it refuses the body before every other pass's findings.
+    ///
     /// # Errors
-    /// [`ServiceError::ValidationFailed`] carrying every RM/terminology/
-    /// template violation (→ 422); [`ServiceError`] from a failing template
-    /// resolution.
+    /// [`ServiceError::ValidationFailed`] carrying every privacy finding, else
+    /// every RM/terminology/template violation (→ 422); [`ServiceError`] from
+    /// a failing template resolution.
     #[expect(
         clippy::as_conversions,
         reason = "per-pass failure counts widen exactly for the metrics facade: usize \
@@ -187,6 +191,7 @@ impl FerroEhrService {
         &self,
         composition: Submitted<'_>,
         incomplete: bool,
+        party_rule: bool,
     ) -> Result<(), ServiceError> {
         use openehr_sdt::flat::validation as conformance;
         use openehr_sdt::rm_instance as rm;
@@ -196,13 +201,25 @@ impl FerroEhrService {
         };
         // NOTE: a `553|incomplete|` commit keeps the canonical-JSON passes by
         // decision (#6002): its body need not read as strict typed RM.
+        let mut parties = Vec::new();
         let mut messages = run_validation_pass(hand_off, || match composition {
+            Submitted::Typed(typed) if party_rule => {
+                rm::validate_rm_and_terminology_typed_visiting(typed, &mut |path, node| {
+                    crate::privacy::PrivacyPolicy::check_typed_node(
+                        "COMPOSITION",
+                        path,
+                        node,
+                        &mut parties,
+                    );
+                })
+            }
             Submitted::Typed(typed) => rm::validate_rm_and_terminology_typed(typed),
             Submitted::Canonical(value) if incomplete => {
                 rm::validate_rm_and_terminology_incomplete_as(value, "COMPOSITION")
             }
             Submitted::Canonical(value) => rm::validate_rm_and_terminology(value, "COMPOSITION"),
         });
+        crate::privacy::PrivacyPolicy::refuse(parties)?;
         let rm_terminology_failures = messages.len();
         let mut template_failures = 0;
         let mut binding_failures = 0;
@@ -301,7 +318,7 @@ impl FerroEhrService {
         match kind {
             Kind::Composition => {
                 self.privacy.enforce(kind.as_str(), data)?;
-                self.validate_composition_for_commit(Submitted::Canonical(data), incomplete)
+                self.validate_composition_for_commit(Submitted::Canonical(data), incomplete, false)
                     .await
             }
             Kind::EhrStatus => {

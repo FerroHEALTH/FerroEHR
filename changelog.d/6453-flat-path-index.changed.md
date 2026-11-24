@@ -1,0 +1,1 @@
+- A FLAT or STRUCTURED commit reads the path from a node to each object its structural stubs constrain from the web template's walk plan, computed once per template, and checks that the plan still matches a node's paths by comparing them instead of hashing them on every child. The built COMPOSITION is unchanged.

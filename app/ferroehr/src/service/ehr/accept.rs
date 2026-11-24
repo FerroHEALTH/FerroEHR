@@ -69,8 +69,10 @@ impl FerroEhrService {
     /// # Errors
     /// As [`Self::validate_for_commit`].
     async fn validate_typed_for_commit(&self, kind: Kind, body: &Body) -> Result<(), ServiceError> {
-        if !kind.is_demographic()
-            && self.privacy.applies_to(kind.as_str())
+        let privacy = !kind.is_demographic() && self.privacy.applies_to(kind.as_str());
+        // A COMPOSITION meets the data-minimisation pass in its RM pass's walk.
+        if privacy
+            && !matches!(body, Body::Composition(_))
             && let Some(rm) = body.as_rm()
         {
             self.privacy
@@ -78,7 +80,7 @@ impl FerroEhrService {
         }
         match body {
             Body::Composition(rm) => {
-                self.validate_composition_for_commit(Submitted::Typed(rm), false)
+                self.validate_composition_for_commit(Submitted::Typed(rm), false, privacy)
                     .await
             }
             Body::EhrStatus(rm) => validate_ehr_status(rm),

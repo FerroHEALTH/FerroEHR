@@ -69,18 +69,29 @@ pub async fn delete_ehrs(
     .await?)
 }
 
-/// Delete the commit-audit rows `ids`, which nothing references.
+/// Delete the commit-audit rows `ids`, which nothing may reference: none is
+/// deleted when a stored version or contribution still names one.
 ///
 /// # Errors
-/// [`StorageError::Database`] on a driver failure.
+/// [`StorageError::DanglingReference`] when a stored row still names one of
+/// `ids`, and [`StorageError::Database`] on a driver failure.
 pub async fn delete_commit_audits(tx: &mut PgConnection, ids: &[Uuid]) -> Result<(), StorageError> {
     if ids.is_empty() {
         return Ok(());
     }
-    sqlx::query("DELETE FROM commit_audit_facts WHERE id = ANY($1)")
-        .bind(ids)
-        .execute(tx)
-        .await?;
+    let named: i64 = sqlx::query_scalar(
+        "WITH named AS (SELECT count(*) AS n FROM commit_audit_facts a WHERE a.id = ANY($1) \
+                    AND (EXISTS (SELECT 1 FROM version v WHERE v.commit_audit_id = a.id) \
+                         OR EXISTS (SELECT 1 FROM contribution c WHERE c.commit_audit_id = a.id))), \
+              d AS (DELETE FROM commit_audit_facts WHERE id = ANY($1) AND (SELECT n FROM named) = 0) \
+         SELECT n FROM named",
+    )
+    .bind(ids)
+    .fetch_one(tx)
+    .await?;
+    if named > 0 {
+        return Err(StorageError::DanglingReference("commit audit"));
+    }
     Ok(())
 }
 

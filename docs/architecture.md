@@ -240,7 +240,13 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   tier moves and the deletes name the node rows in the version's statement,
   the storage-parity sweep reports a row set no version reads
   (`orphan_nodes`), and `node_version_integrity` holds the invariant across
-  commit, delete, archive, erasure and decommissioning. The per-EHR class index
+  commit, delete, archive, erasure and decommissioning. A version's
+  `contribution_id` and `commit_audit_id` and a contribution's
+  `commit_audit_id` carry no foreign key either (#6394): a commit statement
+  inserts the rows they name, a version written into an existing
+  contribution, an imported version and an archive load write nothing unless
+  those rows are stored, the EHR erasure deletes no audit a stored row still
+  names, and `change_control_integrity` holds it across every writer. The per-EHR class index
   `idx_node_hot_ehr_type` leaves out the ELEMENT rows, which are reached
   through the nested-set range of the primary key, and the data-structure
   classes (`ITEM_*`, `HISTORY`, the events, `EVENT_CONTEXT`, `ACTIVITY`), which

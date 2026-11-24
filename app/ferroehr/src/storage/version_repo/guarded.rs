@@ -535,7 +535,7 @@ pub(super) fn statement(
     format!(
         "{}{}, {}, c AS ( \
              INSERT INTO contribution (id, ehr_id, commit_audit_id) \
-             SELECT $6, $7, a.id FROM a ON CONFLICT (id) DO NOTHING RETURNING id \
+             SELECT $6, $7, a.id FROM a RETURNING id \
          ){}{}{}{}{}",
         guard_ctes(
             "$7",
@@ -611,7 +611,7 @@ fn set_statement(members: &[SetMember<'_>], plan: &SharedPlan) -> String {
     let mut sql = format!(
         "{}{}, {}, c AS ( \
              INSERT INTO contribution (id, ehr_id, commit_audit_id) \
-             SELECT $1, $2, ca.id FROM ca ON CONFLICT (id) DO NOTHING RETURNING id \
+             SELECT $1, $2, ca.id FROM ca RETURNING id \
          )",
         guard_ctes("$2", &targets, "$6", (("$3", "$4"), Lead::Content)),
         plan.ctes(&firsts),
@@ -692,7 +692,10 @@ pub async fn commit_set(
     for member in members {
         query = super::commit::bind_episodes(query, &member.version);
     }
-    let row = query.fetch_one(&mut *conn).await?;
+    let row = query
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(|e| super::commit::uid_in_use(e.into(), head.id))?;
     if plan.inserts() {
         plan.remember(
             known,
@@ -700,12 +703,6 @@ pub async fn commit_set(
         );
     }
     GuardFlags::read(&row)?.require()?;
-    if row
-        .try_get::<Option<uuid::Uuid>, _>("contribution_id")?
-        .is_none()
-    {
-        return Err(StorageError::ContributionUidInUse(Some(head.id)));
-    }
     for member in members {
         let v = &member.version;
         crate::storage::blob_ref::record_uris(conn, v.vo_id, v.sys_version, v.blob_uris).await?;
