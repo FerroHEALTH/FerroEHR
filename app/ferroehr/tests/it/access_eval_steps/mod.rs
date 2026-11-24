@@ -613,7 +613,8 @@ pub(super) fn assert_outcome(verdict: &Verdict, item: &Item<'_>, expected: Outco
 /// or to none.
 pub(super) fn tie_in(episode: Option<&str>) -> Tie {
     use ferroehr::access_eval::care_tie::Grant;
-    use ferroehr::party_binding::grants::caller::care_of::{CarerKind, Episode};
+    use ferroehr::party_binding::grants::caller::care_of::CarerKind;
+    use ferroehr::party_binding::grants::caller::care_ref::Episode;
     Tie {
         path: CarePath::Team,
         role: code("HL7_ParticipationType", "PART"),

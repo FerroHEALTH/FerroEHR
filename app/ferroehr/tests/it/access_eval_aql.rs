@@ -1700,8 +1700,52 @@ const HOSPITAL: &str = "urn:example:hospital";
 
 impl World {
     /// Commits to EHR `index` a composition placed in the hospital's episode
-    /// `episode`, and returns its id.
+    /// `episode`, and returns its id. The subject first holds a care fact in
+    /// that episode with a carer no caller performs, stamped as a relationship
+    /// commit stamps it, since a composition is placed only in an episode of
+    /// its subject (#6412).
     async fn place(&mut self, index: usize, episode: &str) -> String {
+        let subject = self.ehrs[index].1;
+        let pool = self.db.pool();
+        let mut conn = ferroehr::db::acquire::acquire(&pool)
+            .await
+            .expect("a connection");
+        let mut tx = sqlx::Connection::begin(&mut *conn)
+            .await
+            .expect("a transaction");
+        sqlx::query(
+            "INSERT INTO party.binding_caller_fact (holder_id, ordinal, kind, party_id, \
+                 target_id, target_kind, terminology_id, code_string, provider_issuer, \
+                 provider_id, lifecycle_state, role_validity, validity, episode_issuer, \
+                 episode_id) \
+             VALUES ($1, 0, 'under_care_of', $2, $3, 'GROUP', 'HL7_ParticipationType', 'PART', \
+                 'urn:example:providers', 'hospital', '532', '(,)', '(,)', $4, $5)",
+        )
+        .bind(uuid::Uuid::now_v7())
+        .bind(subject)
+        .bind(uuid::Uuid::now_v7())
+        .bind(HOSPITAL)
+        .bind(episode)
+        .execute(&mut *tx)
+        .await
+        .expect("the care fact");
+        sqlx::query(
+            "INSERT INTO party.binding_caller_fact_party (party_id, stamped_xid) \
+             VALUES ($1, pg_current_xact_id()) \
+             ON CONFLICT (party_id) DO UPDATE SET stamped_xid = EXCLUDED.stamped_xid",
+        )
+        .bind(subject)
+        .execute(&mut *tx)
+        .await
+        .expect("the stamp");
+        // NOTE: our own design (#5762), a test commit of party rows that no request makes.
+        tx.commit().await.expect("the care fact commits");
+        drop(conn);
+        self.svc
+            .grants()
+            .refresh()
+            .await
+            .expect("the copy reads the stamp");
         let mut body = composition(episode);
         body["context"] = json!({ "_type": "EVENT_CONTEXT",
             "start_time": { "_type": "DV_DATE_TIME", "value": "2026-11-23T10:00:00Z" },

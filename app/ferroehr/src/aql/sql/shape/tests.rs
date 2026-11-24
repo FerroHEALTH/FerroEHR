@@ -555,3 +555,37 @@ fn a_demographic_statement_carries_no_per_ehr_gate() {
         demographic.sql
     );
 }
+
+/// A query of EHR rows alone carries the revisions on the first row it
+/// serves (#6320), whose number a paged request binds from the offset's slot.
+#[test]
+fn a_paged_query_of_ehr_rows_binds_its_first_row_from_the_offset() {
+    let ir = plan("SELECT e/ehr_id/value FROM EHR e ORDER BY e/ehr_id/value");
+    let shapes = Shapes::new(&ir);
+    let lineage = Arc::new(ArchetypeLineage::default());
+    for round in 1..=5_i64 {
+        let mut ctx = ctx(
+            classes(
+                jiff::Timestamp::now(),
+                &["party"],
+                Care::Census(Arc::from([])),
+                None,
+            ),
+            &lineage,
+        );
+        ctx.offset = Some(20 * round);
+        let bound = prepared(&shapes, &ir, &Params::default(), &ctx);
+        assert!(
+            bound
+                .sql
+                .contains("row_number() OVER ( ORDER BY \"e0\".\"id\" ASC)"),
+            "{}",
+            bound.sql
+        );
+    }
+    assert_eq!(
+        shapes.bound(),
+        3,
+        "the third request on binds from the shape"
+    );
+}

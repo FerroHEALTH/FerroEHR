@@ -28,7 +28,8 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::error::{ServiceError, Violation};
-use crate::party_binding::grants::caller::care_of::{self, CarerKind};
+use crate::party_binding::grants::caller::care_of::CarerKind;
+use crate::party_binding::grants::caller::care_ref;
 use crate::party_binding::grants::caller::is_care;
 use crate::versioning::Kind;
 use crate::versioning::tree::Tree;
@@ -237,7 +238,7 @@ pub(crate) fn of_body<'a, T: Tree<'a>>(kind: Kind, body: T) -> Vec<Reference> {
             }
             // NOTE: a covers_for that does not read is the care fact's refusal (care_of::read).
             if is_care(body)
-                && let Ok(Some(cover)) = care_of::covers_for(body)
+                && let Ok(Some(cover)) = care_ref::covers_for(body)
             {
                 out.push(Reference {
                     container: Some(cover.carer),

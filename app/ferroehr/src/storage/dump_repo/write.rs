@@ -20,24 +20,34 @@ use crate::storage::dump_repo::{
 use crate::storage::error::StorageError;
 use crate::storage::version_repo;
 
-/// The commit-audit insert both waves share, completed by its conflict rule.
-const INSERT_AUDITS: &str = "INSERT INTO commit_audit (id, time_committed, system_id, change_type, \
-     description, committer, attestation) \
-     SELECT t.id, t.time_committed::timestamptz, t.system_id, t.change_type, \
-     t.description, t.committer, t.attestation \
-     FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::jsonb[], \
-     $6::jsonb[], $7::jsonb[]) \
-     AS t(id, time_committed, system_id, change_type, description, committer, attestation)";
+/// The commit-audit insert both waves share, completed by its conflict rule:
+/// each audit's shared part holds its system id alone, and its description
+/// and committer stay on its own row, as an archive says nothing of the
+/// caller that committed it (#6395).
+macro_rules! insert_audits {
+    () => {
+        "WITH t AS ( \
+         SELECT * FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::jsonb[], \
+         $6::jsonb[], $7::jsonb[], $8::text[]) \
+         AS t(id, time_committed, system_id, change_type, description, committer, attestation, \
+         part)), \
+         s AS (INSERT INTO commit_audit_shared (digest, system_id) \
+         SELECT DISTINCT sha256(convert_to(t.part, 'UTF8')), t.system_id FROM t \
+         ON CONFLICT (digest) DO SELECT RETURNING id, digest) \
+         INSERT INTO commit_audit_facts (id, time_committed, shared, change_type, description, \
+         committer, attestation) \
+         SELECT t.id, t.time_committed::timestamptz, s.id, t.change_type, t.description, \
+         t.committer, t.attestation \
+         FROM t JOIN s ON s.digest = sha256(convert_to(t.part, 'UTF8'))"
+    };
+}
+
+/// The commit-audit insert refusing an id already stored.
+const INSERT_AUDITS: &str = insert_audits!();
 
 /// [`INSERT_AUDITS`] leaving an id already stored as it is.
-const INSERT_AUDITS_KEEPING_STORED: &str = "INSERT INTO commit_audit (id, time_committed, system_id, \
-     change_type, description, committer, attestation) \
-     SELECT t.id, t.time_committed::timestamptz, t.system_id, t.change_type, \
-     t.description, t.committer, t.attestation \
-     FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::jsonb[], \
-     $6::jsonb[], $7::jsonb[]) \
-     AS t(id, time_committed, system_id, change_type, description, committer, attestation) \
-     ON CONFLICT (id) DO NOTHING";
+const INSERT_AUDITS_KEEPING_STORED: &str =
+    concat!(insert_audits!(), " ON CONFLICT (id) DO NOTHING");
 
 /// What a commit-audit insert does with an id already stored.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -75,6 +85,10 @@ pub async fn insert_audits(
     let descriptions: Vec<Option<&Value>> = audits.iter().map(|a| a.description.as_ref()).collect();
     let committers: Vec<&Value> = audits.iter().map(|a| &a.committer).collect();
     let attestations: Vec<Option<&Value>> = audits.iter().map(|a| a.attestation.as_ref()).collect();
+    let parts: Vec<String> = audits
+        .iter()
+        .map(|a| version_repo::audit_shared::SharedPart::new(&a.system_id, None, None).content())
+        .collect();
     sqlx::query(sql)
         .bind(ids)
         .bind(times)
@@ -83,6 +97,7 @@ pub async fn insert_audits(
         .bind(descriptions)
         .bind(committers)
         .bind(attestations)
+        .bind(parts)
         .execute(tx)
         .await?;
     Ok(())

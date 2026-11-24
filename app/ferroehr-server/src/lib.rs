@@ -881,6 +881,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         .context("mirroring the audit category register into the retention register")?;
     // NOTE: EHDS Art. 3(3), a hold stops withholding at its limit; this only writes the record.
     service.spawn_access_delay_expiries(Duration::from_secs(60));
+    let upkeep = service.spawn_upkeep();
     pmir::start(&service, &config, &mut indicators).context("starting the PMIR consumer")?;
     let listener_sessions = policy::listen(&service, &config, config.pix.is_some()).await?;
     tracing::info!(
@@ -982,6 +983,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     support_watch.abort();
     outbox_prune.abort();
     parent_statistics.abort();
+    upkeep.abort();
     if let Some(handle) = usage_report {
         handle.abort();
     }

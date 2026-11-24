@@ -14,7 +14,8 @@
 use serde_json::Value;
 use uuid::Uuid;
 
-use super::super::care_of::{CareFact, Cover, Episode};
+use super::super::care_of::CareFact;
+use super::super::care_ref::{Cover, Episode};
 use super::super::{CallerFact, FactValue};
 use super::{FACT_TEXT, HOLDER_VERSION, WRITER};
 use crate::party_binding::grants::derive::Bound;

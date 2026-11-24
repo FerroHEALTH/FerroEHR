@@ -291,9 +291,16 @@ in [Security](../security.md#assurance-level-and-the-natural-person-on-patient-d
 minimum = "substantial"
 
 [authz.assurance.levels]
+"http://eidas.europa.eu/LoA/low" = "low"
 "http://eidas.europa.eu/LoA/substantial" = "substantial"
 "http://eidas.europa.eu/LoA/high" = "high"
 ```
+
+These are the values FerroSMART writes into `acr`. Behind FerroSMART, set
+the floor to substantial at least: the xShare Yellow Button that FerroBRIDGE
+serves reads the patient's record with their own exchanged token, which
+this gate holds to the floor
+([Behind FerroSMART](../behind-ferrosmart.md#the-patients-own-token-through-ferrobridge)).
 
 Boot refuses a `minimum` with an empty `levels` table or with no value mapped at
 or above it (every patient-data request would be refused), a blank `claim`

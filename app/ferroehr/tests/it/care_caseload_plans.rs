@@ -133,8 +133,8 @@ fn clone_statements() -> [String; 3] {
     ]
 }
 
-/// Seeds the EHRs, their compositions and the care projection, and takes
-/// the statistics.
+/// Seeds the EHRs, their compositions and the care projection, vacuums them
+/// all-visible, and takes the statistics.
 async fn seed(svc: &FerroEhrService, pool: &PgPool) {
     let prototype_ehr = create_ehr(svc).await;
     let prototype = svc
@@ -203,11 +203,7 @@ async fn seed(svc: &FerroEhrService, pool: &PgPool) {
         .expect("seed the care projection");
         from = to + 1;
     }
-    for relation in ["ehr", "vo_head", "version_hot", "node_hot", "access_care"] {
-        pool.execute(sqlx::AssertSqlSafe(format!("VACUUM {relation}")))
-            .await
-            .expect("vacuum a seeded relation");
-    }
+    all_visible(pool).await;
     pool.execute("ANALYZE")
         .await
         .expect("take the seed's statistics");
@@ -216,6 +212,46 @@ async fn seed(svc: &FerroEhrService, pool: &PgPool) {
     )
     .await
     .expect("analyze the seeded partitioned parents");
+}
+
+/// The seeded relations, whose every page the plans assume all-visible.
+const SEEDED: [&str; 5] = ["ehr", "vo_head", "version_hot", "node_hot", "access_care"];
+
+/// Vacuums the seeded relations until every page of each is all-visible, as
+/// autovacuum leaves a settled store. An index-only scan of the projection
+/// is costed by that fraction, and a snapshot older than the seed, which
+/// another test may hold, keeps a vacuum from setting it (PostgreSQL 18
+/// §24.1.4).
+async fn all_visible(pool: &PgPool) {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+    loop {
+        for relation in SEEDED {
+            pool.execute(sqlx::AssertSqlSafe(format!("VACUUM {relation}")))
+                .await
+                .expect("vacuum a seeded relation");
+        }
+        let behind: Vec<(String, i32, i32)> = sqlx::query_as(
+            "SELECT c.relname::text, c.relpages, c.relallvisible \
+             FROM unnest($1::text[]) AS s(name) \
+             CROSS JOIN LATERAL (SELECT ('clinical.' || s.name)::regclass AS relid \
+                                 UNION SELECT relid \
+                                 FROM pg_partition_tree(('clinical.' || s.name)::regclass)) AS t \
+             JOIN pg_class c ON c.oid = t.relid \
+             WHERE c.relkind = 'r' AND c.relallvisible < c.relpages",
+        )
+        .bind(SEEDED)
+        .fetch_all(pool)
+        .await
+        .expect("read the visibility of the seeded relations");
+        if behind.is_empty() {
+            return;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the seeded relations never became all-visible: {behind:?}"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+    }
 }
 
 /// The care a caller of `team` reads from the projection, on [`DAY`].

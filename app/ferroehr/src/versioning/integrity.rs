@@ -106,9 +106,9 @@ pub(crate) fn sign_version(
 /// The RFC 8785 form a commit signs: the envelope `parts` name, without a
 /// `signature`, joined with `data` (RM common master06 §Digital Signature).
 ///
-/// RFC 8785 §3.2.3 orders the members, so the envelope's and the body are
-/// written one after the other, each from its RM value, and no canonical
-/// value is built of either.
+/// RFC 8785 §3.2.3 orders the members, so the envelope is written from its
+/// RM values and the body is read off its rendering, and no canonical value is
+/// built of either.
 ///
 /// # Errors
 /// The outer error is [`write_original_version`]'s; the inner one is the
@@ -121,25 +121,26 @@ pub(crate) fn signed_form<C: VersionMember, A: VersionMember>(
     if let Err(error) = write_original_version(parts, &mut envelope)? {
         return Ok(Err(error));
     }
-    let joined = match data {
-        Signed::Value(data) if !data.is_null() => envelope.member("data", data),
-        Signed::Typed(data) => envelope.member("data", data),
-        Signed::Void | Signed::Value(_) => Ok(()),
-    };
-    Ok(joined.and_then(|()| envelope.finish()))
+    if let Signed::Rendered(rendered) = data {
+        let written = envelope.member_written("data", |out| {
+            out.reserve(rendered.text().len());
+            rendered.write_canonical(rendered.root(), out)
+        });
+        if let Err(error) = written {
+            return Ok(Err(error));
+        }
+    }
+    Ok(envelope.finish())
 }
 
-/// The `data` a signed version carries: none (a logical delete), a canonical
-/// value, or a typed commit body written into the canonical form straight from
-/// its `Serialize` impl.
+/// The `data` a signed version carries: none (a logical delete), or the
+/// body's one rendering, whose RFC 8785 form is read off its index.
 #[derive(Clone, Copy)]
 pub(crate) enum Signed<'a> {
     /// Void data (RM common master06 §Logical Deletion).
     Void,
-    /// A canonical value.
-    Value(&'a Value),
-    /// A typed commit body.
-    Typed(&'a crate::versioning::body::Body),
+    /// The commit body as rendered for `version.body`.
+    Rendered(&'a crate::storage::render::index::Rendered),
 }
 
 /// Compute the server-generated `VERSION.signature` of the `IMPORTED_VERSION`

@@ -110,8 +110,25 @@ KEYWORDS='SELECT|FROM|WHERE|ORDER[[:space:]]+BY|GROUP[[:space:]]+BY|HAVING|JOIN|
 # its inputs are the two `Domain` constants in the same file and a committed
 # template, and its only consumer is a test that compares the rendering with the
 # committed migrations. Nothing here reaches a connection.
+#
+# `audit_shared.rs` names a statement's shared-part CTEs `s0`, `s1`, … by an
+# index the statement builder counts itself, with no request input, and binds
+# every value; its one `push_str` writes the shared part's JSON text, which is
+# bound as a value, not SQL (#6395).
+#
+# `render/index.rs` and `render/nodes.rs` write JSON text, a body's RFC 8785
+# form and a node row's fragment, which a statement binds as a value.
 EXEMPT='app/ferroehr/src/storage/node_write.rs:push_str(sea_query::Iden::unquoted(&leaf.column))
-app/ferroehr/src/storage/ddl_template.rs:out.push_str(&line.replace(KINDS, &kinds))'
+app/ferroehr/src/storage/ddl_template.rs:out.push_str(&line.replace(KINDS, &kinds))
+app/ferroehr/src/storage/version_repo/audit_shared.rs:text.push_str(piece)
+app/ferroehr/src/storage/version_repo/audit_shared.rs:ELSE id END FROM s{at})
+app/ferroehr/src/storage/version_repo/audit_shared.rs:(SELECT id FROM s{at})
+app/ferroehr/src/storage/render/index.rs:out.push_str(plain)
+app/ferroehr/src/storage/render/index.rs:out.push_str(self.raw_text(id))
+app/ferroehr/src/storage/render/index.rs:out.push_str(literal)
+app/ferroehr/src/storage/render/nodes.rs:out.push_str(body.member_text(kept.member))
+app/ferroehr/src/storage/render/nodes.rs:out.push_str(body.key(kept.member))
+app/ferroehr/src/storage/render/nodes.rs:out.push_str(value)'
 
 collect() {
   if [[ "${1:-}" = "--all" ]]; then
