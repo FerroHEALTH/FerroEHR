@@ -106,6 +106,17 @@ pub struct EhrEntry {
     pub revision: Revision,
 }
 
+/// The entry of an EHR with no settings whose subject is not known, which
+/// every unsettled judgement shares ([`RequestAccess::judge_unsettled`]).
+static UNSETTLED: std::sync::LazyLock<Arc<EhrEntry>> = std::sync::LazyLock::new(|| {
+    Arc::new(EhrEntry {
+        settings: Arc::new(None),
+        subject: None,
+        version: None,
+        revision: Revision::default(),
+    })
+});
+
 /// One EHR's verdict in a request, with what it was judged from.
 #[derive(Debug, Clone)]
 pub struct Judgement {
@@ -566,12 +577,6 @@ impl RequestAccess {
     /// care ground is named. Which roles and paths it holds is not known, so
     /// the care ground names no relationship. Our own design (#5581).
     pub fn judge_unsettled(&self, ehr_id: EhrId) {
-        let entry = EhrEntry {
-            settings: Arc::new(None),
-            subject: None,
-            version: None,
-            revision: Revision::default(),
-        };
         let at = Some(ehr_id);
         let left = self.care_left();
         let cared = self.judge(at, None, &left).admits_any()
@@ -581,7 +586,7 @@ impl RequestAccess {
             (true, Some(tie)) if !self.may_hold_care() => Cared::of(vec![tie]),
             (true, _) => left,
         };
-        let judged = self.judgement_of(ehr_id, &Arc::new(entry), &care);
+        let judged = self.judgement_of(ehr_id, &UNSETTLED, &care);
         self.verdicts
             .lock()
             .unwrap_or_else(PoisonError::into_inner)

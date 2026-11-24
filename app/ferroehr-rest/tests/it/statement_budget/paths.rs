@@ -588,7 +588,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlPopulation,
         conversions: 2,
-        allocations: 2436,
+        allocations: 2431,
         peak_bytes: 158_823,
         round_trips: 2,
         nested: 0,
@@ -668,7 +668,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlMatches,
         conversions: 2,
-        allocations: 3867,
+        allocations: 3863,
         peak_bytes: 192_267,
         round_trips: 3,
         nested: 0,
@@ -698,7 +698,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadVersion,
         conversions: 0,
-        allocations: 997,
+        allocations: 989,
         peak_bytes: 162_800,
         round_trips: 1,
         nested: 1,
