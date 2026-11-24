@@ -173,7 +173,7 @@ impl FerroEhrService {
             .commit_direct_create(
                 (Kind::PartyRelationship, None),
                 request,
-                "PARTY_RELATIONSHIP",
+                "PARTY_RELATIONSHIP creation",
                 |body, envelope| Change::create(Kind::PartyRelationship, body, None, envelope),
             )
             .await?;
@@ -214,7 +214,12 @@ impl FerroEhrService {
     ) -> Result<ServiceResponse, ServiceError> {
         let addressed = ((Kind::PartyRelationship, vo_id), None);
         let (committed, served) = self
-            .commit_direct_update(addressed, precondition, request, "PARTY_RELATIONSHIP")
+            .commit_direct_update(
+                addressed,
+                precondition,
+                request,
+                "PARTY_RELATIONSHIP update",
+            )
             .await?;
         // Metadata + in-hand body, unless the commit rewrote it: then the
         // stored form is read back.

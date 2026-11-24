@@ -309,8 +309,9 @@ impl FromStr for RmPath {
     }
 }
 
-/// Splits a path body on top-level `/`, `//` as empty segments; an
-/// unterminated `[` gives `Err(index)` of its segment.
+/// Splits a path body on top-level `/`, `//` as empty segments, reading a
+/// quoted literal inside a predicate as text; an unterminated `[` gives
+/// `Err(index)` of its segment.
 fn split_top_level(body: &str) -> Result<Vec<&str>, usize> {
     let bytes = body.as_bytes();
     let (mut i, n) = (0, bytes.len());
@@ -318,8 +319,11 @@ fn split_top_level(body: &str) -> Result<Vec<&str>, usize> {
     while i <= n {
         let start = i;
         let mut depth = 0usize;
+        let mut quoted = false;
         while let Some(&b) = bytes.get(i) {
             match b {
+                b'\'' if depth > 0 => quoted = quote_toggles(quoted, bytes.get(i + 1).copied()),
+                _ if quoted => {}
                 b'[' => depth += 1,
                 b']' => depth = depth.saturating_sub(1),
                 b'/' if depth == 0 => break,
@@ -450,7 +454,7 @@ fn parse_segment(seg: &str, index: usize) -> Result<PathSegment, PathError> {
 fn parse_predicate(inner: &str) -> Result<Predicate, PathError> {
     let mut predicate = Predicate::default();
     // `[at0001, 'standing']` — the comma shortcut binds the whole remainder.
-    let (head, comma_name) = match inner.split_once(',') {
+    let (head, comma_name) = match split_unquoted(inner, ",") {
         Some((h, rest)) => (h.trim(), Some(rest.trim())),
         None => (inner.trim(), None),
     };
@@ -463,17 +467,37 @@ fn parse_predicate(inner: &str) -> Result<Predicate, PathError> {
         apply_conjunct(head, &mut predicate)?;
         return Ok(predicate);
     }
-    // Split on ` and ` / ` AND ` conjunctions.
     let mut rest = head;
-    while let Some((left, right)) = rest
-        .split_once(" and ")
-        .or_else(|| rest.split_once(" AND "))
+    while let Some((left, right)) = [" and ", " AND "]
+        .into_iter()
+        .filter_map(|conjunction| split_unquoted(rest, conjunction))
+        .min_by_key(|(left, _)| left.len())
     {
         apply_conjunct(left.trim(), &mut predicate)?;
         rest = right.trim();
     }
     apply_conjunct(rest.trim(), &mut predicate)?;
     Ok(predicate)
+}
+
+/// `s` split around its first `separator` outside a single-quoted literal.
+fn split_unquoted<'a>(s: &'a str, separator: &str) -> Option<(&'a str, &'a str)> {
+    let mut quoted = false;
+    for (at, ch) in s.char_indices() {
+        if ch == '\'' {
+            quoted = quote_toggles(quoted, s.as_bytes().get(at + 1).copied());
+        } else if !quoted && s.get(at..).is_some_and(|tail| tail.starts_with(separator)) {
+            return Some((s.get(..at)?, s.get(at + separator.len()..)?));
+        }
+    }
+    None
+}
+
+/// Whether a literal is open after a `'` followed by `next`, given it was
+/// open before (`quoted`). A literal closes only where its quote ends a
+/// token, so an apostrophe inside a name (`'Patient's gender'`) is text.
+fn quote_toggles(quoted: bool, next: Option<u8>) -> bool {
+    !quoted || !matches!(next, None | Some(b' ' | b'\t' | b']' | b',' | b')'))
 }
 
 /// Interpret one predicate conjunct.
@@ -1239,6 +1263,46 @@ mod tests {
             "/data/events[some path = 'x']".parse::<RmPath>(),
             Err(PathError::UnsupportedPredicate(_))
         ));
+    }
+
+    /// A quoted literal is one value: an ` and `, a comma, a `/`, a bracket or
+    /// an apostrophe inside it splits nothing (BASE `master11-paths`
+    /// §"Predicate").
+    #[test]
+    fn a_quoted_literal_splits_no_predicate() {
+        let p = path("/data/events[name/value='Blood and urine']/data");
+        assert_eq!(p.segments.len(), 3);
+        assert_eq!(
+            p.segments[1].predicate.name_value.as_deref(),
+            Some("Blood and urine")
+        );
+        let q = path("/data/events[at0006 AND name/value='Blood AND urine']");
+        assert_eq!(
+            q.segments[1].predicate.archetype_node_id.as_deref(),
+            Some("at0006")
+        );
+        assert_eq!(
+            q.segments[1].predicate.name_value.as_deref(),
+            Some("Blood AND urine")
+        );
+        let r = path("/data/events[name/value='a, b']");
+        assert_eq!(r.segments[1].predicate.name_value.as_deref(), Some("a, b"));
+        let apostrophe = path("/items[at0001 and name/value='Patient's gender']/value");
+        assert_eq!(apostrophe.segments.len(), 2);
+        assert_eq!(
+            apostrophe.segments[0].predicate.archetype_node_id.as_deref(),
+            Some("at0001")
+        );
+        assert_eq!(
+            apostrophe.segments[0].predicate.name_value.as_deref(),
+            Some("Patient's gender")
+        );
+        let s = path("/items[name/value='a/b [x]']/value");
+        assert_eq!(s.segments.len(), 2);
+        assert_eq!(
+            s.segments[0].predicate.name_value.as_deref(),
+            Some("a/b [x]")
+        );
     }
 
     /// The parenthesised uniqueness modifier is refused.

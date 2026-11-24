@@ -1,0 +1,232 @@
+== answer
+{
+  "_type": "CONTRIBUTION",
+  "uid": {
+    "_type": "HIER_OBJECT_ID",
+    "value": "<uuid#0>"
+  },
+  "audit": {
+    "_type": "AUDIT_DETAILS",
+    "system_id": "localhost",
+    "time_committed": {
+      "_type": "DV_DATE_TIME",
+      "value": "<instant#1>"
+    },
+    "change_type": {
+      "_type": "DV_CODED_TEXT",
+      "value": "creation",
+      "defining_code": {
+        "_type": "CODE_PHRASE",
+        "terminology_id": {
+          "_type": "TERMINOLOGY_ID",
+          "value": "openehr"
+        },
+        "code_string": "249"
+      }
+    },
+    "description": {
+      "_type": "DV_CODED_TEXT",
+      "value": "batch",
+      "defining_code": {
+        "_type": "CODE_PHRASE",
+        "terminology_id": {
+          "_type": "TERMINOLOGY_ID",
+          "value": "local"
+        },
+        "code_string": "at0001"
+      }
+    },
+    "committer": {
+      "_type": "PARTY_IDENTIFIED",
+      "name": "dr.jansen",
+      "identifiers": [
+        {
+          "_type": "DV_IDENTIFIER",
+          "issuer": "https://idp.example",
+          "id": "dr.jansen",
+          "type": "oauth2"
+        }
+      ]
+    }
+  },
+  "versions": [
+    {
+      "_type": "OBJECT_REF",
+      "namespace": "local",
+      "type": "COMPOSITION",
+      "id": {
+        "_type": "OBJECT_VERSION_ID",
+        "value": "<uuid#2>::localhost::1"
+      }
+    }
+  ]
+}
+== version
+{
+  "_type": "ORIGINAL_VERSION",
+  "uid": {
+    "_type": "OBJECT_VERSION_ID",
+    "value": "<uuid#2>::localhost::1"
+  },
+  "contribution": {
+    "_type": "OBJECT_REF",
+    "namespace": "local",
+    "type": "CONTRIBUTION",
+    "id": {
+      "_type": "HIER_OBJECT_ID",
+      "value": "<uuid#0>"
+    }
+  },
+  "commit_audit": {
+    "_type": "AUDIT_DETAILS",
+    "system_id": "localhost",
+    "time_committed": {
+      "_type": "DV_DATE_TIME",
+      "value": "<instant#1>"
+    },
+    "change_type": {
+      "_type": "DV_CODED_TEXT",
+      "value": "creation",
+      "defining_code": {
+        "_type": "CODE_PHRASE",
+        "terminology_id": {
+          "_type": "TERMINOLOGY_ID",
+          "value": "openehr"
+        },
+        "code_string": "249"
+      }
+    },
+    "description": {
+      "_type": "DV_TEXT",
+      "value": "Imported from the ward system"
+    },
+    "committer": {
+      "_type": "PARTY_IDENTIFIED",
+      "name": "dr.jansen",
+      "identifiers": [
+        {
+          "_type": "DV_IDENTIFIER",
+          "issuer": "https://idp.example",
+          "id": "dr.jansen",
+          "type": "oauth2"
+        }
+      ]
+    }
+  },
+  "lifecycle_state": {
+    "_type": "DV_CODED_TEXT",
+    "value": "complete",
+    "defining_code": {
+      "_type": "CODE_PHRASE",
+      "terminology_id": {
+        "_type": "TERMINOLOGY_ID",
+        "value": "openehr"
+      },
+      "code_string": "532"
+    }
+  },
+  "data": {
+    "_type": "COMPOSITION",
+    "name": {
+      "_type": "DV_TEXT",
+      "value": "c"
+    },
+    "archetype_node_id": "openEHR-EHR-COMPOSITION.encounter.v1",
+    "uid": {
+      "_type": "OBJECT_VERSION_ID",
+      "value": "<uuid#2>::localhost::1"
+    },
+    "archetype_details": {
+      "_type": "ARCHETYPED",
+      "archetype_id": {
+        "_type": "ARCHETYPE_ID",
+        "value": "openEHR-EHR-COMPOSITION.encounter.v1"
+      },
+      "rm_version": "1.2.0"
+    },
+    "language": {
+      "_type": "CODE_PHRASE",
+      "terminology_id": {
+        "_type": "TERMINOLOGY_ID",
+        "value": "ISO_639-1"
+      },
+      "code_string": "en"
+    },
+    "territory": {
+      "_type": "CODE_PHRASE",
+      "terminology_id": {
+        "_type": "TERMINOLOGY_ID",
+        "value": "ISO_3166-1"
+      },
+      "code_string": "NL"
+    },
+    "category": {
+      "_type": "DV_CODED_TEXT",
+      "value": "event",
+      "defining_code": {
+        "_type": "CODE_PHRASE",
+        "terminology_id": {
+          "_type": "TERMINOLOGY_ID",
+          "value": "openehr"
+        },
+        "code_string": "433"
+      }
+    },
+    "composer": {
+      "_type": "PARTY_IDENTIFIED",
+      "name": "conformance tester"
+    }
+  },
+  "signature": "<signature>"
+}
+== revision history
+{
+  "_type": "REVISION_HISTORY",
+  "items": [
+    {
+      "_type": "REVISION_HISTORY_ITEM",
+      "version_id": {
+        "_type": "OBJECT_VERSION_ID",
+        "value": "<uuid#2>::localhost::1"
+      },
+      "audits": [
+        {
+          "_type": "AUDIT_DETAILS",
+          "system_id": "localhost",
+          "time_committed": {
+            "_type": "DV_DATE_TIME",
+            "value": "<instant#1>"
+          },
+          "change_type": {
+            "_type": "DV_CODED_TEXT",
+            "value": "creation",
+            "defining_code": {
+              "_type": "CODE_PHRASE",
+              "terminology_id": {
+                "_type": "TERMINOLOGY_ID",
+                "value": "openehr"
+              },
+              "code_string": "249"
+            }
+          },
+          "description": {
+            "_type": "DV_TEXT",
+            "value": "Imported from the ward system"
+          },
+          "committer": {
+            "_type": "PARTY_IDENTIFIED",
+            "name": "dr.jansen",
+            "identifiers": [
+              {
+                "_type": "DV_IDENTIFIER",
+                "issuer": "https://idp.example",
+                "id": "dr.jansen",
+                "type": "oauth2"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

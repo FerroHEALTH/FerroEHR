@@ -318,7 +318,12 @@ CREATE TABLE access_care (
     -- The relationship's care_role, which a rule's care roles are matched
     -- against inside a query's statement.
     role_terminology text   NOT NULL,
-    role_code        text   NOT NULL
+    role_code        text   NOT NULL,
+    -- The SHA-256 key of the episode of care the relationship is scoped to:
+    -- its issuer, an octet 0x00 and its id; NULL when it names none.
+    episode_digest   bytea
+        CONSTRAINT ck_access_care_episode_digest
+            CHECK (episode_digest IS NULL OR octet_length(episode_digest) = 32)
 );
 CREATE INDEX ix_access_care_person ON access_care (person_id);
 -- The check: one probe per EHR, by its subject digest and the caller's
@@ -329,7 +334,7 @@ CREATE INDEX ix_access_care_subject ON access_care (subject_digest, carer_id);
 -- so a query over a caller's caseload starts from the caller's rows.
 CREATE INDEX ix_access_care_caseload ON access_care (carer_id, role_terminology, role_code)
     INCLUDE (subject_digest, care_from, care_until, provider_issuer, provider_id, writer_id,
-             self_declared);
+             self_declared, episode_digest);
 COMMENT ON TABLE access_care IS 'The care relationships of the party domain, one row per subject reference and relationship, keyed by digest; written only by the care projector. Our own design.';
 COMMENT ON COLUMN access_care.subject_digest IS 'The SHA-256 digest of one subject reference that names the PERSON: its own reference in this CDR''s namespace, or a record subject it declares. Our own design.';
 COMMENT ON COLUMN access_care.carer_id IS 'The carer of the relationship, by its container: a PERSON, a ROLE, a GROUP or an ORGANISATION. Our own design.';
@@ -340,6 +345,7 @@ COMMENT ON COLUMN access_care.provider_issuer IS 'The issuer of the provider DV_
 COMMENT ON COLUMN access_care.provider_id IS 'The id of the provider DV_IDENTIFIER in whose care the relationship is. Our own design.';
 COMMENT ON COLUMN access_care.writer_id IS 'The PERSON or client ACTOR that wrote the relationship, by its container; NULL when its committer names none. Our own design.';
 COMMENT ON COLUMN access_care.self_declared IS 'Whether the relationship''s basis is self_declared. Our own design.';
+COMMENT ON COLUMN access_care.episode_digest IS 'The SHA-256 key of the episode of care the relationship is scoped to, over its issuer, an octet 0x00 and its id; NULL when it names none. Our own design.';
 
 -- The snapshot of the party domain the rows were read under, and the check
 -- digest of the key they were digested under; NULL before the first run.

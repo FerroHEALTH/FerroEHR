@@ -20,6 +20,7 @@
               (#1694)"
 )]
 
+mod compiled;
 mod declared;
 pub(crate) mod leaf;
 mod name_type;
@@ -30,16 +31,16 @@ pub(crate) mod subtype;
 mod unique;
 
 use indexmap::IndexMap;
-use openehr_rm::v1_2::paths::{PathSegment, is_archetype_root_node_id};
+use openehr_rm::v1_2::paths::is_archetype_root_node_id;
 use serde_json::{Map, Value};
 
 use crate::flat::instance::Instance;
 use crate::rm_instance::{ValidationKind, ValidationMessage};
 
 use crate::flat::path;
-use crate::flat::rmpath;
 use crate::flat::sim::{SimDocument, SimNode, is_present};
 use crate::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
+use compiled::{Compiled, Frame, GroupPlan, Members, Selector};
 use declared::rm_declares_attribute;
 use plan::{ChildGroup, NodeWalk};
 
@@ -564,15 +565,19 @@ impl Validator {
             built = NodeWalk::build(wt);
             &built
         };
-        for group in &plan.child_groups {
-            self.check_group(instance, wt, group, &plan.child_names, &plan.name_fallback);
+        let compiled = &plan.compiled;
+        let mut frame = Frame::new(compiled);
+        for (group, compiled_group) in plan.child_groups.iter().zip(&compiled.groups) {
+            if let Some(compiled_group) = compiled_group {
+                self.check_group(instance, wt, group, compiled_group, &mut frame, compiled);
+            }
         }
 
-        self.check_cardinalities(instance, wt, plan);
-        self.check_existence(instance, wt, plan);
+        self.check_cardinalities(instance, wt, plan, &mut frame);
+        self.check_existence(instance, wt, plan, &mut frame);
         self.check_prohibited(instance, wt);
-        self.check_slots(instance, plan);
-        self.check_closure(instance, wt, plan);
+        self.check_slots(instance, plan, &mut frame);
+        self.check_closure(instance, wt, plan, &mut frame);
     }
 
     /// Closed-archetype walk: an archetyped child under a constrained attribute
@@ -586,17 +591,15 @@ impl Validator {
         instance: I,
         wt: &WebTemplateNode,
         plan: &NodeWalk,
+        frame: &mut Frame<'i, I>,
     ) {
-        for (ca, segs) in wt.closed_attributes.iter().zip(&plan.closed) {
-            let Some(segments) = segs else {
+        let paths = plan.closed.iter().zip(&plan.compiled.closed);
+        for (ca, (segs, prefix)) in wt.closed_attributes.iter().zip(paths) {
+            let (Some(last), Some(prefix)) = (segs.as_deref().and_then(<[_]>::last), *prefix)
+            else {
                 continue;
             };
-            let Some((last, intermediate)) = segments.split_last() else {
-                continue;
-            };
-            for container in
-                &rmpath::navigate_matched(&[instance], intermediate, &plan.name_fallback)
-            {
+            for container in frame.containers(&plan.compiled, instance, prefix) {
                 let slot_counts = self.match_closed_children(*container, ca, &last.attribute);
                 self.check_slot_occurrences(ca, &last.attribute, &slot_counts);
             }
@@ -624,23 +627,23 @@ impl Validator {
                 continue;
             };
             let ct = child.rm_type().unwrap_or("");
-            let id_types: Vec<&str> = ca
-                .allowed_ids
-                .iter()
-                .zip(&ca.allowed_rm_types)
-                .filter(|(a, _)| *a == nid)
-                .map(|(_, t)| t.as_str())
-                .collect();
-            if !id_types.is_empty() {
+            let id_types = || {
+                ca.allowed_ids
+                    .iter()
+                    .zip(&ca.allowed_rm_types)
+                    .filter(move |(a, _)| *a == nid)
+                    .map(|(_, t)| t.as_str())
+            };
+            if id_types().next().is_some() {
                 // NOTE: AOM 1.4 `c_object.adoc` `rm_type_name`, "Reference model type that this
                 // node corresponds to": a child the id matches must conform to that type too.
-                if !ct.is_empty() && !id_types.iter().any(|t| subtype::conforms(ct, t)) {
+                if !ct.is_empty() && !id_types().any(|t| subtype::conforms(ct, t)) {
                     self.push(
                         &ca.path,
                         format!(
                             "node '{nid}' under '{attribute}' is a {ct}, which conforms to \
                              none of the RM types the template allows there [{}]",
-                            id_types.join(", ")
+                            id_types().collect::<Vec<_>>().join(", ")
                         ),
                         ValidationKind::WrongType,
                     );
@@ -706,15 +709,19 @@ impl Validator {
 
     /// Type conformance for the wrapper constraints the compactor hoisted away
     /// (`ITEM_*`, `HISTORY`, single `EVENT`; master16 "Class not allowed").
-    fn check_slots<'i, I: Instance<'i>>(&mut self, instance: I, plan: &NodeWalk) {
-        for sg in &plan.slot_groups {
-            let Some((last, intermediate)) = sg.segments.split_last() else {
+    fn check_slots<'i, I: Instance<'i>>(
+        &mut self,
+        instance: I,
+        plan: &NodeWalk,
+        frame: &mut Frame<'i, I>,
+    ) {
+        for (sg, compiled) in plan.slot_groups.iter().zip(&plan.compiled.slots) {
+            let Some((prefix, selector)) = compiled else {
                 continue;
             };
-            let containers =
-                rmpath::navigate_matched(&[instance], intermediate, &plan.name_fallback);
-            for container in &containers {
-                for node in select_group_children(*container, last, &plan.slot_names) {
+            for container in frame.containers(&plan.compiled, instance, *prefix) {
+                let members = Members::of(*container, selector.attribute());
+                for node in selector.select(&members) {
                     let Some(it) = node.rm_type() else {
                         continue;
                     };
@@ -740,20 +747,20 @@ impl Validator {
         instance: I,
         wt: &WebTemplateNode,
         plan: &NodeWalk,
+        frame: &mut Frame<'i, I>,
     ) {
         // Existence is a lower-bound (mandatory-presence) constraint — relaxed
         // away for a `553|incomplete|` commit (master06 §"Incomplete Content").
         if self.relax_lower_bounds {
             return;
         }
-        for (ex, segs) in wt.existence.iter().zip(&plan.existence) {
+        let paths = plan.existence.iter().zip(&plan.compiled.existence);
+        for (ex, (segs, prefix)) in wt.existence.iter().zip(paths) {
             if ex.min < 1 {
                 continue;
             }
-            let Some(segments) = segs else {
-                continue;
-            };
-            let Some((last, intermediate)) = segments.split_last() else {
+            let (Some(last), Some(prefix)) = (segs.as_deref().and_then(<[_]>::last), *prefix)
+            else {
                 continue;
             };
             // An attribute no RM class declares cannot be present; reported by
@@ -761,10 +768,7 @@ impl Validator {
             if !rm_declares_attribute(&last.attribute) {
                 continue;
             }
-            // Navigate the intermediate segments to the container node(s).
-            let containers =
-                rmpath::navigate_matched(&[instance], intermediate, &plan.name_fallback);
-            for container in &containers {
+            for container in frame.containers(&plan.compiled, instance, prefix) {
                 if presence::attr_absent(*container, &last.attribute) {
                     self.push(
                         ex.path.clone(),
@@ -783,57 +787,56 @@ impl Validator {
     /// occurrence-check it, then recurse into each matched instance.
     #[expect(
         clippy::indexing_slicing,
-        reason = "`group.members` holds indices into `wt_parent.children` recorded by `NodeWalk::build` over that same child vector, `members` is non-empty for any recorded group (so `members[0]` exists), and `identity_idx` is an `rposition`/`len() - 1` over `segments` (returned early when empty), so every index and range here is in bounds by construction"
+        reason = "`group.members` holds indices into `wt_parent.children` recorded by `NodeWalk::build` over that same child vector, `members` is non-empty for any recorded group, and `compiled.identity` is an index into the non-empty `group.segments` it was compiled from, so every index and range here is in bounds by construction"
     )]
     fn check_group<'i, I: Instance<'i>>(
         &mut self,
         parent: I,
         wt_parent: &WebTemplateNode,
         group: &ChildGroup,
-        names: &SiblingNameIndex,
-        name_fallback: &rmpath::NameFallback,
+        compiled: &GroupPlan,
+        frame: &mut Frame<'i, I>,
+        node_plan: &Compiled,
     ) {
-        // An empty slice means the child path does not extend the parent's.
-        let segments = &group.segments;
-        if segments.is_empty() {
-            return;
-        }
-        let members: Vec<&WebTemplateNode> = group
-            .members
-            .iter()
-            .map(|&i| &wt_parent.children[i])
-            .collect();
-        let first = members[0];
-        let identity_idx = identity_index(segments);
-        let raw_id_seg = &segments[identity_idx];
-        let trailing = &segments[identity_idx + 1..];
-        let identity_is_locatable = !trailing.is_empty() || is_locatable(&first.rm_type);
-        let structural_id_seg = structural_identity(raw_id_seg, identity_is_locatable);
-        let id_seg: &PathSegment = structural_id_seg.as_ref().unwrap_or(raw_id_seg);
-
-        // Navigate the intermediate segments to the container node(s).
-        let containers =
-            rmpath::navigate_matched(&[parent], &segments[..identity_idx], name_fallback);
+        let first = &wt_parent.children[group.members[0]];
+        let several: Vec<&WebTemplateNode>;
+        let members: &[&WebTemplateNode] = if let [_] = group.members.as_slice() {
+            std::slice::from_ref(&first)
+        } else {
+            several = group
+                .members
+                .iter()
+                .map(|&i| &wt_parent.children[i])
+                .collect();
+            &several
+        };
+        let trailing = &group.segments[compiled.identity + 1..];
+        let identity_is_locatable = !trailing.is_empty() || compiled.is_locatable(&first.rm_type);
+        let selector = if identity_is_locatable {
+            &compiled.raw
+        } else {
+            &compiled.structural
+        };
 
         // Occurrences apply only to an archetype-node-identified LOCATABLE; plain
         // RM attributes follow RM cardinality.
         let occ_applies = identity_is_locatable
-            && id_seg.predicate.archetype_node_id.is_some()
+            && selector.has_id()
             && !members.iter().any(|c| c.in_context == Some(true));
-        let (group_min, group_max) = group_occurrences(&members);
+        let (group_min, group_max) = group_occurrences(members);
 
-        for container in &containers {
-            let matched = select_group_children(*container, id_seg, names);
+        for container_members in frame.members(node_plan, parent, compiled.source) {
+            let matched = selector.select(container_members);
             if occ_applies {
                 self.emit_occurrences(&first.aql_path, group_min, group_max, matched.len());
             }
             for node in matched {
-                self.walk_group_targets(node, trailing, &members, name_fallback);
+                self.walk_group_targets(node, &compiled.trailing, members);
                 if let [value] = trailing
                     && value.attribute == "value"
                     && value.predicate.is_empty()
                 {
-                    for member in &members {
+                    for member in members {
                         self.check_null_constraints(node, &member.null_constraints);
                         self.check_element_existence(node, member);
                         if let Some(element_path) = member.aql_path.strip_suffix("/value") {
@@ -899,11 +902,12 @@ impl Validator {
     fn walk_group_targets<'i, I: Instance<'i>>(
         &mut self,
         node: I,
-        trailing: &[PathSegment],
+        trailing: &[Selector],
         members: &[&WebTemplateNode],
-        name_fallback: &rmpath::NameFallback,
     ) {
-        for target in rmpath::navigate_matched(&[node], trailing, name_fallback) {
+        let mut targets = Vec::new();
+        compiled::reach(node, trailing, &mut targets);
+        for target in targets {
             match members {
                 [only] => self.walk(target, only),
                 _ => self.visit_choice(target, members),
@@ -1019,19 +1023,17 @@ impl Validator {
         instance: I,
         wt: &WebTemplateNode,
         plan: &NodeWalk,
+        frame: &mut Frame<'i, I>,
     ) {
-        for (card, segs) in wt.card_all.iter().zip(&plan.cardinalities) {
-            let Some(segments) = segs else {
-                continue;
-            };
-            let Some((last, intermediate)) = segments.split_last() else {
+        let paths = plan.cardinalities.iter().zip(&plan.compiled.cardinalities);
+        for (card, (segs, prefix)) in wt.card_all.iter().zip(paths) {
+            let (Some(last), Some(prefix)) = (segs.as_deref().and_then(<[_]>::last), *prefix)
+            else {
                 continue;
             };
             // AOM 1.4 §cardinality applies only when the attribute is present; absence is
             // `C_ATTRIBUTE.existence`'s concern.
-            let containers =
-                rmpath::navigate_matched(&[instance], intermediate, &plan.name_fallback);
-            for container in &containers {
+            for container in frame.containers(&plan.compiled, instance, prefix) {
                 if !container.is_present(&last.attribute) {
                     continue;
                 }
@@ -1077,58 +1079,6 @@ impl Validator {
 // RM-path parsing and navigation are [`openehr_rm::v1_2::paths`], reached via
 // [`crate::flat::rmpath`]; only the validation-specific checks live here.
 
-/// Select the instance children a sibling group claims from `container`,
-/// routing same-`archetype_node_id` siblings by `name` (RM common
-/// `master03-archetyped_package.adoc` §"The `LOCATABLE` class"; BASE
-/// `master11-paths.adoc` §"Using a Name-based Predicate").
-///
-/// A name-qualified sibling of a name-differentiated identity matches strictly,
-/// the unqualified one takes the residue
-/// ([`rmpath::select_children_excluding_names`]), and an identity absent from
-/// `names` matches with the id-only fallback on.
-fn select_group_children<'i, I: Instance<'i>>(
-    container: I,
-    id_seg: &PathSegment,
-    names: &SiblingNameIndex,
-) -> Vec<I> {
-    let claimed = id_seg
-        .predicate
-        .archetype_node_id
-        .as_ref()
-        .and_then(|id| names.get(&(id_seg.attribute.clone(), id.clone())));
-    match (id_seg.predicate.name_value.as_ref(), claimed) {
-        (Some(_), Some(_)) => rmpath::select_children_matched(container, id_seg, false),
-        (None, Some(claimed)) => {
-            rmpath::select_children_excluding_names(container, id_seg, claimed)
-        }
-        (_, None) => rmpath::select_children_matched(container, id_seg, true),
-    }
-}
-
-/// The index of the group's identity segment: the last segment carrying a
-/// predicate, else the last segment.
-fn identity_index(segments: &[PathSegment]) -> usize {
-    segments
-        .iter()
-        .rposition(|s| !s.predicate.is_empty())
-        .unwrap_or(segments.len() - 1)
-}
-
-/// The predicate-stripped identity segment for a node matched by attribute
-/// position, since only `LOCATABLE` carries `archetype_node_id` (RM
-/// `org.openehr.rm.common.locatable.adoc`). [`None`] means the raw segment applies.
-fn structural_identity(
-    raw_id_seg: &PathSegment,
-    identity_is_locatable: bool,
-) -> Option<PathSegment> {
-    if identity_is_locatable || raw_id_seg.predicate.is_empty() {
-        return None;
-    }
-    let mut stripped = raw_id_seg.clone();
-    stripped.predicate = openehr_rm::v1_2::paths::Predicate::default();
-    Some(stripped)
-}
-
 /// The group's combined occurrence bounds: the loosest of its members'.
 fn group_occurrences(members: &[&WebTemplateNode]) -> (i32, i32) {
     let min = members
@@ -1162,6 +1112,7 @@ mod tests {
     use serde_json::{Value, json};
 
     use super::*;
+    use crate::flat::rmpath;
     use crate::flat::webtemplate::constraint::{
         WebTemplateArchetypeSlot, WebTemplateClosedAttribute, WebTemplateCodeList,
         WebTemplateExistence, WebTemplateSlot,

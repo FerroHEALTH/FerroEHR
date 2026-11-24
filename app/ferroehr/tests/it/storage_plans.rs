@@ -2313,13 +2313,25 @@ async fn seed_stale_parent_statistics(svc: &FerroEhrService, pool: &PgPool) -> V
             .await
             .expect("supersede the read object");
     }
+    // The shared parts of a deployment's many callers, analyzed as autovacuum
+    // would once they were stored (#6395).
+    pool.execute(
+        "INSERT INTO commit_audit_shared (digest, system_id) \
+         SELECT sha256(convert_to('caller ' || n, 'UTF8')), 'elsewhere' \
+         FROM generate_series(1, 5000) n",
+    )
+    .await
+    .expect("seed the other callers' shared parts");
+    pool.execute("ANALYZE commit_audit_shared")
+        .await
+        .expect("give the planner statistics over the shared parts");
     analyze_as_autovacuum(pool).await;
     head.vo_id
 }
 
 /// The reads of [`READS_BY_VO_ID`] whose custom or generic plan for `vo`
-/// reaches a commit audit row other than by one `pk_commit_audit` probe, each
-/// with its plan.
+/// reaches a commit audit's facts or its shared part other than by one probe
+/// of its primary key, each with its plan.
 #[expect(
     clippy::disallowed_methods,
     reason = "a test reads the database on a raw pool connection, outside any request"
@@ -2355,11 +2367,18 @@ async fn reads_walking_the_commit_audit(pool: &PgPool, vo: VoId) -> Vec<String> 
             tx.rollback().await.expect("roll the explain back");
 
             let scans = scans(&plan);
-            let audits = on(&scans, "commit_audit");
-            let probed = !audits.is_empty()
-                && audits.iter().all(|scan| {
-                    scan.index.as_deref() == Some("pk_commit_audit") && scan.rows <= 1.0
-                });
+            let probed = [
+                ("commit_audit_facts", "pk_commit_audit"),
+                ("commit_audit_shared", "pk_commit_audit_shared"),
+            ]
+            .iter()
+            .all(|(relation, key)| {
+                let audits = on(&scans, relation);
+                !audits.is_empty()
+                    && audits
+                        .iter()
+                        .all(|scan| scan.index.as_deref() == Some(*key) && scan.rows <= 1.0)
+            });
             if !probed {
                 walked.push(format!("{read}, {mode}:\n{}", render(&scans)));
             }

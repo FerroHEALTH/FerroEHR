@@ -511,7 +511,8 @@ pub(crate) fn care_of(rows: &[FactRow]) -> Vec<CareOf> {
                         (row.holder, row.version.clone()),
                         care.kind,
                         care.covers_for.clone(),
-                    ),
+                    )
+                    .in_episode(care.episode.clone().map(Arc::new)),
             ),
             _ => None,
         })

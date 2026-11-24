@@ -269,6 +269,21 @@ impl Body {
         each_typed!(self, rm => Some(rm.as_rm()), _view => None)
     }
 
+    /// The episodes of care this COMPOSITION body is placed in
+    /// ([`crate::versioning::episode::placed`]), read before it is rendered.
+    ///
+    /// # Errors
+    /// As [`crate::versioning::episode::placed`].
+    pub(crate) fn episodes(
+        &self,
+    ) -> Result<Vec<crate::versioning::episode::EpisodeKey>, ServiceError> {
+        if let Some(rm) = self.as_rm() {
+            return crate::versioning::episode::placed(crate::versioning::tree::Typed::Object(rm));
+        }
+        self.canonical()
+            .map_or(Ok(Vec::new()), crate::versioning::episode::placed)
+    }
+
     /// The typed RM view of the body, mutably; `None` for a canonical body.
     pub(crate) fn as_rm_mut(&mut self) -> Option<&mut dyn openehr_rm::v1_2::access::RmObject> {
         use openehr_rm::v1_2::access::AsRm as _;

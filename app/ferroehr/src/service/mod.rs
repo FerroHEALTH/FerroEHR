@@ -201,6 +201,9 @@ pub struct FerroEhrService {
     /// `[record.versioning] idempotent_resend` (#4415); the binary sets it via
     /// [`Self::with_skip_identical_resend`].
     skip_identical_resend: bool,
+    /// The ids of the commit audit shared parts this service has seen
+    /// (#6395).
+    audit_shares: Arc<crate::storage::version_repo::audit_shared::AuditShares>,
     /// Short-lived stash of a just-created EHR's RM `EHR` wire body, built from
     /// the commit results at creation and popped by the `ehr_created_object`
     /// adapter seam so a `Prefer: return=representation` create response is
@@ -350,6 +353,7 @@ impl FerroEhrService {
             query_result_ceiling: None,
             outbox_gate: crate::extensions::outbox::OutboxGate::Always,
             skip_identical_resend: false,
+            audit_shares: Arc::default(),
             created_ehr_repr: ehr::created::created_ehrs(ehr::created::CREATED_EHRS),
             pmir_domains: Arc::default(),
             care_projected: Arc::default(),
@@ -658,6 +662,7 @@ impl FerroEhrService {
             multimedia: self.multimedia.as_deref(),
             outbox_enabled: self.outbox_written(),
             skip_identical_resend: self.skip_identical_resend,
+            audit_shares: &self.audit_shares,
             binding: &self.binding,
             grants: &self.grants,
             privacy: &self.privacy,
