@@ -727,7 +727,8 @@ Set these in your shell (or an `.env` file) to retune without editing anything:
 | `POSTGRES_PASSWORD` | `postgres` | Bootstrap superuser password (init only). |
 | `FERROEHR__TELEMETRY__FORMAT` | `pretty` | Log rendering for `docker compose logs`. Set `json` for log collectors. |
 | `FERROEHR__TELEMETRY__FILTER` | `info` | Log level filter. |
-| `FERROEHR__DATABASE__MAX_CONNECTIONS` | `10` | Server connection-pool ceiling. |
+| `FERROEHR__DATABASE__MAX_CONNECTIONS` | `20` | The size of each of the server's three pools. |
+| `FERROEHR__DATABASE__CONNECTION_BUDGET` | `70` | The most connections the server opens: three pools of 20, the audit runtime's four and its listener connection. |
 | `FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS` | `256` | Concurrent-request bound (`503` with `Retry-After` past it). |
 | `FERROEHR__RECORD__SIGNING__ENABLED` | `true` | Version signing. |
 
