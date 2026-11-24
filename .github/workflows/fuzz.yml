@@ -90,11 +90,13 @@ jobs:
         with:
           tool: cargo-fuzz@0.13.2
 
+      # The campaign's entry on main, read and never written here (#6388).
       - name: Cache the fuzz build tree
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: fuzz
-          key: build
+          shared-key: fuzz
+          save-if: false
 
       # The pin above and its row in docs/VERSIONS.md move together; a drift
       # here means one of them was edited by hand.
@@ -181,11 +183,14 @@ jobs:
           # assets (cargo-fuzz publishes an x86_64-unknown-linux-musl build).
           tool: cargo-fuzz@0.13.2
 
+      # One entry for every target: they build one workspace with the same
+      # flags, so the first job to finish writes it (#6388).
       - name: Cache the fuzz build tree
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: fuzz
-          key: ${{ matrix.target }}
+          shared-key: fuzz
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Restore the accumulated corpus
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

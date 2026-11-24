@@ -110,8 +110,8 @@ env:
   # such a push every lane is skipped except these, each kept for a cache
   # pull requests read and only a main push can write:
   #   * the rust-cache lanes (deny, clippy, feature-combos, its-wasm,
-  #     its-rest-features, doc, msrv, codegen-drift, nesting-release,
-  #     cpu-budget, test on one shard, build, instructions, test-viewer),
+  #     its-rest-features, msrv, codegen-drift, cpu-budget, test on one shard,
+  #     build, test-viewer),
   #     each only when `cache_refresh` names it: the key's
   #     inputs moved, or main holds no entry for it;
   #   * ui-e2e-binary and ui-e2e-viewer, on their own triggers: they write
@@ -135,7 +135,8 @@ env:
   # main's warm cache and never publish their own. PR-branch caches are read by nothing else (GHA
   # cache scoping), so letting every PR save would only thrash the shared
   # 10 GB repo quota and evict the caches that matter — including the ui-e2e
-  # exact-key binary caches below.
+  # exact-key binary caches below. actions-cache-prune.yml deletes what main
+  # replaced and every entry outside main (#6388).
 
 jobs:
   # ── Change detection: cargo jobs run ONLY when build-relevant paths change ──
@@ -328,7 +329,7 @@ jobs:
           # The jobs that save a rust-cache entry on main. rust-cache names it
           # `v0-rust-<job id>-<os>-<arch>-…`, or after its `shared-key` when a
           # job sets one, as each msrv shard does (github.com/Swatinem/rust-cache).
-          CACHE_JOBS: deny clippy feature-combos its-wasm its-rest-features doc msrv-core msrv-server msrv-others codegen-drift nesting-release cpu-budget test build instructions test-viewer
+          CACHE_JOBS: deny clippy feature-combos its-wasm its-rest-features msrv-core msrv-server msrv-others codegen-drift cpu-budget test build test-viewer
         run: |
           set -euo pipefail
           verified=false
@@ -808,6 +809,9 @@ jobs:
       - name: shellcheck / The GHCR prune deletes nothing on a dry run and keeps young and retagged manifests
         if: ${{ !cancelled() }}
         run: bash scripts/watch/ghcr-prune-orphans.sh --self-test
+      - name: shellcheck / The cache prune keeps main's newest entry of each family and expires the rest
+        if: ${{ !cancelled() }}
+        run: bash scripts/watch/actions-cache-prune.sh --self-test
       - name: shellcheck
         if: ${{ !cancelled() }}
         run: bash scripts/watch/spec-update.sh --self-test
@@ -1584,24 +1588,28 @@ jobs:
     # job is ~1/10 the length of the test job, so re-evaluating the whole tree
     # on every main push is cheap insurance. A push the merge queue verified
     # needs none of it (the queue run is never cancelled, its group is the
-    # commit), so there it runs only to write its cache (#4546).
-    if: (needs.changes.outputs.code == 'true' || github.ref == 'refs/heads/main') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'doc'))
+    # commit), so there it is skipped.
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true' || github.ref == 'refs/heads/main') && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
       contents: read
-    env:
-      RUSTDOCFLAGS: -D warnings
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # No cache of its own: it restores clippy's entry read-only, whose
+      # dependency metadata rustdoc reads (#6388). RUSTDOCFLAGS stays on the
+      # steps, since rust-cache hashes every RUST* variable into its key.
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
-          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+          cache-shared-key: clippy
+          cache-save-if: false
       # --document-private-items on both runs: stale intra-doc links can hide
       # behind non-pub items the public build never evaluates (#1838).
       - run: cargo doc --locked --workspace --all-features --no-deps --document-private-items
+        env:
+          RUSTDOCFLAGS: -D warnings
       # Doc tests live HERE, not in the pg19 test job: nextest cannot run
       # doctests, so `cargo test --doc` is its own compile (default features —
       # doctests document what a default consumer gets), and this job is ~1/10
@@ -1609,6 +1617,8 @@ jobs:
       # lane instead of the critical path. No DB: doctests are examples, never
       # integration tests.
       - run: cargo test --locked --workspace --doc
+        env:
+          RUSTDOCFLAGS: -D warnings
 
   # ── MSRV verification: the declared rust-version must actually build ────────
   # The Cargo book names cargo-hack as the verification tool — a pinned stable
@@ -1700,7 +1710,7 @@ jobs:
   nesting-release:
     name: nesting limit (release)
     needs: changes
-    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'nesting-release'))
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1710,8 +1720,11 @@ jobs:
         with:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        # A release-profile lane keeps no cache of its own: it restores main's
+        # `build` entry for the registry and writes nothing (#6388).
         with:
-          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+          cache-shared-key: build
+          cache-save-if: false
       - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
           tool: cargo-nextest
@@ -1751,6 +1764,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        # Its own entry, written on main: the optimised test binary built cold
+        # outlasts the runner (#6388).
         with:
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Non-durable test tuning
@@ -1872,7 +1887,7 @@ jobs:
   instructions:
     name: codec instructions (callgrind)
     needs: changes
-    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'instructions'))
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -1882,8 +1897,11 @@ jobs:
         with:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        # A release-profile lane keeps no cache of its own: it restores main's
+        # `build` entry for the registry and writes nothing (#6388).
         with:
-          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+          cache-shared-key: build
+          cache-save-if: false
       - name: Install valgrind
         run: sudo apt-get update && sudo apt-get install -y valgrind
       - run: bash scripts/perf/instructions.sh
@@ -2507,7 +2525,7 @@ jobs:
       # NOTE: `ui-e2e-console-*` here is a cache/artifact IDENTITY string, not
       # prose — renaming it would strand every stored entry, so it stays.
       - id: viewer-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ui-e2e-console-stage
           key: ui-e2e-console-1.99.1-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', '.cargo/**', 'crates/**', 'app/ferroehr-viewer/**') }}
@@ -2517,6 +2535,7 @@ jobs:
           # Registry-only cache; sccache owns compilation caching (the same
           # split, for the same lockfile-rotation reason, as the jobs above).
           cache-targets: false
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
         if: steps.viewer-cache.outputs.cache-hit != 'true'
       - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
@@ -2553,6 +2572,11 @@ jobs:
           mkdir -p ui-e2e-console-stage
           cp target/debug/ferroehr-viewer ui-e2e-console-stage/
           cp ui-e2e-tests.tar.zst ui-e2e-console-stage/
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.viewer-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main'
+        with:
+          path: ui-e2e-console-stage
+          key: ${{ steps.viewer-cache.outputs.cache-primary-key }}
       - name: sccache statistics
         if: always() && steps.viewer-cache.outputs.cache-hit != 'true'
         env:
@@ -2600,15 +2624,12 @@ jobs:
       # Nothing compiles in this job (#335): the server binary,
       # the viewer, and the e2e test binaries all arrive as artifacts from
       # the two parallel jobs above. The toolchain stays only because
-      # `cargo nextest run --archive-file` is a cargo subcommand; rust-cache
-      # keeps just the registry (nextest resolves no dependencies here, but
-      # setup-rust-toolchain's default cache would archive an empty target).
+      # `cargo nextest run --archive-file` is a cargo subcommand; nextest
+      # resolves no dependencies here, so the job restores and writes no cache
+      # (#6388).
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
-        # This workflow publishes nothing releasable — the artifacts here are
-        # screenshots and short-lived test inputs, so the restored registry
-        # cache is not release input.
-        with: # zizmor: ignore[cache-poisoning]
-          cache-targets: false
+        with:
+          cache: false
       - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
           tool: cargo-nextest
@@ -2693,10 +2714,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # No cache, as in ui-e2e: nothing compiles here.
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
-        # Screenshots and short-lived test inputs only, as in ui-e2e.
-        with: # zizmor: ignore[cache-poisoning]
-          cache-targets: false
+        with:
+          cache: false
       - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
           tool: cargo-nextest
