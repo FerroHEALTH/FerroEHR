@@ -86,6 +86,7 @@ async fn decode_composition_body(
         // of the built RM is the template-mediated 422 (master04 §Validation).
         Some(format @ (WireFormat::Flat | WireFormat::Structured)) => {
             let structured = format == WireFormat::Structured;
+            ferroehr::db::acquire::release_held();
             let decoded =
                 crate::formats::dispatch::composition_from_simplified(state, h, body, structured);
             stage::instrument(Stage::Decode, decoded).await
@@ -135,8 +136,8 @@ pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Respo
     )
     .await?;
     let meta = commit_meta(ehr_id, uid, &committed);
-    let rendered = composition_write_response(&state, h, &base, ehr_id, meta, created, created);
-    let mut resp = stage::instrument(Stage::Encode, rendered).await?;
+    let mut resp =
+        composition_write_response(&state, h, &base, ehr_id, meta, created, created).await?;
     stored_tags.echo(&mut resp);
     Ok(resp)
 }
@@ -613,6 +614,9 @@ fn stored_body(body: ReadBody) -> Result<Value, RestError> {
 /// Render a COMPOSITION create/update response: FLAT/STRUCTURED interop bodies
 /// when requested (always the representation), else the canonical
 /// `ETag`/`Last-Modified`/`Location` + `Prefer` write response.
+///
+/// The version a body renders is read first, so the encode holds no
+/// connection (#5774).
 async fn composition_write_response(
     state: &AppState,
     h: &http::HeaderMap,
@@ -622,17 +626,38 @@ async fn composition_write_response(
     minimal: StatusCode,
     repr: StatusCode,
 ) -> Result<Response, RestError> {
-    if let Some(fmt @ (WireFormat::Flat | WireFormat::Structured)) =
-        negotiate::resolve_accept(h, COMPOSITION_FORMATS, WireFormat::CanonicalJson)
+    let simplified =
+        match negotiate::resolve_accept(h, COMPOSITION_FORMATS, WireFormat::CanonicalJson) {
+            Some(fmt @ (WireFormat::Flat | WireFormat::Structured)) => Some(fmt),
+            _ => None,
+        };
+    let read = if simplified.is_some()
+        || negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation)
     {
         let ovid = parse_version_uid(&meta.uid)?;
-        let body = state
+        state
             .backend()
             .composition_at_version(ehr_id, ovid)
             .await?
-            .body;
+            .body
+    } else {
+        ReadBody::Value(Value::Null)
+    };
+    ferroehr::db::acquire::release_held();
+    let rendered = async {
+        let Some(fmt) = simplified else {
+            return Ok(negotiate::resource::write_read_rm::<Composition>(
+                h,
+                base,
+                (minimal, repr),
+                Some("composition"),
+                &meta,
+                read,
+                "composition",
+            ));
+        };
         let mut out =
-            crate::formats::dispatch::composition_simplified_read(state, repr, body, fmt).await?;
+            crate::formats::dispatch::composition_simplified_read(state, repr, read, fmt).await?;
         // `Location` is required on a `201` regardless of body form
         // (RFC 7231 §6.3.2), so the simplified representations get the same
         // version-identity headers.
@@ -647,25 +672,7 @@ async fn composition_write_response(
         // form (`Accept` decides, not `Prefer`), so the applied preference is
         // representation (§Representation details negotiation).
         negotiate::prefer::set_preference_applied(&mut out, AppliedPreference::Representation);
-        return Ok(out);
-    }
-    let read = if negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation) {
-        let ovid = parse_version_uid(&meta.uid)?;
-        state
-            .backend()
-            .composition_at_version(ehr_id, ovid)
-            .await?
-            .body
-    } else {
-        ReadBody::Value(Value::Null)
+        Ok(out)
     };
-    Ok(negotiate::resource::write_read_rm::<Composition>(
-        h,
-        base,
-        (minimal, repr),
-        Some("composition"),
-        &meta,
-        read,
-        "composition",
-    ))
+    stage::instrument(Stage::Encode, rendered).await
 }

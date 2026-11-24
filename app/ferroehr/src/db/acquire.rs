@@ -32,8 +32,9 @@
 //!
 //! Inside [`request_scope`], a request keeps the connection it checked out
 //! between its statements and returns it to the pool once: at [`release_held`],
-//! which the HTTP layer calls when the handler has answered, or when the scope
-//! ends. A request that turns from one storage domain to the other gives back
+//! which the HTTP layer calls when the request turns to work that runs no
+//! statement (decoding its body, encoding its answer) and when the handler has
+//! answered, or when the scope ends. A request that turns from one storage domain to the other gives back
 //! what it keeps of the first ([`acquire`]). While the request waits for a pool
 //! or for another task's work ([`handoff`]), the scope keeps nothing (#6027).
 //! How long the request held each connection is recorded on
@@ -244,6 +245,11 @@ fn note_checkout(key: usize, name: Option<PoolName>, out: bool) {
 /// against the work that follows it.
 pub const RELEASED: &str = "ferroehr::db::released";
 
+/// The `tracing` target of the events that mark a request's hold of a
+/// connection: `taken` as it takes one from a pool, `given back` as it
+/// returns it, each naming the pool.
+pub const HOLD: &str = "ferroehr::db::hold";
+
 /// Returns every connection the current [`request_scope`] keeps to its pool,
 /// recording how long the request held each; a later [`acquire`] in the
 /// scope checks out again. Outside a scope it does nothing.
@@ -374,6 +380,7 @@ fn kept_while_waiting() {
 /// Records that a request held a connection of the pool `name` from `since`
 /// until now.
 fn held_for(since: Instant, name: Option<PoolName>) {
+    tracing::trace!(target: HOLD, pool = label(name), "given back");
     crate::telemetry::metrics::metrics()
         .db_pool_hold_duration
         .record(
@@ -620,6 +627,7 @@ pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
             &[KeyValue::new(POOL, label(name))],
         );
     let conn = result?;
+    tracing::trace!(target: HOLD, pool = label(name), "taken");
     Ok(Checkout::new(conn, key, Instant::now(), name))
 }
 
