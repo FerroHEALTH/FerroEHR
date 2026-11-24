@@ -20,7 +20,9 @@ REVOKE ALL ON FUNCTION
     binding_date(p_value text, p_upper boolean),
     binding_validity(p_interval jsonb),
     binding_fold(p_value text),
+    binding_change_set(items jsonb),
     binding_changed(),
+    binding_revision_committed(),
     person_version_changed(),
     facts_behind(held pg_snapshot)
     FROM PUBLIC;
@@ -129,7 +131,8 @@ BEGIN
         GRANT EXECUTE ON FUNCTION
             binding_date(p_value text, p_upper boolean),
             binding_validity(p_interval jsonb),
-            binding_fold(p_value text)
+            binding_fold(p_value text),
+            binding_change_set(items jsonb)
             TO ferroehr_party;
         GRANT EXECUTE ON FUNCTION
             node_shared_member(a_key text, a_num integer, a_tier text, a_vo_id uuid, a_sys_version integer),

@@ -45,22 +45,23 @@ use ferroehr::versioning::committer::{CommitterIdentity, with_committer};
 /// The template of a professional's `PERSON`.
 pub(crate) const PERSON_TEMPLATE: &str = "FerroEHR professional";
 /// A `PERSON` template the mapping does not name.
-const OTHER_TEMPLATE: &str = "FerroEHR patient";
+pub(crate) const OTHER_TEMPLATE: &str = "FerroEHR patient";
 /// The template of the professional `ROLE`.
 pub(crate) const ROLE_TEMPLATE: &str = "FerroEHR professional role";
 /// The template of a provisioned `GROUP`.
-const GROUP_TEMPLATE: &str = "FerroEHR care team";
+pub(crate) const GROUP_TEMPLATE: &str = "FerroEHR care team";
 /// The archetype of a membership `PARTY_RELATIONSHIP`.
-const MEMBERSHIP: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1";
+pub(crate) const MEMBERSHIP: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1";
 /// The archetype of a representation `PARTY_RELATIONSHIP`, which the
 /// representation code makes one, not the archetype.
-const REPRESENTATION: &str = "org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.custodian.v2";
+pub(crate) const REPRESENTATION: &str =
+    "org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.custodian.v2";
 /// The identifier cluster the key selector reads.
 const CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v1";
 /// The `identifier_issuer` of the login's `[auth.issuer.<name>.party]` table.
 pub(crate) const LOGIN: &str = "https://login.example/tenant";
 /// The `group_identifier_issuer` of that table.
-const GROUPS: &str = "https://login.example/groups";
+pub(crate) const GROUPS: &str = "https://login.example/groups";
 /// The `identifier_type` of that table.
 pub(crate) const GUID: &str = "guid";
 /// The date every lookup is judged on.
@@ -235,7 +236,7 @@ pub(crate) fn representation(
 
 /// Commits `body`, a `PARTY_RELATIONSHIP` of its own, returning its
 /// container.
-async fn commit_relationship(svc: &FerroEhrService, body: &Value) -> VoId {
+pub(crate) async fn commit_relationship(svc: &FerroEhrService, body: &Value) -> VoId {
     Box::pin(crate::fixtures::create_relationship(
         svc,
         version(body, "532", None),
@@ -272,7 +273,7 @@ fn relationship(
 }
 
 /// A `GROUP` of `template` named by `external_id` under the group issuer.
-fn group(template: &str, external_id: &str) -> Value {
+pub(crate) fn group(template: &str, external_id: &str) -> Value {
     json!({
         "_type": "GROUP",
         "archetype_node_id": "openEHR-DEMOGRAPHIC-GROUP.care_team.v1",
@@ -755,7 +756,7 @@ async fn the_head_state_is_reported() {
 /// Gives the `PERSON` `member` exactly the memberships of `groups`: each an
 /// inline relationship from the `PERSON` to the `GROUP`, the member holding
 /// it (#5220).
-async fn memberships(svc: &FerroEhrService, member: VoId, groups: &[VoId]) {
+pub(crate) async fn memberships(svc: &FerroEhrService, member: VoId, groups: &[VoId]) {
     let read = Box::pin(svc.party_get(
         PartyKind::Person,
         crate::fixtures::at(member.to_string()),
