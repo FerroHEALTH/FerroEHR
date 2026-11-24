@@ -179,8 +179,30 @@ pub fn validate_rm_and_terminology(root: &Value, declared: &str) -> Vec<Validati
 pub fn validate_rm_and_terminology_typed<T: openehr_rm::v1_2::validate::tree::Walk + ?Sized>(
     root: &T,
 ) -> Vec<ValidationMessage> {
-    use openehr_rm::v1_2::validate::tree::{TreeKind, validate_tree};
-    validate_tree(root)
+    messages(openehr_rm::v1_2::validate::tree::validate_tree(root))
+}
+
+/// [`validate_rm_and_terminology_typed`], calling `visit` with every node and
+/// its RM instance path in the same walk
+/// ([`openehr_rm::v1_2::validate::tree::validate_tree_visiting`]).
+#[must_use]
+pub fn validate_rm_and_terminology_typed_visiting<
+    T: openehr_rm::v1_2::validate::tree::Walk + ?Sized,
+>(
+    root: &T,
+    visit: &mut dyn FnMut(&str, &openehr_rm::v1_2::validate::tree::Node<'_>),
+) -> Vec<ValidationMessage> {
+    messages(openehr_rm::v1_2::validate::tree::validate_tree_visiting(
+        root, visit,
+    ))
+}
+
+/// The typed passes' violations as validation messages.
+fn messages(
+    violations: Vec<openehr_rm::v1_2::validate::tree::TreeViolation>,
+) -> Vec<ValidationMessage> {
+    use openehr_rm::v1_2::validate::tree::TreeKind;
+    violations
         .into_iter()
         .map(|v| ValidationMessage {
             path: v.path,

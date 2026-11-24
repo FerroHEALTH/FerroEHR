@@ -254,3 +254,40 @@ fn the_typed_reading_of_a_body_is_its_canonical_json() {
         "{read} bodies, {found} findings"
     );
 }
+
+/// The identified-party rule run in the RM pass's walk finds, path for path
+/// and in order, what the data-minimisation pass finds on its own, on every
+/// COMPOSITION of the corpora and on each made to identify its subject
+/// (#6453).
+#[test]
+fn the_party_rule_in_the_rm_walk_finds_what_the_pass_finds() {
+    let policy = PrivacyPolicy::from(&PrivacyConfig::default());
+    let mut found = 0;
+    let mut read = 0;
+    for (path, kind, body, value) in corpus() {
+        if kind != Kind::Composition {
+            continue;
+        }
+        let planted = typed(kind, &identifying(&value));
+        for body in std::iter::once(body).chain(planted) {
+            let Body::Composition(rm) = &body else {
+                panic!("{path}: a COMPOSITION body");
+            };
+            let want = policy.findings(kind.as_str(), Typed::Object(body.as_rm().unwrap()));
+            let mut walked = Vec::new();
+            let _messages = openehr_sdt::rm_instance::validate_rm_and_terminology_typed_visiting(
+                rm.as_ref(),
+                &mut |at, node| {
+                    PrivacyPolicy::check_typed_node("COMPOSITION", at, node, &mut walked);
+                },
+            );
+            assert_eq!(walked, want, "{path}");
+            found += want.len();
+            read += 1;
+        }
+    }
+    assert!(
+        read >= 200 && found >= 180,
+        "{read} bodies, {found} findings"
+    );
+}
