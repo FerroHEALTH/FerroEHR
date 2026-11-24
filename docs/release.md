@@ -108,16 +108,19 @@ release run left open:
 
 ## The performance gate
 
-Every pull request that touches the server's build, its images or the gate
-runs the `perf` job in `ci.yml` (#5081, #5326). `scripts/perf/gate.sh ab`
+The `perf` job in `nightly.yml` runs every night on `main`, against the commit
+the previous night measured, and on a pull request labelled `ci:perf` or
+`ci:heavy`, against its base (#5081, #5326, #6517). It reads a clock on a
+shared runner, so it never gates a merge (`docs/ci-cd.md`). `scripts/perf/gate.sh ab`
 starts two servers side by side on one runner, each in a container with its
 own FerroEHR PostgreSQL container:
 
 - **The head:** the image this tree builds, with this tree's gate
   configuration.
 - **The base:** the change's base commit, the first parent of the commit
-  under test. The `perf-base-binary` job builds its server exactly as
-  `ui-e2e-binary` builds the head's (the same container, toolchain and `e2e`
+  under test, or the previous night's commit on a schedule. The
+  `perf-base-binary` job builds its server exactly as `server-binary` builds
+  the head's (the same container, toolchain and `e2e`
   profile), so the arms differ in the change alone. The `perf` job packages
   it with the base tree's own Dockerfile and PostgreSQL image, and the gate
   runs it under that tree's `perf/ferroehr.toml`, professional templates,
@@ -198,9 +201,10 @@ the idle phase, and the self-test passes only when the gate fails that run on
 Some changes cost something the gate measures and are worth it: an exact
 access decision that reads the store per request costs transactions a
 notification-timed copy did not (#5891). The `perf` job measures and fails
-only a run that could not be judged; the `perf-verdict` job judges a breach
-(`scripts/perf/accepted.sh`, #5924), and `conclusion` needs it. A breach
-passes only when all three hold:
+only a run that could not be judged; on a labelled pull request the
+`perf-verdict` job judges a breach (`scripts/perf/accepted.sh`, #5924). A
+scheduled run fails on any breach, and `nightly-report.yml` files it. A
+breach passes only when all three hold:
 
 - The pull request carries the `perf-accepted` label.
 - Its description names every breached metric on a line of its own,
@@ -213,10 +217,7 @@ passes only when all three hold:
 The breach is then reported as accepted: a warning per metric, and an
 "Accepted breaches" table with the issue and the comment's link after the
 full report in the `perf-verdict` job's summary and log. A run that could not
-be judged is never accepted. `pr-guards.yml` re-runs `perf-verdict` alone
-when the label or the description changes, so the measurement is not
-repeated. On a push to `main` the verdict reads the pull request that merged
-the commit. No openEHR spec governs this: our own design.
+be judged is never accepted. No openEHR spec governs this: our own design.
 
 The release's `performance` job runs the same gate against the previous
 published release and honours the same acceptances

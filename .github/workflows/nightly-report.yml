@@ -1,0 +1,72 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# .github/workflows/nightly-report.yml: one tracking issue per red scheduled
+# run of the nightly tier (#6517). A failed scheduled run of CI, Nightly,
+# SonarQube Cloud or Fuzz on main files an issue for its workflow, or comments
+# on the open one, with the failed jobs and the commits since that workflow's
+# previous scheduled run. No specification governs this: our own design.
+name: Nightly report
+
+on:
+  workflow_run: # zizmor: ignore[dangerous-triggers] main's scheduled runs only; API reads and an issue write, no checkout of their code
+    workflows: [CI, Nightly, SonarQube Cloud, Fuzz]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: nightly-report-${{ github.event.workflow_run.name }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  report:
+    name: report
+    if: github.event.workflow_run.event == 'schedule' && github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read # the local action
+      actions: read # the run's jobs and the previous scheduled run
+      issues: write # the tracking issue
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/actions
+      - name: The failed jobs and the commit range
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          WORKFLOW_ID: ${{ github.event.workflow_run.workflow_id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          failed="$(gh api --paginate "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" \
+            --jq '.jobs[] | select(.conclusion == "failure" or .conclusion == "timed_out") | "- \(.name)"')"
+          previous="$(gh api "repos/$REPO/actions/workflows/$WORKFLOW_ID/runs?event=schedule&branch=main&status=completed&per_page=2" \
+            | jq -r --arg run "$RUN_ID" '[.workflow_runs[] | select((.id | tostring) != $run)][0].head_sha // ""')"
+          if [ -n "$previous" ] && [ "$previous" != "$HEAD_SHA" ]; then
+            range="https://github.com/$REPO/compare/$previous...$HEAD_SHA"
+          else
+            range="$HEAD_SHA (no earlier scheduled run to compare with)"
+          fi
+          {
+            echo "The scheduled run $RUN_URL failed on \`$HEAD_SHA\`."
+            echo
+            echo "Failed jobs:"
+            echo "${failed:-- (none reported; read the run)}"
+            echo
+            echo "Commits since the previous scheduled run: $range"
+          } > body.md
+          cat body.md
+      - name: File or update the tracking issue
+        uses: ./.github/actions/file-watcher-issue # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          title: "ci: the scheduled ${{ github.event.workflow_run.name }} run failed on main"
+          body-file: body.md
+          type: Task
+          labels: ci
