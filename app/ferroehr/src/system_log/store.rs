@@ -89,14 +89,14 @@ use ferrohealth_smart::assurance::AssuranceLevel;
 /// The batched write of the system records: each record written once into
 /// `audit.audit_event`, one row per element of the parallel column arrays,
 /// every row under the one render policy in `$38`, with the content digest
-/// its writer computed in `$57` and its write time in `$56`, and held under
-/// the reservation in `$54`, when there is one, by a row of
+/// its writer computed in `$56` and its write time in `$55`, and held under
+/// the reservation in `$53`, when there is one, by a row of
 /// `audit.audit_event_hold` (#6203, #6242). The transaction takes its xid in
 /// the materialized `own_xid` every row joins, before any row draws its
 /// position, which the frontier proof rests on ([`crate::access_log::frontier`]).
 /// Each record's search tokens arrive as the text of an `integer[]` in `$39`,
-/// since an array of arrays unnests element by element, and its id in `$53`;
-/// `$55` is the level each record is recorded for review at.
+/// since an array of arrays unnests element by element, and its id in `$52`;
+/// `$54` is the level each record is recorded for review at.
 const INSERT_BATCH: &str = "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_current_xact_id() AS taken), \
      written AS (INSERT INTO audit.audit_event (id, recorded_at, action, outcome, \
      event_code, operation, principal, patient_id, resource_class, resource_id, \
@@ -104,13 +104,13 @@ const INSERT_BATCH: &str = "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_c
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
      acting_mode, assurance_level, assurance_value, professional_id, emergency_access, \
      retention_ends, retention_stated, permit, issuer, client_id, ehr_id, subject_namespace, \
-     subject_lookup_failed, category_content, render_policy, search_tokens, binding, guest, \
+     subject_lookup_failed, category_content, render_policy, search_tokens, binding, \
      party, party_groups, provider, representation, external_fields, agreement, actor_chain, \
      facilities, binding_detail, summary, token_attributes, review, stored_at, content_digest) \
      SELECT u.id, u.c1, u.c2, u.c3, u.c4, u.c5, u.c6, u.c7, u.c8, u.c9, u.c10, u.c11, u.c12, \
      u.c13, u.c14, u.c15, u.c16, u.c17, u.c18, u.c19, u.c20, u.c21, u.c22, u.c23, u.c24, u.c25, \
      u.c26, u.c27, u.c28, u.c29, u.c30, u.c31, u.c32, u.c33, u.c34, u.c35, u.c36, u.c37, \
-     $38::bytea, u.tokens::integer[], u.c40, u.c41, u.c42, u.c43, u.c44, u.c45, u.c46, u.c47, \
+     $38::bytea, u.tokens::integer[], u.c40, u.c42, u.c43, u.c44, u.c45, u.c46, u.c47, \
      u.c48, u.c49, u.c50, u.c51, u.c52, u.review, u.stored_at, u.content_digest \
      FROM own_xid CROSS JOIN UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
      $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], \
@@ -119,16 +119,16 @@ const INSERT_BATCH: &str = "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_c
      $22::jsonb[], $23::text[], $24::text[], $25::text[], $26::text[], $27::text[], \
      $28::boolean[], $29::text[]::date[], $30::boolean[], $31::text[], $32::text[], \
      $33::text[], $34::text[], $35::text[], $36::boolean[], $37::jsonb[], $39::text[], \
-     $40::text[], $41::boolean[], $42::jsonb[], $43::jsonb[], $44::jsonb[], $45::jsonb[], \
-     $46::jsonb[], $47::jsonb[], $48::jsonb[], $49::jsonb[], $50::jsonb[], $51::jsonb[], \
-     $52::jsonb[], $53::uuid[], $55::text[], $56::timestamptz[], $57::bytea[]) \
+     $40::text[], $41::jsonb[], $42::jsonb[], $43::jsonb[], $44::jsonb[], \
+     $45::jsonb[], $46::jsonb[], $47::jsonb[], $48::jsonb[], $49::jsonb[], $50::jsonb[], \
+     $51::jsonb[], $52::uuid[], $54::text[], $55::timestamptz[], $56::bytea[]) \
      AS u(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, \
      c19, c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32, c33, c34, c35, c36, \
-     c37, tokens, c40, c41, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52, id, review, \
+     c37, tokens, c40, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52, id, review, \
      stored_at, content_digest) \
      RETURNING seq) \
      INSERT INTO audit.audit_event_hold (seq, reserved_by) \
-     SELECT w.seq, $54::uuid FROM written w WHERE $54::uuid IS NOT NULL";
+     SELECT w.seq, $53::uuid FROM written w WHERE $53::uuid IS NOT NULL";
 
 /// The columns a stored record is read back from, in the order the ITI-81
 /// search and the FHIR Feed select them.
@@ -681,7 +681,6 @@ impl AuditStore {
             .bind(policy)
             .bind(tokens)
             .bind(c.bindings)
-            .bind(c.guests)
             .bind(c.parties)
             .bind(c.groups)
             .bind(c.providers)
@@ -1123,21 +1122,13 @@ fn origin_count(event: &AuditEvent) -> Option<i64> {
         .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
 }
 
-/// The `binding` and `guest` column values of `event` and its jsonb binding
-/// columns ([`crate::system_log::binding::BindingRecord::json_columns`]),
-/// with the `summary` column last.
-fn binding_columns(
-    event: &AuditEvent,
-) -> (Option<&'static str>, bool, [Option<serde_json::Value>; 10]) {
-    let (code, guest, binding) = event.binding.as_ref().map_or_else(
-        || (None, false, Default::default()),
-        |binding| {
-            (
-                Some(binding.code.as_str()),
-                binding.guest,
-                binding.json_columns(),
-            )
-        },
+/// The `binding` column value of `event` and its jsonb binding columns
+/// ([`crate::system_log::binding::BindingRecord::json_columns`]), with the
+/// `summary` column last.
+fn binding_columns(event: &AuditEvent) -> (Option<&'static str>, [Option<serde_json::Value>; 10]) {
+    let (code, binding) = event.binding.as_ref().map_or_else(
+        || (None, Default::default()),
+        |binding| (Some(binding.code.as_str()), binding.json_columns()),
     );
     let summary = event
         .summary
@@ -1147,7 +1138,7 @@ fn binding_columns(
     for (column, value) in columns.iter_mut().zip(binding.into_iter().chain([summary])) {
         *column = value;
     }
-    (code, guest, columns)
+    (code, columns)
 }
 
 /// The `ehr_id` column value: the EHR a classified access reached, which its
