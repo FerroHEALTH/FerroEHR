@@ -40,11 +40,11 @@ then writes the committer from the bound party:
 
 | Caller | Committer the server writes |
 |---|---|
-| A person, at a `persons` issuer through a first-party client | `PARTY_IDENTIFIED` with the `PERSON`'s name, an `external_ref` to the `PERSON`, the login identifier `{issuer = <token iss>, id = <person_key value>, type = "oauth2"}` and the provider identifier `{issuer, id, type = "healthcare-provider"}` |
-| A delegated person (a client or RFC 8693 actor the CDR grants `act_for_persons`) | the person's own committer, as above; the client and the actor go into the access record, never into the committer |
+| A person | `PARTY_IDENTIFIED` with the `PERSON`'s name, an `external_ref` to the `PERSON`, the login identifier `{issuer = <token iss>, id = <sub>, type = "oauth2"}` and the provider identifier `{issuer, id, type = "healthcare-provider"}` |
+| A delegated person (a token whose RFC 8693 `act` names an actor) | the person's own committer, as above; the client and the actor go into the access record, never into the committer |
 | A Basic user | the committer of the `PERSON` its `[[authz.party_binding.basic_user]]` table maps it to, with the login identifier `{issuer = <[api] basic_issuer>, id = <user>, type = "basic"}` |
 | A representative | `PARTY_RELATED` naming the representative's own `PERSON` in `external_ref`, their login identifier, and the coded `relationship` from the openEHR `subject_relationship` group (`253\|unknown\|` when no code fits) |
-| A patient of a `patients` issuer | `PARTY_SELF` with no `external_ref` (RM common master04, the first scheme of §Referring to the Patient) |
+| The record's person, on their own record | `PARTY_SELF` with no `external_ref` (RM common master04, the first scheme of §Referring to the Patient) |
 | A verified external person of a `federation` issuer | `PARTY_IDENTIFIED` with no `external_ref`: the asserted name, the professional's `hp_identifier` under `"<country>:<issuing authority>"`, and the token's `iss` and `sub` with type `oauth2` |
 | A MyHealth@EU contact point's professional | as the external person, with the HP Identity Assertion's `NameID` under the assertion's issuer and type `hp_identifier:<NameID format>` |
 | A declared system client (`relay` or `device`) | `PARTY_IDENTIFIED` named by the client, with `{issuer = <token iss>, id = <client>, type = "client"}` and no `external_ref` |
@@ -200,12 +200,12 @@ values and their renderings are under
 
 ## How a party gets its login identifier
 
-The binding matches the token's `person_key` claim against the identifier at
+The binding matches the token's `sub` against the identifier at
 the binding-key selector of a mapped `PERSON` template, under the
 `identifier_issuer` of the issuer's `[auth.issuer.<name>.party]` table. A `PERSON`
 binds a professional only while it performs a live professional `ROLE`, and
 a representative only while it is the source of a recorded representation
-relationship. A `PERSON` that is neither binds a `persons` login as the person
+relationship. A `PERSON` that is neither binds a login as the person
 themself: no role, `PARTY_SELF` as the committer, and only the EHRs whose
 subject is that `PERSON` (#6106). The identifier gets there in one of four ways:
 

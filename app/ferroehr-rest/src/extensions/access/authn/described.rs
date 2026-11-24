@@ -63,10 +63,8 @@ impl Authenticator {
 
     /// The SMART discovery document of the described issuer under `options`.
     ///
-    /// The document is built for what `describe` describes the issuer for: a
-    /// `machines` issuer of a deployment that trusts no user-token issuer gets
-    /// the Backend Services document, with no app-launch member (SMART App
-    /// Launch 2.2.0, Backend Services, §Retrieve `.well-known/smart-configuration`).
+    /// The document is built for the purpose `describe` describes the issuer
+    /// for (SMART App Launch 2.2.0, Conformance, §Metadata).
     pub(crate) fn smart_configuration(&self, options: &SmartOptions) -> Described {
         let Some((primary, purpose)) = &self.primary else {
             return Described::None;

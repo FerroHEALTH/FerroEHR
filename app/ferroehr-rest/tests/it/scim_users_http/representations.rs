@@ -1,19 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! A patient portal's representatives, provisioned over SCIM by the portal's
-//! own client (#5622), in a deployment that also binds its professionals
-//! through a `persons` issuer's `[auth.issuer.<name>.party]` table (#5652).
+//! Representations in a deployment that provisions its professionals over
+//! SCIM (#5622) and binds them through a `[auth.issuer.<name>.party]` table
+//! (#5652), with a second issuer whose logins bind persons' own `PERSON`s.
 //!
-//! The portal client's `binding_issuer` is the `patients` issuer, one of the
-//! key issuers the server compiles its person mapping from. Its Users are
-//! `PERSON`s of the patient template with no professional `ROLE`. A portal
-//! login a `PERSON` carries is held to that `PERSON`: the patient only when it
-//! is the EHR's subject, a representative only through a live
-//! representation, and refused otherwise. SCIM writes the identity only; the
-//! representation is the patient's or an administrator's (Regulation (EU)
-//! 2025/327 Art. 4(2)). No openEHR spec governs provisioning or resolving a
-//! login to a party: our own design.
+//! A representative is a `PERSON` whose login binds them. Their login reaches
+//! a subject only through a live representation recorded for the provider
+//! under a `write_representation` grant naming it; SCIM writes the identity
+//! only, never a representation (Regulation (EU) 2025/327 Art. 4(2)). No
+//! openEHR spec governs provisioning or resolving a login to a party: our
+//! own design.
 
 use std::sync::Arc;
 
@@ -23,49 +20,49 @@ use ferroehr::service::demographic::precondition::Precondition;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::version_update::WriteRequest;
 use ferrohealth_smart::config::IssuerEntry;
-use ferrohealth_smart::kind::IssuerKind;
 use http::StatusCode;
 use serde_json::{Value, json};
 
 use super::default_definitions::{seeded, zero_config};
-use super::{CLIENT, LOGIN, MACHINES, SCOPE, call, patch_op};
+use super::{CLIENT, LOGIN, MACHINES, SCOPE};
 use crate::common::{self, BASE, EXT};
 use crate::policy_fixture::{capability, grant, scope};
 use crate::portal_representatives_http::{PORTAL, child, representation, token};
 
-/// The portal's provisioning client.
-const PORTAL_CLIENT: &str = "portal-sync";
 /// The client that records representations for the hospital: it holds
 /// `write_representation` for [`crate::portal_representatives_http::PROVIDER`].
 const WRITER: &str = "registry";
 /// A client holding `write_representation` for another provider only.
 const CLINIC: &str = "clinic-registry";
-/// Frank's portal login, the binding key of his `PERSON`.
+/// Frank's login, the binding key of his `PERSON`.
 const FRANK: &str = "frank-login";
 
-/// The SCIM harness configuration with the portal trusted as a `patients`
-/// issuer beside the professionals' `persons` issuer and its table.
+/// The SCIM harness configuration trusting [`PORTAL`] beside the
+/// professionals' issuer, its logins bound under its own identifiers.
 fn config() -> ferroehr_rest::config::AppConfig {
     let mut config = zero_config();
     common::add_issuer(
         &mut config,
         IssuerEntry {
-            kind: Some(IssuerKind::Patients),
             jwks_file: common::jwks_file().display().to_string(),
+            party: Some(ferrohealth_smart::party::config::PartySection {
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(PORTAL),
+                identifier_issuer: PORTAL.to_owned(),
+                identifier_type: "login".to_owned(),
+                ..ferrohealth_smart::party::config::PartySection::default()
+            }),
             ..common::entry(PORTAL, super::AUDIENCE)
         },
     );
-    common::patient_context(&mut config, PORTAL);
     config.party_binding.provider = Some(crate::portal_representatives_http::provider());
     config
 }
 
 /// The router over a fresh database holding the default definitions, with
-/// the person mapping compiled as the server installs it, the portal's
-/// client granted `scim_provision` under the portal issuer and
-/// `access_demographic`, and the hospital's client `scim_provision` under
-/// [`LOGIN`].
-async fn portal() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
+/// the person mapping compiled as the server installs it, the hospital's
+/// client granted `scim_provision` under [`LOGIN`] and `access_demographic`,
+/// and the representation writers granted.
+async fn world() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     let config = config();
     let (db, pool) = common::migrated_pool().await;
     let resolved = ferroehr::config::auth::resolve(&config.auth.shared, &config.audience_bases())
@@ -77,9 +74,8 @@ async fn portal() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     )
     .expect("the mapping compiles");
     let service = Arc::new(seeded(&config, &pool).await.with_binding_mapping(mapping));
-    // The replica boots on the configuration that adds the portal issuer, as
-    // the server does: its lease records the key space and its first tend
-    // fills it.
+    // The replica boots on the configuration that adds the issuer, as the
+    // server does: its lease records the key space and its first tend fills it.
     service
         .take_binding_lease(uuid::Uuid::now_v7())
         .await
@@ -87,24 +83,13 @@ async fn portal() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
         .expect("a lease")
         .tend()
         .await
-        .expect("the portal issuer's key space fills");
-    let provisioning = capability(
-        "scim_provision",
-        &[scope("binding_issuer", PORTAL), scope("token_scope", SCOPE)],
-    );
-    let demographic = capability("access_demographic", &[]);
-    grant(
-        &service,
-        MACHINES,
-        PORTAL_CLIENT,
-        &[provisioning, demographic],
-    )
-    .await;
+        .expect("the issuer's key space fills");
     let hospital = capability(
         "scim_provision",
         &[scope("binding_issuer", LOGIN), scope("token_scope", SCOPE)],
     );
-    grant(&service, MACHINES, CLIENT, &[hospital]).await;
+    let demographic = capability("access_demographic", &[]);
+    grant(&service, MACHINES, CLIENT, &[hospital, demographic]).await;
     let writes = |provider: (&str, &str)| {
         capability(
             "write_representation",
@@ -126,20 +111,12 @@ async fn portal() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     (db, service, app)
 }
 
-/// The SCIM User Frank of the portal's client; its id.
-async fn frank(app: &Router) -> String {
-    let body = json!({
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User", super::EXTENSION],
-        "userName": "frank",
-        "name": { "formatted": "Frank Visser" },
-        super::EXTENSION: { "loginIdentifier": FRANK }
-    });
-    let (status, _, created) = call(app, "POST", "/Users", PORTAL_CLIENT, Some(&body), &[]).await;
-    assert_eq!(status, StatusCode::CREATED, "{created}");
-    created["id"].as_str().expect("an id").to_owned()
+/// Frank's `PERSON`, bound by his login under [`PORTAL`]; its id.
+async fn frank(service: &FerroEhrService) -> String {
+    common::shipped_patient(service, (PORTAL, FRANK), "Frank Visser").await
 }
 
-/// The status and body of `GET /ehr/{ehr}` under Frank's own portal login.
+/// The status and body of `GET /ehr/{ehr}` under Frank's own login.
 async fn read_as_frank(app: &Router, ehr: &str) -> (StatusCode, String) {
     let request = common::req("GET", format!("{BASE}/ehr/{ehr}"))
         .auth(&token(FRANK, ehr, &json!({})))
@@ -188,68 +165,16 @@ fn system(client: &str) -> String {
     )
 }
 
-/// The portal's client provisions Frank in the patient template with no
-/// `ROLE`. His portal login reaches nothing until a representation is
-/// recorded; an administrator records it and he reads Eva's record; the
-/// client deactivates him and he is refused on the next request.
+/// A SCIM client writes no representation: its `PARTY_RELATIONSHIP` naming
+/// Frank is refused, and Frank still reaches nothing.
 #[tokio::test]
-async fn the_portal_provisions_a_representative_who_binds_only_through_a_representation() {
-    let (_db, service, app) = portal().await;
+async fn a_scim_client_is_refused_a_representation() {
+    let (_db, service, app) = world().await;
     let (eva, ehr) = child(&service).await;
-    let user = frank(&app).await;
-    let (_, body) = head(&service, &user).await;
-    assert_eq!(
-        body["archetype_details"]["template_id"]["value"],
-        ferroehr::party_binding::shipped::PATIENT,
-        "the PERSON is of the patient template"
-    );
-    assert!(body.get("roles").is_none(), "no professional ROLE");
-
-    let (status, refused) = read_as_frank(&app, &ehr).await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
-    assert!(
-        refused.contains("refused-representation-unrecorded"),
-        "{refused}"
-    );
-
-    let frank_id = ferroehr::ids::VoId(user.parse().expect("a container id"));
-    let mut write = WriteRequest::<openehr_rm::prelude::PartyRelationship>::new(
-        openehr_its::json::from_canonical_value(&standalone(frank_id, eva))
-            .expect("a PARTY_RELATIONSHIP"),
-    );
-    write.lifecycle_state = Some("532".to_owned());
-    Box::pin(service.party_relationship_create(write))
-        .await
-        .expect("the administrator records the representation");
-    let (status, body) = read_as_frank(&app, &ehr).await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-
-    let deactivate = patch_op(json!([{ "op": "replace", "path": "active", "value": false }]));
-    let (status, _, deactivated) = call(
-        &app,
-        "PATCH",
-        &format!("/Users/{user}"),
-        PORTAL_CLIENT,
-        Some(&deactivate),
-        &[],
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK, "{deactivated}");
-    let (status, refused) = read_as_frank(&app, &ehr).await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
-}
-
-/// The owning portal client writes no representation of its own
-/// representative: its `PARTY_RELATIONSHIP` naming Frank is refused, and
-/// Frank still reaches nothing.
-#[tokio::test]
-async fn the_portal_client_is_refused_a_representation() {
-    let (_db, service, app) = portal().await;
-    let (eva, ehr) = child(&service).await;
-    let user = frank(&app).await;
+    let user = frank(&service).await;
     let frank_id = ferroehr::ids::VoId(user.parse().expect("a container id"));
     let request = common::req("POST", format!("{EXT}/demographic/party_relationship"))
-        .auth(&system(PORTAL_CLIENT))
+        .auth(&system(CLIENT))
         .accept("application/json")
         .json(standalone(frank_id, eva).to_string())
         .build();
@@ -279,9 +204,9 @@ async fn post_as(app: &Router, client: &str, relationship: &Value) -> (StatusCod
 /// record.
 #[tokio::test]
 async fn a_representation_is_written_under_a_grant_for_its_provider() {
-    let (_db, service, app) = portal().await;
+    let (_db, service, app) = world().await;
     let (eva, ehr) = child(&service).await;
-    let user = frank(&app).await;
+    let user = frank(&service).await;
     let frank_id = ferroehr::ids::VoId(user.parse().expect("a container id"));
     let guardian = representation(frank_id, eva, "264", None);
 
@@ -316,7 +241,7 @@ async fn a_representation_is_written_under_a_grant_for_its_provider() {
 /// Relationship Store), whatever route carries it.
 #[tokio::test]
 async fn a_scim_version_that_touches_a_representation_is_refused() {
-    let (_db, service, app) = portal().await;
+    let (_db, service, app) = world().await;
     let (eva, _) = child(&service).await;
     let (user, _) = super::created(&app, CLIENT, "anna", "anna-login").await;
     let anna = ferroehr::ids::VoId(user.parse().expect("a container id"));
@@ -338,21 +263,4 @@ async fn a_scim_version_that_touches_a_representation_is_refused() {
         format!("{refused:?}").contains("/demographic/party_relationship"),
         "{refused:?}"
     );
-}
-
-/// A patient portal's representative holds no role: the portal client's
-/// User asking for one is refused, as a representative acts only through a
-/// representation.
-#[tokio::test]
-async fn a_portal_representative_holds_no_role() {
-    let (_db, _service, app) = portal().await;
-    let body = json!({
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User", super::EXTENSION],
-        "userName": "frank",
-        "roles": [{ "value": "nurse" }],
-        super::EXTENSION: { "loginIdentifier": FRANK }
-    });
-    let (status, _, refused) = call(&app, "POST", "/Users", PORTAL_CLIENT, Some(&body), &[]).await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
-    assert!(refused.to_string().contains("hold no role"), "{refused}");
 }

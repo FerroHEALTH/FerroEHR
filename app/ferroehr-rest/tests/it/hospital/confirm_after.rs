@@ -9,7 +9,9 @@
 //! next read, the access log holds exactly one entry for it, with the outcome
 //! the client got, and the run again is counted once. No openEHR spec governs
 //! the copies: our own design. A commit confirms after it was decided the
-//! same way, before it writes (#6256).
+//! same way, before it writes (#6256). A replica's refresher confirms the
+//! caller facts copy on its schedule, so a request after a facts stamp
+//! reads no facts on its own path once a round has run (#6440).
 
 use http::StatusCode;
 use opentelemetry::metrics::MeterProvider as _;
@@ -21,10 +23,10 @@ use crate::common::{BASE, EXT, FHIR};
 use crate::hospital::abac::answered;
 use crate::hospital::build::{composition, world};
 use crate::hospital::ledger::{Expect, Ledger};
-use crate::hospital::replicas::deaf;
+use crate::hospital::replicas::{deaf, deaf_service};
 use crate::hospital::world::{
-    CONFIDENTIALITY, ENCOUNTER, ROOT, SCIM, World, call, call_matching, coded_in, patch_op, scim,
-    text,
+    CONFIDENTIALITY, ENCOUNTER, ROOT, SCIM, World, admit, call, call_matching, coded_in, day,
+    patch_op, router, scim, text,
 };
 
 /// A meter provider whose access-path instruments land in `exporter`.
@@ -449,6 +451,66 @@ async fn a_read_decided_on_a_party_copy_behind_the_store_runs_once_more() {
     assert_ne!(
         records[0].1, 0,
         "the entry records the run again's refusal: {records:?}"
+    );
+}
+
+/// A caller facts stamp notifies no replica, so a request after it on a
+/// replica whose facts copy has not read since reads the stamped facts on
+/// its own path (#6440). Once that replica's refresher has confirmed its
+/// copies, the next request after a stamp reads no facts and runs once.
+/// Each stamp is the ADT system's change of Eva's psychiatry stay, written
+/// through the world's replica.
+#[tokio::test]
+async fn a_request_after_a_facts_stamp_reads_no_facts_after_a_refresher_round() {
+    let (provider, exporter) = instruments();
+    let mut world = Box::pin(world()).await;
+    let (svc, _drain, _elsewhere) = deaf_service(&world).await;
+    let other = router(&world.config, &svc).await;
+    let path = format!("{BASE}/ehr/{}/composition/{}", world.ehr, world.vitals.vo);
+    let read = || call(&other, "devries", "GET", &path, Some("TREAT"), None);
+    for _ in 0..2 {
+        answered(&read().await, StatusCode::OK, None);
+    }
+    let before = reruns(&provider, &exporter);
+
+    let stay = day(-2);
+    admit(&mut world, &[("Psychiatry", &stay, Some(&day(30)))]).await;
+    let held = svc.grants().facts_snapshot();
+    answered(&read().await, StatusCode::OK, None);
+    assert_ne!(
+        svc.grants().facts_snapshot(),
+        held,
+        "with no round since the stamp the request reads the facts itself"
+    );
+
+    admit(&mut world, &[("Psychiatry", &stay, Some(&day(31)))]).await;
+    let held = svc.grants().facts_snapshot();
+    svc.grants()
+        .spawn_refresher(std::time::Duration::from_millis(50));
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    while svc.grants().facts_snapshot() == held {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the refresher reads the stamp"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    let confirmed = svc.grants().facts_snapshot();
+    let rerun = reruns(&provider, &exporter);
+    answered(&read().await, StatusCode::OK, None);
+    assert_eq!(
+        svc.grants().facts_snapshot(),
+        confirmed,
+        "after a refresher round the request reads no facts"
+    );
+    assert_eq!(
+        reruns(&provider, &exporter),
+        rerun,
+        "after a refresher round the request runs once"
+    );
+    assert!(
+        rerun <= before + 1,
+        "the first stamp ran the request at most twice"
     );
 }
 

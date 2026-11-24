@@ -4,11 +4,11 @@ FerroEHR does not manage users. There is no user table, no user API, and no
 plan to add one: **identity administration is delegated to your identity
 provider (IdP)**, and the CDR consumes standard OAuth 2.0 bearer tokens. This page
 records that posture and walks through connecting an identity provider:
-[behind FerroSMART](#behind-ferrosmart), the setup for SMART apps, first,
-then [the generic standards path](#the-generic-standards-path), then
-**Microsoft Entra ID** (Azure AD), **AD FS**, **Okta**, **Keycloak**, a SAML
-identity provider behind one of them, and the answer for plain-LDAP
-directories.
+[behind FerroSMART](#behind-ferrosmart) first, then [the generic standards
+path](#the-generic-standards-path) for any authorization server whose access
+tokens follow RFC 9068, then **Keycloak** trusted directly, and the identity
+providers that run upstream of FerroSMART: **Microsoft Entra ID**, **AD
+FS**, **Okta**, a SAML identity provider and plain-LDAP directories.
 
 <!-- toc -->
 
@@ -75,9 +75,8 @@ family's SMART App Launch 2.x authorization server, and your identity provider
 runs upstream of FerroSMART for login only
 ([Behind FerroSMART](behind-ferrosmart.md)). FerroEHR never sees the provider's
 tokens: FerroSMART logs the person in at the provider, applies its own policy
-and consent, and issues the RFC 9068 access tokens FerroEHR reads under the
-`ferrosmart` issuer preset (`preset = "ferrosmart"`: `typ` `at+jwt` alone,
-`scope` required).
+and consent, and issues the RFC 9068 access tokens FerroEHR reads from one
+`[auth.issuer.<name>]` table naming its `issuer`.
 
 FerroSMART supports these upstream providers, each with its setup in
 FerroSMART's repository:
@@ -102,15 +101,13 @@ What changes against a provider FerroEHR trusts directly, such as the
 - **Launch context.** FerroSMART puts `ehrId` (at an openEHR base), `patient`
   and `fhirUser` in the token response and the access token, from the
   viewer's EHR launch or its own patient picker
-  ([SMART App Launch](smart-app-launch.md)). The `ferrosmart` preset sets
-  `patient_context`, so FerroSMART's `patient/` grants count. That setting is
-  trust in the grants and nothing more: whether a caller is the record's
-  person comes from the party binding alone
+  ([SMART App Launch](smart-app-launch.md)). A `patient/` grant reaches only
+  the EHR its `ehrId` names, and it is trust in the grant and nothing more:
+  whether a caller is the record's person comes from the party binding alone
   ([A person's own record](behind-ferrosmart.md#a-persons-own-record)).
-- **One issuer for professionals and patients.** A provider issuer has one
-  `kind`, so a direct setup takes a second realm or issuer for patients.
-  FerroSMART is one `persons` issuer for both: a patient signs in, picks their
-  EHR and gets a `patient/` grant to it.
+- **One issuer for professionals and patients.** FerroSMART signs both, each
+  named by their `fhirUser`: a patient signs in, picks their EHR and gets a
+  `patient/` grant to it.
 - **The person's key is FerroSMART's subject.** FerroSMART's `sub` is
   pairwise per provider: base64url of the SHA-256 of the provider's issuer,
   a zero octet and the provider's `sub`. A PERSON's SCIM `loginIdentifier` is
@@ -125,8 +122,9 @@ What changes against a provider FerroEHR trusts directly, such as the
 - **The product scope.** A person reaches the ADMIN API only with the
   product scope, which FerroSMART grants through a role that maps to it from
   FerroSMART 0.2.0 (FerroHEALTH/FerroSMART#647).
-- **System clients** register at FerroSMART for Backend Services, with a JWK
-  Set, and FerroEHR grants each its operations in the CDR as for any system
+- **Clients** register at FerroSMART, whose registry is the one list of
+  clients. A system client registers for Backend Services, with a JWK Set,
+  and FerroEHR grants each its operations in the CDR as for any system
   caller.
 
 ```toml
@@ -135,7 +133,6 @@ public_base_url = "https://ehr.example.org"
 
 [auth.issuer.smart]
 issuer = "https://smart.example.org"
-preset = "ferrosmart"
 
 [auth.issuer.smart.party]
 identifier_issuer = "urn:example:ferrosmart-login"
@@ -150,51 +147,36 @@ the base FerroSMART names in `aud`.
 
 ## Who the caller is
 
-`ferrohealth-smart` classifies every token by its issuer's `kind` and
-profile, and the server acts on the kind:
+`ferrohealth-smart` reads every token's caller from its standard claims, the
+same way for every issuer (SMART App Launch 2.2.0, Scopes and Launch Context;
+RFC 9068 §2.2; RFC 8693 §4.1), and the server acts on the kind:
 
-- **A person** signs in at a `persons` issuer through a first-party client,
-  a client the CDR grants `sign_in_persons`, or with HTTP Basic. The login is bound to the `PERSON` carrying its key,
-  and the person commits under that `PERSON`.
-- **A delegated person** reaches the server through a client or an RFC 8693
-  actor the CDR grants `act_for_persons`. The token's subject is
-  the person, so the request is bound and committed exactly as the person's
-  own; the client and the actor do not change who committed. The access
-  record carries `acting_mode = delegated`, the client and the actor chain.
-- **A Keycloak impersonation** is a delegated person. Keycloak 26.8 puts the
-  administrator who impersonates a user into an RFC 8693 `act` claim of every
-  token of the impersonation session, `{"sub": <the administrator's user
-  id>, "preferred_username": …}`, which "is always present and cannot be
-  disabled" (Keycloak 26.8.0 release notes, *Track impersonation across
-  token lifecycle and downstream services*). An impersonation is therefore
-  refused like any undeclared actor, unless the CDR grants the administrator
-  `act_for_persons` on an `ACTOR` carrying its user id as a `client_id`
-  identifier under the issuer. Then the request is
-  bound to the impersonated user and commits as that user, and the access
-  record names the administrator as the actor (EHDS Annex II 3.2(b) asks
-  for the natural person who accessed). Keycloak's `act` names no issuer,
-  so the actor is recorded under the token's issuer. The `impersonator`
-  claim (`id`, `username`) of Keycloak's built-in IMPERSONATOR_ID and
-  IMPERSONATOR_USERNAME session note mappers repeats `act` and decides
-  nothing. To refuse every impersonation, add those mappers and set
-  `impersonation_marker = "impersonator"` on the issuer: a token carrying
-  the claim is refused before any actor is read. A Keycloak older than 26.8
-  writes no `act`, so there the marker is the only way to see an
-  impersonation at all.
-- **A guest**, by the profile's `guest` markers (Entra ID marks one with
-  `acct = 1` or an `idp` other than the issuer), is refused with `403`
-  (`refused-guest`) unless the issuer's `[auth.issuer.<name>.party]` table sets
-  `guests = true`. Admit guests only for people acting under your own
-  responsibility (GDPR Art. 9(3) and Art. 29), such as contractors.
-- **A system caller** is an app-only token by the profile's `app_only`
-  markers: `sub` equal to the client claim under `rfc9068`, `idtyp = app`
-  without `scp` under `entra`, and the listed service-account subjects under
-  `keycloak`. A Basic user is never one. A system caller acts for no person, so
-  it holds `system/` scopes only, and a token with a `user/` or `patient/` scope
-  is refused with `403`. It reads under its `system/` scopes. It commits into an
-  EHR only as a client the CDR grants `commit_composition`: an `ACTOR`
-  carrying its `client_id` and performing a `ROLE`
-  whose capability grants it
+- **A person** is a user whose token's `fhirUser` is a `Practitioner`, a
+  `PractitionerRole`, a `Person`, or of no stated type, or a Basic user. The
+  login, the token's `sub` under the issuer's party table, is bound to the
+  `PERSON` carrying its key, and the person commits under that `PERSON`.
+- **A patient** is a user whose `fhirUser` is the `Patient` their `patient`
+  launch context names. Their login is bound like a person's, and they are
+  the record's person only on the EHRs whose subject is their `PERSON`.
+- **A representative** is a user whose `fhirUser` is a `RelatedPerson`, or
+  whose `PERSON` is a representative's alone, admitted for a subject the CDR
+  stores a live representation of
+  ([Representatives](operational-policy.md#representatives)).
+- **A delegated user** is a token whose RFC 8693 `act` names an actor, such
+  as a service that exchanged the user's token or an administrator who
+  impersonates them. The token's subject is the user, so the request is bound
+  and committed exactly as the user's own; the actor does not change who
+  committed. The access record carries `acting_mode = delegated`, the client
+  and the actor chain (EHDS Annex II 3.2(b) asks for the natural person who
+  accessed). An actor that names no issuer is recorded under the token's
+  issuer.
+- **A system caller** is a client credentials token, whose `sub` is its
+  `client_id` (RFC 9068 §2.2). A Basic user is never one. A system caller
+  acts for no person, so it holds `system/` scopes only, and a token with a
+  `user/` or `patient/` scope is refused with `403`. It reads under its
+  `system/` scopes. It commits into an EHR only as a client the CDR grants
+  `commit_composition`: an `ACTOR` carrying its `client_id` and performing a
+  `ROLE` whose capability grants it
   ([Operational policy](operational-policy.md#what-a-system-client-may-do)),
   under the committer `PARTY_IDENTIFIED{name = <client>, identifiers =
   [{issuer = <iss>, id = <client>, type = "client"}]}` with an `external_ref`
@@ -211,8 +193,7 @@ profile, and the server acts on the kind:
   - it holds only the `patient/` scopes the agreement `reads` (beside
     `openid`, `profile`, `fhirUser`, `online_access` and `launch`), so a token
     with any other scope is refused, and it reaches only the EHR of its
-    launch context, which needs the issuer's `patient_context` in its
-    `[auth.issuer.<name>.profile]` table;
+    launch context;
   - it is an access-service caller by its kind, so an opted-out EHR answers
     `404` as an unknown one does (EHDS Art. 10(1)). Only an external person
     under an agreement with `opt_out_override` reaches one, under an emergency
@@ -274,8 +255,7 @@ profile, and the server acts on the kind:
 A `federation` issuer with `contact_point = true` in its `[auth.issuer.<name>.federation]`
 table is a MyHealth@EU national contact point (NCPeH-A's authorization
 server). Its person agreement names the service it serves in `ehdsi_service`
-(`patient_summary`, `eprescription` or `orcd`), and its issuer goes into
-sets `patient_context` in its `[auth.issuer.<name>.profile]` table. Every
+(`patient_summary`, `eprescription` or `orcd`). Every
 request runs with a sender-constrained token
 (`sender_constraint = "required"`). On every patient-data route:
 
@@ -343,35 +323,28 @@ request runs with a sender-constrained token
 
 ## The generic standards path
 
-Every walk-through on this page configures the same three things: an issuer
-of kind `persons` that signs your professionals' access tokens, the
-`[auth.issuer.<name>.party]` table their logins are bound through, and a SCIM client that
-provisions their `PERSON`s. Configure them first against a standards-only
-authorization server; the vendor sections after this one are the same
-configuration through a preset (`entra`, `keycloak`, `okta`), each listing
-the preset's deviations with their sources. Every preset key can be set on
-the issuer table, which wins over the preset.
+FerroEHR trusts an authorization server whose access tokens follow RFC 9068:
+`typ` `at+jwt`, and `iss`, `sub`, `aud`, `exp`, `iat`, `jti`, `client_id`
+and `scope` in every token (RFC 9068 §2.2, SMART App Launch 2.2.0). Its
+registry is the one list of clients: a token whose `aud` names FerroEHR
+admits the client its `client_id` names, and FerroEHR keeps no client list of
+its own. Configure three things:
 
-1. **The issuer.** The `rfc9068` profile is the default: an RFC 9068 access
-   token with `typ` `at+jwt`, the client in `client_id` and the scopes in
-   `scope`.
+1. **The issuer.** One table naming it:
 
    ```toml
    [auth.issuer.as]
    issuer = "https://as.example.com"
-   kind = "persons"
    audience = ["ferroehr"]
    ```
 
-   A person's token is admitted only through a client the CDR grants
-   `sign_in_persons`: an administrator writes the client's `AGENT`, carrying
-   its `client_id` under the issuer, and a `ROLE` granting the operation
-   ([Operational policy](operational-policy.md)).
+   A server that signs its tokens with `typ` `JWT` names it in
+   `[auth.issuer.as.profile] token_types`.
 
 2. **The binding, on `sub`.** OpenID Connect Core 1.0 §5.7 names `iss` with
-   `sub` as the only stable identifier of an end-user, so the `rfc9068`
-   profile binds on `sub`. The `[auth.issuer.<name>.party]` table names the identifier
-   the key is matched against:
+   `sub` as the only stable identifier of an end-user, so a login is bound by
+   its token's `sub`. The `[auth.issuer.<name>.party]` table names the
+   identifier the key is matched against:
 
    ```toml
    [auth.issuer.as.party]
@@ -382,282 +355,63 @@ the issuer table, which wins over the preset.
    An `email`, `phone_number`, `preferred_username` or `name` is never a key.
 3. **The SCIM client.** Your authorization server issues the provisioning
    client an access token by the client credentials grant (RFC 6749 §4.4), or
-   in exchange for a client assertion (RFC 7523 §2.2). Declare the
-   authorization server as an issuer of kind `machines`, and grant the client
+   in exchange for a client assertion (RFC 7523 §2.2). Grant the client
    [`scim_provision`](installation/config-auth.md#authscim) in the CDR with
    the `binding_issuer` of step 2. The SCIM client sends the key as
    `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier`
    (RFC 7644).
-4. **An onward caller.** A service that calls FerroEHR for a signed-in
-   professional, such as FerroBRIDGE, exchanges the professional's token at
-   the authorization server by RFC 8693 token exchange. Grant the service
-   `act_for_persons` on the `AGENT` carrying its client id (or, for an RFC
-   8693 actor, its `sub`) under the issuer: the request is bound to the
-   professional, and the access record names the service.
+
+A service that calls FerroEHR for a signed-in professional, such as
+FerroBRIDGE, exchanges the professional's token at the authorization server
+by RFC 8693 token exchange. The request is bound to the professional, and
+the access record names the service.
 
 [Who is the committer](security/committer.md) shows what the server records
 for each of these callers.
 
-## Microsoft Entra ID (Azure AD)
-
-Entra ID exposes a standards-compliant OIDC issuer per tenant.
-
-1. **Register an application** (Entra admin center → App registrations).
-   Note the *Directory (tenant) ID* and the *Application (client) ID*.
-2. **Define app roles** (App registration → App roles): create roles named
-   after the CDR roles you use (for example `USER`, `CLINICAL`, `ADMIN`) and
-   assign users/groups to them (Enterprise applications → your app → Users
-   and groups). Entra puts assigned app roles in the token's `roles` claim.
-3. **Expose an audience**: either use the client ID as the audience or add an
-   *Application ID URI* (for example `api://ferroehr`).
-4. **Point the CDR at the tenant issuer** and mine the `roles` claim:
-
-   ```bash
-   export FERROEHR__AUTH__ISSUER__ENTRA__ISSUER=https://login.microsoftonline.com/<tenant-id>/v2.0
-   export FERROEHR__AUTH__ISSUER__ENTRA__KIND=persons
-   # Entra ID mints no RFC 9068 tokens (`typ` JWT, the scopes in `scp`), which
-   # the `entra` profile reads.
-   export FERROEHR__AUTH__ISSUER__ENTRA__PRESET=entra
-   export FERROEHR__AUTH__ISSUER__ENTRA__AUDIENCE=api://ferroehr
-   export FERROEHR__AUTH__ISSUER__ENTRA__ROLE_CLAIMS=roles
-   # Its roles may grant the administrator role.
-   export FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS=entra
-   ```
-
-   Then grant your app `sign_in_persons` in the CDR, on the `AGENT` carrying
-   its client id under the tenant issuer ([Operational
-   policy](operational-policy.md)); a person's token through any other
-   client is refused with `401`.
-
-5. **Verify**: request a token for the app (any OAuth2 client credential or
-   auth-code flow) and call the API. Read the status codes as a diagnostic:
-
-   | Status | What it tells you |
-   |---|---|
-   | `200`-family | roles arrived and the operation was permitted |
-   | `401` | no credential, or one the server rejected (the body deliberately never says which) |
-   | `403` | the token is valid but carries no role or SMART on openEHR scope the operation needs: a clinical call needs a matching scope and, unless every SMART on openEHR scope it holds is a `system/` scope or the caller is the record's person or their representative, at least one role, an admin call needs the admin role and the product scope |
-   | `400` | the `Authorization` header itself is malformed; no credential was ever read |
-   | `503` | the CDR could not read your issuer's key set again, so the token was never judged: check network egress, not the token |
-
-> [!IMPORTANT]
-> A role must arrive in a **role claim**, not in `scope`. The OAuth2 `scope`
-> claim grants a client delegated authority
-> ([RFC 6749 §3.3](https://www.rfc-editor.org/rfc/rfc6749#section-3.3)) and says
-> nothing about the subject's roles, so it is not a role source. If your IdP is
-> configured to put role names in `scope`, map them into `roles` (or another
-> entry of `ROLE_CLAIMS`) instead.
-
-> [!TIP]
-> Group-based deployments can emit the `groups` claim instead and list it in
-> `ROLE_CLAIMS`, but group claims arrive as object IDs unless you configure
-> group names, so app roles usually read better in policy.
-
-> [!WARNING]
-> Two configuration mistakes are boot errors rather than runtime surprises, so
-> you will find them the first time you start the server: an issuer that is not
-> an `https` URL with no query or fragment, and an empty audience list. Both are
-> deliberate: the second is what stops this server accepting a token minted for
-> a different service. An issuer the server cannot reach at boot refuses the
-> start too.
-
-### Binding and provisioning with the `entra` preset
-
-The `entra` preset is the generic path with Entra ID's deviations, each from
-Microsoft's *Access token claims reference* (claims) or *Optional claims
-reference* (optional):
-
-| Preset key | Value | Source |
-|---|---|---|
-| `person_key` | `oid` | claims, `oid`: "The immutable identifier for the requestor"; `sub` is a pairwise value per application and never a key |
-| `tenant_claim` | `tid` | claims, `tid` |
-| `token_types` | `["JWT"]` | claims, header `typ` "always `JWT`" |
-| `scope_claim`, `app_only_scope_claim` | `scp` (string), `roles` (array) | claims, `scp` and `roles` |
-| `client_claims` | `["azp"]` | claims, `azp` |
-| `app_only` | `idtyp = "app"`, and no `scp` | optional, `idtyp`; claims, `scp` "Only included for user tokens" |
-| `guest` | an `idp` other than the issuer, or `acct = 1` | claims, `idp`; optional, `acct` |
-| `expect` | `ver = "2.0"` | claims, `ver` |
-| `user_claims` | `["acct"]` | optional, `acct`, emitted only when the registration asks for it |
-| `unstable_claims` | `upn`, `unique_name` | claims, `unique_name`; optional, `upn` |
-
-Binding on `oid` is FerroEHR's choice on Microsoft's "immutable identifier"
-wording. For it to work, the app registration of FerroEHR's API, and of
-every service such as FerroBRIDGE that calls it, needs:
-
-- the optional claims `acct` (the guest marker: the preset requires it on
-  every user token, so a registration without it is refused at the first
-  token, naming the claim), `idtyp` (the app-only marker), `given_name` and
-  `family_name`, and the `profile` scope that `oid` needs;
-- `"requestedAccessTokenVersion": 2` in the manifest's `api` attribute
-  (*Understand the app manifest*): FerroEHR accepts v2.0 tokens only, and a
-  null value defaults to version 1.
-
-Cross-tenant synchronisation and converted guests: a member-type user of
-another tenant carries `acct = 0`, but an `idp` naming their home tenant. The
-preset treats them as a guest by `idp`, so they bind only where the
-`[auth.issuer.<name>.party]` table sets `guests = true`, and never as staff.
-
-A person in more groups than fit in a token (the groups overage: "150 for
-SAML tokens, 200 for JWT tokens", claims) carries no `groups` claim, and the
-login is refused with `403` (`refused-groups-unavailable`) unless the issuer
-sets `adapter = "idp-entra"` with an `[auth.idp.entra]` table, which reads the
-groups from Microsoft Graph. Provision only the groups assigned to the
-application to stay under the limit.
-
-**Provisioning through SCIM.** The non-gallery enterprise application, its
-Tenant URL `https://<host>/scim/v2/` and the steps on FerroEHR's side are in
-[Provision from Microsoft Entra ID](installation/config-auth.md#provision-from-microsoft-entra-id).
-On the Entra side:
-
-- **Authentication.** Use the OAuth 2.0 client credentials grant against your
-  own authorization server, or Workload Identity Federation, in which Entra
-  presents a signed client assertion your authorization server exchanges.
-  Never leave the Secret Token blank: Entra then sends its own test token,
-  which every non-gallery application of the tenant receives.
-- **Attribute mappings.** Replace the tutorial's `mailNickname` to
-  `externalId` with `objectId` to `externalId`, because a mail nickname "may
-  not be unique in the directory" (*Develop a SCIM endpoint*). Map `objectId`
-  to `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier`
-  as well, and `userPrincipalName` to `userName`.
-- **Matching precedence.** Set `externalId` first and `userName` second.
-- **Remove every other attribute** the FerroEHR mapping does not carry:
-  "Schema discovery isn't currently supported on custom non-gallery SCIM
-  application" (*Develop a SCIM endpoint*), so Entra cannot learn FerroEHR's
-  schema and sends what its defaults name.
-
-## AD FS (on-premises Active Directory)
-
-AD FS 2016+ speaks OIDC. This is also the supported path for on-premises
-Active Directory in general: front AD with AD FS (or another OIDC-capable
-broker) rather than pointing anything at LDAP.
-
-1. **Create an Application Group** (AD FS Management → Application Groups →
-   *Web API* template, or *Server application + Web API* for interactive
-   clients). The Web API's *identifier* becomes the token audience.
-2. **Issue role claims**: on the Web API's *Issuance Transform Rules*, add a
-   rule mapping AD group membership to the `role` claim (template: *Send
-   Group Membership as a Claim*), one rule per CDR role.
-3. **Point the CDR at the AD FS issuer** and mine the `role` claim:
-
-   ```bash
-   export FERROEHR__AUTH__ISSUER__ADFS__ISSUER=https://adfs.example.com/adfs
-   export FERROEHR__AUTH__ISSUER__ADFS__KIND=persons
-   export FERROEHR__AUTH__ISSUER__ADFS__AUDIENCE=ferroehr-api
-   # AD FS mints no RFC 9068 tokens: name the type and the claims its tokens carry.
-   export FERROEHR__AUTH__ISSUER__ADFS__PROFILE__TOKEN_TYPES=JWT
-   export FERROEHR__AUTH__ISSUER__ADFS__PROFILE__REQUIRED_CLAIMS=iss,sub,aud,exp
-   export FERROEHR__AUTH__ISSUER__ADFS__ROLE_CLAIMS=role
-   export FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS=adfs
-   ```
-
-   Grant your app `sign_in_persons` in the CDR, as for Entra ID above.
-
-   Discovery works out of the box (`https://adfs.example.com/adfs/.well-known/openid-configuration`).
-4. **Verify** with the same status table as above: `401` without a token, `403`
-   with a token that lacks the required role.
-
-> [!NOTE]
-> AD FS emits a single string for one role and an array for several; the
-> role-mining layer accepts both shapes on any configured claim path.
-
-## "We only have LDAP"
-
-The CDR does not speak LDAP, by design: LDAP bind would put password
-handling back inside the CDR. Front the directory with an OIDC-capable
-broker and connect that instead:
-
-- **Active Directory** → AD FS (above) or Entra ID (if synced).
-- **Generic LDAP** → Keycloak with LDAP user federation (the
-  [Keycloak example](security.md#authentication) then applies verbatim), or
-  any other OIDC provider that can federate LDAP.
-
-The broker owns the LDAP bind; the CDR sees only signed tokens.
-
-## Okta
-
-The `okta` preset reads Okta's access tokens (Okta, *OpenID Connect & OAuth
-2.0 API*, the reserved claims of the access token):
-
-| Preset key | Value | Source |
-|---|---|---|
-| `person_key` | `uid` | `uid`: "A unique identifier for the user" |
-| `client_claims` | `["cid"]` | `cid`: "Client ID of the client that requested the access token" |
-| `scope_claim` | `scp` (array) | `scp`: "Array of scopes that are granted to this access token" |
-| `app_only` | no `uid` | `uid` "isn't included in the access token if there is no user bound to it" |
-| `token_types` | none | the page names no `typ`, so an `okta` issuer fails to load until you set `token_types` to what your Okta server writes |
-
-```toml
-[auth.issuer.default]
-issuer = "https://example.okta.com/oauth2/default"
-kind = "persons"
-preset = "okta"
-audience = ["api://ferroehr"]
-
-[auth.issuer.default.profile]
-token_types = ["<the typ header your server writes>"]
-```
-
-Read the `typ` header of one of your server's access tokens and set it in
-`token_types`; the preset deliberately names none.
-
 ## Keycloak
 
-The `keycloak` preset reads Keycloak 26.8 access tokens: `azp` as the client,
-`scope` as a string, `typ` `JWT` (confirm it against your own server), and no
-app-only marker until you list your service accounts. Configure a realm for
-binding as follows.
+Keycloak 26.8 signs its access tokens with `typ` `JWT`, names the client in
+`azp` and the scopes in `scope`, and carries no `client_id` unless a mapper
+adds it. FerroEHR trusts a realm directly once every client's tokens carry
+`client_id`:
 
-1. **Two realms.** An issuer has one `kind`, so professionals sign in at one
-   realm (`kind = "persons"`) and patients at another (`kind = "patients"`).
-   A patient's own access comes from the party binding alone: their login
-   under the patients realm has to be a binding key of the `PERSON` that
-   their EHR's `EHR_STATUS.subject` names. A patient token whose login no
-   `PERSON` carries, or that names no `ehrId`, is refused `403` with
-   `refused-unbound`
-   ([Representatives in the patient portal](operational-policy.md#representatives-in-the-patient-portal)).
-2. **The binding on `sub`.** Keycloak's `sub` is the user id, which no user
-   can change. A user-profile attribute can be the key instead only when its
-   *Who can edit* permission is *Admin* (`"permissions": { "edit": ["admin"] }`,
-   Server Administration Guide, *Managing user attributes*).
-3. **Service accounts.** "A client's service account is a user account with
-   username `service-account-CLIENT_ID`", so its `sub` is a user id. List
-   every service account of the realm by its `sub` in the issuer's
-   `app_only`; the empty list refuses the issuer at load. On a realm with
-   just-in-time creation an unlisted service account would be read as a
-   person, so the list must be complete.
+1. **`client_id` in every token.** Add a *Hardcoded claim* mapper named
+   `client_id` to each client, whose value is the client's own id, and add it
+   to the access token. A client credentials token's `sub` is the service
+   account's user id, so give each service account's tokens a `sub` equal to
+   the client id with a second hardcoded mapper; FerroEHR reads a token whose
+   `sub` is its `client_id` as a system caller (RFC 9068 §2.2).
+2. **The token type.** Set `[auth.issuer.<name>.profile] token_types =
+   ["JWT"]`.
 
    ```toml
    [auth.issuer.staff]
    issuer = "https://keycloak.example.com/realms/staff"
-   kind = "persons"
-   preset = "keycloak"
    audience = ["ferroehr"]
 
    [auth.issuer.staff.profile]
-   app_only = [{ subjects = ["<the sub of service-account-lab>"] }]
+   token_types = ["JWT"]
    ```
 
+3. **The binding on `sub`.** Keycloak's `sub` is the user id, which no user
+   can change.
 4. **The audience for an onward caller.** Keycloak's standard token exchange
    requires "the requester client set as an audience in the `aud` claim" of
    the subject token (*Securing applications*, token exchange). Add an
    audience mapper to the client scope your professionals' tokens carry that
    puts the bridge's or gateway's client in `aud`, and let the onward caller
-   name FerroEHR's client id in the `audience` parameter. Grant the onward
-   client `act_for_persons` in the CDR.
-5. **No impersonation on a binding realm.** "Any user with the
-   `impersonation` role in the realm can impersonate a user" (*Impersonating
-   users*). Check that no user or group holds the realm `impersonation` role,
-   or the fine-grained admin permission `impersonate`, and that no client
-   holds the legacy token exchange's impersonation permission; disable the
-   legacy token exchange. Where an administrator must keep impersonation, add
-   the built-in user session note mappers IMPERSONATOR_ID and
-   IMPERSONATOR_USERNAME to the inbound client scope and set
-   `impersonation_marker = "impersonator"`, so every impersonation is
-   refused. Whether Keycloak 26.8 adds those mappers by default is not
-   verified here; check the client scope. Keycloak 26.8 also writes an RFC
-   8693 `act` claim into every impersonation token, so an impersonator the
-   CDR does not grant `act_for_persons` is refused even without the marker
-   ([Who the caller is](#who-the-caller-is)).
+   name FerroEHR's client id in the `audience` parameter.
+5. **Impersonation.** Keycloak 26.8 puts the administrator who impersonates a
+   user into an RFC 8693 `act` claim of every token of the impersonation
+   session, which "is always present and cannot be disabled" (Keycloak 26.8.0
+   release notes, *Track impersonation across token lifecycle and downstream
+   services*). FerroEHR reads it as asserted: the request is bound to the
+   impersonated user and the access record names the administrator as the
+   actor. On a binding realm, check that no user or group holds the realm
+   `impersonation` role or the fine-grained admin permission `impersonate`,
+   and disable the legacy token exchange. A Keycloak older than 26.8 writes
+   no `act`, so there an impersonation cannot be seen at all.
 6. **Realm hardening.** On a binding or just-in-time realm: no
    self-registration, no social or other brokered identity provider without
    an explicit allow-list, and no automatic account linking (the first login
@@ -669,30 +423,39 @@ binding as follows.
    (supported)*). It provisions nothing outbound, so it cannot create
    FerroEHR's `PERSON`s or `GROUP`s: a deployment needs an upstream SCIM
    client, such as its identity governance or HR system, or just-in-time
-   creation. Enabling Keycloak's own SCIM adds a second SCIM endpoint to the
-   deployment, which FerroEHR does not read.
+   creation.
 
-## A SAML identity provider through Keycloak or Entra ID
+## Identity providers upstream of FerroSMART
 
-FerroEHR never sees SAML. It is an OAuth 2.0 resource server and validates
-only access tokens, so a SAML 2.0 identity provider reaches it through an
-authorization server that brokers it:
+**Microsoft Entra ID** signs its access tokens with `typ` `JWT`, names the
+scopes in `scp` and the client in `azp` (Microsoft identity platform,
+*Access token claims reference*). **Okta** names the scopes in `scp` and the
+client in `cid` (Okta, *OpenID Connect & OAuth 2.0 API*). **AD FS** issues
+neither `client_id` nor `scope`. None of them issues the RFC 9068 tokens
+FerroEHR reads, so each runs upstream of FerroSMART for login, as the table
+in [Behind FerroSMART](#behind-ferrosmart) lists. The same holds for:
 
-- **Keycloak** brokers it by Web Browser SSO (OASIS SAML V2.0 Profiles §4.1)
-  as the service provider, and issues its own OpenID Connect tokens after the
-  login. Set the identity provider's *Principal Type* to the Subject `NameID`
-  with the persistent format (`urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`,
-  Keycloak's default *NameID Policy Format*) or to an immutable attribute, so
-  the brokered user's Keycloak `sub` stays the same from login to login.
-  Keycloak refuses a Subject `NameID` principal with the transient format.
-  Map the name attributes to `given_name`, `family_name` and `name` for
-  just-in-time creation, and the group attribute to the group claim.
-- **Entra ID** federates the SAML identity provider for its tenant, and the
-  `entra` preset reads the tokens it issues as above.
+- **A SAML 2.0 identity provider.** FerroEHR never sees SAML. Keycloak or
+  Entra ID brokers it by Web Browser SSO (OASIS SAML V2.0 Profiles §4.1), and
+  FerroSMART logs the person in there. In Keycloak, set the identity
+  provider's *Principal Type* to the Subject `NameID` with the persistent
+  format (`urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`) or to an
+  immutable attribute, so the brokered user's `sub` stays the same from login
+  to login.
+- **A plain LDAP directory.** The CDR does not speak LDAP, by design: an LDAP
+  bind would put password handling back inside the CDR. Front Active
+  Directory with AD FS or Entra ID, and any other directory with Keycloak's
+  LDAP user federation.
 
 Never bind on `email`, `phone_number`, `preferred_username`, `name`, `upn` or
-`unique_name`, whatever the SAML assertion maps them from (OpenID Connect
-Core 1.0 §5.7).
+`unique_name`, whatever an assertion maps them from (OpenID Connect Core 1.0
+§5.7).
+
+> [!IMPORTANT]
+> A role must arrive in a **role claim**, not in `scope`. The OAuth2 `scope`
+> claim grants a client delegated authority
+> ([RFC 6749 §3.3](https://www.rfc-editor.org/rfc/rfc6749#section-3.3)) and says
+> nothing about the subject's roles, so it is not a role source.
 
 ## Just-in-time creation
 
@@ -712,18 +475,7 @@ each identity provider must do for it:
   the userinfo endpoint. A generic issuer emits the OpenID Connect Core 1.0
   §5.1 claims your mapped attributes name (`name`, `given_name`,
   `family_name`).
-- **Microsoft Entra ID (the `entra` preset):** add the optional claims
-  `given_name` and `family_name` to the access token of your app
-  registration and request the `profile` scope: Entra documents both as v2.0
-  optional claims that "Requires the `profile` scope" (Microsoft identity
-  platform, *Optional claims reference*). Admit logins by group (an
-  `admit_group` element of the `create_at_login` grant, holding an object
-  id of `groups`) or by the `idp` claim (an `admit_idp` element), which
-  "records the identity provider that authenticated the subject of the
-  token" and differs from the issuer for a guest (*Access token claims
-  reference*). The key is the object id `oid`, never `upn` or `email`, which
-  Entra calls mutable.
-- **Keycloak (the `keycloak` preset):** the built-in `profile` client scope
+- **Keycloak:** the built-in `profile` client scope
   maps the name claims; check that its mappers add them to the access token.
   Make the name attributes administrator-controlled as the key is: in the
   realm's user profile, set the attribute's *Who can edit* permission to
