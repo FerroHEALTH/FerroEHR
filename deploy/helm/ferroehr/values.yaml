@@ -679,33 +679,28 @@ config:
   # than appearing to succeed. Add an `issuer` table, an [[auth.basic.users]]
   # entry, or set enabled=false — the last serves EVERY request unauthenticated
   # and is a development-only choice the chart makes you state explicitly.
-  # `issuer` is a list of tables, one per trusted issuer, each stating its
-  # `kind` (persons | patients | machines | federation) and its `profile`
-  # (rfc9068 | entra | keycloak | okta | nl) beside its `audience`; a persons
-  # issuer has its `party` table, the identifier issuer its logins bind under,
-  # and its people sign in through the clients the CDR grants
-  # `sign_in_persons` (a client's `AGENT`, written through the Demographic
-  # API; book: Operational policy). Every Basic
-  # user is a person, mapped by authz.party_binding.basic_user to the binding
-  # key its PERSON carries, so a Basic user needs a persons issuer too. The
+  # `issuer` holds one table per trusted issuer by name, a SMART App Launch
+  # 2.2 authorization server unless it states `kind: federation`, beside its
+  # `audience`; an issuer whose users sign in has its `party` table, the
+  # identifier issuer its logins bind under, and the authorization server's
+  # registry is the one list of clients. Every Basic user is a person, mapped
+  # by authz.party_binding.basic_user to the binding key its PERSON carries,
+  # so a Basic user needs an issuer with a party table too. The
   # issuer is an https URL with no query/fragment, only asymmetric algorithms
   # are accepted, and every [[auth.basic.users]] password_hash must be
   # argon2id at m>=19456,t=2,p=1. All checked at boot. An issuer with
   # `sender_constraint: required` runs on any number of replicas: they record
   # the DPoP proofs they accept in the one database they share.
   #   issuer:
-  #     - issuer: https://idp.example.com/realms/staff
-  #       kind: persons
-  #       profile: keycloak
+  #     staff:
+  #       issuer: https://smart.example.com
   #       audience: [ferroehr]
-  #   party:
-  #     - issuer: https://idp.example.com/realms/staff
-  #       identifier_issuer: urn:example:staff-login
-  #       identifier_type: uuid
+  #       party:
+  #         identifier_issuer: urn:example:staff-login
+  #         identifier_type: uuid
   # Every route enforces SMART on openEHR scopes: the scopes a Basic user's
   # PERSON is granted (`hold_scopes`) and a token's `scope` claim must grant
-  # what it calls; a system client the CDR grants `access_without_scope` whose
-  # token carries no resource scope meets every SMART on openEHR requirement.
+  # what it calls.
   # A Basic user is a credential alone: `user` and its hash. Its roles are
   # `hold_roles` grants, and authz.rbac.first_admin names the one Basic user
   # that holds `admin_role` and the product scope from the configuration, the
@@ -738,8 +733,8 @@ config:
   # [auth.scim] — the SCIM 2.0 service provider at /scim/v2 (RFC 7644),
   # through which an identity provider such as Microsoft Entra ID provisions
   # each professional as a demographic PERSON. Absent by default, and the
-  # table's presence serves it. It needs a machines [[auth.issuer]] (the
-  # deployment's own authorization server); the party mapping under
+  # table's presence serves it. It needs an issuer of the deployment's own
+  # authorization server, whose client credentials tokens the client holds; the party mapping under
   # authz.party_binding defaults to FerroEHR's default definitions.
   # config.server.public_base_url is required, and the Ingress then routes
   # /scim/v2 on every host. Who provisions is CDR data, not a value: a
@@ -1533,7 +1528,7 @@ terminology:
 # ─────────────────────────────────────────────────────────────────────────────
 bridge:
   # -- Deploy FerroBRIDGE alongside the CDR. Needs `bridge.cdr.oauth`, a client
-  # of a `machines` issuer in `config.auth.issuer`, `bridge.cdr.existingSecret`
+  # of an issuer in `config.auth.issuer`, `bridge.cdr.existingSecret`
   # with its client secret, and at least one `bridge.networkPolicy.ingressFrom`
   # peer; the render is refused without any of them.
   enabled: false
@@ -1584,8 +1579,8 @@ bridge:
       # -- The issuer identifier of the authorization server, an https URL
       # (RFC 8414 §2); FerroBRIDGE reads its token endpoint from the
       # issuer's metadata. Required, and it must be a `config.auth.issuer`
-      # entry with `kind: machines`, or the render is refused: the CDR trusts
-      # no token of an issuer it does not list.
+      # entry, or the render is refused: the CDR trusts no token of an issuer
+      # it does not list.
       issuer: ""
       # -- The token endpoint (RFC 6749 §3.2), for an authorization server
       # whose metadata FerroBRIDGE cannot read at `issuer`. Set, FerroBRIDGE

@@ -53,9 +53,15 @@ guarded_handler! {
                                           EHR is served again under the new settings.",
              body = serde_json::Value),
             (status = 400, description = "The body does not name the EHR, or the \
-                                          settings are not settings of the \
-                                          `access_directives` scheme whose every invariant \
-                                          holds; the problem names the first defect.",
+                                          settings do not read as an \
+                                          `ACCESS_DIRECTIVE_SETTINGS` of the \
+                                          `access_directives` scheme; the problem names the \
+                                          first defect.",
+             body = serde_json::Value),
+            (status = 422, description = "The settings read but break a rule, such as an \
+                                          invariant of the draft access control BMM or a \
+                                          code outside the terminology its attribute is \
+                                          bound to; the problem names the first defect.",
              body = serde_json::Value),
             (status = 404, description = "No such EHR.", body = serde_json::Value),
             (status = 409, description = "The EHR's settings parse, so it is not held: a \

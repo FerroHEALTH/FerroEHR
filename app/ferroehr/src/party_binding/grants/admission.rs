@@ -9,8 +9,8 @@
 //! [`crate::party_binding::policy_mark::TERMINOLOGY`] admits the logins of each
 //! token issuer its [`LOGIN_ISSUER`] elements name that meet every condition
 //! it declares: an identity provider of [`ADMIT_IDP`], a group of
-//! [`ADMIT_GROUP`], a role of [`ADMIT_ROLE`], the level of
-//! [`ADMIT_ASSURANCE`] or above, and a guest only under [`ADMIT_GUESTS`].
+//! [`ADMIT_GROUP`], a role of [`ADMIT_ROLE`] and the level of
+//! [`ADMIT_ASSURANCE`] or above.
 //! A grant names at least one issuer and one condition, or its commit is
 //! refused and a stored one is never honoured, so no grant admits every
 //! login of an issuer. Several grants in force admit a login when any one
@@ -45,10 +45,6 @@ pub const ADMIT_ROLE: &str = "admit_role";
 /// the lowest `[authz.assurance]` level an admitted login carries.
 pub const ADMIT_ASSURANCE: &str = "admit_assurance";
 
-/// The code naming the element whose `DV_BOOLEAN` admits a guest the
-/// issuer's `[auth.issuer.<name>.party]` table admits.
-pub const ADMIT_GUESTS: &str = "admit_guests";
-
 /// Why a `create_at_login` grant's credentials admit nothing.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum AdmissionRefused {
@@ -67,14 +63,13 @@ pub enum AdmissionRefused {
     /// An element of this code holds no value of the type it is read as.
     #[error(
         "carries a {0} element whose value does not read: {LOGIN_ISSUER}, {ADMIT_IDP}, \
-         {ADMIT_GROUP}, {ADMIT_ROLE} and {ADMIT_ASSURANCE} hold a non-empty text and \
-         {ADMIT_GUESTS} a DV_BOOLEAN"
+         {ADMIT_GROUP}, {ADMIT_ROLE} and {ADMIT_ASSURANCE} hold a non-empty text"
     )]
     Unreadable(&'static str),
     /// The [`ADMIT_ASSURANCE`] text names no level.
     #[error("reads {0:?} as {ADMIT_ASSURANCE}, which is none of low, substantial and high")]
     Assurance(String),
-    /// More than one [`ADMIT_ASSURANCE`] or [`ADMIT_GUESTS`] element.
+    /// More than one [`ADMIT_ASSURANCE`] element.
     #[error("carries more than one {0} element")]
     Several(&'static str),
 }
@@ -87,7 +82,6 @@ pub struct Admission {
     groups: Vec<String>,
     roles: Vec<String>,
     assurance: Option<AssuranceLevel>,
-    guests: bool,
 }
 
 impl Admission {
@@ -106,20 +100,12 @@ impl Admission {
             [level] => Some(level_of(level)?),
             _ => return Err(AdmissionRefused::Several(ADMIT_ASSURANCE)),
         };
-        let guests = match credentials.named(ADMIT_GUESTS).len() {
-            0 => false,
-            1 => credentials
-                .boolean(ADMIT_GUESTS)
-                .ok_or(AdmissionRefused::Unreadable(ADMIT_GUESTS))?,
-            _ => return Err(AdmissionRefused::Several(ADMIT_GUESTS)),
-        };
         let admission = Self {
             issuers,
             idp: texts(credentials, ADMIT_IDP)?,
             groups: texts(credentials, ADMIT_GROUP)?,
             roles: texts(credentials, ADMIT_ROLE)?,
             assurance,
-            guests,
         };
         if admission.idp.is_empty()
             && admission.groups.is_empty()
@@ -159,12 +145,6 @@ impl Admission {
     #[must_use]
     pub fn assurance(&self) -> Option<AssuranceLevel> {
         self.assurance
-    }
-
-    /// Whether it admits a guest.
-    #[must_use]
-    pub fn guests(&self) -> bool {
-        self.guests
     }
 }
 
@@ -261,7 +241,6 @@ mod tests {
             ]}),
             named(ADMIT_ROLE, &text("clinical")),
             named(ADMIT_ASSURANCE, &text("Substantial")),
-            named(ADMIT_GUESTS, &json!({"_type": "DV_BOOLEAN", "value": true})),
         ])
         .expect("the admission reads");
         assert!(admission.names("https://login.example"));
@@ -270,7 +249,6 @@ mod tests {
         assert_eq!(admission.groups(), ["clinicians"]);
         assert_eq!(admission.roles(), ["clinical"]);
         assert_eq!(admission.assurance(), Some(AssuranceLevel::Substantial));
-        assert!(admission.guests());
     }
 
     #[test]
@@ -280,20 +258,8 @@ mod tests {
         assert_eq!(read(&[idp()]), Err(AdmissionRefused::NoIssuer));
         assert_eq!(read(&[issuer()]), Err(AdmissionRefused::NoCondition));
         assert_eq!(
-            read(&[
-                issuer(),
-                named(ADMIT_GUESTS, &json!({"_type": "DV_BOOLEAN", "value": true}))
-            ]),
-            Err(AdmissionRefused::NoCondition),
-            "admitting guests is no condition"
-        );
-        assert_eq!(
             read(&[issuer(), named(ADMIT_IDP, &text("  "))]),
             Err(AdmissionRefused::Unreadable(ADMIT_IDP))
-        );
-        assert_eq!(
-            read(&[issuer(), idp(), named(ADMIT_GUESTS, &text("yes"))]),
-            Err(AdmissionRefused::Unreadable(ADMIT_GUESTS))
         );
         assert_eq!(
             read(&[issuer(), named(ADMIT_ASSURANCE, &text("medium"))]),

@@ -536,7 +536,6 @@ url = "tls://u8:URL_PW_SENTINEL_8@h8:6514/p8"
         r#"
 [auth.issuer.r]
 issuer = "https://u7:URL_PW_SENTINEL_7@idp.example/realms/r"
-kind = "machines"
 audience = ["ferroehr"]
 
 [server]
@@ -639,12 +638,10 @@ enabled = true
 
 [auth.issuer.as]
 issuer = "https://as.example"
-kind = "machines"
 audience = ["ferroehr-machines"]
 
 [auth.issuer.login]
 issuer = "https://login.example"
-kind = "persons"
 audience = ["ferroehr"]
 
 [auth.issuer.login.party]

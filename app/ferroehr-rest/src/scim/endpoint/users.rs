@@ -98,14 +98,10 @@ pub(crate) async fn create(
         }
         let map = &users.inner.map;
         let values = map
-            .values(
-                &users.service,
-                resource,
-                (&client.binding_issuer, client.portal),
-            )
+            .values(&users.service, resource, &client.binding_issuer)
             .await?;
         let user = NewUser {
-            template_id: map.template_id(client.portal)?.to_owned(),
+            template_id: map.template_id().to_owned(),
             namespace: map.namespace().to_owned(),
             values,
         };
@@ -267,14 +263,7 @@ pub(crate) async fn modify(
         };
         let wanted = wanted_roles(&after)?;
         admit_roles(&client, &wanted)?;
-        let user = write(
-            &users,
-            (issuer, client.portal),
-            user,
-            (&current, &after),
-            active,
-        )
-        .await?;
+        let user = write(&users, issuer, user, (&current, &after), active).await?;
         sync_roles(&users, &client, user, wanted).await
     })
     .await;
@@ -317,12 +306,11 @@ async fn current(
     Ok((user, current))
 }
 
-/// Commits the User `user` of the client of `issuer`, a portal client when
-/// `portal`, going from `old` to `new` with the request's `active`,
-/// returning the User after.
+/// Commits the User `user` of the client of `issuer`, going from `old` to
+/// `new` with the request's `active`, returning the User after.
 async fn write(
     users: &Users,
-    (issuer, portal): (&str, bool),
+    issuer: &str,
     user: ProvisionedUser,
     (old, new): (&Resource, &Resource),
     active: Option<bool>,
@@ -330,7 +318,7 @@ async fn write(
     let (set, clear) = users
         .inner
         .map
-        .changes(&users.service, &user.body, (old, new), (issuer, portal))
+        .changes(&users.service, &user.body, (old, new), issuer)
         .await?;
     let update = UserUpdate {
         set,
@@ -383,22 +371,13 @@ fn wanted_roles(resource: &Resource) -> Result<Vec<String>, ScimError> {
 
 /// Refuses `wanted` when it names a role the client's `scim_provision`
 /// grants do not admit, or any role when they name no `role_terminology`
-/// (#5625), or any role for a patient portal's representative, who performs
-/// no `ROLE` (#5622).
+/// (#5625).
 ///
 /// # Errors
-/// A `403` naming the first role outside the ceiling, or naming the portal.
+/// A `403` naming the first role outside the ceiling.
 fn admit_roles(client: &ScimClient, wanted: &[String]) -> Result<(), ScimError> {
     if wanted.is_empty() {
         return Ok(());
-    }
-    if client.portal {
-        return Err(ScimError::new(
-            StatusCode::FORBIDDEN,
-            "the client provisions a patient portal's representatives, who hold no role: a \
-             representative acts only through a representation the patient or an \
-             administrator records",
-        ));
     }
     if client.roles.terminology.is_none() {
         return Err(ScimError::new(

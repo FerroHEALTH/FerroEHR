@@ -41,7 +41,7 @@ const KEY: &str = "7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d";
 /// The binding configuration of `party_binding_http` with the Basic user
 /// [`USER`] mapped by [`KEY`] when `mapped`.
 fn deployment(mapped: bool) -> AppConfig {
-    let mut config = config(None);
+    let mut config = config();
     config.auth.shared.basic = Some(common::basic_section(&[(
         USER,
         common::hash_password("pw").as_str(),
@@ -91,7 +91,6 @@ async fn a_basic_user_with_no_mapping_builds_no_authenticator() {
         &deployment(false),
         Some(source),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
-        common::standing(&svc),
     )
     .await;
     let Err(refused) = built else {

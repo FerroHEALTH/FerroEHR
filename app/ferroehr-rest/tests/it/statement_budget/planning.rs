@@ -7,7 +7,9 @@
 //! executions (`PostgreSQL` docs, `PREPARE`, "Notes").
 //!
 //! The plans are read from `pg_stat_statements` with `track_planning` on for
-//! the test's database. No openEHR spec governs the planning of a statement:
+//! the test's database, whose tables leave autovacuum and are analyzed before
+//! each path is warmed, so the statistics a window plans with do not move
+//! inside it. No openEHR spec governs the planning of a statement:
 //! our own design.
 
 use std::fmt::Write as _;
@@ -97,6 +99,35 @@ async fn planned(pool: &PgPool) -> (Vec<(String, String)>, String) {
     (over, ledger)
 }
 
+/// Takes the test's tables out of autovacuum, whose ANALYZE would otherwise
+/// fall inside a path's window at a time the run's speed decides: a new
+/// statistic invalidates the cached plans and plans each statement again
+/// (`PostgreSQL` docs, `PREPARE`, "Notes"; Routine Vacuuming, "Updating
+/// Planner Statistics").
+async fn without_autovacuum(pool: &PgPool) {
+    sqlx::query(
+        "DO $$ DECLARE t regclass; BEGIN \
+         FOR t IN SELECT c.oid::regclass FROM pg_class c \
+             JOIN pg_namespace n ON n.oid = c.relnamespace \
+             WHERE c.relkind = 'r' AND pg_has_role(c.relowner, 'USAGE') \
+               AND n.nspname NOT IN ('pg_catalog', 'information_schema') LOOP \
+           EXECUTE format('ALTER TABLE %s SET (autovacuum_enabled = off)', t); \
+         END LOOP; END $$",
+    )
+    .execute(pool)
+    .await
+    .expect("the test's tables leave autovacuum");
+}
+
+/// Analyzes the test's database, so each path's window plans with the
+/// statistics of the writes before it.
+async fn settle_statistics(pool: &PgPool) {
+    sqlx::query("ANALYZE")
+        .execute(pool)
+        .await
+        .expect("the test's database is analyzed");
+}
+
 /// Every statement of every hot path settles on a generic plan: over
 /// [`REQUESTS`] requests on one connection per pool, none is planned more
 /// than [`PLANS`] times.
@@ -108,12 +139,14 @@ async fn every_hot_path_settles_each_statement_on_a_generic_plan() {
         .execute(&pool)
         .await
         .expect("pg_stat_statements: the server loads it (shared_preload_libraries)");
+    without_autovacuum(&pool).await;
     let world = World::build(&app).await;
     let mut report = String::new();
     let mut over = Vec::new();
     let mut known = [false; KNOWN.len()];
     for path in order() {
         world.prepare(&app, &svc, path).await;
+        settle_statistics(&pool).await;
         world.warm(&app, path).await;
         drained(&pool).await;
         let evicted = testkit::statements::statement_window(&pool)

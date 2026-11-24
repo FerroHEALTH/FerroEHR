@@ -1,1 +1,1 @@
-- A patient-portal login that resolves to a representative is classed as a representative, never as the subject, so the `delegation` directives of the represented person's `EHR_ACCESS` narrow it.
+- A login that resolves to a representative is classed as a representative, never as the subject, so the `delegation` directives of the represented person's `EHR_ACCESS` narrow it.

@@ -31,18 +31,16 @@ config:
     issuer:
       basic_users:
         issuer: https://basic-users.ferroehr.invalid
-        kind: persons
         audience: [ferroehr-basic-users]
         jwks_file: /opt/sandbox-posture/basic-users-jwks.json
         party:
           identifier_issuer: urn:example:basic-user
           identifier_type: login
-      # The machines issuer FerroBRIDGE's client credentials tokens come from
+      # The issuer FerroBRIDGE's client credentials tokens come from
       # (RFC 6749 §4.4): the CDR trusts its tokens, and bridge.cdr.oauth
       # names FerroBRIDGE's client at it.
       machines:
         issuer: https://machines.example.org/realms/ferroehr
-        kind: machines
         audience: [ferroehr-machines]
     basic:
       users:

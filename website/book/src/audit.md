@@ -592,7 +592,7 @@ beside it hold what each outcome needs:
 | `external` | a verified external person of a `federation` issuer | `external_fields`, `agreement`, `provider` |
 | `organisation` | an organisation under an agreement with `accessor = "organisation"` | `external_fields`, `agreement` (with its legal ground and access class, and for a `chained` request `correlation_id` and `correlation_source`), `provider` |
 | `system` | a client acting for nobody | `party`, the client's `ACTOR` in the policy parties; `provider`, the identifier of the `ORGANISATION` its acts-for relationship targets; `facilities` of the compositions it committed |
-| `self` | the record's person, whose login the party binding binds to the `PERSON` an EHR's subject names, through a `persons` or a `patients` issuer | the principal; `party`, that `PERSON` |
+| `self` | the record's person, whose login the party binding binds to the `PERSON` an EHR's subject names | the principal; `party`, that `PERSON` |
 | `refused-*` | a refusal of the binding or of a caller kind: `unbound`, `ambiguous`, `inactive`, `abandoned`, `deprovisioned`, `wrong-marker`, `representation-unrecorded`, `key-claim-missing`, `groups-unavailable`, `guest`, `external-incomplete`, `trc-patient-mismatch`, `trc-missing`; and of a caller kind, `system-personal-scope` (a system caller holding a `user/` or `patient/` scope), `no-agreement` (no federation agreement admits the accessor) and `scope-beyond-agreement` (an external caller holding a scope its agreement does not read) and `correlation-missing` (a `chained` organisation request without an attested correlation id) | `party` for a party refused for its state or marker, `binding_detail` for what else the refusal names (`represented`, the subject a representative asserted; `claim`, the name of the key claim a token lacked, never its value) |
 
 `acting_mode` is `person`, `delegated` for a person through a declared client
@@ -714,7 +714,7 @@ whose declared purpose is one of them carries the emergency mark:
   protect the vital interests of the data subject (Regulation (EU) 2025/327
   Art 11(5)).") and whose `ehds-emergency-purpose` details name the purposes
   that marked it. The declared code stays on `agent.purposeOfUse` and on
-  `purposeOfEvent`. A patient portal keys on the entity and shows its
+  `purposeOfEvent`. An app keys on the entity and shows its
   description.
 - **The DICOM syslog feed:** no mark. The PS3.15 schema has no purpose
   element.
@@ -921,10 +921,9 @@ value outside its form, is a `400`.
 **The caller's authorisation selects the view, and no parameter widens it.**
 
 - The **subject view** goes to the person the EHR is about and to their
-  representative, bound through the party binding: a patient-portal token
-  reads the EHR of its launch context, and a representative, through a
-  `persons` issuer or as the actor of the patient's token, reads the EHR of
-  the subject the representation names
+  representative, bound through the party binding: the person reads the EHRs
+  whose subject is their `PERSON`, and a representative reads the EHR of the
+  subject the representation names
   ([Operational policy](operational-policy.md)). It shows who accessed (the
   provider and the party), when, the action and outcome, the items and their
   categories, the purposes and the emergency mark, and leaves out the
@@ -995,7 +994,7 @@ jurisdiction's terminology. FerroEHR ships no country's restriction.
   When the entry cannot be written, the write is answered `503`.
 
 ```bash
-# Who accessed my record this month? (the patient portal's token)
+# Who accessed my record this month? (the person's own token)
 curl -H "Authorization: Bearer $PATIENT_TOKEN" \
   "https://cdr.example.org/ferroehr/rest/extensions/v1/ehr/$EHR_ID/access_log?from=2026-11-01T00:00:00Z"
 ```
@@ -1115,7 +1114,7 @@ on, a new composition can be held from the person under
 [EHDS](https://eur-lex.europa.eu/eli/reg/2025/327/oj) Art. 3(3) until a
 professional releases it or its period passes. Only one route honours the
 hold: the subject-scoped [ITI-81 read](#retrieving-audit-records-iti-81), the
-one a patient portal serves the person's own trail from, leaves out every
+one an app serves the person's own trail from, leaves out every
 record that names a held composition. Every other sink and stream is a feed to
 the controller's own systems and carries those records and events while the
 hold is in force:
@@ -1438,7 +1437,7 @@ not ask for, is a `400` with `not-supported`; a parameter the crate does not
 know is ignored
 (§3.81.4.1.3). Under RBAC the
 unscoped retrieval is **admin-only**; a caller holding a
-`read_subject_audit` grant, a patient portal acting for the people it
+`read_subject_audit` grant, an app acting for the people it
 serves, reads it **scoped to one subject**: one
 `patient` or `patient.identifier` with one value is required, and the caller
 is refused with a `403` that names the parameter when it omits

@@ -234,7 +234,7 @@ A key passes the provenance rule when the version that introduced it was
 committed by a SCIM client, a client whose `ACTOR` holds or held a
 `scim_provision` grant (its client identifier under its token issuer), by an
 administrator, by a declared migration, or by just-in-time creation at a first
-login of a `persons` issuer an `[auth.issuer.<name>.party]` table binds (a
+login of an issuer an `[auth.issuer.<name>.party]` table binds (a
 `249|creation|` version carrying its description, committed
 by the new `PERSON` itself). A stored version
 records no role its committer held, so you name the administrators: by the

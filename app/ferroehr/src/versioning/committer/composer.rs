@@ -106,8 +106,9 @@ pub(crate) async fn confirm_unchanged(
 }
 
 /// Whether `identity` is a professional bound to a `PERSON` through a token:
-/// no person or representative in their own record, no system, external or
-/// patient-portal caller, and no Basic user, which keeps its stated composer.
+/// no person or representative in their own record, no system or external
+/// caller, no representative admitted on a stored representation, and no
+/// Basic user, which keeps its stated composer.
 fn professional(identity: &CommitterIdentity) -> bool {
     identity.id_type == "oauth2"
         && identity.party.is_some()

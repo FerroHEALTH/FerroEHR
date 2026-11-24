@@ -46,7 +46,7 @@ const KEY: &str = "4d5e6f7a-8b9c-4d0e-9f1a-3b4c5d6e7f8a";
 /// `audited`.
 async fn service(audited: bool) -> (testkit::TestDb, Arc<FerroEhrService>) {
     let db = testkit::db().await.expect("testkit database");
-    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false)]).await;
+    crate::fixtures::open_key_spaces(&db, &[LOGIN]).await;
     let mut svc = FerroEhrService::new(&DomainPools::from_shared(&db.pool()));
     if audited {
         let config = AuditConfig {
