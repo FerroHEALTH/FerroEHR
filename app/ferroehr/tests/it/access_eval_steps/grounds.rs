@@ -53,6 +53,7 @@ fn request(caller: Caller, asked: Asked<'_>, policy: Option<AccessPolicy>) -> Re
             operation: asked.operation,
             purpose: asked.purpose.map(str::to_owned),
             emergency: asked.emergency,
+            episodes: asked.episodes.map(Arc::from),
         },
         InForce {
             policy: policy.map(Arc::new),
@@ -90,6 +91,7 @@ fn bound(
             operation: asked.operation,
             purpose: asked.purpose.map(str::to_owned),
             emergency: asked.emergency,
+            episodes: asked.episodes.map(Arc::from),
         },
         InForce {
             policy: policy.map(Arc::new),

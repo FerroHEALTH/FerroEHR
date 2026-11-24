@@ -54,11 +54,13 @@ pub struct SmartConfig {
     /// `/gateway/v1` → `/gateway/v1/.well-known/smart-configuration`.
     pub platform_base_url: Option<SecretUrl>,
 
-    /// Episode context (master09 §Experimental: Episode Context), advertised
-    /// only: `episode_launch = true` adds `context-openehr-episode` to the
-    /// document's capabilities and applies no episode filtering (openEHR has
-    /// no first-class Episode resource; master09 calls the semantics
-    /// "currently implementation-defined").
+    /// Episode context (master09 §Experimental: Episode Context, whose
+    /// semantics are "currently implementation-defined"): `episode_launch =
+    /// true` adds `context-openehr-episode` to the document's capabilities and
+    /// narrows every request of a launch to the token's `episodeId`, read as
+    /// `issuer|id`: the session reads and queries that episode's data, the
+    /// data placed in no episode and the data `ACCESS_POLICY.episode_shared`
+    /// names (draft access control, ITS-REST, Queries and the Caseload).
     pub episode_launch: bool,
 }
 

@@ -99,9 +99,11 @@ use crate::ids::EhrId;
 use crate::party_binding::grants::caller::facts::CallerFacts;
 use crate::service::ehr::access_rule::SettingsCaller;
 use crate::service::ehr::access_settings::EhrAccessSettings;
+use crate::versioning::episode::EpisodeKey;
 
 mod confidentiality;
 mod covering;
+mod narrowing;
 
 /// Who asks, as the procedure reads them.
 #[derive(Debug, Clone, PartialEq)]
@@ -177,6 +179,9 @@ pub struct Asked<'a> {
     pub purpose: Option<&'a str>,
     /// What the caller declared in an emergency.
     pub emergency: Emergency,
+    /// The episodes of care the request is narrowed to, sorted; `None` when
+    /// it is not narrowed.
+    pub episodes: Option<&'a [EpisodeKey]>,
 }
 
 /// An emergency as the caller declared it.
@@ -501,9 +506,19 @@ pub struct Judged<'a> {
     pub now: jiff::Timestamp,
 }
 
-/// Decides `judged` by the procedure of this module.
+/// Decides `judged` by the procedure of this module, narrowed to the
+/// episodes the request names.
 #[must_use]
 pub fn decide(judged: &Judged<'_>) -> Verdict {
+    let verdict = procedure(judged);
+    match judged.asked.episodes {
+        Some(episodes) => narrowing::narrowed(verdict, narrowing::within(judged, episodes)),
+        None => verdict,
+    }
+}
+
+/// The verdict of `judged` by the steps of the procedure.
+fn procedure(judged: &Judged<'_>) -> Verdict {
     let mut verdict = Verdict::admit();
     let caller = judged.caller;
     if let Some(refusal) = crate::access_eval::exclusion::standing(judged) {

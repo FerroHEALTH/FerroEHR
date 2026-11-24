@@ -223,6 +223,7 @@ fn request() -> RequestAccess {
             operation: OperationClass::Read,
             purpose: Some("TREAT".to_owned()),
             emergency: Emergency::default(),
+            episodes: None,
         },
         InForce {
             policy: Some(Arc::new(policy())),

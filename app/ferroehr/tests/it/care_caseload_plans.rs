@@ -288,6 +288,7 @@ fn access(team: uuid::Uuid) -> Arc<RequestAccess> {
             operation: OperationClass::Query,
             purpose: Some("TREAT".to_owned()),
             emergency: Emergency::default(),
+            episodes: None,
         },
         InForce {
             policy: Some(Arc::new(policy)),

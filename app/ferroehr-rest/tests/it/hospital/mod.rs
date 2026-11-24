@@ -20,6 +20,7 @@ pub(crate) mod build;
 mod care_relationship;
 mod confirm_after;
 mod discovery;
+pub(crate) mod episode_launch;
 pub(crate) mod episodes;
 pub(crate) mod ledger;
 mod lifecycle;

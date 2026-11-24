@@ -44,6 +44,7 @@ use crate::party_binding::grants::live::LiveGrants;
 use crate::service::ehr::access_settings::EhrAccessSettings;
 use crate::storage::access_projection::{EhrSubject, Revision};
 use crate::telemetry::stage::{self, Stage};
+use crate::versioning::episode::EpisodeKey;
 
 task_local! {
     static REQUEST_ACCESS: Arc<RequestAccess>;
@@ -61,6 +62,7 @@ mod records;
 pub struct RequestAccess {
     caller: Caller,
     operation: OperationClass,
+    episodes: Option<Arc<[EpisodeKey]>>,
     purpose: Option<String>,
     emergency: Emergency,
     pub(super) policy: Option<Arc<AccessPolicy>>,
@@ -166,6 +168,9 @@ pub struct Asking {
     pub purpose: Option<String>,
     /// What the caller declared in an emergency.
     pub emergency: Emergency,
+    /// The episodes of care the request is narrowed to, sorted; `None` when
+    /// it is not narrowed.
+    pub episodes: Option<Arc<[EpisodeKey]>>,
 }
 
 /// What the request reads beside the caller and the ask.
@@ -193,6 +198,7 @@ impl RequestAccess {
             operation: asking.operation,
             purpose: asking.purpose,
             emergency: asking.emergency,
+            episodes: asking.episodes,
             policy: in_force.policy,
             categories: in_force.categories,
             server_default: in_force.server_default,
@@ -332,25 +338,6 @@ impl RequestAccess {
         Policy::of(self.policy.as_deref())
     }
 
-    /// Refuses a caseload for this request where the policy turns it off or
-    /// the declared purpose is no care purpose
-    /// ([`crate::access_eval::caseload::allowed`]).
-    ///
-    /// # Errors
-    /// [`crate::access_eval::caseload::Refused`].
-    pub fn caseload_allowed(&self) -> Result<(), crate::access_eval::caseload::Refused> {
-        crate::access_eval::caseload::allowed(self.policy.as_deref(), self.purpose.as_deref())
-    }
-
-    /// The namespace this CDR names its parties under; empty with no caller
-    /// facts copy.
-    #[must_use]
-    pub fn party_namespace(&self) -> Arc<str> {
-        self.grants
-            .as_ref()
-            .map_or_else(|| Arc::from(""), |grants| grants.namespace())
-    }
-
     /// The moment the request began.
     #[must_use]
     pub fn now(&self) -> jiff::Timestamp {
@@ -447,6 +434,7 @@ impl RequestAccess {
                 operation: self.operation,
                 purpose: self.purpose.as_deref(),
                 emergency: self.emergency,
+                episodes: self.episodes.as_deref(),
             },
             policy: self.policy(),
             rules: rules_of(self.policy.as_deref()),

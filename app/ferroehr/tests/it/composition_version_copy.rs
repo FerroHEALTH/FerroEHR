@@ -79,6 +79,7 @@ fn professional(svc: &FerroEhrService) -> Arc<RequestAccess> {
             operation: OperationClass::Read,
             purpose: Some("TREAT".to_owned()),
             emergency: Emergency::default(),
+            episodes: None,
         },
         InForce {
             policy: None,

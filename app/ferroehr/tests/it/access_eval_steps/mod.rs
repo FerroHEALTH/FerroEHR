@@ -358,6 +358,7 @@ pub(super) fn asked(operation: OperationClass, purpose: Option<&str>) -> Asked<'
         operation,
         purpose,
         emergency: Emergency::default(),
+        episodes: None,
     }
 }
 
