@@ -902,7 +902,6 @@ configs:
       # key pair whose private key was discarded, for local lanes only.
       [auth.issuer.basic_users]
       issuer = "https://basic-users.ferroehr.invalid"
-      kind = "persons"
       audience = ["ferroehr-basic-users"]
       jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
 
@@ -940,7 +939,6 @@ configs:
       # trusted here as a machines issuer for that one client.
       [auth.issuer.quickstart]
       issuer = "http://localhost:8180/quickstart"
-      kind = "machines"
       audience = ["ferroehr-scim"]
 
       [auth.issuer.quickstart.profile]
@@ -1042,7 +1040,6 @@ configs:
       # key pair whose private key was discarded, for local lanes only.
       [auth.issuer.basic_users]
       issuer = "https://basic-users.ferroehr.invalid"
-      kind = "persons"
       audience = ["ferroehr-basic-users"]
       jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
 
@@ -1080,7 +1077,6 @@ configs:
       # trusted here as a machines issuer for that one client.
       [auth.issuer.quickstart]
       issuer = "http://localhost:8180/quickstart"
-      kind = "machines"
       audience = ["ferroehr-scim"]
 
       [auth.issuer.quickstart.profile]
@@ -1155,7 +1151,6 @@ configs:
       # client in `client_id`, so the issuer takes the claims it carries.
       [auth.issuer.quickstart]
       issuer = "http://localhost:8180/quickstart"
-      kind = "machines"
       audience = ["http://localhost:8090/fhir"]
 
       [auth.issuer.quickstart.profile]

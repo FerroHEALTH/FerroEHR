@@ -32,8 +32,6 @@ data_key_file = "/etc/ferropix/data-key"
 # carries.
 [auth.issuer.sandbox]
 issuer = "http://localhost:8180/sandbox"
-kind = "machines"
-preset = "rfc9068"
 audience = ["http://localhost:8090/fhir"]
 
 [auth.issuer.sandbox.profile]

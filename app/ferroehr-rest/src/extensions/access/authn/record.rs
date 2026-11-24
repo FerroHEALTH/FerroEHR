@@ -53,20 +53,16 @@ pub(super) fn refused(
     if let Some(claim) = named.and_then(super::party::Named::claim) {
         detail.insert("claim".to_owned(), vec![claim.to_owned()]);
     }
-    let kind = principal
-        .and_then(|principal| principal.access.caller())
-        .map(Caller::kind);
-    let inner = match kind {
-        Some(CallerKind::Guest(inner)) => Some(inner.as_ref()),
-        other => other,
-    };
-    if let Some(CallerKind::Representative { represented, .. }) = inner {
-        detail.insert("represented".to_owned(), vec![represented.clone()]);
+    let caller = principal.and_then(|principal| principal.access.caller());
+    // NOTE: EHDS Art. 4(2), a refused representative's record names the patient its
+    // token's launch context asserts.
+    if let Some(represented) = caller.and_then(Caller::represented) {
+        detail.insert("represented".to_owned(), vec![represented.to_owned()]);
     }
-    // NOTE: master07 §Context Selection, a `patients` token names its patient by the EHR
-    // of its launch context, which a refused patient-portal representative asserted.
-    if let Some(CallerKind::PatientRepresentative { .. } | CallerKind::Patient) = inner
-        && let Some(ehr) = principal.and_then(|principal| principal.access.ehr_id())
+    // NOTE: master07 §Context Selection, a patient's token names its patient by the EHR of
+    // its launch context.
+    if caller.is_some_and(|caller| matches!(caller.kind(), CallerKind::Patient))
+        && let Some(ehr) = caller.and_then(Caller::ehr_id)
     {
         detail.insert("represented".to_owned(), vec![ehr.to_owned()]);
     }
@@ -107,7 +103,7 @@ pub(super) fn of_request(
     let client = granted.client().filter(|_| committer.system);
     let deployment = auth
         .zip(principal.access.caller())
-        .and_then(|(auth, caller)| auth.deployment.provider_of(caller));
+        .and_then(|(auth, _)| auth.deployment.provider());
     let provider = client
         .and_then(|client| client.provider.as_ref())
         .and_then(|provider| provider.identifier.clone())
@@ -166,7 +162,7 @@ fn of(
             party: Some(triple(party)),
             ..BindingRecord::of(ferroehr::system_log::binding::BindingCode::SelfPatient)
         }),
-        kind => {
+        _ => {
             let bound = caller.party().and_then(Outcome::bound)?;
             let mut record = BindingRecord::bound(
                 triple(&bound.party),
@@ -179,43 +175,10 @@ fn of(
                 details
                     .and_then(|details| details.provider.clone())
                     .map(|(issuer, id)| Identified { issuer, id }),
-                bound.guest,
+                false,
             );
-            let inner = match kind {
-                CallerKind::Guest(inner) => inner.as_ref(),
-                other => other,
-            };
-            #[expect(
-                clippy::match_same_arms,
-                reason = "each kind is named, so a kind ferrohealth-smart adds is read here"
-            )]
-            match inner {
-                CallerKind::Representative {
-                    represented,
-                    ground,
-                } => {
-                    record.representation = Some(Representation {
-                        represented: represented.clone(),
-                        ground: ground.clone(),
-                        relationship: bound
-                            .represents
-                            .iter()
-                            .find_map(ferrohealth_smart::party::Represented::relationship)
-                            .map(str::to_owned),
-                        relationship_id: None,
-                    });
-                }
-                CallerKind::Delegated { .. } => record.actor_chain = actor_chain(caller),
-                CallerKind::Person
-                | CallerKind::Patient
-                | CallerKind::System
-                | CallerKind::PatientRepresentative { .. }
-                | CallerKind::Guest(_)
-                | CallerKind::ExternalPerson(_)
-                | CallerKind::ExternalOrganisation(_) => {}
-                // NOTE: ferrohealth-smart `kind::CallerKind` is `#[non_exhaustive]`;
-                // a kind a later release adds carries no representation or actor here.
-                _ => {}
+            if caller.actor().is_some() {
+                record.actor_chain = actor_chain(caller);
             }
             Some(record)
         }
@@ -338,16 +301,9 @@ mod tests {
     use super::*;
 
     fn caller(kind: CallerKind, claims: &serde_json::Value) -> Caller {
-        Caller::new(
-            "sub-1".to_owned(),
-            Some("app".to_owned()),
-            "",
-            None,
-            false,
-            kind,
-        )
-        .with_issuer("https://login.example".to_owned())
-        .with_claims(claims.as_object().cloned().unwrap_or_default())
+        Caller::new("sub-1".to_owned(), Some("app".to_owned()), "", None, kind)
+            .with_issuer("https://login.example".to_owned())
+            .with_claims(claims.as_object().cloned().unwrap_or_default())
     }
 
     #[test]
@@ -372,13 +328,13 @@ mod tests {
 
     #[test]
     fn an_unbound_person_carries_no_binding() {
-        assert!(of(&caller(CallerKind::Person, &json!({})), None, None, None).is_none());
+        assert!(of(&caller(CallerKind::User, &json!({})), None, None, None).is_none());
     }
 
     #[test]
     fn the_actor_chain_is_read_outermost_first() {
         let delegated = caller(
-            CallerKind::Delegated { actor: None },
+            CallerKind::User,
             &json!({ "act": { "sub": "gateway", "act": { "iss": "https://idp.example",
                                                            "sub": "portal" } } }),
         );

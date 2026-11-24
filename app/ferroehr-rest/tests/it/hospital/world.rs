@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use axum::Router;
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::config::binding::{PartyBindingConfig, ProviderId, Providers};
+use ferroehr::config::binding::{PartyBindingConfig, ProviderId};
 use ferroehr::config::scim::ScimConfig;
 use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
@@ -22,9 +22,7 @@ use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
 use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::config::{AuthSection, IssuerEntry};
-use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::party::config::PartySection;
-use ferrohealth_smart::profile::Preset;
 use http::{HeaderMap, StatusCode, header};
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -36,7 +34,7 @@ pub(crate) const PERSONS: &str = "https://keycloak.sint-example.example/realms/h
 /// The hospital's own authorization server, the `machines` issuer of its
 /// SCIM client and its system clients.
 pub(crate) const MACHINES: &str = "https://machines.sint-example.example";
-/// The patient portal, the `patients` issuer of the patient and her
+/// The patient portal, the issuer of the patient and her
 /// representative.
 pub(crate) const PATIENTS: &str = "https://portal.sint-example.example";
 /// The audience of every token.
@@ -287,8 +285,6 @@ pub(crate) fn capability(operation: &str, items: &[Value]) -> Value {
 pub(crate) fn config() -> AppConfig {
     let machines = IssuerEntry {
         issuer: SecretUrl::new(MACHINES),
-        kind: Some(IssuerKind::Machines),
-        preset: Preset::Rfc9068,
         audience: vec![AUDIENCE.to_owned()],
         jwks_file: common::jwks_file().display().to_string(),
         profile: ferrohealth_smart::profile::ProfileKeys {
@@ -303,7 +299,6 @@ pub(crate) fn config() -> AppConfig {
         ..common::entry(PERSONS, AUDIENCE)
     };
     let patients = IssuerEntry {
-        kind: Some(IssuerKind::Patients),
         jwks_file: common::jwks_file().display().to_string(),
         ..common::entry(PATIENTS, AUDIENCE)
     };
@@ -313,26 +308,30 @@ pub(crate) fn config() -> AppConfig {
         identifier_type: "login".to_owned(),
         group_claim: "groups".to_owned(),
         group_identifier_issuer: format!("{LOGIN}/groups"),
+    };
+    let portal = PartySection {
+        issuer: SecretUrl::new(PATIENTS),
+        identifier_issuer: PATIENTS.to_owned(),
+        identifier_type: "login".to_owned(),
         ..PartySection::default()
     };
     let mut auth = common::auth(AuthSection {
-        issuer: common::bound(vec![machines, persons, patients], vec![staff]),
+        issuer: common::bound(vec![machines, persons, patients], vec![staff, portal]),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
     let mut config = common::api_config(true);
     config.auth = auth;
     config.auth.scim = Some(ScimConfig::default());
-    common::patient_context(&mut config, PATIENTS);
     config.public_root = Some(
         ferroehr::config::server::PublicRoot::new("https://cdr.sint-example.example", "")
             .expect("a public root"),
     );
     config.party_binding = PartyBindingConfig {
-        provider: Some(Providers::One(ProviderId {
+        provider: Some(ProviderId {
             issuer: PROVIDERS.to_owned(),
             id: "sint-example".to_owned(),
-        })),
+        }),
         ..PartyBindingConfig::default()
     };
     config.rbac.role_issuers = vec![common::name_of(PERSONS)];

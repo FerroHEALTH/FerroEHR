@@ -594,20 +594,19 @@ mod tests {
 
     use super::*;
 
-    /// `[auth] described_issuer` names an `[auth]` issuer that serves a
-    /// user launch: an unknown issuer and a `machines` issuer, which signs
-    /// client credentials tokens only, are refused before any issuer is read,
-    /// and a `persons` issuer passes.
+    /// `[auth] described_issuer` names a trusted `[auth]` issuer: an unknown
+    /// issuer is refused before any issuer is read.
     #[test]
-    fn the_described_issuer_names_a_user_facing_auth_issuer() {
-        let mut persons = crate::config::auth_section::machine("https://as.example/persons");
-        persons.kind = Some(ferrohealth_smart::kind::IssuerKind::Persons);
+    fn the_described_issuer_names_a_trusted_auth_issuer() {
         let issuer = [
             (
-                "machines".to_owned(),
-                crate::config::auth_section::machine("https://as.example/machines"),
+                "one".to_owned(),
+                crate::config::auth_section::machine("https://as.example/one"),
             ),
-            ("persons".to_owned(), persons),
+            (
+                "two".to_owned(),
+                crate::config::auth_section::machine("https://as.example/two"),
+            ),
         ]
         .into();
         let resolved = auth::resolve(
@@ -622,13 +621,8 @@ mod tests {
             described_issuer_error(&SecretUrl::new("https://elsewhere.example"), &resolved)
                 .expect("an unknown issuer is refused");
         assert!(unknown.contains("which is no trusted issuer"), "{unknown}");
-        let machines =
-            described_issuer_error(&SecretUrl::new("https://as.example/machines"), &resolved)
-                .expect("a machines issuer is refused");
-        assert!(machines.contains("names the machines issuer"), "{machines}");
         assert!(
-            described_issuer_error(&SecretUrl::new("https://as.example/persons"), &resolved)
-                .is_none()
+            described_issuer_error(&SecretUrl::new("https://as.example/two"), &resolved).is_none()
         );
     }
 

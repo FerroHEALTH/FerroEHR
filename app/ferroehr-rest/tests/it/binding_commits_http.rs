@@ -18,7 +18,6 @@ use ferroehr::party_binding::source::BindingSource;
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::IssuerEntry;
-use ferrohealth_smart::kind::IssuerKind;
 use http::StatusCode;
 use serde_json::{Value, json};
 
@@ -53,13 +52,12 @@ const ADMINISTRATOR: &str = "3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f";
 /// machines issuer and the patients issuer, with `ISSUER`'s role claims
 /// granting the administrator role.
 fn deployment() -> AppConfig {
-    let mut config = config(None);
+    let mut config = config();
     let jwks_file = common::jwks_file().display().to_string();
     common::add_issuer(
         &mut config,
         IssuerEntry {
             issuer: ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
-            kind: Some(IssuerKind::Machines),
             audience: vec![MACHINE_AUDIENCE.to_owned()],
             jwks_file: jwks_file.clone(),
             // NOTE: the test key signs RFC 9068 `at+jwt` tokens, which the
@@ -74,13 +72,12 @@ fn deployment() -> AppConfig {
     common::add_issuer(
         &mut config,
         IssuerEntry {
-            kind: Some(IssuerKind::Patients),
             jwks_file,
             ..common::entry(PATIENTS, AUDIENCE)
         },
     );
+    common::bind_issuer(&mut config, PATIENTS);
     config.rbac = common::rbac_trusting(ISSUER);
-    common::patient_context(&mut config, PATIENTS);
     config
 }
 
@@ -436,7 +433,7 @@ async fn only_an_administrator_versions_a_professionals_person() {
 async fn a_patients_demographic_write_is_refused() {
     let (db, svc, app) = app().await;
     professional(&svc, COLLEAGUE, "532").await;
-    let jane = common::portal_patient(&db.pool(), PATIENTS, "jane").await;
+    let jane = common::patient_person(&db.pool(), PATIENTS, "jane").await;
     let ehr = common::person_ehr(&svc, jane).await;
     let exp = jiff::Timestamp::now().as_second() + 3600;
     let patient = common::bearer(&json!({

@@ -56,16 +56,17 @@ async fn issuer() -> MockServer {
 }
 
 /// A server trusting the professionals' issuer `persons` and the persons'
-/// own `patients` issuer, whose `patient/` grants count.
+/// own issuer `patients`, both binding their logins.
 async fn app(persons: &str, patients: &str) -> (testkit::TestDb, Router) {
-    let mut patient = common::entry(patients, AUDIENCE);
-    patient.kind = Some(ferrohealth_smart::kind::IssuerKind::Patients);
     let mut cfg = AppConfig {
-        auth: common::trusting(vec![common::entry(persons, AUDIENCE), patient]),
+        auth: common::trusting(vec![
+            common::entry(persons, AUDIENCE),
+            common::entry(patients, AUDIENCE),
+        ]),
         ..common::api_config(false)
     };
-    common::patient_context(&mut cfg, persons);
-    common::patient_context(&mut cfg, patients);
+    common::bind_issuer(&mut cfg, persons);
+    common::bind_issuer(&mut cfg, patients);
     let (pg, service) = common::test_service().await;
     (pg, common::router_with(cfg, service).await)
 }
@@ -228,7 +229,8 @@ async fn record() -> Record {
     let patients = self::issuer().await;
     let (pg, app) = app(&uri, &patients.uri()).await;
     let professional = token(&uri, "dr-bob", PROFESSIONAL, None);
-    let alice = common::portal_patient(&pg.pool(), &patients.uri(), "alice").await;
+    common::bind_subjects(&pg.pool(), &[(uri.as_str(), "dr-bob")]).await;
+    let alice = common::patient_person(&pg.pool(), &patients.uri(), "alice").await;
     let (status, headers, text) = common::send(
         &app,
         call(

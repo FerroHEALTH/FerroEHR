@@ -28,7 +28,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::party_binding::grants::admission::{
-    ADMIT_ASSURANCE, ADMIT_GROUP, ADMIT_GUESTS, ADMIT_IDP, ADMIT_ROLE, LOGIN_ISSUER,
+    ADMIT_ASSURANCE, ADMIT_GROUP, ADMIT_IDP, ADMIT_ROLE, LOGIN_ISSUER,
 };
 use crate::party_binding::policy_mark::{ACTS_FOR, REPRESENTS, TERMINOLOGY};
 use openehr_rm::draft::access_control::terminology::{
@@ -175,7 +175,6 @@ fn names_no_operation(code: &str) -> bool {
         ADMIT_GROUP,
         ADMIT_ROLE,
         ADMIT_ASSURANCE,
-        ADMIT_GUESTS,
         FACILITY_PARTS[0],
         FACILITY_PARTS[1],
         FACILITY_PARTS[2],
@@ -246,17 +245,6 @@ pub enum Operation {
     /// Reach the DEMOGRAPHIC API, which no SMART on openEHR resource family
     /// covers.
     AccessDemographic,
-    /// Be a client the persons of its token issuer sign in through: a
-    /// person's token through it is the person's own, or their
-    /// representative's.
-    SignInPersons,
-    /// Act for the persons of its token issuer as a third-party client, or
-    /// as the RFC 8693 actor a person's token names in `act`: the request is
-    /// the client acting for the person, with no representation.
-    ActForPersons,
-    /// Be admitted, as a system caller whose token carries no resource
-    /// scope, to every SMART on openEHR requirement.
-    AccessWithoutScope,
     /// Write the membership (`MBR`) and `under_care_of` relationships of
     /// [`openehr_rm::draft::access_control::terminology::CareRelationship`] and the
     /// [`openehr_rm::draft::access_control::terminology::RecordSubject`] element of a
@@ -275,7 +263,7 @@ pub enum Operation {
 
 impl Operation {
     /// Every operation, in contract order.
-    pub const ALL: [Self; 23] = [
+    pub const ALL: [Self; 20] = [
         Self::CommitComposition,
         Self::ComposeFor,
         Self::ImportEhr,
@@ -293,9 +281,6 @@ impl Operation {
         Self::CreateAtLogin,
         Self::QuerySystemWide,
         Self::AccessDemographic,
-        Self::SignInPersons,
-        Self::ActForPersons,
-        Self::AccessWithoutScope,
         Self::WriteCareRelationship,
         Self::WriteRepresentation,
         Self::WriteAccessPolicy,
@@ -322,9 +307,6 @@ impl Operation {
             Self::CreateAtLogin => "create_at_login",
             Self::QuerySystemWide => "query_system_wide",
             Self::AccessDemographic => "access_demographic",
-            Self::SignInPersons => "sign_in_persons",
-            Self::ActForPersons => "act_for_persons",
-            Self::AccessWithoutScope => "access_without_scope",
             Self::WriteCareRelationship => "write_care_relationship",
             Self::WriteRepresentation => "write_representation",
             Self::WriteAccessPolicy => "write_access_policy",
@@ -450,7 +432,7 @@ mod tests {
         assert!(is_qualifier(ACTS_FOR) && is_qualifier("template"));
         assert!(AGREEMENT.iter().all(|code| is_qualifier(code)));
         assert!(is_qualifier(RELAY) && is_qualifier(DEVICE) && is_qualifier("identifier_prefix"));
-        assert!(is_qualifier(LOGIN_ISSUER) && is_qualifier(ADMIT_GUESTS));
+        assert!(is_qualifier(LOGIN_ISSUER) && is_qualifier(ADMIT_IDP));
         assert!(is_qualifier(NO_SUBJECT_NAMESPACE));
         assert!(!is_qualifier("sensitivity_clearance") && !is_qualifier("permitted_purpose"));
         assert!(is_qualifier("under_care_of") && !is_qualifier("member_of"));

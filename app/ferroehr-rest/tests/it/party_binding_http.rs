@@ -64,16 +64,12 @@ pub(crate) fn professionals(mapping: BindingMapping) -> BindingMapping {
 }
 
 /// The `[auth]` table trusting `ISSUER`, whose logins the `[auth.issuer.<name>.party]`
-/// table binds by `person_key`, reading groups from `groups`.
-pub(crate) fn config(person_key: Option<&str>) -> AppConfig {
+/// table binds by `sub`, reading groups from `groups`.
+pub(crate) fn config() -> AppConfig {
     let mut auth = common::auth(AuthSection {
         issuer: common::bound(
             vec![IssuerEntry {
                 jwks_file: common::jwks_file().display().to_string(),
-                profile: ferrohealth_smart::profile::ProfileKeys {
-                    person_key: person_key.map(str::to_owned),
-                    ..ferrohealth_smart::profile::ProfileKeys::default()
-                },
                 ..common::entry(ISSUER, AUDIENCE)
             }],
             vec![PartySection {
@@ -82,7 +78,6 @@ pub(crate) fn config(person_key: Option<&str>) -> AppConfig {
                 identifier_type: "guid".to_owned(),
                 group_claim: "groups".to_owned(),
                 group_identifier_issuer: GROUPS.to_owned(),
-                ..PartySection::default()
             }],
         ),
         ..AuthSection::default()
@@ -96,9 +91,9 @@ pub(crate) fn config(person_key: Option<&str>) -> AppConfig {
 }
 
 /// The router over `svc`, looking every caller up in its party source.
-async fn router(svc: Arc<FerroEhrService>, person_key: Option<&str>) -> Router {
+async fn router(svc: Arc<FerroEhrService>) -> Router {
     let source = Arc::new(svc.party_source("demographic"));
-    router_with(svc, config(person_key), source).await
+    router_with(svc, config(), source).await
 }
 
 /// The router over `svc` under `config`, looking every caller up in `source`.
@@ -118,12 +113,11 @@ async fn router_observed(
     source: Arc<dyn BindingSource>,
     observability: Observability,
 ) -> Router {
-    common::first_party(&svc, &config).await;
+    common::open_configured_key_spaces(&config).await;
     let authenticator = Authenticator::new(
         &config,
         Some(source),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
-        common::standing(&svc),
     )
     .await
     .expect("the binding builds");
@@ -340,7 +334,7 @@ impl PartySource for Twice {
 #[tokio::test]
 async fn a_login_matching_two_parties_is_refused_naming_the_caller() {
     let (_db, svc) = service().await;
-    let app = router_with(svc, config(None), Arc::new(Twice)).await;
+    let app = router_with(svc, config(), Arc::new(Twice)).await;
     let twice = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
     refused(&app, &token(twice, &json!({})), "refused-ambiguous").await;
     // The refusal carries the refused caller, which the failed-authentication
@@ -388,7 +382,7 @@ async fn a_bound_professional_is_served_and_the_unusable_outcomes_are_refused() 
     )
     .await
     .expect("the PERSON deletes");
-    let app = router(Arc::clone(&svc), None).await;
+    let app = router(Arc::clone(&svc)).await;
 
     let (status, body) = list(&app, &token(bound, &json!({}))).await;
     assert_eq!(
@@ -413,18 +407,6 @@ async fn a_bound_professional_is_served_and_the_unusable_outcomes_are_refused() 
 }
 
 #[tokio::test]
-async fn a_token_without_the_key_claim_is_refused() {
-    let (_db, svc) = service().await;
-    let app = router(svc, Some("oid")).await;
-    refused(
-        &app,
-        &token("someone", &json!({})),
-        "refused-key-claim-missing",
-    )
-    .await;
-}
-
-#[tokio::test]
 async fn a_deactivation_on_one_instance_refuses_the_next_request_on_another() {
     let (db, pool) = common::migrated_pool().await;
     common::open_key_spaces(&pool, &[(LOGIN, false)]).await;
@@ -438,7 +420,7 @@ async fn a_deactivation_on_one_instance_refuses_the_next_request_on_another() {
     );
     let key = "5a6b7c8d-9e0f-4a1b-8c3d-4e5f6a7b8c9d";
     let (uid, body) = professional(&first, key, "532").await;
-    let on_second = router(Arc::clone(&second), None).await;
+    let on_second = router(Arc::clone(&second)).await;
     let credential = token(key, &json!({}));
     assert_eq!(list(&on_second, &credential).await.0, StatusCode::OK);
 
@@ -446,92 +428,6 @@ async fn a_deactivation_on_one_instance_refuses_the_next_request_on_another() {
     // very next request, since every request reads the side table.
     update(&first, &uid, &body, "800").await;
     refused(&on_second, &credential, "refused-inactive").await;
-}
-
-/// An overage token whose groups the identity provider cannot give for now is
-/// the server's failure, never the person's: with the `idp-entra` adapter
-/// registered and its Graph answering `429`, the request is answered `503`
-/// with the Graph's `Retry-After` (#5086). The adapter reaches a Graph on
-/// loopback over plain `http`, as RFC 8414 §2's loopback exception admits.
-#[tokio::test]
-async fn an_overage_the_identity_provider_throttles_is_unavailable_with_its_retry_after() {
-    use wiremock::matchers::{method, path};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
-
-    let graph = MockServer::start().await;
-    Mock::given(method("POST"))
-        .and(path("/token"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-            "access_token": "graph-access", "token_type": "Bearer", "expires_in": 3600
-        })))
-        .mount(&graph)
-        .await;
-    let oid = "6c7d8e9f-0a1b-4c2d-8e3f-4a5b6c7d8e9f";
-    Mock::given(method("POST"))
-        .and(path(format!("/v1.0/users/{oid}/getMemberObjects")))
-        .respond_with(ResponseTemplate::new(429).insert_header("Retry-After", "7"))
-        .mount(&graph)
-        .await;
-
-    let (_db, svc) = service().await;
-    let key = "7d8e9f0a-1b2c-4d3e-9f4a-5b6c7d8e9f0a";
-    professional(&svc, key, "532").await;
-    let mut config = config(None);
-    if let Some(entry) = config.auth.shared.issuer.values_mut().next() {
-        entry.profile.adapter = Some(ferrohealth_smart::idp::entra::NAME.to_owned());
-    }
-    config.auth.shared.idp.entra = Some(Box::new(ferrohealth_smart::idp::entra::GraphSection {
-        base_url: format!("{}/v1.0", graph.uri()),
-        credentials: ferrohealth_smart::config::credentials::OauthSection {
-            token_endpoint: ferrohealth_secret::secret_url::SecretUrl::new(format!(
-                "{}/token",
-                graph.uri()
-            )),
-            client_id: "ferroehr-graph".to_owned(),
-            client_secret: Some(secrecy::SecretString::from("graph-test-secret")),
-            scope: "https://graph.microsoft.com/.default".to_owned(),
-            ..ferrohealth_smart::config::credentials::OauthSection::default()
-        },
-        ..ferrohealth_smart::idp::entra::GraphSection::default()
-    }));
-    common::first_party(&svc, &config).await;
-    let authenticator = Authenticator::new(
-        &config,
-        Some(Arc::new(svc.party_source("demographic"))),
-        Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
-        common::standing(&svc),
-    )
-    .await
-    .expect("the binding with its adapter builds");
-    let observability = Observability::default();
-    observability.lifecycle.booted();
-    let app = ferroehr_rest::router::router(
-        AppState::with_parts(config, svc, None, observability),
-        authenticator,
-    );
-
-    let overage = token(
-        key,
-        &json!({ "oid": oid,
-                 "_claim_names": { "groups": "src1" },
-                 "_claim_sources": { "src1": { "endpoint": "https://graph.example" } } }),
-    );
-    let (status, headers, body) = common::send(
-        &app,
-        common::req("GET", format!("{BASE}/definition/template/adl1.4"))
-            .auth(&overage)
-            .accept("application/json")
-            .build(),
-    )
-    .await;
-    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE, "{body}");
-    assert_eq!(
-        headers
-            .get(http::header::RETRY_AFTER)
-            .and_then(|value| value.to_str().ok()),
-        Some("7"),
-        "{body}"
-    );
 }
 
 /// The stored failed-authentication records carrying `binding`, as
@@ -575,7 +471,7 @@ async fn a_login_binding_refusal_is_recorded_with_its_code_and_party() {
     );
     let inactive = "7c8d9e0f-1a2b-4c3d-8e4f-5a6b7c8d9e0f";
     let (person_uid, _) = professional(&svc, inactive, "800").await;
-    let app = router(Arc::clone(&svc), None).await;
+    let app = router(Arc::clone(&svc)).await;
     refused(&app, &token(inactive, &json!({})), "refused-inactive").await;
     refused(&app, &token(inactive, &json!({})), "refused-inactive").await;
 
@@ -588,34 +484,6 @@ async fn a_login_binding_refusal_is_recorded_with_its_code_and_party() {
             ("110114".to_owned(), Some(party))
         ],
         "one failed-authentication record per refusal, naming the inactive party"
-    );
-}
-
-/// A token without the key claim is recorded with the name of the claim the
-/// issuer's binding reads, never a claim value (#5139).
-#[tokio::test]
-async fn a_key_claim_refusal_is_recorded_with_the_claim_name() {
-    let (db, _audit, svc) = audited_service().await;
-    let app = router(svc, Some("oid")).await;
-    refused(
-        &app,
-        &token("someone", &json!({"name": "A Person"})),
-        "refused-key-claim-missing",
-    )
-    .await;
-
-    refusal_rows(&db.pool(), "refused-key-claim-missing", 1).await;
-    let (detail,): (Option<Value>,) = sqlx::query_as(
-        "SELECT binding_detail FROM audit.access_trail \
-         WHERE binding = 'refused-key-claim-missing' AND summary IS NULL",
-    )
-    .fetch_one(&db.pool())
-    .await
-    .expect("query");
-    assert_eq!(
-        detail,
-        Some(json!({"claim": ["oid"]})),
-        "the record names the key claim and carries no claim value"
     );
 }
 
@@ -654,7 +522,7 @@ impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for Capture {
 #[tokio::test]
 async fn an_unbound_person_is_refused_on_every_kind_of_request() {
     let (db, _audit, svc) = audited_service().await;
-    let app = router(svc, None).await;
+    let app = router(svc).await;
     let credential = token("8d9e0f1a-2b3c-4d4e-9f5a-6b7c8d9e0f1a", &json!({}));
     let ehr = "9e0f1a2b-3c4d-4e5f-8a6b-7c8d9e0f1a2b";
     let requests = [
@@ -698,7 +566,7 @@ async fn an_unbound_person_is_refused_on_every_kind_of_request() {
 #[tokio::test]
 async fn an_unbound_person_is_refused_under_patient_scopes() {
     let (_db, svc) = service().await;
-    let app = router(svc, None).await;
+    let app = router(svc).await;
     let subject = "1a2b3c4d-5e6f-4a7b-9c8d-9e0f1a2b3c4d";
     for scope in [
         "user/composition-*.cruds patient/composition-*.r",
@@ -707,22 +575,6 @@ async fn an_unbound_person_is_refused_under_patient_scopes() {
         let claims = json!({ "scope": scope, "patient": "9e0f1a2b-3c4d-4e5f-8a6b-7c8d9e0f1a2b" });
         refused(&app, &token(subject, &claims), "refused-unbound").await;
     }
-}
-
-/// #5006: the refusal of a token without the key claim names the claim the
-/// issuer's binding reads, which "provision this person" would misdiagnose.
-#[tokio::test]
-async fn a_key_claim_refusal_names_the_missing_claim() {
-    let (_db, svc) = service().await;
-    let app = router(svc, Some("oid")).await;
-    let (status, body) = list(&app, &token("someone", &json!({}))).await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
-    assert!(body.contains("refused-key-claim-missing"), "{body}");
-    assert!(
-        body.contains(r#"claim \"oid\""#),
-        "the claim is named: {body}"
-    );
-    assert!(!body.contains("provision"), "{body}");
 }
 
 /// #5006: each refusal writes one `warn` line naming the issuer and the
@@ -734,7 +586,7 @@ async fn a_refusal_logs_no_claim_value_and_is_counted_by_issuer_and_outcome() {
 
     let telemetry = common::telemetry();
     let (_db, svc) = service().await;
-    let app = router(svc, None).await;
+    let app = router(svc).await;
     let subject = "0f1a2b3c-4d5e-4f6a-9b7c-8d9e0f1a2b3c";
     let capture = Capture::default();
     let lines = Arc::clone(&capture.0);
@@ -786,7 +638,7 @@ async fn the_management_surface_refuses_an_unbound_person_with_403() {
         },
         ..Observability::default()
     };
-    let app = router_observed(svc, config(None), source, observability).await;
+    let app = router_observed(svc, config(), source, observability).await;
     let credential = token("1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d", &json!({}));
     let (status, body) = common::send_body(
         &app,

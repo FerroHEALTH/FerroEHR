@@ -661,27 +661,19 @@ async fn a_token_naming_two_of_a_persons_groups_lists_exactly_those_two() {
         identifier_type: "guid".to_owned(),
         group_claim: "groups".to_owned(),
         group_identifier_issuer: GROUPS.to_owned(),
-        ..PartySection::default()
     };
-    let profile = ferrohealth_smart::profile::Profile::default();
     let binding = PartyBinding::new(Arc::new(service.party_source("demographic")))
-        .with_issuer(
-            table,
-            ferrohealth_smart::kind::IssuerKind::Persons,
-            &profile,
-        )
+        .with_issuer(table, ferrohealth_smart::kind::IssuerKind::Smart)
         .expect("the table binds");
     let resolve = |claims: serde_json::Map<String, Value>| {
         let caller = Caller::new(
-            "subject".to_owned(),
+            key(1).clone(),
             Some("app".to_owned()),
             "user/*.read",
             None,
-            false,
-            CallerKind::Person,
+            CallerKind::User,
         )
         .with_issuer(PERSONS.to_owned())
-        .with_person_key(Some(key(1)), None)
         .with_claims(claims);
         let binding = &binding;
         async move { binding.resolve(&caller).await.expect("the source answers") }

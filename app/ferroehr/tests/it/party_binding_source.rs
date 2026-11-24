@@ -890,28 +890,20 @@ async fn the_source_reports_the_live_groups_a_person_belongs_to() {
         identifier_type: GUID.to_owned(),
         group_claim: "groups".to_owned(),
         group_identifier_issuer: GROUPS.to_owned(),
-        ..PartySection::default()
     };
-    let profile = ferrohealth_smart::profile::Profile::default();
     let binding = PartyBinding::new(Arc::new(source(&svc)))
-        .with_issuer(
-            table,
-            ferrohealth_smart::kind::IssuerKind::Persons,
-            &profile,
-        )
+        .with_issuer(table, ferrohealth_smart::kind::IssuerKind::Smart)
         .expect("the table binds");
     let mut claims = serde_json::Map::new();
     claims.insert("groups".to_owned(), json!(["ward", "clinic", "unknown"]));
     let caller = Caller::new(
-        "subject".to_owned(),
+        value.to_owned(),
         Some("app".to_owned()),
         "user/*.read",
         None,
-        false,
-        CallerKind::Person,
+        CallerKind::User,
     )
     .with_issuer("https://login.example".to_owned())
-    .with_person_key(Some(value.to_owned()), None)
     .with_claims(claims);
     let outcome = binding.resolve(&caller).await.expect("the source answers");
     let Some(Outcome::Party(bound)) = outcome else {

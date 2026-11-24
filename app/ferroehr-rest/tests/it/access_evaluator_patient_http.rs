@@ -31,7 +31,7 @@ use crate::common::BASE;
 
 /// The issuer of the professionals' tokens.
 const ISSUER: &str = "https://issuer.example";
-/// The issuer of the person's own tokens: a `patients` issuer of its own.
+/// The issuer of the person's own tokens, an issuer of its own.
 pub(crate) const PATIENTS: &str = "https://patients.example";
 /// The audience every fixture token is minted for.
 pub(crate) const AUDIENCE: &str = "ferroehr";
@@ -85,8 +85,6 @@ pub(crate) fn composition() -> Value {
 pub(crate) fn rest_config() -> AppConfig {
     let mut config = common::api_config(false);
     config.auth = common::persons_and_patients(ISSUER, PATIENTS, AUDIENCE);
-    common::patient_context(&mut config, ISSUER);
-    common::patient_context(&mut config, PATIENTS);
     config
 }
 
@@ -98,6 +96,7 @@ fn seed_config() -> AppConfig {
 /// A real service over a fresh DB, optionally wired with an ATNA audit sender.
 async fn service(audit: Option<AuditSender>) -> (testkit::TestDb, Arc<FerroEhrService>) {
     let (pg, pool) = common::migrated_pool().await;
+    common::bind_subjects(&pool, &[(ISSUER, SUBJECT)]).await;
     let mut svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     if let Some(sender) = audit {
         svc = svc.with_audit(sender);
@@ -154,7 +153,7 @@ pub(crate) async fn seed_own(seed: &Router, pool: &PgPool) {
 /// Seeds `ehr_id` as the person's own EHR ([`seed_own`]); the id of their
 /// `PERSON`.
 async fn seed_own_as(seed: &Router, pool: &PgPool, ehr_id: &str) -> uuid::Uuid {
-    let person = common::portal_patient(pool, PATIENTS, SUBJECT).await;
+    let person = common::patient_person(pool, PATIENTS, SUBJECT).await;
     let req = Request::builder()
         .method("PUT")
         .uri(format!("{BASE}/ehr/{ehr_id}"))
@@ -166,11 +165,10 @@ async fn seed_own_as(seed: &Router, pool: &PgPool, ehr_id: &str) -> uuid::Uuid {
     person
 }
 
-/// Whether `req` is refused as a `patients` token whose launch context binds
-/// no `PERSON` is: `403` with `refused-unbound` (#6080).
+/// Whether `req` is refused `403`: a patient's token whose launch context
+/// names no EHR reaches none (master07 §Context Selection).
 async fn unbound(app: &Router, req: Request<Body>) -> bool {
-    let (code, body) = common::send_body(app, req).await;
-    code == StatusCode::FORBIDDEN && body.contains("refused-unbound")
+    common::send_body(app, req).await.0 == StatusCode::FORBIDDEN
 }
 
 /// Commit `body` into `ehr_id` through the direct composition route; return its
@@ -478,8 +476,7 @@ async fn read_of_own_patient_is_served() {
     assert_eq!(s.status, StatusCode::OK, "own-patient read is served");
 }
 
-/// A patient context that names no EHR reaches none: its login binds no
-/// launch EHR's subject, so the token is refused unbound (#6080).
+/// A patient context that names no EHR reaches none (#6080).
 #[tokio::test]
 async fn a_patient_context_naming_no_ehr_is_forbidden() {
     let (pg, svc) = service(None).await;
@@ -499,7 +496,7 @@ async fn a_patient_context_naming_no_ehr_is_forbidden() {
 
 /// The SMART `patient` claim is no openEHR launch context: master07 §Context
 /// Selection names `ehrId` for the EHR, so a token carrying `patient` alone
-/// makes its caller the subject of no EHR, and its login binds none (#6080).
+/// grants its `patient/` scopes no EHR (#6080).
 #[tokio::test]
 async fn the_patient_claim_is_no_launch_context() {
     let (pg, svc) = service(None).await;

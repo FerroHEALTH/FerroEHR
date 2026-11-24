@@ -17,16 +17,13 @@ use axum::body::Body;
 use ferroehr::config::auth_section::AuthConfig;
 use ferroehr::config::rest::ApiConfig;
 use ferroehr::ids::EhrId;
-use ferroehr::party_binding::grants::bootstrap::{ClientGrant, PersonGrant};
+use ferroehr::party_binding::grants::bootstrap::PersonGrant;
 use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
-use ferroehr::party_binding::grants::standing::GrantStanding;
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
 use ferroehr_rest::state::AppState;
 use ferrohealth_smart::config::{AuthSection, BasicSection, BasicUser, IssuerEntry};
-use ferrohealth_smart::kind::IssuerKind;
-use ferrohealth_smart::kind::standing::Standing;
 use http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
 use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
@@ -162,12 +159,11 @@ pub(crate) async fn router_with(config: AppConfig, service: Arc<FerroEhrService>
     let source = service
         .party_source(config.party_binding.namespace.clone())
         .with_creator(Arc::clone(&service));
-    first_party(&service, &config).await;
+    open_configured_key_spaces(&config).await;
     let authenticator = Authenticator::new(
         &config,
         Some(Arc::new(source)),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
-        standing(&service),
     )
     .await
     .expect("test auth config is valid");
@@ -326,25 +322,12 @@ pub(crate) fn issuer_table<'a>(config: &'a mut AppConfig, issuer: &str) -> &'a m
         .expect("the issuer is trusted")
 }
 
-/// Trusts the issuer `issuer` of `config` to assert a patient context, so
-/// its `patient/` grants count (its profile's `patient_context`).
-pub(crate) fn patient_context(config: &mut AppConfig, issuer: &str) {
-    issuer_table(config, issuer).profile.patient_context = Some(true);
-}
-
 pub(crate) fn entry(issuer: &str, audience: &str) -> IssuerEntry {
     IssuerEntry {
         issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
-        kind: Some(IssuerKind::Persons),
         audience: vec![audience.to_owned()],
         ..IssuerEntry::default()
     }
-}
-
-/// The standing the server asks while it classifies a token: the policy
-/// grants of `service`.
-pub(crate) fn standing(service: &FerroEhrService) -> Arc<dyn Standing> {
-    Arc::new(GrantStanding::new(Arc::clone(service.grants())))
 }
 
 /// `service` with `operations` allowed beside the operations its ceiling
@@ -356,62 +339,22 @@ pub(crate) fn allowing(service: &FerroEhrService, operations: &[Operation]) {
     ));
 }
 
-/// Grants [`TEST_CLIENT`] `sign_in_persons` under every `persons` issuer of
-/// `config` but the Basic users' own, as a deployment grants the client its
-/// persons sign in through: a person's test token comes through it.
-pub(crate) async fn first_party(service: &FerroEhrService, config: &AppConfig) {
-    open_configured_key_spaces(config).await;
-    let issuers: Vec<String> = config
-        .auth
-        .shared
-        .issuer
-        .values()
-        .filter(|entry| entry.kind == Some(IssuerKind::Persons))
-        .map(|entry| entry.issuer.expose().to_owned())
-        .filter(|issuer| issuer != BASIC_ISSUER)
-        .collect();
-    for issuer in issuers {
-        grant_standing(service, &issuer, TEST_CLIENT, Operation::SignInPersons).await;
-    }
-}
-
-/// Grants the client `client_id` of `issuer` `operation` on `service`, as an
-/// administrator grants a client its standing: `sign_in_persons`,
-/// `act_for_persons` or `access_without_scope`.
-pub(crate) async fn grant_standing(
-    service: &FerroEhrService,
-    issuer: &str,
-    client_id: &str,
-    operation: Operation,
-) {
-    allowing(service, &[operation]);
-    service
-        .grant_client(&ClientGrant {
-            issuer: issuer.to_owned(),
-            client_id: client_id.to_owned(),
-            operation,
-            elements: Vec::new(),
-        })
-        .await
-        .expect("the client is granted its standing");
-}
-
-/// [`ferroehr_rest::build_with`] after [`first_party`].
+/// [`ferroehr_rest::build_with`] after [`open_configured_key_spaces`].
 pub(crate) async fn build_with(config: AppConfig, service: Arc<FerroEhrService>) -> Router {
-    Box::pin(first_party(&service, &config)).await;
+    Box::pin(open_configured_key_spaces(&config)).await;
     Box::pin(ferroehr_rest::build_with(config, service))
         .await
         .expect("the router builds")
 }
 
-/// [`ferroehr_rest::build_full`] after [`first_party`].
+/// [`ferroehr_rest::build_full`] after [`open_configured_key_spaces`].
 pub(crate) async fn build_full(
     config: AppConfig,
     service: Arc<FerroEhrService>,
     authz: Option<Arc<ferroehr_rest::extensions::access::authz::AuthzHandle>>,
     observability: ferroehr_rest::extensions::management::Observability,
 ) -> Router {
-    Box::pin(first_party(&service, &config)).await;
+    Box::pin(open_configured_key_spaces(&config)).await;
     Box::pin(ferroehr_rest::build_full(
         config,
         service,
@@ -503,20 +446,26 @@ pub(crate) fn started_metadata_issuer() -> &'static str {
         .expect("metadata_issuer runs before a token names it")
 }
 
-/// Bearer authentication trusting the `persons` issuer `persons` and the
-/// `patients` issuer `patients`, both for `audience` and both reading the
-/// committed test key set: patients and professionals sign in at separate
-/// issuers.
+/// Bearer authentication trusting the issuers `persons` and `patients`, both
+/// for `audience`, both reading the committed test key set and both binding
+/// their logins ([`bind_issuer`]): patients and professionals sign in at
+/// separate issuers.
 pub(crate) fn persons_and_patients(persons: &str, patients: &str, audience: &str) -> AuthConfig {
     let jwks_file = jwks_file().display().to_string();
+    let bound = |issuer: &str| ferrohealth_smart::party::config::PartySection {
+        identifier_issuer: logins_of(issuer),
+        identifier_type: "guid".to_owned(),
+        ..ferrohealth_smart::party::config::PartySection::default()
+    };
     trusting(vec![
         IssuerEntry {
             jwks_file: jwks_file.clone(),
+            party: Some(bound(persons)),
             ..entry(persons, audience)
         },
         IssuerEntry {
-            kind: Some(IssuerKind::Patients),
             jwks_file,
+            party: Some(bound(patients)),
             ..entry(patients, audience)
         },
     ])
@@ -886,15 +835,15 @@ pub(crate) async fn app_granting(
     (db, router_with(config, service).await)
 }
 
-/// The identifier issuer the logins of the `persons` issuer `issuer` bind
+/// The identifier issuer the logins of the issuer `issuer` bind
 /// under in [`bind_issuer`].
 pub(crate) fn logins_of(issuer: &str) -> String {
     format!("{issuer}/logins")
 }
 
-/// Binds the logins of the `persons` issuer `issuer` in `config`: once a
-/// party table binds the Basic users, every person is bound, the tokens of
-/// every `persons` issuer included.
+/// Binds the logins of the issuer `issuer` in `config`: once a party table
+/// binds the Basic users, every person is bound, the tokens of every issuer
+/// included.
 pub(crate) fn bind_issuer(config: &mut AppConfig, issuer: &str) {
     issuer_table(config, issuer).party = Some(ferrohealth_smart::party::config::PartySection {
         identifier_issuer: logins_of(issuer),
@@ -916,17 +865,18 @@ pub(crate) async fn bind_subjects(pool: &PgPool, bound: &[(&str, &str)]) {
     }
 }
 
-/// Commits into `pool` the `PERSON` of the patient whose portal login is
-/// `login` under the `patients` issuer `issuer`, unless one carries that key
-/// already; its container id. A `patients` token is the patient only when its
-/// login is a key of the launch EHR's subject (#6080).
-pub(crate) async fn portal_patient(pool: &PgPool, issuer: &str, login: &str) -> uuid::Uuid {
-    open_key_spaces(pool, &[(issuer, true)]).await;
-    if let Some(person) = bound_person(pool, issuer, login).await {
+/// Commits into `pool` the `PERSON` of the patient whose login is `login`
+/// under [`bind_issuer`] of `issuer`, with no professional `ROLE`, unless one
+/// carries that key already; its container id. A patient's token is the
+/// patient only when its login is a key of the launch EHR's subject (#6080).
+pub(crate) async fn patient_person(pool: &PgPool, issuer: &str, login: &str) -> uuid::Uuid {
+    let logins = logins_of(issuer);
+    open_key_spaces(pool, &[(logins.as_str(), false)]).await;
+    if let Some(person) = bound_person(pool, &logins, login).await {
         return person;
     }
     let committer = binding_service(pool);
-    let body = crate::party_binding_http::person(issuer, login);
+    let body = crate::party_binding_http::person(&logins, login);
     let created = Box::pin(committer.party_create(
         ferroehr::service::demographic::types::PartyKind::Person,
         crate::party_binding_http::write(&body, "532", None),
@@ -1131,7 +1081,7 @@ pub(crate) async fn open_key_spaces(pool: &PgPool, issuers: &[(&str, bool)]) {
 }
 
 /// Records the key issuers `config` declares, each `[auth.issuer.<name>.party]`
-/// `identifier_issuer` and each `patients` issuer, as `active` key spaces in
+/// `identifier_issuer`, as `active` key spaces in
 /// every live database of this test process that holds no lease, as a
 /// replica booting on `config` fills them; a database with a lease has its
 /// key spaces kept by its replicas.
@@ -1141,13 +1091,9 @@ pub(crate) async fn open_configured_key_spaces(config: &AppConfig) {
     else {
         return;
     };
-    let portal = ferroehr::config::binding::portal_issuers(&resolved);
     let spaces: Vec<(String, bool)> = ferroehr::config::binding::key_issuers(&resolved)
         .into_iter()
-        .map(|issuer| {
-            let flag = portal.contains(&issuer);
-            (issuer, flag)
-        })
+        .map(|issuer| (issuer, false))
         .collect();
     let pools = TEST_POOLS
         .lock()

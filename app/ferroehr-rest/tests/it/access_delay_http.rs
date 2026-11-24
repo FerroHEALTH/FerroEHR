@@ -36,7 +36,7 @@ use crate::common;
 use crate::common::{BASE, EXT};
 
 const ISSUER: &str = "https://issuer.example";
-/// The issuer of the person's own tokens: a `patients` issuer of its own.
+/// The issuer of the person's own tokens, an issuer of its own.
 const PATIENTS: &str = "https://patients.example";
 const AUDIENCE: &str = "ferroehr";
 /// The professional's subject.
@@ -82,8 +82,7 @@ async fn app_with(
         .expect("mirror the category map");
     let mut config = common::api_config(true);
     config.auth = common::persons_and_patients(ISSUER, PATIENTS, AUDIENCE);
-    common::patient_context(&mut config, ISSUER);
-    common::patient_context(&mut config, PATIENTS);
+    common::bind_subjects(&pool, &[(ISSUER, PROFESSIONAL)]).await;
     let mut authz = None;
     let mut uploader = professional();
     if !bound.is_empty() {
@@ -159,7 +158,7 @@ async fn send(
 /// login is a key of, and commits the IPS composition into it as the
 /// professional; returns the EHR id and the composition's object id.
 async fn record(app: &Router, pool: &PgPool) -> (String, String) {
-    let person = common::portal_patient(pool, PATIENTS, PATIENT).await;
+    let person = common::patient_person(pool, PATIENTS, PATIENT).await;
     let ehr = ehr_as(app, &professional(), Some(&common::person_status(person))).await;
     let vo = commit(app, &ehr).await;
     (ehr, vo)

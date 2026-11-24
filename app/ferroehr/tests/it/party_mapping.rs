@@ -892,22 +892,16 @@ async fn admin_bound_to(svc: &FerroEhrService, value: &str) -> CommitterIdentity
         ..PartySection::default()
     };
     let binding = PartyBinding::new(Arc::new(svc.party_source(NAMESPACE)))
-        .with_issuer(
-            table,
-            ferrohealth_smart::kind::IssuerKind::Persons,
-            &ferrohealth_smart::profile::Profile::default(),
-        )
+        .with_issuer(table, ferrohealth_smart::kind::IssuerKind::Smart)
         .expect("the table binds");
     let login = Caller::new(
-        "admin".to_owned(),
+        value.to_owned(),
         Some("app".to_owned()),
         "user/*.cruds",
         None,
-        false,
-        CallerKind::Person,
+        CallerKind::User,
     )
-    .with_issuer("https://login.example".to_owned())
-    .with_person_key(Some(value.to_owned()), None);
+    .with_issuer("https://login.example".to_owned());
     let outcome = binding.resolve(&login).await.expect("answers");
     let bound = outcome.as_ref().and_then(Outcome::bound).cloned();
     assert!(

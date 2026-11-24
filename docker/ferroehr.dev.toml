@@ -38,7 +38,6 @@ terminology = true
 # lanes only, so no token of it exists.
 [auth.issuer.basic_users]
 issuer = "https://basic-users.ferroehr.invalid"
-kind = "persons"
 audience = ["ferroehr-basic-users"]
 jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
 
@@ -55,7 +54,6 @@ group_identifier_issuer = "urn:example:groups"
 # issuers under their own names.
 [auth.issuer.scim]
 issuer = "https://scim.ferroehr.invalid"
-kind = "machines"
 audience = ["ferroehr-scim"]
 jwks_file = "/etc/ferroehr/scim-jwks.json"
 
@@ -148,7 +146,7 @@ first_admin = "ferroehr-admin"
 # users it provisions, the clients persons sign in through and the change
 # feed a lane may grant a reader.
 [authz.grants]
-allowed = ["commit_composition", "read_change_feed", "scim_provision", "hold_roles", "hold_scopes", "sign_in_persons"]
+allowed = ["commit_composition", "read_change_feed", "scim_provision", "hold_roles", "hold_scopes"]
 
 # The healthcare provider the dev lanes act for (an example id under the OID
 # arc 2.999), and the binding key of each Basic user.

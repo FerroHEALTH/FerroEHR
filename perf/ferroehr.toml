@@ -21,7 +21,6 @@ profile = "sandbox"
 # key was discarded.
 [auth.issuer.basic_users]
 issuer = "https://basic-users.ferroehr.invalid"
-kind = "persons"
 audience = ["ferroehr-basic-users"]
 jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
 
@@ -34,7 +33,6 @@ identifier_type = "login"
 # docs/conformance/party/scim/ (never production material).
 [auth.issuer.scim]
 issuer = "https://scim.ferroehr.invalid"
-kind = "machines"
 audience = ["ferroehr-scim"]
 jwks_file = "/etc/ferroehr/scim-jwks.json"
 

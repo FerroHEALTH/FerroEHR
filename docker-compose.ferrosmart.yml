@@ -120,7 +120,6 @@ services:
       # FerroSMART is the issuer named `ferrosmart`, beside the quickstart's
       # `basic_users` and `quickstart` issuers.
       FERROEHR__AUTH__ISSUER__FERROSMART__ISSUER: http://localhost:8280
-      FERROEHR__AUTH__ISSUER__FERROSMART__PRESET: ferrosmart
       # Its audience is the base the app asked for (RFC 8707 §2), the openEHR
       # base FerroEHR derives from its public URL below. A person binds to the PERSON whose SCIM loginIdentifier is their
       # FerroSMART subject.

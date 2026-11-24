@@ -5,12 +5,12 @@
 //! that hold the shared `[auth]` section, the binding and FerroEHR's per-issuer
 //! tables together.
 //!
-//! `ferrohealth-smart` owns the issuer kinds and profiles, `[auth.issuer.<name>.party]` and
-//! `[auth.issuer.<name>.federation]`, and refuses what breaks its own rules. FerroEHR adds
-//! the provider it acts for, the `PARTY_REF.namespace` a bound party is
-//! written under, the key each Basic user is bound by, and the rules no single
-//! table can see: every `persons` issuer is bound, no two issuers share an
-//! audience, and each FerroEHR table names a trusted issuer of its kind once.
+//! `ferrohealth-smart` owns the issuers, `[auth.issuer.<name>.party]` and
+//! `[auth.issuer.<name>.federation]`, and refuses what breaks its own rules.
+//! FerroEHR adds the provider it acts for, the `PARTY_REF.namespace` a bound
+//! party is written under, the key each Basic user is bound by, and the rules
+//! no single table can see: no two issuers share an audience, and each
+//! FerroEHR table names a trusted issuer once.
 //! No openEHR spec governs configuration: our own design.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -22,9 +22,7 @@ use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::party::binding::PartyBinding;
 use ferrohealth_smart::party::config::PartyError;
 use ferrohealth_smart::party::source::{Lookup, PartySource, Query, SourceError};
-use serde::de::value::{MapAccessDeserializer, SeqAccessDeserializer};
-use serde::de::{MapAccess, SeqAccess, Visitor};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 mod defaults;
 pub mod jit;
@@ -39,9 +37,8 @@ pub mod person;
 pub struct PartyBindingConfig {
     /// The healthcare provider this deployment acts for, which every access
     /// record of a bound person and every version a person commits name
-    /// (EHDS Art. 13(4), Annex II 3.2(a)): one provider, or one table per
-    /// tenant.
-    pub provider: Option<Providers>,
+    /// (EHDS Art. 13(4), Annex II 3.2(a)).
+    pub provider: Option<ProviderId>,
     /// The `PARTY_REF.namespace` a bound party is written under, held to the
     /// `OBJECT_REF.namespace` pattern.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
@@ -123,59 +120,6 @@ impl fmt::Display for ProviderId {
     }
 }
 
-/// One `[[authz.party_binding.provider]]` table: the provider of the tokens
-/// whose issuer profile's `tenant_claim` carries `tenant`.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(default, deny_unknown_fields)]
-#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
-pub struct TenantProvider {
-    /// The `tenant_claim` value the table holds for.
-    pub tenant: String,
-    /// The issuer of the provider's identifier.
-    pub issuer: String,
-    /// The provider's identifier.
-    pub id: String,
-}
-
-/// The `provider` key: one table, or an array of tables keyed by tenant.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(untagged)]
-pub enum Providers {
-    /// `[authz.party_binding.provider]`: the one provider of the deployment.
-    One(ProviderId),
-    /// `[[authz.party_binding.provider]]`: one provider per tenant.
-    ByTenant(Vec<TenantProvider>),
-}
-
-impl<'de> Deserialize<'de> for Providers {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        deserializer.deserialize_any(ProvidersVisitor)
-    }
-}
-
-/// Reads the table form or the array form of `provider`.
-struct ProvidersVisitor;
-
-impl<'de> Visitor<'de> for ProvidersVisitor {
-    type Value = Providers;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(
-            "an [authz.party_binding.provider] table or [[authz.party_binding.provider]] tables",
-        )
-    }
-
-    fn visit_map<A: MapAccess<'de>>(self, map: A) -> Result<Providers, A::Error> {
-        ProviderId::deserialize(MapAccessDeserializer::new(map)).map(Providers::One)
-    }
-
-    fn visit_seq<A: SeqAccess<'de>>(self, seq: A) -> Result<Providers, A::Error> {
-        Vec::<TenantProvider>::deserialize(SeqAccessDeserializer::new(seq)).map(Providers::ByTenant)
-    }
-}
-
 /// One `[[authz.party_binding.basic_user]]` table: the binding key a Basic
 /// user is looked up by.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -212,12 +156,10 @@ pub enum BindingError {
 /// Returns the party binding the configuration describes, looking logins up
 /// in `source`.
 ///
-/// The vendor adapters `[auth.idp]` builds are registered from `resolved`,
-/// so a profile naming one without its table is refused; every Basic user of
-/// the section must map to a key.
+/// Every Basic user of the section must map to a key.
 ///
 /// # Errors
-/// [`BindingError`] naming the table, the adapter or the Basic user refused;
+/// [`BindingError`] naming the table or the Basic user refused;
 /// [`BindingError::BasicUnmapped`] names the operator grant that bootstraps
 /// the `PERSON` an unmapped Basic user needs.
 pub fn party_binding(
@@ -285,29 +227,14 @@ pub fn errors(authz: &crate::config::authz::AuthzConfig, resolved: &Resolved) ->
             mapping.user
         ));
     }
-    unbound_persons(resolved, &mut errors);
     key_types(binding, resolved, &mut errors);
     shared_audiences(resolved, &mut errors);
-    providers(binding, resolved, &mut errors);
+    providers(binding, &mut errors);
     errors.extend(jit::errors(binding, resolved));
     if let Err(e) = resolved.role_issuers("authz.rbac.role_issuers", &authz.rbac.role_issuers) {
         errors.push(crate::error::ErrorChain::new(&e).to_string());
     }
     errors
-}
-
-/// Refuses a `persons` issuer with no `[auth.issuer.<name>.party]` table: binding is how
-/// FerroEHR attributes a person, with no unbound mode.
-fn unbound_persons(resolved: &Resolved, errors: &mut Vec<String>) {
-    let bound: BTreeSet<&str> = resolved.party.iter().map(|t| t.issuer.expose()).collect();
-    for (issuer, kind) in &resolved.kinds {
-        if *kind == IssuerKind::Persons && !bound.contains(issuer.as_str()) {
-            errors.push(format!(
-                "the persons issuer {issuer:?} has no party table: every persons issuer \
-                 binds its logins to a party"
-            ));
-        }
-    }
 }
 
 /// Refuses an `[auth.issuer.<name>.party]` table whose `identifier_type` no person
@@ -360,9 +287,9 @@ fn shared_audiences(resolved: &Resolved, errors: &mut Vec<String>) {
     }
 }
 
-/// Refuses a missing provider, a namespace outside the `OBJECT_REF` pattern,
-/// and a per-tenant provider list that leaves a bound issuer uncovered.
-fn providers(binding: &PartyBindingConfig, resolved: &Resolved, errors: &mut Vec<String>) {
+/// Refuses a missing provider and a namespace outside the `OBJECT_REF`
+/// pattern.
+fn providers(binding: &PartyBindingConfig, errors: &mut Vec<String>) {
     if !openehr_base::v1_3::base_types::identification::object_ref_impl::namespace_valid(
         &binding.namespace,
     ) {
@@ -375,53 +302,13 @@ fn providers(binding: &PartyBindingConfig, resolved: &Resolved, errors: &mut Vec
     match &binding.provider {
         None => errors.push(
             "authz.party_binding.provider is required: set [authz.party_binding.provider] with \
-             the issuer and id of the healthcare provider this deployment acts for, or one \
-             [[authz.party_binding.provider]] table per tenant"
+             the issuer and id of the healthcare provider this deployment acts for"
                 .to_owned(),
         ),
-        Some(Providers::One(provider)) => {
+        Some(provider) => {
             if provider.issuer.trim().is_empty() || provider.id.trim().is_empty() {
                 errors.push("authz.party_binding.provider needs both issuer and id".to_owned());
             }
-        }
-        Some(Providers::ByTenant(tables)) => tenants(tables, resolved, errors),
-    }
-}
-
-/// The rules of the per-tenant provider tables.
-fn tenants(tables: &[TenantProvider], resolved: &Resolved, errors: &mut Vec<String>) {
-    let mut seen = BTreeSet::new();
-    for table in tables {
-        if table.tenant.trim().is_empty()
-            || table.issuer.trim().is_empty()
-            || table.id.trim().is_empty()
-        {
-            errors.push(
-                "each [[authz.party_binding.provider]] table needs tenant, issuer and id"
-                    .to_owned(),
-            );
-        }
-        if !seen.insert(table.tenant.as_str()) {
-            errors.push(format!(
-                "two [[authz.party_binding.provider]] tables name the tenant {:?}",
-                table.tenant
-            ));
-        }
-    }
-    let bound: BTreeSet<&str> = resolved.party.iter().map(|t| t.issuer.expose()).collect();
-    for settings in &resolved.issuers {
-        if bound.contains(settings.issuer.as_str())
-            && settings
-                .profile
-                .tenant_claim
-                .as_deref()
-                .is_none_or(|c| c.trim().is_empty())
-        {
-            errors.push(format!(
-                "the bound issuer {:?} names no tenant_claim, so no \
-                 [[authz.party_binding.provider]] table covers its logins",
-                settings.issuer
-            ));
         }
     }
 }
@@ -448,19 +335,6 @@ impl crate::config::FerroEhrConfig {
     }
 }
 
-/// Every `patients` issuer, sorted: a binding key under one is a portal
-/// representative's login, held with no `[auth.issuer.<name>.party]` table and bound
-/// only through a live representation (#5446, #5622).
-#[must_use]
-pub fn portal_issuers(resolved: &Resolved) -> Vec<String> {
-    resolved
-        .kinds
-        .iter()
-        .filter(|(_, kind)| **kind == IssuerKind::Patients)
-        .map(|(issuer, _)| issuer.clone())
-        .collect()
-}
-
 /// The person mapping the server derives the side table under (#5622).
 ///
 /// # Errors
@@ -471,14 +345,11 @@ pub fn installed_mapping(
     resolved: &Resolved,
     admin_role: &str,
 ) -> Result<crate::party_binding::BindingMapping, crate::party_binding::SelectorError> {
-    Ok(sections
-        .binding_mapping(&key_issuers(resolved), admin_role)?
-        .with_portal_issuers(portal_issuers(resolved)))
+    sections.binding_mapping(&key_issuers(resolved), admin_role)
 }
 
 /// The issuers a binding key is held under: every party table's
-/// `identifier_issuer`, and every `patients` issuer, under which a portal
-/// representative's login is their key with no table (#5622).
+/// `identifier_issuer`.
 ///
 /// The server compiles the person mapping from this one set, and the SCIM
 /// gate admits a `scim_provision` grant whose `binding_issuer` is in it. No
@@ -489,7 +360,6 @@ pub fn key_issuers(resolved: &Resolved) -> Vec<String> {
         .party
         .iter()
         .map(|table| table.identifier_issuer.clone())
-        .chain(portal_issuers(resolved))
         .collect();
     issuers.sort();
     issuers.dedup();
@@ -499,11 +369,11 @@ pub fn key_issuers(resolved: &Resolved) -> Vec<String> {
 /// Returns the one provider `urn:ura|1`, the provider the configuration
 /// tests declare.
 #[cfg(test)]
-pub(crate) fn one_provider() -> Providers {
-    Providers::One(ProviderId {
+pub(crate) fn one_provider() -> ProviderId {
+    ProviderId {
         issuer: "urn:ura".to_owned(),
         id: "1".to_owned(),
-    })
+    }
 }
 
 /// What the party binding binds, as the boot line and `/management/info`
@@ -513,7 +383,7 @@ pub struct BindingPosture {
     /// Every trusted issuer.
     pub issuers: Vec<BoundIssuer>,
     /// The provider the deployment acts for, when declared.
-    pub provider: Option<Providers>,
+    pub provider: Option<ProviderId>,
     /// The `PARTY_REF.namespace` a bound party is written under.
     pub namespace: String,
     /// The federation agreements in force, read from the CDR; empty in the
@@ -599,11 +469,10 @@ impl BindingPosture {
                 format!("{} ({kind}, {key})", bound.issuer)
             })
             .collect();
-        let provider = match &self.provider {
-            None => "-".to_owned(),
-            Some(Providers::One(provider)) => provider.to_string(),
-            Some(Providers::ByTenant(tables)) => format!("{} tenants", tables.len()),
-        };
+        let provider = self
+            .provider
+            .as_ref()
+            .map_or_else(|| "-".to_owned(), ToString::to_string);
         tracing::info!(
             issuers = %issuers.join(", "),
             provider = %provider,
@@ -671,10 +540,10 @@ mod tests {
         );
         assert_eq!(
             c.authz.party_binding.provider,
-            Some(Providers::One(ProviderId {
+            Some(ProviderId {
                 issuer: "urn:ura".to_owned(),
                 id: "1234".to_owned(),
-            }))
+            })
         );
         assert_eq!(
             c.authz.rbac.emergency_access_role.as_deref(),

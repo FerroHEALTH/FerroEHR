@@ -10,7 +10,6 @@
 //! document describes is our own design.
 
 use ferrohealth_smart::config::IssuerEntry;
-use ferrohealth_smart::kind::IssuerKind;
 use http::StatusCode;
 
 use crate::common;
@@ -27,7 +26,6 @@ async fn discovery_describes_the_keycloak_persons_issuer_and_never_the_machines_
     let mut config = common::api_config(false);
     config.auth = common::trusting(vec![
         IssuerEntry {
-            kind: Some(IssuerKind::Machines),
             ..common::entry(&machines.uri(), AUDIENCE)
         },
         common::entry(&keycloak.uri(), AUDIENCE),

@@ -234,7 +234,7 @@ pub(crate) fn bound_person_alone(principal: &Principal) -> bool {
     principal.roles.is_empty()
         && principal.represented.is_none()
         && principal.access.caller().is_some_and(|caller| {
-            matches!(caller.kind(), SmartKind::Person)
+            crate::extensions::access::authn::party::own::professional_login(caller.kind())
                 && caller
                     .party()
                     .and_then(ferrohealth_smart::party::Outcome::bound)
@@ -263,8 +263,7 @@ fn kind(principal: Option<&Principal>, subject: bool, capabilities: &Capabilitie
     let smart = principal.access.caller();
     // NOTE: EHDS Art. 4(2), whoever acts for someone else is their representative whatever
     // issuer it logged in through, so the representation is read before the person (#5613).
-    let represents =
-        smart.is_some_and(|caller| matches!(caller.kind(), SmartKind::Representative { .. }));
+    let represents = smart.is_some_and(|caller| matches!(caller.kind(), SmartKind::RelatedPerson));
     if represents || principal.represented.is_some() {
         return CallerKind::Representative;
     }

@@ -7,20 +7,19 @@
 //!
 //! A party that is `inactive` or `abandoned` (RM common
 //! `master06-change_control_package.adoc` §Abandoned and Inactive States), a
-//! login two parties carry, a deprovisioned key, a token without the key
-//! claim, a party without the marker the caller's kind needs, groups that
-//! cannot be read and a person whose login no party carries are each refused
-//! with `403` and their binding code, with no fallback to a login-only
-//! committer (RM common `AUDIT_DETAILS.committer` names who did it). A
-//! source or an identity provider that cannot answer is the server's failure,
-//! never the person's, and answers `503`. No openEHR spec governs resolving a
+//! login two parties carry, a deprovisioned key, a credential without a key,
+//! a party without the marker the caller's kind needs, groups that cannot be
+//! read and a person whose login no party carries are each refused with
+//! `403` and their binding code, with no fallback to a login-only committer
+//! (RM common `AUDIT_DETAILS.committer` names who did it). A source that
+//! cannot answer is the server's failure, never the person's, and answers
+//! `503`. No openEHR spec governs resolving a
 //! login to a party: our own design.
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::time::Duration;
 
-use ferroehr::config::binding::Providers;
+use ferroehr::config::binding::ProviderId;
 use ferroehr::error::ServiceError;
 use ferroehr::party_binding::grants::capabilities::Capabilities;
 use ferroehr::party_binding::source::BindingSource;
@@ -28,9 +27,8 @@ use ferroehr::versioning::committer::bound::BoundDetails;
 
 use ferrohealth_smart::assurance::AssuranceSection;
 use ferrohealth_smart::kind::CallerKind;
-use ferrohealth_smart::party::adapter::AdapterError;
+use ferrohealth_smart::party::Outcome;
 use ferrohealth_smart::party::binding::PartyBinding;
-use ferrohealth_smart::party::{GroupsCause, Outcome, PartyRef, Represented};
 use ferrohealth_smart::resource::{Access, Caller};
 
 use super::AuthError;
@@ -51,13 +49,10 @@ pub(crate) struct Binding {
     deployment: Deployment,
     /// `[authz.party_binding] namespace`.
     namespace: String,
-    /// Each issuer's `person_key`, the claim a `refused-key-claim-missing`
-    /// record names.
-    key_claims: BTreeMap<String, String>,
     /// Each issuer's `identifier_issuer`s, which a `refused-unbound` problem
     /// names so the operator can provision the person.
     identifier_issuers: BTreeMap<String, Vec<String>>,
-    /// The just-in-time creation of each bound `persons` issuer, or why the
+    /// The just-in-time creation of each bound issuer, or why the
     /// mapping cannot write a provisional `PERSON`.
     jit: Result<BTreeMap<String, jit::Jit>, Vec<String>>,
     /// `[authz.assurance]`, which an `admit_assurance` condition reads.
@@ -129,11 +124,6 @@ pub(super) fn binding(
         Arc::<dyn BindingSource>::clone(&source);
     let binding = ferroehr::config::binding::party_binding(&config.party_binding, resolved, lookup)
         .map_err(BindingRefused::Shared)?;
-    let key_claims = resolved
-        .issuers
-        .iter()
-        .map(|settings| (settings.issuer.clone(), settings.profile.person_key.clone()))
-        .collect();
     let mut identifier_issuers: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for party in &resolved.party {
         identifier_issuers
@@ -144,9 +134,8 @@ pub(super) fn binding(
     Ok(Some(Arc::new(Binding {
         shared: binding,
         source,
-        deployment: Deployment::of(config, resolved),
+        deployment: Deployment::of(config),
         namespace: config.party_binding.namespace.clone(),
-        key_claims,
         identifier_issuers,
         jit: jit::tables(&config.party_binding, resolved),
         assurance: config.assurance.clone(),
@@ -154,54 +143,26 @@ pub(super) fn binding(
 }
 
 /// The healthcare provider the deployment acts for:
-/// `[authz.party_binding] provider`, one provider or a table per tenant,
-/// with each issuer's `tenant_claim`, whatever issuer binds a caller.
+/// `[authz.party_binding] provider`, whatever issuer binds a caller.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Deployment {
     /// `[authz.party_binding] provider`.
-    provider: Option<Providers>,
-    /// Each issuer's `tenant_claim`, which picks a per-tenant provider.
-    tenant_claims: BTreeMap<String, String>,
+    provider: Option<ProviderId>,
 }
 
 impl Deployment {
-    /// The provider of `config`, its tenants picked by the claims of
-    /// `resolved`'s issuers.
-    pub(super) fn of(
-        config: &crate::config::AppConfig,
-        resolved: &ferrohealth_smart::config::Resolved,
-    ) -> Self {
-        let tenant_claims = resolved
-            .issuers
-            .iter()
-            .filter_map(|settings| {
-                let claim = settings.profile.tenant_claim.clone()?;
-                Some((settings.issuer.clone(), claim))
-            })
-            .collect();
+    /// The provider of `config`.
+    pub(super) fn of(config: &crate::config::AppConfig) -> Self {
         Self {
             provider: config.party_binding.provider.clone(),
-            tenant_claims,
         }
     }
 
-    /// The healthcare provider `caller` acts for, as `(issuer, id)`: the one
-    /// provider, or the table of the tenant its token names.
-    pub(super) fn provider_of(&self, caller: &Caller) -> Option<(String, String)> {
-        match self.provider.as_ref()? {
-            Providers::One(one) => Some((one.issuer.clone(), one.id.clone())),
-            Providers::ByTenant(tables) => {
-                let tenant = caller
-                    .issuer()
-                    .and_then(|issuer| self.tenant_claims.get(issuer))
-                    .and_then(|claim| caller.claim(claim))
-                    .and_then(serde_json::Value::as_str);
-                tables
-                    .iter()
-                    .find(|table| Some(table.tenant.as_str()) == tenant)
-                    .map(|table| (table.issuer.clone(), table.id.clone()))
-            }
-        }
+    /// The healthcare provider the deployment acts for, as `(issuer, id)`.
+    pub(super) fn provider(&self) -> Option<(String, String)> {
+        self.provider
+            .as_ref()
+            .map(|one| (one.issuer.clone(), one.id.clone()))
     }
 }
 
@@ -235,7 +196,7 @@ impl Binding {
             })?;
         Ok(Some(BoundDetails {
             name,
-            provider: self.deployment.provider_of(caller),
+            provider: self.deployment.provider(),
             namespace: self.namespace.clone(),
             portal: None,
         }))
@@ -259,7 +220,7 @@ impl Binding {
         roles: &[String],
     ) -> Result<Option<Outcome>, AuthError> {
         let issuer = caller.issuer().unwrap_or("-");
-        if jit::candidate(caller).is_none() {
+        if !jit::candidate(caller) {
             return Ok(None);
         }
         let admissions = self.source.admissions(issuer).await.map_err(|error| {
@@ -291,7 +252,7 @@ impl Binding {
             caller,
             &admissions,
             (roles, &self.assurance),
-            (&self.namespace, self.deployment.provider_of(caller)),
+            (&self.namespace, self.deployment.provider()),
         ) {
             Ok(person) => person,
             Err(reason) => {
@@ -364,19 +325,6 @@ pub(super) async fn bind(
             });
     }
     let outcome = match binding.shared.resolve(caller).await {
-        // NOTE: GDPR Art. 9(3) and Art. 29, a guest acts only under this controller's
-        // responsibility, which the party table's `guests` declares; our own design.
-        Ok(None) if matches!(caller.kind(), CallerKind::Guest(_)) => {
-            return Err(AuthError::PartyRefused {
-                code: "refused-guest",
-                principal: None,
-                party: None,
-                named: None,
-            });
-        }
-        Ok(None) if matches!(caller.kind(), CallerKind::Representative { .. }) => {
-            return Err(unrecorded());
-        }
         Ok(None) => return Ok(access),
         Ok(Some(outcome)) => outcome,
         Err(error) => return Err(closed::unanswered(&error)),
@@ -389,8 +337,7 @@ pub(super) async fn bind(
         outcome => outcome,
     };
     if let Some(mut refusal) = refusal(&outcome).filter(|_| {
-        !own::binds_the_person(caller.kind(), &outcome)
-            && !own::binds_a_representative(caller.kind(), &outcome)
+        !own::binds_the_person(caller, &outcome) && !own::binds_a_representative(caller, &outcome)
     }) {
         let issuer = caller.issuer().unwrap_or("-");
         // NOTE: GDPR Art. 5(1)(c), the line names the issuer and the outcome, never the claim
@@ -410,9 +357,12 @@ pub(super) async fn bind(
                 ],
             );
         if let AuthError::PartyRefused { named, .. } = &mut refusal {
+            // NOTE: OpenID Connect Core 1.0 §5.7, a login is bound by its token's `sub`.
             *named = match outcome {
-                Outcome::KeyClaimMissing => {
-                    binding.key_claims.get(issuer).cloned().map(Named::Claim)
+                Outcome::KeyClaimMissing
+                    if caller.via() == ferrohealth_smart::resource::Via::Bearer =>
+                {
+                    Some(Named::Claim("sub".to_owned()))
                 }
                 Outcome::Unbound => binding
                     .identifier_issuers
@@ -422,15 +372,6 @@ pub(super) async fn bind(
             };
         }
         return Err(refusal);
-    }
-    if let CallerKind::Representative { represented, .. } = caller.kind()
-        && represented_subject(&outcome, represented).is_none()
-    {
-        tracing::warn!(
-            issuer = caller.issuer().unwrap_or("-"),
-            "the party source records no live representation of the asserted subject"
-        );
-        return Err(unrecorded());
     }
     Ok(Access::Caller(Arc::new(
         Caller::clone(caller).with_party(outcome),
@@ -448,23 +389,6 @@ pub(super) const fn unrecorded() -> AuthError {
     }
 }
 
-/// The subject among the bound party's live representations that the token's
-/// `represented` claim names, matched on the party id without regard to case.
-// NOTE: no openEHR spec governs resolving a login to a party, our own design: the
-// claim is a bare string, and the source names a subject by its container id.
-pub(super) fn represented_subject<'a>(
-    outcome: &'a Outcome,
-    represented: &str,
-) -> Option<&'a PartyRef> {
-    let represented = represented.trim();
-    outcome
-        .bound()?
-        .represents
-        .iter()
-        .map(Represented::subject)
-        .find(|subject| subject.id().eq_ignore_ascii_case(represented))
-}
-
 /// The refusal `outcome` answers, or `None` for an outcome the request
 /// proceeds under.
 fn refusal(outcome: &Outcome) -> Option<AuthError> {
@@ -476,12 +400,6 @@ fn refusal(outcome: &Outcome) -> Option<AuthError> {
         Outcome::Deprovisioned => "refused-deprovisioned",
         Outcome::KeyClaimMissing => "refused-key-claim-missing",
         Outcome::WrongMarker { .. } => "refused-wrong-marker",
-        Outcome::GroupsUnavailable(GroupsCause::Adapter(error)) => {
-            if let Some(retry_after) = upstream(error) {
-                return Some(AuthError::PartyUnavailable { retry_after });
-            }
-            "refused-groups-unavailable"
-        }
         Outcome::GroupsUnavailable(_) => "refused-groups-unavailable",
         // NOTE: `Outcome::Unbound`, and an outcome added later to the non-exhaustive
         // `Outcome` binds no party until it is read here, so both are unbound.
@@ -495,22 +413,6 @@ fn refusal(outcome: &Outcome) -> Option<AuthError> {
             .map(|party| Box::new(super::record::triple(party))),
         named: None,
     })
-}
-
-/// The `Retry-After` of an adapter failure that is the identity provider's
-/// (a status, throttling or a timeout), or `None` for one that is the
-/// token's.
-#[expect(
-    clippy::option_option,
-    reason = "the outer None is a failure of the token, the inner one an upstream failure \
-              that gave no Retry-After"
-)]
-fn upstream(error: &AdapterError) -> Option<Option<Duration>> {
-    match error {
-        AdapterError::Status { retry_after, .. } => Some(*retry_after),
-        AdapterError::Timeout { .. } | AdapterError::Unreadable { .. } => Some(None),
-        _ => None,
-    }
 }
 
 /// The text of the refusal `code`, naming what the operator or the person
@@ -532,7 +434,6 @@ pub(super) fn detail(code: &str, named: Option<&Named>) -> String {
             "the demographic party this login is bound to may not act in this role"
         }
         "refused-groups-unavailable" => "the groups this token asserts cannot be read",
-        "refused-guest" => "a guest of this login's issuer is not admitted",
         "refused-representation-unrecorded" => {
             "no live representation of the asserted subject is recorded for this login"
         }
@@ -612,9 +513,7 @@ pub(super) fn committer_identity(
             .and_then(Caller::party)
             .and_then(Outcome::bound)
             .cloned(),
-        representative: portal.is_some()
-            || caller
-                .is_some_and(|caller| matches!(caller.kind(), CallerKind::Representative { .. })),
+        representative: portal.is_some(),
         bound: portal.map(|portal| BoundDetails {
             namespace: portal.namespace.clone(),
             portal: Some(ferroehr::versioning::committer::bound::PortalParty {
@@ -636,7 +535,7 @@ pub(super) fn committer_identity(
 
 #[cfg(test)]
 mod tests {
-    use ferrohealth_smart::party::PartyRef;
+    use ferrohealth_smart::party::{GroupsCause, PartyRef};
 
     use super::*;
 
@@ -705,30 +604,7 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn an_upstream_adapter_failure_is_unavailable_with_its_retry_after() {
-        let throttled = Outcome::GroupsUnavailable(GroupsCause::Adapter(AdapterError::Status {
-            status: http::StatusCode::TOO_MANY_REQUESTS,
-            retry_after: Some(Duration::from_secs(7)),
-            body: None,
-        }));
-        assert!(matches!(
-            refusal(&throttled),
-            Some(AuthError::PartyUnavailable { retry_after: Some(d) }) if d == Duration::from_secs(7)
-        ));
-        let claim = Outcome::GroupsUnavailable(GroupsCause::Adapter(AdapterError::Claim {
-            claim: "oid".to_owned(),
-        }));
-        assert!(matches!(
-            refusal(&claim),
-            Some(AuthError::PartyRefused {
-                code: "refused-groups-unavailable",
-                ..
-            })
-        ));
-    }
-
-    /// An `[auth]` section with one `persons` issuer, bound by its party
+    /// An `[auth]` section with one issuer, bound by its party
     /// table when `bound`.
     fn section(bound: bool) -> ferrohealth_smart::config::AuthSection {
         let issuer = ferrohealth_secret::secret_url::SecretUrl::new("https://login.example");
@@ -743,7 +619,6 @@ mod tests {
                 "login".to_owned(),
                 ferrohealth_smart::config::IssuerEntry {
                     issuer,
-                    kind: Some(ferrohealth_smart::kind::IssuerKind::Persons),
                     audience: vec!["ferroehr".to_owned()],
                     party,
                     ..ferrohealth_smart::config::IssuerEntry::default()
@@ -778,14 +653,7 @@ mod tests {
         *config.auth.shared = section(true);
         let replay: Arc<dyn ferrohealth_smart::sender::replay::ReplayStore> =
             Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new());
-        let Err(message) = super::super::Authenticator::new(
-            &config,
-            None,
-            replay,
-            crate::test_support::standing(),
-        )
-        .await
-        else {
+        let Err(message) = super::super::Authenticator::new(&config, None, replay).await else {
             panic!("a party table without a party source builds no authenticator");
         };
         assert!(message.contains("no party source"), "{message}");

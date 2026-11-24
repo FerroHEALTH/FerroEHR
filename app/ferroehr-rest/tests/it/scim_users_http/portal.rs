@@ -23,7 +23,6 @@ use ferroehr::service::demographic::precondition::Precondition;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::version_update::WriteRequest;
 use ferrohealth_smart::config::IssuerEntry;
-use ferrohealth_smart::kind::IssuerKind;
 use http::StatusCode;
 use serde_json::{Value, json};
 
@@ -50,12 +49,10 @@ fn config() -> ferroehr_rest::config::AppConfig {
     common::add_issuer(
         &mut config,
         IssuerEntry {
-            kind: Some(IssuerKind::Patients),
             jwks_file: common::jwks_file().display().to_string(),
             ..common::entry(PORTAL, super::AUDIENCE)
         },
     );
-    common::patient_context(&mut config, PORTAL);
     config.party_binding.provider = Some(crate::portal_representatives_http::provider());
     config
 }

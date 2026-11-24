@@ -48,8 +48,6 @@ hospital_overlay() {
 x-hospital-env: &hospital-env
   FERROEHR__AUTH__ISSUER__QUICKSTART__AUDIENCE: ferroehr-scim,ferroehr-system
   FERROEHR__AUTH__ISSUER__FERROSMART__ISSUER: $HS_ISSUER
-  FERROEHR__AUTH__ISSUER__FERROSMART__KIND: persons
-  FERROEHR__AUTH__ISSUER__FERROSMART__PRESET: ferrosmart
   FERROEHR__AUTH__ISSUER__FERROSMART__PARTY__IDENTIFIER_ISSUER: $HS_LOGIN_ISSUER
   FERROEHR__AUTH__ISSUER__FERROSMART__PARTY__IDENTIFIER_TYPE: login
   FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: ferrosmart
@@ -57,7 +55,7 @@ x-hospital-env: &hospital-env
   FERROEHR__AUTHZ__RBAC__EMERGENCY_ACCESS_ROLE: EMERGENCY
   FERROEHR__AUDIT__PURPOSE_CODES: TREAT,ETREAT
   FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES: ETREAT
-  FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,query_system_wide,scim_provision,hold_scopes,sign_in_persons,act_for_persons,access_service,write_access_policy,write_care_relationship
+  FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,query_system_wide,scim_provision,hold_scopes,access_service,write_access_policy,write_care_relationship
   FERROEHR__AUTH__SMART__DISCOVERY: "true"
   FERROEHR__SERVER__PUBLIC_BASE_URL: http://localhost:8080
   FERROEHR__AUTH__ISSUER__FERROSMART__PROFILE__PATIENT_CONTEXT: "$honoured"

@@ -113,7 +113,7 @@ pub(super) fn patient_context<'a>(
         let providers: Vec<ProviderKey> = principal
             .access
             .caller()
-            .and_then(|caller| layer.authenticator.deployment.provider_of(caller))
+            .and_then(|_| layer.authenticator.deployment.provider())
             .map(|(issuer, id)| ProviderKey::new(issuer, id))
             .into_iter()
             .collect();

@@ -143,22 +143,16 @@ pub(crate) async fn bound(svc: &FerroEhrService, sub: &str, key: &str) -> Commit
     };
     let source = svc.party_source("demographic");
     let binding = PartyBinding::new(Arc::new(source.clone()))
-        .with_issuer(
-            table,
-            ferrohealth_smart::kind::IssuerKind::Persons,
-            &ferrohealth_smart::profile::Profile::default(),
-        )
+        .with_issuer(table, ferrohealth_smart::kind::IssuerKind::Smart)
         .expect("the table binds");
     let login = Caller::new(
-        sub.to_owned(),
+        key.to_owned(),
         Some("app".to_owned()),
         "user/*.cruds",
         None,
-        false,
-        CallerKind::Person,
+        CallerKind::User,
     )
-    .with_issuer(ISSUER.to_owned())
-    .with_person_key(Some(key.to_owned()), None);
+    .with_issuer(ISSUER.to_owned());
     let outcome = binding.resolve(&login).await.expect("answers");
     let party = outcome.as_ref().and_then(Outcome::bound).cloned();
     let party_id = party

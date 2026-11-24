@@ -149,10 +149,7 @@ pub(crate) async fn app_over_pools(
             ..common::entry(MEDICS, "ferroehr")
         },
     );
-    common::add_issuer(
-        &mut config,
-        crate::caller_kinds_http::machines(MACHINES, ferrohealth_smart::profile::Preset::Rfc9068),
-    );
+    common::add_issuer(&mut config, crate::caller_kinds_http::machines(MACHINES));
     common::bind_issuer(&mut config, MEDICS);
     common::bind_subjects(&pool, &[(MEDICS, "drb")]).await;
     config.rbac.role_issuers = vec![common::name_of(MEDICS)];

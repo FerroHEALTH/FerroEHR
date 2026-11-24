@@ -50,7 +50,6 @@ services:
       # in for the client the tokens do not name; scripts/conformance.sh grants
       # that client sign_in_persons in the CDR.
       FERROEHR__AUTH__ISSUER__SMART__ISSUER: "https://as.cnf.test"
-      FERROEHR__AUTH__ISSUER__SMART__KIND: "persons"
       FERROEHR__AUTH__ISSUER__SMART__AUDIENCE: "cnf-smart-sut"
       FERROEHR__AUTH__ISSUER__SMART__ALGORITHMS: "RS256"
       FERROEHR__AUTH__ISSUER__SMART__PROFILE__TOKEN_TYPES: "JWT"

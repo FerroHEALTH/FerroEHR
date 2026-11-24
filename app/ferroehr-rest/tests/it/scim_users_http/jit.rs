@@ -17,10 +17,10 @@
 use std::sync::Arc;
 
 use axum::Router;
+use ferroehr::config::binding::ProviderId;
 use ferroehr::config::binding::jit::IssuerBinding;
-use ferroehr::config::binding::{ProviderId, Providers};
 use ferroehr::ids::VoId;
-use ferroehr::party_binding::grants::admission::{ADMIT_GUESTS, ADMIT_IDP, LOGIN_ISSUER};
+use ferroehr::party_binding::grants::admission::{ADMIT_IDP, LOGIN_ISSUER};
 use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::FerroEhrService;
@@ -29,8 +29,6 @@ use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::IssuerEntry;
-use ferrohealth_smart::kind::IssuerKind;
-use ferrohealth_smart::profile::Marker;
 use http::StatusCode;
 use serde_json::{Value, json};
 
@@ -349,10 +347,10 @@ async fn a_first_login_creates_one_provisional_person_and_binds_to_it() {
 #[tokio::test]
 async fn a_provisional_record_names_the_declared_provider() {
     let mut config = jit_config();
-    config.party_binding.provider = Some(Providers::One(ProviderId {
+    config.party_binding.provider = Some(ProviderId {
         issuer: "urn:oid:2.16.528.1.1007.3.3".to_owned(),
         id: "90000013".to_owned(),
-    }));
+    });
     let (_db, pool, _service, app) = Box::pin(jit_app(config)).await;
     let token = login("6a1f6c1e-0000-4000-8000-00000000a0f1", &named());
     for _ in 0..2 {
@@ -660,27 +658,10 @@ const SERVICE_ACCOUNT: &str = "service-account-lab";
 /// guest by `acct = 1` and its service account app-only, its party table admitting guests.
 fn callers_config() -> AppConfig {
     let mut config = jit_config();
-    if let Some(persons) = config
-        .auth
-        .shared
-        .issuer
-        .values_mut()
-        .find(|entry| entry.issuer.expose() == PERSONS)
-    {
-        persons.profile.guest = Some(vec![Marker::Claim {
-            claim: "acct".to_owned(),
-            value: "1".to_owned(),
-        }]);
-        persons.profile.app_only = Some(vec![Marker::Subjects(vec![SERVICE_ACCOUNT.to_owned()])]);
-        if let Some(party) = persons.party.as_mut() {
-            party.guests = true;
-        }
-    }
     common::add_issuer(
         &mut config,
         IssuerEntry {
             issuer: ferrohealth_secret::secret_url::SecretUrl::new(PATIENTS),
-            kind: Some(IssuerKind::Patients),
             audience: vec![AUDIENCE.to_owned()],
             jwks_file: common::jwks_file().display().to_string(),
             ..IssuerEntry::default()
@@ -689,70 +670,39 @@ fn callers_config() -> AppConfig {
     config
 }
 
-/// A patient of the patients issuer and an app-only token of the persons
-/// issuer pass the binding as before, the patient's scopes then deciding,
-/// and create no `PERSON`, and a guest is refused and creates none while no
-/// admission admits guests.
+/// A patient's token of an issuer with no party table is refused unbound,
+/// an app-only token of the persons issuer is not bound, and neither creates
+/// a `PERSON`.
 #[tokio::test]
-async fn a_patient_a_system_caller_and_a_guest_without_admit_guests_create_nothing() {
+async fn a_patient_and_a_system_caller_create_nothing() {
     let (_db, pool, service, app) = Box::pin(jit_app(callers_config())).await;
     let portal = "6a1f6c1e-0000-4000-8000-00000000e001";
-    let person = common::portal_patient(&pool, PATIENTS, portal).await;
+    let person = common::patient_person(&pool, PATIENTS, portal).await;
     let ehr = common::person_ehr(&service, person).await;
     let registered = person_count(&pool).await;
     let exp = jiff::Timestamp::now().as_second() + 3600;
     let patient = common::bearer(&json!({ "iss": PATIENTS, "aud": AUDIENCE, "exp": exp,
         "sub": portal, "name": "A. Patient", "ehrId": ehr,
+        "fhirUser": format!("Patient/{portal}"), "patient": portal,
         "scope": "patient/template-*.r" }));
     let (status, body) = request(&app, &patient).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
-    assert!(
-        body.contains("the credential does not permit") && !body.contains("refused-"),
-        "a patient is not bound, and its scopes decide: {body}"
-    );
+    assert!(body.contains("refused-unbound"), "{body}");
 
     let mut system = named();
     system["scope"] = json!("system/template-*.r");
+    system["client_id"] = json!(SERVICE_ACCOUNT);
     let (status, body) = request(&app, &login(SERVICE_ACCOUNT, &system)).await;
     assert_eq!(
         status,
         StatusCode::OK,
         "a system caller is not bound: {body}"
     );
-
-    let guest_key = "6a1f6c1e-0000-4000-8000-00000000e003";
-    let mut guest = named();
-    guest["acct"] = json!("1");
-    let (status, body) = request(&app, &login(guest_key, &guest)).await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
-    assert!(body.contains("refused-unbound"), "{body}");
     assert_eq!(
         person_count(&pool).await,
         registered,
         "no caller here creates a PERSON"
     );
-}
-
-/// Under an admission whose `admit_guests` is true an admitted guest's first
-/// login creates its provisional `PERSON` and is served bound to it.
-#[tokio::test]
-async fn a_guest_under_admit_guests_is_created() {
-    let (_db, pool, service, app) = Box::pin(bare_app(callers_config())).await;
-    admit(
-        &service,
-        &[element(
-            ADMIT_GUESTS,
-            &json!({ "_type": "DV_BOOLEAN", "value": true }),
-        )],
-        None,
-    )
-    .await;
-    let key = "6a1f6c1e-0000-4000-8000-00000000e004";
-    let mut guest = named();
-    guest["acct"] = json!("1");
-    let (status, body) = request(&app, &login(key, &guest)).await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    assert_eq!(persons_of(&pool, key).await.len(), 1);
 }
 
 /// The provisional `PERSON` performs a professional `ROLE` from today and

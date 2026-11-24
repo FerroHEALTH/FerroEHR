@@ -39,7 +39,7 @@ async fn burst(auth: &Arc<Authenticator>) -> usize {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
 async fn a_burst_at_first_sight_derives_the_credential_once() {
-    let auth = Authenticator::new(&basic_config(60), None, memory(), test_support::standing())
+    let auth = Authenticator::new(&basic_config(60), None, memory())
         .await
         .expect("a Basic-only authenticator");
     assert_eq!(
@@ -56,7 +56,7 @@ async fn a_burst_at_first_sight_derives_the_credential_once() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
 async fn a_burst_after_the_entry_expired_derives_the_credential_once() {
-    let auth = Authenticator::new(&basic_config(1), None, memory(), test_support::standing())
+    let auth = Authenticator::new(&basic_config(1), None, memory())
         .await
         .expect("a Basic-only authenticator");
     assert_eq!(burst(&auth).await, 1, "the first burst derives once");

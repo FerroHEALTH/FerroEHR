@@ -1,8 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `[[authz.party_binding.issuer]]`: how a `persons` issuer's tokens are
-//! read when a first login creates a provisional `PERSON`.
+//! `[[authz.party_binding.issuer]]`: how a bound issuer's tokens are read when a first login creates a provisional `PERSON`.
 //!
 //! Whether a login is created is policy, held in the CDR: a
 //! `create_at_login` grant of the draft access terminology names the issuer and
@@ -19,7 +18,6 @@ use std::collections::BTreeSet;
 
 use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::config::Resolved;
-use ferrohealth_smart::kind::IssuerKind;
 use serde::{Deserialize, Serialize};
 
 use super::PartyBindingConfig;
@@ -31,10 +29,9 @@ use super::person::{NEVER_A_KEY, Source};
 #[serde(default, deny_unknown_fields)]
 #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct IssuerBinding {
-    /// The `persons` issuer the table holds for. It renders with any userinfo masked.
+    /// The bound issuer the table holds for. It renders with any userinfo masked.
     pub issuer: SecretUrl,
-    /// The claim the `userName` is read from; the issuer profile's
-    /// `person_key` when unset.
+    /// The claim the `userName` is read from; the token's `sub` when unset.
     pub user_name_claim: Option<String>,
     /// The dotted claim path the identity provider an `admit_idp` admission
     /// condition matches is read from.
@@ -68,9 +65,8 @@ pub fn errors(binding: &PartyBindingConfig, resolved: &Resolved) -> Vec<String> 
             errors.push(format!("{at} is listed twice"));
         }
         let bound = resolved.party.iter().any(|p| p.issuer == table.issuer);
-        let persons = resolved.kinds.get(table.issuer.expose()) == Some(&IssuerKind::Persons);
-        if !(bound && persons) {
-            errors.push(format!("{at} names no persons issuer an party table binds"));
+        if !bound {
+            errors.push(format!("{at} names no issuer a party table binds"));
             continue;
         }
         if table.idp_claim.trim().is_empty() {
@@ -90,7 +86,7 @@ pub fn errors(binding: &PartyBindingConfig, resolved: &Resolved) -> Vec<String> 
     errors
 }
 
-/// The `persons` issuers an `[auth.issuer.<name>.party]` table of `resolved` binds: the
+/// The issuers an `[auth.issuer.<name>.party]` table of `resolved` binds: the
 /// issuers whose first logins a `create_at_login` grant may create a
 /// `PERSON` for.
 #[must_use]
@@ -98,7 +94,6 @@ pub fn login_issuers(resolved: &Resolved) -> Vec<SecretUrl> {
     resolved
         .party
         .iter()
-        .filter(|table| resolved.kinds.get(table.issuer.expose()) == Some(&IssuerKind::Persons))
         .map(|table| table.issuer.clone())
         .collect()
 }
@@ -173,7 +168,6 @@ mod tests {
                 "login".to_owned(),
                 IssuerEntry {
                     issuer: SecretUrl::new(ISSUER),
-                    kind: Some(IssuerKind::Persons),
                     audience: vec!["ferroehr".to_owned()],
                     party: Some(PartySection {
                         identifier_issuer: "urn:login".to_owned(),
@@ -233,21 +227,21 @@ mod tests {
     }
 
     #[test]
-    fn a_table_of_a_bound_persons_issuer_and_a_full_mapping_boot() {
+    fn a_table_of_a_bound_issuer_and_a_full_mapping_boot() {
         let errors = errors(&with(table()), &resolved());
         assert!(errors.is_empty(), "{errors:?}");
         assert_eq!(mapping_errors(&mapped()), Vec::<String>::new());
     }
 
     #[test]
-    fn a_table_of_no_bound_persons_issuer_is_refused() {
+    fn a_table_of_no_bound_issuer_is_refused() {
         let other = IssuerBinding {
             issuer: SecretUrl::new("https://elsewhere.example"),
             ..table()
         };
         let errors = errors(&with(other), &resolved());
         assert!(
-            errors.iter().any(|e| e.contains("names no persons issuer")),
+            errors.iter().any(|e| e.contains("names no issuer a party table binds")),
             "{errors:?}"
         );
     }

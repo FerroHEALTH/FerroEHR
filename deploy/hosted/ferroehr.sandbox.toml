@@ -34,7 +34,6 @@ terminology = true
 # lanes only, so no token of it exists.
 [auth.issuer.basic_users]
 issuer = "https://basic-users.ferroehr.invalid"
-kind = "persons"
 audience = ["ferroehr-basic-users"]
 jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
 
@@ -78,7 +77,6 @@ key = "ferroehr"
 # so only the containers on the box obtain its tokens.
 [auth.issuer.sandbox]
 issuer = "http://localhost:8180/sandbox"
-kind = "machines"
 audience = ["ferroehr-scim"]
 
 [auth.issuer.sandbox.profile]
