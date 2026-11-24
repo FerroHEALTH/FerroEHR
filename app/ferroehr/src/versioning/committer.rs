@@ -113,7 +113,7 @@ pub fn current_committer() -> Option<CommitterIdentity> {
 /// EHR ([`CommitterIdentity::person`]); `false` outside a request.
 #[must_use]
 pub fn person_commits() -> bool {
-    current_committer().is_some_and(|identity| identity.person)
+    REQUEST_COMMITTER.try_with(|identity| identity.as_ref().is_some_and(|i| i.person)) == Ok(true)
 }
 
 /// Whether the current request's committer inserts for the record's person.
@@ -123,7 +123,11 @@ pub fn person_commits() -> bool {
 /// the same rules; `false` outside a request.
 #[must_use]
 pub fn inserts_for_the_person() -> bool {
-    current_committer().is_some_and(|identity| identity.person || identity.representative)
+    REQUEST_COMMITTER.try_with(|identity| {
+        identity
+            .as_ref()
+            .is_some_and(|i| i.person || i.representative)
+    }) == Ok(true)
 }
 
 /// The committer a commit records for the committer the client `stated`.

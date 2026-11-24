@@ -55,8 +55,12 @@ pub(super) fn care_ground(tie: &Tie, namespace: &str) -> Option<AccessStoredCare
             .as_ref()
             .map(|cover| identifier(&cover.key, Some(cover.kind.rm_type()))),
         provider: identifier(&grant.provider, Some("ORGANISATION")),
-        // TODO(#6412): the relationship's episode, once the tie carries it.
-        episode: None,
+        episode: grant.episode.as_ref().map(|episode| DvIdentifier {
+            issuer: Some(episode.issuer.clone()),
+            assigner: None,
+            id: episode.id.clone(),
+            r#type: None,
+        }),
     })
 }
 

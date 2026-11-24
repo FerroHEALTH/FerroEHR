@@ -851,11 +851,11 @@ async fn commit_resolved(
     let statement = folded_shape(
         contribution,
         contribution_id,
-        prepared.folded()?,
+        prepared.folded(),
         ctx,
         &committed,
     );
-    committed.time_committed = commit_folded(tx, &audit.row(), statement)
+    committed.time_committed = commit_folded(tx, &audit.row(ctx.audit_shares), statement)
         .await?
         .time_committed;
     prepared.finish(tx).await?;
@@ -1074,7 +1074,7 @@ pub(crate) async fn commit_contribution(
         ..
     } = commit_folded(
         tx,
-        &contribution_audit.row(),
+        &contribution_audit.row(ctx.audit_shares),
         Folded::Contribution { id: uid, ehr_id },
     )
     .await?;

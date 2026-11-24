@@ -633,6 +633,10 @@ CREATE TABLE binding_caller_fact (
     covers_issuer   text,
     covers_id       text,
     covers_kind     text,
+    -- The episode DV_IDENTIFIER of a care relationship, its issuer and id;
+    -- NULL when it names none and for every other fact.
+    episode_issuer  text,
+    episode_id      text,
     CONSTRAINT ck_binding_caller_fact_kind
         CHECK (kind IN ('role', 'organisation_type', 'MBR', 'under_care_of', 'related_to')),
     CONSTRAINT ck_binding_caller_fact_value
@@ -661,7 +665,10 @@ CREATE TABLE binding_caller_fact (
                AND (covers_issuer IS NULL) = (covers_kind IS NULL)
                AND (covers_kind IS NULL
                     OR covers_kind IN ('PERSON', 'ROLE', 'GROUP', 'ORGANISATION'))
-               AND (covers_issuer IS NULL OR kind = 'under_care_of'))
+               AND (covers_issuer IS NULL OR kind = 'under_care_of')),
+    CONSTRAINT ck_binding_caller_fact_episode
+        CHECK ((episode_issuer IS NULL) = (episode_id IS NULL)
+               AND (episode_issuer IS NULL OR kind = 'under_care_of'))
 );
 CREATE UNIQUE INDEX uq_binding_caller_fact
     ON binding_caller_fact (holder_id, ordinal, kind, terminology_id, code_string, target_id)
@@ -688,6 +695,8 @@ COMMENT ON COLUMN binding_caller_fact.holder_version IS 'The OBJECT_VERSION_ID o
 COMMENT ON COLUMN binding_caller_fact.covers_issuer IS 'The issuer of a care relationship''s covers_for DV_IDENTIFIER; NULL when it names none and for every other fact.';
 COMMENT ON COLUMN binding_caller_fact.covers_id IS 'The id of a care relationship''s covers_for DV_IDENTIFIER; NULL when it names none and for every other fact.';
 COMMENT ON COLUMN binding_caller_fact.covers_kind IS 'The type of a care relationship''s covers_for DV_IDENTIFIER: the RM type of the carer it covers for, PERSON, ROLE, GROUP or ORGANISATION; NULL when it names none and for every other fact.';
+COMMENT ON COLUMN binding_caller_fact.episode_issuer IS 'The issuer of a care relationship''s episode DV_IDENTIFIER; NULL when it names none and for every other fact.';
+COMMENT ON COLUMN binding_caller_fact.episode_id IS 'The id of a care relationship''s episode DV_IDENTIFIER; NULL when it names none and for every other fact.';
 COMMENT ON COLUMN binding_caller_fact.terminology_id IS 'The terminology of a role, an organisation type or a care relationship''s care_role.';
 COMMENT ON COLUMN binding_caller_fact.code_string IS 'The code of a role, an organisation type or a care relationship''s care_role.';
 COMMENT ON TABLE binding_caller_fact IS 'The roles each ROLE head that is not deleted names for its performer, the type each ORGANISATION head names for itself, the memberships of each PERSON and ORGANISATION head, the care relationship each PARTY_RELATIONSHIP head of its own states about its source, and the kinship each related_to PARTY_RELATIONSHIP head states about each of its two persons. Derived from the party versions in each commit''s transaction; no openEHR spec governs reading them as access facts, our own design.';

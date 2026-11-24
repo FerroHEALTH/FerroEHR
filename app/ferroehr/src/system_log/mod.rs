@@ -427,7 +427,7 @@ impl FerroEhrService {
         if !self.audit_enabled() {
             return Ok(Vec::new());
         }
-        let served = crate::storage::version_repo::read::content_of_objects(conn, vo_ids)
+        let served = crate::storage::version_repo::content::content_of_objects(conn, vo_ids)
             .await
             .map_err(ServiceError::from)?;
         Ok(served.iter().map(content_ids).collect())
@@ -448,7 +448,7 @@ impl FerroEhrService {
         if !self.audit_enabled() {
             return Ok(Vec::new());
         }
-        let served = crate::storage::version_repo::read::content_of_contribution(
+        let served = crate::storage::version_repo::content::content_of_contribution(
             &self.pool,
             contribution_id,
         )
@@ -539,7 +539,7 @@ fn stamp_caller(event: &mut AuditEvent) {
 
 /// The classifier's identities of one stored content tuple.
 fn content_ids(
-    served: &crate::storage::version_repo::read::ServedContent,
+    served: &crate::storage::version_repo::content::ServedContent,
 ) -> categories::ContentIds {
     categories::ContentIds::of_kind(
         &served.kind,

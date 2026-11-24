@@ -20,6 +20,7 @@ use crate::party_binding::grants::caller::care_of::CareOf;
 use crate::party_binding::grants::caller::facts::CallerFacts;
 use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
+use crate::versioning::episode::EpisodeKey;
 
 impl LiveGrants {
     /// The `PERSON` the EHR subject reference `subject` names.
@@ -91,6 +92,24 @@ impl LiveGrants {
     /// [`GrantsUnavailable`] when a miss cannot be read.
     pub async fn under_care_of(&self, subject: Uuid) -> Result<Vec<CareOf>, GrantsUnavailable> {
         Ok(self.care.of_subject(&self.pool, subject).await?.to_vec())
+    }
+
+    /// The episodes the care relationships of the subject `subject` are
+    /// scoped to, live or ended, from the care copy or read on a miss.
+    ///
+    /// # Errors
+    /// [`GrantsUnavailable`] when a miss cannot be read.
+    pub async fn episodes_of(
+        &self,
+        subject: Uuid,
+    ) -> Result<BTreeSet<EpisodeKey>, GrantsUnavailable> {
+        Ok(self
+            .care
+            .of_subject(&self.pool, subject)
+            .await?
+            .iter()
+            .filter_map(|care| care.episode().map(|episode| episode.key))
+            .collect())
     }
 
     /// The subject references of the `PERSON`s under the care of any of

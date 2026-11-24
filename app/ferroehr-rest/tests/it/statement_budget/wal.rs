@@ -376,35 +376,17 @@ fn corpus(file: &str) -> String {
 /// row records over the relations of the commit (everything but the access
 /// log's and the audit intake's), and the most statements `PostgreSQL` may
 /// run nested in it that name a clinical relation (foreign-key checks and
-/// triggers), by fixture: the bytes measured with the lean node storage
-/// (#5969), 2% above, and its nested statements exactly. With
-/// `fk_node_version` and the full node indexes an IPS commit measured
-/// 278,420 bytes and 410 nested statements, and a lab commit 10,667 bytes and
-/// 18; with the lean storage 233,279 and 9,827. The `event_time` column with
-/// its index and the magnitude index (#6022) brought them to 237,374 and
-/// 10,092: the IPS ceiling holds, and the lab ceiling is that measurement, 2%
-/// above, since two of a lab commit's ten node rows are an event and a
-/// history (the decision of 2026-11-18 on #6022). The index on the code of an
-/// ELEMENT value (#6033) adds 36 entries of 72 bytes to an IPS commit, which
-/// measured 239,966: its ceiling is that measurement, 2% above, the rise that
-/// issue's 3% allows and the orchestrator accepted on 2026-11-19. A lab
-/// commit carries no coded ELEMENT value and keeps its ceiling. The version
-/// tree uniqueness has since served the read by version id in place of a
-/// separate index (#6207): 96 bytes fewer on each commit, and both ceilings
-/// fell by it. A node row has since stored its own path step, and the node
-/// key carries no tier (#6204): 13,650 bytes fewer on an IPS commit and 255
-/// on a lab commit, and the ceilings fell by as much. A member repeated
-/// across a version's node rows has since been stored once (#6229): 42,162
-/// bytes fewer on an IPS commit, whose entries repeat one participation list,
-/// and its ceiling fell by as much; a lab commit repeats none and keeps its
-/// ceiling.
+/// triggers), by fixture (#6393).
 const COMMIT_CEILINGS: [(Fixture, u64, u64); 2] =
-    [(Fixture::Ips, 188_857, 8), (Fixture::Lab, 9942, 8)];
+    [(Fixture::Ips, 180_231, 8), (Fixture::Lab, 8963, 8)];
 
 /// Whether `relation` is written by a commit rather than by the access log or
 /// the audit intake beside it.
 pub(super) fn commit_relation(relation: &str) -> bool {
-    !entry_relation(relation) && !pass_relation(relation) && !relation.contains("audit_")
+    ["commit_audit", "pk_commit_audit", "uq_commit_audit"]
+        .iter()
+        .any(|prefix| relation.starts_with(prefix))
+        || !entry_relation(relation) && !pass_relation(relation) && !relation.contains("audit_")
 }
 
 /// Each composition commit writes at most its ceiling in [`COMMIT_CEILINGS`]
