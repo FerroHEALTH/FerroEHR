@@ -1686,7 +1686,7 @@ jobs:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         # A release-profile lane keeps no cache of its own: it restores main's
-        # `build` entry for the registry and writes nothing (#6388).
+        # `build-tests` entry for the registry and writes nothing (#6388).
         with:
           cache-shared-key: build-tests
           cache-save-if: false
@@ -1891,7 +1891,7 @@ jobs:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         # A release-profile lane keeps no cache of its own: it restores main's
-        # `build` entry for the registry and writes nothing (#6388).
+        # `build-tests` entry for the registry and writes nothing (#6388).
         with:
           cache-shared-key: build-tests
           cache-save-if: false

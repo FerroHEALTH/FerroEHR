@@ -1,0 +1,1 @@
+- An EHR Extract import into an existing EHR reads the EHR's `EHR_STATUS` and `EHR_ACCESS` on its own transaction, so it no longer asks the clinical pool for a second connection while it holds one (#6432).

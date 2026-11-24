@@ -39,18 +39,16 @@ config:
     issuer:
       basic_users:
         issuer: https://basic-users.ferroehr.invalid
-        kind: persons
         audience: [ferroehr-basic-users]
         jwks_file: /opt/sandbox-posture/basic-users-jwks.json
         party:
           identifier_issuer: urn:example:basic-user
           identifier_type: login
-      # The machines issuer of the SCIM client that provisions `clinician`
+      # The issuer of the SCIM client that provisions `clinician`
       # (docs/conformance/party/scim/README.md: COMMITTED TEST key, never
       # production); its public key set is `files.scim-jwks.json` below.
       scim:
         issuer: https://scim.ferroehr.invalid
-        kind: machines
         audience: [ferroehr-scim]
         jwks_file: /etc/ferroehr/scim-jwks.json
         profile:

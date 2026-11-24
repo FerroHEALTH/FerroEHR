@@ -77,7 +77,7 @@ pub(crate) fn acts_for_the_person(principal: &Principal) -> bool {
         || principal
             .access
             .caller()
-            .is_some_and(|caller| matches!(caller.kind(), CallerKind::Representative { .. }))
+            .is_some_and(|caller| matches!(caller.kind(), CallerKind::RelatedPerson))
 }
 
 /// Answer, as an unknown object would be answered, a request whose path names

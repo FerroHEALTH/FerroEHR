@@ -63,7 +63,6 @@ fn composition_read() -> AuditEvent {
             issuer: "urn:oid:2.999.7.9".to_owned(),
             id: "hospital".to_owned(),
         }),
-        false,
     ));
     event
 }

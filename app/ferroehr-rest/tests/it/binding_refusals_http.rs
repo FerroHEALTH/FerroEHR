@@ -28,7 +28,7 @@ const PER_CALLER: usize = 10;
 /// The router over `svc`, binding through the local source.
 async fn router(svc: Arc<FerroEhrService>) -> Router {
     let source = Arc::new(svc.party_source("demographic"));
-    router_with(svc, config(None), source).await
+    router_with(svc, config(), source).await
 }
 
 /// The status of a read of the `EHR_STATUS` of `ehr` as `credential`.

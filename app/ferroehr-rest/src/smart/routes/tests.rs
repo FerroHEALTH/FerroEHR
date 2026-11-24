@@ -34,8 +34,7 @@ fn principal(scope: &str, client: Option<&str>, honoured: Honoured) -> Principal
         client.map(str::to_owned),
         scope,
         None,
-        false,
-        ferrohealth_smart::kind::CallerKind::Person,
+        ferrohealth_smart::kind::CallerKind::User,
     )
     .with_issuer("https://as.example".to_owned())
     .with_claims(claims);
@@ -218,39 +217,6 @@ fn a_patient_grant_is_checked_for_its_family_and_permission_alone() {
     // A user/ grant beside it widens the permissions (the union of the grants).
     let both = principal("patient/composition-*.r user/composition-*.c", None, bound);
     assert!(check(&ehr_data(Permission::Create), &both).is_ok());
-}
-
-/// A subject granted `access_without_scope` whose token carries no
-/// resource scope meets every SMART on openEHR requirement; one without
-/// it, or one whose token carries resource scopes, gets only its scopes.
-#[test]
-fn a_scopeless_subject_meets_an_openehr_requirement_only_without_scopes() {
-    let caller = |scope: &str, scopeless: bool| {
-        let caller = Caller::new(
-            "svc".to_owned(),
-            None,
-            scope,
-            None,
-            scopeless,
-            ferrohealth_smart::kind::CallerKind::System,
-        );
-        Principal::new(
-            Access::Caller(Arc::new(caller)),
-            Vec::new(),
-            Honoured::default(),
-        )
-    };
-    let read = ehr_data(Permission::Read);
-    assert!(check(&read, &caller("openid", true)).is_ok());
-    assert!(check(&read, &caller("openid", false)).is_err());
-    assert!(
-        check(&read, &caller("user/template-*.r", true)).is_err(),
-        "a token carrying scopes gets only its scopes"
-    );
-    assert!(
-        check(&routes().product(), &caller("openid", true)).is_err(),
-        "the allowlist reaches no product-scope surface"
-    );
 }
 
 /// The DEMOGRAPHIC API has no family: a client granted

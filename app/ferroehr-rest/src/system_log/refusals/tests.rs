@@ -128,7 +128,7 @@ fn beyond_the_budget_one_summary_is_written_per_issuer_and_outcome() {
     for user in ["u1", "u2", "u3", "u4", "u5"] {
         dispositions.push(charge(&ledger, now, caller(user), None, &refused(user)).disposition);
     }
-    let other = event(Some(BindingCode::RefusedGuest), "https://idp", "u6");
+    let other = event(Some(BindingCode::RefusedAmbiguous), "https://idp", "u6");
     dispositions.push(charge(&ledger, now, caller("u6"), Some("e9"), &other).disposition);
     assert_eq!(
         dispositions,
@@ -160,7 +160,7 @@ fn beyond_the_budget_one_summary_is_written_per_issuer_and_outcome() {
     assert_eq!(
         summaries,
         [
-            (Some(BindingCode::RefusedGuest), 1, ""),
+            (Some(BindingCode::RefusedAmbiguous), 1, ""),
             (Some(BindingCode::RefusedUnbound), 2, ""),
         ],
         "an issuer-and-outcome summary names no caller"
