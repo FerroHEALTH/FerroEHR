@@ -456,9 +456,8 @@ async fn a_professional_holds_a_composition_within_the_limit() {
 
 /// The treating professional releases a held composition from a clinical
 /// route on the EHR (the owner's ruling of 2026-10-31), and the person's token
-/// neither reads it while held nor releases it. A mixed grant is never the
-/// person's: the patients issuer refuses a token that carries a `user/` scope
-/// beside its `patient/` ones.
+/// neither reads it while held nor releases it, whether it carries `patient/`
+/// grants alone or a `user/` grant beside them.
 #[tokio::test]
 async fn the_treating_professional_releases_from_a_clinical_route() {
     let (_db, pool, _svc, app) = app(true).await;
@@ -471,10 +470,7 @@ async fn the_treating_professional_releases_from_a_clinical_route() {
         "scope": "patient/composition-*.ru", "ehrId": ehr }));
     let release = format!("{EXT}/ehr/{ehr}/versioned_composition/{vo}/access-delay/release");
 
-    assert_eq!(
-        read(&app, &ehr, &vo, &mixed).await,
-        StatusCode::UNAUTHORIZED
-    );
+    assert_eq!(read(&app, &ehr, &vo, &mixed).await, StatusCode::NOT_FOUND);
     let (status, body) = send(&app, "POST", &release, &person, None).await;
     assert_eq!(
         status,
@@ -486,10 +482,7 @@ async fn the_treating_professional_releases_from_a_clinical_route() {
     let (status, body) = send(&app, "POST", &release, &professional(), None).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "release: {body}");
     assert_eq!(read(&app, &ehr, &vo, &person).await, StatusCode::OK);
-    assert_eq!(
-        read(&app, &ehr, &vo, &mixed).await,
-        StatusCode::UNAUTHORIZED
-    );
+    assert_eq!(read(&app, &ehr, &vo, &mixed).await, StatusCode::OK);
 
     let (status, body) = send(&app, "POST", &release, &person, None).await;
     assert_eq!(
@@ -500,7 +493,7 @@ async fn the_treating_professional_releases_from_a_clinical_route() {
     let (status, body) = send(&app, "POST", &release, &mixed, None).await;
     assert_eq!(
         status,
-        StatusCode::UNAUTHORIZED,
+        StatusCode::FORBIDDEN,
         "nor does a mixed token: {body}"
     );
 }

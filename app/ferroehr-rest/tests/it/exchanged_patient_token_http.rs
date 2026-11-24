@@ -3,13 +3,13 @@
 
 //! The patient's own token that FerroSMART's RFC 8693 token exchange issues
 //! to FerroBRIDGE for the xShare Yellow Button (#6420), over the real axum
-//! app under the `ferrosmart` issuer preset.
+//! app trusting FerroSMART as a SMART App Launch issuer.
 //!
 //! The token carries the subject token's `sub`, `fhirUser`, `patient`, `acr`
 //! and `auth_time`, the `ehrId` of the patient's EHR, the exchanging client
 //! as `client_id`, no `act`, and `patient/composition-*.r patient/aql-*.s` at
-//! most. `ferrohealth-smart` reads it as the patient through a client the
-//! CDR grants `act_for_persons`. FerroEHR holds it to its subject's own EHR
+//! most. `ferrohealth-smart` reads it as the patient its `fhirUser` names.
+//! FerroEHR holds it to its subject's own EHR
 //! (EHDS Art. 3), withholds what the Art. 3(3) access delay holds, refuses it
 //! below the `[authz.assurance]` floor with the RFC 9470 §3 step-up
 //! challenge, and records the person, the client and the level (Annex II
@@ -21,7 +21,6 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::system_log::store::AuditStore;
 use ferroehr::system_log::store::chains::AuditChain;
@@ -29,14 +28,13 @@ use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
 use ferrohealth_smart::assurance::{AssuranceLevel, AssuranceSection};
 use ferrohealth_smart::config::IssuerEntry;
-use ferrohealth_smart::profile::Preset;
 use http::{Request, StatusCode, header};
 use serde_json::{Value, json};
 use sqlx::{PgPool, Row};
 
 use crate::common::{self, BASE, EXT};
 
-/// FerroSMART, trusted in one `persons` table under its preset.
+/// FerroSMART, the one trusted issuer.
 const ISSUER: &str = "https://smart.example";
 /// The openEHR base FerroSMART pairs with FerroBRIDGE's FHIR base.
 const AUDIENCE: &str = "ferroehr";
@@ -84,15 +82,14 @@ struct World {
 }
 
 /// A deployment behind FerroSMART with the floor at substantial, the access
-/// delay on for patient summaries when `delayed`, FerroBRIDGE granted
-/// `act_for_persons`, the patient's and the professional's logins bound, and
+/// delay on for patient summaries when `delayed`, the patient's and the
+/// professional's logins bound, and
 /// a patient summary committed into the patient's EHR.
 async fn world(delayed: bool) -> World {
     let (db, pool) = common::migrated_pool().await;
     let svc = crate::access_delay_http::audited_service(&pool, delayed).await;
     let mut config = common::api_config(true);
     config.auth = common::trusting(vec![IssuerEntry {
-        preset: Preset::Ferrosmart,
         jwks_file: common::jwks_file().display().to_string(),
         ..common::entry(ISSUER, AUDIENCE)
     }]);
@@ -101,7 +98,6 @@ async fn world(delayed: bool) -> World {
     config.rbac.role_issuers = vec![common::name_of(ISSUER)];
     common::bind_subjects(&pool, &[(ISSUER, PROFESSIONAL)]).await;
     let person = patient_person(&pool).await;
-    common::grant_standing(&svc, ISSUER, BRIDGE, Operation::ActForPersons).await;
     let mut rbac = AuthzConfig::default();
     rbac.rbac.enabled = true;
     let authz = AuthzHandle::build(&rbac, &config.api.base_path).map(Arc::new);

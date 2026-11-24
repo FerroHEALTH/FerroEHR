@@ -525,17 +525,21 @@ async fn a_professional_is_held_to_no_patient_context() {
     seed_ehr(&seed, EHR_OTHER).await;
 
     let app = gated_app(svc).await;
+    let mut body = composition();
+    // The bound professional names themself by the placeholder the server fills.
+    body["composer"] = json!({ "_type": "PARTY_IDENTIFIED",
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": ISSUER, "id": SUBJECT }] });
     let s = status(
         &app,
         request(
             "POST",
             &format!("/ehr/{EHR_OTHER}/composition"),
             &professional(),
-            &composition(),
+            &body,
         ),
     )
     .await;
-    assert_ne!(s.status, StatusCode::FORBIDDEN);
+    assert_ne!(s.status, StatusCode::FORBIDDEN, "{s:?}");
     assert_eq!(s.status, StatusCode::CREATED);
 }
 
@@ -1045,6 +1049,45 @@ async fn an_import_outside_the_patient_context_is_forbidden() {
             "{path} needs a patient context naming the EHR"
         );
     }
+}
+
+/// The person signing in with `user/` grants and no launch context imports
+/// into their own EHR by the party binding alone (EHDS Art. 3), is refused
+/// a second `EHR_STATUS` there, and is refused another person's EHR.
+#[tokio::test]
+async fn the_person_imports_into_their_own_ehr_by_identity() {
+    let (pg, svc, seed) = service_and_seed_app().await;
+    seed_own(&seed, &pg.pool()).await;
+    seed_ehr(&seed, EHR_OTHER).await;
+    let app = gated_app(svc).await;
+    let token = common::bearer(&json!({
+        "sub": SUBJECT, "iss": PATIENTS, "aud": AUDIENCE,
+        "exp": jiff::Timestamp::now().as_second() + 3600,
+        "scope": "user/composition-*.crud user/aql-*.s",
+    }));
+    let extract_as = |path: &str, name: &str| {
+        let mut req = import(path, name, None);
+        req.headers_mut().insert(
+            "authorization",
+            http::HeaderValue::from_str(&token).expect("a header value"),
+        );
+        req
+    };
+    let extract = |path: &str| extract_as(path, "ehr_extract.folder.json");
+
+    let (code, body) =
+        common::send_body(&app, extract(&format!("/message/import/{EHR_OWN}"))).await;
+    assert_eq!(code, StatusCode::NO_CONTENT, "{body}");
+    assert_eq!(
+        status(&app, extract(&format!("/message/import/{EHR_OTHER}"))).await,
+        not_subject()
+    );
+    let (code, body) = common::send_body(
+        &app,
+        extract_as(&format!("/message/import/{EHR_OWN}"), "ehr_extract.v1.json"),
+    )
+    .await;
+    assert_eq!(code, StatusCode::CONFLICT, "a second EHR_STATUS: {body}");
 }
 
 /// An import into the caller's own EHR lands.
