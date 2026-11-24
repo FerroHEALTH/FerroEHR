@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
-# Bootstraps ZITADEL v4.20.3 as FerroSMART's upstream login for
+# Bootstraps ZITADEL v4.20.5 as FerroSMART's upstream login for
 # docker-compose.ferrosmart-zitadel.yml, through ZITADEL's v2 APIs with the
 # IAM_OWNER token its first instance wrote (`cmd/setup/steps.yaml`,
 # FirstInstance), as FerroSMART documents the setup:

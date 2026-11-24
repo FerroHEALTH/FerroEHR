@@ -16,7 +16,7 @@
 # `clinician`'s, which ZITADEL's password policy holds to an upper case
 # letter, a digit and a symbol (`cmd/defaults.yaml`).
 #
-# WHAT RUNS. ZITADEL v4.20.3 (pinned in docs/VERSIONS.md) on its own
+# WHAT RUNS. ZITADEL v4.20.5 (pinned in docs/VERSIONS.md) on its own
 # PostgreSQL, its Login v2 UI, and `zitadel-bootstrap` once:
 # docker/ferrosmart/zitadel/bootstrap.sh makes the project, its roles, the
 # application and the user, and writes FerroSMART's configuration with the
@@ -62,7 +62,7 @@ services:
     restart: unless-stopped
 
   ferrosmart-zitadel:
-    image: ghcr.io/zitadel/zitadel:v4.20.3@sha256:1b30fea7ed88826dc0a98dacee4e2f2c8b05201fd26f5e4cb5386615b29f7638
+    image: ghcr.io/zitadel/zitadel:v4.20.5@sha256:cb21fe73badfe44972bb24a66cf0ebce6a8dc63ab8ed24567af6b731bd8bbf45
     network_mode: service:identity-issuer
     user: "${FERROSMART_ZITADEL_UID:-0}"
     command: start-from-init --masterkeyFile /run/secrets/ferrosmart_zitadel_masterkey
@@ -112,7 +112,7 @@ services:
       start_period: 20s
 
   ferrosmart-zitadel-login:
-    image: ghcr.io/zitadel/zitadel-login:v4.20.3@sha256:8f730428dfd65cd8979d07ef4e34a59d44978e956692b7dbbc3bba4e4abb4f92
+    image: ghcr.io/zitadel/zitadel-login:v4.20.5@sha256:bbab3b26a44093c1a9636a6b89c3ab31c2f6eb2f2cafc681c6f676e74e96845c
     network_mode: service:identity-issuer
     user: "${FERROSMART_ZITADEL_UID:-0}"
     depends_on:
