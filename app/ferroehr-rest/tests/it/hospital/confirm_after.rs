@@ -520,6 +520,70 @@ async fn a_query_decided_on_a_policy_copy_behind_the_store_runs_once_more() {
     );
 }
 
+/// The rows Dr. Jansen's query of EHR rows alone serves on `app`, paged by
+/// `paging`.
+async fn ehrs_read_by_jansen(app: &axum::Router, paging: &str) -> usize {
+    let body = json!({ "q": format!("SELECT e/ehr_id/value FROM EHR e{paging}") });
+    let answer = call(
+        app,
+        "jansen",
+        "POST",
+        &format!("{BASE}/query/aql"),
+        Some("TREAT"),
+        Some(&body),
+    )
+    .await;
+    assert_eq!(answer.status, StatusCode::OK, "the query: {}", answer.body);
+    answer.json()["rows"].as_array().expect("rows").len()
+}
+
+/// A query of EHR rows alone confirms its policy copies by the revisions its
+/// `paging` statement read, or by a read of its own after it ran where it
+/// served no row (#6320): a copy in force runs once, and a policy change it
+/// never heard of runs the query once more, and only once.
+async fn a_query_of_ehr_rows_confirms_the_policy(paging: &str) {
+    let (provider, exporter) = instruments();
+    let mut world = Box::pin(world()).await;
+    let (other, _drain, _elsewhere) = deaf(&world).await;
+    let served = ehrs_read_by_jansen(&other, paging).await;
+    assert_eq!(served > 0, paging.is_empty(), "{paging:?} serves {served}");
+    let before = reruns(&provider, &exporter);
+    assert_eq!(ehrs_read_by_jansen(&other, paging).await, served);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before,
+        "{paging:?}: a copy in force runs once"
+    );
+
+    world.policy = classify_the_encounter(&world).await;
+    assert_eq!(ehrs_read_by_jansen(&other, paging).await, served);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "{paging:?}: the query ran once more, and only once"
+    );
+    assert_eq!(ehrs_read_by_jansen(&other, paging).await, served);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "{paging:?}: the confirmed copy decides the next query at once"
+    );
+}
+
+/// The first row a query of EHR rows serves carries the revisions it is
+/// confirmed by.
+#[tokio::test]
+async fn a_query_of_ehr_rows_confirms_the_policy_on_its_first_row() {
+    a_query_of_ehr_rows_confirms_the_policy("").await;
+}
+
+/// A query of EHR rows paged past its last row serves none, and confirms its
+/// copies by a read of its own after it ran.
+#[tokio::test]
+async fn a_query_of_ehr_rows_that_serves_no_row_confirms_the_policy_after_it_ran() {
+    a_query_of_ehr_rows_confirms_the_policy(" LIMIT 5 OFFSET 1000000").await;
+}
+
 /// An `EHR_STATUS` read confirms its policy copies by the revisions its own
 /// version read selects (#6320): a copy in force answers in one run, and a
 /// policy change it never heard of runs the read once more.
@@ -549,6 +613,91 @@ async fn an_ehr_status_read_confirms_the_policy_on_its_own_statement() {
         "the read ran once more, and only once"
     );
     assert_eq!(read().await.status, StatusCode::OK);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "the confirmed copy decides the next read at once"
+    );
+}
+
+/// A query by `POST` decided on a party copy the store overtook runs once
+/// more with the same body and leaves one record (#6320): SCIM's
+/// deactivation of the nurse, committed through the world's replica, refuses
+/// her very next query on a replica that hears nothing. The run that took her
+/// held binding lookup was dropped, and the run again read the query from the
+/// bytes the first run read: a refusal, never a `400` for a missing body.
+#[tokio::test]
+async fn a_query_decided_on_a_party_copy_behind_the_store_runs_once_more() {
+    let (provider, exporter) = instruments();
+    let world = Box::pin(world()).await;
+    let (other, _drain, _elsewhere) = deaf(&world).await;
+    let body = json!({
+        "q": format!(
+            "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c WHERE e/ehr_id/value = '{}'",
+            world.ehr
+        )
+    });
+    let uri = format!("{BASE}/query/aql");
+    let query = || call(&other, "devries", "POST", &uri, Some("TREAT"), Some(&body));
+    for _ in 0..2 {
+        answered(&query().await, StatusCode::OK, None);
+    }
+    let before = reruns(&provider, &exporter);
+    answered(&query().await, StatusCode::OK, None);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before,
+        "a copy in force runs once"
+    );
+
+    let user = format!("/Users/{}", world.people["devries"].person);
+    let deactivate = patch_op(json!([{ "op": "replace", "path": "active", "value": false }]));
+    let (status, scimmed) = scim(&world.app, SCIM, "PATCH", &user, Some(&deactivate)).await;
+    assert_eq!(status, StatusCode::OK, "the deactivation: {scimmed}");
+    let refused = query().await;
+    assert_eq!(refused.status, StatusCode::FORBIDDEN, "{}", refused.body);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "the query ran once more, and only once"
+    );
+    let records = recorded(&world, &refused.request_id()).await;
+    assert_eq!(records.len(), 1, "one record of the request: {records:?}");
+    assert_ne!(
+        records[0].1, 0,
+        "the entry records the run again's refusal: {records:?}"
+    );
+}
+
+/// A party read confirms its policy copies by the revisions its own party
+/// statement reads through the clinical door (#6320): a copy in force
+/// answers in one run, and a policy change it never heard of runs the read
+/// once more, with the answer it gave before.
+#[tokio::test]
+async fn a_party_read_confirms_the_policy_on_its_own_statement() {
+    let (provider, exporter) = instruments();
+    let mut world = Box::pin(world()).await;
+    let (other, _drain, _elsewhere) = deaf(&world).await;
+    let uri = format!("{BASE}/demographic/person/{}", world.eva);
+    let read = || call(&other, "jansen", "GET", &uri, Some("TREAT"), None);
+    let first = read().await;
+    let before = reruns(&provider, &exporter);
+    assert_eq!(read().await.status, first.status, "{}", first.body);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before,
+        "a copy in force runs once"
+    );
+
+    world.policy = classify_the_encounter(&world).await;
+    let again = read().await;
+    assert_eq!(again.status, first.status, "{}", again.body);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "the read ran once more, and only once"
+    );
+    assert_eq!(read().await.status, first.status);
     assert_eq!(
         reruns(&provider, &exporter),
         before + 1,

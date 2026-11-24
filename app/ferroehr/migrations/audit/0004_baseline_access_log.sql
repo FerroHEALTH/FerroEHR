@@ -473,7 +473,9 @@ COMMENT ON TABLE access_log_seal_verified IS
 -- index's order with the sorted few past the cursor, so an ordered page
 -- reads no more of the index than it serves; an arm with a join or a
 -- condition of its own is planned apart and sorted whole. An indexed entry
--- is held by no write: the cursor stays below every hold.
+-- is held by no write: the cursor stays below every hold. The arm past the
+-- cursor is bounded by the newest id too, so a generic plan estimates it as
+-- the narrow range it is (#6385).
 CREATE VIEW access_log_record AS
     SELECT k.entry_id AS chain_seq, e.record_type, e.uid, k.time_recorded, e.content, e.form,
            e.content_digest, k.ehr_id, k.party_id,
@@ -489,6 +491,7 @@ CREATE VIEW access_log_record AS
                    e.render_policy_id, e.patient_id, e.principal, NULL::integer[]
               FROM access_log_entry e
              WHERE e.id > (SELECT x.last_id FROM access_log_index_state x WHERE x.singleton)
+               AND e.id <= (SELECT max(m.id) FROM access_log_entry m)
                AND NOT EXISTS (SELECT 1 FROM access_log_hold h WHERE h.entry_id = e.id)) AS k
       JOIN access_log_entry e ON e.id = k.entry_id;
 COMMENT ON VIEW access_log_record IS

@@ -332,3 +332,31 @@ fn foundation_types_are_the_base_foundation_packages() {
         assert!(!is_foundation_type(t), "{t}");
     }
 }
+
+#[test]
+fn every_class_and_enumeration_is_found_by_its_name_and_no_other() {
+    for name in classes().map(|c| c.name) {
+        assert_eq!(class(name).map(|c| c.name), Some(name));
+    }
+    for name in openehr_rm::v1_1::model::classes().map(|c| c.name) {
+        assert_eq!(
+            openehr_rm::v1_1::model::class(name).map(|c| c.name),
+            Some(name)
+        );
+    }
+    for absent in [
+        "",
+        "X",
+        "observation",
+        "OBSERVATIOM",
+        "OBSERVATION ",
+        "DV_TEXTX",
+    ] {
+        assert!(class(absent).is_none(), "{absent}");
+        assert!(openehr_rm::v1_1::model::class(absent).is_none(), "{absent}");
+    }
+    let kind = openehr_rm::v1_2::model::enumeration("PROPORTION_KIND").expect("PROPORTION_KIND");
+    assert_eq!(kind.name, "PROPORTION_KIND");
+    assert!(openehr_rm::v1_2::model::enumeration("PROPORTION_KINDS").is_none());
+    assert!(openehr_rm::v1_2::model::enumeration("PROPORTION_KINE").is_none());
+}

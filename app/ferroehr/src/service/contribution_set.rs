@@ -142,14 +142,9 @@ impl FerroEhrService {
                 audit,
                 now: gate.now,
                 guard: Guard {
-                    expected_head: None,
                     policy: gate.policy,
                     definitions: gate.definitions,
-                    outbox: None,
-                    reservation: None,
-                    status: None,
-                    directory: None,
-                    party: None,
+                    ..Guard::default()
                 },
             };
             let ready =

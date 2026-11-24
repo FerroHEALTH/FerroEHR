@@ -2009,17 +2009,34 @@ confirm after they ran the same way (#6320): the version read of the EHR
 object selects the revisions, and a clinical query a request judges reads
 them on the one-row read of the versions it served, or, when it serves none,
 as two hidden columns of its own statement (`aql::sql::Layout::revisions`); a
-query that served no row reads them once after it ran. An ITI-81 page does
+query that served no row reads them once after it ran. Only the first row a
+query serves carries those columns, guarded by `row_number()` over the
+query's own order, so the plan gains one `WindowAgg` and no sort; a
+`DISTINCT`, an aggregate and an ordered query with a `LIMIT`, whose bounded
+sort a window would make whole, carry them on every row. An ITI-81 page does
 the same where the audit store shares the clinical database and its role may
 read `clinical.request_revisions`: the page statement selects them beside its
-records, and elsewhere the search reads them in a statement of their own.
+records, and elsewhere the search reads them in a statement of their own. A party read and a
+demographic query run on the party pool, whose schema holds no policy: where
+the two domains share one database, the party read's version read and the
+demographic query's read of the versions it served select the revisions
+through `clinical_door.policy_revisions()`, a `SECURITY DEFINER` function
+owned by the clinical schema's owner in a schema that holds nothing else,
+which returns the two counters and which the party roles may run; they still
+read no clinical table, and the boot gate refuses anything else in that
+schema and the function once it runs on the caller's `search_path` or as the
+caller. Where the party domain lives in a database of its own, such a read
+reads them once after it ran. **Our own design**, the mirror of the party
+door below.
 
 **The party copies on a read, where the party domain shares the clinical
 database** (#6320). Every decision rests on the party copies too (the binding
 lookups, the grants and the caller facts, #6048), confirmed by a read of
 `binding_grant_revision` on the party pool. Where the two domains share one
-database (the quickstart, the chart default), a `GET` without a body instead
-rides: authentication verifies the credential once, and the binding, the
+database (the quickstart, the chart default), a `GET` without a body, and an
+AQL execution by `POST` (the ad hoc and the two stored query operations, by
+their matched route; no other `POST` rides), instead rides: authentication
+verifies the credential once, and the binding, the
 grants and the decision run on the copies as they stand, each copy noting the
 revision it held (`party_binding::request::ride`). The read's own clinical
 statement selects the party store's revisions through
@@ -2034,6 +2051,10 @@ revisions one indexed read then finds; otherwise that run is dropped with
 everything it would have counted (its decisions, a lookup hit, an
 authentication failure) and the request runs once more from the binding on,
 on the path that reads the revisions first, which answers whatever they are.
+A query's run again reads the body the first run read: the body limit
+buffered it into one chunk, which the ride keeps by reference until it ends.
+A query reads the revisions on the one-row read of the versions it served,
+or, when it serves none, as a hidden column of its own statement.
 `access_policy_reruns_total{op}` counts it. The topology is read once per
 service; where the party domain lives in a database of its own, no clinical
 statement can reach it and the confirm stays a statement of its own. **Our

@@ -89,6 +89,8 @@ pub(crate) struct AuthLayer {
     /// The methods each route serves, so an unserved one is answered `405`
     /// before any check judges the caller.
     pub(crate) served: Arc<ServedMethods>,
+    /// The routes whose `POST` may ride (#6320).
+    pub(crate) post_rides: Arc<run::PostRides>,
     /// The service a representative's subject is resolved to its EHR through.
     pub(crate) service: Arc<ferroehr::service::FerroEhrService>,
 }
@@ -1420,6 +1422,7 @@ mod tests {
                 "__ferroehr.platform",
             )),
             served: Arc::new(ServedMethods::default()),
+            post_rides: Arc::default(),
             service: Arc::new(ferroehr::service::FerroEhrService::new(
                 &ferroehr::db::domain::DomainPools::from_shared(
                     &sqlx::postgres::PgPoolOptions::new()

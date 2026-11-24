@@ -228,17 +228,12 @@ impl FerroEhrService {
     fn party_guard(&self, head: Option<i32>, prior: Prior) -> Guard {
         Guard {
             expected_head: head,
-            policy: None,
-            definitions: None,
-            outbox: None,
-            reservation: None,
-            status: None,
-            directory: None,
             party: Some(Box::new(PartySync {
                 key_space: !self.binding.is_empty(),
                 reverse: None,
                 prior,
             })),
+            ..Guard::default()
         }
     }
 }
