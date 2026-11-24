@@ -1,0 +1,1 @@
+- A commit signs the RFC 8785 form of its body read off the same rendering that `version.body` and the node rows come from, so the body is serialized once. The node rows read that rendering without checking its UTF-8 again. The stored rows, the stored text and the signatures are unchanged.
