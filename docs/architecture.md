@@ -2299,10 +2299,12 @@ grant names and whose `token_scope` its token holds; the contact erasure
 reaches the binding issuers of every stored grant, ended ones included, so
 revoking a client stops no GDPR Art. 17 erasure. The `ROLE` commit refuses a
 capability that names `origin`, `reader` or `binding_issuer` other than once
-(`grants::check_role`). Each replica's refresher reads the grant copy on
-every grant notification (`LiveGrants::spawn_refresher`), so a commit of a request
-that resolves no caller still sees the change-feed grants in force, with no
-read on its path. **Our own design:** no openEHR spec defines a change feed,
+(`grants::check_role`). Each replica's refresher confirms the grant copy
+and the caller facts copy on every grant notification and once a minute
+(`LiveGrants::spawn_refresher`), so a commit of a request that resolves no
+caller still sees the change-feed grants in force, with no read on its path,
+and a request after a caller facts stamp, which notifies no replica, reads
+no facts on its path once a round has run. **Our own design:** no openEHR spec defines a change feed,
 SCIM, or an authorization meaning for these.
 
 **The first grant is the operator's.** An administrator is a person bound to
