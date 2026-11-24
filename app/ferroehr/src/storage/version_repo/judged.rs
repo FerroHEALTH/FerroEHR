@@ -129,15 +129,17 @@ pub async fn read_judged(pool: &PgPool, at: JudgedAt) -> Result<Option<Judged>, 
         return Ok(None);
     };
     let facts = HeadFacts::read(&row, vo_id)?;
+    let head = row.try_get("held_head")?;
+    let digest = row.try_get("held_digest")?;
     let stored = match row.try_get::<Option<VoId>, _>("vo_id")? {
-        Some(held) => Some(stored_version_raw(held, &row)?),
+        Some(object) => Some(stored_version_raw(object, row)?),
         None => None,
     };
     Ok(Some(Judged {
         facts,
         stored,
-        head: row.try_get("held_head")?,
-        digest: row.try_get("held_digest")?,
+        head,
+        digest,
     }))
 }
 

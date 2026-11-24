@@ -57,7 +57,7 @@ fn held(ehr_id: EhrId, vo_id: VoId, body: &str) -> Held {
             person_withheld: false,
             access_revision: Revision::default(),
             canonical: Value::Null,
-            canonical_text: Some(std::sync::Arc::from(body)),
+            canonical_text: Some(body.into()),
             attestations_at_committal: Vec::new(),
             attestations_after_committal: Vec::new(),
         },
