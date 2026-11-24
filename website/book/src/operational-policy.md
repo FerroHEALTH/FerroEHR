@@ -1757,8 +1757,12 @@ episodes of care it belongs to with an `ELEMENT` anywhere in its
 `context.other_context` whose `name` is the code `episode` of
 `openehr_access` and whose value is the episode's `DV_IDENTIFIER` (`issuer`
 and `id`), as the care delivery environment identifies it. FerroEHR keeps
-the episodes of each composition's current version; no access decision
-reads them yet. A persistent composition (`openehr::431`) that names an
+the episodes of each composition's current version. A directive, a rule of
+your access policy, a classification or a delegation names an episode's
+data with `episodes` in its `ACCESS_DATA_SCOPE`, each a `DV_IDENTIFIER`
+compared by `issuer` and `id`: a patient's restriction of one episode hides
+that episode's compositions and nothing else, and data placed in no episode
+match no entry. A persistent composition (`openehr::431`) that names an
 episode, and an `episode` element without a `DV_IDENTIFIER` carrying an
 issuer and an id, are refused `422` on a commit, a CONTRIBUTION, an EHR
 Extract import and an archive load. Your template must admit the element,

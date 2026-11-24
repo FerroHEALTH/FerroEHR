@@ -5,7 +5,8 @@
 //! predicate over one item of an EHR.
 //!
 //! An `ACCESS_DATA_SCOPE` names data by single versioned objects, templates,
-//! archetypes, categories, sensitivities, origins and commit time; within one
+//! archetypes, categories, sensitivities, origins, episodes of care and
+//! commit time; within one
 //! scope every attribute it sets must hold, and a list of scopes covers what
 //! any of them covers, an empty list the whole EHR, future data included
 //! (draft BMM `openehr_access_control_0.1.0`, `ACCESS_DIRECTIVE.data`). A
@@ -34,6 +35,7 @@ use openehr_rm::draft::access_control::access_control::access_classification::Ac
 use openehr_rm::draft::access_control::access_control::access_data_scope::AccessDataScope;
 use openehr_rm::draft::access_control::access_control::access_label::AccessLabel;
 use openehr_rm::draft::access_control::terminology::{Confidentiality, ForeignCode, ForeignKind};
+use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use uuid::Uuid;
 
@@ -41,9 +43,11 @@ use crate::access_eval::care_tie::CareNeed;
 use crate::access_eval::class::{DataLayout, Layout};
 use crate::access_eval::scope::confidential::{Labelled, label_level, level_of};
 use crate::policy_register::CategoriesInForce;
-use crate::service::ehr::access_projection::{Bound, Validity, validity};
+use crate::service::ehr::access_projection::Bound;
+use crate::versioning::episode::EpisodeKey;
 
 pub mod confidential;
+mod covered;
 
 /// How a fact that cannot be read is read: as covering for a deny, as not
 /// covering for a permit.
@@ -88,6 +92,9 @@ pub struct Object<'a> {
     pub origins: Option<&'a [String]>,
     /// When the content was committed.
     pub recorded: Option<jiff::Timestamp>,
+    /// The episodes of care the object is placed in, empty when it is placed
+    /// in none; `None` when the read did not select them.
+    pub episodes: Option<&'a [EpisodeKey]>,
 }
 
 /// What an access reaches: the EHR as a whole, such as `GET /ehr/{ehr_id}`,
@@ -217,6 +224,8 @@ pub struct DataMatch {
     pub categories: Option<Vec<CategoryMatch>>,
     /// `origins`.
     pub origins: Option<Held<Vec<String>>>,
+    /// `episodes`, each as its key.
+    pub episodes: Option<Held<Vec<EpisodeKey>>>,
     /// `recorded`.
     pub recorded: Option<Recorded>,
 }
@@ -252,6 +261,13 @@ impl DataMatch {
                 .as_ref()
                 .is_none_or(|o| match (object.origins, o.known()) {
                     (Some(origins), Some(o)) => origins.iter().any(|x| o.contains(x)),
+                    _ => polarity.unreadable(),
+                })
+            && self
+                .episodes
+                .as_ref()
+                .is_none_or(|e| match (object.episodes, e.known()) {
+                    (Some(placed), Some(e)) => placed.iter().any(|x| e.contains(x)),
                     _ => polarity.unreadable(),
                 })
             && self.recorded.as_ref().is_none_or(|r| {
@@ -671,112 +687,6 @@ impl Scopes {
                 .collect(),
         )
     }
-
-    /// The items one scope covers; `with_sensitivity` reads its
-    /// sensitivities through the labels and classifications, which a
-    /// classification's own scope does not, so classifications never refer
-    /// to each other.
-    fn scope(
-        &self,
-        scope: &AccessDataScope,
-        polarity: Polarity,
-        with_sensitivity: bool,
-        placed: Option<&DataLayout>,
-    ) -> Pred {
-        let objects = scope.objects.as_deref().map(|objects| {
-            objects
-                .iter()
-                .filter_map(crate::service::ehr::access_settings::object_id)
-                .collect::<Vec<_>>()
-        });
-        // NOTE: our own design, an object reference that names no object covers every
-        // object for a deny and none for a permit.
-        let unplaced = scope
-            .objects
-            .as_deref()
-            .is_some_and(|all| objects.as_ref().is_some_and(|read| read.len() < all.len()));
-        let fact = |known: Option<Bound>, at: Option<usize>| {
-            known.map(|bound| match at {
-                Some(at) => Edge {
-                    at: Held::Fact(at),
-                    included: bound.included,
-                },
-                None => Edge::from(bound),
-            })
-        };
-        let recorded = match scope.recorded.as_ref().map(validity) {
-            None => None,
-            Some(Validity::Within { from, until }) => Some(Recorded {
-                from: fact(from, placed.and_then(|p| p.from)),
-                until: fact(until, placed.and_then(|p| p.until)),
-            }),
-            Some(Validity::Unreadable) => {
-                return if polarity.unreadable() {
-                    Pred::True
-                } else {
-                    Pred::False
-                };
-            }
-        };
-        let data = DataMatch {
-            objects: objects
-                .filter(|_| !(unplaced && polarity.unreadable()))
-                .map(|objects| held(objects, placed.and_then(|p| p.objects))),
-            templates: scope
-                .templates
-                .as_deref()
-                .map(|t| t.iter().map(|x| x.to_lowercase()).collect()),
-            archetypes: scope
-                .archetypes
-                .as_deref()
-                .map(|a| a.iter().map(|x| x.value.to_lowercase()).collect()),
-            categories: scope.categories.as_deref().map(|codes| {
-                codes
-                    .iter()
-                    .filter_map(|coded| ForeignCode::read(ForeignKind::Category, coded).ok())
-                    .map(|code| self.categories.category(&code))
-                    .collect()
-            }),
-            origins: scope
-                .origins
-                .as_deref()
-                .map(|origins| held(origins.to_vec(), placed.and_then(|p| p.origins))),
-            recorded,
-        };
-        let confidentiality = scope
-            .confidentialities
-            .as_deref()
-            .map_or(Pred::True, |levels| {
-                self.at_most(levels, polarity, with_sensitivity)
-            });
-        let sensitivity = match scope.sensitivities.as_deref() {
-            Some(codes) if with_sensitivity => Pred::any(
-                sensitivities(codes)
-                    .iter()
-                    .map(|code| self.sensitive(code))
-                    .collect(),
-            ),
-            Some(codes) => Pred::any(
-                sensitivities(codes)
-                    .iter()
-                    .filter_map(|code| self.labels.get(code))
-                    .map(|objects| labelled(objects, polarity))
-                    .collect(),
-            ),
-            None => Pred::True,
-        };
-        let rows = if data.is_empty() {
-            Pred::True
-        } else {
-            Pred::Data(Arc::new(data), polarity)
-        };
-        Pred::all(vec![rows, sensitivity, confidentiality])
-    }
-}
-
-/// `known`, or the fact at `at` when the class leaves it to each EHR.
-fn held<T>(known: T, at: Option<usize>) -> Held<T> {
-    at.map_or(Held::Known(known), Held::Fact)
 }
 
 /// The objects `objects` labels, read with `polarity`.
@@ -788,6 +698,17 @@ fn labelled(objects: &Held<Vec<Uuid>>, polarity: Polarity) -> Pred {
         }),
         polarity,
     )
+}
+
+/// The key of the episode `identifier` names; `None` when its issuer or its
+/// id is blank or absent, which names no episode a composition is placed in.
+#[must_use]
+pub fn episode_key(identifier: &DvIdentifier) -> Option<EpisodeKey> {
+    let issuer = identifier
+        .issuer
+        .as_deref()
+        .filter(|i| !i.trim().is_empty())?;
+    (!identifier.id.trim().is_empty()).then(|| EpisodeKey::of(issuer, &identifier.id))
 }
 
 /// The sensitivity codes of `coded`, each of the jurisdiction's terminology;

@@ -201,7 +201,11 @@ impl FerroEhrService {
                 .map(|j| (j.facts, j.stored)));
         };
         let key = (vo_id, tree);
-        if let Some(held) = self.version_copy.get(key).await {
+        // NOTE: our own design (#6416), a copy read before reads selected episodes holds none.
+        let held = self.version_copy.get(key).await.filter(|held| {
+            held.facts.episodes.is_some() || !crate::access_eval::episodes::selected()
+        });
+        if let Some(held) = held {
             let marks = read_marks(&self.pool, vo_id, held.stored.sys_version).await?;
             if let Some(marks) = marks
                 && marks.head == held.head

@@ -324,7 +324,10 @@ impl LivePolicy {
             return Ok(());
         }
         let read = match openehr_its::json::from_canonical_json::<AccessPolicy>(&row.data) {
-            Ok(policy) => Some(Arc::new(policy)),
+            Ok(policy) => {
+                crate::access_eval::episodes::note_policy(&policy);
+                Some(Arc::new(policy))
+            }
             Err(error) => {
                 tracing::error!(
                     version = row.version,
