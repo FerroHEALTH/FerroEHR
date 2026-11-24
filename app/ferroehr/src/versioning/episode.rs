@@ -44,6 +44,33 @@ impl EpisodeKey {
     pub const fn as_bytes(&self) -> &[u8; 32] {
         &self.0
     }
+
+    /// The key whose 32 octets are `octets`; `None` for any other length.
+    #[must_use]
+    pub fn from_octets(octets: &[u8]) -> Option<Self> {
+        octets.try_into().ok().map(Self)
+    }
+
+    /// The key in lower-case hexadecimal, as a settings class's facts hold it.
+    #[must_use]
+    pub fn hex(&self) -> String {
+        crate::digest::hex(&self.0)
+    }
+
+    /// The key `hex` spells in hexadecimal; `None` when it spells no key.
+    #[must_use]
+    pub fn from_hex(hex: &str) -> Option<Self> {
+        let digits = hex.as_bytes();
+        if digits.len() != 64 || !digits.iter().all(u8::is_ascii_hexdigit) {
+            return None;
+        }
+        let mut key = [0_u8; 32];
+        for (octet, pair) in key.iter_mut().zip(digits.as_chunks::<2>().0) {
+            let text = std::str::from_utf8(pair).ok()?;
+            *octet = u8::from_str_radix(text, 16).ok()?;
+        }
+        Some(Self(key))
+    }
 }
 
 /// The episodes the COMPOSITION `body` is placed in, each once and sorted;
@@ -125,6 +152,26 @@ fn persistent<'a, T: Tree<'a>>(body: T) -> bool {
         .as_deref()
         == Some("openehr")
         && code.get_text("code_string").as_deref() == Some("431")
+}
+
+/// Refuses the placement `placed` unless each of its episodes is in
+/// `declared`, the episodes of the care relationships of the EHR's subject,
+/// live or ended (draft access control package, Episodes of Care: declared
+/// episodes).
+///
+/// # Errors
+/// [`ServiceError::Unprocessable`] (`422`) naming the element.
+pub(crate) fn declared<'a>(
+    placed: impl IntoIterator<Item = &'a EpisodeKey>,
+    declared: &std::collections::BTreeSet<EpisodeKey>,
+) -> Result<(), ServiceError> {
+    if placed.into_iter().all(|key| declared.contains(key)) {
+        Ok(())
+    } else {
+        Err(refused(
+            "names an episode that no care relationship of the EHR's subject names",
+        ))
+    }
 }
 
 /// The `422` of a placement the commit refuses.
@@ -209,5 +256,16 @@ mod tests {
     #[test]
     fn the_key_separates_issuer_and_id() {
         assert_ne!(EpisodeKey::of("Ha", "b"), EpisodeKey::of("H", "ab"));
+    }
+
+    #[test]
+    fn a_key_round_trips_through_its_hex_and_octets() {
+        let key = EpisodeKey::of("H", "C-17");
+        assert_eq!(EpisodeKey::from_hex(&key.hex()), Some(key));
+        assert_eq!(EpisodeKey::from_octets(key.as_bytes()), Some(key));
+        let tail: String = key.hex().chars().skip(2).collect();
+        assert_eq!(EpisodeKey::from_hex(&tail), None);
+        assert_eq!(EpisodeKey::from_hex(&format!("+f{tail}")), None);
+        assert_eq!(EpisodeKey::from_octets(&[0; 31]), None);
     }
 }

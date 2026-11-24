@@ -8,8 +8,9 @@
 //!
 //! A second set of rows times a typed composition both ways #5849 compares:
 //! `canonical_json(&serde_json::to_value(x))` and the serializer that writes
-//! the form straight from `x`. No specification governs this measurement: our
-//! own design.
+//! the form straight from `x`. A third set times the serializer over objects
+//! nested ever deeper, whose cost per byte holds flat with depth (#6444). No
+//! specification governs this measurement: our own design.
 
 #![expect(
     clippy::expect_used,
@@ -35,6 +36,7 @@ use std::time::{Duration, Instant};
 use openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json;
 use openehr_rm::v1_2::common::change_control::canonical_serializer_impl::canonical_to_string;
 use openehr_rm::v1_2::composition::composition::Composition;
+use serde::Serialize;
 use serde_json::{Value, json};
 
 /// The timed runs per writer and document, of which the median is reported.
@@ -96,6 +98,23 @@ fn prose() -> Value {
         .map(|index| json!({ "index": index, "narrative": line.repeat(4), "naïef": true }))
         .collect();
     json!({ "_type": "SECTION", "items": items })
+}
+
+/// An object `depth` levels deep whose members are out of name order at
+/// every level, as an RM value's fields are (#6444).
+#[derive(Serialize)]
+struct Nested {
+    value: String,
+    inner: Option<Box<Nested>>,
+    archetype_node_id: &'static str,
+}
+
+fn nested(depth: usize) -> Nested {
+    Nested {
+        value: format!("level {depth}"),
+        inner: (depth > 0).then(|| Box::new(nested(depth - 1))),
+        archetype_node_id: "at0001",
+    }
 }
 
 /// The median nanoseconds one call of `write` takes over `value`.
@@ -169,4 +188,22 @@ fn main() {
             "saved_percent": ((100.0 - 100.0 * after / before) * 10.0).round() / 10.0,
         })
     );
+    for depth in [4, 16, 64, 256] {
+        let value = nested(depth);
+        let form = canonical_to_string(&value).expect("the document canonicalises");
+        let nanos = median_nanos(&value, |value| {
+            canonical_to_string(value).expect("the document canonicalises")
+        });
+        let bytes = f64::from(u32::try_from(form.len()).expect("a bench document under 4 GiB"));
+        println!(
+            "{}",
+            json!({
+                "document": "nested",
+                "depth": depth,
+                "bytes": form.len(),
+                "serializer_ns": nanos.round(),
+                "ns_per_byte": (nanos / bytes * 100.0).round() / 100.0,
+            })
+        );
+    }
 }

@@ -10,7 +10,7 @@ use openehr_sdt::rm_instance::{
 };
 use serde_json::Value;
 
-fn compositions() -> Vec<(String, Value)> {
+pub(super) fn compositions() -> Vec<(String, Value)> {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let mut out = Vec::new();
     let mut stack: Vec<std::path::PathBuf> = ["corpus", "crates", "docs/specs/openehr/CNF"]
@@ -52,7 +52,7 @@ fn compositions() -> Vec<(String, Value)> {
 
 /// Defective variants: a coded slot out of its group and its code set, an
 /// empty `archetype_node_id`, and `archetype_details` on a non-root node.
-fn variants(doc: &Value) -> Vec<(&'static str, Value)> {
+pub(super) fn variants(doc: &Value) -> Vec<(&'static str, Value)> {
     let mut out = vec![("as committed", doc.clone())];
     let mut v = doc.clone();
     if let Some(code) = v.pointer_mut("/category/defining_code/code_string") {

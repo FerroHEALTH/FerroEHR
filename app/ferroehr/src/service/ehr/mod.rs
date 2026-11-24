@@ -48,6 +48,7 @@ mod contributions;
 pub(in crate::service) mod created;
 mod directory;
 mod directory_commit;
+mod episodes;
 pub(in crate::service) mod kind_rules;
 pub(in crate::service) mod meta;
 pub mod object;

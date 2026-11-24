@@ -373,6 +373,13 @@ const RELATE: &str = "INSERT INTO binding_caller_fact (holder_id, ordinal, kind,
      VALUES ($1, 0, 'under_care_of', $2, $3, 'GROUP', 'HL7_ParticipationType', $4, \
      'urn:example:providers', 'hospital', $6, '(,)', $5::daterange, $1::text || '::v1')";
 
+/// [`RELATE`] scoped to the episode `$7`, `$8` (#6412).
+const RELATE_IN: &str = "INSERT INTO binding_caller_fact (holder_id, ordinal, kind, party_id, \
+     target_id, target_kind, terminology_id, code_string, provider_issuer, provider_id, \
+     lifecycle_state, role_validity, validity, holder_version, episode_issuer, episode_id) \
+     VALUES ($1, 0, 'under_care_of', $2, $3, 'GROUP', 'HL7_ParticipationType', $4, \
+     'urn:example:providers', 'hospital', $6, '(,)', $5::daterange, $1::text || '::v1', $7, $8)";
+
 /// The relationship the holder `$1` held, deleted as its next version does.
 const UNRELATE: &str = "DELETE FROM binding_caller_fact WHERE holder_id = $1";
 
@@ -419,8 +426,8 @@ async fn ward() -> (testkit::TestDb, Ward) {
 /// census to the census read fresh at the delta's revision: an admission to
 /// a second team, a discharge, a role change, a move between teams, a
 /// relationship deleted, record subjects declared and withdrawn, a holder
-/// no longer live, a stamp that changed nothing and a party that is no
-/// patient.
+/// no longer live, an episode added, changed and removed (#6412), a stamp
+/// that changed nothing and a party that is no patient.
 #[tokio::test]
 #[expect(
     clippy::too_many_lines,
@@ -524,6 +531,42 @@ async fn a_census_after_each_delta_is_the_census_read_at_its_revision() {
                 vec!["ATND", "[2025-01-01,2027-01-01)", "532"],
             )],
             vec![ward.patient(7)],
+        ),
+        (
+            "an episode added",
+            vec![
+                (UNRELATE, vec![ward.holder(9)], vec![]),
+                (
+                    RELATE_IN,
+                    vec![ward.holder(9), ward.patient(9), second],
+                    vec!["PART", "[2020-01-01,)", "532", "H", "C-17"],
+                ),
+            ],
+            vec![ward.patient(9)],
+        ),
+        (
+            "an episode changed",
+            vec![
+                (UNRELATE, vec![ward.holder(9)], vec![]),
+                (
+                    RELATE_IN,
+                    vec![ward.holder(9), ward.patient(9), second],
+                    vec!["PART", "[2020-01-01,)", "532", "H", "D-4"],
+                ),
+            ],
+            vec![ward.patient(9)],
+        ),
+        (
+            "an episode removed",
+            vec![
+                (UNRELATE, vec![ward.holder(9)], vec![]),
+                (
+                    RELATE,
+                    vec![ward.holder(9), ward.patient(9), second],
+                    vec!["PART", "[2020-01-01,)", "532"],
+                ),
+            ],
+            vec![ward.patient(9)],
         ),
         (
             "a stamp that changed nothing and a party that is no patient",

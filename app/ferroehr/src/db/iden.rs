@@ -241,6 +241,9 @@ pub enum VoHead {
     RootArchetype,
     /// `committed_at` — the trunk head's commit instant.
     CommittedAt,
+    /// `episodes` — the keys of the episodes of care the trunk head is placed
+    /// in; `NULL` when it is placed in none (#6413).
+    Episodes,
     /// `restricted_at` — when restriction of processing was recorded for this
     /// object; `NULL` = unrestricted.
     RestrictedAt,
@@ -401,6 +404,9 @@ mod tests {
     /// interval written `[a, b)` would otherwise close the table early and
     /// hide every column after it.
     fn create_table_body(table: &str) -> String {
+        if let Some(columns) = view_columns(table) {
+            return columns;
+        }
         let head = format!("CREATE TABLE {table} (");
         let body = DDL
             .iter()
@@ -427,6 +433,30 @@ mod tests {
             }
         }
         panic!("unterminated CREATE TABLE {table} in the migration sets");
+    }
+
+    /// The output columns of the view `table`, one per line as a table body
+    /// declares them, when the migration sets declare `table` as a view.
+    fn view_columns(table: &str) -> Option<String> {
+        let head = format!("CREATE VIEW {table} AS");
+        let body = DDL
+            .iter()
+            .filter(|(name, _)| *name == table)
+            .find_map(|(_, file)| file.split_once(&head))?
+            .1;
+        let select = body
+            .split_once("FROM")?
+            .0
+            .trim()
+            .trim_start_matches("SELECT");
+        Some(
+            select
+                .split(',')
+                .filter_map(|item| item.split_whitespace().last())
+                .map(|column| format!("{} x", column.rsplit('.').next().unwrap_or(column)))
+                .collect::<Vec<_>>()
+                .join("\n"),
+        )
     }
 
     /// Whether `body` declares a column named exactly `col` — a line whose

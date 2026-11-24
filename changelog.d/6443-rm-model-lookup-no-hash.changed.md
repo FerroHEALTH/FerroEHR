@@ -1,0 +1,1 @@
+- The generated RM model finds a class or an enumeration by its name through a lookup decided at generation time, on the name's length and the bytes that tell the names apart, with no hashing. A composition commit's node walk and template conformance pass run about 4% fewer instructions.

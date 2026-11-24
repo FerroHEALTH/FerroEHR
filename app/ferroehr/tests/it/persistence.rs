@@ -113,7 +113,8 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "audit_reservation",
             "blob_ref",
             "category_map",
-            "commit_audit",
+            "commit_audit_facts",
+            "commit_audit_shared",
             "contribution",
             "definition_revision",
             "dpop_proof",
@@ -161,7 +162,8 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "binding_representation",
             "binding_state",
             "blob_ref",
-            "commit_audit",
+            "commit_audit_facts",
+            "commit_audit_shared",
             "contribution",
             "event_outbox",
             "event_outbox_reader",
@@ -1077,8 +1079,10 @@ async fn seed_version(pool: &PgPool) -> (Uuid, Uuid) {
     // audit.change_type is a coded audit_change_type value ('249' creation),
     // enforced by ck_audit_change_type — not the rubric.
     let commit_audit_id: Uuid = sqlx::query_scalar(
-        "INSERT INTO commit_audit (system_id, change_type, committer)
-         VALUES ('test.system', '249', '{\"_type\":\"PARTY_SELF\"}'::jsonb)
+        "WITH s AS (INSERT INTO commit_audit_shared (digest, system_id)
+                    VALUES (sha256(gen_random_uuid()::text::bytea), 'test.system') RETURNING id)
+         INSERT INTO commit_audit_facts (shared, change_type, committer)
+         SELECT s.id, '249', '{\"_type\":\"PARTY_SELF\"}'::jsonb FROM s
          RETURNING id",
     )
     .fetch_one(pool)

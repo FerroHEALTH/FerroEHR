@@ -144,7 +144,8 @@ inline!(
     usize,
     Uuid,
     jiff::civil::Date,
-    jiff::Timestamp
+    jiff::Timestamp,
+    crate::versioning::episode::EpisodeKey
 );
 
 impl Weigh for String {

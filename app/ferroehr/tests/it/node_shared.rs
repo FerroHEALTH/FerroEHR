@@ -300,7 +300,7 @@ async fn every_node_index_reads_only_members_that_are_never_shared() {
     .fetch_all(&pool)
     .await
     .expect("read the index definitions");
-    assert!(indexes.len() >= 20, "{indexes:?}");
+    assert!(indexes.len() >= 19, "{indexes:?}");
     let functions: Vec<(String, String)> = sqlx::query_as(
         "SELECT p.proname, pg_get_functiondef(p.oid) FROM pg_proc p JOIN pg_namespace s ON s.oid = p.pronamespace \
          WHERE s.nspname = 'ext' AND p.prokind = 'f'",

@@ -534,6 +534,7 @@ inferno = { version = "0.12", features = ["nameattr"] }
 
 # ── Caching, rate limiting, resilience ───────────────────────────────────────
 moka = { version = "0.12", features = ["future"] }   # Caffeine equivalent (template/WebTemplate cache)
+arc-swap = "1.9"                   # lock-free read-mostly maps (the commit audit shared parts)
 backon = "1"                      # retry/backoff (backoff crate is deprecated)
 
 # ── Errors & utilities ───────────────────────────────────────────────────────

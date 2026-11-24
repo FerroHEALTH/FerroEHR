@@ -36,7 +36,7 @@ impl FerroEhrService {
         kind: Kind,
         request: &WriteRequest<Body>,
         container: Option<Container>,
-        change: (&str, &str),
+        change: (&str, &'static str),
     ) -> Result<Resolved, ServiceError> {
         let rendered = demographic_rules(kind, &request.data, container)?;
         let resolved = self.resolve_write(request, change.0, change.1)?;
@@ -92,16 +92,19 @@ impl FerroEhrService {
         version: Option<crate::versioning::object_version_id::TreeId>,
         at: Option<jiff::Timestamp>,
     ) -> Result<RawServiceResponse, ServiceError> {
-        let raw = support::load_ehrless_raw(
-            &self.demographic_pool,
-            self.spec_profile,
-            vo_id,
-            version,
-            at,
-            kind,
-        )
-        .await?
-        .ok_or_else(|| support::missing(kind.as_str(), vo_id, version.is_some() || at.is_some()))?;
+        let raw = self
+            .on_party_pool(support::load_ehrless_raw(
+                &self.demographic_pool,
+                self.spec_profile,
+                vo_id,
+                version,
+                at,
+                kind,
+            ))
+            .await??
+            .ok_or_else(|| {
+                support::missing(kind.as_str(), vo_id, version.is_some() || at.is_some())
+            })?;
         if raw.read.deleted() {
             return Ok(RawServiceResponse {
                 body: ReadBody::Value(serde_json::Value::Null),

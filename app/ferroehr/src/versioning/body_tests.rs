@@ -128,6 +128,7 @@ fn audit() -> AuditInput {
             }))
             .unwrap(),
         ),
+        server_description: false,
         committer: crate::versioning::audit::party_proxy(&json!({
             "_type": "PARTY_IDENTIFIED",
             "name": "Dr. Ærø",
@@ -168,7 +169,7 @@ fn the_typed_commit_writes_and_signs_the_bytes_the_canonical_one_did() {
         let rendered = body.render().unwrap();
         assert_eq!(
             (
-                String::from_utf8(rendered.text().to_vec()).unwrap(),
+                rendered.text().to_owned(),
                 crate::storage::render::content_digest(&rendered)
             ),
             canonical_path(&view),
@@ -177,7 +178,7 @@ fn the_typed_commit_writes_and_signs_the_bytes_the_canonical_one_did() {
         assert_eq!(
             signed_form(
                 parts(&uid, contribution_ref(contribution), audit.typed(&at), &others, None),
-                Signed::Typed(&body)
+                Signed::Rendered(&rendered)
             )
             .unwrap()
             .unwrap(),
