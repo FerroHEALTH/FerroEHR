@@ -28,6 +28,7 @@ use super::written::{nodes, root_archetype};
 use super::{Committed, ResolvedWrite};
 use crate::error::ServiceError;
 use crate::storage::render::Decomposed;
+use crate::storage::render::index::Rendered;
 use crate::storage::version_repo::commit::FoldedVersion;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::object_version_id::object_version_id;
@@ -111,19 +112,11 @@ pub(super) fn prepare(
 
 impl Prepared {
     /// The version columns its statement binds.
-    ///
-    /// # Errors
-    /// [`ServiceError::Internal`] when the rendering is no UTF-8 text.
-    pub(super) fn folded(&self) -> Result<FoldedVersion<'_>, ServiceError> {
+    pub(super) fn folded(&self) -> FoldedVersion<'_> {
         let r = &self.r;
         let (trunk_version, branch_number, branch_version) = r.tree.columns();
-        let body = r
-            .rendered
-            .as_ref()
-            .map(|rendered| std::str::from_utf8(rendered.text()))
-            .transpose()
-            .map_err(|e| ServiceError::internal("serialize the canonical body", e))?;
-        Ok(FoldedVersion {
+        let body = r.rendered.as_ref().map(Rendered::text);
+        FoldedVersion {
             vo_id: r.vo_id,
             kind: r.kind.as_str(),
             ehr_id: r.ehr_id,
@@ -148,7 +141,7 @@ impl Prepared {
             content_sys_version: r.shared_from,
             root_archetype: self.committed.root_archetype.as_deref(),
             episodes: &r.episodes,
-        })
+        }
     }
 
     /// Whether the version continues its object's trunk, and so becomes its
