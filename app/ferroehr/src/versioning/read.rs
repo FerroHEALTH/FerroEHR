@@ -339,7 +339,7 @@ pub(crate) struct RawVersionRead {
     /// representation).
     pub(crate) read: VersionRead,
     /// The stored body's own jsonb text, when it never needed parsing.
-    pub(crate) raw_json: Option<std::sync::Arc<str>>,
+    pub(crate) raw_json: Option<crate::storage::stored_text::StoredText>,
 }
 
 /// Compose a [`RawVersionRead`]: parse the raw text back into a typed value
@@ -361,8 +361,8 @@ pub(crate) fn raw_version_read(
         || (profile == crate::config::profile::SpecProfile::Stable
             && stored.stable_compatible != Some(true));
     let mut raw_json = stored.canonical_text.take();
-    if needs_value && let Some(text) = raw_json.as_deref() {
-        stored.canonical = serde_json::from_str(text).map_err(|e| {
+    if needs_value && let Some(text) = raw_json.as_ref() {
+        stored.canonical = serde_json::from_slice(text.bytes()).map_err(|e| {
             ServiceError::exception(format!(
                 "the stored body of versioned object {} is not decodable JSON: {e}",
                 stored.vo_id
