@@ -33,14 +33,15 @@ COMMENT ON VIEW request_revisions IS 'No rows: the party schema holds no policy 
 -- of this schema, with a fixed search_path, and returns two counters and a
 -- flag that carry no personal data. The
 -- clinical roles may run it and read no table of this schema
--- (db::verify_domain_isolation holds both).
+-- (db::verify_domain_isolation holds both). The door outlives a drop of the
+-- party schema alone (#6479), so this set opens it again over the one it finds.
 --
 -- No openEHR spec governs the confirmation: our own design.
-CREATE SCHEMA party_door;
+CREATE SCHEMA IF NOT EXISTS party_door;
 COMMENT ON SCHEMA party_door IS 'The one function of the party domain the clinical roles may run: the party store''s revisions. Our own design (#6320).';
 REVOKE ALL ON SCHEMA party_door FROM PUBLIC;
 
-CREATE FUNCTION party_door.party_revisions(held pg_snapshot)
+CREATE OR REPLACE FUNCTION party_door.party_revisions(held pg_snapshot)
 RETURNS TABLE (grants bigint, facts_behind boolean, bindings bigint)
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = party, pg_catalog

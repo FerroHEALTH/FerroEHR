@@ -1324,6 +1324,29 @@ async fn a_pooled_connection_applies_the_configured_statement_timeout() {
     );
 }
 
+/// A wipe that drops the party schema alone, as the hosted sandbox wipe does,
+/// leaves `party_door` behind; the party set opens the door again over it and
+/// the rebuilt store serves a party read.
+#[tokio::test]
+async fn a_wiped_party_schema_is_rebuilt_over_the_door_it_left() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    sqlx::query("DROP SCHEMA party CASCADE")
+        .execute(&pool)
+        .await
+        .expect("drop the party schema");
+    db::run_migrations(&pool)
+        .await
+        .expect("the party set rebuilds its schema over the door a wipe left");
+    let door: (i64, bool, i64) = sqlx::query_as(
+        "SELECT grants, facts_behind, bindings FROM party_door.party_revisions(NULL)",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the door reads the rebuilt party store");
+    assert_eq!(door.0, 0, "a rebuilt store starts at revision 0: {door:?}");
+}
+
 /// A partially wiped database comes back whole (#3298): the sandbox reset drops
 /// the clinical, audit and ext schemas and leaves the party set
 /// applied, so the clinical set has to rebuild everything the write path needs
