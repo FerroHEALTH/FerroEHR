@@ -31,9 +31,6 @@ impl AuditStore {
     /// [`AuditError::Store`] when a query fails, the rendering errors of a
     /// record that cannot be read back, and [`AuditError::IndexBehind`] when
     /// the index does not catch up within its wait.
-    ///
-    /// # Panics
-    /// Never: a page's statements are always its count and its page.
     pub async fn search(&self, filter: &AuditSearchFilter) -> Result<AuditPage, AuditError> {
         // NOTE: our own design (#6322), an access-log entry's search tokens are rendered by the
         // frontier round, so a token search first moves the index past every entry before it.
@@ -47,15 +44,12 @@ impl AuditStore {
         };
         let mut conn = acquire(&self.pool).await?;
         let cursor = self.cursor.bound(&mut conn).await?;
-        let Statements { template, values } =
-            self.page_shapes
-                .statements(Kind::Page, filter, &resolved, cursor);
-        #[expect(
-            clippy::expect_used,
-            reason = "Kind::Page builds exactly two statements, the count and the page"
-        )]
-        let [count_values, values] = <[SqlxValues; 2]>::try_from(values)
-            .expect("the page should have its count and its page statement");
+        let Statements {
+            template,
+            values: [count_values, values],
+        } = self
+            .page_shapes
+            .statements(Kind::Page, filter, &resolved, cursor);
         // NOTE: our own design (#6005), a shape's text is a named statement that PostgreSQL may
         // plan once per connection (plan_cache_mode auto); any other text goes unnamed.
         let shaped = search_page::shaped(filter);
@@ -94,14 +88,10 @@ impl AuditStore {
         filter: &AuditSearchFilter,
         resolved: &[Option<TokenMatch>],
     ) -> (Arc<Template>, SqlxValues) {
-        let Statements { template, values } =
-            self.page_shapes.statements(kind, filter, resolved, 0);
-        #[expect(
-            clippy::expect_used,
-            reason = "Kind::Trail and Kind::Ehrs each build exactly one statement"
-        )]
-        let [values] =
-            <[SqlxValues; 1]>::try_from(values).expect("the search should have one statement");
+        let Statements {
+            template,
+            values: [values, _],
+        } = self.page_shapes.statements(kind, filter, resolved, 0);
         (template, values)
     }
 }
@@ -172,13 +162,13 @@ enum Bind {
 }
 
 /// The statements of one search and their values, in the order its
-/// [`Kind`] builds them.
+/// [`Kind`] builds them; a kind of one statement leaves the second empty.
 #[derive(Debug)]
 pub(crate) struct Statements {
     /// The statements' text.
     pub(crate) template: Arc<Template>,
     /// Each statement's values.
-    pub(crate) values: Vec<SqlxValues>,
+    pub(crate) values: [SqlxValues; 2],
 }
 
 impl Template {
@@ -222,21 +212,21 @@ impl PageShapes {
         });
         let slots = slots(filter, resolved, cursor, numbers, &carried);
         if slots.len() == template.slots
-            && let Some(values) = template
-                .statements
-                .iter()
-                .map(|(_, binds)| bound(binds, &slots))
-                .collect::<Option<Vec<_>>>()
+            && let Some(values) = bound_all(&template, &slots)
         {
             return Statements { template, values };
         }
         // NOTE: our own design (#6362), a search whose values its shape's template does not
         // place builds its own statements.
-        let (statements, values) = kind
-            .build(filter, resolved, cursor, numbers, &carried)
-            .into_iter()
-            .map(|(sql, values)| ((sql, Vec::new()), values))
-            .unzip();
+        let mut values = [empty(), empty()];
+        let mut statements = Vec::new();
+        for (slot, (sql, bound)) in values
+            .iter_mut()
+            .zip(kind.build(filter, resolved, cursor, numbers, &carried))
+        {
+            *slot = bound;
+            statements.push((sql, Vec::new()));
+        }
         Statements {
             template: Arc::new(Template {
                 slots: 0,
@@ -245,6 +235,21 @@ impl PageShapes {
             values,
         }
     }
+}
+
+/// No values.
+fn empty() -> SqlxValues {
+    SqlxValues(sea_query::Values(Vec::new()))
+}
+
+/// The values each statement of `template` takes from `slots`; `None` when a
+/// bind names a value `slots` does not hold.
+fn bound_all(template: &Template, slots: &[sea_query::Value]) -> Option<[SqlxValues; 2]> {
+    let mut values = [empty(), empty()];
+    for (slot, (_, binds)) in values.iter_mut().zip(&template.statements) {
+        *slot = bound(binds, slots)?;
+    }
+    Some(values)
 }
 
 /// The values `binds` take from `slots`; `None` when a bind names a value

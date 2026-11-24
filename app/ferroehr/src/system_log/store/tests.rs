@@ -508,7 +508,6 @@ fn a_shapes_statements_are_the_built_ones() {
         let statements = shapes.statements(Kind::Page, &filter, &resolved, cursor);
         assert_eq!(statements.template.sql(0), count_sql);
         assert_eq!(statements.template.sql(1), sql);
-        assert_eq!(statements.values.len(), 2);
         assert_eq!(statements.values[0].0, count_values.0);
         assert_eq!(statements.values[1].0, values.0);
         templates.push(statements.template);
@@ -541,8 +540,9 @@ fn a_trail_and_its_ehrs_are_the_built_statements() {
             let (sql, values) = build(&filter, &resolved);
             let statements = shapes.statements(kind, &filter, &resolved, 0);
             assert_eq!(statements.template.sql(0), sql);
-            assert_eq!(statements.values.len(), 1);
             assert_eq!(statements.values[0].0, values.0);
+            assert_eq!(statements.values[1].0.0, Vec::new());
+            assert_eq!(statements.template.sql(1), "");
             templates.push(statements.template);
         }
         for (first, second) in [(0, 3), (2, 5)] {
