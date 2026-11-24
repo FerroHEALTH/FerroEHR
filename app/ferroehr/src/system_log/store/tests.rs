@@ -432,26 +432,27 @@ fn shaped_searches() -> Vec<(
     Vec<Option<crate::system_log::search::TokenMatch>>,
 )> {
     use crate::system_log::search::{ColumnMatch, IdentifierColumn, TokenMatch};
-    let at = |second: i64| Some(jiff::Timestamp::from_second(second).expect("an instant"));
+    let at = |second: i64| Some(jiff::Timestamp::constant(second, 0));
     let mut searches = Vec::new();
-    for round in 0..2_i64 {
+    for round in 0..2_i16 {
+        let wide = i64::from(round);
         let text = |name: &str| format!("{name}-{round}");
         searches.push((
             AuditSearchFilter {
-                count: 20 + round,
-                offset: round * 7,
+                count: 20 + wide,
+                offset: wide * 7,
                 ..AuditSearchFilter::default()
             },
             Vec::new(),
         ));
         searches.push((
             AuditSearchFilter {
-                from: at(1_700_000_000 + round),
-                until: at(1_800_000_000 + round),
+                from: at(1_700_000_000 + wide),
+                until: at(1_800_000_000 + wide),
                 until_inclusive: round == 1,
                 criteria: vec![
                     AuditCriterion::Patient(vec![text("p"), text("q")]),
-                    AuditCriterion::Outcome(vec![0, 4 * i16::try_from(round).expect("a round")]),
+                    AuditCriterion::Outcome(vec![0, 4 * round]),
                     AuditCriterion::Action(vec![text("R")]),
                 ],
                 count: 50,
@@ -462,7 +463,7 @@ fn shaped_searches() -> Vec<(
         ));
         searches.push((
             AuditSearchFilter {
-                until: at(1_900_000_000 - round),
+                until: at(1_900_000_000 - wide),
                 criteria: vec![
                     AuditCriterion::Agent(vec![text("agent")]),
                     AuditCriterion::Element(AuditElement::EntityIdentifier, Vec::new()),
@@ -472,7 +473,7 @@ fn shaped_searches() -> Vec<(
             vec![
                 None,
                 Some(TokenMatch {
-                    ids: vec![3, i32::try_from(round).expect("a round") + 5],
+                    ids: vec![3, i32::from(round) + 5],
                     columns: vec![
                         ColumnMatch {
                             column: IdentifierColumn::ResourceId,

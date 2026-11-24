@@ -19,8 +19,8 @@ use sea_query::{
 };
 use sea_query_sqlx::{SqlxBinder as _, SqlxValues};
 use sqlx::Row as _;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::{Arc, PoisonError};
 
 use super::{AuditCriterion, AuditElement, AuditSearchFilter, RECORD_COLUMNS};
 use crate::system_log::search::TokenMatch;
@@ -295,20 +295,20 @@ impl PageShapes {
         let held = self
             .templates
             .read()
-            .ok()
-            .and_then(|templates| templates.get(&key).cloned());
-        let template = match held {
-            Some(template) => template,
-            None => {
-                let template = Arc::new(template_of(filter, resolved, &carried));
-                if let Ok(mut templates) = self.templates.write()
-                    && templates.len() < SHAPES_KEPT
-                {
-                    templates.insert(key, Arc::clone(&template));
-                }
-                template
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(&key)
+            .cloned();
+        let template = held.unwrap_or_else(|| {
+            let template = Arc::new(template_of(filter, resolved, &carried));
+            let mut templates = self
+                .templates
+                .write()
+                .unwrap_or_else(PoisonError::into_inner);
+            if templates.len() < SHAPES_KEPT {
+                templates.insert(key, Arc::clone(&template));
             }
-        };
+            template
+        });
         let slots = slots(filter, resolved, cursor, numbers, &carried);
         if slots.len() == template.slots
             && let Some(count_values) = bound(&template.count_binds, &slots)
@@ -485,12 +485,16 @@ fn template_of(
             | AuditCriterion::Agent(values)
             | AuditCriterion::Entity(values)
             | AuditCriterion::Action(values) => {
-                values.iter_mut().for_each(|value| *value = next_text());
+                for value in values.iter_mut() {
+                    *value = next_text();
+                }
             }
-            AuditCriterion::Outcome(values) => values.iter_mut().for_each(|value| {
-                outcome += 1;
-                *value = outcome;
-            }),
+            AuditCriterion::Outcome(values) => {
+                for value in values.iter_mut() {
+                    outcome += 1;
+                    *value = outcome;
+                }
+            }
             AuditCriterion::Address(_) | AuditCriterion::Element(..) => {}
         }
     }
