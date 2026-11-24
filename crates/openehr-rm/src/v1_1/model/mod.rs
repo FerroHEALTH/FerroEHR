@@ -16,9 +16,6 @@
 //! True for exactly the types `ferroehr::storage::codec::STRUCTURE_TYPES`
 //! splits into their own `node` row, which the BMM cannot derive.
 
-use std::collections::HashMap;
-use std::sync::LazyLock;
-
 mod data;
 
 /// An RM class in the static model.
@@ -157,12 +154,10 @@ pub enum EnumValue {
     Str(&'static str),
 }
 
-/// Name → class index, built once from the generated table.
-static INDEX: LazyLock<HashMap<&'static str, &'static RmClass>> =
-    LazyLock::new(|| data::CLASSES.iter().map(|c| (c.name, c)).collect());
-
 fn find(name: &str) -> Option<&'static RmClass> {
-    INDEX.get(name).copied()
+    data::CLASSES
+        .get(data::class_index(name)?)
+        .filter(|c| c.name == name)
 }
 
 /// The class named `name`, if present in the model.
@@ -268,12 +263,10 @@ pub fn classes() -> impl Iterator<Item = &'static RmClass> {
     data::CLASSES.iter()
 }
 
-/// Name → enumeration index, built once from the generated table.
-static ENUM_INDEX: LazyLock<HashMap<&'static str, &'static RmEnumeration>> =
-    LazyLock::new(|| data::ENUMERATIONS.iter().map(|e| (e.name, e)).collect());
-
 /// The enumeration class named `name`, if it is one (e.g. `"PROPORTION_KIND"`).
 #[must_use]
 pub fn enumeration(name: &str) -> Option<&'static RmEnumeration> {
-    ENUM_INDEX.get(name).copied()
+    data::ENUMERATIONS
+        .get(data::enumeration_index(name)?)
+        .filter(|e| e.name == name)
 }
