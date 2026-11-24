@@ -230,20 +230,15 @@ async fn a_write_over_a_version_that_is_not_the_newest_is_refused() {
 /// A defect by name, and how a valid policy is broken to carry it.
 type Defect = (&'static str, fn(&mut Value));
 
+/// A body the strict reader does not read as an `ACCESS_POLICY` is `400`;
+/// one that reads but breaks a rule of the draft package is `422` (RFC 9110
+/// §15.5.21; ITS-REST `422`: content that "could be converted to a
+/// resource, but there are semantic validation errors"). Either way nothing
+/// is stored.
 #[tokio::test]
 async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
     let (_db, svc) = crate::fixtures::service().await;
-    let cases: [Defect; 11] = [
-        ("Rules_kind", |p| {
-            let mut rule = nurse_rule();
-            rule["kind"] = coded(TERMINOLOGY_ID_ACCESS, "consent");
-            p["rules"] = json!([rule]);
-        }),
-        ("a rule's role in the draft access terminology", |p| {
-            let mut rule = nurse_rule();
-            rule["applies_to"][0]["role"] = coded(TERMINOLOGY_ID_ACCESS, "NURSE");
-            p["rules"] = json!([rule]);
-        }),
+    let malformed: [Defect; 4] = [
         ("an empty list of rules", |p| p["rules"] = json!([])),
         ("an undeclared member", |p| p["colour"] = json!("red")),
         ("a missing mandatory member", |p| {
@@ -253,6 +248,18 @@ async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
         }),
         ("an empty optional list", |p| {
             p["classifications"] = json!([]);
+        }),
+    ];
+    let unprocessable: [Defect; 7] = [
+        ("Rules_kind", |p| {
+            let mut rule = nurse_rule();
+            rule["kind"] = coded(TERMINOLOGY_ID_ACCESS, "consent");
+            p["rules"] = json!([rule]);
+        }),
+        ("a rule's role in the draft access terminology", |p| {
+            let mut rule = nurse_rule();
+            rule["applies_to"][0]["role"] = coded(TERMINOLOGY_ID_ACCESS, "NURSE");
+            p["rules"] = json!([rule]);
         }),
         ("Grace_valid", |p| {
             p["relationship_grace"]["value"] = json!("-P1D");
@@ -273,16 +280,27 @@ async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
             p["archetype_node_id"] = json!("openEHR-EHR-ACCESS_POLICY.other.v1");
         }),
     ];
-    for (defect, break_it) in cases {
+    let refused = async |(defect, break_it): Defect| {
         let mut body = policy(false);
         break_it(&mut body);
-        let refused = svc
-            .put_access_policy(&PolicyPrecondition::Create, &body)
+        svc.put_access_policy(&PolicyPrecondition::Create, &body)
             .await
-            .expect_err(defect);
+            .expect_err(defect)
+    };
+    for case in malformed {
+        let refused = refused(case).await;
         assert!(
             matches!(refused, ServiceError::BadRequest(_)),
-            "{defect}: {refused:?}"
+            "{}: {refused:?}",
+            case.0
+        );
+    }
+    for case in unprocessable {
+        let refused = refused(case).await;
+        assert!(
+            matches!(refused, ServiceError::Unprocessable { .. }),
+            "{}: {refused:?}",
+            case.0
         );
     }
     assert!(
@@ -299,7 +317,7 @@ async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
         .await
         .expect_err("another controller");
     assert!(
-        matches!(refused, ServiceError::BadRequest(_)),
+        matches!(refused, ServiceError::Unprocessable { .. }),
         "{refused:?}"
     );
 }

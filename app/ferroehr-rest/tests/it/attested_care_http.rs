@@ -149,7 +149,6 @@ async fn serve(restricted: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrServic
         auth,
         ..common::api_config(true)
     };
-    common::patient_context(&mut config, FEDERATION);
     config.public_root = Some(
         ferroehr::config::server::PublicRoot::new("https://ehr.example", "")
             .expect("a public root"),

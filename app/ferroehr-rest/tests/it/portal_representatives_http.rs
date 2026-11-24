@@ -4,11 +4,10 @@
 //! Representatives in the patient portal (#5446), driven through the assembled
 //! router over a real `FerroEhrService` on a real `PostgreSQL` 18.
 //!
-//! A `patients` issuer's token names its patient by the EHR of its launch
-//! context. A parent signs in as the actor of the child's token (RFC 8693 §4.1
-//! `act`) or under their own login naming the child's EHR; FerroEHR binds them
-//! to the `PERSON` whose binding key is that login under the token's issuer
-//! and admits them only while that `PERSON` holds a live representation of
+//! A portal token names its patient by the EHR of its launch context. A
+//! parent signs in under their own login naming the child's EHR; FerroEHR
+//! binds them to the `PERSON` whose binding key is that login under the
+//! token's issuer and admits them only while that `PERSON` holds a live representation of
 //! the EHR's subject, a `PARTY_RELATIONSHIP` of its own named
 //! `openehr_access::represents`, recorded for the provider the deployment
 //! acts for. The patient authorises a proxy by committing one on the basis
@@ -26,7 +25,6 @@ use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::{AuthSection, IssuerEntry};
-use ferrohealth_smart::kind::IssuerKind;
 use http::StatusCode;
 use openehr_rm::prelude::EhrStatus;
 use serde_json::{Value, json};
@@ -35,7 +33,7 @@ use crate::common::{self, BASE, EXT};
 use crate::party_binding_http::{
     AUDIENCE, audited_service, person, router_with, service, uid, vo, write,
 };
-use ferroehr::config::binding::{ProviderId, Providers};
+use ferroehr::config::binding::ProviderId;
 
 /// The patient portal's issuer, under which a representative's login is
 /// their binding key.
@@ -51,20 +49,22 @@ const PROXY: &str = "3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f";
 /// The scopes of every portal token.
 const SCOPES: &str = "patient/composition-*.cruds";
 
-/// The configuration trusting `PORTAL` as a `patients` issuer that reads an
-/// `act` as the patient's representative, with its `patient/` grants
-/// honoured.
+/// The configuration trusting `PORTAL`, whose logins its party table binds
+/// under the portal's own identifiers, with its `patient/` grants honoured.
 pub(crate) fn config() -> AppConfig {
     let mut auth = common::auth(AuthSection {
-        issuer: common::named(vec![IssuerEntry {
-            kind: Some(IssuerKind::Patients),
-            jwks_file: common::jwks_file().display().to_string(),
-            profile: ferrohealth_smart::profile::ProfileKeys {
-                act_represents_patient: Some(true),
-                ..ferrohealth_smart::profile::ProfileKeys::default()
-            },
-            ..common::entry(PORTAL, AUDIENCE)
-        }]),
+        issuer: common::bound(
+            vec![IssuerEntry {
+                jwks_file: common::jwks_file().display().to_string(),
+                ..common::entry(PORTAL, AUDIENCE)
+            }],
+            vec![ferrohealth_smart::party::config::PartySection {
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(PORTAL),
+                identifier_issuer: PORTAL.to_owned(),
+                identifier_type: "guid".to_owned(),
+                ..ferrohealth_smart::party::config::PartySection::default()
+            }],
+        ),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
@@ -73,7 +73,6 @@ pub(crate) fn config() -> AppConfig {
         auth,
         ..AppConfig::default()
     };
-    common::patient_context(&mut config, PORTAL);
     config.party_binding.provider = Some(provider());
     config
 }
@@ -83,11 +82,11 @@ pub(crate) fn config() -> AppConfig {
 pub(crate) const PROVIDER: (&str, &str) = ("urn:example:providers", "hospital");
 
 /// [`PROVIDER`] as the party binding names it.
-pub(crate) fn provider() -> Providers {
-    Providers::One(ProviderId {
+pub(crate) fn provider() -> ProviderId {
+    ProviderId {
         issuer: PROVIDER.0.to_owned(),
         id: PROVIDER.1.to_owned(),
-    })
+    }
 }
 
 /// The router over `svc`.
@@ -107,10 +106,10 @@ pub(crate) fn token(sub: &str, ehr: &str, extra: &Value) -> String {
     common::bearer(&claims)
 }
 
-/// The child's token, its actor `actor` when one signs in for the child.
-pub(crate) fn acting(ehr: &str, actor: Option<&str>) -> String {
-    let extra = actor.map_or_else(|| json!({}), |sub| json!({ "act": { "sub": sub } }));
-    token(CHILD_LOGIN, ehr, &extra)
+/// The token naming the child's EHR of the login `login`, the child's own
+/// when none.
+pub(crate) fn acting(ehr: &str, login: Option<&str>) -> String {
+    token(login.unwrap_or(CHILD_LOGIN), ehr, &json!({}))
 }
 
 /// The status and body of `GET /ehr/{ehr}` as `credential`.
@@ -285,10 +284,10 @@ async fn other_ehr(svc: &FerroEhrService) -> String {
     ehr.to_string()
 }
 
-/// A parent reads the child's EHR as the actor of the child's token and
-/// under their own login naming it, and reaches no other EHR either way.
+/// A parent reads the child's EHR under their own login naming it, and
+/// reaches no other EHR.
 #[tokio::test]
-async fn a_parent_reads_the_childs_ehr_on_either_portal_path() {
+async fn a_parent_reads_the_childs_ehr_under_their_own_login() {
     let (_db, svc) = service().await;
     let (subject, ehr) = own_child(&svc).await;
     representative(
@@ -299,10 +298,7 @@ async fn a_parent_reads_the_childs_ehr_on_either_portal_path() {
     .await;
     let elsewhere = other_ehr(&svc).await;
     let app = router(&svc).await;
-    for (path, credential) in [
-        ("act", acting(&ehr, Some(PARENT))),
-        ("own login", token(PARENT, &ehr, &json!({}))),
-    ] {
+    for (path, credential) in [("own login", token(PARENT, &ehr, &json!({})))] {
         let (status, body) = read(&app, &ehr, &credential).await;
         assert_eq!(status, StatusCode::OK, "{path}: {body}");
         let (status, body) = read(&app, &elsewhere, &credential).await;
@@ -330,11 +326,7 @@ async fn a_representation_not_recorded_or_ended_is_refused() {
     )
     .await;
     let app = router(&svc).await;
-    for (case, credential) in [
-        ("no relationship", acting(&ehr, Some(PARENT))),
-        ("ended, act", acting(&ehr, Some(FORMER))),
-        ("ended, own login", token(FORMER, &ehr, &json!({}))),
-    ] {
+    for (case, credential) in [("ended, own login", token(FORMER, &ehr, &json!({})))] {
         let (status, body) = read(&app, &ehr, &credential).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "{case}: {body}");
         assert!(
@@ -342,10 +334,13 @@ async fn a_representation_not_recorded_or_ended_is_refused() {
             "{case}: {body}"
         );
     }
+    let (status, body) = read(&app, &ehr, &acting(&ehr, Some(PARENT))).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "no PERSON: {body}");
+    assert!(body.contains("refused-unbound"), "no PERSON: {body}");
 }
 
 /// A former representative is never the patient (#5532): once their
-/// representation is deleted, both paths refuse them, while the patient's own login is still
+/// representation is deleted, their login is refused, while the patient's own login is still
 /// the patient.
 ///
 /// A representative of another subject only is refused too: a login a `PERSON`
@@ -383,9 +378,7 @@ async fn a_deleted_representation_never_leaves_the_patient_behind() {
     .expect("the representation is deleted");
 
     for (case, credential) in [
-        ("deleted, act", acting(&ehr, Some(PARENT))),
         ("deleted, own login", token(PARENT, &ehr, &json!({}))),
-        ("never recorded, act", acting(&ehr, Some(PROXY))),
         ("never recorded, own login", token(PROXY, &ehr, &json!({}))),
     ] {
         let (status, body) = read(&app, &ehr, &credential).await;
@@ -450,10 +443,7 @@ async fn the_patient_authorises_a_proxy_and_revokes_it() {
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
-    for (path, credential) in [
-        ("act", as_proxy),
-        ("own login", token(PROXY, &ehr, &json!({}))),
-    ] {
+    for (path, credential) in [("own login", as_proxy)] {
         let (status, body) = read(&app, &ehr, &credential).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "revoked, {path}: {body}");
         assert!(

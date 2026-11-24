@@ -176,7 +176,7 @@ SECURITY POSTURE
 {{- end }}
 {{- if .Values.bridge.enabled }}
   FerroBRIDGE:            {{ include "ferroehr.bridgeFullname" . }}:{{ .Values.bridge.service.port }} — reachable from the bridge.networkPolicy.ingressFrom peers only.
-     It reaches this CDR as the client "{{ .Values.bridge.cdr.oauth.clientId }}" of the machines issuer
+     It reaches this CDR as the client "{{ .Values.bridge.cdr.oauth.clientId }}" of the issuer
      {{ .Values.bridge.cdr.oauth.issuer }}, its secret in Secret "{{ .Values.bridge.cdr.existingSecret }}". No Ingress is rendered for it.
      CDR: {{ include "ferroehr.cdrRestUrl" . }}
      {{- if .Values.terminology.enabled }}

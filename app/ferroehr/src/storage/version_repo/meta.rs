@@ -357,12 +357,13 @@ pub struct CurrentVoRow {
     pub branch_version: i32,
 }
 
-/// Read the current-version `(vo_id, tree)` of an EHR's object of `kind`.
+/// Read the current-version `(vo_id, tree)` of an EHR's object of `kind` on
+/// `conn`.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
 pub async fn current_vo(
-    pool: &PgPool,
+    conn: &mut sqlx::PgConnection,
     ehr_id: EhrId,
     kind: &str,
 ) -> Result<Option<CurrentVoRow>, StorageError> {
@@ -374,7 +375,7 @@ pub async fn current_vo(
     let found = sqlx::query(SQL)
         .bind(ehr_id)
         .bind(kind)
-        .fetch_optional(&mut *acquire(pool).await?)
+        .fetch_optional(conn)
         .await?;
     let Some(row) = found else {
         return Ok(None);

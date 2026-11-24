@@ -32,9 +32,9 @@ use openehr_base::v1_3::base_types::identification::object_ref::ObjectRef;
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::access_policy::check::checked;
+use crate::access_policy::check::{PolicyDefect, checked};
 use crate::access_policy::{CHANNEL, LivePolicy};
-use crate::error::{ErrorChain, ServiceError};
+use crate::error::{ErrorChain, ServiceError, Violation};
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::storage::access_policy::{self as store, NewVersion, PolicyRow};
@@ -231,10 +231,11 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// - `bad_request` (`400`) — the body is no canonical-JSON
-    ///   `ACCESS_POLICY`, breaks a draft BMM invariant, its root is no
-    ///   `ACCESS_POLICY` archetype root, its controller is no `ORGANISATION`
-    ///   or another one than the policy's; or `If-Match` is no
-    ///   `OBJECT_VERSION_ID`.
+    ///   `ACCESS_POLICY`, or `If-Match` is no `OBJECT_VERSION_ID`.
+    /// - `content_invalid` (`422`) — the policy breaks a draft BMM invariant
+    ///   or a rule of [`checked`], such as a root that is no `ACCESS_POLICY`
+    ///   archetype root or a controller that is no `ORGANISATION`, or names
+    ///   another controller than the policy's.
     /// - `validation_failed` (`422`) — the policy breaks the template it
     ///   names, or names a code outside a value set it binds.
     /// - `version_mismatch` (`412`) — `precondition` does not hold.
@@ -248,10 +249,11 @@ impl FerroEhrService {
         body: &Value,
     ) -> Result<PolicyVersion, ServiceError> {
         let policy = checked(body).map_err(|defect| {
-            ServiceError::bad_request(
-                format!("the access policy is refused: {}", ErrorChain::new(&defect)),
-                defect,
-            )
+            let detail = format!("the access policy is refused: {}", ErrorChain::new(&defect));
+            match defect {
+                PolicyDefect::NotAPolicy(_) => ServiceError::bad_request(detail, defect),
+                _ => ServiceError::content_invalid(Violation::new(detail).with_source(defect)),
+            }
         })?;
         self.access_policy_content(body, &policy).await?;
         let mut conn = self.recorded_conn(self.access_policy.pool()).await?;
@@ -280,9 +282,12 @@ impl FerroEhrService {
                         ServiceError::internal("read the access policy in force", error)
                     })?;
                 if owner.controller != policy.controller {
-                    return Err(ServiceError::precondition(
-                        "the access policy is refused: its controller is not the controller the \
-                         policy belongs to",
+                    return Err(ServiceError::content_invalid(
+                        Violation::new(
+                            "the access policy is refused: its controller is not the controller \
+                             the policy belongs to",
+                        )
+                        .with_path("ACCESS_POLICY.controller"),
                     ));
                 }
                 let Some(next) = row.version.checked_add(1) else {

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The party binding configuration through `ferroehr::config::assemble`: a
-//! full configuration of every issuer kind loads, and each boot refusal of
+//! full configuration of both issuer kinds loads, and each boot refusal of
 //! `[auth]` and `[authz.party_binding]` names its key; the federation
 //! agreements and the system clients are CDR data, judged at their commit
 //! (`federation_agreements.rs`, `policy_grants.rs`). No openEHR spec governs
@@ -12,13 +12,13 @@ use std::collections::HashMap;
 
 use assert_fs::prelude::FileWriteStr as _;
 use ferroehr::config::FerroEhrConfig;
-use ferroehr::config::binding::{BindingPosture, Providers};
+use ferroehr::config::binding::BindingPosture;
 
 /// An Argon2id PHC string at the OWASP floor.
 const HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaGhhc2hoYQ";
 
-/// A configuration with one issuer of every kind, a bound persons issuer,
-/// and a mapped Basic user.
+/// A configuration with a bound SMART issuer, a SMART issuer of client
+/// credentials, a federation issuer and a mapped Basic user.
 fn full() -> String {
     format!(
         r#"
@@ -27,17 +27,10 @@ subject_index = "local"
 
 [auth.issuer.staff]
 issuer = "https://idp.example/realms/staff"
-kind = "persons"
 audience = ["ferroehr"]
-
-[auth.issuer.patients]
-issuer = "https://idp.example/realms/patients"
-kind = "patients"
-audience = ["ferroehr-patients"]
 
 [auth.issuer.machines]
 issuer = "https://idp.example/realms/machines"
-kind = "machines"
 audience = ["ferroehr-machines"]
 
 [auth.issuer.federation]
@@ -91,7 +84,7 @@ key = { path = "/details[id2]/items[id3]", type = "guid" }
 template_id = "FerroEHR professional role"
 "#;
 
-/// `toml` with [`KEY_TEMPLATE`], so its persons issuer's logins can bind.
+/// `toml` with [`KEY_TEMPLATE`], so its bound issuer's logins can bind.
 fn bound(toml: &str) -> String {
     format!("{toml}{KEY_TEMPLATE}")
 }
@@ -126,15 +119,15 @@ fn a_full_configuration_loads_and_states_its_binding() {
     let config = assemble(&bound(&full())).expect("assembles");
     config.validate().expect("validates");
     let posture = BindingPosture::of(&config);
-    assert_eq!(posture.issuers.len(), 4);
-    // The issuers are in name order: federation, machines, patients, staff.
-    let staff = &posture.issuers[3];
+    assert_eq!(posture.issuers.len(), 3);
+    // The issuers are in name order: federation, machines, staff.
+    let staff = &posture.issuers[2];
     assert_eq!(staff.issuer, "https://idp.example/realms/staff");
     assert_eq!(
         staff.identifier_issuer.as_deref(),
         Some("urn:example:staff-login")
     );
-    assert!(matches!(posture.provider, Some(Providers::One(_))));
+    assert!(posture.provider.is_some());
     assert_eq!(posture.namespace, "demographic");
     assert!(
         posture.agreements.is_empty(),
@@ -144,7 +137,7 @@ fn a_full_configuration_loads_and_states_its_binding() {
         &config,
     ))
     .expect("renders");
-    assert_eq!(info["binding"]["issuers"][3]["kind"], "persons", "{info}");
+    assert_eq!(info["binding"]["issuers"][2]["kind"], "smart", "{info}");
     assert_eq!(
         info["binding"]["agreements"],
         serde_json::json!([]),
@@ -161,18 +154,6 @@ fn a_mapped_basic_user_is_named_while_no_assurance_minimum_is_set() {
     assert_eq!(
         BindingPosture::of(&assured).unassured_basic,
         Vec::<String>::new()
-    );
-}
-
-#[test]
-fn a_persons_issuer_with_no_party_table_is_refused() {
-    let text = refusal(&with(
-        "[auth.issuer.staff.party]\nidentifier_issuer = \"urn:example:staff-login\"\nidentifier_type = \"guid\"\n",
-        "",
-    ));
-    assert!(
-        text.contains("the persons issuer \"https://idp.example/realms/staff\" has no party table"),
-        "{text}"
     );
 }
 
@@ -250,12 +231,12 @@ fn an_explicit_section_overrides_its_default_and_leaves_the_others() {
     assert_ne!(binding.group, default.group);
 }
 
-/// `[authz.rbac] first_admin` beside a `persons` `[auth.issuer.<name>.party]` table is a
+/// `[authz.rbac] first_admin` beside an `[auth.issuer.<name>.party]` table is a
 /// person's credential: unmapped it is refused with the remedy, the operator
 /// grant that lets SCIM provision its `PERSON`, and mapped to a key it boots
 /// before that `PERSON` exists (#5620).
 #[test]
-fn a_first_admin_beside_a_persons_table_is_mapped_or_refused_naming_the_operator_grant() {
+fn a_first_admin_beside_a_party_table_is_mapped_or_refused_naming_the_operator_grant() {
     let first_admin = "[authz.rbac]\nfirst_admin = \"alice\"\n";
     let mapped = with("[authz.rbac]\n", first_admin);
     assemble(&bound(&mapped))
@@ -303,18 +284,16 @@ fn a_basic_user_with_no_mapping_is_refused_naming_the_user() {
 }
 
 #[test]
-fn a_party_table_under_an_issuer_of_another_kind_is_refused() {
+fn a_party_table_under_a_federation_issuer_is_refused() {
     let party = "[auth.issuer.staff.party]\nidentifier_issuer = \"urn:example:staff-login\"\nidentifier_type = \"guid\"\n";
     let text = refusal(&with(
         party,
         &format!(
-            "{party}\n[auth.issuer.machines.party]\nidentifier_issuer = \"urn:example:b\"\nidentifier_type = \"guid\"\n"
+            "{party}\n[auth.issuer.federation.party]\nidentifier_issuer = \"urn:example:b\"\nidentifier_type = \"guid\"\n"
         ),
     ));
     assert!(
-        text.contains(
-            "the party table of \"https://idp.example/realms/machines\" names no trusted persons issuer"
-        ),
+        text.contains("federation") && text.contains("party"),
         "{text}"
     );
 }
@@ -322,7 +301,7 @@ fn a_party_table_under_an_issuer_of_another_kind_is_refused() {
 #[test]
 fn two_issuers_sharing_an_audience_are_refused() {
     let text = refusal(&with(
-        "audience = [\"ferroehr-patients\"]",
+        "audience = [\"ferroehr-machines\"]",
         "audience = [\"ferroehr\"]",
     ));
     assert!(text.contains("share the audience \"ferroehr\""), "{text}");
@@ -364,18 +343,16 @@ fn a_removed_key_is_refused_as_unknown() {
 
 #[test]
 fn a_role_issuer_of_another_kind_is_refused() {
-    for issuer in ["federation", "patients", "machines"] {
-        let text = refusal(&with(
-            "role_issuers = [\"staff\"]",
-            &format!("role_issuers = [\"{issuer}\"]"),
-        ));
-        assert!(
-            text.contains(&format!(
-                "the authz.rbac.role_issuers list names the issuer {issuer:?}, which is not a persons issuer"
-            )),
-            "{text}"
-        );
-    }
+    let text = refusal(&with(
+        "role_issuers = [\"staff\"]",
+        "role_issuers = [\"federation\"]",
+    ));
+    assert!(
+        text.contains(
+            "the authz.rbac.role_issuers list names the issuer \"federation\", which is not a persons issuer"
+        ),
+        "{text}"
+    );
     let text = refusal(&with(
         "role_issuers = [\"staff\"]",
         "role_issuers = [\"https://idp.example/realms/staff\"]",
@@ -389,7 +366,7 @@ fn a_role_issuer_of_another_kind_is_refused() {
 }
 
 #[test]
-fn a_missing_provider_or_both_forms_are_refused() {
+fn a_missing_provider_or_a_provider_list_is_refused() {
     let text = refusal(&with(
         "provider = { issuer = \"urn:oid:2.16.528.1.1007.3.3\", id = \"12345678\" }\n\n[[authz.party_binding.basic_user]]",
         "\n[[authz.party_binding.basic_user]]",
@@ -398,19 +375,11 @@ fn a_missing_provider_or_both_forms_are_refused() {
         text.contains("authz.party_binding.provider is required"),
         "{text}"
     );
-    let both = format!(
-        "{}\n[[authz.party_binding.provider]]\ntenant = \"t\"\nissuer = \"urn:x\"\nid = \"1\"\n",
-        full()
-    );
-    assert!(assemble(&both).is_err(), "both provider forms load");
     let tenants = with(
         "provider = { issuer = \"urn:oid:2.16.528.1.1007.3.3\", id = \"12345678\" }",
-        "provider = [{ tenant = \"t\", issuer = \"urn:x\", id = \"1\" }]",
+        "provider = [{ issuer = \"urn:x\", id = \"1\" }]",
     );
-    assert!(
-        refusal(&tenants).contains("names no tenant_claim"),
-        "a bound issuer with tenants no table covers"
-    );
+    assert!(assemble(&tenants).is_err(), "a provider list loads");
 }
 
 #[test]
@@ -733,23 +702,16 @@ fn an_unknown_scim_key_is_named() {
     assert!(unknown.contains("max_deactivation"), "{unknown}");
 }
 
-/// The person mapping the server installs holds a portal representative's
-/// binding key, the login under the `patients` issuer, beside the keys of the
-/// `persons` issuer's `[auth.issuer.<name>.party]` table (#5622): the boot compiles the
-/// mapping from the one key-issuer set the SCIM gate reads too.
+/// The person mapping the server installs holds the keys of each
+/// `[auth.issuer.<name>.party]` table: the boot compiles the mapping from the
+/// one key-issuer set the SCIM gate reads too.
 #[test]
-fn the_installed_mapping_holds_a_patients_issuer_key_beside_a_party_table() {
+fn the_installed_mapping_holds_the_party_table_keys() {
     let config = assemble(&bound(&full())).expect("assembles");
     config.validate().expect("validates");
     let resolved = config.resolve_auth().expect("resolves");
     let issuers = ferroehr::config::binding::key_issuers(&resolved);
-    assert_eq!(
-        issuers,
-        [
-            "https://idp.example/realms/patients".to_owned(),
-            "urn:example:staff-login".to_owned()
-        ]
-    );
+    assert_eq!(issuers, ["urn:example:staff-login".to_owned()]);
     let mapping = config
         .authz
         .party_binding
@@ -759,11 +721,5 @@ fn the_installed_mapping_holds_a_patients_issuer_key_beside_a_party_table() {
     let key = mapping
         .key_selector("FerroEHR professional")
         .expect("the default template keys logins");
-    assert!(
-        key.issuers()
-            .iter()
-            .any(|issuer| issuer == "https://idp.example/realms/patients"),
-        "{:?}",
-        key.issuers()
-    );
+    assert_eq!(key.issuers(), ["urn:example:staff-login".to_owned()]);
 }

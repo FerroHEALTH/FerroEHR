@@ -239,48 +239,6 @@ pub async fn representations(
     Ok(out)
 }
 
-/// The live key rows of the `PERSON`s whose portal login is `value`.
-///
-/// The key is under the identifier issuer `issuer`, a `patients` issuer, of
-/// any type, compared in the canonical form its type declares; each row is
-/// `(party, lifecycle_state)`.
-///
-/// # Errors
-/// [`LookupError::Closed`] when `issuer`'s key space is not `active` or no
-/// key space records it, [`LookupError::Storage`] on a driver failure.
-pub async fn representative_keys(
-    conn: &mut PgConnection,
-    issuer: &str,
-    value: &str,
-) -> Result<Vec<(Uuid, String)>, LookupError> {
-    let rows = sqlx::query(
-        "SELECT s.state AS space, b.party_id, b.lifecycle_state \
-         FROM (SELECT $1::text AS issuer) q \
-         LEFT JOIN binding_key_space s ON s.issuer = q.issuer \
-         LEFT JOIN binding_identifier b ON s.state = 'active' \
-           AND b.selector = 'key' AND b.issuer = q.issuer AND b.retired_at IS NULL \
-           AND b.value = CASE WHEN lower(b.identifier_type) IN ('guid', 'uuid') \
-                              THEN lower($2) ELSE $2 END \
-         ORDER BY b.party_id",
-    )
-    .bind(issuer)
-    .bind(value)
-    .fetch_all(&mut *conn)
-    .await?;
-    let space: Option<String> = match rows.first() {
-        Some(row) => row.try_get("space")?,
-        None => None,
-    };
-    open(issuer, space.as_deref())?;
-    let mut out = Vec::with_capacity(rows.len());
-    for row in rows {
-        if let Some(party) = row.try_get::<Option<Uuid>, _>("party_id")? {
-            out.push((party, row.try_get("lifecycle_state")?));
-        }
-    }
-    Ok(out)
-}
-
 /// The representation a representative is admitted on.
 ///
 /// It is live on the day, recorded for a provider the caller acts for, and
