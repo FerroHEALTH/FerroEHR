@@ -217,7 +217,7 @@ pub async fn count_contributions(
     upper: Option<jiff::Timestamp>,
 ) -> Result<i64, StorageError> {
     Ok(sqlx::query_scalar(
-        "SELECT count(*) FROM contribution c JOIN commit_audit a ON a.id = c.commit_audit_id \
+        "SELECT count(*) FROM contribution c JOIN commit_audit_facts a ON a.id = c.commit_audit_id \
          WHERE c.ehr_id = $1 \
            AND ($2::timestamptz IS NULL OR a.time_committed >= $2::timestamptz) \
            AND ($3::timestamptz IS NULL OR a.time_committed <= $3::timestamptz)",

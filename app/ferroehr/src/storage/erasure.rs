@@ -77,7 +77,7 @@ pub async fn delete_commit_audits(tx: &mut PgConnection, ids: &[Uuid]) -> Result
     if ids.is_empty() {
         return Ok(());
     }
-    sqlx::query("DELETE FROM commit_audit WHERE id = ANY($1)")
+    sqlx::query("DELETE FROM commit_audit_facts WHERE id = ANY($1)")
         .bind(ids)
         .execute(tx)
         .await?;
@@ -251,7 +251,7 @@ pub async fn delete_orphan_commit_audits(
     ids: &[Uuid],
 ) -> Result<(), StorageError> {
     sqlx::query(
-        "DELETE FROM commit_audit a WHERE a.id = ANY($1) \
+        "DELETE FROM commit_audit_facts a WHERE a.id = ANY($1) \
            AND NOT EXISTS (SELECT 1 FROM version v WHERE v.commit_audit_id = a.id) \
            AND NOT EXISTS (SELECT 1 FROM contribution c WHERE c.commit_audit_id = a.id)",
     )

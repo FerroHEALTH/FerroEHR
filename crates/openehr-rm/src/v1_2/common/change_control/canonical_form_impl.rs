@@ -105,7 +105,8 @@ impl<'a> Writer<'a> {
 
 /// Orders `a` and `b` by their UTF-16 code units (RFC 8785 §3.2.3), by bytes
 /// where that order agrees.
-pub(super) fn utf16_order(a: &str, b: &str) -> Ordering {
+#[must_use]
+pub fn utf16_order(a: &str, b: &str) -> Ordering {
     match a.bytes().zip(b.bytes()).find(|(x, y)| x != y) {
         None => a.len().cmp(&b.len()),
         Some((x, y)) if x.is_ascii() && y.is_ascii() => x.cmp(&y),
@@ -118,7 +119,10 @@ const EXACT_INTEGER: u64 = 1 << 53;
 
 /// Writes `number` to `out` as the ECMAScript Number-to-String form of its
 /// IEEE 754 double (RFC 8785 §3.2.2.3), every integer included.
-pub(super) fn write_number(number: &Number, out: &mut String) -> Result<(), serde_json::Error> {
+///
+/// # Errors
+/// A [`serde_json::Error`] when `number` has no finite IEEE 754 double form.
+pub fn write_number(number: &Number, out: &mut String) -> Result<(), serde_json::Error> {
     // NOTE: ECMA-262 Number::toString writes an integral double below 10^21 as
     // its decimal digits, so an integer within 2^53 is written as its own.
     if let Some(magnitude) = number.as_u64().filter(|n| *n <= EXACT_INTEGER) {
@@ -172,7 +176,7 @@ const fn escaped(byte: u8) -> bool {
 
 /// Writes `text` to `out` as a JSON string (RFC 8785 §3.2.2.2), copying each
 /// run with nothing to escape whole.
-pub(super) fn write_string(text: &str, out: &mut String) {
+pub fn write_string(text: &str, out: &mut String) {
     out.reserve(text.len() + 2);
     out.push('"');
     let mut rest = text;

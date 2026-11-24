@@ -458,7 +458,7 @@ async fn commit_audit_attestation_attributes_read_the_stored_audit() {
         .version_uid();
     let vo: uuid::Uuid = vo_of(&marked).parse().expect("vo id");
     sqlx::query(
-        "UPDATE commit_audit SET attestation = $1 \
+        "UPDATE commit_audit_facts SET attestation = $1 \
          WHERE id = (SELECT commit_audit_id FROM version WHERE vo_id = $2)",
     )
     .bind(json!({

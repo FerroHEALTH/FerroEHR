@@ -10,7 +10,9 @@
 //! confirmed after it ran takes from here the newest revisions its statements
 //! saw, and its answer leaves only once the copies hold them. A write judges
 //! its gate read's revisions before it writes, and a run that committed a
-//! write is never run again (#6256). No openEHR spec governs the copies: our
+//! write is never run again (#6256). A party statement, whose schema holds no
+//! policy, reads them through `clinical_door.policy_revisions()` where the two
+//! domains share a database (#6320). No openEHR spec governs the copies: our
 //! own design.
 
 use std::cell::Cell;
@@ -37,6 +39,9 @@ pub struct Seen {
 
 tokio::task_local! {
     static SEEN: Cell<Seen>;
+    /// Set while a request's statements run on the party pool of a service
+    /// whose party roles may run `clinical_door.policy_revisions()` (#6320).
+    static DOOR: ();
 }
 
 /// Runs `fut` gathering the revisions its statements read and whether it
@@ -47,6 +52,30 @@ pub async fn scope<F: Future>(fut: F) -> (F::Output, Seen) {
         (output, SEEN.with(Cell::get))
     })
     .await
+}
+
+/// Runs `fut`, statements on the party pool, through the clinical door when
+/// `open`.
+///
+/// Each statement that confirms a request's policy copies then reads the
+/// policy and definition revisions through `clinical_door.policy_revisions()`:
+/// the two domains share a database and the party roles may run it (#6320).
+pub async fn through_clinical_door<F: Future>(open: bool, fut: F) -> F::Output {
+    if open {
+        DOOR.scope((), fut).await
+    } else {
+        fut.await
+    }
+}
+
+/// Whether a statement of the running request reads the revisions through
+/// the clinical door.
+///
+/// It does on the party pool behind an open door ([`through_clinical_door`]),
+/// inside a [`scope`] that confirms the copies after it ran.
+#[must_use]
+pub fn reads_clinical_door() -> bool {
+    DOOR.try_with(|()| ()).is_ok() && SEEN.try_with(|_| ()).is_ok()
 }
 
 /// The newest revisions the running request's statements read so far;

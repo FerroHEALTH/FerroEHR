@@ -131,7 +131,7 @@ impl FerroEhrService {
             .commit_direct_create(
                 (support::kind_of(kind), container),
                 request,
-                "PARTY",
+                "PARTY creation",
                 |body, envelope| {
                     Change::create_allocated(allocated, support::kind_of(kind), body, envelope)
                 },
@@ -217,7 +217,7 @@ impl FerroEhrService {
             Some(Container::Existing(vo_id)),
         );
         let (committed, served) = self
-            .commit_direct_update(addressed, precondition, request, "PARTY")
+            .commit_direct_update(addressed, precondition, request, "PARTY update")
             .await?;
         let read_back = self.read_party(kind, committed.vo_id, Some(committed.tree), None);
         demographic_answer(served, &committed, read_back).await

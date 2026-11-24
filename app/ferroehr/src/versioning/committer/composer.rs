@@ -98,7 +98,11 @@ pub(crate) async fn confirm_unchanged(
     let unchanged = previous
         .and_then(|text| openehr_its::json::from_canonical_json::<PartyProxy>(&text).ok())
         .is_some_and(|previous| previous == *stated);
-    if unchanged { Ok(()) } else { Err(refused()) }
+    if unchanged {
+        Ok(())
+    } else {
+        Err(ServiceError::not_permitted(REFUSAL))
+    }
 }
 
 /// Whether `identity` is a professional bound to a `PERSON` through a token:
@@ -126,7 +130,7 @@ fn settle_for(identity: &CommitterIdentity, body: &mut Body) -> Result<Settled, 
         // NOTE: RM common master06 §Incomplete Content, a 553|incomplete| body may state no
         // composer yet, and one that names nobody names no one else.
         None => return Ok(Settled::Done),
-        Some(Err(_)) => return Err(refused()),
+        Some(Err(_)) => return Err(ServiceError::not_permitted(REFUSAL)),
         Some(Ok(stated)) => match judge(&stated, &ours, identity, || {
             Capabilities::current().holds(Operation::ComposeFor)
         }) {
@@ -161,13 +165,13 @@ fn judge(
         PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(own)),
     ) = (stated, ours)
     else {
-        return Err(refused());
+        return Err(ServiceError::not_permitted(REFUSAL));
     };
     if bound::placeholder(party) {
         return if bound::names_caller(party, identity) {
             Ok(Verdict::Fill)
         } else {
-            Err(refused())
+            Err(ServiceError::not_permitted(REFUSAL))
         };
     }
     if bound::states_nothing_more(party, own)
@@ -175,7 +179,7 @@ fn judge(
     {
         return Ok(Verdict::Keep);
     }
-    Err(refused())
+    Err(ServiceError::not_permitted(REFUSAL))
 }
 
 /// Whether `party` names, by its `external_ref`, a `PERSON` of the party
@@ -211,16 +215,13 @@ fn another_person(
     person && consistent && named == provider.is_some()
 }
 
-/// The refusal of a composer the bound professional may not state.
-pub(crate) fn refused() -> ServiceError {
-    ServiceError::not_permitted(
-        "COMPOSITION.composer: a bound professional's COMPOSITION names the professional as its \
-         composer; send the placeholder naming the authenticated caller, which the server \
-         fills, a composer that states nothing the server's does not, or, under a compose_for \
-         grant, another PERSON of the same provider by its external_ref (RM COMPOSITION.composer; \
-         EHDS Art. 13(4))",
-    )
-}
+/// The message of the refusal of a composer the bound professional may not
+/// state.
+pub(crate) const REFUSAL: &str = "COMPOSITION.composer: a bound professional's COMPOSITION names the professional as its \
+     composer; send the placeholder naming the authenticated caller, which the server \
+     fills, a composer that states nothing the server's does not, or, under a compose_for \
+     grant, another PERSON of the same provider by its external_ref (RM COMPOSITION.composer; \
+     EHDS Art. 13(4))";
 
 #[cfg(test)]
 mod tests {

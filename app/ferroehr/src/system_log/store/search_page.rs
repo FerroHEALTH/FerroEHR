@@ -118,15 +118,77 @@ pub(super) fn build_search_statements(
     resolved: &[Option<TokenMatch>],
     cursor: i64,
 ) -> (String, SqlxValues, String, SqlxValues) {
+    build(
+        filter,
+        resolved,
+        cursor,
+        Numbers::of(filter),
+        &carried_of(filter),
+    )
+}
+
+/// The page's counts: the records past the offset it reads, one past the
+/// page, which tells the caller whether a next page exists; the offset; and
+/// the records it serves whole.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct Numbers {
+    pub(super) count: u64,
+    pub(super) offset: u64,
+    pub(super) served: u64,
+}
+
+impl Numbers {
+    /// The counts `filter` asks for.
+    pub(super) fn of(filter: &AuditSearchFilter) -> Self {
+        let served = u64::try_from(page_size(filter)).unwrap_or(50);
+        Self {
+            count: served.saturating_add(1),
+            offset: u64::try_from(Ord::max(filter.offset, 0)).unwrap_or(0),
+            served,
+        }
+    }
+}
+
+/// What the page carries beside its records: nothing, the policy revisions,
+/// or those and the party store's read through the door the value names.
+#[derive(Debug, Clone, PartialEq)]
+pub(super) enum CarriedRead {
+    Nothing,
+    Policy,
+    Party(Option<String>),
+}
+
+/// What `filter`'s page carries.
+pub(super) fn carried_of(filter: &AuditSearchFilter) -> CarriedRead {
+    if !filter.carried.policy {
+        return CarriedRead::Nothing;
+    }
+    if filter.carried.reads_party() {
+        let door = crate::party_binding::request::door();
+        CarriedRead::Party(door.as_deref().map(|held| held.text().to_owned()))
+    } else {
+        CarriedRead::Policy
+    }
+}
+
+/// The two statements of [`build_search_statements`] from the page's counts
+/// and what it carries.
+pub(super) fn build(
+    filter: &AuditSearchFilter,
+    resolved: &[Option<TokenMatch>],
+    cursor: i64,
+    numbers: Numbers,
+    carried: &CarriedRead,
+) -> (String, SqlxValues, String, SqlxValues) {
     let condition = crate::system_log::search::condition::search_condition(filter, resolved);
-    // One record past the page, which tells the caller whether a next page exists.
-    let count = u64::try_from(page_size(filter))
-        .unwrap_or(50)
-        .saturating_add(1);
-    let offset = u64::try_from(Ord::max(filter.offset, 0)).unwrap_or(0);
     let (count_sql, count_values) = total(&condition, cursor).build_sqlx(PostgresQueryBuilder);
-    let served = u64::try_from(page_size(filter)).unwrap_or(50);
-    let mut page = page(&condition, count, offset, served, cursor);
+    let mut page = page(
+        &condition,
+        numbers.count,
+        numbers.offset,
+        numbers.served,
+        cursor,
+    );
     // NOTE: our own design (#6320), the revisions ride on the page's first record alone, which
     // the confirmation reads, so the other records carry a NULL over the wire.
     let first = |carried: Expr| -> Expr {
@@ -138,17 +200,23 @@ pub(super) fn build_search_statements(
             .into()
     };
     page.expr_as(first(Expr::cust(CURSOR_SQL_ITEM)), Alias::new(CURSOR));
-    if filter.carried.policy {
-        let carried = if filter.carried.reads_party() {
-            let door = crate::party_binding::request::door();
-            Expr::cust_with_values(
-                super::carried::PARTY,
-                [door.as_deref().map(|held| held.text().to_owned())],
-            )
-        } else {
-            Expr::cust(super::carried::POLICY)
-        };
-        page.expr_as(first(carried), Alias::new(super::carried::CARRIED));
+    match carried {
+        CarriedRead::Nothing => {}
+        CarriedRead::Policy => {
+            page.expr_as(
+                first(Expr::cust(super::carried::POLICY)),
+                Alias::new(super::carried::CARRIED),
+            );
+        }
+        CarriedRead::Party(door) => {
+            page.expr_as(
+                first(Expr::cust_with_values(
+                    super::carried::PARTY,
+                    [door.clone()],
+                )),
+                Alias::new(super::carried::CARRIED),
+            );
+        }
     }
     let (sql, values) = page.build_sqlx(PostgresQueryBuilder);
     (count_sql, count_values, sql, values)
@@ -192,7 +260,7 @@ pub(super) fn shaped(filter: &AuditSearchFilter) -> bool {
 
 /// The kind of `criterion`, the token parameter's element among them, and
 /// the number of its values.
-fn criterion_kind(criterion: &AuditCriterion) -> (CriterionKind, usize) {
+pub(super) fn criterion_kind(criterion: &AuditCriterion) -> (CriterionKind, usize) {
     match criterion {
         AuditCriterion::Patient(values) => (CriterionKind::Patient, values.len()),
         AuditCriterion::Agent(values) => (CriterionKind::Agent, values.len()),
@@ -208,7 +276,7 @@ fn criterion_kind(criterion: &AuditCriterion) -> (CriterionKind, usize) {
 
 /// What a criterion filters on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum CriterionKind {
+pub(super) enum CriterionKind {
     Patient,
     Agent,
     Entity,

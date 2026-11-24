@@ -35,7 +35,8 @@ impl FerroEhrService {
         if placed.is_empty() {
             return Ok(());
         }
-        self.episodes_declared(ehr_id, &placed).await
+        // NOTE: our own design (#6412), only a placed commit allocates the check's future.
+        Box::pin(self.episodes_declared(ehr_id, &placed)).await
     }
 
     /// Refuses the placement `placed` of a composition in `ehr_id` unless

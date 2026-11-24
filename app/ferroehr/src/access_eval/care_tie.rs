@@ -36,9 +36,8 @@ use openehr_rm::draft::access_control::terminology::{
 };
 use uuid::Uuid;
 
-use crate::party_binding::grants::caller::care_of::{
-    CareOf, CarerKind, Cover, Episode, ProviderKey,
-};
+use crate::party_binding::grants::caller::care_of::{CareOf, CarerKind, ProviderKey};
+use crate::party_binding::grants::caller::care_ref::{Cover, Episode};
 use crate::party_binding::grants::caller::facts::CallerFacts;
 use crate::versioning::episode::EpisodeKey;
 
