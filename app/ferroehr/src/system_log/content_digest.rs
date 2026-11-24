@@ -10,7 +10,7 @@
 //! stored columns. An auditor recomputes it from a row alone:
 //!
 //! ```text
-//! SHA-256( RFC 8785 ( ["ferroehr.audit_event.v6", { <column>: <value>, ... }] ) )
+//! SHA-256( RFC 8785 ( ["ferroehr.audit_event.v7", { <column>: <value>, ... }] ) )
 //! ```
 //!
 //! The object holds every column of `audit.audit_event` except `seq` (the
@@ -44,10 +44,10 @@ use openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_jso
 use openehr_rm::v1_2::common::change_control::canonical_serializer_impl::canonical_to_string;
 
 /// The tag the digested array starts with.
-pub const TAG: &str = "ferroehr.audit_event.v6";
+pub const TAG: &str = "ferroehr.audit_event.v7";
 
 /// The `digest_version` of a record whose digest has this form.
-pub const VERSION: i16 = 6;
+pub const VERSION: i16 = 7;
 
 /// An instant as the digest writes it: UTC, six fractional digits, `Z`.
 #[must_use]
@@ -63,10 +63,6 @@ pub fn to_microsecond(at: jiff::Timestamp) -> jiff::Timestamp {
 
 /// The columns of one record, borrowed, as the digest writes them.
 #[derive(Debug, Clone, Copy)]
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "the record's four boolean columns, each its own member of the digested object"
-)]
 pub struct Record<'a> {
     /// `id`.
     pub id: uuid::Uuid,
@@ -154,8 +150,6 @@ pub struct Record<'a> {
     pub search_tokens: &'a str,
     /// `binding`.
     pub binding: Option<&'a str>,
-    /// `guest`.
-    pub guest: bool,
     /// `party`.
     pub party: Option<&'a Value>,
     /// `party_groups`.
@@ -227,7 +221,6 @@ pub fn of(record: &Record<'_>) -> Result<[u8; 32], Unwritable> {
     w.text("event_code", record.event_code);
     w.json("external_fields", record.external_fields)?;
     w.json("facilities", record.facilities)?;
-    w.boolean("guest", record.guest);
     w.uuid("id", record.id);
     w.optional_text("issuer", record.issuer);
     w.optional_text("legal_basis", record.legal_basis);
@@ -491,7 +484,7 @@ pub const STORED: &str = "jsonb_build_object(\
      'category_content', e.category_content, \
      'render_policy', encode(e.render_policy, 'hex'), \
      'search_tokens', to_jsonb(e.search_tokens::text[]), \
-     'binding', e.binding, 'guest', e.guest) \
+     'binding', e.binding) \
      || jsonb_build_object(\
      'party', e.party, 'party_groups', e.party_groups, 'provider', e.provider, \
      'representation', e.representation, 'external_fields', e.external_fields, \
@@ -554,7 +547,6 @@ mod tests {
             render_policy: &[0x00, 0xff],
             search_tokens: "{3,-1}",
             binding: None,
-            guest: false,
             party: None,
             party_groups: None,
             provider: None,
@@ -617,7 +609,6 @@ mod tests {
             ("render_policy", text("00ff")),
             ("search_tokens", serde_json::json!(["3", "-1"])),
             ("binding", Value::Null),
-            ("guest", Value::Bool(false)),
             ("party", Value::Null),
             ("party_groups", Value::Null),
             ("provider", Value::Null),
@@ -628,10 +619,10 @@ mod tests {
             ("facilities", Value::Null),
             ("binding_detail", Value::Null),
             ("summary", Value::Null),
-            ("digest_version", text("6")),
+            ("digest_version", text("7")),
             ("token_attributes", Value::Null),
         ];
-        assert_eq!(members.len(), 56, "every column but seq and content_digest");
+        assert_eq!(members.len(), 55, "every column but seq and content_digest");
         Value::Object(
             members
                 .into_iter()
@@ -648,7 +639,7 @@ mod tests {
         let digest = of(&record(&roles, "2026-11-22T04:31:28.2Z")).expect("a digest");
         assert_eq!(
             crate::digest::hex(&digest),
-            "74cea798d83a2e263a69c5d25c94ba5fc8943ae4b89e8433627ff081e7b30168"
+            "f35185db7443a5ca8de6c6dbd4e82ce08721125e054af93365547edfc4c21dfa"
         );
     }
 

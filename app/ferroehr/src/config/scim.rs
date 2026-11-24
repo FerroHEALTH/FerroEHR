@@ -172,14 +172,13 @@ mod tests {
     }
 
     #[test]
-    fn the_table_takes_no_public_base_url_and_no_client() {
-        for key in [
-            "public_base_url = \"https://cdr.example.com\"",
-            "[[client]]\nclient_id = \"entra\"",
-        ] {
-            let refused = toml::from_str::<ScimConfig>(key).expect_err("the key is unknown");
-            assert!(refused.to_string().contains("unknown field"), "{refused}");
-        }
+    fn an_unknown_key_is_refused() {
+        let refused =
+            toml::from_str::<ScimConfig>("colour = \"blue\"").expect_err("the key is unknown");
+        assert!(
+            refused.to_string().contains("unknown field `colour`"),
+            "{refused}"
+        );
     }
 
     #[test]

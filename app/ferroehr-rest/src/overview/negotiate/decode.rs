@@ -23,7 +23,7 @@ use super::{
     WireFormat, classify_media, content_type_format, header_str, media_token,
     require_known_xml_lineage,
 };
-use ferroehr::telemetry::stage::{self, Stage};
+use ferroehr::telemetry::stage::Stage;
 
 /// Decode a required JSON body into a `serde_json::Value`.
 ///
@@ -31,7 +31,7 @@ use ferroehr::telemetry::stage::{self, Stage};
 /// [`ApiError::UnsupportedMediaType`] if the `Content-Type` is not JSON;
 /// [`ApiError::BadRequest`] if the bytes are not valid JSON.
 pub(crate) fn json_value(headers: &HeaderMap, body: &Bytes) -> Result<serde_json::Value, ApiError> {
-    let _stage = stage::enter(Stage::Decode);
+    let _stage = super::off_the_pool(Stage::Decode);
     require_json(headers)?;
     parse_json(body)
 }
@@ -48,7 +48,7 @@ pub(crate) fn contribution_text(
     headers: &HeaderMap,
     body: &Bytes,
 ) -> Result<ContributionText, ApiError> {
-    let _stage = stage::enter(Stage::Decode);
+    let _stage = super::off_the_pool(Stage::Decode);
     require_json(headers)?;
     if let Ok(text) = std::str::from_utf8(body)
         && let Ok(found) = openehr_its::json::scan_keys(text)
@@ -109,7 +109,7 @@ pub(crate) fn typed_json<T: DeserializeOwned>(
     body: &Bytes,
     what: &str,
 ) -> Result<T, ApiError> {
-    let _stage = stage::enter(Stage::Decode);
+    let _stage = super::off_the_pool(Stage::Decode);
     require_json(headers)?;
     ferroehr::telemetry::conversion::record("text_to_dto");
     let mut de = serde_json::Deserializer::from_slice(body);
@@ -155,7 +155,7 @@ pub(crate) fn rm_value<T>(headers: &HeaderMap, body: &Bytes) -> Result<T, ApiErr
 where
     T: FromXml + DeserializeOwned,
 {
-    let _stage = stage::enter(Stage::Decode);
+    let _stage = super::off_the_pool(Stage::Decode);
     match content_type_format(headers) {
         Some(WireFormat::CanonicalJson) => {
             let json = std::str::from_utf8(body)

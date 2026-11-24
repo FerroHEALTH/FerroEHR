@@ -175,7 +175,6 @@ fn of(
                 details
                     .and_then(|details| details.provider.clone())
                     .map(|(issuer, id)| Identified { issuer, id }),
-                false,
             );
             if caller.actor().is_some() {
                 record.actor_chain = actor_chain(caller);
@@ -200,7 +199,6 @@ fn portal_record(
         false,
         Vec::new(),
         None,
-        false,
     );
     record.representation = Some(Representation {
         represented: portal.subject.to_string(),

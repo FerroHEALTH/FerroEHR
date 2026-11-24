@@ -378,7 +378,6 @@ CREATE TABLE audit_event (
     party                  jsonb,
     party_groups           jsonb,
     provider               jsonb,
-    guest                  boolean     NOT NULL DEFAULT false,
     representation         jsonb,
     external_fields        jsonb,
     agreement              jsonb,
@@ -387,7 +386,7 @@ CREATE TABLE audit_event (
     binding_detail         jsonb,
     summary                jsonb,
     -- The form of the record's content digest (system_log::content_digest).
-    digest_version         smallint    NOT NULL DEFAULT 6,
+    digest_version         smallint    NOT NULL DEFAULT 7,
     -- The purposes of use and professional roles the access token states.
     token_attributes       jsonb,
     -- The SHA-256 of the record's columns, computed by the writer.
@@ -433,11 +432,11 @@ CREATE TABLE audit_event (
             'refused-unbound', 'refused-ambiguous', 'refused-inactive', 'refused-abandoned',
             'refused-deprovisioned', 'refused-wrong-marker',
             'refused-representation-unrecorded', 'refused-key-claim-missing',
-            'refused-groups-unavailable', 'refused-guest', 'refused-external-incomplete',
+            'refused-groups-unavailable', 'refused-external-incomplete',
             'refused-trc-patient-mismatch', 'refused-trc-missing',
             'refused-system-personal-scope', 'refused-no-agreement',
             'refused-scope-beyond-agreement', 'refused-correlation-missing')),
-    CONSTRAINT ck_audit_event_digest_version CHECK (digest_version = 6),
+    CONSTRAINT ck_audit_event_digest_version CHECK (digest_version = 7),
     CONSTRAINT ck_audit_event_content_digest CHECK (octet_length(content_digest) = 32)
 );
 CREATE INDEX ix_audit_event_retention_ends ON audit_event (retention_ends)
@@ -567,8 +566,6 @@ COMMENT ON COLUMN audit_event.party_groups IS
     'The ids of the GROUP parties the token names that the bound party belongs to.';
 COMMENT ON COLUMN audit_event.provider IS
     'The healthcare provider the access is attributed to, {issuer, id} (EHDS Annex II 3.2(a)).';
-COMMENT ON COLUMN audit_event.guest IS
-    'Whether the bound caller is a guest its issuer admits (GDPR Art. 9(3), Art. 29).';
 COMMENT ON COLUMN audit_event.representation IS
     'For a representative: whom they act for, on which asserted ground, and the subject_relationship code of their committer.';
 COMMENT ON COLUMN audit_event.external_fields IS
@@ -584,7 +581,7 @@ COMMENT ON COLUMN audit_event.binding_detail IS
 COMMENT ON COLUMN audit_event.summary IS
     'For a summary record: the count of the refusals it stands for and the EHR ids they named.';
 COMMENT ON COLUMN audit_event.digest_version IS
-    'The form of the record''s content digest: 6, the RFC 8785 form system_log::content_digest documents.';
+    'The form of the record''s content digest: 7, the RFC 8785 form system_log::content_digest documents.';
 COMMENT ON COLUMN audit_event.content_digest IS
     'The SHA-256 of the record''s columns in the form system_log::content_digest documents, computed by the writer; its window''s seal covers it, and audit_event_reaped keeps it once retention removed the record.';
 COMMENT ON COLUMN audit_event.seq IS

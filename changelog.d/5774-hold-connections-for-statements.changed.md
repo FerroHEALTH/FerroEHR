@@ -1,0 +1,1 @@
+- A request gives its pool connections back as soon as it turns to work that runs no statement: decoding the request body, encoding the answer, rendering an ITI-81 page, and the way out after its access record is written. A commit now holds its party connection about 1 ms, where it held it through the body's decode and validation.

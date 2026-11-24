@@ -19,17 +19,14 @@ reaches the two Yellow Button functions on FerroBRIDGE.
 
 ## The flow
 
-```text
- patient app ── standalone patient launch ──▶ FerroSMART ── login ──▶ eID (DigiD over SAML, ...)
-     │                                          │  acr = the eIDAS level of the login
-     │ Bearer token (patient/ scopes, acr)      │
-     ▼                                          │ RFC 8693 token exchange
- FerroBRIDGE ◀─────────────────────────────────┘ (sub, fhirUser, patient, acr, ehrId; client_id = FerroBRIDGE)
-     │  GET /fhir/Patient/{id}/$summary   (Download)
-     │  POST, GET, DELETE /shl            (One-time Share)
-     │  exchanged token, patient/composition-*.r patient/aql-*.s
-     ▼
- FerroEHR (openEHR CDR) ── terminology ──▶ FerroTERM
+```mermaid
+flowchart TB
+    app["patient app"] -- "standalone patient launch" --> smart["FerroSMART<br/>acr = the eIDAS level of the login"]
+    smart -- "login" --> eid["eID (DigiD over SAML, ...)"]
+    app -- "Bearer token (patient/ scopes, acr)" --> bridge["FerroBRIDGE"]
+    smart -- "RFC 8693 token exchange<br/>(sub, fhirUser, patient, acr, ehrId, client_id = FerroBRIDGE)" --> bridge
+    bridge -- "GET /fhir/Patient/{id}/$summary (Download)<br/>POST, GET, DELETE /shl (One-time Share)<br/>exchanged token, patient/composition-*.r patient/aql-*.s" --> ehr["FerroEHR (openEHR CDR)"]
+    ehr -- "terminology" --> term["FerroTERM"]
 ```
 
 1. The person signs in to a patient app with a standalone patient launch
