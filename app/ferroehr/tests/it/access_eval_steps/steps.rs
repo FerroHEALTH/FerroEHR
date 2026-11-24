@@ -325,8 +325,8 @@ fn step_2_restriction() {
 }
 
 /// Step 2 over each attribute of a data scope: objects, archetypes,
-/// categories, origins and commit time, and the polarity of a fact the
-/// object lacks.
+/// categories, origins, episodes and commit time, and the polarity of a fact
+/// the object lacks.
 #[test]
 fn step_2_data_scope_attributes() {
     let restriction = |data: Value| directive("restriction", "deny", &json!({ "data": [data] }));
@@ -337,6 +337,7 @@ fn step_2_data_scope_attributes() {
         archetype: Some("openEHR-EHR-COMPOSITION.report.v1"),
         origins: Some(&origins),
         recorded: Some("2026-11-12T08:00:00Z".parse().expect("an instant")),
+        episodes: Some(&CARDIOLOGY_EPISODE[..]),
     });
     let unstamped = Item::Object(Object {
         vo_id: uuid(OTHER),
@@ -344,6 +345,7 @@ fn step_2_data_scope_attributes() {
         archetype: None,
         origins: None,
         recorded: None,
+        episodes: None,
     });
     let rows = [
         (
@@ -368,6 +370,18 @@ fn step_2_data_scope_attributes() {
             "origins",
             json!({ "origins": ["lab-system"] }),
             ABSENT_RESTRICTED,
+            ABSENT_RESTRICTED,
+        ),
+        (
+            "episodes",
+            episodes(&["C-17"]),
+            ABSENT_RESTRICTED,
+            ABSENT_RESTRICTED,
+        ),
+        (
+            "another episode",
+            episodes(&["D-4"]),
+            Outcome::Admit,
             ABSENT_RESTRICTED,
         ),
         (
@@ -400,6 +414,7 @@ fn step_2_data_scope_attributes() {
         archetype: None,
         origins: Some(&[]),
         recorded: None,
+        episodes: Some(&[]),
     });
     let case = Case::of(settings(
         "open",

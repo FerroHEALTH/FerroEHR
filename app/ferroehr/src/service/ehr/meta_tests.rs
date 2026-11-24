@@ -31,26 +31,26 @@ fn body(root_uid: Option<&str>, nested_uid: &str) -> String {
 fn the_root_uid_of_this_version_is_carried() {
     let text = body(Some(OWN), OTHER);
     serde_json::from_str::<serde_json::Value>(&text).expect("the fixture is JSON");
-    assert!(carries_version_uid(&text, OWN));
+    assert!(carries_version_uid(text.as_bytes(), OWN));
 }
 
 #[test]
 fn a_body_without_its_own_uid_takes_the_parse_path() {
     assert!(
-        !carries_version_uid(&body(None, OWN), OWN),
+        !carries_version_uid(body(None, OWN).as_bytes(), OWN),
         "a nested uid equal to the version's is not the root uid"
     );
-    assert!(!carries_version_uid(&body(None, OTHER), OWN));
+    assert!(!carries_version_uid(body(None, OTHER).as_bytes(), OWN));
 }
 
 #[test]
 fn a_body_with_another_versions_uid_takes_the_parse_path() {
-    assert!(!carries_version_uid(&body(Some(OTHER), OWN), OWN));
+    assert!(!carries_version_uid(body(Some(OTHER), OWN).as_bytes(), OWN));
     let prefix = OWN
         .strip_suffix(":2")
         .expect("the own uid ends in its version");
     assert!(
-        !carries_version_uid(&body(Some(OWN), OTHER), prefix),
+        !carries_version_uid(body(Some(OWN), OTHER).as_bytes(), prefix),
         "a uid that only starts with the version's is another one"
     );
 }
@@ -60,7 +60,7 @@ fn a_root_uid_past_the_leading_members_takes_the_parse_path() {
     let text = format!(
         r#"{{"_type":"COMPOSITION","language":{{"code_string":"en"}},"uid":{{"_type":"OBJECT_VERSION_ID","value":"{OWN}"}}}}"#
     );
-    assert!(!carries_version_uid(&text, OWN));
+    assert!(!carries_version_uid(text.as_bytes(), OWN));
 }
 
 #[test]
@@ -73,6 +73,6 @@ fn a_malformed_body_takes_the_parse_path() {
         r#"{"name":{"value":"x""#,
         "not json",
     ] {
-        assert!(!carries_version_uid(text, OWN), "{text:?}");
+        assert!(!carries_version_uid(text.as_bytes(), OWN), "{text:?}");
     }
 }

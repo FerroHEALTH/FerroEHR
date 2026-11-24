@@ -24,7 +24,9 @@
 //! connection that sat idle (the lone `Sync` of `PgPoolOptions::before_acquire`).
 //! An instant is counted at its full microsecond width: the server writes
 //! its fraction without the trailing zeros, so its width moves with the
-//! clock. No openEHR spec governs the bytes a request moves: our own design.
+//! clock. A `pg_snapshot` is counted at the width of `1:1:`: its text moves
+//! with the cluster's xids and open transactions (#6462). No openEHR spec
+//! governs the bytes a request moves: our own design.
 
 use std::collections::{BTreeMap, VecDeque};
 use std::net::SocketAddr;
@@ -338,6 +340,89 @@ fn narrowed(bytes: &[u8], since: &str) -> u64 {
     left_out
 }
 
+/// The width of the shortest `pg_snapshot` text, `1:1:`, at which every
+/// snapshot a message carries is counted.
+const SNAPSHOT_WIDTH: usize = 4;
+
+/// Whether `value` is the text of a `pg_snapshot`: `xmin:xmax:xip,…`, each
+/// running xid at or above `xmin` and below `xmax` (PostgreSQL docs,
+/// "Snapshot Information Functions").
+fn is_snapshot(value: &[u8]) -> bool {
+    let Ok(text) = std::str::from_utf8(value) else {
+        return false;
+    };
+    let mut parts = text.splitn(3, ':');
+    let (Some(xmin), Some(xmax), Some(xip)) = (parts.next(), parts.next(), parts.next()) else {
+        return false;
+    };
+    let xid = |digits: &str| {
+        (!digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit()))
+            .then(|| digits.parse::<u64>().ok())
+            .flatten()
+    };
+    let (Some(xmin), Some(xmax)) = (xid(xmin), xid(xmax)) else {
+        return false;
+    };
+    xmin <= xmax
+        && (xip.is_empty()
+            || xip
+                .split(',')
+                .all(|running| xid(running).is_some_and(|x| xmin <= x && x < xmax)))
+}
+
+/// The bytes the snapshots among the values of `message`, a `Bind` or a
+/// `DataRow`, carry beyond [`SNAPSHOT_WIDTH`]: a snapshot's text grows with
+/// the cluster's xids and with the transactions any session of the server
+/// has open, which the request does not decide.
+fn snapshot_excess(message: &[u8]) -> u64 {
+    let kind = message.first().copied().unwrap_or_default();
+    let body = message.get(5..).unwrap_or_default();
+    let i16_at = |at: usize| {
+        body.get(at..at + 2)
+            .map(|b| usize::from(u16::from_be_bytes([b[0], b[1]])))
+    };
+    let mut at = match kind {
+        b'B' => {
+            let portal = body
+                .iter()
+                .position(|b| *b == 0)
+                .map_or(body.len(), |end| end + 1);
+            let name = body
+                .get(portal..)
+                .and_then(|rest| rest.iter().position(|b| *b == 0))
+                .map_or(body.len(), |end| portal + end + 1);
+            let Some(formats) = i16_at(name) else {
+                return 0;
+            };
+            name + 2 + formats * 2
+        }
+        b'D' => 0,
+        _ => return 0,
+    };
+    let Some(values) = i16_at(at) else { return 0 };
+    at += 2;
+    let mut excess = 0;
+    for _ in 0..values {
+        let Some(len) = body
+            .get(at..at + 4)
+            .map(|b| i32::from_be_bytes([b[0], b[1], b[2], b[3]]))
+        else {
+            break;
+        };
+        at += 4;
+        let Ok(len) = usize::try_from(len) else {
+            continue;
+        };
+        if let Some(value) = body.get(at..at + len)
+            && is_snapshot(value)
+        {
+            excess += u64::try_from(len.saturating_sub(SNAPSHOT_WIDTH)).expect("a width");
+        }
+        at += len;
+    }
+    excess
+}
+
 /// Relays the client's bytes to the database, adding each message to the
 /// connection's exchanges.
 async fn frontend(
@@ -401,7 +486,8 @@ fn sent(message: &[u8], conn: &mut Conn, since: &str) {
     let body = message.get(5..).unwrap_or_default();
     let bytes = (u64::try_from(message.len()).expect("a message length")
         + narrowed(message, since))
-    .saturating_sub(names(kind, body));
+    .saturating_sub(names(kind, body))
+    .saturating_sub(snapshot_excess(message));
     match kind {
         b'p' => conn.unit.push((
             STARTUP.to_owned(),
@@ -492,8 +578,9 @@ async fn backend(
             let idle = kind == b'Z' && buf.get(5) == Some(&b'I');
             let message: Vec<u8> = buf.drain(..=len).collect();
             let tally = Tally {
-                received: u64::try_from(message.len()).expect("a message length")
-                    + narrowed(&message, &since),
+                received: (u64::try_from(message.len()).expect("a message length")
+                    + narrowed(&message, &since))
+                .saturating_sub(snapshot_excess(&message)),
                 ..Tally::default()
             };
             let mut ledger = ledger.lock().unwrap();
@@ -527,4 +614,36 @@ async fn backend(
             return;
         }
     }
+}
+
+/// A snapshot bound or read back counts at the width of `1:1:` whatever its
+/// xids, and a time of day, which shares its shape, is no snapshot.
+#[test]
+fn a_snapshot_counts_at_one_width() {
+    let bind = |value: &[u8]| {
+        let mut body = b"\0s1\0\0\x01\0\x01\0\x01".to_vec();
+        body.extend_from_slice(&i32::try_from(value.len()).expect("a length").to_be_bytes());
+        body.extend_from_slice(value);
+        let mut message = vec![b'B'];
+        message.extend_from_slice(
+            &u32::try_from(body.len() + 4)
+                .expect("a length")
+                .to_be_bytes(),
+        );
+        message.extend_from_slice(&body);
+        message
+    };
+    assert_eq!(snapshot_excess(&bind(b"780:780:")), 4);
+    assert_eq!(
+        snapshot_excess(&bind(b"1000780:1000790:1000781,1000785")),
+        27
+    );
+    let narrow = bind(b"9:9:");
+    let wide = bind(b"1000780:1000790:1000781,1000785");
+    assert_eq!(
+        narrow.len() - usize::try_from(snapshot_excess(&narrow)).expect("bytes"),
+        wide.len() - usize::try_from(snapshot_excess(&wide)).expect("bytes"),
+        "two snapshots count alike"
+    );
+    assert_eq!(snapshot_excess(&bind(b"12:30:00")), 0, "a time of day");
 }
