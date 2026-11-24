@@ -38,10 +38,15 @@ use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
+use crate::party_binding::grants::caller::FactValue;
+use crate::party_binding::grants::caller::store;
 use crate::party_binding::grants::capabilities::Capabilities;
+use crate::party_binding::grants::care::care_of;
+use crate::party_binding::grants::derive::GrantFacts;
 use crate::party_binding::grants::operation::{CREATING_SYSTEM, Operation};
 use crate::service::FerroEhrService;
 use crate::service::ehr::access_parties::Landing;
+use crate::storage::access_projection::EhrSubject;
 use crate::versioning::Kind;
 use crate::versioning::import::ImportContainer;
 
@@ -126,6 +131,102 @@ impl FerroEhrService {
             }
         }
         Ok(())
+    }
+
+    /// Refuses an import one of whose COMPOSITION versions is placed in an
+    /// episode that no care relationship of the EHR's subject names, in the
+    /// demographic store or the extract's demographics chapter (draft access
+    /// control package, Episodes of Care: declared episodes). The subject is
+    /// the one the import's head `EHR_STATUS` names, else the target EHR's;
+    /// nothing is read when no version is placed.
+    ///
+    /// # Errors
+    /// `422` naming the element for a malformed placement or an undeclared
+    /// episode; a storage failure.
+    pub(super) async fn check_imported_episodes(
+        &self,
+        containers: &[ImportContainer],
+        parties: &[ImportContainer],
+        target: Option<EhrId>,
+    ) -> Result<(), ServiceError> {
+        let mut placed = BTreeSet::new();
+        for container in containers.iter().filter(|c| c.kind == Kind::Composition) {
+            for version in container.versions.iter().filter(|v| !v.data.is_null()) {
+                placed.extend(crate::versioning::episode::placed(&version.data)?);
+            }
+        }
+        if placed.is_empty() {
+            return Ok(());
+        }
+        let imported = containers
+            .iter()
+            .filter(|c| c.kind == Kind::EhrStatus)
+            .filter_map(|c| {
+                c.versions
+                    .iter()
+                    .max_by_key(|v| (v.lineage(), v.tree.columns()))
+            })
+            .find_map(|head| {
+                let at = |pointer: &str| {
+                    head.data
+                        .pointer(pointer)
+                        .and_then(Value::as_str)
+                        .map(str::to_owned)
+                };
+                // NOTE: RM EHR Extract IM §Creation Semantics, a `local` reference names a
+                // party of the extract's demographics chapter, held under its own container.
+                let namespace = at("/subject/external_ref/namespace").map(|ns| {
+                    if ns == LOCAL {
+                        self.grants.namespace().to_string()
+                    } else {
+                        ns
+                    }
+                });
+                EhrSubject::stored(namespace, at("/subject/external_ref/id/value"))
+            });
+        let subject = match (imported, target) {
+            (Some(subject), _) => Some(subject),
+            (None, Some(ehr_id)) => {
+                crate::storage::ehr_repo::ehr_subject_columns(&self.pool, ehr_id)
+                    .await?
+                    .and_then(|(id, namespace)| EhrSubject::stored(namespace, id))
+            }
+            (None, None) => None,
+        };
+        let person = match subject {
+            Some(subject) => self.grants.person_of(&subject).await?,
+            None => None,
+        };
+        let mut declared = BTreeSet::new();
+        if let Some(person) = person {
+            let rows = {
+                let mut conn = acquire(&self.demographic_pool).await?;
+                store::care_of_subject(&mut conn, person).await?
+            };
+            declared.extend(
+                care_of(&rows)
+                    .iter()
+                    .filter_map(|care| care.episode().map(|episode| episode.key)),
+            );
+            for party in parties.iter().filter(|p| p.kind == Kind::PartyRelationship) {
+                let Some(head) = party
+                    .versions
+                    .iter()
+                    .max_by_key(|v| (v.lineage(), v.tree.columns()))
+                else {
+                    continue;
+                };
+                let facts = GrantFacts::of(Kind::PartyRelationship, &head.data);
+                if facts.care_source != Some(person) {
+                    continue;
+                }
+                declared.extend(facts.facts.iter().filter_map(|fact| match &fact.value {
+                    FactValue::Care(care) => care.episode.as_ref().map(|episode| episode.key),
+                    FactValue::Code(_) | FactValue::Team(_) | FactValue::Kin(_) => None,
+                }));
+            }
+        }
+        crate::versioning::episode::declared(&placed, &declared)
     }
 
     /// The `creating_system_id`s whose wrapped committers the request's
@@ -336,6 +437,10 @@ fn imported_subjects(containers: &[ImportContainer]) -> BTreeSet<Option<String>>
         })
         .collect()
 }
+
+/// The namespace an EHR Extract writes the references to its demographics
+/// chapter under.
+const LOCAL: &str = "local";
 
 /// The refusal of an import as `operation` by a caller holding no grant
 /// covering the EHR.
