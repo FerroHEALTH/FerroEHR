@@ -412,10 +412,6 @@ pub struct BindingMapping {
     admin_role: Option<String>,
     /// Whether the policy parties are recognised and guarded.
     policy: bool,
-    /// The `patients` issuers: a binding key under one is a portal login,
-    /// held with no professional `ROLE` and bound only as a representative
-    /// through a live representation (#5622).
-    portal_issuers: BTreeSet<String>,
     /// The patient's `PERSON` template with the path of its identifiers.
     patient: Option<PatientSelector>,
 }
@@ -508,21 +504,6 @@ impl BindingMapping {
         self.policy
     }
 
-    /// Returns this mapping holding a binding key under each of `issuers`, the
-    /// `patients` issuers, as a portal login: its key row is held with no
-    /// professional `ROLE`, and a SCIM client whose `binding_issuer` is one
-    /// provisions its Users in the patient template with no `ROLE` (#5622).
-    /// Our own design.
-    #[must_use]
-    pub fn with_portal_issuers<I, S>(mut self, issuers: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<String>,
-    {
-        self.portal_issuers = issuers.into_iter().map(Into::into).collect();
-        self
-    }
-
     /// Returns this mapping reading the identifiers of a patient's `PERSON`
     /// of `template_id` at `path`, each a `DV_IDENTIFIER` in `details` of any
     /// type and issuer (RM Demographic IM §2.1.3).
@@ -552,19 +533,6 @@ impl BindingMapping {
         self.patient
             .as_ref()
             .map(|patient| (patient.template.as_str(), patient.path.as_str()))
-    }
-
-    /// The `patients` issuers, sorted ([`Self::with_portal_issuers`]).
-    #[must_use]
-    pub fn portal_issuers(&self) -> Vec<String> {
-        self.portal_issuers.iter().cloned().collect()
-    }
-
-    /// Whether `issuer` is a `patients` issuer, under which a binding key is
-    /// a portal login.
-    #[must_use]
-    pub fn is_portal_issuer(&self, issuer: &str) -> bool {
-        self.portal_issuers.contains(issuer)
     }
 
     /// The binding-key selector of the person template `template_id`, in any
@@ -671,14 +639,13 @@ impl BindingMapping {
     }
 
     /// The key spaces the mapping derives key rows in: each issuer a key
-    /// selector lists, with whether it is a `patients` issuer, under which a
-    /// key is a portal login.
+    /// selector lists.
     #[must_use]
-    pub fn key_spaces(&self) -> BTreeMap<String, bool> {
+    pub fn key_spaces(&self) -> BTreeSet<String> {
         self.persons
             .values()
             .flat_map(|selectors| selectors.key.issuers())
-            .map(|issuer| (issuer.clone(), self.is_portal_issuer(issuer)))
+            .cloned()
             .collect()
     }
 }

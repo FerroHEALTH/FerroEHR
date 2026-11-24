@@ -715,7 +715,6 @@ async fn a_create_at_login_grant_admits_the_logins_of_the_issuer_it_names_per_re
         panic!("one admission for the issuer it names");
     };
     assert_eq!(admitted.idp(), ["https://sts.example/"]);
-    assert!(!admitted.guests());
     assert_eq!(
         svc.grants().admissions("https://other.example", now),
         [],

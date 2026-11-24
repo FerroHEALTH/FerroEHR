@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use axum::Router;
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::config::binding::{PartyBindingConfig, ProviderId, Providers};
+use ferroehr::config::binding::{PartyBindingConfig, ProviderId};
 use ferroehr::config::scim::ScimConfig;
 use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
@@ -22,9 +22,7 @@ use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
 use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::config::{AuthSection, IssuerEntry};
-use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::party::config::PartySection;
-use ferrohealth_smart::profile::Preset;
 use http::{HeaderMap, StatusCode, header};
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -36,8 +34,8 @@ pub(crate) const PERSONS: &str = "https://keycloak.sint-example.example/realms/h
 /// The hospital's own authorization server, the `machines` issuer of its
 /// SCIM client and its system clients.
 pub(crate) const MACHINES: &str = "https://machines.sint-example.example";
-/// The patient portal, the `patients` issuer of the patient and her
-/// representative.
+/// The patient's app's authorization server, the issuer of the patient's and
+/// her representative's tokens.
 pub(crate) const PATIENTS: &str = "https://portal.sint-example.example";
 /// The audience of every token.
 pub(crate) const AUDIENCE: &str = "ferroehr";
@@ -46,9 +44,8 @@ pub(crate) const AUDIENCE: &str = "ferroehr";
 pub(crate) const LOGIN: &str = "urn:sint-example:keycloak";
 /// The scope the SCIM clients' tokens carry.
 pub(crate) const SCIM_SCOPE: &str = "ferroehr/scim";
-/// The hospital's SCIM client, and the patient portal's.
+/// The hospital's SCIM client.
 pub(crate) const SCIM: &str = "scim-hospital";
-pub(crate) const PORTAL_SCIM: &str = "scim-portal";
 /// The terminology the hospital codes its roles in, which its SCIM client
 /// sends as the values of a User's `roles` (RFC 7643 §4.1.2).
 pub(crate) const ROLES: &str = "urn:sint-example:roles";
@@ -279,14 +276,12 @@ pub(crate) fn capability(operation: &str, items: &[Value]) -> Value {
 }
 
 /// The deployment's configuration: the three issuers, the staff's logins
-/// bound by the keys SCIM provisions, the patient portal's `patient/`
-/// grants honoured, the break-glass role and the emergency purpose, and
+/// bound by the keys SCIM provisions, the patient's and her representative's
+/// logins bound to their `PERSON`s, the break-glass role and the emergency purpose, and
 /// `root` the first administrator.
 pub(crate) fn config() -> AppConfig {
     let machines = IssuerEntry {
         issuer: SecretUrl::new(MACHINES),
-        kind: Some(IssuerKind::Machines),
-        preset: Preset::Rfc9068,
         audience: vec![AUDIENCE.to_owned()],
         jwks_file: common::jwks_file().display().to_string(),
         profile: ferrohealth_smart::profile::ProfileKeys {
@@ -301,7 +296,6 @@ pub(crate) fn config() -> AppConfig {
         ..common::entry(PERSONS, AUDIENCE)
     };
     let patients = IssuerEntry {
-        kind: Some(IssuerKind::Patients),
         jwks_file: common::jwks_file().display().to_string(),
         ..common::entry(PATIENTS, AUDIENCE)
     };
@@ -311,26 +305,30 @@ pub(crate) fn config() -> AppConfig {
         identifier_type: "login".to_owned(),
         group_claim: "groups".to_owned(),
         group_identifier_issuer: format!("{LOGIN}/groups"),
+    };
+    let patient = PartySection {
+        issuer: SecretUrl::new(PATIENTS),
+        identifier_issuer: PATIENTS.to_owned(),
+        identifier_type: "login".to_owned(),
         ..PartySection::default()
     };
     let mut auth = common::auth(AuthSection {
-        issuer: common::bound(vec![machines, persons, patients], vec![staff]),
+        issuer: common::bound(vec![machines, persons, patients], vec![staff, patient]),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
     let mut config = common::api_config(true);
     config.auth = auth;
     config.auth.scim = Some(ScimConfig::default());
-    common::patient_context(&mut config, PATIENTS);
     config.public_root = Some(
         ferroehr::config::server::PublicRoot::new("https://cdr.sint-example.example", "")
             .expect("a public root"),
     );
     config.party_binding = PartyBindingConfig {
-        provider: Some(Providers::One(ProviderId {
+        provider: Some(ProviderId {
             issuer: PROVIDERS.to_owned(),
             id: "sint-example".to_owned(),
-        })),
+        }),
         ..PartyBindingConfig::default()
     };
     config.rbac.role_issuers = vec![common::name_of(PERSONS)];
@@ -400,9 +398,10 @@ fn exp() -> i64 {
 
 /// The credential of the caller `name`: a member of staff's Keycloak token
 /// (any other name a new member of staff's, holding `USER`),
-/// the patient's or her representative's portal token naming her EHR
-/// (`eva:<ehr>`, `frank:<ehr>`), or a system client's app-only token
-/// (`client:<id>`).
+/// the patient's own token or her representative's naming her EHR
+/// (`eva:<ehr>`, `frank:<ehr>`), each `fhirUser` the `Patient` or the
+/// `RelatedPerson` acting for her (SMART App Launch 2.2 §fhirUser), or a
+/// system client's app-only token (`client:<id>`).
 pub(crate) fn credential(name: &str) -> String {
     if let Some(client) = name.strip_prefix("client:") {
         return common::bearer(&json!({
@@ -412,8 +411,14 @@ pub(crate) fn credential(name: &str) -> String {
         }));
     }
     if let Some((who, ehr)) = name.split_once(':') {
+        let user = if who == "eva" {
+            "Patient/eva".to_owned()
+        } else {
+            format!("RelatedPerson/{who}")
+        };
         return common::bearer(&json!({
             "iss": PATIENTS, "aud": AUDIENCE, "exp": exp(), "sub": format!("{who}-login"),
+            "fhirUser": user, "patient": "eva",
             "ehrId": ehr, "scope": "patient/composition-*.cruds patient/aql-*.s",
             "roles": ["PATIENT"],
         }));
@@ -515,10 +520,71 @@ pub(crate) async fn served(
     app: &Router,
     req: http::Request<axum::body::Body>,
 ) -> (StatusCode, HeaderMap, String) {
+    use tracing::instrument::WithSubscriber as _;
+    use tracing_subscriber::Layer as _;
+    use tracing_subscriber::layer::SubscriberExt as _;
+
     let app = app.clone();
-    tokio::spawn(async move { common::send(&app, req).await })
-        .await
-        .expect("the request's task")
+    let log = RequestLog::default();
+    let subscriber = tracing_subscriber::registry().with(
+        tracing_subscriber::fmt::layer()
+            .with_ansi(false)
+            .with_writer(log.clone())
+            .with_filter(tracing_subscriber::filter::LevelFilter::DEBUG),
+    );
+    let (status, headers, body) =
+        tokio::spawn(async move { common::send(&app, req).await }.with_subscriber(subscriber))
+            .await
+            .expect("the request's task");
+    // An internal error names no cause on the wire, so the answer carries the server's log of it.
+    if status == StatusCode::INTERNAL_SERVER_ERROR {
+        let body = format!(
+            "{body}\n-- the server's log of the request --\n{}",
+            log.text()
+        );
+        return (status, headers, body);
+    }
+    (status, headers, body)
+}
+
+/// The log lines one request writes, kept so a test that meets an internal
+/// error shows what the server said.
+#[derive(Clone, Default)]
+struct RequestLog(Arc<std::sync::Mutex<Vec<u8>>>);
+
+impl RequestLog {
+    /// The lines written so far.
+    fn text(&self) -> String {
+        String::from_utf8_lossy(
+            &self
+                .0
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner),
+        )
+        .into_owned()
+    }
+}
+
+impl std::io::Write for RequestLog {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for RequestLog {
+    type Writer = Self;
+
+    fn make_writer(&'a self) -> Self::Writer {
+        self.clone()
+    }
 }
 
 /// `method uri` as `caller`, declaring `purpose`, with a JSON `body`.

@@ -5,10 +5,10 @@
 //! sessions, inside [`DbConfig::connection_budget`] (#5845), and the
 //! connections the server opens before it answers ready (#5774).
 //!
-//! A request holds a connection of a pool from its first statement until its
-//! handler has answered ([`crate::db::acquire::release_held`]), or until it
-//! turns to the other storage domain's pool or waits on another server; the
-//! pool needs about the arrival rate times that hold, and room for a burst.
+//! A request holds a connection of a pool from its first statement until it
+//! turns to work that runs none, to the other storage domain's pool or to a
+//! wait on another server ([`crate::db::acquire::release_held`]); the pool
+//! needs about the arrival rate times that hold, and room for a burst.
 //! No openEHR spec governs connection handling: our own design.
 
 use crate::db::acquire::{Checkout, acquire};

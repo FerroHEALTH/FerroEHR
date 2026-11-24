@@ -127,18 +127,19 @@ fn patient(ehr: &str) -> String {
     token_with_role(None, ehr)
 }
 
-/// The parent's token, as the actor of the child's.
+/// The parent's token, under their own login, naming the child's EHR.
 fn parent(ehr: &str) -> String {
     token_with_role(Some(PARENT), ehr)
 }
 
-/// A portal token for `ehr`, its actor `actor`, carrying [`PATIENT_ROLE`].
-pub(crate) fn token_with_role(actor: Option<&str>, ehr: &str) -> String {
-    let mut claims = json!({ "roles": [PATIENT_ROLE] });
-    if let Some(actor) = actor {
-        claims["act"] = json!({ "sub": actor });
-    }
-    token(CHILD_LOGIN, ehr, &claims)
+/// A portal token for `ehr` of the login `login`, the child's own when none,
+/// carrying [`PATIENT_ROLE`].
+pub(crate) fn token_with_role(login: Option<&str>, ehr: &str) -> String {
+    token(
+        login.unwrap_or(CHILD_LOGIN),
+        ehr,
+        &json!({ "roles": [PATIENT_ROLE] }),
+    )
 }
 
 /// The status and JSON body of `GET uri` as `credential`.
@@ -328,8 +329,8 @@ async fn the_subject_reads_only_their_own_log() {
     }
 }
 
-/// The parent reads the subject view of the child's log as the actor of the
-/// child's token, and nothing of another EHR.
+/// The parent reads the subject view of the child's log under their own
+/// login, and nothing of another EHR.
 #[tokio::test]
 async fn a_representative_reads_the_represented_subjects_log() {
     let fx = fixture().await;
