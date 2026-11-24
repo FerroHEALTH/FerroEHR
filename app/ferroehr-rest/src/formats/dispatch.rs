@@ -219,11 +219,12 @@ pub(crate) async fn composition_simplified_read(
     let value = match read {
         ReadBody::RawJson(text) => {
             // NOTE: a stored body the strict reader refuses is a `553|incomplete|` commit's, read as its value.
-            if let Ok(typed) = openehr_its::json::from_canonical_json::<Composition>(&text) {
+            if let Ok(typed) = openehr_its::json::from_canonical_slice::<Composition>(text.bytes())
+            {
                 return composition_simplified_typed(state, status, &typed, format).await;
             }
             ferroehr::telemetry::conversion::record("stored_text_to_value");
-            serde_json::from_str::<Value>(&text)
+            serde_json::from_slice::<Value>(text.bytes())
                 .map_err(|e| internal(format!("re-parse the stored composition body: {e}")))?
         }
         ReadBody::Value(value) => value,
