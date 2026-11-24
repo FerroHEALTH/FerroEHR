@@ -1777,6 +1777,21 @@ A `relationship_validity` entry of the access policy with
 `episode_required` set refuses `422` a care relationship of the roles and
 provider types it covers that names no `episode`.
 
+**Care scoped to an episode.** A care relationship that names an `episode`
+admits on care only the data of that episode, the data placed in no
+episode and the data your access policy's `episode_shared` names. A
+relationship that names no episode covers the whole record, as before. A
+patient admitted to cardiology and seen by dermatology has two episodes: a
+cardiologist whose one live relationship names the cardiology episode reads
+the cardiology data and the unplaced data, is refused the dermatology data
+with `refused-outside-episode` (`403`, step 7 of the access record), and no
+query, count or page shows it. An access service caller also reads the data
+of the EHDS priority categories (Art. 14(1)) through the category map. An
+emergency, the patient, a permit directive and a gate-keeper decide as they
+do without episodes. A query can narrow your caseload further to named
+episodes with `caseload_episodes` ([Narrowing a query to your
+caseload](querying-aql.md#narrowing-a-query-to-your-caseload)).
+
 **Group memberships of a provider.** A `PARTY_RELATIONSHIP` in an
 `ORGANISATION`'s `relationships` carrying `MBR` of `HL7_RoleClass` makes that provider a
 member of the `GROUP` its `target` names, such as the providers of a
