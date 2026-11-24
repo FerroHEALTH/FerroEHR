@@ -29,7 +29,7 @@ const LOGIN: &str = "dr.jansen";
 const ISSUER: &str = "https://idp.example";
 
 /// The authenticated professional.
-fn professional() -> CommitterIdentity {
+pub(crate) fn professional() -> CommitterIdentity {
     CommitterIdentity {
         subject: LOGIN.to_owned(),
         id_type: "oauth2",
@@ -47,7 +47,7 @@ fn professional() -> CommitterIdentity {
 }
 
 /// The record's person, writing through a patient-context credential.
-fn person() -> CommitterIdentity {
+pub(crate) fn person() -> CommitterIdentity {
     CommitterIdentity {
         subject: "jane".to_owned(),
         person: true,
@@ -56,7 +56,7 @@ fn person() -> CommitterIdentity {
 }
 
 /// The professional's committer as a client states it.
-fn matching() -> Value {
+pub(crate) fn matching() -> Value {
     json!({
         "_type": "PARTY_IDENTIFIED",
         "name": LOGIN,
@@ -66,7 +66,7 @@ fn matching() -> Value {
 
 /// An `UPDATE_VERSION` of `data` by `committer`, with the client's
 /// `description` when given, superseding `preceding` when given.
-fn version<T: serde::de::DeserializeOwned, R: crate::fixtures::Envelope<T>>(
+pub(crate) fn version<T: serde::de::DeserializeOwned, R: crate::fixtures::Envelope<T>>(
     data: &Value,
     code: &str,
     preceding: Option<&str>,
