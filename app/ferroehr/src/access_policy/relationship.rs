@@ -436,6 +436,38 @@ mod tests {
     }
 
     #[test]
+    fn the_first_covering_entry_that_marks_episode_required_refuses_a_relationship_with_none() {
+        let policy = policy(&format!(
+            r#", "relationship_validity": [
+                {{ "_type": "ACCESS_RELATIONSHIP_VALIDITY",
+                   "organisation_types": [{hosp}], "episode_required": true }},
+                {{ "_type": "ACCESS_RELATIONSHIP_VALIDITY", "episode_required": false }}]"#,
+            hosp = term("urn:example:org-types", "hospital"),
+        ));
+        let role = code("HL7_ParticipationType", "ATND");
+        let hospital = [code("urn:example:org-types", "hospital")];
+        let gp = [code("urn:example:org-types", "gp")];
+        let at_hospital = written(&role, &hospital, Some("2026-12-01"));
+        assert_eq!(
+            episode(Some(&policy), &at_hospital, false),
+            Err(EpisodeRequired {
+                role: "HL7_ParticipationType::ATND".to_owned()
+            })
+        );
+        assert_eq!(episode(Some(&policy), &at_hospital, true), Ok(()));
+        assert_eq!(
+            episode(
+                Some(&policy),
+                &written(&role, &gp, Some("2026-12-01")),
+                false
+            ),
+            Ok(()),
+            "the first entry covering a GP's relationship requires none"
+        );
+        assert_eq!(episode(None, &at_hospital, false), Ok(()), "no policy");
+    }
+
+    #[test]
     fn an_open_relationship_no_entry_covers_is_refused_and_a_closed_one_kept() {
         let role = code("HL7_ParticipationType", "ATND");
         for policy in [None, Some(policy(""))] {

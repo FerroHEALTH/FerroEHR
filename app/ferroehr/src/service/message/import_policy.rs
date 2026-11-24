@@ -173,10 +173,16 @@ impl FerroEhrService {
                         .and_then(Value::as_str)
                         .map(str::to_owned)
                 };
-                EhrSubject::stored(
-                    at("/subject/external_ref/namespace"),
-                    at("/subject/external_ref/id/value"),
-                )
+                // NOTE: RM EHR Extract IM §Creation Semantics, a `local` reference names a
+                // party of the extract's demographics chapter, held under its own container.
+                let namespace = at("/subject/external_ref/namespace").map(|ns| {
+                    if ns == LOCAL {
+                        self.grants.namespace().to_string()
+                    } else {
+                        ns
+                    }
+                });
+                EhrSubject::stored(namespace, at("/subject/external_ref/id/value"))
             });
         let subject = match (imported, target) {
             (Some(subject), _) => Some(subject),
@@ -435,6 +441,10 @@ fn imported_subjects(containers: &[ImportContainer]) -> BTreeSet<Option<String>>
         })
         .collect()
 }
+
+/// The namespace an EHR Extract writes the references to its demographics
+/// chapter under.
+const LOCAL: &str = "local";
 
 /// The refusal of an import as `operation` by a caller holding no grant
 /// covering the EHR.

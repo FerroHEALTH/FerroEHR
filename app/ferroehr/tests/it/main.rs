@@ -82,6 +82,7 @@ mod caller_facts;
 mod canonical_json_literals;
 mod care_bounds;
 mod care_caseload_plans;
+mod care_episodes;
 mod care_roles_query;
 mod care_writer_marking;
 mod care_writer_scope;

@@ -808,6 +808,53 @@ mod tests {
     }
 
     #[test]
+    fn an_episode_reads_and_one_without_an_issuer_and_an_id_is_refused() {
+        let with_episode = |episode: Value| {
+            let mut body = care_of();
+            body["details"]["items"]
+                .as_array_mut()
+                .expect("items")
+                .push(element(&coded(TERMINOLOGY, "episode"), &episode));
+            GrantFacts::of(Kind::PartyRelationship, &body)
+        };
+        let read = with_episode(
+            json!({"_type": "DV_IDENTIFIER", "issuer": "H", "id": "C-17",
+                                       "type": "VN"}),
+        );
+        assert_eq!(read.unread, Vec::<String>::new());
+        assert!(matches!(
+            read.facts.as_slice(),
+            [CallerFact {
+                value: FactValue::Care(CareFact {
+                    episode: Some(episode),
+                    ..
+                }),
+                ..
+            }] if *episode == Episode::new("H", "C-17")
+                && episode.key == EpisodeKey::of("H", "C-17")
+        ));
+        let none = GrantFacts::of(Kind::PartyRelationship, &care_of());
+        assert!(matches!(
+            none.facts.as_slice(),
+            [CallerFact {
+                value: FactValue::Care(CareFact { episode: None, .. }),
+                ..
+            }]
+        ));
+        for refused in [
+            json!({"_type": "DV_IDENTIFIER", "id": "C-17"}),
+            json!({"_type": "DV_IDENTIFIER", "issuer": " ", "id": "C-17"}),
+            json!({"_type": "DV_IDENTIFIER", "issuer": "H", "id": ""}),
+            coded("local", "C-17"),
+        ] {
+            let facts = with_episode(refused.clone());
+            assert_eq!(facts.facts, Vec::new(), "{refused}");
+            assert_eq!(facts.unread.len(), 1, "{refused}: {:?}", facts.unread);
+            assert!(facts.unread[0].contains("episode"), "{:?}", facts.unread);
+        }
+    }
+
+    #[test]
     fn a_self_declared_basis_reads() {
         let mut body = care_of();
         let basis = element(
