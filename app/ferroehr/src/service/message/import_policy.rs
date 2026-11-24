@@ -226,11 +226,7 @@ impl FerroEhrService {
                 }));
             }
         }
-        if placed.is_subset(&declared) {
-            Ok(())
-        } else {
-            Err(crate::versioning::episode::undeclared())
-        }
+        crate::versioning::episode::declared(&placed, &declared)
     }
 
     /// The `creating_system_id`s whose wrapped committers the request's

@@ -57,10 +57,6 @@ impl FerroEhrService {
             Some(person) => self.grants.episodes_of(person).await?,
             None => BTreeSet::new(),
         };
-        if placed.iter().all(|key| declared.contains(key)) {
-            Ok(())
-        } else {
-            Err(episode::undeclared())
-        }
+        episode::declared(placed, &declared)
     }
 }

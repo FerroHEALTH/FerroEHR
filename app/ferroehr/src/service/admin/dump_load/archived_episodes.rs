@@ -75,9 +75,7 @@ impl FerroEhrService {
                 );
                 declared.extend(archived.get(&person).into_iter().flatten().copied());
             }
-            if !keys.is_subset(&declared) {
-                return Err(for_archived_ehr(episode::undeclared(), ehr_id));
-            }
+            episode::declared(&keys, &declared).map_err(|e| for_archived_ehr(e, ehr_id))?;
         }
         Ok(())
     }

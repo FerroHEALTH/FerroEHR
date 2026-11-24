@@ -127,11 +127,24 @@ fn persistent<'a, T: Tree<'a>>(body: T) -> bool {
         && code.get_text("code_string").as_deref() == Some("431")
 }
 
-/// The `422` of a composition placed in an episode no care relationship of
-/// its EHR's subject names, live or ended (draft access control package,
-/// Episodes of Care: declared episodes).
-pub(crate) fn undeclared() -> ServiceError {
-    refused("names an episode that no care relationship of the EHR's subject names")
+/// Refuses the placement `placed` unless each of its episodes is in
+/// `declared`, the episodes of the care relationships of the EHR's subject,
+/// live or ended (draft access control package, Episodes of Care: declared
+/// episodes).
+///
+/// # Errors
+/// [`ServiceError::Unprocessable`] (`422`) naming the element.
+pub(crate) fn declared<'a>(
+    placed: impl IntoIterator<Item = &'a EpisodeKey>,
+    declared: &std::collections::BTreeSet<EpisodeKey>,
+) -> Result<(), ServiceError> {
+    if placed.into_iter().all(|key| declared.contains(key)) {
+        Ok(())
+    } else {
+        Err(refused(
+            "names an episode that no care relationship of the EHR's subject names",
+        ))
+    }
 }
 
 /// The `422` of a placement the commit refuses.
