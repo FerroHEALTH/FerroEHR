@@ -2263,12 +2263,101 @@ fn relation_wal(m: &Measure, relation: &str) -> (u64, u64) {
         .unwrap_or_default()
 }
 
-/// A commit placed in an episode costs no round trip, no nested statement
-/// and no row more than its unplaced twin, at most 64 WAL bytes in its head
-/// row and at most four allocations (#6413). The node indexes split their
-/// pages as they fill, so the head row is judged on its own, and the pair is
-/// judged on its second window, after each path's first.
+/// `root` posts `body` as JSON to `uri`; the object id of what it created.
+async fn created(app: &Router, uri: String, body: String) -> String {
+    let (status, headers, answer) = plain(
+        app,
+        &Call {
+            method: "POST",
+            uri,
+            user: "root",
+            accept: JSON,
+            headers: Vec::new(),
+            body: Some((JSON, body)),
+        },
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{answer}");
+    object_id(&headers)
+}
+
+/// `count` EHRs, each of a patient `PERSON` whose care fact in `pool` names
+/// the episode `H|C-17`, which [`episode_ips`] names (#6412): the fact the
+/// declared-episode rule reads, written as a relationship commit derives it.
+async fn cared_ehrs(app: &Router, pool: &PgPool, count: usize) -> Vec<(String, String)> {
+    let reference = |id: &str| {
+        serde_json::json!({ "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+            "id": { "_type": "HIER_OBJECT_ID", "value": id } })
+    };
+    let mut ehrs = Vec::new();
+    for _ in 0..count {
+        let patient = created(
+            app,
+            format!("{BASE}/demographic/person"),
+            demographic_fixture("person"),
+        )
+        .await;
+        sqlx::query(
+            "INSERT INTO party.binding_caller_fact (holder_id, ordinal, kind, party_id, \
+                 target_id, target_kind, terminology_id, code_string, provider_issuer, \
+                 provider_id, lifecycle_state, role_validity, validity, episode_issuer, \
+                 episode_id) \
+             VALUES ($1, 0, 'under_care_of', $2::uuid, $3, 'GROUP', 'HL7_ParticipationType', \
+                 'ATND', 'urn:example:providers', 'hospital', '532', '(,)', \
+                 '[2026-11-01,2027-11-01)', 'H', 'C-17')",
+        )
+        .bind(uuid::Uuid::now_v7())
+        .bind(&patient)
+        .bind(uuid::Uuid::now_v7())
+        .execute(pool)
+        .await
+        .expect("the care fact");
+        let status = serde_json::json!({ "_type": "EHR_STATUS",
+            "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+            "archetype_details": { "_type": "ARCHETYPED", "rm_version": "1.1.0",
+                "archetype_id": { "_type": "ARCHETYPE_ID",
+                    "value": "openEHR-EHR-EHR_STATUS.generic.v1" } },
+            "name": { "_type": "DV_TEXT", "value": "EHR Status" },
+            "subject": { "_type": "PARTY_SELF", "external_ref": reference(&patient) },
+            "is_queryable": true, "is_modifiable": true });
+        let (code, headers, answer) = plain(
+            app,
+            &Call {
+                method: "POST",
+                uri: format!("{BASE}/ehr"),
+                user: "root",
+                accept: JSON,
+                headers: Vec::new(),
+                body: Some((JSON, status.to_string())),
+            },
+        )
+        .await;
+        assert_eq!(code, StatusCode::CREATED, "the EHR: {answer}");
+        let ehr = headers
+            .get(http::header::LOCATION)
+            .and_then(|location| location.to_str().ok())
+            .and_then(|location| location.rsplit('/').next())
+            .expect("the EHR's location")
+            .to_owned();
+        ehrs.push((ehr, String::new()));
+    }
+    ehrs
+}
+
+/// A commit placed in an episode its subject's care relationship names costs
+/// no round trip, no nested statement and no row more than its unplaced twin
+/// while the copies hold the EHR and its subject, and one round trip more,
+/// the care copy's read of the subject's relationships, when they do not; at
+/// most 64 WAL bytes in its head row and, held, 21 allocations: the
+/// placement read before the transaction and the EHR's copied entry (#6413,
+/// #6412). The node indexes split
+/// their pages as they fill, so the head row is judged on its own, and the
+/// pair is judged on its second window, after each path's first.
 #[tokio::test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one scenario of a placed commit and its twin, held and fresh"
+)]
 async fn a_placed_commit_costs_its_projection_alone() {
     let counter = Counter::default();
     let _guard =
@@ -2284,7 +2373,8 @@ async fn a_placed_commit_costs_its_projection_alone() {
         .expect("the extension");
     }
     super::wal::kept(&pool).await;
-    let world = World::build(&app).await;
+    let mut world = World::build(&app).await;
+    world.ehrs = cared_ehrs(&app, &pool, EHRS).await;
     let mut twin = Measure::default();
     let mut placed = Measure::default();
     for _ in 0..2 {
@@ -2335,5 +2425,46 @@ async fn a_placed_commit_costs_its_projection_alone() {
     }
     let head = |m: &Measure| relation_wal(m, "vo_head").0.div_euclid(REQUESTS);
     assert!(head(&placed) <= head(&twin) + 64, "{report}");
-    assert!(placed_allocations <= twin_allocations + 4, "{report}");
+    assert!(placed_allocations <= twin_allocations + 21, "{report}");
+
+    let fresh = usize::try_from(WARM + REQUESTS).unwrap();
+    world.ehrs = cared_ehrs(&app, &pool, fresh).await;
+    let fresh_twin = Box::pin(measure(
+        &app,
+        &pool,
+        &pools,
+        None,
+        &world,
+        &counter,
+        Path::CommitTwin,
+    ))
+    .await;
+    world.ehrs = cared_ehrs(&app, &pool, fresh).await;
+    let fresh_placed = Box::pin(measure(
+        &app,
+        &pool,
+        &pools,
+        None,
+        &world,
+        &counter,
+        Path::CommitPlaced,
+    ))
+    .await;
+    let report = format!(
+        "fresh twin: {} round trips, {} allocations\nfresh placed: {} round trips, {} allocations\n\
+         {}\n{}",
+        fresh_twin.round_trips,
+        fresh_twin.low(|a| a.count),
+        fresh_placed.round_trips,
+        fresh_placed.low(|a| a.count),
+        fresh_twin.statements,
+        fresh_placed.statements
+    );
+    eprintln!("{report}");
+    assert_eq!(
+        fresh_placed.round_trips,
+        fresh_twin.round_trips + 1,
+        "{report}"
+    );
+    assert_eq!(fresh_placed.nested, fresh_twin.nested, "{report}");
 }

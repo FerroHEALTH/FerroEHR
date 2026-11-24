@@ -6,7 +6,8 @@
 //! `episode` of a care relationship of its EHR's subject, live or ended.
 //!
 //! A write judges it before its clinical transaction, and only when the
-//! composition is placed, from the care copy. Our own design (#6412).
+//! composition is placed, from the EHR's access copy and the care copy, which
+//! the request's access decision holds. Our own design (#6412).
 
 use std::collections::BTreeSet;
 
@@ -47,14 +48,13 @@ impl FerroEhrService {
         ehr_id: EhrId,
         placed: &[EpisodeKey],
     ) -> Result<(), ServiceError> {
-        let declared: BTreeSet<EpisodeKey> = match self.ehr_subject_person(ehr_id).await? {
-            Some(person) => self
-                .grants
-                .under_care_of(person)
-                .await?
-                .iter()
-                .filter_map(|care| care.episode().map(|episode| episode.key))
-                .collect(),
+        let subject = self.ehr_access_entry(ehr_id).await?.subject;
+        let person = match subject {
+            Some(subject) => self.grants.person_of(&subject).await?,
+            None => None,
+        };
+        let declared = match person {
+            Some(person) => self.grants.episodes_of(person).await?,
             None => BTreeSet::new(),
         };
         if placed.iter().all(|key| declared.contains(key)) {
