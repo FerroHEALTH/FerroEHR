@@ -223,7 +223,7 @@ impl Ready {
             ctx,
             &committed,
         );
-        let rows = commit_folded(conn, &self.audit.row(), statement).await?;
+        let rows = commit_folded(conn, &self.audit.row(ctx.audit_shares), statement).await?;
         committed.time_committed = rows.time_committed;
         committed.subject_moved = rows.subject_moved;
         if prepared.has_more() {

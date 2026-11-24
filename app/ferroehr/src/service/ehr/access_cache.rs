@@ -76,6 +76,12 @@ impl EhrAccessCache {
         }
     }
 
+    /// Runs the copy's pending cache upkeep ([`crate::service::upkeep`]).
+    pub(in crate::service) async fn upkeep(&self) {
+        self.inner.run_pending_tasks().await;
+        self.classes.run_pending_tasks().await;
+    }
+
     /// What the copy holds: the EHRs' settings, and the classes with their
     /// bytes.
     pub(in crate::service) fn held(&self) -> (Held, Held) {

@@ -54,7 +54,7 @@ impl FerroEhrService {
         &self,
         supplied: Option<&openehr_its::rest::generated::common::UpdateAudit>,
         change_type: &str,
-        description: &str,
+        description: &'static str,
     ) -> Result<AuditInput, ServiceError> {
         match supplied {
             Some(update) => AuditInput::from_update(
@@ -78,7 +78,7 @@ impl FerroEhrService {
         &self,
         request: &WriteRequest<T>,
         change_type: &str,
-        description: &str,
+        description: &'static str,
     ) -> Result<Resolved, ServiceError> {
         let audit = self.commit_audit(request.audit.as_ref(), change_type, description)?;
         let attestations = request

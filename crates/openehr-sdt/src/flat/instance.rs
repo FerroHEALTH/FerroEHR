@@ -53,6 +53,18 @@ pub(crate) trait Instance<'a>: Copy {
     /// a `|raw` output carries.
     fn to_raw(self) -> Option<crate::flat::sim::RawDatum>;
 
+    /// Calls `f` with each member of the container attribute `name`, in
+    /// order; `false` when it is absent or single-valued.
+    fn each_member(self, name: &str, f: &mut dyn FnMut(Self)) -> bool {
+        match self.members(name) {
+            Some(members) => {
+                members.into_iter().for_each(f);
+                true
+            }
+            None => false,
+        }
+    }
+
     /// The string at attribute `name`.
     fn str_at(self, name: &str) -> Option<&'a str> {
         self.attr(name).and_then(Instance::as_str)
@@ -83,6 +95,15 @@ impl<'a> Instance<'a> for &'a Value {
         self.get(name)
             .and_then(Value::as_array)
             .map(|a| a.iter().collect())
+    }
+    fn each_member(self, name: &str, f: &mut dyn FnMut(Self)) -> bool {
+        match self.get(name).and_then(Value::as_array) {
+            Some(items) => {
+                items.iter().for_each(f);
+                true
+            }
+            None => false,
+        }
     }
     fn is_present(self, name: &str) -> bool {
         self.get(name).is_some_and(|v| !v.is_null())
@@ -140,6 +161,18 @@ impl<'a> Instance<'a> for RmRef<'a> {
                 .items(name)
                 .map(|items| items.map(RmRef::Object).collect()),
             _ => None,
+        }
+    }
+    fn each_member(self, name: &str, f: &mut dyn FnMut(Self)) -> bool {
+        match self {
+            RmRef::Object(o) => match o.items(name) {
+                Some(items) => {
+                    items.map(RmRef::Object).for_each(f);
+                    true
+                }
+                None => false,
+            },
+            _ => false,
         }
     }
     fn is_present(self, name: &str) -> bool {

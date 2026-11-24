@@ -35,9 +35,9 @@ mod plans;
 /// the sink's cursor up to the delivery frontier that is not parked, each
 /// with `retry` beside [`RECORD_COLUMNS`].
 ///
-/// Each record is read by its key: the retried one per parked row, and the
-/// system log's next from the `pk_audit_event` range between the bounds
-/// (#6427).
+/// Each record is read by its key: the retried one per parked row, and each
+/// log's next from the key range between the bounds, which reach the plan
+/// as `InitPlan`s (#6427, #6385).
 pub(super) fn next_statement() -> &'static str {
     static NEXT: LazyLock<String> = LazyLock::new(|| {
         let columns: Vec<String> = RECORD_COLUMNS
@@ -67,14 +67,18 @@ pub(super) fn next_statement() -> &'static str {
                       ORDER BY a.seq LIMIT 1)) \
              UNION ALL \
              (SELECT false AS retry, {columns} FROM audit.audit_record e \
-              JOIN audit.delivery_cursor c ON c.sink = $1 AND c.chain = 'access_log' \
-              JOIN audit.delivery_frontier f ON f.chain = 'access_log' \
-              WHERE e.chain = 'access_log' AND e.chain_seq > c.through_id \
-                AND e.chain_seq <= f.through_id \
-                AND NOT EXISTS (SELECT 1 FROM audit.delivery_parked p \
-                                 WHERE p.sink = $1 AND p.chain = 'access_log' \
-                                   AND p.record_id = e.chain_seq) \
-              ORDER BY e.chain_seq LIMIT 1)"
+              WHERE e.chain = 'access_log' AND e.chain_seq = \
+                    (SELECT r.chain_seq FROM audit.access_log_record r \
+                      WHERE r.chain_seq > (SELECT c.through_id FROM audit.delivery_cursor c \
+                                            WHERE c.sink = $1 AND c.chain = 'access_log') \
+                        AND r.chain_seq <= (SELECT f.through_id FROM audit.delivery_frontier f \
+                                             WHERE f.chain = 'access_log') \
+                        AND EXISTS (SELECT 1 FROM audit.audit_render_policy rp \
+                                     WHERE rp.id = r.render_policy_id) \
+                        AND NOT EXISTS (SELECT 1 FROM audit.delivery_parked p \
+                                         WHERE p.sink = $1 AND p.chain = 'access_log' \
+                                           AND p.record_id = r.chain_seq) \
+                      ORDER BY r.chain_seq LIMIT 1))"
         )
     });
     NEXT.as_str()

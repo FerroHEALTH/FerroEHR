@@ -375,6 +375,7 @@ fn a_stored_attestation_commit_audit_round_trips() {
         system_id: "sysA.example.org".to_owned(),
         change_type: change_type::MODIFICATION.to_owned(),
         description: None,
+        server_description: false,
         committer: party_proxy(&committer()).expect("a canonical committer"),
         attestation: Some(Box::new(
             AttestationParts::decode(&fragment).expect("a valid stored fragment"),

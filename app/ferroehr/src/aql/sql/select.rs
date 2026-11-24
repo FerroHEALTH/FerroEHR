@@ -14,7 +14,10 @@
 //! emits (`vo_id`, `sys_version`, `num`, `num_cap`) and is reassembled at read
 //! time.
 
-use sea_query::{Alias, Expr, ExprTrait as _, Func};
+use sea_query::{
+    Alias, Expr, ExprTrait as _, Func, PostgresQueryBuilder, QueryBuilder as _, SqlWriterValues,
+    WindowStatement,
+};
 
 use crate::aql::error::{AqlError, SqlError};
 use crate::aql::ir::{
@@ -116,18 +119,71 @@ impl Builder<'_> {
     /// Append the hidden policy and definition revisions, read from the
     /// view `request_revisions` at the statement's snapshot, so a request
     /// that confirms its policy copies after it ran checks them against the
-    /// revisions in force beside the rows it was served (#6320). Each is an
-    /// uncorrelated scalar subquery, the same on every row, so it changes
-    /// neither a `DISTINCT` nor a grouping.
-    pub(super) fn build_revision_columns(&mut self) {
-        self.q.expr_as(
+    /// revisions in force beside the rows it was served (#6320). In a ride
+    /// (`ride`), the party store's revisions beside them, through
+    /// `party_door.party_revisions(held)`. Only the first row served carries them
+    /// ([`Self::first_served_row`]); every row carries them where it cannot.
+    pub(super) fn build_revision_columns(&mut self, ride: bool, order: &WindowStatement) {
+        let first = self.first_served_row(order);
+        let mut column = |read: Expr, alias: &str| {
+            let cell = match &first {
+                Some(first) => Expr::case(first.clone(), read).into(),
+                None => read,
+            };
+            self.q.expr_as(cell, Alias::new(alias));
+        };
+        column(
             Expr::cust("(SELECT rr.policy FROM request_revisions rr)"),
-            Alias::new(super::POLICY_REVISION_COL),
+            super::POLICY_REVISION_COL,
         );
-        self.q.expr_as(
+        column(
             Expr::cust("(SELECT rr.definitions FROM request_revisions rr)"),
-            Alias::new(super::DEFINITION_REVISION_COL),
+            super::DEFINITION_REVISION_COL,
         );
+        if ride {
+            column(
+                Expr::cust_with_values(
+                    "(SELECT ROW(pr.grants, pr.facts_behind, pr.bindings) \
+                     FROM party_door.party_revisions($1::pg_snapshot) pr)",
+                    [super::shape::held_snapshot()],
+                ),
+                super::PARTY_REVISIONS_COL,
+            );
+        }
+    }
+
+    /// The condition that holds on the first row the statement serves: its
+    /// `row_number()` over the statement's own `order`, which PostgreSQL
+    /// numbers before `OFFSET` skips. `None` for a `DISTINCT`, where a column
+    /// that varies by row changes which rows are distinct, for an aggregate,
+    /// for an ordered statement with a `LIMIT`, whose bounded sort a window
+    /// above it would make whole, and for an order that binds a value, which
+    /// the window would bind apart and so sort once more.
+    fn first_served_row(&self, order: &WindowStatement) -> Option<Expr> {
+        let aggregates = self
+            .ir
+            .select
+            .iter()
+            .any(|column| matches!(column.value, SelectValue::Aggregate { .. }));
+        let bounded_sort =
+            !self.ir.order_by.is_empty() && self.ctx.limit.is_some_and(|limit| limit >= 0);
+        if self.ir.distinct || aggregates || bounded_sort {
+            return None;
+        }
+        let mut window = SqlWriterValues::new("$", true);
+        PostgresQueryBuilder.prepare_window_statement(order, &mut window);
+        let (window, values) = window.into_parts();
+        if !values.0.is_empty() {
+            return None;
+        }
+        let first = match self.ctx.offset.filter(|offset| *offset > 0) {
+            Some(offset) => Expr::cust_with_values(
+                "$1 + 1",
+                [sea_query::Value::from(u64::try_from(offset).unwrap_or(0))],
+            ),
+            None => Expr::cust("1"),
+        };
+        Some(Expr::cust(format!("row_number() OVER ({window})")).eq(first))
     }
 
     fn emit_select_column(&mut self, i: usize, col: &SelectColumn) -> Result<ColumnSpec, AqlError> {

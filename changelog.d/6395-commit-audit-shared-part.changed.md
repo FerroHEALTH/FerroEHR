@@ -1,0 +1,1 @@
+- A commit audit stores its system id, the committer of a caller outside a patient context and a description the server wrote once, in a shared part, and keeps a person's committer and a client's description on its own row, which an EHR erasure deletes. Every reader serves the audit byte for byte as before, and a commit writes about 380 bytes less.

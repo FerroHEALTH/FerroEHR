@@ -273,6 +273,7 @@ impl FerroEhrService {
             system_id: self.effective_system_id(),
             change_type: change_type.to_owned(),
             description: Some(dv_text(DESCRIPTION)),
+            server_description: true,
             committer: PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(
                 PartyIdentifiedData {
                     external_ref: Some(Box::new(PartyRef {

@@ -137,7 +137,7 @@ fn archived_parties(
 }
 
 /// Name the archived EHR a settings refusal is about.
-fn for_archived_ehr(error: ServiceError, ehr_id: EhrId) -> ServiceError {
+pub(super) fn for_archived_ehr(error: ServiceError, ehr_id: EhrId) -> ServiceError {
     match error {
         ServiceError::BadRequest(mut refusal) => {
             refusal.message = format!("archived EHR {ehr_id}: {}", refusal.message);

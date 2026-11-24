@@ -255,6 +255,13 @@ impl CareCopy {
         }
     }
 
+    /// Runs the copy's pending cache upkeep ([`crate::service::upkeep`]).
+    pub(crate) async fn upkeep(&self) {
+        self.subjects.run_pending_tasks().await;
+        self.teams.run_pending_tasks().await;
+        self.persons.run_pending_tasks().await;
+    }
+
     /// What the copy holds: its subjects, persons and teams, the patients
     /// and declared subjects of those teams, and their bytes.
     pub(crate) fn held(&self) -> CareHeld {
@@ -504,7 +511,8 @@ pub(crate) fn care_of(rows: &[FactRow]) -> Vec<CareOf> {
                         (row.holder, row.version.clone()),
                         care.kind,
                         care.covers_for.clone(),
-                    ),
+                    )
+                    .in_episode(care.episode.clone().map(Arc::new)),
             ),
             _ => None,
         })

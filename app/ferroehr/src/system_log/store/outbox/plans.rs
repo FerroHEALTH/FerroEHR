@@ -196,3 +196,194 @@ async fn the_delivery_read_reads_the_window_by_its_index() {
         "only the retried record"
     );
 }
+
+/// The access-log entries the log holds, the last of them past the search
+/// index's cursor.
+const ENTRIES: i64 = 200_000;
+const INDEXED: i64 = 198_000;
+
+/// Writes an access log of [`ENTRIES`] entries, those up to [`INDEXED`] in
+/// the search index, and a syslog sink owed all of it.
+async fn seed_access_log(conn: &mut PgConnection) {
+    let seed: [(&str, &[i64]); 6] = [
+        (
+            "INSERT INTO audit.audit_render_policy (digest, policy) \
+             VALUES (sha256(convert_to('{}', 'UTF8')), '{}')",
+            &[],
+        ),
+        (
+            "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_current_xact_id() AS taken) \
+             INSERT INTO audit.access_log_entry (id, record_type, uid, time_recorded, content, \
+             content_digest, render_policy_id, event_action, event_outcome, principal, \
+             patient_id) OVERRIDING SYSTEM VALUE \
+             SELECT g, 'ACCESS_LOG_ENTRY', gen_random_uuid(), \
+             now() - ($1 - g) * interval '1 second', '{}', sha256(int8send(g)), \
+             (SELECT id FROM audit.audit_render_policy), 'R', 0, 'user-' || g % 50, \
+             'patient-' || g % 500 FROM own_xid CROSS JOIN generate_series(1, $1) AS g",
+            &[ENTRIES],
+        ),
+        (
+            "INSERT INTO audit.access_log_index (entry_id, time_recorded, render_policy_id, \
+             principal, patient_id, search_tokens, search_keys) \
+             SELECT id, time_recorded, render_policy_id, principal, patient_id, '{}', '{}' \
+             FROM audit.access_log_entry WHERE id <= $1",
+            &[INDEXED],
+        ),
+        (
+            "UPDATE audit.access_log_index_state SET last_id = $1",
+            &[INDEXED],
+        ),
+        (
+            "INSERT INTO audit.delivery_cursor (sink, chain, through_id) \
+             VALUES ('syslog', 'system', 0), ('syslog', 'access_log', 0)",
+            &[],
+        ),
+        (
+            "UPDATE audit.delivery_frontier SET through_id = $1 WHERE chain = 'access_log'",
+            &[ENTRIES],
+        ),
+    ];
+    for (statement, values) in seed {
+        let mut query = sqlx::query(statement);
+        for value in values {
+            query = query.bind(*value);
+        }
+        query.execute(&mut *conn).await.expect("the log is written");
+    }
+    sqlx::raw_sql(
+        "VACUUM ANALYZE audit.access_log_entry, audit.access_log_index, \
+         audit.access_log_index_state, audit.delivery_cursor, audit.delivery_frontier",
+    )
+    .execute(&mut *conn)
+    .await
+    .expect("the log is analyzed");
+}
+
+/// Over an access log of 200,000 entries, its last 2,000 past the search
+/// index's cursor, a sink's next entry is read through the key range of its
+/// window, with the window in the indexed entries, across the cursor and
+/// past it, and the entry read is the one owed (#6385).
+#[tokio::test]
+async fn the_delivery_read_reads_the_access_log_window_by_its_key() {
+    let db = testkit::db().await.expect("testkit database");
+    let mut conn = crate::db::acquire::acquire(&db.pool())
+        .await
+        .expect("a connection");
+    seed_access_log(&mut conn).await;
+    sqlx::raw_sql("SET plan_cache_mode = force_generic_plan")
+        .execute(&mut *conn)
+        .await
+        .expect("the generic plan is forced");
+    for cursor in [0, INDEXED - 1_000, INDEXED, ENTRIES - 1] {
+        sqlx::query(
+            "UPDATE audit.delivery_cursor SET through_id = $1 \
+             WHERE sink = 'syslog' AND chain = 'access_log'",
+        )
+        .bind(cursor)
+        .execute(&mut *conn)
+        .await
+        .expect("the cursor stands");
+        let (plan, pages, rows) = read(&mut conn).await;
+        assert!(
+            !plan.contains("Gather")
+                && !plan.contains("Seq Scan on access_log_entry ")
+                && !plan.contains("Seq Scan on access_log_index "),
+            "cursor {cursor}: the window is read by its key:\n{plan}"
+        );
+        assert!(
+            pages <= PAGES,
+            "cursor {cursor}: {pages} pages touched, at most {PAGES}:\n{plan}"
+        );
+        assert_eq!(
+            rows,
+            [(false, cursor + 1)],
+            "cursor {cursor}: the next entry"
+        );
+    }
+}
+
+/// Over the same access log, the person's trail reads the entries past the
+/// search index's cursor as one bounded key range in one process, with no
+/// sort of that window, whether the cursor is caught up or behind (#6385).
+#[cfg(feature = "fhir")]
+#[tokio::test]
+async fn the_person_trail_reads_the_open_window_by_its_key() {
+    use sea_query::PostgresQueryBuilder;
+
+    use crate::system_log::search::condition::search_condition;
+    use crate::system_log::search::resolve_criteria;
+    use crate::system_log::store::{AuditCriterion, AuditSearchFilter, newest_first};
+
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let mut conn = crate::db::acquire::acquire(&pool)
+        .await
+        .expect("a connection");
+    seed_access_log(&mut conn).await;
+    let filter = AuditSearchFilter {
+        criteria: vec![AuditCriterion::Patient(vec!["patient-7".to_owned()])],
+        ..AuditSearchFilter::default()
+    };
+    let resolved = resolve_criteria(&pool, &filter)
+        .await
+        .expect("the criteria resolve")
+        .expect("no token criterion");
+    let trail = newest_first(search_condition(&filter, &resolved)).to_string(PostgresQueryBuilder);
+    sqlx::query("SELECT set_config('ferroehr.plan_test', $1, false)")
+        .bind(trail)
+        .execute(&mut *conn)
+        .await
+        .expect("the trail is handed over");
+    sqlx::raw_sql(
+        "DO $$ BEGIN EXECUTE 'PREPARE trail AS ' || current_setting('ferroehr.plan_test'); END $$",
+    )
+    .execute(&mut *conn)
+    .await
+    .expect("the trail prepares");
+    for cursor in [INDEXED, ENTRIES] {
+        sqlx::query("UPDATE audit.access_log_index_state SET last_id = $1")
+            .bind(cursor)
+            .execute(&mut *conn)
+            .await
+            .expect("the cursor stands");
+        sqlx::query(
+            "INSERT INTO audit.access_log_index (entry_id, time_recorded, render_policy_id, \
+             principal, patient_id, search_tokens, search_keys) \
+             SELECT id, time_recorded, render_policy_id, principal, patient_id, '{}', '{}' \
+             FROM audit.access_log_entry WHERE id <= $1 ON CONFLICT DO NOTHING",
+        )
+        .bind(cursor)
+        .execute(&mut *conn)
+        .await
+        .expect("the index holds the entries up to the cursor");
+        let plan: Vec<String> = sqlx::query_scalar(
+            "EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, TIMING OFF, SUMMARY OFF) EXECUTE trail",
+        )
+        .fetch_all(&mut *conn)
+        .await
+        .expect("the plan reads");
+        let plan = plan.join("\n");
+        let lines: Vec<&str> = plan.lines().collect();
+        let window = lines.windows(2).any(|pair| {
+            pair[0].contains("->  Index Scan using pk_access_log_entry on access_log_entry")
+                && pair[1].contains("(id > (InitPlan")
+                && pair[1].contains("(id <= (InitPlan")
+        });
+        assert!(
+            window && plan.matches("Sort Key").count() == 1,
+            "cursor {cursor}: the open window is one bounded key range, sorted only as the \
+             trail:\n{plan}"
+        );
+        let rows = plan
+            .lines()
+            .next()
+            .and_then(|top| top.split("rows=").nth(1))
+            .and_then(|rows| rows.split_whitespace().next())
+            .unwrap_or_default()
+            .to_owned();
+        assert_eq!(
+            rows, "400.00",
+            "cursor {cursor}: the patient's 400 entries:\n{plan}"
+        );
+    }
+}
