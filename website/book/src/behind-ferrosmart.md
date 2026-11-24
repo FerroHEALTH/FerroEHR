@@ -13,12 +13,12 @@ tokens. FerroSMART's architecture describes the whole deployment in
 §13.21, A product behind FerroSMART, of its [architecture](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/docs/architecture.md).
 This page is FerroEHR's side of it.
 
-```text
- SMART app ── /authorize, /token ──▶ FerroSMART ── login ──▶ OpenID Connect provider
-     │                                   │
-     │  Bearer access token              │ jwks_uri
-     ▼                                   ▼
- FerroEHR (resource server) ── reads the caller from the token's claims
+```mermaid
+flowchart LR
+    app["SMART app"] -- "/authorize, /token" --> smart["FerroSMART"]
+    smart -- "login" --> idp["OpenID Connect provider"]
+    app -- "Bearer access token" --> rs["FerroEHR (resource server)<br/>reads the caller from the token's claims"]
+    smart -- "jwks_uri" --> rs
 ```
 
 ## FerroSMART serves the openEHR base
