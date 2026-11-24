@@ -127,6 +127,13 @@ fn persistent<'a, T: Tree<'a>>(body: T) -> bool {
         && code.get_text("code_string").as_deref() == Some("431")
 }
 
+/// The `422` of a composition placed in an episode no care relationship of
+/// its EHR's subject names, live or ended (draft access control package,
+/// Episodes of Care: declared episodes).
+pub(crate) fn undeclared() -> ServiceError {
+    refused("names an episode that no care relationship of the EHR's subject names")
+}
+
 /// The `422` of a placement the commit refuses.
 fn refused(detail: &str) -> ServiceError {
     ServiceError::content_invalid(

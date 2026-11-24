@@ -31,7 +31,7 @@ use serde_json::Value;
 use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
-use super::care_of::{CareFact, CarerKind, Cover, ProviderKey};
+use super::care_of::{CareFact, CarerKind, Cover, Episode, ProviderKey};
 use super::kin::KinFact;
 use super::{CallerFact, FactKind, FactValue};
 use crate::db::snapshot::Snapshot;
@@ -65,6 +65,14 @@ macro_rules! fact_columns {
          lower(f.role_validity) AS role_lower, upper(f.role_validity) AS role_upper, \
          isempty(f.validity) AS empty, lower(f.validity) AS lower, upper(f.validity) AS upper, \
          f.not_before, f.not_after"
+    };
+}
+
+/// The columns of one care relationship, over `binding_caller_fact f`: a
+/// fact's and its episode's, which only a care relationship holds.
+macro_rules! care_columns {
+    () => {
+        concat!(fact_columns!(), ", f.episode_issuer, f.episode_id")
     };
 }
 
@@ -102,7 +110,7 @@ const HELD_FACTS: &str = concat!(
 /// `ix_binding_caller_fact_party`.
 const CARED: &str = concat!(
     "SELECT f.party_id AS stamped, ",
-    fact_columns!(),
+    care_columns!(),
     " FROM binding_caller_fact_party p \
      JOIN binding_caller_fact f ON f.party_id = p.party_id AND f.kind = 'under_care_of' \
      WHERE ",
@@ -114,7 +122,7 @@ const CARED: &str = concat!(
 /// `ix_binding_caller_fact_party`.
 const CARE_OF_SUBJECT: &str = concat!(
     "SELECT f.party_id AS stamped, ",
-    fact_columns!(),
+    care_columns!(),
     " FROM binding_caller_fact f WHERE f.party_id = $1 AND f.kind = 'under_care_of' \
      ORDER BY f.holder_id, f.ordinal"
 );
@@ -122,7 +130,7 @@ const CARE_OF_SUBJECT: &str = concat!(
 /// The care relationships of each of a set of subjects.
 const CARE_OF_SUBJECTS: &str = concat!(
     "SELECT f.party_id AS stamped, ",
-    fact_columns!(),
+    care_columns!(),
     " FROM binding_caller_fact f WHERE f.party_id = ANY($1) AND f.kind = 'under_care_of' \
      ORDER BY f.party_id, f.holder_id, f.ordinal"
 );
@@ -132,7 +140,7 @@ const CARE_OF_SUBJECTS: &str = concat!(
 /// `EXPLAIN` it.
 pub const CARE_OF_TEAM: &str = concat!(
     "SELECT f.party_id AS stamped, ",
-    fact_columns!(),
+    care_columns!(),
     " FROM binding_caller_fact f WHERE f.target_id = $1 AND f.kind = 'under_care_of' \
      ORDER BY f.party_id, f.holder_id, f.ordinal"
 );
@@ -141,7 +149,7 @@ pub const CARE_OF_TEAM: &str = concat!(
 /// from `ix_binding_caller_fact_care_team`.
 const CARE_OF_CARERS: &str = concat!(
     "SELECT f.party_id AS stamped, ",
-    fact_columns!(),
+    care_columns!(),
     " FROM binding_caller_fact f WHERE f.target_id = ANY($1) AND f.kind = 'under_care_of' \
      ORDER BY f.party_id, f.holder_id, f.ordinal"
 );
@@ -150,7 +158,7 @@ const CARE_OF_CARERS: &str = concat!(
 /// from `uq_binding_caller_fact`.
 const CARE_OF_HOLDER: &str = concat!(
     "SELECT f.party_id AS stamped, ",
-    fact_columns!(),
+    care_columns!(),
     " FROM binding_caller_fact f WHERE f.holder_id = $1 AND f.kind = 'under_care_of'"
 );
 
@@ -173,11 +181,12 @@ const DECLARED: &str = concat!(
 );
 
 /// The text of one stored fact, as a commit compares the facts of a head
-/// before and after.
+/// before and after; an episode adds to it only where a fact holds one.
 const FACT_TEXT: &str = "ROW(kind, ordinal, party_id, terminology_id, code_string, target_id, \
      target_kind, provider_issuer, provider_id, self_declared, writer_id, lifecycle_state, \
      role_validity, validity, not_before, not_after, holder_version, covers_issuer, \
-     covers_id, covers_kind)::text";
+     covers_id, covers_kind)::text \
+     || CASE WHEN episode_id IS NULL THEN '' ELSE ROW(episode_issuer, episode_id)::text END";
 
 /// The party that wrote the trunk head of the holder `$1`: the container its
 /// commit audit's committer names in `external_ref`, the bound `PERSON` of a
@@ -246,6 +255,12 @@ impl crate::memory::Weigh for FactRow {
                         .issuer
                         .capacity()
                         .saturating_add(covers.key.id.capacity())
+                }))
+                .saturating_add(care.episode.as_ref().map_or(0, |episode| {
+                    episode
+                        .issuer
+                        .capacity()
+                        .saturating_add(episode.id.capacity())
                 })),
         };
         value
@@ -683,6 +698,7 @@ fn fact_row(holder: Uuid, row: &sqlx::postgres::PgRow) -> Result<FactRow, Storag
             provider: ProviderKey::new(issuer, id),
             self_declared,
             covers_for,
+            episode: episode_of(row)?,
         }),
         (
             FactKind::Role | FactKind::OrganisationType,
@@ -711,6 +727,22 @@ fn fact_row(holder: Uuid, row: &sqlx::postgres::PgRow) -> Result<FactRow, Storag
         writer: row.try_get("writer_id")?,
         version: row.try_get("holder_version")?,
     })
+}
+
+/// The episode the care relationship `row` holds, read by the care reads
+/// alone ([`care_columns`]).
+fn episode_of(row: &sqlx::postgres::PgRow) -> Result<Option<Episode>, StorageError> {
+    match (
+        row.try_get::<Option<String>, _>("episode_issuer")?,
+        row.try_get::<Option<String>, _>("episode_id")?,
+    ) {
+        (None, None) => Ok(None),
+        (Some(issuer), Some(id)) => Ok(Some(Episode::new(issuer, id))),
+        _ => Err(StorageError::InvalidRows(
+            "binding_caller_fact holds an episode ck_binding_caller_fact_episode refuses"
+                .to_owned(),
+        )),
+    }
 }
 
 #[cfg(test)]

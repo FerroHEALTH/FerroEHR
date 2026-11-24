@@ -120,6 +120,40 @@ pub fn effective_end(
     }
 }
 
+/// Why a care relationship with no `episode` is refused at write: the first
+/// `ACCESS_POLICY._relationship_validity_` entry covering its role and
+/// provider type marks `_episode_required_` (draft access control decision
+/// procedure, Writing Relationships).
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error(
+    "a care relationship in the role {role} names an episode: the relationship_validity entry of \
+     the access policy that covers its role and provider type marks episode_required"
+)]
+pub struct EpisodeRequired {
+    /// The role, as `terminology::code`.
+    pub role: String,
+}
+
+/// Judges whether the care relationship `written`, naming an episode when
+/// `episode`, may be written without one under `policy`.
+///
+/// # Errors
+/// [`EpisodeRequired`] when it names none and the covering entry requires one.
+pub fn episode(
+    policy: Option<&AccessPolicy>,
+    written: &Written<'_>,
+    episode: bool,
+) -> Result<(), EpisodeRequired> {
+    let required =
+        covering(policy, written).is_some_and(|entry| entry.episode_required == Some(true));
+    if required && !episode {
+        return Err(EpisodeRequired {
+            role: format!("{}::{}", written.role.terminology, written.role.code),
+        });
+    }
+    Ok(())
+}
+
 /// Why a self-declared care relationship is refused at write.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum SelfDeclaredRefusal {

@@ -372,6 +372,7 @@ async fn project(
                 terminology: "HL7_ParticipationType".to_owned(),
                 code: "PART".to_owned(),
             },
+            episode: None,
         })
         .collect();
     access_care::clear(&mut tx)

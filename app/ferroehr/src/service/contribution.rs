@@ -141,7 +141,27 @@ pub(crate) async fn commit_version_set(
             attests.extend(plan_attestation(&target_kinds, v, party_only)?);
             continue;
         }
-        changes.push(build_change(cx, &target_kinds, v, ehr_id, party_only).await?);
+        let index = v.index;
+        let change = build_change(cx, &target_kinds, v, ehr_id, party_only).await?;
+        if let (
+            Some(ehr_id),
+            Change::Create {
+                kind: Kind::Composition,
+                body,
+                ..
+            }
+            | Change::Modify {
+                kind: Kind::Composition,
+                body,
+                ..
+            },
+        ) = (ehr_id, &change.1)
+        {
+            cx.placement_declared(ehr_id, body)
+                .await
+                .map_err(|e| e.for_version_member(index))?;
+        }
+        changes.push(change);
     }
 
     // Whether the set needs the content-write gate; the gate itself runs

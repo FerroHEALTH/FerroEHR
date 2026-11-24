@@ -68,6 +68,7 @@ fn the_care_ground_names_the_kind_of_the_carer_it_covers_for() {
             provider: ProviderKey::new("urn:example:providers", "hospital"),
             in_grace: false,
             covers_for: Some(Cover::new(ProviderKey::new("local", &covered), kind)),
+            episode: None,
         };
         let role = ForeignCode {
             terminology: "HL7_ParticipationType".to_owned(),

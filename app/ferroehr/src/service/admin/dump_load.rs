@@ -1124,6 +1124,8 @@ impl FerroEhrService {
         // refused for either before anything is written.
         self.check_archived_access(&mut archive, dir, &manifest, format)
             .await?;
+        self.check_archived_episodes(&mut archive, dir, &manifest, format)
+            .await?;
 
         // Our own extension: re-populate the object store from the archive's
         // `blobs/` entries before loading versions that reference them.
@@ -1516,6 +1518,7 @@ async fn load_versions(
 }
 
 mod archived_access;
+mod archived_episodes;
 #[cfg(feature = "multimedia")]
 mod blobs;
 mod demographic_load;

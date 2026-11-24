@@ -17,6 +17,7 @@
 //! cannot be read is the refusal of its commit (`422`).
 
 use std::fmt;
+use std::sync::Arc;
 
 use openehr_rm::draft::access_control::terminology::care::{CareBasis, CareElement};
 use openehr_rm::draft::access_control::terminology::{ForeignCode, ForeignKind, Term};
@@ -29,6 +30,7 @@ use crate::party_binding::derive::container;
 use crate::party_binding::grants::derive::{Bound, GrantFacts};
 use crate::party_binding::grants::store::Dates;
 use crate::party_binding::policy_mark::{coded, first};
+use crate::versioning::episode::EpisodeKey;
 use crate::versioning::tree::Tree;
 
 /// The resource a care relationship is written at.
@@ -116,6 +118,34 @@ pub(crate) struct CareFact {
     /// `covers_for` `DV_IDENTIFIER`, written in the provider's form; `None`
     /// when it names none.
     pub(crate) covers_for: Option<Cover>,
+    /// The episode of care it is scoped to; `None` when it names none.
+    pub(crate) episode: Option<Episode>,
+}
+
+/// The episode of care a care relationship is scoped to: the `issuer` and
+/// `id` of its `episode` `DV_IDENTIFIER`, and their [`EpisodeKey`] (draft
+/// access control package, Episodes of Care: `_type_` is not compared).
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Episode {
+    /// The key a placement is matched by.
+    pub key: EpisodeKey,
+    /// The identifier's `issuer`.
+    pub issuer: String,
+    /// The identifier's `id`.
+    pub id: String,
+}
+
+impl Episode {
+    /// The episode `issuer` gives the identifier `id`.
+    #[must_use]
+    pub fn new(issuer: impl Into<String>, id: impl Into<String>) -> Self {
+        let (issuer, id) = (issuer.into(), id.into());
+        Self {
+            key: EpisodeKey::of(&issuer, &id),
+            issuer,
+            id,
+        }
+    }
 }
 
 /// Pushes onto `facts` the care relationship `body`, a `PARTY_RELATIONSHIP`
@@ -147,6 +177,7 @@ pub(crate) fn read<'a, T: Tree<'a>>(body: T, facts: &mut GrantFacts) {
     let role = care_role(body).map_err(|why| wrong.push(why)).ok();
     let provider = provider(body).map_err(|why| wrong.push(why)).ok();
     let self_declared = basis(body).map_err(|why| wrong.push(why)).ok();
+    let episode = episode(body).map_err(|why| wrong.push(why)).ok();
     let covers_for = covers_for(body)
         .and_then(|cover| match cover {
             Some(cover) if carer == Some(cover.carer) => {
@@ -164,6 +195,7 @@ pub(crate) fn read<'a, T: Tree<'a>>(body: T, facts: &mut GrantFacts) {
         Some(provider),
         Some(self_declared),
         Some(covers_for),
+        Some(episode),
     ) = (
         wrong.is_empty(),
         carer,
@@ -172,6 +204,7 @@ pub(crate) fn read<'a, T: Tree<'a>>(body: T, facts: &mut GrantFacts) {
         provider,
         self_declared,
         covers_for,
+        episode,
     ) {
         facts.care_source = source;
         facts.facts.push(CallerFact {
@@ -184,6 +217,7 @@ pub(crate) fn read<'a, T: Tree<'a>>(body: T, facts: &mut GrantFacts) {
                 provider,
                 self_declared,
                 covers_for,
+                episode,
             }),
             validity: body.get("time_validity").map(Tree::to_value),
             not_before: Bound::Open,
@@ -332,6 +366,27 @@ pub(crate) fn covers_for<'a, T: Tree<'a>>(body: T) -> Result<Option<CoversFor>, 
     }
 }
 
+/// The episode of care the care relationship `body` is scoped to: its
+/// `episode` `DV_IDENTIFIER`, with an `issuer` and an `id`; `None` when it
+/// names none (draft access control package, Episodes of Care).
+///
+/// # Errors
+/// Why it cannot be read: an `episode` that is no `DV_IDENTIFIER` with a
+/// non-blank issuer and id.
+pub(crate) fn episode<'a, T: Tree<'a>>(body: T) -> Result<Option<Episode>, String> {
+    let Some(value) = named_element(body, CareElement::Episode.code()) else {
+        return Ok(None);
+    };
+    let identifier: DvIdentifier = openehr_its::json::from_canonical_value(&value.to_value())
+        .map_err(|error| format!("its episode is no DV_IDENTIFIER: {error}"))?;
+    match identifier.issuer.filter(|issuer| !issuer.trim().is_empty()) {
+        Some(issuer) if !identifier.id.trim().is_empty() => {
+            Ok(Some(Episode::new(issuer, identifier.id)))
+        }
+        _ => Err("its episode names the episode of care by an issuer and an id".to_owned()),
+    }
+}
+
 /// Whether the `basis` of `body` is `self_declared`; `assigned`, the
 /// default when absent, is not (draft access control package, Care
 /// Relationships). The access policy judges a self-declared one at its
@@ -362,6 +417,7 @@ pub struct CareOf {
     self_declared: bool,
     held: Option<Held>,
     covers_for: Option<Cover>,
+    episode: Option<Arc<Episode>>,
 }
 
 /// Where a care relationship is stored: its own `PARTY_RELATIONSHIP`
@@ -386,7 +442,22 @@ impl CareOf {
             self_declared: false,
             held: None,
             covers_for: None,
+            episode: None,
         }
+    }
+
+    /// This relationship scoped to the episode `episode`; `None` when it
+    /// names none.
+    #[must_use]
+    pub fn in_episode(mut self, episode: Option<Arc<Episode>>) -> Self {
+        self.episode = episode;
+        self
+    }
+
+    /// The episode of care it is scoped to; `None` when it names none.
+    #[must_use]
+    pub fn episode(&self) -> Option<&Arc<Episode>> {
+        self.episode.as_ref()
     }
 
     /// This relationship as stored in the `PARTY_RELATIONSHIP` container
@@ -564,6 +635,11 @@ impl crate::memory::Weigh for CareOf {
                     .issuer
                     .capacity()
                     .saturating_add(covers.key.id.capacity())
+            }),
+            self.episode.as_ref().map_or(0, |episode| {
+                size_of::<Episode>()
+                    .saturating_add(episode.issuer.capacity())
+                    .saturating_add(episode.id.capacity())
             }),
         ]
         .into_iter()
