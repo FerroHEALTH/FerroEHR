@@ -122,8 +122,20 @@ struct Seeded {
 /// link every one.
 async fn seed(entries: u32) -> Seeded {
     let db = testkit::db().await.expect("testkit database");
-    let pool = db.pool();
-    let pools = DomainPools::from_shared(&pool);
+    let (drain, sender, checkpoints) = seed_on(&db.pool(), entries).await;
+    Seeded {
+        db,
+        drain: Some(drain),
+        sender,
+        checkpoints,
+    }
+}
+
+/// Seed the log of `pool` with the reads `0..entries` and wait for the
+/// chainer to link every one; returns its drain, its sender and its
+/// checkpoints.
+async fn seed_on(pool: &sqlx::PgPool, entries: u32) -> (AuditHandle, AuditSender, Checkpoints) {
+    let pools = DomainPools::from_shared(pool);
     let config = ferroehr::system_log::config::AuditConfig {
         enabled: true,
         ..ferroehr::system_log::config::AuditConfig::default()
@@ -155,7 +167,7 @@ async fn seed(entries: u32) -> Seeded {
         std::time::Instant::now() + Duration::from_secs(120 * u64::from(entries.div_ceil(ENTRIES)));
     loop {
         let chained: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_record")
-            .fetch_one(&pool)
+            .fetch_one(pool)
             .await
             .expect("the access log is counted");
         if chained == expected {
@@ -167,12 +179,41 @@ async fn seed(entries: u32) -> Seeded {
         );
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
-    Seeded {
-        db,
-        drain: Some(drain),
-        sender,
-        checkpoints,
-    }
+    (drain, sender, checkpoints)
+}
+
+/// The log the plan tests read, seeded once per test binary build (#6352):
+/// [`ENTRIES`] reads, indexed up to all but the newest four requests' entries,
+/// as between two frontier rounds, and vacuumed. Each test reads its own
+/// clone of it.
+async fn plan_log() -> testkit::TestDb {
+    testkit::seeded::seeded_db("access_log_storage plan log", async |db| {
+        let pool = db.pool();
+        let (drain, sender, _checkpoints) = seed_on(&pool, ENTRIES).await;
+        let last: i64 = sqlx::query_scalar("SELECT max(id) FROM audit.access_log_entry")
+            .fetch_one(&pool)
+            .await
+            .expect("the last entry id reads");
+        sender
+            .store()
+            .index_access_log(last - i64::from(PER_REQUEST) * 4)
+            .await
+            .expect("the index moves");
+        vacuum(&pool).await;
+        let runtime = drain.runtime_pool();
+        drain.shutdown(Duration::from_secs(10)).await;
+        runtime.close().await;
+    })
+    .await
+    .expect("the seeded plan log")
+}
+
+/// The search index's cursor in the log of `pool`.
+async fn index_cursor(pool: &sqlx::PgPool) -> i64 {
+    sqlx::query_scalar("SELECT last_id FROM audit.access_log_index_state WHERE singleton")
+        .fetch_one(pool)
+        .await
+        .expect("the index cursor reads")
 }
 
 /// Vacuum and analyse every relation of [`RELATIONS`], as autovacuum leaves
@@ -208,19 +249,9 @@ async fn plan(pool: &sqlx::PgPool, count: &str) -> String {
 /// #6319).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_iti81_total_is_counted_from_the_time_index() {
-    let seeded = seed(ENTRIES).await;
-    let pool = seeded.db.pool();
-    let last: i64 = sqlx::query_scalar("SELECT max(id) FROM audit.access_log_entry")
-        .fetch_one(&pool)
-        .await
-        .expect("the last entry id reads");
-    let cursor = seeded
-        .sender
-        .store()
-        .index_access_log(last)
-        .await
-        .expect("the index moves");
-    vacuum(&pool).await;
+    let db = plan_log().await;
+    let pool = db.pool();
+    let cursor = index_cursor(&pool).await;
     // NOTE: our own design (#6319), where the count takes most of the index the planner may read
     // its narrow rows in place of its time index; neither reads an entry's row.
     for count in [
@@ -256,19 +287,9 @@ async fn the_iti81_total_is_counted_from_the_time_index() {
 /// cursor, never by a sort of the whole index (#6319).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_newest_page_reads_the_index_in_its_order() {
-    let seeded = seed(ENTRIES).await;
-    let pool = seeded.db.pool();
-    let last: i64 = sqlx::query_scalar("SELECT max(id) FROM audit.access_log_entry")
-        .fetch_one(&pool)
-        .await
-        .expect("the last entry id reads");
-    let cursor = seeded
-        .sender
-        .store()
-        .index_access_log(last)
-        .await
-        .expect("the index moves");
-    vacuum(&pool).await;
+    let db = plan_log().await;
+    let pool = db.pool();
+    let cursor = index_cursor(&pool).await;
     for (page, index) in [
         (
             format!(
@@ -311,20 +332,9 @@ async fn a_newest_page_reads_the_index_in_its_order() {
 /// read of its row, with entries past the search index's cursor (#6320).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_iti81_page_reads_each_record_it_serves_by_its_key() {
-    let seeded = seed(ENTRIES).await;
-    let pool = seeded.db.pool();
-    let last: i64 = sqlx::query_scalar("SELECT max(id) FROM audit.access_log_entry")
-        .fetch_one(&pool)
-        .await
-        .expect("the last entry id reads");
-    // The newest entries stay past the cursor, as between two frontier rounds.
-    let cursor = seeded
-        .sender
-        .store()
-        .index_access_log(last - i64::from(PER_REQUEST) * 4)
-        .await
-        .expect("the index moves");
-    vacuum(&pool).await;
+    let db = plan_log().await;
+    let pool = db.pool();
+    let cursor = index_cursor(&pool).await;
     let filter = AuditSearchFilter {
         count: 20,
         ..AuditSearchFilter::default()
