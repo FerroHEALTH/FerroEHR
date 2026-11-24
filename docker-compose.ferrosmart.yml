@@ -124,8 +124,10 @@ services:
       FERROEHR__AUTH__ISSUER__FERROSMART__PARTY__IDENTIFIER_ISSUER: urn:example:ferrosmart-login
       FERROEHR__AUTH__ISSUER__FERROSMART__PARTY__IDENTIFIER_TYPE: login
       # The discovery document describes FerroSMART, so an app that starts at
-      # FerroEHR's base finds it.
+      # FerroEHR's base finds it; the quickstart's issuer beside it signs only
+      # its clients' tokens, so FerroSMART is named.
       FERROEHR__AUTH__SMART__DISCOVERY: "true"
+      FERROEHR__AUTH__DESCRIBED_ISSUER: ferrosmart
       FERROEHR__SERVER__PUBLIC_BASE_URL: http://localhost:8080
 
   # The viewer launches SMART apps from an EHR's page through FerroSMART's

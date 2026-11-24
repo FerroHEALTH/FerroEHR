@@ -398,7 +398,9 @@ configs:
   # password grant for curl-friendly token fetching. `ferroehr-service`
   # (ferroehr-service-quickstart-secret) has only the client-credentials grant,
   # a service account holding USER, the `system/` scopes and a `client_id`
-  # claim, which its AGENT's `client_id` identifier matches. A realm that declares
+  # claim, which its AGENT's `client_id` identifier matches, and a `sub` that is
+  # its client id, so its tokens read as a system caller (RFC 9068 §2.2); the
+  # viewer's tokens name it in `client_id` too. A realm that declares
   # `clientScopes` gets none of Keycloak's built-in ones, so the two the CDR
   # reads are declared as Keycloak defines them: `basic` (the `sub` claim) and
   # `roles` (the realm roles in `realm_access.roles`, the CDR's default role
@@ -704,6 +706,18 @@ configs:
                   "access.token.claim": "true",
                   "id.token.claim": "false"
                 }
+              },
+              {
+                "name": "client_id",
+                "protocol": "openid-connect",
+                "protocolMapper": "oidc-hardcoded-claim-mapper",
+                "config": {
+                  "claim.name": "client_id",
+                  "claim.value": "ferroehr-viewer",
+                  "jsonType.label": "String",
+                  "access.token.claim": "true",
+                  "id.token.claim": "false"
+                }
               }
             ],
             "defaultClientScopes": [
@@ -747,10 +761,21 @@ configs:
                   "access.token.claim": "true",
                   "id.token.claim": "false"
                 }
+              },
+              {
+                "name": "sub",
+                "protocol": "openid-connect",
+                "protocolMapper": "oidc-hardcoded-claim-mapper",
+                "config": {
+                  "claim.name": "sub",
+                  "claim.value": "ferroehr-service",
+                  "jsonType.label": "String",
+                  "access.token.claim": "true",
+                  "id.token.claim": "false"
+                }
               }
             ],
             "defaultClientScopes": [
-              "basic",
               "roles",
               "system/composition-*.cruds",
               "system/template-*.cruds",
