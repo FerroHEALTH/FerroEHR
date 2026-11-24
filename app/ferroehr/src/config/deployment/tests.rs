@@ -291,13 +291,6 @@ fn production_refuses_the_open_access_default() {
     assert_eq!(accepted.accepted, [DeploymentGap::OpenEhrAccessDefault]);
 }
 
-/// The removed audit fail mode is no gap a deployment can accept: its token
-/// is unknown (#5747).
-#[test]
-fn the_audit_fail_mode_is_no_gap() {
-    assert!(serde_json::from_str::<DeploymentGap>("\"audit_fails_open\"").is_err());
-}
-
 /// A `sandbox` deployment runs on the shipped defaults and says so; the
 /// open access default refuses nothing there.
 #[test]

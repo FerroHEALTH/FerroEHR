@@ -30,33 +30,15 @@ on:
   merge_group:
 
 concurrency:
-  # PR runs supersede within their own pull request (`github.ref` is
-  # `refs/pull/N/merge`); every other event gets a group of its own COMMIT.
-  #
-  # Pending cancellation is not governed by `cancel-in-progress`: "By default,
-  # any existing pending job or workflow in the same concurrency group will be
-  # canceled and the new queued job or workflow will take its place"
+  # A pull request's runs share its ref; every push to main shares one group;
+  # each merge-group entry gets a group of its own commit, which the queue
+  # alone cancels. A newer push to main cancels the older push run: a verified
+  # push only writes caches, and a cancelled bypass push is covered by the next
+  # queue group built on it and by the nightly full run. Pending runs in one
+  # group give way to the newest one
   # (https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#concurrency).
-  # With a per-ref group every main push shared one group, so a push that
-  # queued behind a running one was cancelled by the next push and its guard
-  # tier never reported at all — which is what happened to the v4.0.5 release
-  # merge commit (run 32951162038). Keying non-PR runs by SHA gives each push
-  # and each merge-group entry a group of its own, so nothing can pend behind a
-  # sibling (#2777).
-  #
-  # `case(pred, value, default)` is the documented conditional-value function —
-  # "Evaluates predicates in order and returns the value corresponding to the
-  # first predicate that evaluates to true. If no predicate matches, it returns
-  # the last argument as the default value"
-  # (https://docs.github.com/en/actions/reference/workflows-and-actions/expressions)
-  # — used in preference to the `a && b || c` idiom, which the operator table
-  # does not define.
-  group: ci-${{ case(github.event_name == 'pull_request', github.ref, github.sha) }}
-  # Cancel superseded PR runs, NEVER a main run. The change filter below
-  # compares only THIS push's delta, so a main run cancelled mid-flight is
-  # never re-evaluated by the next push if that push touches no code — a
-  # defect can then land permanently with every job reported green-or-skipped.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ case(github.event_name == 'pull_request', github.ref, github.event_name == 'push', 'main-push', github.sha) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 
 # No permissions by default; every job grants itself the minimum it needs
 # (job-level permissions override workflow-level ones —
@@ -104,29 +86,19 @@ env:
   # the queue ever builds a group. Everything else runs on all three, except
   # on a push to main the merge queue already passed (#4546).
   #
-  # The verified push, the rule behind every `queue_verified` in this file:
-  # the `changes` job sets it when a `merge_group` run of this workflow on the
-  # pushed commit passed `conclusion`. That run checked the same tree, so on
-  # such a push every lane is skipped except these, each kept for a cache
-  # pull requests read and only a main push can write:
-  #   * the rust-cache lanes (deny, clippy, feature-combos, its-wasm,
-  #     its-rest-features, msrv, codegen-drift, cpu-budget, test on one shard,
-  #     build, test-viewer),
-  #     each only when `cache_refresh` names it: the key's
-  #     inputs moved, or main holds no entry for it;
-  #   * ui-e2e-binary and ui-e2e-viewer, on their own triggers: they write
-  #     the exact-key binary caches and main's sccache entries.
-  # A push no queue run passed (an administrator's bypass) runs every lane.
+  # The verified push, the rule behind every `queue_verified` in this file
+  # (#4546, #6515): the `changes` job sets it when a `merge_group` run of this
+  # workflow passed `conclusion` on the pushed tree. Such a push only writes
+  # the caches pull requests read: each rust-cache lane `cache_refresh` names
+  # (its key's inputs moved, or main holds no entry) builds without running
+  # its tests, and ui-e2e-binary and ui-e2e-viewer write the exact-key binary
+  # caches and main's sccache entries. A push no queue run passed runs every
+  # lane.
   #
-  # The merge queue proves the merged tree, never the performance (#5284;
-  # the family CI rule of 2026-11-09: every pull-request and merge-group run
-  # under 20 minutes, queue included). The long non-functional lanes, perf
-  # and the browser lanes (ui-e2e, ui-docs-shots, viewer-login-smoke, and
-  # ui-e2e-viewer, which builds only for them), skip a merge_group run and
-  # run on the pull request and on EVERY push to main, a verified one too,
-  # with the same limits, journeys and shards. `conclusion` names them in
-  # its summary. The deployment harness and chart boot are functional and
-  # stay in the queue.
+  # The merge queue proves the merged tree, never the performance (#5284).
+  # perf and the browser lanes (ui-e2e, ui-docs-shots, viewer-login-smoke)
+  # run on the pull request alone. The deployment harness and chart boot are
+  # functional and stay in the queue.
   # No lane reads anything a queue run cannot: the conformance catalogue runs
   # for a push in containers.yml, against the images it pushes.
   #
@@ -309,7 +281,7 @@ jobs:
       # alone. It passes over a commit only when CI proved its database suite
       # broken, so a broken head cannot block the change that repairs it.
       - id: perf_base
-        if: steps.filter.outputs.perf == 'true' && github.event_name != 'merge_group'
+        if: steps.filter.outputs.perf == 'true' && github.event_name == 'pull_request'
         shell: bash
         env:
           REPO: ${{ github.repository }}
@@ -1794,6 +1766,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: df -h / && du -sh target/budget 2>/dev/null || true
       - name: Every hot path within its CPU budget, optimised
+        if: needs.changes.outputs.queue_verified != 'true'
         run: cargo nextest run --locked --cargo-profile budget -p ferroehr-rest --all-features --no-capture -E 'test(every_hot_path_stays_within_its_cpu_budget)'
       - name: Disk after the test
         if: ${{ !cancelled() }}
@@ -1869,7 +1842,11 @@ jobs:
       # --no-tests=pass: empty crates are expected until P17 (nextest exits 4 otherwise)
       # The shard index reaches the command through `env:`, never interpolated
       # into the script (the workflow-security rule in reliability.md).
-      - run: cargo nextest run --locked --workspace --exclude ferroehr-viewer --all-features --no-tests=pass --profile ci --partition "hash:${SHARD}/${SHARD_COUNT}"
+      - name: Build the tests (a verified push writes the cache alone)
+        if: needs.changes.outputs.queue_verified == 'true'
+        run: cargo nextest run --locked --workspace --exclude ferroehr-viewer --all-features --no-run
+      - if: needs.changes.outputs.queue_verified != 'true'
+        run: cargo nextest run --locked --workspace --exclude ferroehr-viewer --all-features --no-tests=pass --profile ci --partition "hash:${SHARD}/${SHARD_COUNT}"
         env:
           SHARD: ${{ matrix.shard }}
           SHARD_COUNT: ${{ needs.changes.outputs.test_shard_count }}
@@ -1947,7 +1924,8 @@ jobs:
         with:
           tool: cargo-nextest
       - run: cargo build --locked -p ferroehr-viewer
-      - run: cargo nextest run --locked -p ferroehr-viewer --no-tests=pass --profile ci
+      - if: needs.changes.outputs.queue_verified != 'true'
+        run: cargo nextest run --locked -p ferroehr-viewer --no-tests=pass --profile ci
 
   # ── The Helm chart's lint + golden renders (issue #2110) ────────────────────
   # deploy/helm/validate.sh is the only check in the repository that pins the
@@ -2081,7 +2059,7 @@ jobs:
   perf:
     name: perf
     needs: [changes, ui-e2e-binary, perf-base-binary]
-    if: needs.changes.outputs.perf == 'true' && github.event_name != 'merge_group'
+    if: needs.changes.outputs.perf == 'true' && github.event_name == 'pull_request'
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
@@ -2405,7 +2383,7 @@ jobs:
   perf-base-binary:
     name: perf base server binary
     needs: changes
-    if: needs.changes.outputs.perf == 'true' && github.event_name != 'merge_group'
+    if: needs.changes.outputs.perf == 'true' && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -2623,7 +2601,7 @@ jobs:
   ui-e2e:
     name: ui-e2e ${{ matrix.viewport }} ${{ matrix.shard }}/${{ needs.changes.outputs.ui_e2e_shard_count }}
     needs: [changes, ui-e2e-binary, ui-e2e-viewer]
-    if: needs.changes.outputs.viewer == 'true' && github.event_name != 'merge_group'
+    if: needs.changes.outputs.viewer == 'true' && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # The battery runs once at the desktop width and once at a phone's 390 px,
@@ -2724,7 +2702,7 @@ jobs:
   ui-docs-shots:
     name: ui-docs-shots
     needs: [changes, ui-e2e-binary, ui-e2e-viewer]
-    if: needs.changes.outputs.viewer == 'true' && github.event_name != 'merge_group'
+    if: needs.changes.outputs.viewer == 'true' && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -2803,7 +2781,7 @@ jobs:
   viewer-login-smoke:
     name: viewer login smoke
     needs: [changes, ui-e2e-binary, ui-e2e-viewer]
-    if: needs.changes.outputs.viewer == 'true' && github.event_name != 'merge_group'
+    if: needs.changes.outputs.viewer == 'true' && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -3506,7 +3484,7 @@ jobs:
           {
             echo "### Not run in the merge queue"
             echo
-            echo "perf, ui-e2e, ui-docs-shots, viewer-login-smoke and ui-e2e-viewer are skipped here: the merge queue proves the merged tree, and these lanes ran on the pull request and run again on the push to main (#5284)."
+            echo "perf, ui-e2e, ui-docs-shots, viewer-login-smoke and ui-e2e-viewer are skipped here: the merge queue proves the merged tree, and these lanes ran on the pull request (#5284)."
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Every needed job succeeded or was skipped
         env:

@@ -30,6 +30,7 @@ use ferroehr::access_eval::condition::{
 use ferroehr::access_eval::procedure::{Caller, Emergency};
 use ferroehr::access_eval::scope::CategoryIndex;
 use ferroehr::db::domain::DomainPools;
+use ferroehr::db::pool::SESSION_SETUP_SPAN;
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::policy_register::listen::{Listened, Listeners};
 use ferroehr::service::FerroEhrService;
@@ -116,8 +117,8 @@ async fn read(
 /// The span a counted read is made in.
 const READ_SPAN: &str = "version_copy_read";
 
-/// The statements sqlx sends inside a [`READ_SPAN`] span, without the session
-/// setup of a connection the pool opens there (#6431).
+/// The statements sqlx sends inside a [`READ_SPAN`] span, leaving out a new
+/// connection's session setup, which is the pool's work (#5899).
 #[derive(Clone, Default)]
 struct Statements(Arc<std::sync::Mutex<Vec<String>>>);
 
@@ -147,11 +148,11 @@ where
         if event.metadata().target() != "sqlx::query" {
             return;
         }
-        let in_read = ctx.event_scope(event).is_some_and(|scope| {
-            let names: Vec<&str> = scope.map(|span| span.name()).collect();
-            names.contains(&READ_SPAN) && !names.contains(&ferroehr::db::pool::SESSION_SETUP_SPAN)
-        });
-        if in_read {
+        let Some(scope) = ctx.event_scope(event) else {
+            return;
+        };
+        let names: Vec<&str> = scope.map(|span| span.name()).collect();
+        if names.contains(&READ_SPAN) && !names.contains(&SESSION_SETUP_SPAN) {
             let mut text = Text::default();
             event.record(&mut text);
             self.0.lock().expect("the statements").push(text.0);
