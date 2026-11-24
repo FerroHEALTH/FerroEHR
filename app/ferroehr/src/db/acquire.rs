@@ -248,19 +248,18 @@ pub const RELEASED: &str = "ferroehr::db::released";
 /// recording how long the request held each; a later [`acquire`] in the
 /// scope checks out again. Outside a scope it does nothing.
 pub fn release_held() {
-    let released = HELD
-        .try_with(|held| {
-            held.try_borrow_mut()
-                .map(|mut held| std::mem::take(&mut *held))
-        })
-        .ok()
-        .and_then(Result::ok);
     let mut given_back = 0_usize;
-    for held in released.into_iter().flatten() {
-        held_for(held.since, held.name);
-        drop(held.conn);
-        given_back = given_back.saturating_add(1);
-    }
+    // NOTE: our own design (#6434), the kept list is drained in place, so its capacity serves
+    // the next checkout of the scope with no allocation.
+    let _outside_a_scope = HELD.try_with(|held| {
+        if let Ok(mut held) = held.try_borrow_mut() {
+            for held in held.drain(..) {
+                held_for(held.since, held.name);
+                drop(held.conn);
+                given_back = given_back.saturating_add(1);
+            }
+        }
+    });
     if given_back > 0 {
         tracing::trace!(target: RELEASED, connections = given_back, "connections given back");
     }

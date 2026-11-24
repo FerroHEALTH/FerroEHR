@@ -36,19 +36,22 @@ impl FerroEhrService {
         }
     }
 
-    /// Runs [`Self::upkeep`] every [`EVERY`] in a detached task that ends
-    /// with the runtime. Called once the service is assembled, since a
-    /// builder that replaces a cache afterwards leaves the task the old one.
-    pub fn spawn_upkeep(self: &Arc<Self>) {
-        tokio::spawn(upkept(Arc::clone(self)));
+    /// Runs [`Self::upkeep`] every [`EVERY`] in a task the returned handle
+    /// stops; an abort between two runs leaves no cache mid-upkeep, and one
+    /// during a run resumes it on the cache's next call. Called once the
+    /// service is assembled, since a builder that replaces a cache afterwards
+    /// leaves the task the old one.
+    #[must_use = "the handle stops the upkeep when the server drains"]
+    pub fn spawn_upkeep(self: &Arc<Self>) -> tokio::task::JoinHandle<()> {
+        tokio::spawn(upkept(Arc::clone(self)))
     }
 }
 
 /// The detached loop behind [`FerroEhrService::spawn_upkeep`].
 #[expect(
     clippy::infinite_loop,
-    reason = "a detached background task with no shutdown channel; it ends when the \
-              runtime drops it, and `-> !` cannot be spawned on stable"
+    reason = "the task ends when its handle aborts it or the runtime drops it, and `-> !` \
+              cannot be spawned on stable"
 )]
 async fn upkept(service: Arc<FerroEhrService>) {
     let mut ticks = tokio::time::interval(EVERY);
@@ -56,5 +59,30 @@ async fn upkept(service: Arc<FerroEhrService>) {
     loop {
         ticks.tick().await;
         service.upkeep().await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use sqlx::PgPool;
+
+    use crate::db::domain::DomainPools;
+    use crate::service::FerroEhrService;
+
+    /// A service over a pool that never connects; its caches start empty.
+    fn service() -> Arc<FerroEhrService> {
+        let pool = PgPool::connect_lazy("postgres://localhost/unused").expect("a lazy pool");
+        Arc::new(FerroEhrService::new(&DomainPools::from_shared(&pool)))
+    }
+
+    #[tokio::test]
+    async fn the_upkeep_stops_when_its_handle_aborts_it() {
+        let upkeep = service().spawn_upkeep();
+        tokio::time::sleep(super::EVERY * 3).await;
+        upkeep.abort();
+        let stopped = upkeep.await.expect_err("the aborted task does not finish");
+        assert!(stopped.is_cancelled(), "{stopped:?}");
     }
 }

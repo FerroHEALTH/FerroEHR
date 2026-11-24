@@ -138,7 +138,7 @@ async fn listening(db: &testkit::TestDb, svc: &Arc<ferroehr::service::FerroEhrSe
 
 /// [`listening`] over the database URL `url`.
 async fn listening_at(url: &str, svc: &Arc<ferroehr::service::FerroEhrService>) {
-    svc.spawn_upkeep();
+    drop(svc.spawn_upkeep());
     let listened: Vec<_> = svc
         .policy_listeners()
         .into_iter()
