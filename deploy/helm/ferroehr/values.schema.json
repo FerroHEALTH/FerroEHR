@@ -1459,7 +1459,7 @@
       "additionalProperties": true
     },
     "bridge": {
-      "description": "FerroBRIDGE, the FHIR and openEHR bridge, deployed as its own workload against this release's CDR. Off by default. Cluster-internal, because a caller FerroBRIDGE's [auth] admits acts on the CDR with its credential: there is no Ingress key and no Service type key, and enabling it without a networkPolicy.ingressFrom peer or a cdr.existingSecret and a cdr.oauth client of a machines issuer is refused at render.",
+      "description": "FerroBRIDGE, the FHIR and openEHR bridge, deployed as its own workload against this release's CDR. Off by default. Cluster-internal, because a caller FerroBRIDGE's [auth] admits acts on the CDR with its credential: there is no Ingress key and no Service type key, and enabling it without a networkPolicy.ingressFrom peer or a cdr.existingSecret and a cdr.oauth client of a trusted issuer is refused at render.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -1525,12 +1525,12 @@
               "type": "string"
             },
             "oauth": {
-              "description": "FerroBRIDGE's OAuth client for the CDR: a client credentials client (RFC 6749 §4.4) of a machines issuer in config.auth.issuer.",
+              "description": "FerroBRIDGE's OAuth client for the CDR: a client credentials client (RFC 6749 §4.4) of an issuer in config.auth.issuer.",
               "type": "object",
               "additionalProperties": false,
               "properties": {
                 "issuer": {
-                  "description": "The issuer identifier, an https URL (RFC 8414 §2); a config.auth.issuer entry with kind machines. Required when enabled.",
+                  "description": "The issuer identifier, an https URL (RFC 8414 §2); a config.auth.issuer entry. Required when enabled.",
                   "type": "string"
                 },
                 "tokenEndpoint": {

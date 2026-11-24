@@ -81,8 +81,8 @@ pub struct FerroEhrConfig {
     /// `[usage_report]` — the installation report to `FerroPULSE` (on by default).
     pub usage_report: ferrohealth_usage_report::section::UsageReportSection,
     /// `[auth]` — authentication: the `ferrohealth-smart` section, whose
-    /// serialization writes every secret as `***`, `[auth.idp]`,
-    /// `[auth.smart]` and `[auth.scim]`.
+    /// serialization writes every secret as `***`, `[auth.smart]` and
+    /// `[auth.scim]`.
     pub auth: auth_section::AuthConfig,
     /// `[authz]` — RBAC, assurance, the party binding, the system
     /// clients and the grant ceiling.
@@ -510,7 +510,6 @@ mod tests {
             &env(&[
                 ("FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS", "64"),
                 ("FERROEHR__AUTH__ISSUER__IDP__ISSUER", "https://idp"),
-                ("FERROEHR__AUTH__ISSUER__IDP__KIND", "persons"),
                 ("FERROEHR__AUTH__ISSUER__IDP__AUDIENCE", "ferroehr,other"),
                 ("FERROEHR__AUTH__ISSUER__IDP__TIMEOUT", "1500ms"),
                 (
@@ -530,10 +529,7 @@ mod tests {
             panic!("one issuer table named idp from the env");
         };
         assert_eq!(issuer.issuer.expose(), "https://idp");
-        assert_eq!(
-            issuer.kind,
-            Some(ferrohealth_smart::kind::IssuerKind::Persons)
-        );
+        assert_eq!(issuer.kind, None);
         assert_eq!(
             issuer.audience,
             vec!["ferroehr".to_owned(), "other".to_owned()]
@@ -641,7 +637,6 @@ mod tests {
                 ("FERROEHR__AUTH__ISSUER__IDP__ISSUER", "https://idp"),
                 ("FERROEHR__AUTH__ISSUER__IDP__AUDIENCE", "ferroehr"),
                 ("FERROEHR__AUTH__ISSUER__IDP__CLOCK_SKEW", "2min"),
-                ("FERROEHR__AUTH__ISSUER__IDP__PRESET", "keycloak"),
             ]),
             &[],
         );
@@ -652,7 +647,6 @@ mod tests {
             issuer.clock_skew,
             ferrohealth_config::units::Duration::from_mins(2)
         );
-        assert_eq!(issuer.preset, ferrohealth_smart::profile::Preset::Keycloak);
 
         // Unset, the issuers carry their documented defaults.
         let d = assemble_ok(None, &env(&[]), &[]);
@@ -663,7 +657,6 @@ mod tests {
             ferrohealth_config::units::Duration::from_secs(60),
             "the default leeway is the conventional 60 s"
         );
-        assert_eq!(entry.preset, ferrohealth_smart::profile::Preset::Rfc9068);
     }
 
     // ── 3. Strictness ─────────────────────────────────────────────────────────

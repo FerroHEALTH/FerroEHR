@@ -16,13 +16,11 @@
 # FerroSMART issues every token FerroEHR reads under this overlay; the
 # provider serves only the login (FerroSMART docs/architecture.md §13.21, A
 # product behind FerroSMART). FerroEHR trusts it in the `[auth.issuer.ferrosmart]`
-# table under the `ferrosmart` preset, which reads it as a `persons` issuer:
-# the persons it issues tokens for bind to their PERSONs under their
+# table: the persons it issues tokens for bind to their PERSONs under their
 # FerroSMART subject (the pairwise `sub`, §13.6 item 9), its patient/ grants
-# count (the preset's `patient_context`), so a standalone launch with
-# `launch/patient` through FerroSMART's picker reads the EHR it chose, and a
-# token of the picker itself is read as the person who signed in (the
-# preset's `issuer_client_is_person`), with no grant of its own in the CDR.
+# reach the EHR their `ehrId` names, so a standalone launch with
+# `launch/patient` through FerroSMART's picker reads the EHR it chose, and
+# FerroSMART's registry is the one list of clients.
 # FerroEHR starts before FerroSMART answers: it reads FerroSMART's metadata in
 # the background and reports ready once it has.
 #
@@ -120,15 +118,16 @@ services:
       # FerroSMART is the issuer named `ferrosmart`, beside the quickstart's
       # `basic_users` and `quickstart` issuers.
       FERROEHR__AUTH__ISSUER__FERROSMART__ISSUER: http://localhost:8280
-      FERROEHR__AUTH__ISSUER__FERROSMART__PRESET: ferrosmart
       # Its audience is the base the app asked for (RFC 8707 §2), the openEHR
       # base FerroEHR derives from its public URL below. A person binds to the PERSON whose SCIM loginIdentifier is their
       # FerroSMART subject.
       FERROEHR__AUTH__ISSUER__FERROSMART__PARTY__IDENTIFIER_ISSUER: urn:example:ferrosmart-login
       FERROEHR__AUTH__ISSUER__FERROSMART__PARTY__IDENTIFIER_TYPE: login
       # The discovery document describes FerroSMART, so an app that starts at
-      # FerroEHR's base finds it.
+      # FerroEHR's base finds it; the quickstart's issuer beside it signs only
+      # its clients' tokens, so FerroSMART is named.
       FERROEHR__AUTH__SMART__DISCOVERY: "true"
+      FERROEHR__AUTH__DESCRIBED_ISSUER: ferrosmart
       FERROEHR__SERVER__PUBLIC_BASE_URL: http://localhost:8080
 
   # The viewer launches SMART apps from an EHR's page through FerroSMART's

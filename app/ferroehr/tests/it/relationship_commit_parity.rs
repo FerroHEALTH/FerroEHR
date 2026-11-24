@@ -33,7 +33,7 @@ const REPRESENTATION: &str = "org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHI
 /// key-space gate and a representation's source rows are rebuilt.
 async fn service() -> (testkit::TestDb, FerroEhrService) {
     let (db, svc) = crate::fixtures::service().await;
-    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false)]).await;
+    crate::fixtures::open_key_spaces(&db, &[LOGIN]).await;
     let svc = granting(svc).await.with_binding_mapping(mapping());
     (db, svc)
 }
