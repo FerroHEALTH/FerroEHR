@@ -169,6 +169,63 @@ representation, so FerroEHR reads it from its own records:
   care, and a result held under the access delay stays held from them. A
   launch context that names someone else's EHR still holds them to that EHR.
 
+## The patient's own token through FerroBRIDGE
+
+FerroBRIDGE serves the xShare Yellow Button: the patient downloads their
+Patient Summary (`Patient/$summary`) or shares it once through a SMART
+Health Link. It reads the summary from FerroEHR as the patient, with the
+token FerroSMART's RFC 8693 token exchange issues it for the patient's own
+token (FerroHEALTH/FerroSMART#785). That token carries:
+
+- the subject token's `sub`, `fhirUser`, `patient`, `acr` and `auth_time`;
+- the `ehrId` of the patient's EHR at this openEHR base;
+- `client_id` naming FerroBRIDGE, and no `act`;
+- `patient/composition-*.r patient/aql-*.s` at most, for five minutes at
+  most.
+
+The `ferrosmart` preset reads it as the patient's own token through
+FerroBRIDGE, so grant FerroBRIDGE's client `act_for_persons` on its `AGENT`
+under FerroSMART's issuer, as for any SMART app. FerroEHR then treats it as
+the person, exactly as their own login:
+
+- It reads only the EHR whose subject is the patient's `PERSON`. Any other
+  EHR is refused `403` with `refused-not-subject`.
+- A composition the [access delay](security.md#delayed-access-by-the-person-ehds-art-33)
+  holds reads as absent until a professional releases it (EHDS Art. 3(3)).
+- Below the `[authz.assurance]` floor it is refused `401` with the RFC 9470
+  §3 step-up challenge, so FerroBRIDGE sends the person back to FerroSMART
+  to sign in at a higher level.
+- The access record names the patient's login and `PERSON`, FerroBRIDGE as
+  the client, FerroSMART as the issuer, the level of assurance and the
+  category of the data read (EHDS Annex II 3.2).
+
+The xShare Yellow Button asks for an eIDAS-recognised eID at level
+substantial at least (EHDS Art. 16(1)). FerroSMART writes the eIDAS level
+URIs into `acr`, so a deployment behind it sets the floor to substantial,
+or high where its Member State asks for that:
+
+```toml
+[auth.issuer.ferrosmart]
+issuer = "https://smart.example.org"
+preset = "ferrosmart"
+
+[auth.issuer.ferrosmart.party]
+identifier_issuer = "urn:example:ferrosmart-login"
+identifier_type = "login"
+
+[authz.assurance]
+minimum = "substantial"
+
+[authz.assurance.levels]
+"http://eidas.europa.eu/LoA/low" = "low"
+"http://eidas.europa.eu/LoA/substantial" = "substantial"
+"http://eidas.europa.eu/LoA/high" = "high"
+```
+
+The floor holds every patient-data request, a professional's included, and
+a Basic credential carries no level, so it is refused on patient data
+([Authentication & access](installation/config-auth.md#authzassurance-the-assurance-level-patient-data-requires)).
+
 ## The discovery document describes FerroSMART
 
 With `[auth.smart] discovery = true`,
