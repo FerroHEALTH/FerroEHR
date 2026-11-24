@@ -326,10 +326,7 @@ async fn a_representation_not_recorded_or_ended_is_refused() {
     )
     .await;
     let app = router(&svc).await;
-    for (case, credential) in [
-        ("no relationship", acting(&ehr, Some(PARENT))),
-        ("ended, own login", token(FORMER, &ehr, &json!({}))),
-    ] {
+    for (case, credential) in [("ended, own login", token(FORMER, &ehr, &json!({})))] {
         let (status, body) = read(&app, &ehr, &credential).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "{case}: {body}");
         assert!(
@@ -337,6 +334,9 @@ async fn a_representation_not_recorded_or_ended_is_refused() {
             "{case}: {body}"
         );
     }
+    let (status, body) = read(&app, &ehr, &acting(&ehr, Some(PARENT))).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "no PERSON: {body}");
+    assert!(body.contains("refused-unbound"), "no PERSON: {body}");
 }
 
 /// A former representative is never the patient (#5532): once their

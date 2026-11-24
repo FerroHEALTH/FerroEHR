@@ -161,8 +161,8 @@ async fn discovery_serves_absolute_base_urls_and_the_enforced_capabilities() {
     assert!(caps.contains(&"context-openehr-ehr"), "{caps:?}");
     assert!(caps.contains(&"permission-user"), "{caps:?}");
     assert!(
-        !caps.contains(&"permission-patient"),
-        "no issuer is bound, so no patient/ grant counts: {caps:?}"
+        caps.contains(&"permission-patient"),
+        "a trusted issuer's patient context counts: {caps:?}"
     );
     assert_eq!(doc["token_endpoint"], format!("{}/token", issuer.uri()));
 }
@@ -202,12 +202,11 @@ async fn a_bound_issuer_declares_patient_permission() {
     assert!(capabilities(&doc).contains(&"permission-patient"));
 }
 
-/// A `machines` issuer signs client credentials tokens only, so the document
-/// describes the `persons` issuer beside it, whichever table comes first, and
-/// carries that issuer's authorization and token endpoints (SMART App Launch
-/// 2.2.0, Conformance, §Metadata).
+/// Beside another trusted issuer, the document describes the one
+/// `described_issuer` names, and carries that issuer's authorization and
+/// token endpoints (SMART App Launch 2.2.0, Conformance, §Metadata).
 #[tokio::test]
-async fn discovery_describes_the_persons_issuer_beside_a_machines_issuer() {
+async fn discovery_describes_the_named_issuer_beside_another() {
     let machines = issuer().await;
     let persons = issuer().await;
     let mut cfg = config(&persons.uri(), true);
@@ -218,6 +217,7 @@ async fn discovery_describes_the_persons_issuer_beside_a_machines_issuer() {
         common::entry(&persons.uri(), AUDIENCE),
     ])
     .shared;
+    cfg.auth.shared.described_issuer = Some(common::name_of(&persons.uri()));
     let (_pg, app) = common::app(cfg).await;
     let (status, doc) = common::send_json(&app, get(DISCOVERY, None)).await;
     assert_eq!(status, StatusCode::OK, "{doc}");

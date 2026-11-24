@@ -20,7 +20,7 @@ use crate::smart_http::issuer;
 const DISCOVERY: &str = "/ferroehr/rest/.well-known/smart-configuration";
 
 #[tokio::test]
-async fn discovery_describes_the_keycloak_persons_issuer_and_never_the_machines_one() {
+async fn discovery_describes_the_named_persons_issuer_and_never_the_machines_one() {
     let machines = issuer().await;
     let keycloak = issuer().await;
     let mut config = common::api_config(false);
@@ -30,6 +30,7 @@ async fn discovery_describes_the_keycloak_persons_issuer_and_never_the_machines_
         },
         common::entry(&keycloak.uri(), AUDIENCE),
     ]);
+    config.auth.shared.described_issuer = Some(common::name_of(&keycloak.uri()));
     config.auth.smart.discovery = true;
     config.public_root = Some(
         ferroehr::config::server::PublicRoot::new("https://cdr.sint-example.example", "")

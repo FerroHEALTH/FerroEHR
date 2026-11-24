@@ -241,7 +241,9 @@ mod tests {
         };
         let errors = errors(&with(other), &resolved());
         assert!(
-            errors.iter().any(|e| e.contains("names no issuer a party table binds")),
+            errors
+                .iter()
+                .any(|e| e.contains("names no issuer a party table binds")),
             "{errors:?}"
         );
     }

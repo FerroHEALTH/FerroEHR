@@ -221,21 +221,13 @@ async fn status(app: &Router, method: &str, path: &str, credential: &str) -> (St
     .await
 }
 
-/// A `RelatedPerson`'s token with `subject` in its patient context, with the
-/// full `user/` grants (SMART App Launch 2.2.0, Scopes and Launch Context).
-pub(crate) fn representative(subject: &str) -> String {
+/// A `RelatedPerson`'s token launched for the EHR `ehr` (`ehrId`, master07
+/// §Context Selection), with the full `user/` grants (SMART App Launch
+/// 2.2.0, Scopes and Launch Context).
+pub(crate) fn representative(ehr: &str) -> String {
     token(
         "rep-login",
-        &json!({ "fhirUser": "RelatedPerson/rep-login", "patient": subject }),
-    )
-}
-
-/// [`representative`], launched for the EHR `ehr` (`ehrId`, master07
-/// §Context Selection).
-fn representative_launched(subject: &str, ehr: &str) -> String {
-    token(
-        "rep-login",
-        &json!({ "fhirUser": "RelatedPerson/rep-login", "patient": subject, "ehrId": ehr }),
+        &json!({ "fhirUser": "RelatedPerson/rep-login", "patient": ehr, "ehrId": ehr }),
     )
 }
 
@@ -247,7 +239,7 @@ async fn a_representative_reaches_only_the_represented_subjects_ehr() {
     stored(&svc, &family).await;
     let stranger = ehr(&svc, Some(STRANGER)).await;
     let app = router(Arc::clone(&svc), Arc::new(Recorded::of(&family))).await;
-    let credential = representative(&family.child);
+    let credential = representative(&family.ehr);
 
     let (code, body) = status(&app, "GET", &format!("/ehr/{child}"), &credential).await;
     assert_eq!(
@@ -283,13 +275,12 @@ async fn a_representative_reaches_only_the_represented_subjects_ehr() {
         "a query over every EHR: {body}"
     );
     // A template is no patient's data.
-    let launched = representative_launched(&family.child, &child);
-    let (code, body) = status(&app, "GET", "/definition/template/adl1.4", &launched).await;
+    let (code, body) = status(&app, "GET", "/definition/template/adl1.4", &credential).await;
     assert_eq!(code, StatusCode::OK, "the template list: {body}");
 }
 
 #[tokio::test]
-async fn a_representation_the_source_does_not_record_is_refused() {
+async fn a_launch_naming_no_ehr_of_this_store_is_refused() {
     let (_db, svc) = service().await;
     let family = family(&svc).await;
     stored(&svc, &family).await;
@@ -297,18 +288,6 @@ async fn a_representation_the_source_does_not_record_is_refused() {
     refused(
         &app,
         &representative(STRANGER),
-        "refused-representation-unrecorded",
-    )
-    .await;
-    // A relationship that has ended is no longer reported.
-    let none = Recorded {
-        subjects: Vec::new(),
-        ..Recorded::of(&family)
-    };
-    let ended = router(Arc::clone(&svc), Arc::new(none)).await;
-    refused(
-        &ended,
-        &representative(&family.child),
         "refused-representation-unrecorded",
     )
     .await;
@@ -324,7 +303,7 @@ async fn a_representation_the_cdr_does_not_store_for_the_provider_is_refused() {
     let (_db, svc) = service().await;
     let family = family(&svc).await;
     let app = router(Arc::clone(&svc), Arc::new(Recorded::of(&family))).await;
-    let credential = representative(&family.child);
+    let credential = representative(&family.ehr);
     refused(&app, &credential, "refused-representation-unrecorded").await;
     stored_for(&svc, &family, Some(("urn:example:providers", "clinic"))).await;
     refused(&app, &credential, "refused-representation-unrecorded").await;
@@ -653,7 +632,7 @@ async fn a_representatives_commit_names_its_person_and_the_recorded_relationship
     let child = family.ehr.clone();
     stored(&svc, &family).await;
     let app = router(Arc::clone(&svc), Arc::new(Recorded::of(&family))).await;
-    let credential = representative(&family.child);
+    let credential = representative(&family.ehr);
     let mut composition = common::ips_canonical_composition();
     if let Some(object) = composition.as_object_mut() {
         object.remove("uid");

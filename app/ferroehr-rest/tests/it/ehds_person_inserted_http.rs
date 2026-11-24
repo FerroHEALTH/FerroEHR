@@ -126,9 +126,9 @@ fn party_self() -> Value {
     json!({ "_type": "PARTY_SELF" })
 }
 
-/// The composer naming a professional.
+/// The composer naming the bound professional by the name of their `PERSON`.
 fn professional_composer() -> Value {
-    json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Bob" })
+    json!({ "_type": "PARTY_IDENTIFIED", "name": "professional" })
 }
 
 /// The versioned-object id of a version uid (`<vo>::<system>::<tree>`).
@@ -313,7 +313,7 @@ async fn a_persons_commit_is_marked_as_theirs_and_reads_back_marked() {
         professionals["_type"], "PARTY_IDENTIFIED",
         "{professionals}"
     );
-    assert_eq!(professionals["name"], "dr-bob", "{professionals}");
+    assert_eq!(professionals["name"], "professional", "{professionals}");
 
     // An AQL query reads each version's committer, which tells the person's
     // entries from the professional's.
@@ -420,7 +420,7 @@ async fn a_person_may_not_alter_a_professionals_entry() {
         "the refusal names its reason: {text}"
     );
     let kept = committer(&r.app, &r.ehr, &r.professional, &r.professionals_entry).await;
-    assert_eq!(kept["name"], "dr-bob", "{kept}");
+    assert_eq!(kept["name"], "professional", "{kept}");
 }
 
 /// A person may not present what they insert as another party's: a composer
@@ -478,7 +478,7 @@ async fn a_professional_updates_a_persons_entry_which_the_person_then_may_not_al
     );
     let reviewed = common::etag_uid(&headers);
     let audit = committer(&r.app, &r.ehr, &r.professional, &reviewed).await;
-    assert_eq!(audit["name"], "dr-bob", "{audit}");
+    assert_eq!(audit["name"], "professional", "{audit}");
     let (status, _headers, text) = update(
         &r.app,
         &r.ehr,
