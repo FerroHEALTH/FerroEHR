@@ -104,7 +104,7 @@ pub async fn insert_imported_vo_version(
          SELECT $1, $2, $3, $4, $5, $6, $7, $8::timestamptz, \
                 $9, $10, $11, $12, $13, $14, NULL, $15, false, $16, $17, $18 \
          WHERE EXISTS (SELECT 1 FROM contribution WHERE id = $13) \
-           AND EXISTS (SELECT 1 FROM commit_audit WHERE id = $14)",
+           AND EXISTS (SELECT 1 FROM commit_audit_facts WHERE id = $14)",
     )
     .bind(row.vo_id)
     .bind(row.kind)
@@ -324,7 +324,7 @@ const INSERT_VERBATIM: &str = "WITH t AS (SELECT * FROM unnest($1::uuid[], $2::t
          body)), \
          d AS (SELECT count(*) AS n FROM t \
                WHERE NOT EXISTS (SELECT 1 FROM contribution c WHERE c.id = t.contribution_id) \
-                  OR NOT EXISTS (SELECT 1 FROM commit_audit a WHERE a.id = t.commit_audit_id)), \
+                  OR NOT EXISTS (SELECT 1 FROM commit_audit_facts a WHERE a.id = t.commit_audit_id)), \
          i AS (INSERT INTO version (vo_id, kind, ehr_id, sys_version, trunk_version, \
          branch_number, branch_version, preceding_version_uid, other_input_version_uids, \
          committed_at, lifecycle_state, contribution_id, commit_audit_id, template_id, signature, \

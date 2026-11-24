@@ -22,6 +22,7 @@ use crate::ids::EhrId;
 use crate::party_binding::grants::caller::care_of::CarerKind;
 use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
+use crate::versioning::episode::EpisodeKey;
 
 /// The text a subject reference is digested from.
 ///
@@ -90,6 +91,8 @@ pub struct CareRow {
     pub self_declared: bool,
     /// Its `care_role`.
     pub role: ForeignCode,
+    /// The episode of care it is scoped to; `None` when it names none.
+    pub episode: Option<EpisodeKey>,
 }
 
 /// The code the projection's `carer_kind` column holds for `kind`.
@@ -215,13 +218,17 @@ pub async fn replace(
         .map(|row| row.role.terminology.as_str())
         .collect();
     let role_codes: Vec<&str> = rows.iter().map(|row| row.role.code.as_str()).collect();
+    let episodes: Vec<Option<&[u8]>> = rows
+        .iter()
+        .map(|row| row.episode.as_ref().map(|key| key.as_bytes().as_slice()))
+        .collect();
     sqlx::query(
         "INSERT INTO access_care (subject_digest, person_id, carer_id, provider_issuer, \
              provider_id, care_from, care_until, writer_id, self_declared, role_terminology, \
-             role_code, carer_kind) \
+             role_code, carer_kind, episode_digest) \
          SELECT * FROM unnest($1::bytea[], $2::uuid[], $3::uuid[], $4::text[], $5::text[], \
              $6::date[], $7::date[], $8::uuid[], $9::boolean[], $10::text[], $11::text[], \
-             $12::\"char\"[])",
+             $12::\"char\"[], $13::bytea[])",
     )
     .bind(&digests)
     .bind(&people)
@@ -235,6 +242,7 @@ pub async fn replace(
     .bind(&role_terminologies)
     .bind(&role_codes)
     .bind(&kinds)
+    .bind(&episodes)
     .execute(&mut *tx)
     .await?;
     Ok(())

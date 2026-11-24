@@ -3,17 +3,88 @@
 
 //! A COMPOSITION is placed in episodes of care by the `episode` elements of
 //! its `context.other_context`, and its head row keeps them (draft access
-//! control, Episodes of Care; #6413).
+//! control, Episodes of Care; #6413). Each episode it names is the episode
+//! of a care relationship of its EHR's subject (#6412).
 
+use ferroehr::db::domain::DomainPools;
 use ferroehr::error::ServiceError;
-use ferroehr::ids::VoId;
+use ferroehr::ids::{EhrId, VoId};
+use ferroehr::party_binding::policy_mark::TERMINOLOGY;
+use ferroehr::service::FerroEhrService;
+use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::versioning::episode::EpisodeKey;
 use serde_json::{Value, json};
 
-use crate::fixtures::{commit_audit, committer, composition, setup, uv};
+use crate::care_bounds::{care_of, coded, interval, party, relate};
+use crate::fixtures::{commit_audit, committer, composition, uv};
+use crate::policy_fixtures::{CARE_PROVIDER, care_provider, create, granting};
+
+/// Every episode the tests of this module place a composition in.
+pub(crate) const EPISODES: [(&str, &str); 5] = [
+    ("H", "C-17"),
+    ("H", "D-4"),
+    ("H", "D-9"),
+    ("G", "1"),
+    ("Hé", "ü\"1"),
+];
+
+/// The care relationship of `patient` to `team` in the role `ATND` until the
+/// end of 2026, scoped to the episode `(issuer, id)` when one is given.
+pub(crate) fn care_in(patient: VoId, team: VoId, episode: Option<(&str, &str)>) -> Value {
+    let mut body = care_of(
+        patient,
+        ("GROUP", &team.to_string()),
+        "ATND",
+        &interval("2026-11-01", Some("2026-12-31")),
+    );
+    if let Some((issuer, id)) = episode {
+        body["details"]["items"]
+            .as_array_mut()
+            .expect("the details")
+            .push(json!({ "_type": "ELEMENT", "archetype_node_id": "at0005",
+                "name": coded(TERMINOLOGY, "episode"),
+                "value": { "_type": "DV_IDENTIFIER", "issuer": issuer, "id": id } }));
+    }
+    body
+}
+
+/// A patient and a care team of [`CARE_PROVIDER`] in `svc`.
+pub(crate) async fn patient_and_team(svc: &FerroEhrService) -> (VoId, VoId) {
+    let (patient, _) = create(svc, PartyKind::Person, &party("PERSON", "Patient"))
+        .await
+        .expect("the patient");
+    care_provider(svc, CARE_PROVIDER).await;
+    let (team, _) = create(svc, PartyKind::Group, &party("GROUP", "Cardiology"))
+        .await
+        .expect("the team");
+    (patient, team)
+}
+
+/// A service and the EHR of a patient under the care of a team in each of
+/// `episodes`, by one relationship each, with the patient and the team.
+pub(crate) async fn cared(
+    episodes: &[(&str, &str)],
+) -> (testkit::TestDb, FerroEhrService, EhrId, (VoId, VoId)) {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = granting(FerroEhrService::new(&DomainPools::from_shared(&db.pool()))).await;
+    let (patient, team) = patient_and_team(&svc).await;
+    for episode in episodes {
+        relate(&svc, &care_in(patient, team, Some(*episode)))
+            .await
+            .expect("the relationship in its episode commits");
+    }
+    let ehr_id = crate::fixtures::create_ehr_for_party(&svc, patient).await;
+    (db, svc, ehr_id, (patient, team))
+}
+
+/// [`cared`] in every episode of [`EPISODES`].
+async fn setup() -> (testkit::TestDb, FerroEhrService, EhrId) {
+    let (db, svc, ehr_id, _) = cared(&EPISODES).await;
+    (db, svc, ehr_id)
+}
 
 /// An `episode` element naming `issuer` and `id`.
-fn episode(issuer: &str, id: &str) -> Value {
+pub(crate) fn episode(issuer: &str, id: &str) -> Value {
     json!({ "_type": "ELEMENT", "archetype_node_id": "at9001",
         "name": { "_type": "DV_CODED_TEXT", "value": "episode",
             "defining_code": { "_type": "CODE_PHRASE",
@@ -24,7 +95,7 @@ fn episode(issuer: &str, id: &str) -> Value {
 
 /// The fixture composition named `name` of `category`, with a context whose
 /// `other_context` holds `items` beside a ward element.
-fn placed(name: &str, category: &str, items: &[Value]) -> Value {
+pub(crate) fn placed(name: &str, category: &str, items: &[Value]) -> Value {
     let ward = json!({ "_type": "ELEMENT", "archetype_node_id": "at0003",
         "name": { "_type": "DV_TEXT", "value": "Ward" },
         "value": { "_type": "DV_TEXT", "value": "B2" } });
@@ -46,7 +117,7 @@ fn placed(name: &str, category: &str, items: &[Value]) -> Value {
 }
 
 /// The keys of `episodes`, sorted as the head row keeps them.
-fn keys(episodes: &[(&str, &str)]) -> Vec<Vec<u8>> {
+pub(crate) fn keys(episodes: &[(&str, &str)]) -> Vec<Vec<u8>> {
     let mut keys: Vec<Vec<u8>> = episodes
         .iter()
         .map(|(issuer, id)| EpisodeKey::of(issuer, id).as_bytes().to_vec())
@@ -56,7 +127,7 @@ fn keys(episodes: &[(&str, &str)]) -> Vec<Vec<u8>> {
 }
 
 /// The `episodes` of the head row of `vo`.
-async fn head(db: &testkit::TestDb, vo: VoId) -> Option<Vec<Vec<u8>>> {
+pub(crate) async fn head(db: &testkit::TestDb, vo: VoId) -> Option<Vec<Vec<u8>>> {
     sqlx::query_scalar("SELECT episodes FROM vo_head WHERE vo_id = $1")
         .bind(vo.0)
         .fetch_one(&db.pool())
@@ -65,7 +136,7 @@ async fn head(db: &testkit::TestDb, vo: VoId) -> Option<Vec<Vec<u8>>> {
 }
 
 /// Whether `error` is a `422`.
-fn unprocessable(error: &ServiceError) -> bool {
+pub(crate) fn unprocessable(error: &ServiceError) -> bool {
     matches!(error, ServiceError::Unprocessable { .. })
 }
 
@@ -250,11 +321,28 @@ async fn recompute(db: &testkit::TestDb, vo: VoId) {
 }
 
 /// A placed composition keeps its episodes through an EHR Extract import
-/// and through an archive load.
+/// into a CDR that holds its subject's relationship, and through an archive
+/// load, which lands the relationship with the record.
 #[tokio::test]
 async fn an_import_and_an_archive_load_keep_the_placement() {
-    let (_source_db, source) = crate::fixtures::service().await;
-    let ehr_id = crate::fixtures::create_ehr(&source).await;
+    let source_db = testkit::db().await.expect("testkit database");
+    let source = granting(FerroEhrService::new(&DomainPools::from_shared(
+        &source_db.pool(),
+    )))
+    .await;
+    let (patient, team) = patient_and_team(&source).await;
+    relate(&source, &care_in(patient, team, Some(("H", "C-17"))))
+        .await
+        .expect("the relationship in its episode commits");
+    let parties = crate::admin_fixture::archive_dir();
+    source
+        .export_ehrs(
+            parties.clone(),
+            ferroehr::service::admin::types::ExportSpec::canonical_json(1),
+        )
+        .await
+        .expect("the export of the parties");
+    let ehr_id = crate::fixtures::create_ehr_for_party(&source, patient).await;
     let body = placed("note", "433", &[episode("H", "C-17")]);
     let vo = source
         .create_composition(ehr_id, uv(&body, "249", None))
@@ -263,7 +351,14 @@ async fn an_import_and_an_archive_load_keep_the_placement() {
         .vo_id;
     let expected = Some(keys(&[("H", "C-17")]));
 
-    let (imported_db, imported) = crate::fixtures::service().await;
+    let (imported_db, _imported_pool, imported) = crate::admin_fixture::repository().await;
+    let imported = granting(imported).await;
+    let reports = imported
+        .load_ehrs(parties.clone())
+        .await
+        .expect("the parties load");
+    assert!(reports.is_empty(), "every party loads: {reports:?}");
+    std::fs::remove_dir_all(&parties).expect("remove the archive");
     let mut extracts = source.extract_ehrs(ehr_id).await.expect("the extract");
     let extract =
         openehr_its::json::from_canonical_value(&extracts.remove(0)).expect("the typed extract");

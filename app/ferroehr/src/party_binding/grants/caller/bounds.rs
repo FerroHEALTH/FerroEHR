@@ -44,6 +44,9 @@ const BASIS: &str = "/details";
 /// The path a provider refusal names: the details that hold the element.
 const PROVIDER: &str = "/details";
 
+/// The path an episode refusal names: the details that hold the element.
+const EPISODE: &str = "/details";
+
 /// The trunk head version of a relationship a bound is judged for.
 #[derive(Debug)]
 pub(crate) struct Head {
@@ -128,7 +131,7 @@ pub(crate) async fn judge_stored(
 ///
 /// # Errors
 /// `422` for a provider that names no `ORGANISATION` of the store, a validity
-/// or a target the policy refuses, `403` for a self-declared relationship its
+/// or a target the policy refuses, a missing episode the policy requires, `403` for a self-declared relationship its
 /// writer may not write, and a storage failure. The writer at the subject's
 /// marking is judged before the commit (`FerroEhrService::care_writer_check`).
 pub(crate) async fn verdict(
@@ -168,6 +171,15 @@ pub(crate) async fn verdict(
     };
     relationship::target(rules, care.kind, care.carer, provider_party)
         .map_err(|refusal| refused(TARGET, &refusal))?;
+    let covered = Written {
+        role: &care.role,
+        provider_types: &provider.types,
+        lower: None,
+        upper: None,
+        today: head.committed_on,
+    };
+    relationship::episode(rules, &covered, care.episode.is_some())
+        .map_err(|refusal| refused(EPISODE, &refusal))?;
     let Some((lower, upper)) = dates else {
         // NOTE: our own design, a validity that does not read holds no date, so it takes no end.
         return Ok(End::Drop);

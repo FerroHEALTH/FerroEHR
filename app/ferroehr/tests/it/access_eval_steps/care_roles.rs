@@ -14,7 +14,8 @@ use serde_json::{Value, json};
 use super::*;
 use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess};
 use ferroehr::access_eval::procedure::{Emergency, Lifted};
-use ferroehr::party_binding::grants::caller::care_of::{CarerKind, Cover};
+use ferroehr::party_binding::grants::caller::care_of::CarerKind;
+use ferroehr::party_binding::grants::caller::care_ref::Cover;
 
 /// Dr. Jansen, the responsible practitioner.
 const JANSEN: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7fa1";

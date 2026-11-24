@@ -14,6 +14,7 @@
 
 use ferroehr::service::admin::types::ExportSpec;
 use ferroehr::storage::error::StorageError;
+use ferroehr::storage::version_repo::audit_shared::{AuditShares, SharedPart};
 use ferroehr::storage::version_repo::commit::{AuditRow, Folded, FoldedVersion, commit_folded};
 use ferroehr::storage::version_repo::import::{
     ImportedVersionRow, VerbatimVersionRow, insert_imported_vo_version, insert_versions_verbatim,
@@ -37,9 +38,9 @@ async fn dangling(pool: &PgPool, schema: &str) -> (i64, i64, i64) {
            (SELECT count(*) FROM {schema}.version v WHERE NOT EXISTS \
               (SELECT 1 FROM {schema}.contribution c WHERE c.id = v.contribution_id)), \
            (SELECT count(*) FROM {schema}.version v WHERE NOT EXISTS \
-              (SELECT 1 FROM {schema}.commit_audit a WHERE a.id = v.commit_audit_id)), \
+              (SELECT 1 FROM {schema}.commit_audit_facts a WHERE a.id = v.commit_audit_id)), \
            (SELECT count(*) FROM {schema}.contribution c WHERE NOT EXISTS \
-              (SELECT 1 FROM {schema}.commit_audit a WHERE a.id = c.commit_audit_id))"
+              (SELECT 1 FROM {schema}.commit_audit_facts a WHERE a.id = c.commit_audit_id))"
     )))
     .fetch_one(pool)
     .await
@@ -147,12 +148,13 @@ async fn every_version_and_contribution_names_stored_rows() {
 }
 
 /// The audit a version written into a CONTRIBUTION carries.
-fn audit() -> AuditRow<'static> {
+fn audit(shares: &AuditShares) -> AuditRow<'_> {
     AuditRow {
-        system_id: "integrity.test",
+        shares,
+        shared: SharedPart::new("integrity.test", None, None),
         change_type: "249",
         description: None,
-        committer: committer("author").to_string(),
+        committer: Some(committer("author").to_string()),
         attestation: None,
     }
 }
@@ -198,7 +200,7 @@ async fn a_version_into_a_contribution_not_stored_is_refused() {
     let mut tx = conn.begin().await.expect("begin");
     let refused = commit_folded(
         &mut tx,
-        &audit(),
+        &audit(&AuditShares::default()),
         Folded::Into {
             id: Uuid::now_v7(),
             version: version(ehr),
@@ -360,7 +362,7 @@ async fn erasure_keeps_an_audit_a_stored_row_names() {
             .fetch_one(&pool)
             .await
             .expect("the stored version's audit");
-    let audits = rows(&pool, "clinical.commit_audit").await;
+    let audits = rows(&pool, "clinical.commit_audit_facts").await;
     let mut conn = ferroehr::db::acquire::acquire(&pool)
         .await
         .expect("a connection");
@@ -371,7 +373,7 @@ async fn erasure_keeps_an_audit_a_stored_row_names() {
         "{refused:?}"
     );
     assert_eq!(
-        rows(&pool, "clinical.commit_audit").await,
+        rows(&pool, "clinical.commit_audit_facts").await,
         audits,
         "no audit of the set is deleted"
     );

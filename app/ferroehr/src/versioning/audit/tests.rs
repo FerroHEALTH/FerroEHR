@@ -148,6 +148,7 @@ fn audit_input(system_id: &str, committer: &Value) -> AuditInput {
         system_id: system_id.to_owned(),
         change_type: change_type::CREATION.to_owned(),
         description: None,
+        server_description: false,
         committer: party_proxy(committer).expect("the fixture is a canonical PARTY_PROXY"),
         attestation: None,
     }

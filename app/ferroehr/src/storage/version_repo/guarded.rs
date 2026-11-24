@@ -18,6 +18,7 @@
 
 use serde_json::Value;
 
+use super::audit_shared::{SharedPlan, SharedRef, shared_value};
 use crate::storage::error::StorageError;
 
 /// What a guarded commit ([`super::commit::Folded::Guarded`]) still requires when it runs:
@@ -471,16 +472,17 @@ fn folder_cte(ehr: &str, vo: &str, first: usize) -> String {
 }
 
 /// The audit insert of a guarded statement, `name`, of the audit at `first`
-/// (five parameters) at `time`, written once `from` holds a row.
-fn audit_cte(name: &str, first: usize, time: &str, from: &str) -> String {
+/// (five parameters, the first naming its shared part as `shared` says) at
+/// `time`, written once `from` holds a row.
+fn audit_cte(name: &str, first: usize, time: &str, from: &str, shared: SharedRef) -> String {
     format!(
         "{name} AS ( \
-             INSERT INTO commit_audit (system_id, change_type, description, committer, \
-                                       attestation, time_committed) \
-             SELECT ${}, ${}, ${}::jsonb, ${}::jsonb, ${}, {time}::timestamptz FROM {from} \
+             INSERT INTO commit_audit_facts (shared, change_type, description, committer, \
+                                             attestation, time_committed) \
+             SELECT {}, ${}, ${}::jsonb, ${}::jsonb, ${}, {time}::timestamptz FROM {from} \
              RETURNING id, time_committed \
          )",
-        first,
+        shared_value(shared, first),
         first + 1,
         first + 2,
         first + 3,
@@ -502,7 +504,11 @@ fn audit_cte(name: &str, first: usize, time: &str, from: &str) -> String {
 /// writes them; `beside` names what else it writes. The audit insert reads from `g`, and every later insert from the audit's, so
 /// nothing is written unless every requirement holds; the last row names a
 /// flag per requirement.
-pub(super) fn statement(beside: Beside, placement: super::head_upsert::Placement) -> String {
+pub(super) fn statement(
+    beside: Beside,
+    placement: super::head_upsert::Placement,
+    plan: &SharedPlan,
+) -> String {
     let after_nodes = 33 + crate::storage::node_write::node_array_count();
     let beside_params = match beside {
         Beside::Status => 6,
@@ -527,7 +533,7 @@ pub(super) fn statement(beside: Beside, placement: super::head_upsert::Placement
         Beside::Nothing => Lead::Content,
     };
     format!(
-        "{}, {}, c AS ( \
+        "{}{}, {}, c AS ( \
              INSERT INTO contribution (id, ehr_id, commit_audit_id) \
              SELECT $6, $7, a.id FROM a RETURNING id \
          ){}{}{}{}{}",
@@ -537,7 +543,8 @@ pub(super) fn statement(beside: Beside, placement: super::head_upsert::Placement
             "$22",
             (("$29", "$30"), lead)
         ),
-        audit_cte("a", 1, "$22", "g"),
+        plan.ctes(&[1]),
+        audit_cte("a", 1, "$22", "g", plan.audit(0)),
         super::commit::version_ctes(
             "",
             ("$7", "c.id", "a.id", "a, c"),
@@ -547,7 +554,7 @@ pub(super) fn statement(beside: Beside, placement: super::head_upsert::Placement
         sync,
         outbox_cte("$6", "$7", ("$31", "$22"), "v", beside != Beside::Party),
         reservation_cte("$32"),
-        flags_row("a", notified)
+        flags_row("a", &format!("{notified}{}", plan.learned_column()))
     )
 }
 
@@ -591,7 +598,7 @@ const MEMBER_SCALARS: usize = 26;
 /// single write's audit, version, head-upsert and node CTEs under its own
 /// names. The members whose placement writes their episodes bind them last,
 /// in member order.
-fn set_statement(members: &[SetMember<'_>]) -> String {
+fn set_statement(members: &[SetMember<'_>], plan: &SharedPlan) -> String {
     use std::fmt::Write as _;
     let n = members.len();
     let stride = MEMBER_SCALARS + crate::storage::node_write::node_array_count();
@@ -600,13 +607,15 @@ fn set_statement(members: &[SetMember<'_>]) -> String {
     let targets: Vec<(String, String)> = (0..n)
         .map(|i| (format!("${}", base(i) + 5), format!("${}", base(i) + 25)))
         .collect();
+    let firsts: Vec<usize> = std::iter::once(7).chain((0..n).map(base)).collect();
     let mut sql = format!(
-        "{}, {}, c AS ( \
+        "{}{}, {}, c AS ( \
              INSERT INTO contribution (id, ehr_id, commit_audit_id) \
              SELECT $1, $2, ca.id FROM ca RETURNING id \
          )",
         guard_ctes("$2", &targets, "$6", (("$3", "$4"), Lead::Content)),
-        audit_cte("ca", 7, "$6", "g"),
+        plan.ctes(&firsts),
+        audit_cte("ca", 7, "$6", "g", plan.audit(0)),
     );
     for (i, member) in members.iter().enumerate() {
         let b = base(i);
@@ -618,7 +627,7 @@ fn set_statement(members: &[SetMember<'_>]) -> String {
         let _ = write!(
             sql,
             ", {}{}",
-            audit_cte(&format!("a{i}"), b, "$6", "c"),
+            audit_cte(&format!("a{i}"), b, "$6", "c", plan.audit(i + 1)),
             super::commit::version_ctes(
                 &i.to_string(),
                 ("$2", "c.id", &format!("a{i}.id"), &format!("a{i}, c")),
@@ -632,7 +641,7 @@ fn set_statement(members: &[SetMember<'_>]) -> String {
         "{}{}{}",
         outbox_cte("$1", "$2", ("$5", "$6"), "c", true),
         reservation_cte("$12"),
-        flags_row("ca", "")
+        flags_row("ca", &plan.learned_column())
     );
     sql
 }
@@ -657,28 +666,23 @@ pub async fn commit_set(
     guard: &Guard,
 ) -> Result<jiff::Timestamp, StorageError> {
     use sqlx::Row as _;
-    let sql = set_statement(members);
-    let mut query = sqlx::query(sqlx::AssertSqlSafe(sql))
+    let known = head.audit.shares.of(false);
+    let plan = SharedPlan::of(
+        known,
+        std::iter::once(&head.audit.shared).chain(members.iter().map(|m| &m.audit.shared)),
+    );
+    let sql = set_statement(members, &plan);
+    let query = sqlx::query(sqlx::AssertSqlSafe(sql))
         .bind(head.id)
         .bind(head.ehr_id)
         .bind(guard.policy)
         .bind(guard.definitions)
         .bind(&guard.outbox)
-        .bind(head.time_committed.to_string())
-        .bind(head.audit.system_id)
-        .bind(head.audit.change_type)
-        .bind(&head.audit.description)
-        .bind(&head.audit.committer)
-        .bind(&head.audit.attestation)
-        .bind(guard.reservation);
-    for member in members {
-        let a = &member.audit;
-        query = query
-            .bind(a.system_id)
-            .bind(a.change_type)
-            .bind(&a.description)
-            .bind(&a.committer)
-            .bind(&a.attestation);
+        .bind(head.time_committed.to_string());
+    let mut query =
+        super::commit::bind_audit(query, &head.audit, plan.audit(0)).bind(guard.reservation);
+    for (at, member) in members.iter().enumerate() {
+        query = super::commit::bind_audit(query, &member.audit, plan.audit(at + 1));
         query = super::commit::bind_version(query, &member.version).bind(member.expected_head);
         query = crate::storage::node_write::bind_node_arrays(
             query,
@@ -692,6 +696,12 @@ pub async fn commit_set(
         .fetch_one(&mut *conn)
         .await
         .map_err(|e| super::commit::uid_in_use(e.into(), head.id))?;
+    if plan.inserts() {
+        plan.remember(
+            known,
+            &row.try_get::<Vec<Option<i32>>, _>("shared_learned")?,
+        );
+    }
     GuardFlags::read(&row)?.require()?;
     for member in members {
         let v = &member.version;

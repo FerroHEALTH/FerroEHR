@@ -55,7 +55,8 @@ impl FerroEhrService {
 
     /// Commits the first version of each of `parties` in one demographic
     /// CONTRIBUTION, under the audit `description` and the committer
-    /// `audited_by`, the caller's when `None`.
+    /// `audited_by`, the caller's when `None`. A description composed for
+    /// the write is stored on the audit's own row (#6395).
     ///
     /// Each body passes the gates of a member of a demographic CONTRIBUTION
     /// over ITS-REST: the typed decode, the RM invariants and the mapped
@@ -68,10 +69,15 @@ impl FerroEhrService {
     pub async fn create_parties(
         &self,
         parties: Vec<NewParty>,
-        description: &str,
+        description: impl Into<std::borrow::Cow<'static, str>>,
         audited_by: Option<PartyProxy>,
     ) -> Result<CommittedContribution, ServiceError> {
-        let mut audit = self.audit(change_type::CREATION, description);
+        let mut audit = match description.into() {
+            std::borrow::Cow::Borrowed(fixed) => self.audit(change_type::CREATION, fixed),
+            std::borrow::Cow::Owned(composed) => {
+                self.audit_composed(change_type::CREATION, &composed)
+            }
+        };
         if let Some(party) = audited_by {
             audit.committer = party;
         }
