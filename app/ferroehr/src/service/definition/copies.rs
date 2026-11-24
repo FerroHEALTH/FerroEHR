@@ -4,8 +4,9 @@
 //! What a replica builds from the definition stores and keeps, held at the
 //! definition revision it was built at (#5948).
 //!
-//! The Web Templates of the stored templates and the archetype lineage index
-//! live in one generation, tagged with a `definition_revision` a request read.
+//! The Web Templates of the stored templates, the template ids no OPT 1.4
+//! template is stored under, and the archetype lineage index live in one
+//! generation, tagged with a `definition_revision` a request read.
 //! Every request reads the newest revision in the one read of the policy
 //! heads it already makes, and a newer revision replaces the generation with
 //! an empty one before the request answers, so no answer rests on a
@@ -14,6 +15,7 @@
 //! from the store at that revision or later. No openEHR spec governs the
 //! caches: our own design.
 
+use std::collections::BTreeSet;
 use std::fmt;
 use std::sync::{Arc, PoisonError, RwLock};
 
@@ -30,7 +32,14 @@ pub(crate) struct Generation {
     pub(crate) web_templates: WebTemplateCache,
     /// The archetype specialisation lineage AQL widens a predicate with.
     pub(crate) lineage: ArchetypeLineageCache,
+    /// The canonical template ids the OPT 1.4 store held no template under
+    /// at a read made at this revision or later, at most [`ABSENT`] (#6335).
+    absent: RwLock<BTreeSet<String>>,
 }
+
+/// The most template ids a generation remembers as absent; past it, an
+/// absent id is read again.
+const ABSENT: usize = 1024;
 
 impl Generation {
     /// An empty generation at `revision`.
@@ -39,6 +48,25 @@ impl Generation {
             revision,
             web_templates: WebTemplateCache::default(),
             lineage: archetype_lineage_cache(),
+            absent: RwLock::new(BTreeSet::new()),
+        }
+    }
+
+    /// Whether a read at this revision found no OPT 1.4 template under the
+    /// canonical id `key`.
+    pub(crate) fn opt14_absent(&self, key: &str) -> bool {
+        self.absent
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .contains(key)
+    }
+
+    /// Remember that a read found no OPT 1.4 template under the canonical id
+    /// `key`, while fewer than [`ABSENT`] ids are remembered.
+    pub(crate) fn note_opt14_absent(&self, key: &str) {
+        let mut absent = self.absent.write().unwrap_or_else(PoisonError::into_inner);
+        if absent.len() < ABSENT {
+            absent.insert(key.to_owned());
         }
     }
 }
@@ -124,5 +152,32 @@ mod tests {
         assert!(Arc::ptr_eq(&third, &copies.current()), "an older revision");
         assert!(copies.at(3).is_some(), "the current revision");
         assert!(copies.at(2).is_none(), "a replaced revision");
+    }
+
+    /// An absence is held by its generation only, and a newer revision
+    /// forgets it (#6335).
+    #[test]
+    fn a_newer_revision_forgets_an_absence() {
+        let copies = DefinitionCopies::default();
+        copies.current().note_opt14_absent("care.v0");
+        assert!(copies.current().opt14_absent("care.v0"), "held");
+        assert!(
+            !copies.current().opt14_absent("other.v0"),
+            "only the id noted"
+        );
+        copies.confirm(1);
+        assert!(!copies.current().opt14_absent("care.v0"), "forgotten");
+    }
+
+    /// A generation remembers at most [`super::ABSENT`] ids.
+    #[test]
+    fn the_absences_are_bounded() {
+        let copies = DefinitionCopies::default();
+        let generation = copies.current();
+        for n in 0..=super::ABSENT {
+            generation.note_opt14_absent(&format!("t{n}"));
+        }
+        assert!(generation.opt14_absent("t0"));
+        assert!(!generation.opt14_absent(&format!("t{}", super::ABSENT)));
     }
 }

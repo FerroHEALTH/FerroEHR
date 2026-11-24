@@ -88,6 +88,48 @@ async fn a_template_deleted_and_replaced_on_another_replica_is_not_served_from_t
     assert_eq!(after, stored, "both replicas serve what the store holds");
 }
 
+/// A template id the OPT 1.4 store holds nothing under is remembered as absent
+/// at the definition revision the request read, so no later request at that
+/// revision reads the store for it, and a template another replica uploads
+/// under it is served on the next request, which reads the moved revision
+/// (#6335).
+#[tokio::test]
+async fn a_template_uploaded_after_a_miss_is_served_once_the_revision_moved() {
+    let db = testkit::db().await.expect("testkit database");
+    let writer = replica(&db.pool());
+    let reader = replica(&db.pool());
+    let (first, _) = templates();
+
+    let missed = served(&reader).await;
+    assert!(
+        matches!(missed, Err(ServiceError::Unprocessable { .. })),
+        "an id nothing is stored under is unknown: {missed:?}"
+    );
+    sqlx::query("ALTER TABLE template_store RENAME TO template_store_away")
+        .execute(&db.pool())
+        .await
+        .expect("the OPT 1.4 store is taken away");
+    let held = reader.web_template(TEMPLATE_ID).await;
+    assert!(
+        matches!(held, Err(ServiceError::Unprocessable { .. })),
+        "the absence is answered at its revision without a read of the OPT 1.4 store: {held:?}"
+    );
+    sqlx::query("ALTER TABLE template_store_away RENAME TO template_store")
+        .execute(&db.pool())
+        .await
+        .expect("the OPT 1.4 store is brought back");
+
+    writer
+        .template_adl14_upload(&first)
+        .await
+        .expect("the upload after the miss");
+    let after = served(&reader)
+        .await
+        .expect("the next request reads the moved revision and builds the template");
+    let stored = served(&writer).await.expect("the writer's own build");
+    assert_eq!(after, stored, "both replicas serve what the store holds");
+}
+
 /// A COMPOSITION in `ehr` whose OBSERVATION was created with `archetype`.
 async fn commit_under(svc: &FerroEhrService, ehr: ferroehr::ids::EhrId, archetype: &str) {
     let mut c = base_composition();

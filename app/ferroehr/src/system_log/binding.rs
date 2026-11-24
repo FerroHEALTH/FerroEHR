@@ -58,8 +58,6 @@ pub enum BindingCode {
     RefusedKeyClaimMissing,
     /// Refused: the group claim is unreadable or overage.
     RefusedGroupsUnavailable,
-    /// Refused: a guest of the issuer.
-    RefusedGuest,
     /// Refused: a `federation` token lacks or garbles a required field.
     RefusedExternalIncomplete,
     /// Refused: the request's patient is not the TRC patient.
@@ -80,7 +78,7 @@ pub enum BindingCode {
 impl BindingCode {
     /// Every code, in the order the `ck_audit_event_binding` constraint lists
     /// them.
-    pub const ALL: [Self; 23] = [
+    pub const ALL: [Self; 22] = [
         Self::Bound,
         Self::Provisional,
         Self::External,
@@ -96,7 +94,6 @@ impl BindingCode {
         Self::RefusedRepresentationUnrecorded,
         Self::RefusedKeyClaimMissing,
         Self::RefusedGroupsUnavailable,
-        Self::RefusedGuest,
         Self::RefusedExternalIncomplete,
         Self::RefusedTrcPatientMismatch,
         Self::RefusedTrcMissing,
@@ -136,7 +133,6 @@ impl BindingCode {
             Self::RefusedRepresentationUnrecorded => "refused-representation-unrecorded",
             Self::RefusedKeyClaimMissing => "refused-key-claim-missing",
             Self::RefusedGroupsUnavailable => "refused-groups-unavailable",
-            Self::RefusedGuest => "refused-guest",
             Self::RefusedExternalIncomplete => "refused-external-incomplete",
             Self::RefusedTrcPatientMismatch => "refused-trc-patient-mismatch",
             Self::RefusedTrcMissing => "refused-trc-missing",
@@ -170,7 +166,6 @@ impl BindingCode {
             Self::RefusedRepresentationUnrecorded => CredentialBinding::RepresentationUnrecorded,
             Self::RefusedKeyClaimMissing => CredentialBinding::KeyClaimMissing,
             Self::RefusedGroupsUnavailable => CredentialBinding::GroupsUnavailable,
-            Self::RefusedGuest => CredentialBinding::Guest,
             Self::RefusedExternalIncomplete => CredentialBinding::ExternalCredentialIncomplete,
             Self::RefusedTrcPatientMismatch => {
                 CredentialBinding::TreatmentRelationshipConfirmationMismatch
@@ -269,8 +264,6 @@ pub struct BindingRecord {
     pub groups: Vec<String>,
     /// The healthcare provider the access is attributed to.
     pub provider: Option<Identified>,
-    /// Whether the caller is a guest its issuer admits.
-    pub guest: bool,
     /// For a representative, whom they act for.
     pub representation: Option<Representation>,
     /// The fields a federation token asserts, by field name.
@@ -318,7 +311,6 @@ impl BindingRecord {
             party: None,
             groups: Vec::new(),
             provider: None,
-            guest: false,
             representation: None,
             external: BTreeMap::new(),
             agreement: None,
@@ -329,20 +321,18 @@ impl BindingRecord {
     }
 
     /// A person bound to `party`, provisional when the `PERSON` is
-    /// `incomplete`, with its groups, its provider and its guest mark.
+    /// `incomplete`, with its groups and its provider.
     #[must_use]
     pub fn bound(
         party: PartyTriple,
         provisional: bool,
         groups: Vec<String>,
         provider: Option<Identified>,
-        guest: bool,
     ) -> Self {
         Self {
             party: Some(party),
             groups,
             provider,
-            guest,
             ..Self::of(if provisional {
                 BindingCode::Provisional
             } else {
@@ -391,7 +381,7 @@ impl BindingRecord {
     }
 
     /// The JSON value of each jsonb binding column, in the order the inserts
-    /// list them after `binding` and `guest`: party, groups, provider,
+    /// list them after `binding`: party, groups, provider,
     /// representation, external fields, agreement, actor chain, facilities
     /// and detail; `NULL` for an empty field.
     #[must_use]
@@ -464,14 +454,8 @@ mod tests {
     }
 
     #[test]
-    fn a_bound_and_a_provisional_person_carry_party_groups_provider_and_guest() {
-        let bound = BindingRecord::bound(
-            party(),
-            false,
-            vec!["g1".to_owned()],
-            Some(provider()),
-            true,
-        );
+    fn a_bound_and_a_provisional_person_carry_party_groups_and_provider() {
+        let bound = BindingRecord::bound(party(), false, vec!["g1".to_owned()], Some(provider()));
         assert_eq!(bound.code, BindingCode::Bound);
         let [party_json, groups, provider_json, ..] = bound.json_columns();
         assert_eq!(
@@ -486,8 +470,7 @@ mod tests {
             provider_json,
             Some(serde_json::json!({ "issuer": "urn:oid:2.999.7.9", "id": "dev" }))
         );
-        assert!(bound.guest);
-        let provisional = BindingRecord::bound(party(), true, Vec::new(), None, false);
+        let provisional = BindingRecord::bound(party(), true, Vec::new(), None);
         assert_eq!(provisional.code, BindingCode::Provisional);
         assert_eq!(provisional.json_columns()[1], None, "no group is NULL");
     }
