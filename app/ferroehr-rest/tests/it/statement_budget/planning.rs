@@ -29,11 +29,7 @@ const PLANS: u64 = 6;
 
 /// The openings of the statements known to plan on every call, each held
 /// over the ceiling: one that settles fails the test until it leaves the list.
-// TODO(#6401): the party binding statements settle on a generic plan.
-const KNOWN: [&str; 2] = [
-    "WITH fd AS (DELETE FROM binding_caller_fact WHERE holder_id = $1 ",
-    "WITH professional AS ( ",
-];
+const KNOWN: [&str; 0] = [];
 
 /// The assembled router of [`super::served`] over pools of one connection
 /// each, with `track_planning` on; the second pool reaches the database

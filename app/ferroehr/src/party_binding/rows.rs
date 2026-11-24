@@ -71,12 +71,14 @@ pub(crate) struct RepresentationRow {
 /// representation (a live standalone container, or any relationship whose
 /// row was retired), so a former representative's login is never taken for
 /// the patient's (#5532). A display name is held once per folded value, the
-/// first in document order.
+/// first in document order. The arrays are read by `generate_subscripts`,
+/// which gives the custom and generic plans one row estimate (#6401).
 macro_rules! wanted_identifiers {
     () => {
         "WITH professional AS ( \
          SELECT t.party, range_agg(party.binding_validity(t.validity)) AS dates \
-         FROM unnest($9::uuid[], $10::jsonb[]) AS t(party, validity) GROUP BY t.party \
+         FROM (SELECT ($9::uuid[])[i] AS party, ($10::jsonb[])[i] AS validity \
+               FROM generate_subscripts($9::uuid[], 1) AS g (i)) t GROUP BY t.party \
      ), held AS ( \
          SELECT w.party, w.selector, w.issuer, w.identifier_type, w.value, \
                 CASE WHEN w.selector IN ('user_name', 'group_display_name') \
@@ -88,9 +90,10 @@ macro_rules! wanted_identifiers {
                     SELECT 1 FROM binding_representation r \
                     WHERE r.representative_id = w.party) AS representative, \
                 w.ord \
-         FROM unnest($3::uuid[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[]) \
-              WITH ORDINALITY \
-              AS w(party, selector, issuer, identifier_type, value, lifecycle_state, ord) \
+         FROM (SELECT ($3::uuid[])[i] AS party, ($4::text[])[i] AS selector, \
+                      ($5::text[])[i] AS issuer, ($6::text[])[i] AS identifier_type, \
+                      ($7::text[])[i] AS value, ($8::text[])[i] AS lifecycle_state, i AS ord \
+               FROM generate_subscripts($3::uuid[], 1) AS g (i)) w \
          LEFT JOIN professional pr ON pr.party = w.party \
      ), wanted AS ( \
          SELECT DISTINCT ON (h.party, h.selector, h.issuer, \
