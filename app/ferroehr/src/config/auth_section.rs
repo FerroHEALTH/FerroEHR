@@ -7,10 +7,8 @@
 //! `ferrohealth-smart` owns every other key of `[auth]`, `[auth.idp.entra]`
 //! included, and reads it with `deny_unknown_fields`; `config::beside` reads
 //! FerroEHR's keys beside it. The section is read as the crate's
-//! `ProductStandingSection`, without the client lists the policy grants
-//! answer (`party_binding::grants::standing`), so `scopeless_subjects` and an
-//! issuer's `first_party_clients` and `delegates` are unknown keys. No
-//! openEHR spec governs configuration: our own design.
+//! `ProductStandingSection`. No openEHR spec governs configuration: our own
+//! design.
 
 use std::fmt;
 
@@ -147,33 +145,6 @@ mod tests {
         assert!(text.contains("`issuer`"), "{text}");
         let err = toml::from_str::<AuthConfig>("[idp.okta]\n").expect_err("unknown adapter");
         assert!(err.to_string().contains("unknown field `okta`"), "{err}");
-    }
-
-    #[test]
-    fn the_client_lists_the_policy_grants_answer_are_unknown_keys() {
-        for body in [
-            "scopeless_subjects = []\n",
-            "[issuer.idp]\nissuer = \"https://idp.example\"\nscopeless_subjects = [\"svc\"]\n",
-            "[issuer.idp]\nissuer = \"https://idp.example\"\n[issuer.idp.profile]\nfirst_party_clients = [\"portal\"]\n",
-            "[issuer.idp]\nissuer = \"https://idp.example\"\n[issuer.idp.profile]\ndelegates = [{ client = \"bridge\" }]\n",
-            "[issuer.idp]\nissuer = \"https://idp.example\"\n[issuer.idp.profile]\naudience_delegates = true\n",
-        ] {
-            let err = toml::from_str::<AuthConfig>(body).expect_err("a removed key");
-            assert!(err.to_string().contains("unknown field"), "{body}: {err}");
-        }
-    }
-
-    /// The token-claim patient scope is removed: a patient is confined to
-    /// their own EHR by the access evaluator alone (#5586).
-    #[test]
-    fn the_removed_patient_binding_keys_are_unknown() {
-        for body in [
-            "patient_claim = \"patient_id\"\n",
-            "patient_namespace = \"nl.bsn\"\n",
-        ] {
-            let err = toml::from_str::<AuthConfig>(body).expect_err("a removed key");
-            assert!(err.to_string().contains("unknown field"), "{body}: {err}");
-        }
     }
 
     #[test]

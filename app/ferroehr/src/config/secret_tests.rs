@@ -464,36 +464,6 @@ fn a_party_issuer_never_renders_its_userinfo() {
     );
 }
 
-/// `[[auth.scopeless_subjects]]` is refused as an unknown key (scopeless
-/// subjects are `access_without_scope` grants in the CDR), and the refusal
-/// never renders the password of the issuer it held (#5437).
-#[test]
-fn a_removed_scopeless_subject_table_is_refused_without_rendering_its_userinfo() {
-    let file = toml_file(&format!(
-        "{NAMED_ISSUER}\n[[auth.scopeless_subjects]]\nissuer = \"https://u:SCOPELESS_PW_SENTINEL@scopeless.example/realms/ferroehr\"\nsub = \"svc\"\n"
-    ));
-    let refused = assemble(Some(file.path()), &env(&[]), &[])
-        .expect_err("the removed table is an unknown key")
-        .to_string();
-    assert!(refused.contains("scopeless_subjects"), "{refused}");
-    assert!(!refused.contains("SCOPELESS_PW_SENTINEL"), "{refused}");
-}
-
-/// `[[authz.federation.agreement]]` is refused as an unknown key (agreements
-/// are CDR data), and the refusal never renders the password of the issuer it
-/// held (#5440).
-#[test]
-fn a_removed_agreement_table_is_refused_without_rendering_its_userinfo() {
-    let file = toml_file(&format!(
-        "{NAMED_ISSUER}\n[[authz.federation.agreement]]\nissuer = \"https://u:AGREEMENT_PW_SENTINEL@agreement.example/realms/ferroehr\"\n"
-    ));
-    let refused = assemble(Some(file.path()), &env(&[]), &[])
-        .expect_err("the removed table is an unknown key")
-        .to_string();
-    assert!(refused.contains("federation"), "{refused}");
-    assert!(!refused.contains("AGREEMENT_PW_SENTINEL"), "{refused}");
-}
-
 /// An `[[authz.party_binding.issuer]]` issuer renders and refuses with its
 /// userinfo masked.
 #[test]
@@ -505,47 +475,18 @@ fn a_party_binding_issuer_never_renders_its_userinfo() {
     );
 }
 
-/// The removed `[[authz.system_client]]` table is refused as an unknown key,
-/// and the refusal never carries its issuer's userinfo (#5436).
+/// An unknown table under `[auth]` or `[authz]` is refused, and the refusal
+/// never renders the userinfo of the issuer it holds.
 #[test]
-fn a_removed_system_client_table_is_refused_without_its_userinfo() {
-    let refused = tests::file_refusal(&format!(
-        "{NAMED_ISSUER}\n[[authz.system_client]]\nissuer = \"https://u:SYSTEM_PW_SENTINEL@system.example/realms/ferroehr\"\nclient_id = \"lab\"\n"
-    ));
-    assert!(refused.contains("system_client"), "{refused}");
-    assert!(!refused.contains("SYSTEM_PW_SENTINEL"), "{refused}");
-}
-
-/// The refusal of the removed `[authz.rbac]` key `key` (#5521).
-fn removed_rbac_key(key: &str, value: &str) {
-    let refused = tests::file_refusal(&format!("[authz.rbac]\n{key} = {value}\n"));
-    assert!(refused.contains(key), "{refused}");
-}
-
-/// `[authz.rbac] subject_audit_role` is removed: reading one subject's access
-/// log is a `read_subject_audit` grant in the CDR (#5521).
-#[test]
-fn the_removed_subject_audit_role_is_refused() {
-    removed_rbac_key("subject_audit_role", "\"PORTAL\"");
-}
-
-/// `[authz.rbac] access_service_roles` is removed: an EHDS Art. 10 access
-/// service is an `access_service` grant in the CDR (#5521).
-#[test]
-fn the_removed_access_service_roles_are_refused() {
-    removed_rbac_key("access_service_roles", "[\"EHDS-ACCESS-SERVICE\"]");
-}
-
-/// `[authz.rbac] import_role` is removed: importing is an `import_ehr` or
-/// `import_ehr_extract` grant in the CDR (#5521).
-#[test]
-fn the_removed_import_role_is_refused() {
-    removed_rbac_key("import_role", "\"IMPORTER\"");
-}
-
-/// `[authz.rbac] identifier_reader_role` is removed (#5521), and the
-/// protected-identifier read it gated is gone with the protection (#6092).
-#[test]
-fn the_removed_identifier_reader_role_is_refused() {
-    removed_rbac_key("identifier_reader_role", "\"IDENTIFIER_READER\"");
+fn an_unknown_table_is_refused_without_rendering_its_userinfo() {
+    for table in ["[[auth.colour]]", "[[authz.colour]]", "[authz.rbac.colour]"] {
+        let refused = tests::file_refusal(&format!(
+            "{NAMED_ISSUER}\n{table}\nissuer = \"https://u:COLOUR_PW_SENTINEL@colour.example/realms/ferroehr\"\n"
+        ));
+        assert!(refused.contains("colour"), "{table}: {refused}");
+        assert!(
+            !refused.contains("COLOUR_PW_SENTINEL"),
+            "{table}: {refused}"
+        );
+    }
 }

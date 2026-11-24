@@ -119,20 +119,6 @@ fn a_symmetric_algorithm_is_a_boot_error() {
     assert!(validate(&valid()).is_ok(), "the asymmetric default boots");
 }
 
-/// The HMAC key source is gone with the move to the shared crate: an
-/// `hmac_secret` is an unknown key, refused like any typo.
-#[test]
-fn an_hmac_secret_is_refused_as_an_unknown_key() {
-    for body in [
-        "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\nhmac_secret = \"0123456789abcdef0123456789abcdef\"\n",
-        "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\nhmac_secret_file = \"/run/secrets/hmac\"\n",
-        "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\njwks_json = \"{}\"\n",
-    ] {
-        let err = parse(body).expect_err("an unknown key must be refused");
-        assert!(err.to_string().contains("unknown field"), "{err}");
-    }
-}
-
 /// RFC 7517 §4.1 / RFC 7518 §6.4: a symmetric key in the handed-over key
 /// set is a secret the resource server can never use, so boot refuses it
 /// before any rendering could print it.

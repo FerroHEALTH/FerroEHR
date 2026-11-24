@@ -79,16 +79,14 @@ mod tests {
         );
     }
 
-    /// A `[terminology.external]` section is refused as an unknown key, never
-    /// ignored, so a deployment naming it does not lose its terminology server
-    /// unseen.
     #[test]
-    fn the_retired_external_section_is_refused() {
-        let err = toml::from_str::<TerminologyServerConfig>(
-            "[external]\nenabled = true\n[external.providers.default]\nurl = \"https://ts/fhir\"\n",
-        )
-        .expect_err("[terminology.external] is no longer a key");
-        assert!(err.to_string().contains("external"), "got {err}");
+    fn an_unknown_key_is_refused() {
+        let err = toml::from_str::<TerminologyServerConfig>("colour = \"blue\"\n")
+            .expect_err("an unknown key is refused");
+        assert!(
+            err.to_string().contains("unknown field `colour`"),
+            "got {err}"
+        );
     }
 
     #[test]
