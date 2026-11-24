@@ -1761,8 +1761,17 @@ the episodes of each composition's current version; no access decision
 reads them yet. A persistent composition (`openehr::431`) that names an
 episode, and an `episode` element without a `DV_IDENTIFIER` carrying an
 issuer and an id, are refused `422` on a commit, a CONTRIBUTION, an EHR
-Extract import and an archive load. Your template must admit the element,
-for example in a CLUSTER of an `other_context` slot.
+Extract import and an archive load. So is a composition placed in an episode
+that no care relationship of its EHR's subject names, live or ended: write
+the relationship with its `episode` before the data placed in it. An import
+is judged against the relationships this CDR holds and those in the
+extract's demographics chapter, an archive load against those it holds and
+those in the archive. Your template must admit the element, for example in
+a CLUSTER of an `other_context` slot.
+
+A `relationship_validity` entry of the access policy with
+`episode_required` set refuses `422` a care relationship of the roles and
+provider types it covers that names no `episode`.
 
 **Group memberships of a provider.** A `PARTY_RELATIONSHIP` in an
 `ORGANISATION`'s `relationships` carrying `MBR` of `HL7_RoleClass` makes that provider a
