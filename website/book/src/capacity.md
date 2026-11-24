@@ -139,12 +139,11 @@ such as a longer `[auth.basic] cache_ttl`, goes in
 
 The seed puts `CAPACITY_POPULATION` patients in the care of the clinician's
 team, so the population groups read a caseload of that size. Every
-`care_commit` request is a new relationship, and each one moves the party
-domain's single facts revision, which every replica's copy of the caller
-facts and the care projection follow. A sweep of `care_commit` on its own
-measures how many relationship commits per second that revision allows; a
-mix with `CAPACITY_CARE_WEIGHT` above 0 measures the reads while an ADT feed
-writes.
+`care_commit` request is a new relationship, which stamps the patient's
+party; every replica's copy of the caller facts and the care projection read
+the stamped parties' facts. A sweep of `care_commit` on its own measures how
+many relationship commits per second the party store takes; a mix with
+`CAPACITY_CARE_WEIGHT` above 0 measures the reads while an ADT feed writes.
 
 ```sh
 export CAPACITY_POPULATION=50000          # a GP practice's list; 1600 for a ward
@@ -161,7 +160,8 @@ bash scripts/perf/capacity.sh summary
 ```
 
 The plans these queries take at 100, 1 600 and 50 000 patients per caseload
-are held by the integration test `care_caseload_plans`.
+are held by the integration test `care_caseload_plans`; its figures are on
+[Care relationships and episodes of care](care-relationships.md#what-it-costs).
 
 ## Trusting a number
 

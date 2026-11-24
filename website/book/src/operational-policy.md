@@ -2296,7 +2296,8 @@ least.
 | --- | --- | --- |
 | `self_declared_care` | The longest period of a care relationship a professional states for themself | no self-declared relationship |
 | `attested_care` | The agreements under which a caller's verified credential may attest a care relationship | no attested relationship |
-| `caseload` | Whether a query may be narrowed to the caller's caseload | `true` |
+| `caseload` | Whether a query may be narrowed to the caller's [caseload](care-relationships.md#the-caseload) | `true` |
+| `episode_shared` | The data every live care relationship covers whatever episode it or the data name, such as the patient summary, each an `ACCESS_DATA_SCOPE` ([Care relationships and episodes of care](care-relationships.md#episodes-of-care)) | none |
 | `conflict_rules` | The conflicts of interest (`self`, `related`, with the kinships) allowed through the professional path, and for whom | none: a professional who is the patient, or is related to them, is refused |
 | `concealed_confidentialities` | The `HL7_Confidentiality` levels whose refused records answer as absent | every refused record answers as forbidden |
 | `value_sets` | The value set on your terminology server that each coded attribute (`care_role`, `representation_basis`, `kinship`, `organisation_type`, `care_purpose`, `emergency_purpose`) is bound to | the package's default code system |
