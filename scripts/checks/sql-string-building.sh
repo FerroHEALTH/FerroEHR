@@ -110,8 +110,17 @@ KEYWORDS='SELECT|FROM|WHERE|ORDER[[:space:]]+BY|GROUP[[:space:]]+BY|HAVING|JOIN|
 # its inputs are the two `Domain` constants in the same file and a committed
 # template, and its only consumer is a test that compares the rendering with the
 # committed migrations. Nothing here reaches a connection.
+#
+# `render/index.rs` and `render/nodes.rs` write JSON text, a body's RFC 8785
+# form and a node row's fragment, which a statement binds as a value.
 EXEMPT='app/ferroehr/src/storage/node_write.rs:push_str(sea_query::Iden::unquoted(&leaf.column))
-app/ferroehr/src/storage/ddl_template.rs:out.push_str(&line.replace(KINDS, &kinds))'
+app/ferroehr/src/storage/ddl_template.rs:out.push_str(&line.replace(KINDS, &kinds))
+app/ferroehr/src/storage/render/index.rs:out.push_str(plain)
+app/ferroehr/src/storage/render/index.rs:out.push_str(self.raw_text(id))
+app/ferroehr/src/storage/render/index.rs:out.push_str(literal)
+app/ferroehr/src/storage/render/nodes.rs:out.push_str(body.member_text(kept.member))
+app/ferroehr/src/storage/render/nodes.rs:out.push_str(body.key(kept.member))
+app/ferroehr/src/storage/render/nodes.rs:out.push_str(value)'
 
 collect() {
   if [[ "${1:-}" = "--all" ]]; then

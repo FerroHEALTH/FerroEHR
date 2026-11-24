@@ -17,7 +17,6 @@ use uuid::Uuid;
 use super::ResolvedWrite;
 use crate::error::ServiceError;
 use crate::versioning::audit::AuditInput;
-use crate::versioning::body::Body;
 use crate::versioning::integrity::Signed;
 use crate::versioning::{SigningCtx, integrity};
 
@@ -39,10 +38,9 @@ pub(super) fn body_and_signature(
     at_committal_attestations: &[Value],
 ) -> Result<(Option<String>, bool), ServiceError> {
     let signs = r.client_signature.is_none() && ctx.signer.enabled();
-    let body = match r.body.as_ref().filter(|_| signs) {
+    let body = match r.rendered.as_ref().filter(|_| signs) {
         None => Signed::Void,
-        Some(Body::Canonical(value)) => Signed::Value(value),
-        Some(typed) => Signed::Typed(typed),
+        Some(rendered) => Signed::Rendered(rendered),
     };
     version_signature(
         ctx,

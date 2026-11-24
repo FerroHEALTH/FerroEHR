@@ -59,27 +59,7 @@ async fn app_with(
     bound: &[&str],
 ) -> (testkit::TestDb, PgPool, Arc<FerroEhrService>, Router) {
     let (db, pool) = common::migrated_pool().await;
-    let audit = common::local_audit();
-    let (sender, _handle): (_, AuditHandle) = start(audit, None, pool.clone())
-        .await
-        .expect("the audit sender");
-    let svc = Arc::new(
-        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
-            .with_audit(sender)
-            .with_audit_store(AuditStore::new(pool.clone())),
-    );
-    if delayed {
-        svc.put_policy_register(
-            Register::AccessDelay,
-            0,
-            r#"{"enabled": true, "categories": ["Patient-Summaries"], "max_delay": "72h"}"#,
-        )
-        .await
-        .expect("turn the access delay on");
-    }
-    svc.mirror_category_map()
-        .await
-        .expect("mirror the category map");
+    let svc = audited_service(&pool, delayed).await;
     let mut config = common::api_config(true);
     config.auth = common::persons_and_patients(ISSUER, PATIENTS, AUDIENCE);
     common::bind_subjects(&pool, &[(ISSUER, PROFESSIONAL)]).await;
@@ -106,6 +86,32 @@ async fn app_with(
     .await;
     assert_eq!(status, StatusCode::CREATED, "OPT upload: {body}");
     (db, pool, svc, app)
+}
+
+/// A service over `pool` auditing to the local store, with the category map
+/// mirrored and, when `delayed`, the delay on for patient summaries (72 hours).
+pub(crate) async fn audited_service(pool: &PgPool, delayed: bool) -> Arc<FerroEhrService> {
+    let (sender, _handle): (_, AuditHandle) = start(common::local_audit(), None, pool.clone())
+        .await
+        .expect("the audit sender");
+    let svc = Arc::new(
+        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
+            .with_audit(sender)
+            .with_audit_store(AuditStore::new(pool.clone())),
+    );
+    if delayed {
+        svc.put_policy_register(
+            Register::AccessDelay,
+            0,
+            r#"{"enabled": true, "categories": ["Patient-Summaries"], "max_delay": "72h"}"#,
+        )
+        .await
+        .expect("turn the access delay on");
+    }
+    svc.mirror_category_map()
+        .await
+        .expect("mirror the category map");
+    svc
 }
 
 /// The professional's token: every `user/` grant and the product scope.

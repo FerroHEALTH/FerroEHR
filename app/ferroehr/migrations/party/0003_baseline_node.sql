@@ -167,22 +167,22 @@ CREATE FUNCTION node_shared(a_shared jsonb, a_tier text, a_vo_id uuid, a_sys_ver
 -- across tiers. No openEHR spec governs index layout: our own design.
 ALTER TABLE node_hot ADD CONSTRAINT node_hot_pkey PRIMARY KEY (vo_id, sys_version, num);
 ALTER TABLE node_cold ADD CONSTRAINT node_cold_pkey PRIMARY KEY (vo_id, sys_version, num);
--- The dashboard ORDER BY: the COMPOSITION roots of one EHR by context start
--- time. COMPOSITION occurs only at a root, so the rm_type predicate is exactly
--- what the query proves.
-CREATE INDEX idx_node_hot_context_start ON node_hot (ehr_id, context_start)
-    WHERE rm_type = 'COMPOSITION';
 -- An AQL lookup by an ELEMENT value (`WHERE id/items[at0001]/value/id = $v`)
 -- enters here: the AQL engine adds, to such an equality, the condition that
 -- some ELEMENT of the same version carries the value as its search text
 -- (crate::aql::sql::condition; ext.node_search_text). The index is partial on
--- the ELEMENT rows, the only rows with a value.
+-- the ELEMENT rows with a search text, the only rows such an equality can
+-- match (#6393).
 CREATE INDEX idx_node_hot_value_search
     ON node_hot (ext.node_search_text(value_type, value_text, data))
-    WHERE rm_type = 'ELEMENT';
--- The per-EHR reads of the structure rows by type and archetype.
+    WHERE rm_type = 'ELEMENT' AND ext.node_search_text(value_type, value_text, data) IS NOT NULL;
+-- The per-EHR reads of the structure rows by type and archetype. ELEMENT and
+-- the data-structure classes are left out: no read enters through them
+-- (#6393).
 CREATE INDEX idx_node_hot_ehr_type ON node_hot (ehr_id, rm_type, archetype)
-    WHERE rm_type <> 'ELEMENT';
+    WHERE rm_type NOT IN ('ELEMENT', 'ITEM_TREE', 'ITEM_LIST', 'ITEM_SINGLE', 'ITEM_TABLE',
+                          'HISTORY', 'POINT_EVENT', 'INTERVAL_EVENT', 'EVENT_CONTEXT',
+                          'ACTIVITY');
 -- Archetype subsumption: a query naming a parent archetype matches a
 -- specialisation child through a `concept-%` prefix scan within the same
 -- entity and major version (AM master07 §Querying).
