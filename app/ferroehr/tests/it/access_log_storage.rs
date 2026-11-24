@@ -985,20 +985,36 @@ async fn cursor_at(pool: &sqlx::PgPool, cursor: i64) {
         .expect("the cursor stands behind");
 }
 
-/// The ITI-81 address search of `address`, counted.
+/// The ITI-81 address search of `address`, counted, asked again while it is
+/// refused as behind until [`SETTLED`] passes.
+///
+/// The frontier follows the `xmin` of the whole server, so a transaction
+/// another test holds open can keep the index behind for longer than one
+/// search waits (#6475).
 async fn by_address(store: &AuditStore, address: &str) -> i64 {
-    store
-        .search(&AuditSearchFilter {
-            criteria: vec![AuditCriterion::Address(vec![address.to_owned()])],
-            count: 1,
-            total: true,
-            ..AuditSearchFilter::default()
-        })
-        .await
+    let filter = AuditSearchFilter {
+        criteria: vec![AuditCriterion::Address(vec![address.to_owned()])],
+        count: 1,
+        total: true,
+        ..AuditSearchFilter::default()
+    };
+    let deadline = std::time::Instant::now() + SETTLED;
+    let answered = loop {
+        match store.search(&filter).await {
+            Err(ferroehr::system_log::AuditError::IndexBehind(_))
+                if std::time::Instant::now() < deadline => {}
+            answered => break answered,
+        }
+    };
+    answered
         .expect("the ITI-81 search answers")
         .total
         .expect("the search counts")
 }
+
+/// How long [`by_address`] asks again while other tests' transactions hold
+/// the server's `xmin` back.
+const SETTLED: Duration = Duration::from_secs(120);
 
 /// A read from `address`, recorded through the sender as a request records
 /// it.
