@@ -45,6 +45,11 @@ pub(crate) async fn granting(svc: FerroEhrService) -> FerroEhrService {
 
 /// Runs `fut` as an administrator.
 pub(crate) async fn as_admin<F: Future>(fut: F) -> F::Output {
+    as_holding(&[ADMIN], fut).await
+}
+
+/// Runs `fut` as a signed-in caller holding `roles`.
+pub(crate) async fn as_holding<F: Future>(roles: &[&str], fut: F) -> F::Output {
     let caller = CommitterIdentity {
         subject: "admin".to_owned(),
         id_type: "oauth2",
@@ -60,7 +65,7 @@ pub(crate) async fn as_admin<F: Future>(fut: F) -> F::Output {
         external: None,
     };
     ferroehr::system_log::access_context::with_roles(
-        vec![ADMIN.to_owned()],
+        roles.iter().map(|role| (*role).to_owned()).collect(),
         with_committer(Some(caller), Box::pin(fut)),
     )
     .await

@@ -10,8 +10,9 @@
 //!   `DV_CODED_TEXT` of the draft access terminology ([`TERMINOLOGY`]);
 //! - a `PARTY_RELATIONSHIP`, at its root or inline, whose `name` or whose
 //!   `details` hold the acts-for code ([`ACTS_FOR`]) of that terminology;
-//! - a `DV_IDENTIFIER` of the client identifier type ([`CLIENT_ID`]), which
-//!   binds an actor to an OAuth 2.0 client.
+//! - with the policy configured ([`clients_bind`]), a `DV_IDENTIFIER` of the
+//!   client identifier type ([`CLIENT_ID`]), which binds an actor to an
+//!   OAuth 2.0 client. Without it the identifier is plain data.
 //!
 //! A party with such a version is marked in `vo_head.policy_party_at`: the
 //! commit of the version sets it in its own transaction
@@ -35,6 +36,7 @@ use serde_json::Value;
 use sqlx::PgConnection;
 
 use crate::ids::VoId;
+use crate::party_binding::BindingMapping;
 use crate::storage::error::StorageError;
 use crate::versioning::tree::{Shape, Tree};
 use openehr_rm::draft::access_control::terminology::{TERMINOLOGY_ID_ACCESS, Term};
@@ -55,9 +57,11 @@ pub const REPRESENTS: &str = "represents";
 /// The `DV_IDENTIFIER.type` of an OAuth 2.0 `client_id`.
 pub const CLIENT_ID: &str = "client_id";
 
-/// The SQL/JSON path that holds exactly when `policy_content` finds content.
-pub const POLICY_PATH: &str = "$ ? (\
-exists($.**?(@._type == \"CAPABILITY\").credentials.**?(@._type == \"DV_CODED_TEXT\" \
+/// The coded half of the policy paths: a capability's credentials or an
+/// acts-for relationship coded in [`TERMINOLOGY`].
+macro_rules! coded_path {
+    () => {
+        "exists($.**?(@._type == \"CAPABILITY\").credentials.**?(@._type == \"DV_CODED_TEXT\" \
 && @.defining_code.terminology_id.value == \"openehr_access\")) \
 || exists($.**?(@._type == \"PARTY_RELATIONSHIP\")?(\
 exists(@.name?(@._type == \"DV_CODED_TEXT\" \
@@ -65,8 +69,39 @@ exists(@.name?(@._type == \"DV_CODED_TEXT\" \
 && @.defining_code.code_string == \"acts_for\")) \
 || exists(@.details.**?(@._type == \"DV_CODED_TEXT\" \
 && @.defining_code.terminology_id.value == \"openehr_access\" \
-&& @.defining_code.code_string == \"acts_for\")))) \
-|| exists($.**?(@._type == \"DV_IDENTIFIER\" && @.type == \"client_id\")))";
+&& @.defining_code.code_string == \"acts_for\"))))"
+    };
+}
+
+/// The SQL/JSON path that holds exactly when `policy_content` finds content
+/// with the policy configured.
+pub const POLICY_PATH: &str = concat!(
+    "$ ? (",
+    coded_path!(),
+    " || exists($.**?(@._type == \"DV_IDENTIFIER\" && @.type == \"client_id\")))"
+);
+
+/// The SQL/JSON path that holds exactly when `policy_content` finds content
+/// without the policy configured: the coded content alone.
+pub const CODED_PATH: &str = concat!("$ ? (", coded_path!(), ")");
+
+/// Whether a client identifier marks a party and binds its client under
+/// `mapping`: only when the deployment configures FerroEHR's policy. The one
+/// rule [`policy_content`], [`mark_stored`] and the client rows follow; no
+/// openEHR spec governs it: our own design (#6542).
+#[must_use]
+pub(crate) fn clients_bind(mapping: &BindingMapping) -> bool {
+    mapping.names_policy()
+}
+
+/// The path [`mark_stored`] tests under `mapping`.
+fn policy_path(mapping: &BindingMapping) -> &'static str {
+    if clients_bind(mapping) {
+        POLICY_PATH
+    } else {
+        CODED_PATH
+    }
+}
 
 /// What makes a version a policy party.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -189,9 +224,10 @@ fn openehr_relationship<'a, T: Tree<'a>>(item: T) -> Option<String> {
 }
 
 /// What makes the party body `body`, in canonical JSON, a policy party, or
-/// `None` when it holds none of it.
+/// `None` when it holds none of it; a client identifier counts only when
+/// `clients` ([`clients_bind`]).
 #[must_use]
-pub(crate) fn policy_content<'a, T: Tree<'a>>(body: T) -> Option<PolicyContent> {
+pub(crate) fn policy_content<'a, T: Tree<'a>>(body: T, clients: bool) -> Option<PolicyContent> {
     first(body, &mut |value| match text(value, "_type")?.as_ref() {
         "CAPABILITY" => first(value.get("credentials")?, &mut |item| {
             coded(item).map(Cow::into_owned)
@@ -200,15 +236,15 @@ pub(crate) fn policy_content<'a, T: Tree<'a>>(body: T) -> Option<PolicyContent> 
         "PARTY_RELATIONSHIP" => {
             carries(value, TERMINOLOGY, ACTS_FOR).then_some(PolicyContent::ActsFor)
         }
-        "DV_IDENTIFIER" => {
-            (text(value, "type").as_deref() == Some(CLIENT_ID)).then_some(PolicyContent::Client)
-        }
+        "DV_IDENTIFIER" => (clients && text(value, "type").as_deref() == Some(CLIENT_ID))
+            .then_some(PolicyContent::Client),
         _ => None,
     })
 }
 
 /// Marks the party `vo_id` (every party when `None`) when one of its stored
-/// versions holds [`policy_content`], tested by [`POLICY_PATH`], on `conn`:
+/// versions holds [`policy_content`] under `mapping`, tested by
+/// [`POLICY_PATH`] or [`CODED_PATH`], on `conn`:
 /// what an import, an archive load and a refill do after the versions land.
 /// A mark is never cleared.
 ///
@@ -216,6 +252,7 @@ pub(crate) fn policy_content<'a, T: Tree<'a>>(body: T) -> Option<PolicyContent> 
 /// [`StorageError::Database`] on a driver failure.
 pub(crate) async fn mark_stored(
     conn: &mut PgConnection,
+    mapping: &BindingMapping,
     vo_id: Option<VoId>,
 ) -> Result<(), StorageError> {
     sqlx::query(
@@ -226,7 +263,7 @@ pub(crate) async fn mark_stored(
                          AND jsonb_path_exists(v.body::jsonb, $2::jsonpath))",
     )
     .bind(vo_id)
-    .bind(POLICY_PATH)
+    .bind(policy_path(mapping))
     .execute(&mut *conn)
     .await?;
     Ok(())
@@ -411,8 +448,11 @@ mod tests {
         assert!(carries(&representation, TERMINOLOGY, REPRESENTS));
         assert!(!carries(&representation, TERMINOLOGY, ACTS_FOR));
         assert_eq!(
-            policy_content(&holding(&json!({ "_type": "PARTY_RELATIONSHIP",
-                "archetype_node_id": "at5", "name": coded_text(REPRESENTS, TERMINOLOGY) }))),
+            policy_content(
+                &holding(&json!({ "_type": "PARTY_RELATIONSHIP",
+                "archetype_node_id": "at5", "name": coded_text(REPRESENTS, TERMINOLOGY) })),
+                true
+            ),
             None,
             "a representation makes no policy party"
         );
@@ -421,7 +461,19 @@ mod tests {
     #[test]
     fn the_coded_content_makes_a_policy_party_in_any_archetype() {
         for (body, expected) in cases() {
-            assert_eq!(policy_content(&body), expected, "{body}");
+            assert_eq!(policy_content(&body, true), expected, "{body}");
+        }
+    }
+
+    /// Without the policy configured a client identifier is plain data: it
+    /// makes no policy party, and the coded content still does (#6542).
+    #[test]
+    fn a_client_identifier_counts_only_under_the_configured_policy() {
+        assert!(clients_bind(&BindingMapping::default().with_policy()));
+        assert!(!clients_bind(&BindingMapping::default()));
+        for (body, expected) in cases() {
+            let expected = expected.filter(|content| *content != PolicyContent::Client);
+            assert_eq!(policy_content(&body, false), expected, "{body}");
         }
     }
 
@@ -431,15 +483,21 @@ mod tests {
     #[tokio::test]
     async fn the_path_agrees_with_the_content_test() {
         let db = testkit::db().await.expect("testkit database");
-        for (body, expected) in cases() {
-            let held: bool =
-                sqlx::query_scalar("SELECT jsonb_path_exists($1::jsonb, $2::jsonpath)")
-                    .bind(body.to_string())
-                    .bind(POLICY_PATH)
-                    .fetch_one(&db.pool())
-                    .await
-                    .expect("the path runs");
-            assert_eq!(held, expected.is_some(), "{body}");
+        for (body, _) in cases() {
+            for (clients, path) in [(true, POLICY_PATH), (false, CODED_PATH)] {
+                let held: bool =
+                    sqlx::query_scalar("SELECT jsonb_path_exists($1::jsonb, $2::jsonpath)")
+                        .bind(body.to_string())
+                        .bind(path)
+                        .fetch_one(&db.pool())
+                        .await
+                        .expect("the path runs");
+                assert_eq!(
+                    held,
+                    policy_content(&body, clients).is_some(),
+                    "{clients}: {body}"
+                );
+            }
         }
     }
 }

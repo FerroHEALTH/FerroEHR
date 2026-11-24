@@ -57,6 +57,8 @@ fn mapping() -> BindingMapping {
             PersonSelectors::new(key).with_name(NameSelector::new(NAME_PATH).expect("compiles")),
         )
         .with_professional_role(ROLE_TEMPLATE)
+        .with_admin_role("ADMIN")
+        .with_policy()
 }
 
 fn text(value: &str) -> Value {
