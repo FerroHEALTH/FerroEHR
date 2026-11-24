@@ -93,9 +93,11 @@ pub async fn contribution_version_refs(
 ) -> Result<Vec<(VoId, (i32, i32, i32), String, String)>, StorageError> {
     // NOTE: EHDS Art. 8 and Art. 3(3) (`docs/law/eu/ehds/text.html`), a member the access
     // evaluator does not admit, or withheld from the person, is left out.
-    let rows = sqlx::query(concat!(
+    macro_rules! refs_sql {
+        ($($facts:ident)?) => {
+            concat!(
         "SELECT m.*, ",
-        head_facts!(),
+        head_facts!($($facts)?),
         " FROM (\
          SELECT vo_id, trunk_version, branch_number, branch_version, creating_system_id, \
          kind FROM version \
@@ -108,6 +110,12 @@ pub async fn contribution_version_refs(
          JOIN vo_head h ON h.vo_id = m.vo_id \
          WHERE (NOT $2 OR (h.person_withheld_until > now()) IS NOT TRUE) \
          ORDER BY m.vo_id"
+            )
+        };
+    }
+    let rows = sqlx::query(crate::storage::access_facts::with_episodes(
+        refs_sql!(),
+        refs_sql!(episodes),
     ))
     .bind(contribution_id)
     .bind(person_withheld)

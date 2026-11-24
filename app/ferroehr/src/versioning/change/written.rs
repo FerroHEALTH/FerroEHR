@@ -32,6 +32,7 @@ pub(super) fn admit_written(
         archetype: archetype.as_deref(),
         origins: Some(&resolved.origins),
         recorded: Some(resolved.time_committed),
+        episodes: Some(&resolved.episodes),
     }))
 }
 
