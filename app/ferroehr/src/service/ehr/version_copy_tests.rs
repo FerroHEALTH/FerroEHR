@@ -24,6 +24,7 @@ fn held(ehr_id: EhrId, vo_id: VoId, body: &str) -> Held {
             archetype: Some("openEHR-EHR-COMPOSITION.report.v1".to_owned()),
             origins: None,
             recorded: Some(now),
+            episodes: Some(Vec::new()),
             revision: Revision::default(),
         },
         stored: StoredVersion {
@@ -54,6 +55,7 @@ fn held(ehr_id: EhrId, vo_id: VoId, body: &str) -> Held {
             origins: None,
             restricted_at: None,
             head_committed_at: Some(now),
+            head_episodes: Some(Vec::new()),
             person_withheld: false,
             access_revision: Revision::default(),
             canonical: Value::Null,

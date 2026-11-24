@@ -36,6 +36,7 @@ pub mod class;
 pub mod condition;
 mod delegation;
 mod directive;
+pub mod episodes;
 mod exclusion;
 pub mod procedure;
 pub mod record;
