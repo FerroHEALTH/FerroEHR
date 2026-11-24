@@ -14,7 +14,7 @@ use ferrohealth_smart::party::source::{Lookup, PartyRecord};
 use ferrohealth_smart::party::{Markers, Membership, PartyRef, PartyState};
 use uuid::Uuid;
 
-use super::{BindingCopy, LiveBindings, LookupKey};
+use super::{BindingCopy, Filled, LiveBindings, LookupKey};
 use crate::db::domain::Domain;
 use crate::policy_register::listen::{Listened, Subscriber};
 
@@ -56,6 +56,15 @@ fn key(n: usize) -> LookupKey {
     }
 }
 
+/// `lookup` as read at `revision`, resting on no party.
+fn filled(lookup: Lookup, revision: i64) -> Filled {
+    Filled {
+        lookup,
+        revision,
+        parties: Vec::new(),
+    }
+}
+
 /// What the store answers for the `n`th login.
 fn found(n: usize) -> Lookup {
     if n.is_multiple_of(7) {
@@ -77,7 +86,7 @@ async fn the_lookups_stay_under_the_cap_and_an_evicted_one_reads_the_store() {
         for n in 0..KEYS {
             let read = async {
                 reads.fetch_add(1, Ordering::Relaxed);
-                Ok::<_, Infallible>((found(n), 0))
+                Ok::<_, Infallible>(filled(found(n), 0))
             };
             let lookup = bindings
                 .lookup(key(n), Some(0), read)
@@ -108,7 +117,7 @@ async fn a_lookup_read_before_the_stores_revision_is_read_again() {
         async move {
             let read = async {
                 reads.fetch_add(1, Ordering::Relaxed);
-                Ok::<_, Infallible>((found(1), read_at))
+                Ok::<_, Infallible>(filled(found(1), read_at))
             };
             bindings
                 .lookup(key(1), Some(revision), read)
@@ -173,7 +182,9 @@ async fn concurrent<E: Clone>(
         let read = async {
             reads.fetch_add(1, Ordering::Relaxed);
             tokio::time::sleep(std::time::Duration::from_millis(20)).await;
-            answer.clone()
+            answer
+                .clone()
+                .map(|(lookup, revision)| filled(lookup, revision))
         };
         bindings.lookup(key(1), Some(revision), read)
     });
@@ -233,7 +244,7 @@ async fn two_logins_on_one_stripe_are_each_answered_their_own_lookup() {
         let read = async move {
             reads.fetch_add(1, Ordering::Relaxed);
             tokio::time::sleep(std::time::Duration::from_millis(20)).await;
-            Ok::<_, Infallible>((found(n), 0))
+            Ok::<_, Infallible>(filled(found(n), 0))
         };
         let bindings = &bindings;
         async move { (n, bindings.lookup(key(n), Some(0), read).await) }
@@ -242,4 +253,129 @@ async fn two_logins_on_one_stripe_are_each_answered_their_own_lookup() {
         assert_eq!(answer.expect("the read succeeds"), found(n), "login {n}");
     }
     assert_eq!(reads.load(Ordering::Relaxed), 2, "one read per login");
+}
+
+/// The party the `n`th login's lookup rests on.
+fn party_of(n: usize) -> Uuid {
+    Uuid::from_u128(u128::try_from(n).expect("a small index"))
+}
+
+/// Looks up logins `logins` at `revision`, each read resting on
+/// [`party_of`] and answering at `revision`; the logins that read the store.
+async fn reading(bindings: &LiveBindings, logins: &[usize], revision: i64) -> Vec<usize> {
+    let mut read = Vec::new();
+    for &n in logins {
+        let reads = AtomicUsize::new(0);
+        let fill = async {
+            reads.fetch_add(1, Ordering::Relaxed);
+            Ok::<_, Infallible>(Filled {
+                lookup: found(n),
+                revision,
+                parties: vec![party_of(n)],
+            })
+        };
+        let lookup = bindings
+            .lookup(key(n), Some(revision), fill)
+            .await
+            .expect("the read succeeds");
+        assert_eq!(lookup, found(n), "login {n}");
+        if reads.load(Ordering::Relaxed) > 0 {
+            read.push(n);
+        }
+    }
+    read
+}
+
+/// The change set notification of revision `revision` with the changes `changes`.
+fn change_set(revision: i64, changes: &str) -> String {
+    format!(r#"{{"r": {revision}, "c": [{changes}]}}"#)
+}
+
+/// A change set drops the lookups it reaches, by party, by key or by group
+/// issuer, and holds the others at its revision, so they are taken at it with
+/// no read (#6403).
+#[tokio::test]
+async fn a_change_set_drops_only_the_lookups_it_reaches() {
+    let bindings = listening().await;
+    let logins = [1, 2, 3, 4, 5];
+    bindings.copy.notified(&change_set(1, r#""*""#)).await;
+    assert_eq!(reading(&bindings, &logins, 1).await, logins.to_vec());
+    let party = format!(r#"{{"p": "{}"}}"#, party_of(1));
+    bindings.copy.notified(&change_set(2, &party)).await;
+    assert_eq!(reading(&bindings, &logins, 2).await, vec![1], "by party");
+    let key = r#"{"k": ["https://idp.example", "sub", "login-3"]}"#;
+    bindings.copy.notified(&change_set(3, key)).await;
+    assert_eq!(reading(&bindings, &logins, 3).await, vec![3], "by key");
+    let groups = r#"{"g": "https://groups.example"}"#;
+    bindings.copy.notified(&change_set(4, groups)).await;
+    assert_eq!(
+        reading(&bindings, &logins, 4).await,
+        vec![2, 4],
+        "by the group issuer of the logins read with memberships"
+    );
+    bindings.copy.notified(&change_set(5, "")).await;
+    assert!(
+        reading(&bindings, &logins, 5).await.is_empty(),
+        "an empty set drops none"
+    );
+}
+
+/// A change set that does not follow the confirmed revision, names a change
+/// no row names, or does not parse drops every lookup (#6403).
+#[tokio::test]
+async fn a_change_set_out_of_order_or_unread_drops_every_lookup() {
+    let bindings = listening().await;
+    let logins = [1, 2, 3];
+    bindings.copy.notified(&change_set(1, r#""*""#)).await;
+    reading(&bindings, &logins, 1).await;
+    bindings.copy.notified(&change_set(3, "")).await;
+    assert_eq!(
+        reading(&bindings, &logins, 3).await,
+        logins.to_vec(),
+        "a gap"
+    );
+    bindings.copy.notified(&change_set(4, r#""*""#)).await;
+    assert_eq!(
+        reading(&bindings, &logins, 4).await,
+        logins.to_vec(),
+        "every row"
+    );
+    bindings.copy.notified(&change_set(5, r#"{"x": 1}"#)).await;
+    assert_eq!(
+        reading(&bindings, &logins, 5).await,
+        logins.to_vec(),
+        "unread change"
+    );
+    bindings.copy.notified("not a change set").await;
+    assert_eq!(
+        reading(&bindings, &logins, 5).await,
+        logins.to_vec(),
+        "unparsed"
+    );
+    bindings.copy.reset().await;
+    bindings.copy.notified(&change_set(6, "")).await;
+    assert_eq!(
+        reading(&bindings, &logins, 6).await,
+        logins.to_vec(),
+        "no revision is confirmed after a reset"
+    );
+}
+
+/// A held lookup is not taken at a revision whose change set has not
+/// arrived, however far behind the copy is (#6048, #6403).
+#[tokio::test]
+async fn a_lookup_past_the_confirmed_revision_is_read_again() {
+    let bindings = listening().await;
+    bindings.copy.notified(&change_set(1, r#""*""#)).await;
+    reading(&bindings, &[1], 1).await;
+    assert_eq!(
+        reading(&bindings, &[1], 2).await,
+        vec![1],
+        "revision 2 unheard"
+    );
+    bindings.copy.notified(&change_set(2, "")).await;
+    assert!(
+        reading(&bindings, &[1], 2).await.is_empty(),
+        "read at 2 itself"
+    );
 }

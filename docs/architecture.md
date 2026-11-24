@@ -1831,15 +1831,20 @@ which the performance gate's transactions-per-request measure refuses
 each login key's lookup of the side table (its parties, their states,
 markers, groups and represented subjects, under the date its states were
 judged on) and each bound `PERSON`'s name, read on a miss, listening on
-`ferroehr_party_binding`. Triggers of `party/0051` notify it with an empty
-payload on any change of a key row, a membership, a representation or a key
-space's state, which drops every lookup, and with a `PERSON`'s container on
-a write of its version, which drops its name. A request whose own commit
-changed the side table drops the copy before it answers, so a deprovisioned
-key is refused on that replica's next request and on another's once the
-notification arrives; while the listener is down every request reads the
-store. A request whose caller is held makes no party-store statement to
-resolve it. **Our own design.**
+`ferroehr_party_binding`. A lookup is taken only when it answers for the
+binding revision the request reads (#6048). Each transaction that changes a
+key row, a membership, a representation or a key space's state moves the
+revision once and notifies, at commit, the revision and its change set
+(#6403): the parties of the rows it wrote, the key of each key row and the
+issuer of each other identifier row, or `*` for a key space's state or a set
+too large for a notification. A replica drops each lookup whose key, group
+issuer or read parties (found, membership groups, represented subjects) the
+set names and holds the others at the new revision; a set out of revision
+order or `*` drops every lookup. A write of a `PERSON`'s version notifies its
+container, which drops its name, and a request whose own commit changed the
+side table drops every name before it answers. While the listener is down
+every request reads the store. A request whose caller is held makes no
+party-store statement to resolve it. **Our own design.**
 
 **Caller facts** (#5511). Beside the grants, the side table holds what the
 access evaluator reads about a caller (migrations `party/0039`, `party/0042`;
