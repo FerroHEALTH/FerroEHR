@@ -397,10 +397,18 @@ pub(super) fn projected_need(
     target: Expr,
     unscoped: bool,
 ) -> Expr {
-    let Some((rows, values)) = need_rows(care, Some(need), target, unscoped) else {
+    let Some((filter, values)) = need_rows(care, Some(need), target, unscoped) else {
         return Expr::val(false);
     };
-    Expr::cust_with_exprs(format!("EXISTS (SELECT 1 {rows})"), values)
+    Expr::cust_with_exprs(
+        format!(
+            "EXISTS (SELECT 1 FROM ehr access_care_ehr \
+             JOIN access_care access_care_row \
+               ON access_care_row.subject_digest = access_care_ehr.subject_digest \
+             WHERE access_care_ehr.id = $1 AND {filter})"
+        ),
+        values,
+    )
 }
 
 /// The episodes of the projection's rows by which the caller holds the
@@ -408,22 +416,25 @@ pub(super) fn projected_need(
 /// as [`projected_need`] reads them: an empty `bytea` for a row scoped to
 /// none; NULL when no row holds.
 fn projected_episodes(care: &ProjectedCare, need: Option<&CareNeed>, target: Expr) -> Expr {
-    let Some((rows, values)) = need_rows(care, need, target, false) else {
+    let Some((filter, values)) = need_rows(care, need, target, false) else {
         return Expr::cust("CAST(NULL AS bytea[])");
     };
     Expr::cust_with_exprs(
         format!(
             "(SELECT array_agg(COALESCE(access_care_row.episode_digest, CAST('' AS bytea))) \
-             {rows})"
+             FROM ehr access_care_ehr \
+             JOIN access_care access_care_row \
+               ON access_care_row.subject_digest = access_care_ehr.subject_digest \
+             WHERE access_care_ehr.id = $1 AND {filter})"
         ),
         values,
     )
 }
 
-/// The `FROM` and `WHERE` of the projection's rows by which the caller holds
-/// the subject of the EHR `$1` by a relationship that meets `need`, any one
-/// it holds for `None`, with the values they bind; `None` for a need no
-/// row meets.
+/// The condition on a row of the projection, joined to the EHR `$1`, by
+/// which the caller holds its subject by a relationship that meets `need`,
+/// any one it holds for `None`, with the values it binds; `None` for a need
+/// no row meets.
 fn need_rows(
     care: &ProjectedCare,
     need: Option<&CareNeed>,
@@ -455,12 +466,7 @@ fn need_rows(
         ""
     };
     let held = held(unscoped);
-    let rows = format!(
-        "FROM ehr access_care_ehr \
-         JOIN access_care access_care_row \
-           ON access_care_row.subject_digest = access_care_ehr.subject_digest \
-         WHERE access_care_ehr.id = $1 AND {held} AND {path}{roles}"
-    );
+    let filter = format!("{held} AND {path}{roles}");
     let mut values = held_values(care, target);
     if need.is_some() {
         values.extend([
@@ -469,5 +475,5 @@ fn need_rows(
             Expr::val(codes),
         ]);
     }
-    Some((rows, values))
+    Some((filter, values))
 }
