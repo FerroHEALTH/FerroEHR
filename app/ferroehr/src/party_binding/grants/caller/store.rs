@@ -31,7 +31,8 @@ use serde_json::Value;
 use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
-use super::care_of::{CareFact, CarerKind, Cover, Episode, ProviderKey};
+use super::care_of::{CareFact, CarerKind, ProviderKey};
+use super::care_ref::{Cover, Episode};
 use super::kin::KinFact;
 use super::{CallerFact, FactKind, FactValue};
 use crate::db::snapshot::Snapshot;

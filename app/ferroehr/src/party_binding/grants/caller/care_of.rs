@@ -25,12 +25,12 @@ use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use uuid::Uuid;
 
+use super::care_ref::{Cover, Episode, covers_for, episode};
 use super::{CallerFact, FactKind, FactValue};
 use crate::party_binding::derive::container;
 use crate::party_binding::grants::derive::{Bound, GrantFacts};
 use crate::party_binding::grants::store::Dates;
 use crate::party_binding::policy_mark::{coded, first};
-use crate::versioning::episode::EpisodeKey;
 use crate::versioning::tree::Tree;
 
 /// The resource a care relationship is written at.
@@ -120,32 +120,6 @@ pub(crate) struct CareFact {
     pub(crate) covers_for: Option<Cover>,
     /// The episode of care it is scoped to; `None` when it names none.
     pub(crate) episode: Option<Episode>,
-}
-
-/// The episode of care a care relationship is scoped to: the `issuer` and
-/// `id` of its `episode` `DV_IDENTIFIER`, and their [`EpisodeKey`] (draft
-/// access control package, Episodes of Care: `_type_` is not compared).
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Episode {
-    /// The key a placement is matched by.
-    pub key: EpisodeKey,
-    /// The identifier's `issuer`.
-    pub issuer: String,
-    /// The identifier's `id`.
-    pub id: String,
-}
-
-impl Episode {
-    /// The episode `issuer` gives the identifier `id`.
-    #[must_use]
-    pub fn new(issuer: impl Into<String>, id: impl Into<String>) -> Self {
-        let (issuer, id) = (issuer.into(), id.into());
-        Self {
-            key: EpisodeKey::of(&issuer, &id),
-            issuer,
-            id,
-        }
-    }
 }
 
 /// Pushes onto `facts` the care relationship `body`, a `PARTY_RELATIONSHIP`
@@ -303,87 +277,6 @@ pub(crate) fn organisation<'a, T: Tree<'a>>(value: T) -> Result<ProviderKey, Str
              ORGANISATION"
                 .to_owned(),
         ),
-    }
-}
-
-/// The carer a care relationship covers for, as the caller fact keeps it:
-/// the `issuer` and `id` of its `covers_for` `DV_IDENTIFIER` and the kind its
-/// `type` names.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Cover {
-    /// The identifier's `issuer` and `id`.
-    pub key: ProviderKey,
-    /// What the carer is, as the identifier's `type` names it.
-    pub kind: CarerKind,
-}
-
-impl Cover {
-    /// The carer `key` names, of `kind`.
-    #[must_use]
-    pub fn new(key: ProviderKey, kind: CarerKind) -> Self {
-        Self { key, kind }
-    }
-}
-
-/// The carer a care relationship covers for, as its `covers_for` names it.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct CoversFor {
-    /// The identifier, as the caller fact stores it.
-    pub(crate) cover: Cover,
-    /// The container its `id` names.
-    pub(crate) carer: Uuid,
-}
-
-/// The carer the care relationship `body` covers for: its `covers_for`
-/// `DV_IDENTIFIER`, in the provider's form, its `issuer` the namespace of the
-/// carer's reference, its `id` the carer's container and its `type` the
-/// carer's kind; `None` when it names none (draft access control package,
-/// Care Relationships). Whether that container is held, and as that kind, is
-/// judged at the commit ([`crate::versioning::party_refs`]).
-///
-/// # Errors
-/// Why it cannot be read: a `covers_for` that is no `DV_IDENTIFIER` with an
-/// issuer, a container id and the type of a carer.
-pub(crate) fn covers_for<'a, T: Tree<'a>>(body: T) -> Result<Option<CoversFor>, String> {
-    let Some(value) = named_element(body, CareElement::CoversFor.code()) else {
-        return Ok(None);
-    };
-    let identifier: DvIdentifier = openehr_its::json::from_canonical_value(&value.to_value())
-        .map_err(|error| format!("its covers_for is no DV_IDENTIFIER: {error}"))?;
-    let issuer = identifier.issuer.filter(|issuer| !issuer.trim().is_empty());
-    let kind = identifier.r#type.as_deref().and_then(CarerKind::of);
-    match (issuer, container(&identifier.id), kind) {
-        (Some(issuer), Some(carer), Some(kind)) => Ok(Some(CoversFor {
-            cover: Cover::new(ProviderKey::new(issuer, identifier.id), kind),
-            carer,
-        })),
-        _ => Err(
-            "its covers_for names the carer it replaces by the namespace of its reference as \
-             the issuer, its container as the id and its kind (PERSON, ROLE, GROUP or \
-             ORGANISATION) as the type"
-                .to_owned(),
-        ),
-    }
-}
-
-/// The episode of care the care relationship `body` is scoped to: its
-/// `episode` `DV_IDENTIFIER`, with an `issuer` and an `id`; `None` when it
-/// names none (draft access control package, Episodes of Care).
-///
-/// # Errors
-/// Why it cannot be read: an `episode` that is no `DV_IDENTIFIER` with a
-/// non-blank issuer and id.
-pub(crate) fn episode<'a, T: Tree<'a>>(body: T) -> Result<Option<Episode>, String> {
-    let Some(value) = named_element(body, CareElement::Episode.code()) else {
-        return Ok(None);
-    };
-    let identifier: DvIdentifier = openehr_its::json::from_canonical_value(&value.to_value())
-        .map_err(|error| format!("its episode is no DV_IDENTIFIER: {error}"))?;
-    match identifier.issuer.filter(|issuer| !issuer.trim().is_empty()) {
-        Some(issuer) if !identifier.id.trim().is_empty() => {
-            Ok(Some(Episode::new(issuer, identifier.id)))
-        }
-        _ => Err("its episode names the episode of care by an issuer and an id".to_owned()),
     }
 }
 
@@ -648,5 +541,235 @@ impl crate::memory::Weigh for CareOf {
 }
 
 #[cfg(test)]
-#[path = "care_of_tests.rs"]
-mod tests;
+mod tests {
+    use serde_json::{Value, json};
+
+    use super::*;
+    use crate::party_binding::grants::caller::writer::care_changes;
+    use crate::party_binding::policy_mark::TERMINOLOGY;
+    use crate::versioning::Kind;
+    use crate::versioning::episode::EpisodeKey;
+
+    const TEAM: &str = "0190a1bc-3a1e-72e4-b7c5-f78a24c01308";
+
+    fn coded(terminology: &str, code: &str) -> Value {
+        json!({"_type": "DV_CODED_TEXT", "value": code,
+               "defining_code": {"_type": "CODE_PHRASE",
+                                 "terminology_id": {"_type": "TERMINOLOGY_ID", "value": terminology},
+                                 "code_string": code}})
+    }
+
+    fn element(name: &Value, value: &Value) -> Value {
+        json!({"_type": "ELEMENT", "archetype_node_id": "at1", "name": name, "value": value})
+    }
+
+    /// A relationship named `code` of `terminology` from and to the
+    /// container `TEAM`.
+    fn relationship(terminology: &str, code: &str) -> Value {
+        json!({"_type": "PARTY_RELATIONSHIP", "archetype_node_id": "at1",
+               "name": coded(terminology, code),
+               "source": {"id": {"_type": "HIER_OBJECT_ID", "value": TEAM}, "type": "PERSON"},
+               "target": {"id": {"_type": "HIER_OBJECT_ID", "value": TEAM}, "type": "GROUP"}})
+    }
+
+    /// A care relationship of its own to `TEAM` in the role `PART`, in the
+    /// care of one provider.
+    fn care_of() -> Value {
+        let mut body = relationship(TERMINOLOGY, "under_care_of");
+        body["details"] = json!({"_type": "ITEM_TREE", "archetype_node_id": "at2", "items": [
+            element(&coded(TERMINOLOGY, "care_role"), &coded("HL7_ParticipationType", "PART")),
+            element(&coded(TERMINOLOGY, "provider"),
+                    &json!({"_type": "DV_IDENTIFIER", "issuer": "urn:example:providers",
+                            "id": "hospital", "type": "ORGANISATION"}))]});
+        body
+    }
+
+    #[test]
+    fn a_care_relationship_is_one_of_its_own_and_never_a_partys() {
+        for (kind, rm) in [
+            (Kind::Person, "PERSON"),
+            (Kind::Organisation, "ORGANISATION"),
+        ] {
+            let inline = GrantFacts::of(kind, &json!({"_type": rm, "relationships": [care_of()]}));
+            assert_eq!(inline.facts, Vec::new(), "{rm}");
+            assert_eq!(inline.unread.len(), 1, "{rm}: {:?}", inline.unread);
+            assert!(
+                inline.unread[0].contains(RESOURCE),
+                "{rm}: {:?}",
+                inline.unread
+            );
+        }
+        let standalone = GrantFacts::of(Kind::PartyRelationship, &care_of());
+        assert_eq!(standalone.unread, Vec::<String>::new());
+        assert_eq!(standalone.care_source, Uuid::parse_str(TEAM).ok());
+        assert!(matches!(
+            standalone.facts.as_slice(),
+            [CallerFact {
+                kind: FactKind::UnderCareOf,
+                value: FactValue::Care(_),
+                ..
+            }]
+        ));
+        let mut bare = care_of();
+        bare["details"]["items"] = json!([]);
+        let refused = GrantFacts::of(Kind::PartyRelationship, &bare);
+        assert_eq!(refused.facts, Vec::new());
+        assert_eq!(
+            refused.unread.len(),
+            2,
+            "no role, no provider: {:?}",
+            refused.unread
+        );
+        let membership = relationship("HL7_RoleClass", "MBR");
+        assert_eq!(
+            GrantFacts::of(Kind::PartyRelationship, &membership)
+                .unread
+                .len(),
+            1,
+            "a membership is its member's"
+        );
+        let mut other_role = care_of();
+        other_role["details"]["items"][0]["value"] = coded("HL7_ParticipationType", "RESP");
+        let other_role = GrantFacts::of(Kind::PartyRelationship, &other_role).facts;
+        assert!(
+            !care_changes(&standalone.facts, &other_role).is_empty(),
+            "a role changed"
+        );
+    }
+
+    #[test]
+    fn a_relationship_never_admits_its_writer_unless_self_declared_and_switched_on() {
+        let (writer, other) = (Uuid::from_u128(1), Uuid::from_u128(2));
+        let assigned = |by: Option<Uuid>| {
+            CareOf::spanning(
+                writer,
+                (None, None),
+                ForeignCode {
+                    terminology: "HL7_ParticipationType".to_owned(),
+                    code: "PART".to_owned(),
+                },
+                ProviderKey::new("urn:example:providers", "hospital"),
+            )
+            .written_by(by, false)
+        };
+        assert!(!assigned(Some(writer)).admits_writer(&[writer], true));
+        assert!(assigned(Some(other)).admits_writer(&[writer], false));
+        assert!(assigned(None).admits_writer(&[writer], false));
+        let declared = assigned(Some(writer)).written_by(Some(writer), true);
+        assert!(declared.admits_writer(&[writer], true));
+        assert!(!declared.admits_writer(&[writer], false), "the path is off");
+    }
+
+    #[test]
+    fn a_covers_for_reads_and_one_not_naming_another_carer_is_refused() {
+        const COVERED: &str = "0190a1bc-3a1e-72e4-b7c5-f78a24c0130a";
+        let with_cover = |cover: Value| {
+            let mut body = care_of();
+            body["details"]["items"]
+                .as_array_mut()
+                .expect("items")
+                .push(element(&coded(TERMINOLOGY, "covers_for"), &cover));
+            GrantFacts::of(Kind::PartyRelationship, &body)
+        };
+        let read = with_cover(json!({"_type": "DV_IDENTIFIER", "issuer": "local",
+                                     "id": COVERED, "type": "PERSON"}));
+        assert_eq!(read.unread, Vec::<String>::new());
+        assert!(matches!(
+            read.facts.as_slice(),
+            [CallerFact {
+                value: FactValue::Care(CareFact {
+                    covers_for: Some(Cover {
+                        key: ProviderKey { issuer, id },
+                        kind: CarerKind::Person,
+                    }),
+                    ..
+                }),
+                ..
+            }] if issuer == "local" && id == COVERED
+        ));
+        for refused in [
+            json!({"_type": "DV_IDENTIFIER", "id": COVERED, "type": "PERSON"}),
+            json!({"_type": "DV_IDENTIFIER", "issuer": "local", "id": COVERED}),
+            json!({"_type": "DV_IDENTIFIER", "issuer": "local", "id": COVERED, "type": "AGENT"}),
+            json!({"_type": "DV_IDENTIFIER", "issuer": "local", "id": "jansen", "type": "PERSON"}),
+            json!({"_type": "DV_IDENTIFIER", "issuer": "local", "id": TEAM, "type": "GROUP"}),
+        ] {
+            let facts = with_cover(refused.clone());
+            assert_eq!(facts.facts, Vec::new(), "{refused}");
+            assert_eq!(facts.unread.len(), 1, "{refused}: {:?}", facts.unread);
+            assert!(facts.unread[0].contains("covers_for"), "{:?}", facts.unread);
+        }
+    }
+
+    #[test]
+    fn an_episode_reads_and_one_without_an_issuer_and_an_id_is_refused() {
+        let with_episode = |episode: Value| {
+            let mut body = care_of();
+            body["details"]["items"]
+                .as_array_mut()
+                .expect("items")
+                .push(element(&coded(TERMINOLOGY, "episode"), &episode));
+            GrantFacts::of(Kind::PartyRelationship, &body)
+        };
+        let read = with_episode(
+            json!({"_type": "DV_IDENTIFIER", "issuer": "H", "id": "C-17",
+                                       "type": "VN"}),
+        );
+        assert_eq!(read.unread, Vec::<String>::new());
+        assert!(matches!(
+            read.facts.as_slice(),
+            [CallerFact {
+                value: FactValue::Care(CareFact {
+                    episode: Some(episode),
+                    ..
+                }),
+                ..
+            }] if *episode == Episode::new("H", "C-17")
+                && episode.key == EpisodeKey::of("H", "C-17")
+        ));
+        let none = GrantFacts::of(Kind::PartyRelationship, &care_of());
+        assert!(matches!(
+            none.facts.as_slice(),
+            [CallerFact {
+                value: FactValue::Care(CareFact { episode: None, .. }),
+                ..
+            }]
+        ));
+        for refused in [
+            json!({"_type": "DV_IDENTIFIER", "id": "C-17"}),
+            json!({"_type": "DV_IDENTIFIER", "issuer": " ", "id": "C-17"}),
+            json!({"_type": "DV_IDENTIFIER", "issuer": "H", "id": ""}),
+            coded("local", "C-17"),
+        ] {
+            let facts = with_episode(refused.clone());
+            assert_eq!(facts.facts, Vec::new(), "{refused}");
+            assert_eq!(facts.unread.len(), 1, "{refused}: {:?}", facts.unread);
+            assert!(facts.unread[0].contains("episode"), "{:?}", facts.unread);
+        }
+    }
+
+    #[test]
+    fn a_self_declared_basis_reads() {
+        let mut body = care_of();
+        let basis = element(
+            &coded(TERMINOLOGY, "basis"),
+            &coded(TERMINOLOGY, "self_declared"),
+        );
+        body["details"]["items"]
+            .as_array_mut()
+            .expect("items")
+            .push(basis);
+        let facts = GrantFacts::of(Kind::PartyRelationship, &body);
+        assert_eq!(facts.unread, Vec::<String>::new());
+        assert!(matches!(
+            facts.facts.as_slice(),
+            [CallerFact {
+                value: FactValue::Care(CareFact {
+                    self_declared: true,
+                    ..
+                }),
+                ..
+            }]
+        ));
+    }
+}
