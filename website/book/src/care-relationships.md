@@ -108,19 +108,13 @@ relationship send exactly the statements of their plain forms.
 
 ### Plans at practice scale
 
-Measured by the `care_caseload_plans` test on a developer laptop
-(PostgreSQL 19, one session, warm cache, a debug build of FerroEHR), in a
-store of 151,700 EHRs with two compositions each. Three care teams hold
-caseloads of 100 patients (a small practice), 1,600 (a ward) and 50,000 (a
-large practice list). Each query runs through the service under a policy
-that requires a care relationship, with the access decision applied to
-every row.
+Measured by the `care_caseload_plans` test, which holds the plan shapes of
+these queries. Three care teams hold caseloads of 100 patients (a small
+practice), 1,600 (a ward) and 50,000 (a large practice list). Each query runs
+through the service under a policy that requires a care relationship, with
+the access decision applied to every row.
 
-| Caseload | Check of one EHR | Caseload page of 50 | `COUNT` of the caseload's compositions |
-| ---: | ---: | ---: | ---: |
-| 100 | 0.05 ms | 5 to 10 ms | 7 ms |
-| 1,600 | 0.04 ms | 6 to 8 ms | 42 ms |
-| 50,000 | 0.04 ms | 25 to 31 ms | 1.2 s |
+{{#include ../generated/care-caseload-bench.md}}
 
 With every relationship of the three teams scoped to one episode the figures
 are the same within the run's noise. The check is one probe of the
