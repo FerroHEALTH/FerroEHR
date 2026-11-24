@@ -7,8 +7,6 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use uuid::Uuid;
-
 use super::care::Care;
 use super::records::Held;
 use super::{AccessCondition, CallerKeys, ConditionGroups, RequestAccess, VerdictPair, pinned};
@@ -24,17 +22,23 @@ impl RequestAccess {
     /// this replica does not hold is withheld.
     #[must_use]
     pub fn condition(&self, classes: &Classes, care: Care) -> AccessCondition {
+        self.condition_as(classes, care, &self.care_left())
+    }
+
+    /// [`Self::condition`], the caller's care for a subject it holds read as
+    /// `left`: [`Cared::Left`], [`Cared::Covering`] or [`Cared::No`].
+    #[must_use]
+    pub fn condition_as(&self, classes: &Classes, care: Care, left: &Cared) -> AccessCondition {
         let _stage = stage::enter(Stage::Access);
         let held = Held::of_class(self.confined());
-        let left = self.care_left();
         let pair = |settings: Option<&EhrAccessSettings>| VerdictPair {
-            cared: self.judge_as(&held, settings, &left).bare(),
+            cared: self.judge_as(&held, settings, left).bare(),
             uncared: self.judge_as(&held, settings, &Cared::No).bare(),
         };
         let mut groups: BTreeMap<VerdictPair, Vec<i64>> = BTreeMap::new();
         for (id, class) in &classes.classes {
             let judged = VerdictPair {
-                cared: self.judge_class(class, &left).bare(),
+                cared: self.judge_class(class, left).bare(),
                 uncared: self.judge_class(class, &Cared::No).bare(),
             };
             groups.entry(judged).or_default().push(*id);
@@ -48,20 +52,29 @@ impl RequestAccess {
             parties: parties.into(),
             keeper: self.caller.settings.party().map(str::to_owned),
         };
-        AccessCondition::new(
-            groups,
-            pair(Some(&EhrAccessSettings::HeldClosed)),
-            pair(None),
-            care,
-            self.grants
+        let default = pair(None);
+        ConditionGroups {
+            groups: groups
+                .into_iter()
+                .map(|(pair, ids)| (ids, Arc::new(pair)))
+                .collect(),
+            closed: Arc::new(pair(Some(&EhrAccessSettings::HeldClosed))),
+            default: (!default.admits_all()).then(|| Arc::new(default)),
+            cared: care,
+            subject_namespace: self
+                .grants
                 .as_ref()
                 .map_or_else(|| Arc::from(""), |grants| grants.namespace()),
             facts,
             // NOTE: our own design (#5586), a confined caller reads only the EHR its patient
             // context names, so a query of it reaches no other EHR whatever its class.
-            held.own
+            confined: held
+                .own
                 .then(|| self.caller.own_ehrs.iter().map(|own| own.0).collect()),
-        )
+            conflicts: Arc::from([]),
+            episodic: *left == Cared::Covering,
+        }
+        .into()
     }
 }
 
@@ -83,35 +96,6 @@ impl AccessCondition {
         pinned: Option<Arc<pinned::PinnedEhr>>,
     ) -> Self {
         Self { groups, pinned }
-    }
-
-    /// The condition of the classes `groups`, `closed` for an EHR held
-    /// closed and `default` for an EHR with no settings.
-    fn new(
-        groups: BTreeMap<VerdictPair, Vec<i64>>,
-        closed: VerdictPair,
-        default: VerdictPair,
-        cared: Care,
-        subject_namespace: Arc<str>,
-        facts: CallerKeys,
-        confined: Option<Arc<[Uuid]>>,
-    ) -> Self {
-        let default_admits = default.admits_all();
-        let groups: Vec<(Vec<i64>, Arc<VerdictPair>)> = groups
-            .into_iter()
-            .map(|(pair, ids)| (ids, Arc::new(pair)))
-            .collect();
-        ConditionGroups {
-            groups,
-            closed: Arc::new(closed),
-            default: (!default_admits).then(|| Arc::new(default)),
-            cared,
-            subject_namespace,
-            facts,
-            confined,
-            conflicts: Arc::from([]),
-        }
-        .into()
     }
 
     /// The condition with `conflicts`, the subject references of the persons

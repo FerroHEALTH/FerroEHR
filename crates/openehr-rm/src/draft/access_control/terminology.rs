@@ -560,6 +560,9 @@ group! {
         Confidentiality => "refused-confidentiality",
         /// The policy needs a care relationship and the caller has none.
         NoCareRelationship => "refused-no-care-relationship",
+        /// The datum lies outside the episodes of care the caller reaches it
+        /// through; answered without the datum's episodes.
+        OutsideEpisode => "refused-outside-episode",
         /// The policy needs a declared purpose and the request has none.
         PurposeMissing => "refused-purpose-missing",
         /// The EHR needs consent and no permit directive applies.

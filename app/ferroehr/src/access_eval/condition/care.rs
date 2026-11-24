@@ -152,15 +152,43 @@ impl RequestAccess {
     }
 
     /// The caller's care as a query of every EHR reads it: [`Cared::Left`]
-    /// when the access may rest on a care relationship, [`Cared::No`] when
-    /// it declares a purpose outside the policy's `care_purposes`.
+    /// when the access may rest on a care relationship, [`Cared::Covering`]
+    /// when it may also rest on one scoped to an episode ([`Self::episodic`]),
+    /// and [`Cared::No`] when it declares a purpose outside the policy's
+    /// `care_purposes`.
     #[must_use]
     pub fn care_left(&self) -> Cared {
-        if self.policy().admits_care(self.purpose.as_deref()) {
-            Cared::Left
-        } else {
+        if !self.policy().admits_care(self.purpose.as_deref()) {
             Cared::No
+        } else if self.episodic() {
+            Cared::Covering
+        } else {
+            Cared::Left
         }
+    }
+
+    /// Whether a care relationship scoped to an episode may target one of
+    /// the caller's principals, by the caller facts copy held, which moves
+    /// with the care relationships it is read beside.
+    #[must_use]
+    pub fn episodic(&self) -> bool {
+        self.grants.as_ref().is_some_and(|grants| {
+            grants.names_episodes()
+                && self.may_hold_care()
+                && grants.episodic(&self.principals_held())
+        })
+    }
+
+    /// The data `ACCESS_POLICY.episode_shared` names, read over an object's
+    /// own facts.
+    #[must_use]
+    pub fn episode_shared(&self) -> crate::access_eval::scope::Pred {
+        let scopes = crate::access_eval::scope::Scopes::new(
+            self.categories.clone(),
+            &[],
+            self.classifications(),
+        );
+        crate::access_eval::coverage::shared_of(self.policy().episode_shared, &scopes)
     }
 
     /// The treatment context the caller's verified credential attests for

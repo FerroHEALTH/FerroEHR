@@ -419,9 +419,16 @@ fn pred(pred: &Pred, h: &str, facts: Facts<'_>) -> Expr {
             .unwrap_or_else(|| Expr::val(true)),
         Pred::Any(preds) => or_all(preds.iter().map(|p| self::pred(p, h, facts)).collect()),
         Pred::Data(data, polarity) => data_match(data, *polarity, h),
+        Pred::InEpisodes(named) => in_episodes(h, named),
         Pred::Ehr(fact) => ehr_fact(*fact, facts),
         Pred::Care(need) => match facts.care {
             Some((condition, target)) => super::care::care_need(need, condition, target.clone()),
+            None => Expr::val(false),
+        },
+        Pred::Covered(need) => match facts.care {
+            Some((condition, target)) => {
+                super::care::covered(need.as_deref(), condition, target.clone(), h)
+            }
             None => Expr::val(false),
         },
     }
@@ -608,16 +615,7 @@ fn episode_in(h: &str, episodes: &Held<Vec<EpisodeKey>>) -> Expr {
         Held::Known(episodes) => null_safe(
             Expr::cust_with_exprs(
                 "$1 && $2",
-                [
-                    col(h, VoHead::Episodes),
-                    Expr::val(
-                        episodes
-                            .iter()
-                            .map(|key| key.as_bytes().to_vec())
-                            .collect::<Vec<_>>(),
-                    )
-                    .cast_as(Alias::new("bytea[]")),
-                ],
+                [col(h, VoHead::Episodes), episode_keys(episodes)],
             ),
             false,
         ),
@@ -629,6 +627,24 @@ fn episode_in(h: &str, episodes: &Held<Vec<EpisodeKey>>) -> Expr {
             ],
         ),
     }
+}
+
+/// The trunk head of `h` is placed in no episode or in one of `named`.
+fn in_episodes(h: &str, named: &[EpisodeKey]) -> Expr {
+    Expr::cust_with_exprs(
+        "($1 IS NULL OR $1 && $2)",
+        [col(h, VoHead::Episodes), episode_keys(named)],
+    )
+}
+
+/// `keys` as one `bytea[]` value.
+fn episode_keys(keys: &[EpisodeKey]) -> Expr {
+    Expr::val(
+        keys.iter()
+            .map(|key| key.as_bytes().to_vec())
+            .collect::<Vec<_>>(),
+    )
+    .cast_as(Alias::new("bytea[]"))
 }
 
 /// The object of `h` is of `category`: its template is the category's, or

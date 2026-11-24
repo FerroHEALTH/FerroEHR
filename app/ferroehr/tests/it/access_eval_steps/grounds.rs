@@ -522,9 +522,18 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
             Refusal::NoCareRelationship,
             professional(DR_B),
             None,
-            Some(care),
+            Some(care.clone()),
             settings("open", &[], &[], &[]),
             Item::Ehr,
+            "ACCESS_POLICY",
+        ),
+        (
+            Refusal::OutsideEpisode,
+            professional(DR_B),
+            None,
+            Some(care),
+            settings("open", &[], &[], &[]),
+            placed(OBJECT, None, &DERMATOLOGY_EPISODE[..]),
             "ACCESS_POLICY",
         ),
         (
@@ -640,7 +649,17 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
         } else {
             (request(who, read(declared), policy), None)
         };
-        let (outcome, decision) = decide_on_subject(&access, Some(settings), &item, subject);
+        let (outcome, decision) = if refusal == Refusal::OutsideEpisode {
+            let ehr_id = EhrId(uuid(EHR));
+            let cared = Cared::of(vec![tie_in(Some("C-17"))]);
+            let verdict = access.judge(Some(ehr_id), Some(&settings), &cared);
+            (
+                access.note(ehr_id, &verdict, &item),
+                access.decision(Some(ehr_id)),
+            )
+        } else {
+            decide_on_subject(&access, Some(settings), &item, subject)
+        };
         let expected = if refusal.is_invisible() {
             Outcome::Absent(refusal)
         } else {

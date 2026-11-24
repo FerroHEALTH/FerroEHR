@@ -55,6 +55,14 @@ const CASELOAD: Ceiling = Ceiling {
     wal: 0,
 };
 
+/// A care-gated read of a datum in the episode the caller's one live
+/// relationship is scoped to (#6414): the same statements as [`READ`].
+const EPISODE_READ: Ceiling = READ;
+
+/// A caseload query of a caller whose one live relationship is scoped to an
+/// episode (#6415): the coverage rides in its one clinical statement.
+const EPISODE_CASELOAD: Ceiling = CASELOAD;
+
 /// A care relationship's commit (#6074).
 const COMMIT: Ceiling = Ceiling {
     round_trips: 26,
@@ -83,6 +91,12 @@ enum Kind {
     Commit,
     /// [`Self::Commit`], then [`Self::Caseload`].
     Recare,
+    /// Dr Jansen's read of a note in the cardiology episode, once her one
+    /// live relationship to Eva is scoped to it.
+    EpisodeRead,
+    /// Dr Jansen's caseload query, once her one live relationship to Eva is
+    /// scoped to the cardiology episode.
+    EpisodeCaseload,
 }
 
 impl Kind {
@@ -92,6 +106,8 @@ impl Kind {
             Self::Caseload => "caseload query",
             Self::Commit => "care relationship commit",
             Self::Recare => "care relationship commit, then the caseload query",
+            Self::EpisodeRead => "care-gated read in an episode",
+            Self::EpisodeCaseload => "caseload query under an episode relationship",
         }
     }
 
@@ -101,13 +117,15 @@ impl Kind {
             Self::Caseload => CASELOAD,
             Self::Commit => COMMIT,
             Self::Recare => RECARE,
+            Self::EpisodeRead => EPISODE_READ,
+            Self::EpisodeCaseload => EPISODE_CASELOAD,
         }
     }
 
     /// The request, its expected status and a check of the body.
     fn request(self, world: &World) -> (http::Request<axum::body::Body>, StatusCode) {
         match self {
-            Self::Read => (
+            Self::Read | Self::EpisodeRead => (
                 common::req(
                     "GET",
                     format!(
@@ -121,7 +139,7 @@ impl Kind {
                 .build(),
                 StatusCode::OK,
             ),
-            Self::Caseload => {
+            Self::Caseload | Self::EpisodeCaseload => {
                 let body = json!({
                     "q": "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c",
                     "caseload": "all",
@@ -174,7 +192,7 @@ impl Kind {
         }
         .expect("the request's task");
         assert_eq!(status, expected, "{}: {body}", self.name());
-        if matches!(self, Self::Caseload) {
+        if matches!(self, Self::Caseload | Self::EpisodeCaseload) {
             let rows =
                 serde_json::from_str::<serde_json::Value>(&body).expect("a RESULT_SET")["rows"]
                     .as_array()
@@ -182,6 +200,48 @@ impl Kind {
             assert!(rows > 0, "the caseload holds Eva's compositions: {body}");
         }
     }
+}
+
+/// Scopes Dr Jansen's care for Eva to the cardiology episode: a
+/// relationship of Eva with Cardiology in it, the stay that names none
+/// ended past its grace, and the encounter placed in it.
+async fn scoped_to_an_episode(world: &mut World) {
+    use crate::hospital::world::admit;
+    crate::hospital::episodes::relate_in(world, "Cardiology", "C-17").await;
+    world.encounter = crate::hospital::episodes::placed(world, "jansen", "C-17").await;
+    let (ward, old_from, old_until) = (day(-2), day(-40), day(-20));
+    admit(
+        world,
+        &[
+            ("Cardiology", &old_from, Some(&old_until)),
+            ("Ward 3", &ward, None),
+            ("Psychiatry", &ward, None),
+        ],
+    )
+    .await;
+}
+
+/// A care-gated read in an episode stays within its ceiling (#6414).
+#[tokio::test]
+async fn a_care_gated_read_in_an_episode_stays_within_its_statement_budget() {
+    let (report, kept) = measured(Kind::EpisodeRead).await;
+    eprintln!("{report}");
+    assert!(
+        kept,
+        "a care-gated read in an episode exceeds its budget:\n{report}"
+    );
+}
+
+/// A caseload query under an episode relationship stays within its ceiling
+/// (#6415).
+#[tokio::test]
+async fn a_caseload_query_under_an_episode_relationship_stays_within_its_statement_budget() {
+    let (report, kept) = measured(Kind::EpisodeCaseload).await;
+    eprintln!("{report}");
+    assert!(
+        kept,
+        "a caseload query under an episode relationship exceeds its budget:\n{report}"
+    );
 }
 
 /// Whether `relation` is written by the request itself rather than by the
@@ -196,7 +256,10 @@ async fn measured(kind: Kind) -> (String, bool) {
     let round_trips = RoundTrips::default();
     let _guard =
         tracing::subscriber::set_default(tracing_subscriber::registry().with(round_trips.clone()));
-    let world = Box::pin(crate::hospital::build::world()).await;
+    let mut world = Box::pin(crate::hospital::build::world()).await;
+    if matches!(kind, Kind::EpisodeRead | Kind::EpisodeCaseload) {
+        scoped_to_an_episode(&mut world).await;
+    }
     super::listening(&world.db, &world.svc).await;
     for extension in ["pg_stat_statements", "pg_walinspect"] {
         sqlx::query(sqlx::AssertSqlSafe(format!(

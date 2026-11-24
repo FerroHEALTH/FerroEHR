@@ -39,6 +39,7 @@ use uuid::Uuid;
 use crate::party_binding::grants::caller::care_of::{CareOf, CarerKind, ProviderKey};
 use crate::party_binding::grants::caller::care_ref::{Cover, Episode};
 use crate::party_binding::grants::caller::facts::CallerFacts;
+use crate::versioning::episode::EpisodeKey;
 
 /// One live care relationship by which the caller holds the subject.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -112,6 +113,17 @@ impl Tie {
                 episode: care.episode().cloned(),
             })),
         })
+    }
+
+    /// The episode the tie is scoped to; `None` when it names none, or a
+    /// query read it without the relationship.
+    #[must_use]
+    pub fn episode(&self) -> Option<EpisodeKey> {
+        self.grant
+            .as_ref()?
+            .episode
+            .as_ref()
+            .map(|episode| episode.key)
     }
 
     /// The tokens a query's census holds for the tie: its path, and its path
@@ -284,6 +296,9 @@ pub enum Cared {
     /// It holds one, and which roles and paths it holds is left to a query's
     /// statement.
     Left,
+    /// As [`Self::Left`], and a relationship of the caller may name an
+    /// episode, so which data it covers is left to the statement too.
+    Covering,
 }
 
 impl Cared {
@@ -308,7 +323,7 @@ impl Cared {
     pub fn ties(&self) -> &[Tie] {
         match self {
             Self::Ties(ties) => ties,
-            Self::No | Self::Left => &[],
+            Self::No | Self::Left | Self::Covering => &[],
         }
     }
 }

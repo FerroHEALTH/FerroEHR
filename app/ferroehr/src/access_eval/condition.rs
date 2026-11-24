@@ -712,6 +712,11 @@ pub struct ConditionGroups {
     /// professional is in conflict with and no conflict rule lets it read,
     /// whose EHRs the query reads no row of (#6077).
     pub conflicts: Arc<[(String, String)]>,
+    /// Whether the cared verdicts leave to the statement which data the
+    /// caller's relationships cover, as a caller one of whose principals a
+    /// relationship scoped to an episode may target reads them
+    /// ([`crate::access_eval::care_tie::Cared::Covering`]).
+    pub episodic: bool,
 }
 
 /// What the facts of a class are read against: the moment of the request,

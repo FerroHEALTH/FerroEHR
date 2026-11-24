@@ -106,7 +106,10 @@ impl Live {
             Self::Now => groups.map(|groups| Value::from(groups.facts.now.to_string())),
             Self::Parties => groups.map(|groups| Value::from(groups.facts.parties.to_vec())),
             Self::Census => match groups.map(|groups| &groups.cared) {
-                Some(Care::Census(cared)) => Some(Value::from(care::census_text(cared))),
+                Some(Care::Census(cared)) => Some(Value::from(care::census_text(
+                    cared,
+                    groups.is_some_and(|groups| groups.episodic),
+                ))),
                 _ => None,
             },
             Self::CareEhrs => match groups.map(|groups| &groups.cared) {
@@ -116,7 +119,10 @@ impl Live {
                 _ => None,
             },
             Self::CareTies => match groups.map(|groups| &groups.cared) {
-                Some(Care::Ehrs(ehrs)) => Some(Value::from(care::ehr_ties_text(ehrs))),
+                Some(Care::Ehrs(ehrs)) => Some(Value::from(care::ehr_ties_text(
+                    ehrs,
+                    groups.is_some_and(|groups| groups.episodic),
+                ))),
                 _ => None,
             },
             Self::CarePrincipals => match groups.map(|groups| &groups.cared) {

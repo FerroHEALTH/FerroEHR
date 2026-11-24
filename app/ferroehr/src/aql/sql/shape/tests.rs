@@ -138,6 +138,7 @@ fn classes(
         },
         confined: confined.map(Into::into),
         conflicts: Arc::from([]),
+        episodic: false,
     })
 }
 
@@ -395,6 +396,7 @@ fn needing(cared: Care) -> AccessCondition {
         },
         confined: None,
         conflicts: Arc::from([]),
+        episodic: false,
     })
 }
 

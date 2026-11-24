@@ -54,6 +54,7 @@ use crate::policy_register::listen::{Listened, Subscriber};
 use crate::storage::error::StorageError;
 use openehr_rm::draft::access_control::terminology::ForeignCode;
 
+mod episodic;
 mod held;
 pub mod revisions;
 #[cfg(test)]
@@ -132,22 +133,41 @@ struct HeldFacts {
     read: u64,
     /// The facts about each party.
     by_party: BTreeMap<Uuid, Arc<[FactRow]>>,
+    /// The carers a relationship scoped to an episode targets.
+    episodic: episodic::Episodic,
 }
 
 impl HeldFacts {
     /// These facts with `changed` applied: each party read holds the facts
     /// read, and a party read with none holds none.
     fn with(&self, changed: Changed, read: u64) -> Self {
-        Self::from_parts(self.by_party.clone(), self.generation, changed, read)
+        let episodic = self.episodic.with(
+            changed.parties.iter().map(|(party, _)| *party),
+            changed
+                .cared
+                .iter()
+                .map(|(subject, rows)| (*subject, rows.as_slice())),
+        );
+        Self::from_parts(
+            self.by_party.clone(),
+            episodic,
+            self.generation,
+            changed,
+            read,
+        )
     }
 
-    /// The facts `changed` reads whole, installed after these.
-    fn whole(&self, changed: Changed, read: u64) -> Self {
-        Self::from_parts(BTreeMap::new(), self.generation, changed, read)
+    /// The facts `changed` reads whole, installed after these: the
+    /// relationships scoped to an episode it reads are held apart from the
+    /// caller facts.
+    fn whole(&self, mut changed: Changed, read: u64) -> Self {
+        let episodic = episodic::Episodic::split(&mut changed.parties);
+        Self::from_parts(BTreeMap::new(), episodic, self.generation, changed, read)
     }
 
     fn from_parts(
         mut by_party: BTreeMap<Uuid, Arc<[FactRow]>>,
+        episodic: episodic::Episodic,
         generation: u64,
         changed: Changed,
         read: u64,
@@ -164,6 +184,7 @@ impl HeldFacts {
             generation: generation.saturating_add(1),
             read,
             by_party,
+            episodic,
         }
     }
 }

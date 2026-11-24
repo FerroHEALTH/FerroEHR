@@ -553,6 +553,9 @@ const fn reason(code: Refusal) -> &'static str {
         Refusal::NoCareRelationship => {
             "the access policy requires a care relationship to the subject and the caller has none"
         }
+        // NOTE: draft access control decision procedure, Refusals, a shown
+        // refused-outside-episode carries none of the datum's episodes.
+        Refusal::OutsideEpisode => "the data lie outside the episodes of care this access reaches",
         Refusal::PurposeMissing => "the access policy requires a declared purpose of use",
         Refusal::ConsentRequired => "the EHR needs consent and no permit directive applies",
         Refusal::NotSubject => "the caller's patient context names another EHR",

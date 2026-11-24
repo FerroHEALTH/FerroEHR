@@ -336,10 +336,6 @@ fn own() -> String {
 /// Write the care projection of `cared`, each relationship from `from` until
 /// `until`, under [`TEAM`], and every EHR row's digest: what the care
 /// projector writes from the party domain.
-#[expect(
-    clippy::disallowed_methods,
-    reason = "a test reads the database on a raw pool connection, outside any request"
-)]
 async fn project(
     world: &World,
     cared: &[(
@@ -347,6 +343,23 @@ async fn project(
         Option<jiff::civil::Date>,
         Option<jiff::civil::Date>,
     )],
+) {
+    project_in(world, cared, None).await;
+}
+
+/// [`project`], each relationship scoped to `episode`.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
+async fn project_in(
+    world: &World,
+    cared: &[(
+        EhrSubject,
+        Option<jiff::civil::Date>,
+        Option<jiff::civil::Date>,
+    )],
+    episode: Option<ferroehr::versioning::episode::EpisodeKey>,
 ) {
     use ferroehr::storage::access_care::{self, CareRow, cared_key, subject_digest, subject_key};
     let pool = world.db.pool();
@@ -372,7 +385,7 @@ async fn project(
                 terminology: "HL7_ParticipationType".to_owned(),
                 code: "PART".to_owned(),
             },
-            episode: None,
+            episode,
         })
         .collect();
     access_care::clear(&mut tx)
@@ -1952,4 +1965,47 @@ async fn a_pinned_query_reads_the_settings_the_caller_may_read() {
             "{role}: the pinned answers are the census's"
         );
     }
+}
+
+/// A relationship scoped to an episode that the care projection holds before
+/// the caller facts copy does, so the condition was built as for a caller who
+/// holds none, admits nothing of that subject's record: the statement counts
+/// only a relationship scoped to no episode as care of the whole record
+/// (#6415).
+#[tokio::test]
+async fn a_projected_episode_relationship_the_copy_has_not_seen_admits_nothing() {
+    let world = Box::pin(World::new()).await;
+    let mut ask = Ask::professional(&world);
+    ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
+    ask.cared = vec![world.subject(0)];
+    let episode = ferroehr::versioning::episode::EpisodeKey::of("urn:example:episodes", "C-17");
+    project_in(&world, &[(world.subject(0), None, None)], Some(episode)).await;
+    let access = request_of(&ask);
+    for aql in [COMPOSITIONS, UNLINKED] {
+        let outcome = run_query_as(&world, &ask, &access, aql, None, CareForm::Projected).await;
+        let rows = outcome.result_set.to_value().unwrap()["rows"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        assert!(rows.is_empty(), "{aql}: {rows:?}");
+    }
+    project(&world, &[(world.subject(0), None, None)]).await;
+    let outcome = run_query_as(
+        &world,
+        &ask,
+        &access,
+        COMPOSITIONS,
+        None,
+        CareForm::Projected,
+    )
+    .await;
+    let rows = outcome.result_set.to_value().unwrap()["rows"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert_eq!(
+        rows.len(),
+        world.objects(0).len(),
+        "a whole-record relationship"
+    );
 }
