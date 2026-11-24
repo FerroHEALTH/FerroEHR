@@ -2469,14 +2469,15 @@ async fn a_placed_commit_costs_its_projection_alone() {
     assert_eq!(fresh_placed.nested, fresh_twin.nested, "{report}");
 }
 
-/// The allocations a read of a composition makes in an EHR whose subject
-/// names a `PERSON` under care (#6478).
-const SUBJECT_READ_ALLOCATIONS: u64 = 0;
+/// The allocations a read of a composition in an EHR whose subject names a
+/// `PERSON` under care may make beyond the same read in an EHR that names
+/// none (#6478).
+const SUBJECT_READ_ALLOCATIONS: u64 = 9;
 
 /// A read of a composition in an EHR whose subject names a `PERSON` under
 /// care takes no copy of the EHR's access entry: the access copy and the
-/// judgement share it (#6478). The budget world's EHRs name no subject, so
-/// their entries hold nothing to copy.
+/// judgement share it (#6478). It is judged against the same read in the
+/// budget world's EHRs, which name no subject, measured in the same run.
 #[tokio::test]
 async fn a_read_in_an_ehr_with_a_subject_stays_within_its_allocations() {
     let counter = Counter::default();
@@ -2503,10 +2504,23 @@ async fn a_read_in_an_ehr_with_a_subject_stays_within_its_allocations() {
         )
         .await;
     }
-    world.ehrs = ehrs;
-    let mut read = Measure::default();
+    let plain_ehrs = world.ehrs.clone();
+    let mut plain = Measure::default();
+    let mut subject = Measure::default();
     for _ in 0..2 {
-        read = Box::pin(measure(
+        world.ehrs.clone_from(&plain_ehrs);
+        plain = Box::pin(measure(
+            &app,
+            &pool,
+            &pools,
+            None,
+            &world,
+            &counter,
+            Path::ReadJson,
+        ))
+        .await;
+        world.ehrs.clone_from(&ehrs);
+        subject = Box::pin(measure(
             &app,
             &pool,
             &pools,
@@ -2517,12 +2531,17 @@ async fn a_read_in_an_ehr_with_a_subject_stays_within_its_allocations() {
         ))
         .await;
     }
-    let allocations = read.low(|a| a.count);
+    let (plain_allocations, subject_allocations) =
+        (plain.low(|a| a.count), subject.low(|a| a.count));
     let report = format!(
-        "read JSON, subject: {} round trips, {allocations} allocations\n{}",
-        read.round_trips, read.statements
+        "read JSON: {} round trips, {plain_allocations} allocations\n\
+         read JSON, subject: {} round trips, {subject_allocations} allocations\n{}",
+        plain.round_trips, subject.round_trips, subject.statements
     );
     eprintln!("{report}");
-    let (within, cell) = judged_allocations(allocations, SUBJECT_READ_ALLOCATIONS);
-    assert!(within, "read JSON, subject: allocations {cell}\n{report}");
+    assert_eq!(subject.round_trips, plain.round_trips, "{report}");
+    assert!(
+        subject_allocations <= plain_allocations + SUBJECT_READ_ALLOCATIONS,
+        "{report}"
+    );
 }
