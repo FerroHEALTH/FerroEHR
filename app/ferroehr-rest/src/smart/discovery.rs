@@ -281,8 +281,7 @@ fn unavailable(reason: &'static str) -> Response {
                         `server.public_base_url`. `capabilities` advertises what \
                         this server enforces: `context-openehr-ehr` and \
                         `openehr-permission-v1` always, `permission-user`, \
-                        `permission-patient` only with an issuer whose profile \
-                        sets `patient_context`, \
+                        `permission-patient` whenever an issuer is trusted, \
                         the experimental pair only when their flags are on, plus \
                         `[auth] capabilities`. This route exists only when \
                         `smart.enabled` is on (otherwise absent => `404`).",

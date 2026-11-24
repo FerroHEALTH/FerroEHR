@@ -487,14 +487,15 @@ async fn the_vital_interest_override_reads_the_ehr_and_is_recorded() {
 }
 
 /// While `[authz.grants] allowed` does not allow `access_service`, the opt-out
-/// is off: recording one is refused and nothing is written, while reversing
-/// and reading stay open.
+/// is off: recording one is refused `422`, a directive the server cannot
+/// carry out (RFC 9110 §15.5.21), and nothing is written, while reversing and
+/// reading stay open.
 #[tokio::test]
 async fn recording_is_refused_while_no_access_service_is_declared() {
     let (_db, _pool, app) = Box::pin(app(false)).await;
     let (ehr, vo) = ehr_with_composition(&app).await;
     let (status, body) = opt_out(&app, &ehr, false).await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
     assert!(
         body.contains("access_service") && body.contains("[authz.grants] allowed"),
         "{body}"
@@ -705,7 +706,7 @@ async fn the_absent_answer_and_the_override_are_recorded_with_their_grounds() {
 }
 
 /// The controller's commit refuses settings whose `DV_DATE_TIME` is no ISO
-/// 8601 date-time with `400` naming `DV_DATE_TIME.Value_valid`, and stores
+/// 8601 date-time with `422` naming `DV_DATE_TIME.Value_valid`, and stores
 /// nothing (RM Data Types, `DV_DATE_TIME` §Invariants; #5629).
 #[tokio::test]
 async fn settings_holding_a_date_time_that_is_no_iso_8601_are_refused() {
@@ -720,7 +721,7 @@ async fn settings_holding_a_date_time_that_is_no_iso_8601_are_refused() {
         "lower_included": true, "upper_included": false });
     let settings = common::directive_settings(&[directive]);
     let (status, body) = commit_settings(&app, &ehr, preceding, &settings).await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
     assert!(body.contains("DV_DATE_TIME.Value_valid"), "{body}");
     let after = versions(&app, &ehr).await.expect("the versions read");
     assert_eq!(after.len(), current.len(), "nothing was stored");

@@ -221,61 +221,16 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # (the same Licensor's BUSL-1.1 code, deny.toml): token validation against the
 # issuer's key set, Basic users, the SMART on openEHR scopes, the discovery
 # document and the client credentials grant. It checks tokens and never issues
-# them; the viewer reads its scope grammar (`openehr-scopes`).
-# The 0.9 line classifies every caller by its issuer's `kind` and profile and
-# binds a person's login to a party (`party`, `[[auth.party]]`), with the
-# Entra ID groups overage adapter (`idp-entra`); 0.9.1 refuses a `system/`
-# scope on a Basic user (GHSA-jhg2-jwjp-hq74), 0.9.3 reads a federation
-# token's consent decision reference and correlation id, and 0.9.4 a contact
-# point's IdA NameID with its format; 0.13.1 keeps a refused key set,
-# introspection or metadata body out of the error (GHSA-5qm7-v4fw-p2v9);
-# 0.16 builds every outbound client (`client::outbound::OutboundClient`) and
-# reads `[auth.idp]`; 0.17 names a TLS refusal under `<key>.tls` and types
-# every configured endpoint as a `SecretUrl`; 0.18 types every issuer
-# identifier the same way, and 0.19 every table that names one
-# (`[[auth.attributes]]`, `[[auth.federation]]`, `[[auth.party]]`,
-# `auth.scopeless_subjects`); 0.19.1 signs a client assertion valid for 60
-# seconds; 0.20 masks the issuer a refused role list names
-# (`check_role_issuers` over `SecretUrl`), and 0.21 chooses the issuer the
-# SMART discovery document describes (`resource::described`, `[auth]
-# described_issuer`); 0.22 takes the DPoP external URL from the product in
-# code (`DpopSection::settings`), so `[server] public_base_url` is the one
-# public URL; 0.23 keeps a Basic user's credential alone (`with_granted_scope`,
-# `with_granted_roles`), and 0.24 asks the product for a client's standing
-# (`kind::standing`), whose 0.24.1 names a refused `[auth]` key by its path;
-# 0.26 builds on ferrohealth-server 0.10, with one server in the lock; 0.27
-# describes a machines-only deployment for SMART Backend Services and returns
-# the purpose with the described issuer, and 0.28 takes a client assertion's
-# `aud` and `typ` from the grant's security profile (no `assertion_audience`);
-# 0.29 ships the `ferrosmart` issuer preset FerroEHR reads FerroSMART's tokens
-# under, 0.29.1 refuses an issuer named in two `[[auth.issuer]]` tables, and
-# 0.29.2 names `token_endpoint_auth_signing_alg_values_supported` in the App
-# Launch discovery document beside `private_key_jwt`; 0.30 builds on
-# ferrohealth-server 0.11, with one server in the lock, and 0.30.1 keeps a
-# verified token's verdict until its `exp` and reports the verdicts held
-# (#6049), and 0.30.2 makes the RFC 3986 normalization public (`uri`) and
-# names `resource` on a refresh (`refresh_for`) for the viewer's launch Tasks
-# (#5930), and 0.31 reads a FerroSMART patient token as `CallerKind::Patient`,
-# which FerroEHR checks against the party binding (#6080), and 0.32 names each
-# issuer (`[auth.issuer.<name>]`), derives its audience and kind, reads the
-# patient context per issuer, carries a reason code on every refusal, reads
-# an issuer in the background (`Rejection::Unread`) and adds the federation
-# field `trc.care_role` (#6140), and 0.33 builds on ferrohealth-server 0.12
-# (#6213), and 0.33.1 answers a Basic verdict from its cache without
-# spawn_blocking. Verified on crates.io 2026-11-22.
-ferrohealth-smart = { version = "=0.33.1", default-features = false, features = ["fetch", "idp-entra"] }
+# them; the viewer reads its scope grammar (`openehr-scopes`). 0.34 reads the
+# caller from the token's standard claims, the authorization server's registry
+# the one list of clients (#6432). Verified on crates.io 2026-11-24.
+ferrohealth-smart = { version = "=0.34.0", default-features = false, features = ["fetch"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroSMART, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
-# ferrohealth-smart's relying party; 0.13 types the provider issuer and the
-# redirect URIs as `SecretUrl`, and 0.23 is the release on ferrohealth-smart
-# 0.28, 0.24 the release on ferrohealth-smart 0.29, and 0.25 the release on
-# ferrohealth-smart 0.30, whose 0.25.1 gives a session a token for a second
-# resource server (`token_for`) for the viewer's launch Tasks (#5930), and 0.26
-# the release on ferrohealth-smart 0.31, 0.27 the release on 0.32, and 0.28
-# the release on 0.33, on ferrohealth-server 0.12 (#6213).
-# Verified on crates.io 2026-11-21.
-ferrohealth-session = { version = "=0.28.1", default-features = false }
+# ferrohealth-smart's relying party; 0.29 is the release on ferrohealth-smart
+# 0.34 (#6432). Verified on crates.io 2026-11-24.
+ferrohealth-session = { version = "=0.29.0", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
@@ -328,10 +283,10 @@ ferrohealth-usage-report = { version = "=0.5.0", features = ["telemetry"] }
 # Licensor's BUSL-1.1 code (deny.toml). FerroBRIDGE's published crates follow
 # Cargo SemVer (a breaking change moves the minor while 0.x), so it is required
 # by a caret range (The Cargo Book, "Specifying Dependencies"). Verified on
-# crates.io 2026-11-21 (0.17.0), on ferrohealth-smart 0.33; `smart` builds its client
+# crates.io 2026-11-24 (0.18.0), on ferrohealth-smart 0.34; `smart` builds its client
 # from ferrohealth-smart's outbound client, and `r4b` the one wire release the
 # terminology client speaks.
-ferrobridge-term = { version = "0.17.0", default-features = false, features = ["r4b", "smart"] }
+ferrobridge-term = { version = "0.18.0", default-features = false, features = ["r4b", "smart"] }
 
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
@@ -373,9 +328,9 @@ fhir-search = { version = "0.1.131", default-features = false }
 # ferrohealth-smart's outbound client; `pmir` is the PMIR Patient Identity
 # Subscriber and Consumer (ITI-94, ITI-93) of `[pix]`, which reads every
 # Patient's `active` and links and rebuilds a subscription from its stored
-# Location. Verified on crates.io 2026-11-22 (0.20.0, on ihe-atna 0.25), on
-# ferrohealth-smart 0.33.
-ihe-iti = { version = "=0.20.0", default-features = false }
+# Location. Verified on crates.io 2026-11-24 (0.21.0, on ihe-atna 0.25), on
+# ferrohealth-smart 0.34.
+ihe-iti = { version = "=0.21.0", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging
