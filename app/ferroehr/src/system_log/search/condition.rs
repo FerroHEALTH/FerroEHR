@@ -94,15 +94,11 @@ fn criterion_condition(criterion: &AuditCriterion) -> sea_query::Cond {
 fn token_condition(found: &TokenMatch) -> sea_query::Cond {
     use sea_query::{Alias, Expr, ExprTrait};
 
-    let ids_of = |ids: &[i32]| {
-        let ids: Vec<String> = ids.iter().map(ToString::to_string).collect();
-        format!("{{{}}}", ids.join(","))
-    };
     // NOTE: our own design (#6373), token ids are `integer` keys and column keys lie above them.
     let carries = |ids: &[i32]| {
         sea_query::Cond::all().add(Expr::cust_with_values(
             "search_keys && CAST($1 AS bigint[])",
-            [ids_of(ids)],
+            [ids_text(ids)],
         ))
     };
     let mut any = sea_query::Cond::any();
@@ -116,7 +112,7 @@ fn token_condition(found: &TokenMatch) -> sea_query::Cond {
             Some(value) => sea_query::Cond::all()
                 .add(Expr::cust_with_values(
                     "search_tokens && CAST($1 AS integer[])",
-                    [ids_of(&column.sets)],
+                    [ids_text(&column.sets)],
                 ))
                 .add(Expr::cust_with_values(
                     column.column.hashed(),
@@ -128,4 +124,10 @@ fn token_condition(found: &TokenMatch) -> sea_query::Cond {
         any = any.add(all);
     }
     any
+}
+
+/// The text of the `integer[]` of `ids`, as a token condition binds it.
+pub(crate) fn ids_text(ids: &[i32]) -> String {
+    let ids: Vec<String> = ids.iter().map(ToString::to_string).collect();
+    format!("{{{}}}", ids.join(","))
 }
