@@ -294,7 +294,7 @@ impl FerroEhrService {
                 "PMIR ITI-93 message {} from the Patient Identity Registry",
                 message.message_id
             );
-            let audit = self.audit(change_type::MODIFICATION, &description);
+            let audit = self.audit_composed(change_type::MODIFICATION, &description);
             let changes = changes.into_iter().map(|c| (audit.clone(), c)).collect();
             change::commit_contribution(
                 &mut tx,

@@ -30,7 +30,7 @@ const VO_COUNT: &str = "SELECT count(DISTINCT vo_id) FROM version WHERE kind = '
 
 /// The distinct versioned COMPOSITIONs committed within `$1..=$2`.
 const VO_COUNT_IN_RANGE: &str = "SELECT count(DISTINCT v.vo_id) FROM version v \
-     JOIN commit_audit a ON a.id = v.commit_audit_id \
+     JOIN commit_audit_facts a ON a.id = v.commit_audit_id \
      WHERE v.kind = 'COMPOSITION' \
        AND ($1::timestamptz IS NULL OR a.time_committed >= $1::timestamptz) \
        AND ($2::timestamptz IS NULL OR a.time_committed <= $2::timestamptz)";
@@ -40,7 +40,7 @@ const VERSION_COUNT: &str = "SELECT count(*) FROM version WHERE kind = 'COMPOSIT
 
 /// The COMPOSITION version rows committed within `$1..=$2`.
 const VERSION_COUNT_IN_RANGE: &str = "SELECT count(*) FROM version v \
-     JOIN commit_audit a ON a.id = v.commit_audit_id \
+     JOIN commit_audit_facts a ON a.id = v.commit_audit_id \
      WHERE v.kind = 'COMPOSITION' \
        AND ($1::timestamptz IS NULL OR a.time_committed >= $1::timestamptz) \
        AND ($2::timestamptz IS NULL OR a.time_committed <= $2::timestamptz)";
@@ -58,14 +58,14 @@ pub async fn contribution_ids(
 ) -> Result<Vec<String>, StorageError> {
     let sql = match scope {
         ContributionScope::Ehr => {
-            "SELECT c.id::text FROM contribution c JOIN commit_audit a ON a.id = c.commit_audit_id \
+            "SELECT c.id::text FROM contribution c JOIN commit_audit_facts a ON a.id = c.commit_audit_id \
              WHERE c.ehr_id IS NOT NULL \
                AND ($1::timestamptz IS NULL OR a.time_committed >= $1::timestamptz) \
                AND ($2::timestamptz IS NULL OR a.time_committed <= $2::timestamptz) \
              ORDER BY a.time_committed, c.id"
         }
         ContributionScope::Demographic => {
-            "SELECT c.id::text FROM contribution c JOIN commit_audit a ON a.id = c.commit_audit_id \
+            "SELECT c.id::text FROM contribution c JOIN commit_audit_facts a ON a.id = c.commit_audit_id \
              WHERE c.ehr_id IS NULL \
                AND ($1::timestamptz IS NULL OR a.time_committed >= $1::timestamptz) \
                AND ($2::timestamptz IS NULL OR a.time_committed <= $2::timestamptz) \
@@ -100,13 +100,13 @@ pub async fn contribution_count(
     }
     let sql = match scope {
         ContributionScope::Ehr => {
-            "SELECT count(*) FROM contribution c JOIN commit_audit a ON a.id = c.commit_audit_id \
+            "SELECT count(*) FROM contribution c JOIN commit_audit_facts a ON a.id = c.commit_audit_id \
              WHERE c.ehr_id IS NOT NULL \
                AND ($1::timestamptz IS NULL OR a.time_committed >= $1::timestamptz) \
                AND ($2::timestamptz IS NULL OR a.time_committed <= $2::timestamptz)"
         }
         ContributionScope::Demographic => {
-            "SELECT count(*) FROM contribution c JOIN commit_audit a ON a.id = c.commit_audit_id \
+            "SELECT count(*) FROM contribution c JOIN commit_audit_facts a ON a.id = c.commit_audit_id \
              WHERE c.ehr_id IS NULL \
                AND ($1::timestamptz IS NULL OR a.time_committed >= $1::timestamptz) \
                AND ($2::timestamptz IS NULL OR a.time_committed <= $2::timestamptz)"

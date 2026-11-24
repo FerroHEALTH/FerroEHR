@@ -1,0 +1,165 @@
+== contribution
+{
+  "_type": "CONTRIBUTION",
+  "uid": {
+    "_type": "HIER_OBJECT_ID",
+    "value": "<uuid#0>"
+  },
+  "audit": {
+    "_type": "AUDIT_DETAILS",
+    "system_id": "localhost",
+    "time_committed": {
+      "_type": "DV_DATE_TIME",
+      "value": "<instant#1>"
+    },
+    "change_type": {
+      "_type": "DV_CODED_TEXT",
+      "value": "creation",
+      "defining_code": {
+        "_type": "CODE_PHRASE",
+        "terminology_id": {
+          "_type": "TERMINOLOGY_ID",
+          "value": "openehr"
+        },
+        "code_string": "249"
+      }
+    },
+    "committer": {
+      "_type": "PARTY_IDENTIFIED",
+      "name": "dr.jansen",
+      "identifiers": [
+        {
+          "_type": "DV_IDENTIFIER",
+          "issuer": "https://idp.example",
+          "id": "dr.jansen",
+          "type": "oauth2"
+        }
+      ]
+    }
+  },
+  "versions": [
+    {
+      "_type": "OBJECT_REF",
+      "namespace": "demographic",
+      "type": "PERSON",
+      "id": {
+        "_type": "OBJECT_VERSION_ID",
+        "value": "<uuid#2>::localhost::1"
+      }
+    }
+  ]
+}
+== version
+{
+  "_type": "ORIGINAL_VERSION",
+  "uid": {
+    "_type": "OBJECT_VERSION_ID",
+    "value": "<uuid#2>::localhost::1"
+  },
+  "contribution": {
+    "_type": "OBJECT_REF",
+    "namespace": "local",
+    "type": "CONTRIBUTION",
+    "id": {
+      "_type": "HIER_OBJECT_ID",
+      "value": "<uuid#0>"
+    }
+  },
+  "commit_audit": {
+    "_type": "AUDIT_DETAILS",
+    "system_id": "localhost",
+    "time_committed": {
+      "_type": "DV_DATE_TIME",
+      "value": "<instant#1>"
+    },
+    "change_type": {
+      "_type": "DV_CODED_TEXT",
+      "value": "creation",
+      "defining_code": {
+        "_type": "CODE_PHRASE",
+        "terminology_id": {
+          "_type": "TERMINOLOGY_ID",
+          "value": "openehr"
+        },
+        "code_string": "249"
+      }
+    },
+    "committer": {
+      "_type": "PARTY_IDENTIFIED",
+      "name": "dr.jansen",
+      "identifiers": [
+        {
+          "_type": "DV_IDENTIFIER",
+          "issuer": "https://idp.example",
+          "id": "dr.jansen",
+          "type": "oauth2"
+        }
+      ]
+    }
+  },
+  "lifecycle_state": {
+    "_type": "DV_CODED_TEXT",
+    "value": "complete",
+    "defining_code": {
+      "_type": "CODE_PHRASE",
+      "terminology_id": {
+        "_type": "TERMINOLOGY_ID",
+        "value": "openehr"
+      },
+      "code_string": "532"
+    }
+  },
+  "data": {
+    "_type": "PERSON",
+    "name": {
+      "_type": "DV_TEXT",
+      "value": "Jane"
+    },
+    "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
+    "uid": {
+      "_type": "OBJECT_VERSION_ID",
+      "value": "<uuid#2>::localhost::1"
+    },
+    "archetype_details": {
+      "_type": "ARCHETYPED",
+      "archetype_id": {
+        "_type": "ARCHETYPE_ID",
+        "value": "openEHR-DEMOGRAPHIC-PERSON.person.v1"
+      },
+      "rm_version": "1.1.0"
+    },
+    "identities": [
+      {
+        "_type": "PARTY_IDENTITY",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "legal name"
+        },
+        "archetype_node_id": "at0001",
+        "details": {
+          "_type": "ITEM_TREE",
+          "name": {
+            "_type": "DV_TEXT",
+            "value": "structure"
+          },
+          "archetype_node_id": "at0002",
+          "items": [
+            {
+              "_type": "ELEMENT",
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "family"
+              },
+              "archetype_node_id": "at0003",
+              "value": {
+                "_type": "DV_TEXT",
+                "value": "Jane"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "signature": "<signature>"
+}

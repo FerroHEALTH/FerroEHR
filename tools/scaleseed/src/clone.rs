@@ -35,7 +35,7 @@ use ferroehr::versioning::signature::signer::Signer;
 /// the explicit column list its lines carry.
 const TABLES: [(&str, &str); 7] = [
     ("ehr", "*"),
-    ("commit_audit", "*"),
+    ("commit_audit_facts", "*"),
     ("contribution", "*"),
     ("version", VERSION_COLUMNS),
     ("vo_head", "*"),
@@ -86,7 +86,7 @@ fn selection(table: &str, with_ehr: bool) -> Option<&'static str> {
         "event_outbox" => {
             "contribution_id IN (SELECT contribution_id FROM clinical.version WHERE vo_id = $1)"
         }
-        "commit_audit" => {
+        "commit_audit_facts" => {
             "id IN (SELECT commit_audit_id FROM clinical.version WHERE vo_id = $1 \
              UNION SELECT c.commit_audit_id FROM clinical.contribution c \
              JOIN clinical.version v ON v.contribution_id = c.id WHERE v.vo_id = $1)"
