@@ -54,7 +54,7 @@ use super::paths::{Path, REQUESTS, World, exchange, order};
 const CPU_BUDGETS: [(Path, u64); 31] = [
     (Path::CommitJson, 7420),
     (Path::CommitXml, 9200),
-    (Path::CommitFlat, 11_280),
+    (Path::CommitFlat, 11_130),
     (Path::ReadJson, 975),
     (Path::ReadXml, 2125),
     (Path::ReadFlat, 2865),
