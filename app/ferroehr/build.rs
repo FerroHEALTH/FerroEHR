@@ -141,11 +141,7 @@ fn main() {
     println!("cargo:rerun-if-env-changed=REVISION");
     println!("cargo:rerun-if-env-changed=FERROEHR_RELEASE_TAG");
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
-    // NOTE: git-rev-parse `--git-dir` and `--git-common-dir` name HEAD and the
-    // one ref it points at, so a fetch or another worktree's commit reruns nothing.
-    for path in head_files() {
-        println!("cargo:rerun-if-changed={}", path.display());
-    }
+    watch_checked_out_ref();
     // `sqlx::migrate!` cannot see a newly added file on stable, and the
     // directives above switch off Cargo's rerun-on-any-change, so the
     // embedded migration sets follow the directory here
@@ -153,34 +149,42 @@ fn main() {
     println!("cargo:rerun-if-changed=migrations");
 }
 
-/// The files that decide the commit HEAD names: HEAD itself, the loose ref it
-/// points at, and `packed-refs`, each when it exists.
-fn head_files() -> Vec<std::path::PathBuf> {
-    let mut files = Vec::new();
-    let Some(git_dir) = git_path("--git-dir") else {
-        return files;
-    };
-    let head = std::path::Path::new(&git_dir).join("HEAD");
-    let target = std::fs::read_to_string(&head)
-        .ok()
-        .and_then(|text| text.trim().strip_prefix("ref: ").map(str::to_owned));
-    files.push(head);
-    if let Some(common) = git_path("--git-common-dir") {
-        let common = std::path::Path::new(&common);
-        if let Some(target) = target {
-            files.push(common.join(target));
+/// Rerun this script when the checked-out commit moves, so `REVISION` names it.
+fn watch_checked_out_ref() {
+    // NOTE: Cargo book build-scripts `rerun-if-changed`, a directory is scanned whole, so the
+    // script watches only `HEAD` and the one ref it names (#6512), as git places them
+    // (git-rev-parse `--git-dir`, `--git-common-dir`, `--symbolic-full-name`).
+    let head = git_rev_parse(&["--symbolic-full-name", "HEAD"]).filter(|name| name != "HEAD");
+    let git_dir = git_rev_parse(&["--path-format=absolute", "--git-dir"]);
+    let common = git_rev_parse(&["--path-format=absolute", "--git-common-dir"]);
+    let watched = [
+        (git_dir, Some("HEAD".to_owned())),
+        (common.clone(), head),
+        (common, Some("packed-refs".to_owned())),
+    ];
+    for (dir, entry) in watched {
+        let (Some(dir), Some(entry)) = (dir, entry) else {
+            continue;
+        };
+        let path = std::path::Path::new(&dir).join(entry);
+        // A packed ref is written loose by its next commit, beside its siblings.
+        let path = if path.exists() {
+            Some(path)
+        } else {
+            path.parent().map(std::path::Path::to_path_buf)
+        };
+        if let Some(path) = path.filter(|path| path.exists()) {
+            println!("cargo:rerun-if-changed={}", path.display());
         }
-        files.push(common.join("packed-refs"));
     }
-    files.retain(|path| path.exists());
-    files
 }
 
-/// The absolute path git reports for `flag` (`--git-dir` or
-/// `--git-common-dir`); `None` outside a git checkout or without git.
-fn git_path(flag: &str) -> Option<String> {
+/// What `git rev-parse` prints for `args`; `None` outside a git checkout or
+/// without git.
+fn git_rev_parse(args: &[&str]) -> Option<String> {
     Command::new("git")
-        .args(["rev-parse", "--path-format=absolute", flag])
+        .arg("rev-parse")
+        .args(args)
         .output()
         .ok()
         .filter(|o| o.status.success())
