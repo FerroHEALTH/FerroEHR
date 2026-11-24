@@ -343,7 +343,7 @@ async fn dr_bakker_breaks_the_glass_and_the_log_marks_the_emergency() {
     ledger.verify(&world).await;
 }
 
-/// Eva reads every composition of her own record, and her portal token
+/// Eva reads every composition of her own record, and her own token
 /// reaches no other EHR: `refused-not-subject`.
 #[tokio::test]
 async fn eva_reads_her_whole_record_and_nobody_elses() {

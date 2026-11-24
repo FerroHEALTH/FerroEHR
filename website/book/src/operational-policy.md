@@ -56,8 +56,6 @@ store, or before it can trust anything:
   first_admin`, the one Basic user that holds `admin_role` and the product
   scope from the file: the first administrator, who writes the first policy
   parties;
-- each issuer's `patient_context`, whether the server believes its `ehrId`
-  claim, which is issuer trust;
 - the grant ceiling, `[authz.grants] allowed`: the operations the party store
   may grant at all, so a compromised administrator account cannot grant
   more than the operator allows ([The grant ceiling](#the-grant-ceiling)).
@@ -227,11 +225,8 @@ own in it, which the change request does not propose. A `CAPABILITY` grants an o
 | `create_at_login` | Create a provisional `PERSON` at the first login of a person no party carries, under the admission conditions the grant names ([Just-in-time admission](#just-in-time-admission)) |
 | `query_system_wide` | Count the client's `system/aql-*` scope, which reaches every query over every EHR (SMART on openEHR, master08 §Resource Scopes) |
 | `access_demographic` | Reach the DEMOGRAPHIC API, which no SMART on openEHR scope covers |
-| `sign_in_persons` | Be a client the persons of its token issuer sign in through: a person's token through it is the person's own, or their representative's |
-| `act_for_persons` | Act for the persons of its token issuer, as a third-party client or as the RFC 8693 actor a person's token names in `act` |
-| `access_without_scope` | Be admitted, as a system caller whose token carries no resource scope, to every SMART on openEHR requirement |
 | `write_care_relationship` | Write the membership (`member_of`) and `under_care_of` care relationships through the Demographic API, as a hospital's ADT system does ([The access control terminology](#the-access-control-terminology)) |
-| `write_representation` | Write a representation (`represents`) through the Demographic API, for the providers its `provider` elements name ([Representatives in the patient portal](#representatives-in-the-patient-portal)) |
+| `write_representation` | Write a representation (`represents`) through the Demographic API, for the providers its `provider` elements name ([Representatives](#representatives)) |
 | `write_access_policy` | Write the controller's `ACCESS_POLICY` |
 
 The same terminology names the elements that qualify a grant, by the code
@@ -261,7 +256,7 @@ in the element's `name`:
 | `provider` | On `write_care_relationship` and `write_representation`: a `DV_IDENTIFIER` (its `issuer` and `id`) naming a provider whose care relationships and memberships, or representations, the grant writes; none named means none written |
 | `target_kind` | On `write_care_relationship`: `PERSON`, `ROLE`, `GROUP` or `ORGANISATION`, a kind of care relationship target the grant writes; none named means none written |
 | `acts_for` | On a `PARTY_RELATIONSHIP`: the source acts for the target |
-| `represents` | On a `PARTY_RELATIONSHIP`: the source represents the target, the subject, on the subject's own record ([Representatives in the patient portal](#representatives-in-the-patient-portal)); it makes no policy party |
+| `represents` | On a `PARTY_RELATIONSHIP`: the source represents the target, the subject, on the subject's own record ([Representatives](#representatives)); it makes no policy party |
 | `role` | A `DV_TEXT`: a role a `hold_roles` grant gives, or a role code a `scim_provision` grant lets its client assign its Users ([SCIM roles](installation/config-auth.md#roles)) |
 | `scope` | A `DV_TEXT`: a SMART scope a `hold_scopes` grant gives |
 | `login_issuer` | A text or `DV_URI`: a token issuer whose first logins a `create_at_login` grant admits |
@@ -269,7 +264,6 @@ in the element's `name`:
 | `admit_group` | A text: a group an admitted login holds |
 | `admit_role` | A text: a role an admitted login holds |
 | `admit_assurance` | A text, `low`, `substantial` or `high`: the lowest assurance level an admitted login carries |
-| `admit_guests` | A `DV_BOOLEAN`: whether a guest is admitted too |
 | `under_care_of` | On a `PARTY_RELATIONSHIP` of its own: the source, a patient's `PERSON`, is under the care of the target, a professional's `PERSON`, a `ROLE`, a team `GROUP` or an organisational unit, with its `care_role` and `provider` |
 
 The terms of a federation agreement are named by codes of the same
@@ -291,8 +285,8 @@ a second party carrying the same issuer and `client_id` is refused with
 `409`.
 
 **Whose grants.** Every authenticated request resolves its caller's grants
-once: a system client, a token of a `machines` issuer, and a verified
-external caller of a `federation` issuer, by its issuer and `client_id`; a
+once: a system client's client credentials token, and a verified external
+caller of a `federation` issuer, by its issuer and `client_id`; a
 person the login binding bound to a `PERSON`, by that party;
 anyone else to no grants. Its grants are the operations the capabilities of
 the `ROLE`s whose `performer` names that party grant, when:
@@ -351,7 +345,7 @@ design.
 | `access caller kind` | `professional`, `access_service`, `datasubject` of `HL7_SecurityRoleType` (the subject), `representative`, `system` | `ACCESS_ACTOR_SCOPE.caller_kind`. An `access_service` caller is one holding the `access_service` grant |
 | `access operation` | `read`, `write`, `export`, `query` | `ACCESS_DIRECTIVE.operations`: the operation classes a directive applies to. No capability grants one |
 | `care relationship` | `member_of`, `under_care_of` | The `name` or `details` of a `PARTY_RELATIONSHIP`: with `member_of`, the source, a professional's `PERSON`, is a member of the target, a care-team `GROUP`, or the source, a provider `ORGANISATION`, is a member of the target `GROUP`; with `under_care_of`, the source, a patient's `PERSON`, is under the care of the target, a team `GROUP` or an organisational unit |
-| `representation` | `represents` | The `name` of a `PARTY_RELATIONSHIP` of its own: the source represents the target, the subject ([Representatives in the patient portal](#representatives-in-the-patient-portal)) |
+| `representation` | `represents` | The `name` of a `PARTY_RELATIONSHIP` of its own: the source represents the target, the subject ([Representatives](#representatives)) |
 | `representation element` | `basis`, `provider`, `evidence` | The `name` of an `ELEMENT` in the `details` of a `represents` relationship |
 | `kinship`, `kinship element` | `related_to`; `kinship` | The `name` or `details` of a `PARTY_RELATIONSHIP` of its own: its source and target, two `PERSON`s, are kin, and its `kinship` element codes how ([Exclusions and conflicts of interest](#exclusions-and-conflicts-of-interest)) |
 | `group kind` | `care_team` | The `name` of a `GROUP`: the `GROUP` is a care team ([Care teams provisioned over SCIM](#care-teams-provisioned-over-scim)) |
@@ -429,18 +423,12 @@ product scope from the configuration. Every gate reads them: the role gate,
 the SMART on openEHR scopes, the access evaluator and the access record. A token's roles and
 scopes come from the token alone, since its issuer is their authority.
 
-**Which clients a person's token comes through.** While `ferrohealth-smart`
-classifies a token, it asks the grants of the `ACTOR` carrying the client
-identifier under the token's issuer: a person's token through a client
-granted `sign_in_persons` is the person's, one through a client granted
-`act_for_persons` is that client acting for the person, and one through any
-other client is refused with `401`. An RFC 8693 actor a person's token names
-is a delegate when the `ACTOR` carrying its `sub` under its issuer is granted
-`act_for_persons`, and a system caller whose token carries no resource scope
-meets every SMART on openEHR requirement when its `ACTOR` is granted
-`access_without_scope`. The answer comes from the copy each replica holds, so
-it adds no transaction, and a party store that cannot answer refuses the
-token with `503`.
+**Which clients a person's token comes through.** The authorization
+server's registry is the one list of clients: a token whose `aud` names
+FerroEHR admits the client its `client_id` names (RFC 9068 §2.2), and
+FerroEHR keeps no client list of its own. An RFC 8693 §4.1 `act` names
+someone acting for the user, which the access record carries as the
+delegated acting mode.
 
 **Importing.** `message_import_ehr` admits a caller with an `import_ehr`
 grant whose `subject_namespace` names the EHR's subject namespace;
@@ -473,7 +461,7 @@ an EHDS Art. 10 access service: an EHR whose person opted out reads as
 absent to it at every route, query and export, unless it declares one of
 `[audit] emergency_purpose_codes` and acts for no person (Art. 10(2)).
 While `[authz.grants] allowed` does not allow `access_service`, recording an
-opt-out is refused with `400`, since it would hold for nobody
+opt-out is refused with `422`, since it would hold for nobody
 ([Opt-out from the access services](security.md#opt-out-from-the-access-services-ehds-art-10)).
 
 A role a token names never grants any of these four: each comes from its
@@ -578,7 +566,7 @@ sign in with HTTP Basic and no `[auth.issuer.<name>.party]` table binds logins: 
 `admin_role` and the product scope before any policy party exists.
 
 No HTTP route grants an operation before an administrator exists. A
-deployment whose staff sign in through a `persons` issuer bound by an
+deployment whose staff sign in through an issuer bound by an
 `[auth.issuer.<name>.party]` table starts in this order:
 
 1. The operator grants the SCIM client `scim_provision` with
@@ -700,7 +688,8 @@ which holds them for the duration of the request:
 
 ### What a system client may do
 
-A system client is a token of a `machines` issuer. It resolves to the
+A system client is a client credentials token, whose `sub` is its
+`client_id` (RFC 9068 §2.2). It resolves to the
 `ACTOR` carrying its client identifier, and what it may do is what that
 party's grants say. No key of `ferroehr.toml` declares a system client.
 
@@ -1142,8 +1131,8 @@ and `ROLE`.
 ```
 
 The client's next request runs under the grant, on every replica, with no
-restart. The grant counts for the client's own app-only token, a token of a
-`machines` issuer whose `client_id` the `AGENT` carries. A person signed in
+restart. The grant counts for the client's own client credentials token,
+whose `client_id` the `AGENT` carries. A person signed in
 through the same client holds the person's own grants, never the client's.
 To withdraw it, end the `ROLE`'s `time_validity` or delete the `ROLE`
 ([Ending a grant](#ending-a-grant)).
@@ -1515,9 +1504,7 @@ hospital admits its own staff". Its capability names the issuer by
 - `admit_role`: the roles, read from `[auth] role_claims`, one of which an
   admitted login holds;
 - `admit_assurance`: the lowest `[authz.assurance]` level an admitted login
-  carries;
-- `admit_guests`: true to admit a guest the issuer's `[auth.issuer.<name>.party]`
-  table admits.
+  carries.
 
 A login is admitted when it meets every condition the grant declares; each
 list admits any one of its values. Several grants in force admit a login
@@ -1992,10 +1979,10 @@ relationship while the earlier versions keep the history (master06
 §Logical Deletion), or by the ADT system after the User is reactivated.
 Apart from the cited lifecycle rules, this section is FerroEHR's own design.
 
-## Representatives in the patient portal
+## Representatives
 
 A parent, a guardian or a proxy the patient chose reads the patient's record
-through the patient portal as the patient's representative. Regulation (EU)
+through an app as the patient's representative. Regulation (EU)
 2025/327 Art. 4(2) asks for proxy services that let natural persons
 authorise others to access their personal electronic health data on their
 behalf, and let legal representatives access the data of the persons whose
@@ -2042,25 +2029,22 @@ callers write one:
 
 FerroEHR admits a representative only on a representation that is live on
 the day of the request, whose `provider` is the provider the deployment acts
-for (`[authz.party_binding.provider]`, or the table of the tenant the token
-names), and that the representative did not write itself. A representative
-whose party source reports a representation the CDR does not store is
-refused `403` with `refused-representation-unrecorded`. The access record of
+for (`[authz.party_binding.provider]`), and that the representative did not
+write itself. A representative with no such representation is refused `403`
+with `refused-representation-unrecorded`. The access record of
 every admitted request names the representation's container, which the
 access log's `representation` authorisation carries as its reference.
 
 The representative's `PERSON` is of a template
 `[[authz.party_binding.person.template]]` maps and carries a binding key: a
-`DV_IDENTIFIER` whose `issuer` is the token issuer of the patient portal and
-whose `id` is the representative's login there (their `sub`). The portal's
-own SCIM client provisions it: a `scim_provision` grant whose
-`binding_issuer` is the portal's `patients` issuer creates each
-representative as a `PERSON` of the patient template, with no professional
-`ROLE`, and deactivates or deletes it ([Users](installation/config-auth.md#users)).
-SCIM provisions the identity only. The client never writes a
-representation: EHDS Art. 4(2) gives the authorisation to the patient (a)
-and to the legal representative under national law (b), so the patient, an
-administrator or a `write_representation` holder records it.
+`DV_IDENTIFIER` whose `issuer` is the `identifier_issuer` of the party table
+of the issuer they sign in at, and whose `id` is their login there (their
+`sub`). An administrator or an identity feed writes it through the
+Demographic API; SCIM provisions a workforce only. The `PERSON` carries the
+representative marker once it is the source of a representation, and no
+professional `ROLE`. EHDS Art. 4(2) gives the authorisation to the patient
+(a) and to the legal representative under national law (b), so the patient,
+an administrator or a `write_representation` holder records it.
 
 ### Legal capacity
 
@@ -2078,38 +2062,29 @@ Fact).
 
 ### Signing in
 
-A `patients` issuer names its patient by the EHR of the token's launch
-context (`ehrId`). A representative signs in one of two ways:
+A representative signs in at a trusted issuer one of two ways:
 
-- **As the actor of the patient's token.** The issuer sets
-  `act_represents_patient = true` and puts the representative in the
-  token's `act` claim (RFC 8693 §4.1): `sub` is the patient, `act.sub` the
-  representative.
-- **Under their own login.** The token's `sub` is the representative and its
-  launch context names the patient's EHR.
+- **As a `RelatedPerson`.** Their token's `fhirUser` is a `RelatedPerson`
+  (SMART App Launch 2.2.0, Scopes and Launch Context, `fhirUser`), and its
+  launch context names the patient's EHR (`ehrId`).
+- **As a user whose `PERSON` is a representative's alone.** Their token
+  names no `RelatedPerson`, and their login binds a `PERSON` carrying the
+  representative marker and no professional `ROLE`.
 
-Either way FerroEHR binds the login, under the token's issuer, to the
-`PERSON` whose binding key it is, and admits the request while that `PERSON`
-holds a live representation of the subject of the EHR's `EHR_STATUS`. The
-request is confined to that EHR. A login a live `PERSON` carries is held to
-that `PERSON`: it is the patient only when that `PERSON` is the EHR's
-subject, a representative only while it holds a live representation of the
-subject, and refused otherwise. A representative with no representation yet,
-one whose representation ended or was deleted, and one who represents
-someone else are all refused, so a former representative never becomes the
-patient. When FerroEHR knows who signs in, its own records decide, not the
-issuer's claim of which EHR the login names. A login no `PERSON` carries
-binds no one: on the first path such an actor is refused, and on the second
-path the token is refused `403` with `refused-unbound`, as is a token that
-names no `ehrId`. These outcomes are decided at binding, when FerroEHR resolves who
-the login is, before the access evaluator decides what that caller may
-reach, and each is recorded as a binding outcome: a missing representation
-with `403` (`refused-representation-unrecorded`), a representative's
-`PERSON` that is `inactive` or `abandoned` with `refused-inactive`, and a
-login two `PERSON`s carry with `refused-ambiguous`. The patient themself is
-the one whose login is a binding key of the `PERSON` the EHR's subject
-names: the party binding is the one source of own access, for a `patients`
-issuer as for a `persons` one, and the token's claims are never trusted on
+Either way FerroEHR binds the login, by the token's `sub` under its
+issuer's party table, to the `PERSON` whose binding key it is, and admits
+the request while that `PERSON` holds a live representation of the subject:
+the subject of the launch EHR, else of the EHR the request names, else the
+`PERSON` an EHR lookup by subject names. The request is confined to that
+subject's EHRs, or to the launch EHR when the token names one. The
+representation is read from the CDR, never from the token (EHDS Art. 4(2)).
+A representative with no representation yet, one whose representation ended
+or was deleted, and one who represents someone else are refused `403` with
+`refused-representation-unrecorded`, so a former representative never becomes
+the patient. A representative reaching their own record reaches it as the
+person themself (EHDS Art. 3). The patient themself is the one whose login
+is a binding key of the `PERSON` the EHR's subject names: the party binding
+is the one source of own access, and the token's claims are never trusted on
 their own. This is FerroEHR's own design.
 
 Each access is recorded bound to the representative's `PERSON`, naming the
@@ -2161,7 +2136,7 @@ changes only a representation they inserted themself: one an administrator
 recorded, such as a court-appointed guardian's, is the administrator's
 (EHDS Art. 5).
 
-### Where the portal is our own design
+### Where this is our own design
 
 No openEHR specification governs these points; each is FerroEHR's own
 design:
@@ -2171,9 +2146,9 @@ design:
 - **Legal capacity is the recorded representations and their validity.**
   The rules are national law (EHDS Art. 4(2)), so FerroEHR holds no rule of
   its own.
-- **A portal login binds by the token issuer.** The representative's binding
-  key is a `DV_IDENTIFIER` under the issuer that signs their login, as a
-  client's `client_id` is.
+- **A login binds by the token issuer.** The representative's binding key
+  is a `DV_IDENTIFIER` under the identifier issuer of the party table of the
+  issuer that signs their login.
 - **A patient writes the representation of themselves**, and the party
   protection holds them to it.
 
@@ -2266,13 +2241,13 @@ one, nothing is tightened.
 - **Whole, over a version.** Name the version you replace in `If-Match`, or
   create the first with `If-None-Match: *`. A stale condition is `412`.
 - **Checked when written.** A body that is no canonical-JSON `ACCESS_POLICY`
-  or breaks an invariant of the draft model is refused whole with `400`, as
-  is a rule of another kind than `controller_rule`, a catalogue entry of that
-  kind, and a rule naming a role, purpose, sensitivity, category or legal
-  ground in `openehr_access`. A policy that holds as a model but breaks the
-  template its `archetype_details.template_id` names, or names a code
-  outside a value set it binds, is refused whole with `422`, naming the
-  attribute.
+  is refused whole with `400`. A policy that reads but breaks a rule is
+  refused whole with `422`, naming the rule or the attribute: an invariant
+  of the draft model, a rule of another kind than `controller_rule`, a
+  catalogue entry of that kind, a rule naming a role, purpose, sensitivity,
+  category or legal ground in `openehr_access`, the template its
+  `archetype_details.template_id` names, or a code outside a value set it
+  binds.
 - **Effective without a restart**, as the registers above.
 - **Read by the access evaluator** on every request: `purpose_required` is
   step 4, checked before any rule, the rules are step 5, a classification
@@ -2323,7 +2298,7 @@ Two more attributes say when a relationship is a ground at all:
 | Attribute | What it says | Left out |
 | --- | --- | --- |
 | `care_purposes` | The purposes of use for which a care relationship is a ground: an access declaring another purpose, such as research, rests on no relationship and matches no rule scope naming `care` | `TREAT`, `ETREAT` and `CAREMGT` of `HL7_ActReason` |
-| `time_zone` | The IANA time zone in which the dates of a relationship's `time_validity` are read, such as `Europe/Amsterdam`; a name the zone database does not hold is refused `400` | UTC |
+| `time_zone` | The IANA time zone in which the dates of a relationship's `time_validity` are read, such as `Europe/Amsterdam`; a name the zone database does not hold is refused `422` | UTC |
 
 #### The attested care path
 
@@ -2527,7 +2502,7 @@ person's. It is refused `403 refused-conflict` at step 5, in a read and in a
 query, unless an entry of the policy's `conflict_rules` for that conflict
 names it (and, for `related`, the kinship); an access such an entry admits
 is marked in the access log with a `conflict allowance` ground. A staff
-member reads their own record through the patient portal. Kinship refuses
+member reads their own record. Kinship refuses
 and never grants: a relative passes the other steps as anyone else.
 
 A kinship is a `PARTY_RELATIONSHIP` of its own named `related_to`, written at

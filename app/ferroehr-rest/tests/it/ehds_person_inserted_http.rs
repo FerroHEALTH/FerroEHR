@@ -56,16 +56,17 @@ async fn issuer() -> MockServer {
 }
 
 /// A server trusting the professionals' issuer `persons` and the persons'
-/// own `patients` issuer, whose `patient/` grants count.
+/// own issuer `patients`, both binding their logins.
 async fn app(persons: &str, patients: &str) -> (testkit::TestDb, Router) {
-    let mut patient = common::entry(patients, AUDIENCE);
-    patient.kind = Some(ferrohealth_smart::kind::IssuerKind::Patients);
     let mut cfg = AppConfig {
-        auth: common::trusting(vec![common::entry(persons, AUDIENCE), patient]),
+        auth: common::trusting(vec![
+            common::entry(persons, AUDIENCE),
+            common::entry(patients, AUDIENCE),
+        ]),
         ..common::api_config(false)
     };
-    common::patient_context(&mut cfg, persons);
-    common::patient_context(&mut cfg, patients);
+    common::bind_issuer(&mut cfg, persons);
+    common::bind_issuer(&mut cfg, patients);
     let (pg, service) = common::test_service().await;
     (pg, common::router_with(cfg, service).await)
 }
@@ -128,6 +129,13 @@ fn party_self() -> Value {
 /// The composer naming a professional.
 fn professional_composer() -> Value {
     json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Bob" })
+}
+
+/// The placeholder naming the login `subject` of `issuer` as composer, which
+/// the server fills with the bound professional's `PARTY_IDENTIFIED`.
+fn placeholder(issuer: &str, subject: &str) -> Value {
+    json!({ "_type": "PARTY_IDENTIFIED",
+            "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": issuer, "id": subject }] })
 }
 
 /// The versioned-object id of a version uid (`<vo>::<system>::<tree>`).
@@ -228,7 +236,8 @@ async fn record() -> Record {
     let patients = self::issuer().await;
     let (pg, app) = app(&uri, &patients.uri()).await;
     let professional = token(&uri, "dr-bob", PROFESSIONAL, None);
-    let alice = common::portal_patient(&pg.pool(), &patients.uri(), "alice").await;
+    common::bind_subjects(&pg.pool(), &[(uri.as_str(), "dr-bob")]).await;
+    let alice = common::patient_person(&pg.pool(), &patients.uri(), "alice").await;
     let (status, headers, text) = common::send(
         &app,
         call(
@@ -253,7 +262,7 @@ async fn record() -> Record {
         &app,
         &ehr,
         &professional,
-        &composition(&professional_composer()),
+        &composition(&placeholder(&uri, "dr-bob")),
     )
     .await;
     let person = token(&patients.uri(), "alice", PERSON, Some(&ehr));
@@ -311,7 +320,10 @@ async fn a_persons_commit_is_marked_as_theirs_and_reads_back_marked() {
         professionals["_type"], "PARTY_IDENTIFIED",
         "{professionals}"
     );
-    assert_eq!(professionals["name"], "dr-bob", "{professionals}");
+    assert_eq!(
+        professionals["identifiers"][0]["id"], "dr-bob",
+        "{professionals}"
+    );
 
     // An AQL query reads each version's committer, which tells the person's
     // entries from the professional's.
@@ -418,7 +430,7 @@ async fn a_person_may_not_alter_a_professionals_entry() {
         "the refusal names its reason: {text}"
     );
     let kept = committer(&r.app, &r.ehr, &r.professional, &r.professionals_entry).await;
-    assert_eq!(kept["name"], "dr-bob", "{kept}");
+    assert_eq!(kept["identifiers"][0]["id"], "dr-bob", "{kept}");
 }
 
 /// A person may not present what they insert as another party's: a composer
@@ -476,7 +488,7 @@ async fn a_professional_updates_a_persons_entry_which_the_person_then_may_not_al
     );
     let reviewed = common::etag_uid(&headers);
     let audit = committer(&r.app, &r.ehr, &r.professional, &reviewed).await;
-    assert_eq!(audit["name"], "dr-bob", "{audit}");
+    assert_eq!(audit["identifiers"][0]["id"], "dr-bob", "{audit}");
     let (status, _headers, text) = update(
         &r.app,
         &r.ehr,

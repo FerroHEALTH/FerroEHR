@@ -254,27 +254,24 @@ fn served_ehrs(
     if access_cols.is_empty() {
         return Ok(Vec::new());
     }
-    // Insertion-ordered so the record set is deterministic, and keyed so a
-    // population page from many EHRs stays linear (#3159).
-    let mut served: indexmap::IndexMap<Uuid, u64> = indexmap::IndexMap::new();
-    let mut in_row: Vec<Uuid> = Vec::with_capacity(access_cols.len());
-    for row in rows {
-        // The `EHR` source and its roots name the same EHR in one row, which
-        // is one served row of that EHR.
-        in_row.clear();
+    // NOTE: our own design (#3159, #6522), insertion-ordered for a deterministic record set, and
+    // each entry keeps the last row that counted it, so one row counts an EHR once in constant time.
+    let mut served: indexmap::IndexMap<Uuid, (u64, usize)> = indexmap::IndexMap::new();
+    for (at, row) in rows.iter().enumerate() {
         for name in access_cols {
             for ehr in ehrs_of(row, name, aggregated)? {
-                if !in_row.contains(&ehr) {
-                    in_row.push(ehr);
+                let (count, counted_in) = served.entry(ehr).or_insert((0, usize::MAX));
+                if *counted_in != at {
+                    *counted_in = at;
+                    *count = count.saturating_add(1);
                 }
             }
         }
-        for ehr in &in_row {
-            let count = served.entry(*ehr).or_insert(0);
-            *count = count.saturating_add(1);
-        }
     }
-    Ok(served.into_iter().collect())
+    Ok(served
+        .into_iter()
+        .map(|(ehr, (count, _))| (ehr, count))
+        .collect())
 }
 
 /// The served EHRs whose `EHR_ACCESS` carried settings, read off the hidden
@@ -431,3 +428,6 @@ fn whole_object_anchor(row: &PgRow, spec: &ColumnSpec) -> Result<Option<SubtreeA
         num_cap,
     }))
 }
+
+#[cfg(test)]
+mod tests;

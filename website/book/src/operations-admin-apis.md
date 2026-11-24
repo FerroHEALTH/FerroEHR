@@ -245,7 +245,7 @@ controller's access policy. What it holds is on
 
 A write with neither condition is **400**, and one whose condition no longer
 holds is **412**: read the policy again and write over the version it answers.
-A policy that does not hold is **400** and leaves the version in force.
+A body that is no canonical-JSON `ACCESS_POLICY` is **400**, a policy that reads but breaks a rule of the draft model or of its template is **422**, and both leave the version in force.
 
 ## Legal marks: restriction, objection and retention
 
@@ -272,7 +272,7 @@ anything.
 | `GET {ext}/admin/access-log` | `?ehr_id=…&from=…&to=…&outcome=…&offset=…&fetch=…` and the other filters | **200**: the access log's records across EHRs, newest first, in the full view ([Reading the access log over ITS-REST](audit.md#reading-the-access-log-over-its-rest)); the read writes its own access-log entry |
 | `GET {ext}/admin/access-log/seals` | `?from_id=…&to_id=…` | **200**: `seals`, each window that covers an entry id of the span, less than 10000 apart, with its `window_no`, `first_id`, `last_id`, `entries`, `previous_digest`, `digest` and `folded`; **400** for a span of 10000 or longer |
 | `GET {ext}/admin/access-log/checkpoint` | `?sequence=…`? | **200**: the newest stored `ACCESS_LOG_CHECKPOINT`, or the one at `sequence`; **404** when none is stored there |
-| `POST {ext}/admin/ehr-access` | `{"ehr_id": "…", "preceding_version_uid": "…", "settings": {…} or null}` | **200** `{"ehr_id", "version_uid"}`: the `EHR_ACCESS` settings are committed on the person's instruction as a new version over `preceding_version_uid`; they hold the EHDS Art. 8 restriction and the Art. 10 opt-out as `restriction` and `opt_out` directives ([Security](security.md#restriction-of-access-by-health-professionals-ehds-art-8)); **400** for settings that do not parse, a `restriction` or `opt_out` directive with `emergency_override` false, a restricted object id that names no versioned object, or an `opt_out` directive while `[authz.grants] allowed` does not allow `access_service`; **412** when `preceding_version_uid` is not the current version |
+| `POST {ext}/admin/ehr-access` | `{"ehr_id": "…", "preceding_version_uid": "…", "settings": {…} or null}` | **200** `{"ehr_id", "version_uid"}`: the `EHR_ACCESS` settings are committed on the person's instruction as a new version over `preceding_version_uid`; they hold the EHDS Art. 8 restriction and the Art. 10 opt-out as `restriction` and `opt_out` directives ([Security](security.md#restriction-of-access-by-health-professionals-ehds-art-8)); **400** for settings that do not parse; **422** for settings that break an invariant of the draft model, a restricted object id that names no versioned object, or an `opt_out` directive while `[authz.grants] allowed` does not allow `access_service`; **412** when `preceding_version_uid` is not the current version |
 | `GET {ext}/admin/ehr-access` | `?ehr_id=…` | **200** `{"ehr_id", "versions": [{"version_uid", "settings"}]}`: every `EHR_ACCESS` version, newest first, so the person's lifted restrictions and reversed opt-outs stay readable |
 | `POST {ext}/admin/ehr-access/repair` | `{"ehr_id": "…", "settings": {…}}` | **200** `{"ehr_id", "version_uid"}`: the `EHR_ACCESS` of an EHR held closed by settings that do not parse is committed again with these settings, which must parse; **409** for an EHR that is not held |
 

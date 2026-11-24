@@ -106,18 +106,6 @@ mod tests {
         assert!(c.validate().is_ok());
     }
 
-    /// The client lists are grants the CDR holds (#5437), and whether an
-    /// issuer's `patient/` grants count is its profile's `patient_context`
-    /// (#6140), so the keys that carried them are unknown keys.
-    #[test]
-    fn the_client_lists_and_the_patient_issuers_are_unknown_keys() {
-        for key in ["backend_clients", "demographic_clients", "patient_issuers"] {
-            let err = toml::from_str::<SmartConfig>(&format!("{key} = [\"etl\"]"))
-                .expect_err("a removed key is refused");
-            assert!(err.to_string().contains("unknown field"), "{key}: {err}");
-        }
-    }
-
     /// A published URL carrying `userinfo` is refused whether or not the
     /// document is served, and the refusal never quotes the credential.
     #[test]
@@ -140,14 +128,11 @@ mod tests {
     }
 
     #[test]
-    fn the_table_takes_no_public_base_url() {
+    fn an_unknown_key_is_refused() {
         let refused =
-            toml::from_str::<SmartConfig>("public_base_url = \"https://cdr.example.com\"")
-                .expect_err("the key is unknown");
+            toml::from_str::<SmartConfig>("colour = \"blue\"").expect_err("the key is unknown");
         assert!(
-            refused
-                .to_string()
-                .contains("unknown field `public_base_url`"),
+            refused.to_string().contains("unknown field `colour`"),
             "{refused}"
         );
     }

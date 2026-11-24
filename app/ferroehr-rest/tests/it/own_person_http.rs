@@ -13,7 +13,6 @@ use std::sync::Arc;
 
 use axum::Router;
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::party_binding::source::BindingSource;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
@@ -27,7 +26,7 @@ use http::StatusCode;
 use serde_json::{Value, json};
 
 use crate::common::{self, BASE};
-use crate::party_binding_http::{ISSUER, LOGIN, person, service, token, uid, vo, write};
+use crate::party_binding_http::{LOGIN, person, service, token, uid, vo, write};
 use crate::representation_http::{STRANGER, config, ehr, router};
 
 /// The `PERSON` every login of [`Patient`] binds.
@@ -173,12 +172,11 @@ async fn a_person_of_no_ehr_reads_no_ehr() {
 /// grants by role runs it.
 async fn rbac_router(svc: Arc<FerroEhrService>, source: Arc<dyn BindingSource>) -> Router {
     let config = config();
-    common::first_party(&svc, &config).await;
+    common::open_configured_key_spaces(&config).await;
     let authenticator = Authenticator::new(
         &config,
         Some(source),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
-        common::standing(&svc),
     )
     .await
     .expect("the binding builds");
@@ -218,20 +216,17 @@ async fn the_rbac_gate_admits_the_person_themself_to_their_own_ehr() {
     assert!(body.contains("refused-not-subject"), "{body}");
 }
 
-/// The SMART app an openEHR launch reaches the CDR through, granted
-/// `act_for_persons`.
+/// The SMART app an openEHR launch reaches the CDR through.
 const APP: &str = "hospital-app";
 
-/// A patient's login through a SMART app the CDR grants `act_for_persons`
-/// is the person themself, as a first-party login is: an openEHR launch
-/// reaches the CDR through such an app (#6080). They read their own EHR and
+/// A patient's login through a SMART app of their issuer is the person
+/// themself: an openEHR launch reaches the CDR through such an app (#6080). They read their own EHR and
 /// write its settings, and any other EHR stays refused.
 #[tokio::test]
-async fn a_patients_login_through_a_delegated_app_reads_their_own_ehr() {
+async fn a_patients_login_through_an_app_reads_their_own_ehr() {
     let (_db, svc) = service().await;
     let own = ehr(&svc, Some(PERSON)).await;
     let stranger = ehr(&svc, Some(STRANGER)).await;
-    common::grant_standing(&svc, ISSUER, APP, Operation::ActForPersons).await;
     let app = router(Arc::clone(&svc), Arc::new(Patient)).await;
     let credential = token("eva-login", &json!({ "client_id": APP }));
 

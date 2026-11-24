@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Own access has one source, the party binding (#6080). `ferrohealth-smart`
-//! reads a `persons` token as the patient's own (`Caller::is_the_person`)
-//! when the issuer's profile sets `fhir_user_patient`, its `fhirUser` is
-//! `Patient/<x>`, its `patient` claim is `x` and its scopes are `patient/`
-//! alone, as FerroSMART's preset does. FerroEHR checks that reading against
+//! reads a token as the patient's own (`Caller::is_the_person`) when its
+//! `fhirUser` is `Patient/<x>`, its `patient` claim is `x` and it names no
+//! actor (SMART App Launch 2.2.0, Scopes and Launch Context). FerroEHR checks that reading against
 //! the binding and never grants on it: the login has to bind the `PERSON`
 //! the EHR's subject names. Each refusal reuses a binding code the access
 //! record already carries:
@@ -20,7 +19,6 @@ use std::sync::Arc;
 
 use axum::Router;
 use ferroehr::party_binding::source::BindingSource;
-use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
 use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::state::AppState;
@@ -65,25 +63,14 @@ impl PartySource for Source {
     }
 }
 
-/// The configuration of [`config`] whose issuer reads a patient's own token
-/// as FerroSMART's preset does.
-fn patient_reading() -> AppConfig {
-    let mut config = config();
-    for entry in config.auth.shared.issuer.values_mut() {
-        entry.profile.fhir_user_patient = Some(true);
-    }
-    config
-}
-
 /// The router over `svc`, looking every login up in `source`.
 async fn router(svc: Arc<ferroehr::service::FerroEhrService>, source: Source) -> Router {
-    let config = patient_reading();
-    common::first_party(&svc, &config).await;
+    let config = config();
+    common::open_configured_key_spaces(&config).await;
     let authenticator = Authenticator::new(
         &config,
         Some(Arc::new(source)),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
-        common::standing(&svc),
     )
     .await
     .expect("the binding builds");
@@ -210,9 +197,9 @@ async fn a_professional_token_with_patient_scopes_is_not_the_persons_own() {
 }
 
 /// A token whose `patient` claim is not the `Patient` its `fhirUser` names
-/// is no patient's own token: a login bound to a professional's `PERSON`
-/// binds as that professional, where a patient's own token would be
-/// refused `refused-wrong-marker`.
+/// is no patient's own token, and its `fhirUser` names a patient, never a
+/// professional: a login bound to a professional's `PERSON` is refused
+/// `refused-wrong-marker`.
 #[tokio::test]
 async fn a_token_whose_patient_claim_differs_from_its_fhir_user_is_not_the_persons_own() {
     let (_db, svc) = service().await;
@@ -225,8 +212,6 @@ async fn a_token_whose_patient_claim_differs_from_its_fhir_user_is_not_the_perso
     let credential = patient_token("p-1", "p-2", PATIENT_SCOPES, Some(&launch));
 
     let (code, body) = get(&app, &format!("/ehr/{launch}"), &credential).await;
-    assert!(
-        !refused_with(&body, "refused-wrong-marker"),
-        "{code}: {body}"
-    );
+    assert_eq!(code, StatusCode::FORBIDDEN, "{body}");
+    assert!(refused_with(&body, "refused-wrong-marker"), "{body}");
 }
