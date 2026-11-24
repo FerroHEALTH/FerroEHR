@@ -6,6 +6,10 @@
 
 /// Strip a generic argument (`DV_INTERVAL<DV_QUANTITY>` → `DV_INTERVAL`).
 pub(crate) fn base(t: &str) -> &str {
+    if !t.contains('<') && !t.starts_with(char::is_whitespace) && !t.ends_with(char::is_whitespace)
+    {
+        return t;
+    }
     t.split('<').next().unwrap_or(t).trim()
 }
 
@@ -15,6 +19,9 @@ pub(crate) fn base(t: &str) -> &str {
 /// ([`openehr_rm::v1_2::model::is_a`]); an unknown constraint type admits any.
 #[must_use]
 pub(crate) fn conforms(instance_type: &str, wt_type: &str) -> bool {
+    if instance_type == wt_type {
+        return true;
+    }
     let (inst, wt) = (base(instance_type), base(wt_type));
     if inst == wt {
         return true;

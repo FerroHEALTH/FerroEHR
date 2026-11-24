@@ -378,12 +378,15 @@ fn corpus(file: &str) -> String {
 /// run nested in it that name a clinical relation (foreign-key checks and
 /// triggers), by fixture (#6393).
 const COMMIT_CEILINGS: [(Fixture, u64, u64); 2] =
-    [(Fixture::Ips, 180_626, 8), (Fixture::Lab, 9357, 8)];
+    [(Fixture::Ips, 180_231, 8), (Fixture::Lab, 8963, 8)];
 
 /// Whether `relation` is written by a commit rather than by the access log or
 /// the audit intake beside it.
 pub(super) fn commit_relation(relation: &str) -> bool {
-    !entry_relation(relation) && !pass_relation(relation) && !relation.contains("audit_")
+    ["commit_audit", "pk_commit_audit", "uq_commit_audit"]
+        .iter()
+        .any(|prefix| relation.starts_with(prefix))
+        || !entry_relation(relation) && !pass_relation(relation) && !relation.contains("audit_")
 }
 
 /// Each composition commit writes at most its ceiling in [`COMMIT_CEILINGS`]

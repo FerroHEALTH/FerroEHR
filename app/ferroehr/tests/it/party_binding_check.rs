@@ -484,7 +484,7 @@ async fn jit_created(svc: &FerroEhrService, issuer: &str, referenced: Option<VoI
             lifecycle_state: None,
         },
     ];
-    svc.create_parties(parties, &jit::description(issuer), Some(committer))
+    svc.create_parties(parties, jit::description(issuer), Some(committer))
         .await
         .expect("the creation commits");
     person_vo

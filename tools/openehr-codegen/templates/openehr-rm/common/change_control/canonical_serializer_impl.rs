@@ -37,14 +37,15 @@ pub fn canonical_object_without<T: Serialize + ?Sized>(
 ) -> Result<String, serde_json::Error> {
     let mut canonical = Canonical {
         out: String::new(),
-        scratch: String::new(),
         names: String::new(),
         members: Vec::new(),
+        sorted: Vec::new(),
+        sorted_texts: Vec::new(),
         depth: 0,
         skip,
     };
     value.serialize(&mut canonical)?;
-    Ok(canonical.out)
+    canonical.finish()
 }
 
 /// An RFC 8785 object assembled member by member, in any order.
@@ -59,9 +60,10 @@ impl Default for CanonicalObject {
         Self {
             canonical: Canonical {
                 out: String::from("{"),
-                scratch: String::new(),
                 names: String::new(),
                 members: Vec::new(),
+                sorted: Vec::new(),
+                sorted_texts: Vec::new(),
                 depth: 1,
                 skip: &[],
             },
@@ -137,8 +139,8 @@ impl CanonicalObject {
     /// Never for members this module wrote; a [`serde_json::Error`] marks a
     /// member text outside the object's buffer.
     pub fn finish(mut self) -> Result<String, serde_json::Error> {
-        self.object().close()?;
-        Ok(self.canonical.out)
+        self.object().close();
+        self.canonical.finish()
     }
 }
 
@@ -148,14 +150,17 @@ const RAW_VALUE: &str = "$serde_json::private::RawValue";
 /// One run of the writer.
 #[derive(Debug)]
 struct Canonical<'s> {
-    /// The canonical form written so far.
+    /// The text written so far, each object's members in the order they
+    /// came; [`Self::sorted`] names the objects whose order differs.
     out: String,
-    /// The buffer an object's sorted members are assembled in.
-    scratch: String,
     /// The raw names of the members of every open object.
     names: String,
     /// The members of every open object, outermost first.
     members: Vec<Member>,
+    /// The closed objects whose members were not written in name order.
+    sorted: Vec<Sorted>,
+    /// The member texts of every [`Sorted`] object, each run in name order.
+    sorted_texts: Vec<Range<usize>>,
     /// How many arrays and objects enclose the value being written.
     depth: usize,
     /// The members of the top-level object left out.
@@ -171,7 +176,79 @@ struct Member {
     text: Range<usize>,
 }
 
+/// The [`Sorted`] objects room is made for when the first is recorded,
+/// enough for a version's signed form without growing.
+const SORTED_OBJECTS: usize = 32;
+
+/// The member texts room is made for when the first object is recorded.
+const SORTED_MEMBERS: usize = 256;
+
+/// An object whose members the canonical form writes in another order.
+#[derive(Debug)]
+struct Sorted {
+    /// The object's text in [`Canonical::out`], braces included.
+    span: Range<usize>,
+    /// Its members' texts in name order, a run of [`Canonical::sorted_texts`].
+    texts: Range<usize>,
+}
+
 impl<'s> Canonical<'s> {
+    /// The canonical form: the written text with every [`Sorted`] object's
+    /// members in name order, each byte copied once.
+    fn finish(mut self) -> Result<String, serde_json::Error> {
+        if self.sorted.is_empty() {
+            return Ok(self.out);
+        }
+        self.sorted.sort_unstable_by_key(|sorted| sorted.span.start);
+        let mut canonical = String::with_capacity(self.out.len());
+        self.copy(0..self.out.len(), &self.sorted, &mut canonical)?;
+        Ok(canonical)
+    }
+
+    /// Copies `range` of [`Self::out`] into `canonical`, writing each object
+    /// of `within`, the [`Sorted`] objects in `range` by start, with its
+    /// members in name order.
+    fn copy(
+        &self,
+        range: Range<usize>,
+        within: &[Sorted],
+        canonical: &mut String,
+    ) -> Result<(), serde_json::Error> {
+        let outside = || ser::Error::custom("a member's text lies outside the canonical form");
+        let mut at = range.start;
+        let mut rest = within;
+        while let Some((sorted, after)) = rest.split_first() {
+            let nested = after.partition_point(|inner| inner.span.start < sorted.span.end);
+            let (inside, later) = after.split_at(nested);
+            canonical.push_str(self.out.get(at..sorted.span.start).ok_or_else(outside)?);
+            canonical.push('{');
+            let texts = self.sorted_texts.get(sorted.texts.clone()).ok_or_else(outside)?;
+            for (index, text) in texts.iter().enumerate() {
+                if index > 0 {
+                    canonical.push(',');
+                }
+                let from = inside.partition_point(|inner| inner.span.start < text.start);
+                let to = inside.partition_point(|inner| inner.span.start < text.end);
+                self.copy(text.clone(), inside.get(from..to).ok_or_else(outside)?, canonical)?;
+            }
+            canonical.push('}');
+            at = sorted.span.end;
+            rest = later;
+        }
+        canonical.push_str(self.out.get(at..range.end).ok_or_else(outside)?);
+        Ok(())
+    }
+
+    /// Cuts the written text back to `len`, with the objects closed past it.
+    fn truncate(&mut self, len: usize) {
+        self.out.truncate(len);
+        while self.sorted.last().is_some_and(|sorted| sorted.span.start >= len) {
+            if let Some(sorted) = self.sorted.pop() {
+                self.sorted_texts.truncate(sorted.texts.start);
+            }
+        }
+    }
+
     /// Writes `number` as the value `serde_json` would build of it.
     fn number(&mut self, number: impl Into<Number>) -> Result<(), serde_json::Error> {
         write_number(&number.into(), &mut self.out)
@@ -334,23 +411,27 @@ impl Object<'_, '_> {
         self.value(value)
     }
 
-    /// Closes the object, sorting and deduplicating its members when they were
-    /// not written in name order.
+    /// Closes the object. Members not written in name order are recorded in
+    /// name order, a name given twice keeping its last value, for
+    /// [`Canonical::finish`] to write.
     #[expect(
         clippy::expect_used,
         reason = "`first` is the member count when the object opened and members are only \
                   pushed after it, and each name range was taken from the names buffer and \
                   names are truncated only when their object closes"
     )]
-    fn close(self) -> Result<(), serde_json::Error> {
+    fn close(self) {
         let Canonical {
             out,
-            scratch,
             names,
             members,
+            sorted,
+            sorted_texts,
             depth,
             ..
         } = self.canonical;
+        out.push('}');
+        *depth -= 1;
         let own = members
             .get_mut(self.first..)
             .expect("an object's members should follow its first");
@@ -363,40 +444,28 @@ impl Object<'_, '_> {
             .iter()
             .zip(own.iter().skip(1))
             .all(|(a, b)| utf16_order(name(a), name(b)) == Ordering::Less);
-        if ordered {
-            out.push('}');
-            members.truncate(self.first);
-            names.truncate(self.names_start);
-            *depth -= 1;
-            return Ok(());
-        }
-        own.sort_by(|a, b| utf16_order(name(a), name(b)));
-        scratch.clear();
-        scratch.reserve(out.len().saturating_sub(self.start));
-        scratch.push('{');
-        let mut written = 0_usize;
-        for (index, member) in own.iter().enumerate() {
-            let next_is_same = own
-                .get(index + 1)
-                .is_some_and(|next| name(next) == name(member));
-            if next_is_same {
-                continue;
+        if !ordered {
+            if sorted.capacity() == 0 {
+                sorted.reserve(SORTED_OBJECTS);
+                sorted_texts.reserve(SORTED_MEMBERS);
             }
-            if written > 0 {
-                scratch.push(',');
+            own.sort_by(|a, b| utf16_order(name(a), name(b)));
+            let from = sorted_texts.len();
+            for (index, member) in own.iter().enumerate() {
+                let next_is_same = own
+                    .get(index + 1)
+                    .is_some_and(|next| name(next) == name(member));
+                if !next_is_same {
+                    sorted_texts.push(member.text.clone());
+                }
             }
-            written += 1;
-            scratch.push_str(out.get(member.text.clone()).ok_or_else(|| {
-                ser::Error::custom("a member's text lies outside the canonical form")
-            })?);
+            sorted.push(Sorted {
+                span: self.start..out.len(),
+                texts: from..sorted_texts.len(),
+            });
         }
-        scratch.push('}');
-        out.truncate(self.start);
-        out.push_str(scratch);
         members.truncate(self.first);
         names.truncate(self.names_start);
-        *depth -= 1;
-        Ok(())
     }
 }
 
@@ -536,7 +605,8 @@ impl<'c, 's> ser::Serializer for &'c mut Canonical<'s> {
     ) -> Result<(), serde_json::Error> {
         let mut object = self.open_object();
         object.field(variant, value)?;
-        object.close()
+        object.close();
+        Ok(())
     }
 
     fn serialize_seq(self, _len: Option<usize>) -> Result<Array<'c, 's>, serde_json::Error> {
@@ -660,7 +730,8 @@ impl ser::SerializeMap for Object<'_, '_> {
     }
 
     fn end(self) -> Result<(), serde_json::Error> {
-        self.close()
+        self.close();
+        Ok(())
     }
 }
 
@@ -702,8 +773,9 @@ impl ser::SerializeStruct for Struct<'_, '_> {
     fn end(self) -> Result<(), serde_json::Error> {
         match self {
             Self::Object(object) => object.close(),
-            Self::Raw(_) => Ok(()),
+            Self::Raw(_) => {}
         }
+        Ok(())
     }
 }
 
@@ -786,7 +858,7 @@ impl<'c, 's> Variant<'c, 's> {
     }
 
     /// Closes the inner value and then the outer object.
-    fn close(mut self) -> Result<(), serde_json::Error> {
+    fn close(mut self) {
         match self.inner {
             Inner::Array(_) => {
                 self.outer.canonical.out.push(']');
@@ -802,7 +874,7 @@ impl<'c, 's> Variant<'c, 's> {
                     names_start,
                     pending: Pending::None,
                 }
-                .close()?;
+                .close();
             }
         }
         match std::mem::take(&mut self.outer.pending) {
@@ -810,10 +882,10 @@ impl<'c, 's> Variant<'c, 's> {
                 let text = at..self.outer.canonical.out.len();
                 self.outer.canonical.members.push(Member { name, text });
             }
-            Pending::Skipped => self.outer.canonical.out.truncate(self.inner_start),
+            Pending::Skipped => self.outer.canonical.truncate(self.inner_start),
             Pending::None => {}
         }
-        self.outer.close()
+        self.outer.close();
     }
 }
 
@@ -838,7 +910,8 @@ impl ser::SerializeTupleVariant for Variant<'_, '_> {
     }
 
     fn end(self) -> Result<(), serde_json::Error> {
-        self.close()
+        self.close();
+        Ok(())
     }
 }
 
@@ -855,7 +928,8 @@ impl ser::SerializeStructVariant for Variant<'_, '_> {
     }
 
     fn end(self) -> Result<(), serde_json::Error> {
-        self.close()
+        self.close();
+        Ok(())
     }
 }
 
