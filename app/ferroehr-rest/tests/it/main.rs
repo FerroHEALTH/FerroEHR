@@ -115,6 +115,7 @@ mod ehr_access_replicas;
 mod ehr_create_replicas;
 mod error_chain;
 mod example_http;
+mod exchanged_patient_token_http;
 mod exclusion_conflict_http;
 mod extensions_openapi;
 mod federation_http;

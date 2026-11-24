@@ -27,10 +27,17 @@ use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
 use crate::system_log::fhir::value_of;
 
+#[cfg(test)]
+mod plans;
+
 /// The statement that reads what `$1`, a sink, delivers next: the oldest
 /// parked record an operator asked to retry, and each log's next record past
 /// the sink's cursor up to the delivery frontier that is not parked, each
 /// with `retry` beside [`RECORD_COLUMNS`].
+///
+/// Each record is read by its key: the retried one per parked row, and the
+/// system log's next from the `pk_audit_event` range between the bounds
+/// (#6427).
 pub(super) fn next_statement() -> &'static str {
     static NEXT: LazyLock<String> = LazyLock::new(|| {
         let columns: Vec<String> = RECORD_COLUMNS
@@ -38,26 +45,36 @@ pub(super) fn next_statement() -> &'static str {
             .map(|column| format!("e.{column}"))
             .collect();
         let columns = columns.join(", ");
-        let next = |chain: &str| {
-            format!(
-                "(SELECT false AS retry, {columns} FROM audit.audit_record e \
-                 JOIN audit.delivery_cursor c ON c.sink = $1 AND c.chain = '{chain}' \
-                 JOIN audit.delivery_frontier f ON f.chain = '{chain}' \
-                 WHERE e.chain = '{chain}' AND e.chain_seq > c.through_id \
-                   AND e.chain_seq <= f.through_id \
-                   AND NOT EXISTS (SELECT 1 FROM audit.delivery_parked p \
-                                    WHERE p.sink = $1 AND p.chain = '{chain}' \
-                                      AND p.record_id = e.chain_seq) \
-                 ORDER BY e.chain_seq LIMIT 1)"
-            )
-        };
         format!(
             "(SELECT true AS retry, {columns} FROM audit.delivery_parked p \
-             JOIN audit.audit_record e ON e.chain = p.chain AND e.chain_seq = p.record_id \
+             CROSS JOIN LATERAL (SELECT * FROM audit.audit_record r \
+                                  WHERE r.chain = p.chain AND r.chain_seq = p.record_id \
+                                  LIMIT 1) e \
              WHERE p.sink = $1 AND p.retry ORDER BY p.parked_at, p.chain, p.record_id LIMIT 1) \
-             UNION ALL {} UNION ALL {}",
-            next("system"),
-            next("access_log")
+             UNION ALL \
+             (SELECT false AS retry, {columns} FROM audit.audit_record e \
+              WHERE e.chain = 'system' AND e.chain_seq = \
+                    (SELECT a.seq FROM audit.audit_event a \
+                      WHERE a.seq > (SELECT c.through_id FROM audit.delivery_cursor c \
+                                      WHERE c.sink = $1 AND c.chain = 'system') \
+                        AND a.seq <= (SELECT f.through_id FROM audit.delivery_frontier f \
+                                       WHERE f.chain = 'system') \
+                        AND NOT EXISTS (SELECT 1 FROM audit.audit_event_hold h \
+                                         WHERE h.seq = a.seq) \
+                        AND NOT EXISTS (SELECT 1 FROM audit.delivery_parked p \
+                                         WHERE p.sink = $1 AND p.chain = 'system' \
+                                           AND p.record_id = a.seq) \
+                      ORDER BY a.seq LIMIT 1)) \
+             UNION ALL \
+             (SELECT false AS retry, {columns} FROM audit.audit_record e \
+              JOIN audit.delivery_cursor c ON c.sink = $1 AND c.chain = 'access_log' \
+              JOIN audit.delivery_frontier f ON f.chain = 'access_log' \
+              WHERE e.chain = 'access_log' AND e.chain_seq > c.through_id \
+                AND e.chain_seq <= f.through_id \
+                AND NOT EXISTS (SELECT 1 FROM audit.delivery_parked p \
+                                 WHERE p.sink = $1 AND p.chain = 'access_log' \
+                                   AND p.record_id = e.chain_seq) \
+              ORDER BY e.chain_seq LIMIT 1)"
         )
     });
     NEXT.as_str()
