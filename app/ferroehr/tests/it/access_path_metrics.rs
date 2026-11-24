@@ -60,6 +60,7 @@ fn request(emergency: Emergency) -> Arc<RequestAccess> {
             operation: OperationClass::Read,
             purpose: None,
             emergency,
+            episodes: None,
         },
         InForce {
             policy: None,
@@ -73,12 +74,12 @@ fn request(emergency: Emergency) -> Arc<RequestAccess> {
 
 /// Judge `ehr_id`, an EHR with no settings, and ask for the EHR itself.
 async fn ask(access: Arc<RequestAccess>, ehr_id: EhrId) -> Outcome {
-    let entry = EhrEntry {
+    let entry = Arc::new(EhrEntry {
         settings: Arc::new(None),
         subject: None,
         version: None,
         revision: ferroehr::storage::access_projection::Revision::default(),
-    };
+    });
     let judged = Arc::clone(&access);
     with_request_access(access, async move {
         let verdict = judged

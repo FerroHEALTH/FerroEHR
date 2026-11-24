@@ -109,25 +109,25 @@ fn providers_of<'a>(facts: &[&'a CallerFact]) -> (Vec<Option<&'a str>>, Vec<Opti
         .unzip()
 }
 
-/// The insert's column list, select list, `unnest` arguments and alias list
-/// entries of the episode columns, empty when `named` is false.
-const fn episode_sql(named: bool) -> [&'static str; 4] {
+/// The insert's column list, select list and subscripted array entries of
+/// the episode columns, empty when `named` is false.
+const fn episode_sql(named: bool) -> [&'static str; 3] {
     if named {
         [
             ", episode_issuer, episode_id",
             ", t.episode_issuer, t.episode_id",
-            ", $21::text[], $22::text[]",
-            ", episode_issuer, episode_id",
+            ", ($21::text[])[i] AS episode_issuer, ($22::text[])[i] AS episode_id",
         ]
     } else {
-        ["", "", "", ""]
+        ["", "", ""]
     }
 }
 
 /// The step that inserts `facts` of `head`, each about the party at its
 /// position in `about` ([`CallerFact::about`], else the head's), returning
 /// each row's party and text ([`Tag::FactsCame`]); it reads nothing when
-/// `facts` is empty.
+/// `facts` is empty. The arrays are read by `generate_subscripts`, which
+/// gives the custom and generic plans one row estimate (#6401).
 pub(super) fn insert<'q>(
     head: GrantHead<'q>,
     about: Vec<Uuid>,
@@ -163,12 +163,7 @@ pub(super) fn insert<'q>(
     let not_before: Vec<_> = facts.iter().map(|f| instant(f.not_before)).collect();
     let not_after: Vec<_> = facts.iter().map(|f| instant(f.not_after)).collect();
     let episodes = episodes_of(facts);
-    let [
-        episode_columns,
-        episode_values,
-        episode_unnest,
-        episode_names,
-    ] = episode_sql(episodes.is_some());
+    let [episode_columns, episode_values, episode_subscripts] = episode_sql(episodes.is_some());
     let statement = format!(
         "INSERT INTO binding_caller_fact \
              (holder_id, ordinal, kind, party_id, terminology_id, code_string, target_id, \
@@ -185,15 +180,17 @@ pub(super) fn insert<'q>(
                      ELSE party.binding_validity(t.validity) END, \
                 t.not_before, t.not_after, holder.version, t.covers_issuer, t.covers_id, \
                 t.covers_kind{episode_values} \
-         FROM unnest($5::integer[], $6::text[], $7::text[], $8::text[], $9::uuid[], \
-                     $10::text[], $11::text[], $12::text[], \
-                     $13::jsonb[], $14::boolean[], $15::timestamptz[], $16::timestamptz[], \
-                     $17::boolean[], $18::text[], $19::text[], $20::text[], $2::uuid[]\
-                     {episode_unnest}) \
-              AS t(ordinal, kind, terminology_id, code_string, target_id, target_kind, \
-                   provider_issuer, provider_id, validity, unreadable, not_before, not_after, \
-                   self_declared, covers_issuer, covers_id, covers_kind, party_id\
-                   {episode_names}) \
+         FROM (SELECT ($5::integer[])[i] AS ordinal, ($6::text[])[i] AS kind, \
+                      ($7::text[])[i] AS terminology_id, ($8::text[])[i] AS code_string, \
+                      ($9::uuid[])[i] AS target_id, ($10::text[])[i] AS target_kind, \
+                      ($11::text[])[i] AS provider_issuer, ($12::text[])[i] AS provider_id, \
+                      ($13::jsonb[])[i] AS validity, ($14::boolean[])[i] AS unreadable, \
+                      ($15::timestamptz[])[i] AS not_before, \
+                      ($16::timestamptz[])[i] AS not_after, ($17::boolean[])[i] AS self_declared, \
+                      ($18::text[])[i] AS covers_issuer, ($19::text[])[i] AS covers_id, \
+                      ($20::text[])[i] AS covers_kind, ($2::uuid[])[i] AS party_id\
+                      {episode_subscripts} \
+               FROM generate_subscripts($5::integer[], 1) AS g (i)) t \
          CROSS JOIN (SELECT {WRITER} AS id) writer \
          CROSS JOIN (SELECT {HOLDER_VERSION} AS version) holder \
          LEFT JOIN binding_care_validity c ON c.vo_id = $1 \

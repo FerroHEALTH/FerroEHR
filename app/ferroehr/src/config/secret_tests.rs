@@ -464,9 +464,8 @@ fn a_party_issuer_never_renders_its_userinfo() {
     );
 }
 
-/// `[[auth.scopeless_subjects]]` is refused as an unknown key (scopeless
-/// subjects are `access_without_scope` grants in the CDR), and the refusal
-/// never renders the password of the issuer it held (#5437).
+/// `[[auth.scopeless_subjects]]` is refused as an unknown key, and the
+/// refusal never renders the password of the issuer it held (#5437).
 #[test]
 fn a_removed_scopeless_subject_table_is_refused_without_rendering_its_userinfo() {
     let file = toml_file(&format!(

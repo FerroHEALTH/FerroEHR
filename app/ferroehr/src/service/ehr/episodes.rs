@@ -49,9 +49,9 @@ impl FerroEhrService {
         ehr_id: EhrId,
         placed: &[EpisodeKey],
     ) -> Result<(), ServiceError> {
-        let subject = self.ehr_access_entry(ehr_id).await?.subject;
-        let person = match subject {
-            Some(subject) => self.grants.person_of(&subject).await?,
+        let entry = self.ehr_access_entry(ehr_id).await?;
+        let person = match &entry.subject {
+            Some(subject) => self.grants.person_of(subject).await?,
             None => None,
         };
         let declared = match person {

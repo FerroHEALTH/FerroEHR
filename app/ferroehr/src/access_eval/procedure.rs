@@ -83,6 +83,7 @@
 //! design (#5487, #5513, #5588, #5621, #5737, #6077).
 
 use openehr_rm::draft::access_control::access_control::access_conflict_rule::AccessConflictRule;
+use openehr_rm::draft::access_control::access_control::access_data_scope::AccessDataScope;
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
@@ -98,8 +99,11 @@ use crate::ids::EhrId;
 use crate::party_binding::grants::caller::facts::CallerFacts;
 use crate::service::ehr::access_rule::SettingsCaller;
 use crate::service::ehr::access_settings::EhrAccessSettings;
+use crate::versioning::episode::EpisodeKey;
 
 mod confidentiality;
+mod covering;
+mod narrowing;
 
 /// Who asks, as the procedure reads them.
 #[derive(Debug, Clone, PartialEq)]
@@ -175,6 +179,9 @@ pub struct Asked<'a> {
     pub purpose: Option<&'a str>,
     /// What the caller declared in an emergency.
     pub emergency: Emergency,
+    /// The episodes of care the request is narrowed to, sorted; `None` when
+    /// it is not narrowed.
+    pub episodes: Option<&'a [EpisodeKey]>,
 }
 
 /// An emergency as the caller declared it.
@@ -215,6 +222,8 @@ pub struct Policy<'a> {
     /// The levels of `concealed_confidentialities`, whose refused records
     /// answer as absent: `R`, then `V`.
     pub concealed: [bool; 2],
+    /// `episode_shared`: the data every episode covers.
+    pub episode_shared: &'a [AccessDataScope],
 }
 
 impl<'a> Policy<'a> {
@@ -242,6 +251,7 @@ impl<'a> Policy<'a> {
                 concealed.contains(&Confidentiality::Restricted),
                 concealed.contains(&Confidentiality::VeryRestricted),
             ],
+            episode_shared: policy.episode_shared.as_deref().unwrap_or_default(),
         }
     }
 
@@ -496,9 +506,19 @@ pub struct Judged<'a> {
     pub now: jiff::Timestamp,
 }
 
-/// Decides `judged` by the procedure of this module.
+/// Decides `judged` by the procedure of this module, narrowed to the
+/// episodes the request names.
 #[must_use]
 pub fn decide(judged: &Judged<'_>) -> Verdict {
+    let verdict = procedure(judged);
+    match judged.asked.episodes {
+        Some(episodes) => narrowing::narrowed(verdict, narrowing::within(judged, episodes)),
+        None => verdict,
+    }
+}
+
+/// The verdict of `judged` by the steps of the procedure.
+fn procedure(judged: &Judged<'_>) -> Verdict {
     let mut verdict = Verdict::admit();
     let caller = judged.caller;
     if let Some(refusal) = crate::access_eval::exclusion::standing(judged) {
@@ -582,24 +602,20 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
         verdict.grounds.granting =
             granting(judged.ehr.care.ties(), &needs.needs).map(|tie| Box::new(tie.clone()));
     }
-    // Step 7: a care relationship.
-    let uncared = Pred::negate(Pred::any(vec![Pred::of(live), keeper.clone()]));
-    if care_read && uncared != Pred::False {
-        let naming = permits
-            .iter()
-            .filter(|permit| permit.directive.applies_to.is_some())
-            .map(|permit| permit.cover.clone())
-            .collect();
-        verdict.rules.push(Rule {
-            when: Pred::all(vec![uncared, Pred::negate(Pred::any(naming))]),
-            then: Outcome::Refused(Refusal::NoCareRelationship),
-            by: Vec::new(),
-        });
-    }
-    // Step 8: the default disposition.
+    let covering = covering::steps_7_and_8(
+        judged,
+        &covering::Held {
+            permits: &permits,
+            keeper: &keeper,
+            live,
+            care_read,
+            default,
+        },
+        &mut verdict,
+    );
     let admitted = match default {
         AccessDefault::Open => Pred::True,
-        AccessDefault::Restricted => Pred::any(vec![keeper, Pred::of(live)]),
+        AccessDefault::Restricted => Pred::any(vec![keeper, covering]),
         AccessDefault::ConsentRequired => keeper,
     };
     disposition(admitted, permits, &mut verdict);

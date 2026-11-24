@@ -3,8 +3,8 @@
 
 //! The caller facts (#5511, #5621, #6055): the roles a caller performs, read
 //! from the coded `name` of each `ROLE` in force it performs, memberships
-//! read from a `PERSON`'s relationships by their code (HL7 v3
-//! `RoleClass#MBR`), and care relationships, each a `PARTY_RELATIONSHIP` of
+//! read from a `PERSON`'s relationships by their code
+//! (`openehr_access::member_of`), and care relationships, each a `PARTY_RELATIONSHIP` of
 //! its own named `openehr_access::under_care_of` with its `care_role` and
 //! `provider` (draft access control package, Care Relationships), in an
 //! archetype of the deployment's own, held on every replica beside the
@@ -12,7 +12,7 @@
 //! replica, a replica reads only the facts of the parties that changed, with
 //! one indexed read, and only a caller holding `write_care_relationship` (or
 //! an administrator) changes a care relationship. A provider
-//! `ORGANISATION`'s `MBR` relationship is its membership of a `GROUP`
+//! `ORGANISATION`'s `member_of` relationship is its membership of a `GROUP`
 //! (#5575), held and guarded the same way. No openEHR spec gives a
 //! capability or a relationship an access meaning: our own design.
 
@@ -84,8 +84,8 @@ fn party_ref(kind: &str, id: VoId) -> Value {
             "id": { "_type": "HIER_OBJECT_ID", "value": id.to_string() } })
 }
 
-/// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
-const MEMBER: (&str, &str) = ("HL7_RoleClass", "MBR");
+/// A professional's membership of a care team: `openehr_access::member_of`.
+const MEMBER: (&str, &str) = ("openehr_access", "member_of");
 
 /// The issuer of the provider the care relationships name.
 const PROVIDERS: &str = "urn:example:providers";
@@ -607,6 +607,138 @@ async fn a_providers_group_membership_is_guarded_and_held_on_another_replica() {
     );
 }
 
+/// A party of the RM class `class`, in an archetype of the deployment's own,
+/// holding `relationships`.
+fn own_party(class: &str, relationships: &[Value]) -> Value {
+    let archetype = format!("org.example::openEHR-DEMOGRAPHIC-{class}.own.v1");
+    let mut body = person("Own", relationships);
+    body["_type"] = json!(class);
+    body["archetype_node_id"] = json!(archetype);
+    body["archetype_details"]["archetype_id"]["value"] = json!(archetype);
+    body
+}
+
+/// Runs `fut` as the system client `client`, or as an administrator when
+/// `None`.
+async fn run_as<F: Future>(svc: &FerroEhrService, client: Option<&str>, fut: F) -> F::Output {
+    match client {
+        Some(client_id) => as_client(svc, client_id, fut).await,
+        None => crate::policy_fixtures::as_admin(fut).await,
+    }
+}
+
+/// Creates the party of `kind` and RM class `class` as `client` (an
+/// administrator when `None`), then commits its next version holding the
+/// relationship `code` from it to the party `target` names, over `validity`.
+async fn relate_party_as(
+    svc: &FerroEhrService,
+    client: Option<&str>,
+    (kind, class): (PartyKind, &str),
+    (code, target): ((&str, &str), &str),
+    validity: &Value,
+) -> Result<VoId, ServiceError> {
+    let mut write = WriteRequest::new(crate::typed_body::typed(&own_party(class, &[])));
+    write.lifecycle_state = Some("532".to_owned());
+    let created = run_as(svc, client, async {
+        Box::pin(svc.party_create(kind, write)).await
+    })
+    .await?;
+    let vo = crate::fixtures::written_vo(&created);
+    let uid = created.meta.as_ref().expect("a version").uid.clone();
+    let mut relationship = care(code, vo, vo, validity);
+    relationship["source"] = party_ref(class, vo);
+    relationship["target"]["id"]["value"] = json!(target);
+    let mut write = WriteRequest::new(crate::typed_body::typed(&own_party(class, &[relationship])));
+    write.lifecycle_state = Some("532".to_owned());
+    write.preceding = Some(uid.parse().expect("an OBJECT_VERSION_ID"));
+    run_as(svc, client, async {
+        Box::pin(svc.party_update(kind, object(vo.to_string()), if_match(&uid), write)).await
+    })
+    .await?;
+    Ok(vo)
+}
+
+/// A relationship coded with the generic HL7 v3 `RoleClass#MBR`, in a
+/// client's own archetypes, is the client's own content: standalone or held
+/// by any party kind, to any target, it commits with no grant beyond
+/// `access_demographic` and makes no caller fact. The same relationship coded
+/// `openehr_access::member_of` keeps every membership rule (#6504).
+#[tokio::test]
+async fn a_relationship_coded_with_the_hl7_member_code_takes_no_access_meaning() {
+    let db = testkit::db().await.expect("testkit database");
+    let (one, two) = (replica(&db.pool()).await, replica(&db.pool()).await);
+    granted(&one, "registry", &[capability("access_demographic", &[])]).await;
+    let (ward, _) = create(&one, PartyKind::Group, &team())
+        .await
+        .expect("the GROUP commits");
+    let (stranger, _) = create(&one, PartyKind::Person, &person("Ms S", &[]))
+        .await
+        .expect("the PERSON commits");
+    let (ward_id, elsewhere) = (ward.to_string(), uuid::Uuid::now_v7().to_string());
+    let (ward_id, elsewhere, oid) = (ward_id.as_str(), elsewhere.as_str(), "1.2.840.113619");
+    let hl7 = ("HL7_RoleClass", "MBR");
+    let validity = interval(&day(-30), None);
+    let mut held = Vec::new();
+    for (party, target) in [
+        ((PartyKind::Person, "PERSON"), ward_id),
+        ((PartyKind::Person, "PERSON"), elsewhere),
+        ((PartyKind::Person, "PERSON"), oid),
+        ((PartyKind::Group, "GROUP"), ward_id),
+        ((PartyKind::Agent, "AGENT"), ward_id),
+        ((PartyKind::Organisation, "ORGANISATION"), oid),
+    ] {
+        let vo = relate_party_as(&one, Some("registry"), party, (hl7, target), &validity)
+            .await
+            .unwrap_or_else(|refused| panic!("{} to {target}: {refused:?}", party.1));
+        held.push(vo);
+    }
+    relate_as(&one, "registry", &care(hl7, stranger, ward, &validity))
+        .await
+        .expect("a standalone relationship coded HL7_RoleClass::MBR commits");
+    two.grants()
+        .refresh_if_stale()
+        .await
+        .expect("the copy reads");
+    let now = jiff::Timestamp::now();
+    for vo in held {
+        assert!(
+            two.grants().facts_of(vo.0, now).care_teams().is_empty(),
+            "no membership is read from {vo}"
+        );
+        assert_eq!(
+            two.grants().memberships(vo.0, now),
+            Vec::<uuid::Uuid>::new()
+        );
+    }
+    for (party, target) in [
+        ((PartyKind::Person, "PERSON"), oid),
+        ((PartyKind::Group, "GROUP"), ward_id),
+        ((PartyKind::Agent, "AGENT"), ward_id),
+    ] {
+        let refused = relate_party_as(&one, None, party, (MEMBER, target), &validity)
+            .await
+            .expect_err("a membership breaking a rule is refused");
+        assert!(
+            matches!(refused, ServiceError::Unprocessable { .. }),
+            "{} to {target}: {refused:?}",
+            party.1
+        );
+    }
+    let mut write = WriteRequest::new(crate::typed_body::typed(&care(
+        MEMBER, stranger, ward, &validity,
+    )));
+    write.lifecycle_state = Some("532".to_owned());
+    let refused = crate::policy_fixtures::as_admin(async {
+        Box::pin(one.party_relationship_create(write)).await
+    })
+    .await
+    .expect_err("a standalone membership is refused");
+    assert!(
+        matches!(refused, ServiceError::Unprocessable { .. }),
+        "{refused:?}"
+    );
+}
+
 /// The single relationship is the stored unit (draft access control
 /// package, The Relationship Store): a care relationship held in a
 /// `PERSON`'s relationships is refused `422`, naming the resource that holds
@@ -693,7 +825,7 @@ async fn one_indexed_read_returns_the_facts_of_the_parties_that_changed() {
          INSERT INTO party.binding_caller_fact \
              (holder_id, ordinal, kind, party_id, target_id, lifecycle_state, role_validity, \
               validity) \
-         SELECT id, 0, 'MBR', id, uuidv7(), '532', '(,)', '(,)' FROM p",
+         SELECT id, 0, 'member_of', id, uuidv7(), '532', '(,)', '(,)' FROM p",
     )
     .execute(&pool)
     .await

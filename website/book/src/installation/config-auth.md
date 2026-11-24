@@ -984,7 +984,7 @@ demographic `GROUP` of the group template:
   `mutability`). A care team is served with `careTeam = true` and the
   extension in its `schemas`; any other Group is served without either. A
   care team's `GROUP` is named by the coded `care_team` and each membership
-  by the coded `MBR` of HL7 `HL7_RoleClass` (RM demographic `PARTY.type()` is the `name`), so
+  by the coded `member_of` of `openehr_access` (RM demographic `PARTY.type()` is the `name`), so
   its members are in the care of the patients under the team's care.
   Creating one and changing its members needs the client's
   `write_care_relationship` grant beside `scim_provision`, and is **403**
@@ -1164,7 +1164,7 @@ its token's `ehrId` names. See [SMART App Launch](../smart-app-launch.md).
 | `discovery` | bool | `false` | Serve `/.well-known/smart-configuration`. It is built from the metadata of one `[auth]` issuer, the [described issuer](#the-described-issuer), so it needs an issuer whose metadata names a `token_endpoint` (SMART App Launch 2.2.0, Conformance, §Metadata), and [`server.public_base_url`](config-server.md#public_base_url-the-one-public-url) for its absolute `services.*.baseUrl` values. Until the described issuer's metadata is read, the route answers `503` with `Retry-After` and the reason `issuer-unread`; metadata that names no `token_endpoint` answers `503` with `issuer-metadata-incomplete`. |
 | `issuer_metadata_file` | path | unset | A JSON file holding the RFC 8414 §2 metadata of the `[auth]` issuer it names, whose key set is a `jwks_file`, read at boot. It must name such an issuer, repeat no member name, and every endpoint it names must be `https` (a loopback host excepted); the discovery document takes its `token_endpoint` and the other endpoints from it. Naming any other issuer is a boot error. |
 | `platform_base_url` | string | unset ⇒ the REST root | The path the discovery document hangs off, e.g. `/gateway/v1`. |
-| `episode_launch` | bool | `false` | Advertise episode context and accept the `launch/episode` scope and `episodeId` claim; applies no episode-scoped filtering. |
+| `episode_launch` | bool | `false` | Advertise episode context, accept the `launch/episode` scope and narrow each request of a launch to the token's `episodeId` claim, read as `issuer\|id`. |
 
 The `launch-base64-json` capability (master09) is advertised by listing it in
 `[auth] capabilities`; the base64 JSON launch object is the application's to

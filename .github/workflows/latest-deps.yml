@@ -53,7 +53,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # A weekly run on a moved lockfile writes no cache: nothing restores it
+      # (#6388).
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          cache-save-if: false
       # Probe half: a registry it cannot resolve at all is a probe failure and
       # reddens the run, because it says nothing about the workspace.
       - name: Update to the latest in-range dependency set

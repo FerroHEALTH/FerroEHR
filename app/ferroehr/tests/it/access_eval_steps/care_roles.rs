@@ -155,6 +155,7 @@ fn judged(
             operation,
             purpose: purpose.map(str::to_owned),
             emergency,
+            episodes: None,
         },
         InForce {
             policy: Some(Arc::new(policy.clone())),
@@ -444,6 +445,7 @@ fn the_record_names_the_relationship_the_procedure_chooses() {
                 operation: OperationClass::Read,
                 purpose: Some("TREAT".to_owned()),
                 emergency: Emergency::default(),
+                episodes: None,
             },
             InForce {
                 policy: Some(Arc::new(policy.clone())),

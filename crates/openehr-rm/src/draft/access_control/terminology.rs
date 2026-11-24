@@ -52,11 +52,6 @@ pub const TERMINOLOGY_ID_CONSENT_PROVISION_TYPE: &str = "HL7_ConsentProvisionTyp
 /// `datasubject` is the subject of the data.
 pub const TERMINOLOGY_ID_SECURITY_ROLE_TYPE: &str = "HL7_SecurityRoleType";
 
-/// HL7 Terminology `http://terminology.hl7.org/CodeSystem/v3-RoleClass`, by its
-/// terminology identifier `HL7_` and its code system name: its `MBR` is the
-/// member of a group.
-pub const TERMINOLOGY_ID_ROLE_CLASS: &str = "HL7_RoleClass";
-
 /// HL7 FHIR `http://hl7.org/fhir/audit-event-action`, by its terminology
 /// identifier `HL7_` and its code system name: the create, read, update and
 /// delete of an audited access.
@@ -513,9 +508,10 @@ group! {
     /// The demographic relationships of care, coded in the `name` of a
     /// `PARTY_RELATIONSHIP`.
     CareRelationship in CareRelationship {
-        /// A professional's `PERSON` is a member of a care-team `GROUP`: HL7
-        /// v3 `RoleClass#MBR`, "a member of a group".
-        MemberOf => "MBR" of TERMINOLOGY_ID_ROLE_CLASS, "member of",
+        /// A professional's `PERSON` is a member of a care-team `GROUP` or an
+        /// organisational unit; HL7 v3 `RoleClass#MBR` is its broader
+        /// standard code.
+        MemberOf => "member_of",
         /// A patient's `PERSON` is under the care of a team `GROUP` or an
         /// organisational unit.
         UnderCareOf => "under_care_of",
@@ -526,7 +522,7 @@ group! {
     /// What kind of group a demographic `GROUP` is, coded in its `name`: RM
     /// demographic `party.adoc` makes `type()` the `name` (`Type_valid`).
     GroupKind in GroupKind {
-        /// The `GROUP` is a care team: a membership (`MBR`) relationship to it puts
+        /// The `GROUP` is a care team: a `member_of` relationship to it puts
         /// its member in the care of the subjects under its care.
         CareTeam => "care_team",
     }
@@ -560,6 +556,9 @@ group! {
         Confidentiality => "refused-confidentiality",
         /// The policy needs a care relationship and the caller has none.
         NoCareRelationship => "refused-no-care-relationship",
+        /// The datum lies outside the episodes of care the caller reaches it
+        /// through; answered without the datum's episodes.
+        OutsideEpisode => "refused-outside-episode",
         /// The policy needs a declared purpose and the request has none.
         PurposeMissing => "refused-purpose-missing",
         /// The EHR needs consent and no permit directive applies.

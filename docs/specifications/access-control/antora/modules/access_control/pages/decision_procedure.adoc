@@ -36,7 +36,7 @@ A caller *holds* a care relationship R (an `under_care_of` relationship whose `s
 |on
 
 |`team`
-|R's `target` names a `GROUP` or an `ORGANISATION` the caller is a member of by an `HL7_RoleClass::MBR` relationship in force, or a group or unit that such a group or unit is itself a member of: one level of nesting and no further.
+|R's `target` names a `GROUP` or an `ORGANISATION` the caller is a member of by a `member_of` relationship in force, or a group or unit that such a group or unit is itself a member of: one level of nesting and no further.
 |on
 
 |`self_declared`

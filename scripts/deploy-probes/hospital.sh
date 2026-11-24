@@ -258,12 +258,6 @@ j_term() { j_coded "$H_TERM" "$1"; }
 # An access effect: a code of HL7 FHIR HL7_ConsentProvisionType.
 j_effect() { j_coded HL7_ConsentProvisionType "$1"; }
 
-# A care relationship code: a membership is HL7 v3 RoleClass MBR, any other
-# care code a term of openehr_access.
-j_care_code() {
-  if [[ "$1" == member ]]; then j_coded HL7_RoleClass MBR; else j_term "$1"; fi
-}
-
 # A PARTY_REF to the party `id` of RM type `type`.
 j_party() {
   jq -nc --arg t "$1" --arg i "$2" \
@@ -307,12 +301,12 @@ j_named_party() {
           value:{_type:"DV_TEXT",value:$n}}]}}]} + $x'
 }
 
-# A relationship carrying the care code `code` (`member`, or a term of
-# openehr_access) from `source` (of RM type `stype`) to the party `target`
-# (of RM type `ttype`) over `validity`.
+# A relationship carrying the care code `code`, a term of openehr_access,
+# from `source` (of RM type `stype`) to the party `target` (of RM type
+# `ttype`) over `validity`.
 j_care() {
   local code="$1" stype="$2" source="$3" ttype="$4" target="$5" validity="$6"
-  jq -nc --argjson k "$(j_care_code "$code")" --argjson s "$(j_party "$stype" "$source")" \
+  jq -nc --argjson k "$(j_term "$code")" --argjson s "$(j_party "$stype" "$source")" \
     --argjson t "$(j_party "$ttype" "$target")" --argjson v "$validity" '{_type:"PARTY_RELATIONSHIP",
     archetype_node_id:"openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.hospital_care.v1",
     name:{_type:"DV_TEXT",value:"care"},
@@ -742,7 +736,7 @@ hospital_setup() {
   done
   for org in lab_org member_org; do
     h_relate 1 admin organisation "$(hv "$org")" \
-      "[$(j_care member ORGANISATION "$(hv "$org")" GROUP "$(hv region)" "$(j_dates "$(h_day -365)")")]" \
+      "[$(j_care member_of ORGANISATION "$(hv "$org")" GROUP "$(hv region)" "$(j_dates "$(h_day -365)")")]" \
       || h_fail_call "the $org joins the regional GROUP"
   done
 
@@ -761,16 +755,16 @@ hospital_setup() {
   local since
   since="$(j_dates "$(h_day -30)")"
   h_relate 2 admin person "$(hv person_anna)" \
-    "[$(j_care member PERSON "$(hv person_anna)" GROUP "$(hv cardiology)" "$since")]" \
+    "[$(j_care member_of PERSON "$(hv person_anna)" GROUP "$(hv cardiology)" "$since")]" \
     || h_fail_call "Dr. Jansen joins Cardiology"
   h_relate 1 admin person "$(hv person_bram)" \
-    "[$(j_care member PERSON "$(hv person_bram)" GROUP "$(hv ward3)" "$since")]" \
+    "[$(j_care member_of PERSON "$(hv person_bram)" GROUP "$(hv ward3)" "$since")]" \
     || h_fail_call "Nurse de Vries joins Ward 3"
   h_relate 2 admin person "$(hv person_gina)" \
-    "[$(j_care member PERSON "$(hv person_gina)" GROUP "$(hv ward3)" "$since")]" \
+    "[$(j_care member_of PERSON "$(hv person_gina)" GROUP "$(hv ward3)" "$since")]" \
     || h_fail_call "Gina joins Ward 3"
   h_relate 1 admin person "$(hv person_carla)" \
-    "[$(j_care member PERSON "$(hv person_carla)" GROUP "$(hv psychiatry)" "$since")]" \
+    "[$(j_care member_of PERSON "$(hv person_carla)" GROUP "$(hv psychiatry)" "$since")]" \
     || h_fail_call "Dr. Smit joins Psychiatry"
 
   # The system clients: the lab acts for the lab, a member of the region;
@@ -1495,7 +1489,7 @@ h_viewer_clinician() {
     '{performer:$p,name:$n}')")"
   [[ "$H_CODE" = 201 ]] || return 1
   h_relate 1 p:controller person "$person" \
-    "[$(j_care member PERSON "$person" GROUP "$(hv cardiology)" "$(j_dates "$(h_day -1)")")]"
+    "[$(j_care member_of PERSON "$person" GROUP "$(hv cardiology)" "$(j_dates "$(h_day -1)")")]"
 }
 
 # The controller's administrator writes the ACCESS_POLICY through the admin
@@ -1652,7 +1646,7 @@ hospital_pixm() {
   h_party role_controller_policy role "$(j_role "controller administrator" PERSON "$(hv person_controller)" \
     "$(j_capability "$(j_operation write_access_policy)")")" || h_fail_call "the controller's policy grant"
   h_relate 2 admin person "$(hv person_anna)" \
-    "[$(j_care member PERSON "$(hv person_anna)" GROUP "$(hv cardiology)" "$(j_dates "$(h_day -30)")")]" \
+    "[$(j_care member_of PERSON "$(hv person_anna)" GROUP "$(hv cardiology)" "$(j_dates "$(h_day -30)")")]" \
     || h_fail_call "Dr. Jansen joins Cardiology"
   # In the patient template, whose details carry the record_subject she
   # declares below (#5634).

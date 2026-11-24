@@ -23,7 +23,13 @@ pub(super) fn simplified(pred: &Pred) -> Pred {
         Pred::All(preds) => folded(Pred::all(preds.iter().map(simplified).collect()), true),
         Pred::Any(preds) => folded(Pred::any(preds.iter().map(simplified).collect()), false),
         Pred::Data(data, _) if covers_nothing(data) => Pred::False,
-        Pred::True | Pred::False | Pred::Data(..) | Pred::Ehr(_) | Pred::Care(_) => pred.clone(),
+        Pred::True
+        | Pred::False
+        | Pred::Data(..)
+        | Pred::Ehr(_)
+        | Pred::Care(_)
+        | Pred::InEpisodes(_)
+        | Pred::Covered(_) => pred.clone(),
     }
 }
 
@@ -58,7 +64,12 @@ fn folded(pred: Pred, all: bool) -> Pred {
 /// it may be absent.
 fn two_valued(pred: &Pred) -> bool {
     match pred {
-        Pred::True | Pred::False | Pred::Data(..) | Pred::Care(_) => true,
+        Pred::True
+        | Pred::False
+        | Pred::Data(..)
+        | Pred::Care(_)
+        | Pred::InEpisodes(_)
+        | Pred::Covered(_) => true,
         Pred::Ehr(_) => false,
         Pred::Not(inner) => two_valued(inner),
         Pred::All(preds) | Pred::Any(preds) => preds.iter().all(two_valued),

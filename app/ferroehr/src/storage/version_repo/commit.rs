@@ -274,7 +274,6 @@ fn folded_statement(shape: Shape, placement: Placement, plan: &SharedPlan) -> St
         ", c AS ( \
              INSERT INTO contribution (id, ehr_id, commit_audit_id) \
              SELECT $6, $7, a.id FROM a \
-             ON CONFLICT (id) DO NOTHING \
              RETURNING id \
          )"
     } else {
@@ -284,7 +283,7 @@ fn folded_statement(shape: Shape, placement: Placement, plan: &SharedPlan) -> St
         let (contribution_id, from) = if contribution {
             ("c.id", "a, c")
         } else {
-            ("$6", "a")
+            ("k.id", "a JOIN contribution k ON k.id = $6")
         };
         let after_nodes = 28 + crate::storage::node_write::node_array_count();
         version_ctes(
@@ -304,8 +303,8 @@ fn folded_statement(shape: Shape, placement: Placement, plan: &SharedPlan) -> St
         )
     } else {
         format!(
-            " SELECT a.id AS commit_audit_id, a.time_committed, $6::uuid AS contribution_id{learned} \
-              FROM a"
+            " SELECT a.id AS commit_audit_id, a.time_committed, k.id AS contribution_id{learned} \
+              FROM a LEFT JOIN contribution k ON k.id = $6"
         )
     };
     let shared = shared_value(plan.audit(0), 1);
@@ -354,36 +353,38 @@ pub(super) fn version_ctes(
             .join(", ")
     };
     let version = format!("v{suffix}");
+    let head = HeadUpsert {
+        vo: &p(0),
+        kind: &p(1),
+        ehr,
+        ordinal: &p(2),
+        branch: &p(4),
+        lifecycle: &p(6),
+        template: &p(9),
+        archetype: &p(19),
+        episodes: match placement {
+            Placement::Untouched => HeadEpisodes::Untouched,
+            Placement::Cleared => HeadEpisodes::Cleared,
+            Placement::Placed => HeadEpisodes::Placed(episodes),
+        },
+        committed_at: &p(14),
+        version: &version,
+    };
     format!(
         ", {version} AS ( \
              INSERT INTO version ({VERSION_COLUMNS}) \
              SELECT {}, {ehr}, {}, {contribution}, {audit}, {}, {}::timestamptz, {} \
              FROM {from} RETURNING content_key \
          ), h{suffix} AS ( {} \
+         ), hc{suffix} AS ( {} \
          ), n{suffix} AS ( {} )",
         list(&[0, 1]),
         list(&[2, 3, 4, 5, 6, 7, 8]),
         list(&[9, 10, 11, 12, 13, 15]),
         p(14),
         list(&[16, 17, 18]),
-        HeadUpsert {
-            vo: &p(0),
-            kind: &p(1),
-            ehr,
-            ordinal: &p(2),
-            branch: &p(4),
-            lifecycle: &p(6),
-            template: &p(9),
-            archetype: &p(19),
-            episodes: match placement {
-                Placement::Untouched => HeadEpisodes::Untouched,
-                Placement::Cleared => HeadEpisodes::Cleared,
-                Placement::Placed => HeadEpisodes::Placed(episodes),
-            },
-            committed_at: &p(14),
-            version: &version,
-        }
-        .sql(),
+        head.advance(),
+        head.insert("= 1"),
         crate::storage::node_write::node_insert_cte((&p(0), &p(2), ehr), &version, nodes)
     )
 }
@@ -492,15 +493,12 @@ fn folded_text(folded: &Folded<'_>, new: bool) -> &'static str {
 
 /// Run one folded commit statement ([`Folded`]), returning the rows it wrote.
 ///
-/// On a CONTRIBUTION uid already in use the `contribution` CTE inserts nothing
-/// (`ON CONFLICT DO NOTHING`), so the outer `LEFT JOIN` yields a NULL id; the
-/// audit row is discarded when the transaction unwinds.
-///
 /// # Errors
 /// Returns [`StorageError::ContributionUidInUse`] when a new CONTRIBUTION's uid
 /// is already in use (ITS-REST `contribution_create`: a duplicate is a
-/// conflict, never an overwrite), else [`StorageError::Database`] on a
-/// driver/insert failure.
+/// conflict, never an overwrite), [`StorageError::DanglingReference`] when a
+/// version [`Folded::Into`] names a CONTRIBUTION the store does not hold, else
+/// [`StorageError::Database`] on a driver/insert failure.
 pub async fn commit_folded(
     tx: &mut PgConnection,
     audit: &AuditRow<'_>,
@@ -530,7 +528,13 @@ pub async fn commit_folded(
         .bind(id)
         .bind(ehr_id);
     let (row, blobs) = match version {
-        None => (query.fetch_one(&mut *tx).await?, None),
+        None => (
+            query
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| uid_in_use(e.into(), id))?,
+            None,
+        ),
         Some(v) => {
             let query = bind_version(query, &v);
             let query = match &guard {
@@ -546,7 +550,9 @@ pub async fn commit_folded(
                 query,
                 &v.rows.iter().collect::<Vec<_>>(),
             );
-            let row = fetch_beside(tx, query, guard.as_ref(), &v).await?;
+            let row = fetch_beside(tx, query, guard.as_ref(), &v)
+                .await
+                .map_err(|e| uid_in_use(e, id))?;
             (row, Some((v.vo_id, v.sys_version, v.blob_uris)))
         }
     };
@@ -560,9 +566,10 @@ pub async fn commit_folded(
     if guard.is_some() {
         super::guarded::GuardFlags::read(&row)?.require()?;
     }
-    let contribution_id: Option<Uuid> = row.try_get("contribution_id")?;
     let rows = FoldedRows {
-        contribution_id: contribution_id.ok_or(StorageError::ContributionUidInUse(Some(id)))?,
+        contribution_id: row
+            .try_get::<Option<Uuid>, _>("contribution_id")?
+            .ok_or(StorageError::DanglingReference("CONTRIBUTION"))?,
         commit_audit_id: row.try_get("commit_audit_id")?,
         time_committed: row
             .try_get::<jiff_sqlx::Timestamp, _>("time_committed")?
@@ -629,6 +636,20 @@ async fn fetch_beside<'q>(
             None => bind_episodes(query, v).fetch_one(&mut *tx).await?,
         },
     })
+}
+
+/// `error` as [`StorageError::ContributionUidInUse`] when `pk_contribution`
+/// refused the CONTRIBUTION `id` (ITS-REST `contribution_create`: a supplied
+/// uid already in use is a conflict, never an overwrite).
+pub(super) fn uid_in_use(error: StorageError, id: Uuid) -> StorageError {
+    match &error {
+        StorageError::Database(sqlx::Error::Database(db))
+            if db.is_unique_violation() && db.constraint() == Some("pk_contribution") =>
+        {
+            StorageError::ContributionUidInUse(Some(id))
+        }
+        _ => error,
+    }
 }
 
 /// `error` as [`StorageError::SubjectInUse`] when `uq_ehr_subject` refused

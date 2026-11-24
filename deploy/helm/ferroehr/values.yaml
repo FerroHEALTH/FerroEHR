@@ -700,8 +700,7 @@ config:
   #         identifier_type: uuid
   # Every route enforces SMART on openEHR scopes: the scopes a Basic user's
   # PERSON is granted (`hold_scopes`) and a token's `scope` claim must grant
-  # what it calls; a system client the CDR grants `access_without_scope` whose
-  # token carries no resource scope meets every SMART on openEHR requirement.
+  # what it calls.
   # A Basic user is a credential alone: `user` and its hash. Its roles are
   # `hold_roles` grants, and authz.rbac.first_admin names the one Basic user
   # that holds `admin_role` and the product scope from the configuration, the

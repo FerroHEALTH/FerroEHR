@@ -417,12 +417,19 @@ The keys live in `[auth]` and `[auth.smart]`; see the
 | `FERROEHR__AUTH__SMART__DISCOVERY` | `false` | Serve the discovery document. |
 | `FERROEHR__SERVER__PUBLIC_BASE_URL` | unset (**required when enabled**) | The URL clients reach the server at, e.g. `https://cdr.example.com`: the absolute `services.*.baseUrl` values are it, `server.base_path` and `api.base_path`. |
 | `FERROEHR__AUTH__SMART__PLATFORM_BASE_URL` | unset | Base the discovery document hangs off. Unset = the REST root (`/ferroehr/rest`). A leading path is honoured (`/gateway/v1` → `/gateway/v1/.well-known/smart-configuration`). |
-| `FERROEHR__AUTH__SMART__EPISODE_LAUNCH` | `false` | Advertise and accept episode launch context (experimental; advisory only, no episode filtering). |
+| `FERROEHR__AUTH__SMART__EPISODE_LAUNCH` | `false` | Advertise episode launch context and narrow each request of a launch to the token's `episodeId` (experimental). |
 | `FERROEHR__AUTH__PRODUCT_SCOPE` | `__ferroehr.platform` | The scope that admits the ADMIN API and, beside a client the CDR grants `access_demographic`, the DEMOGRAPHIC API. |
 | `FERROEHR__AUTH__CAPABILITIES` | `[]` | Capabilities the discovery document adds. |
 | `FERROEHR__AUTH__SCOPES_SUPPORTED` | `[]` | The scopes the discovery document lists. |
 
 > [!NOTE]
-> Episode context is experimental: enabling it advertises the capability and
-> accepts `launch/episode`, but the server applies no episode-scoped
-> filtering: openEHR has no first-class episode resource yet.
+> Episode context is experimental, and SMART on openEHR leaves the meaning
+> of `episodeId` to the platform. FerroEHR reads it as `issuer|id`, the
+> `DV_IDENTIFIER` the care delivery environment gives the episode of care,
+> and narrows every request of the launch to it: the app reads and queries
+> that episode's compositions, the compositions placed in no episode and
+> the data your access policy's `episode_shared` names. A composition of
+> another episode answers `403` with `refused-outside-episode` on a named
+> read and is left out of every query, count and page. A launch in an
+> episode that no live care relationship of the caller names answers `400`
+> on every request, as a query's `caseload_episodes` does.

@@ -54,7 +54,8 @@ use openehr_base::validate::InvariantViolation;
 
 use crate::error::ServiceError;
 use crate::privacy::config::PrivacyConfig;
-use crate::versioning::tree::{Shape, Tree};
+use crate::versioning::tree::{Shape, Tree, Typed};
+use openehr_rm::v1_2::validate::tree::Node;
 
 /// What a clinical commit body carried that the policy refuses.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -177,7 +178,45 @@ impl PrivacyPolicy {
         rm_type: &str,
         data: T,
     ) -> Result<(), ServiceError> {
-        let refused = self.findings(rm_type, data);
+        Self::refuse(self.findings(rm_type, data))
+    }
+
+    /// The identified-party rule on one node of a typed body's walk, at RM
+    /// instance path `path` (empty for the root) below a body of RM type
+    /// `root`: what [`Self::findings`] finds at that node while the rule is in
+    /// force.
+    ///
+    /// The commit validation calls it from the RM pass's walk
+    /// ([`openehr_sdt::rm_instance::validate_rm_and_terminology_typed_visiting`]),
+    /// so the pass needs no walk of its own.
+    pub(crate) fn check_typed_node(
+        root: &str,
+        path: &str,
+        node: &Node<'_>,
+        findings: &mut Vec<Finding>,
+    ) {
+        use openehr_rm::v1_2::access::AsRm;
+        use openehr_rm::v1_2::common::generic::party_identified::PartyIdentified;
+        use openehr_rm::v1_2::common::generic::party_related::PartyRelated;
+        let object = match node.rm_type {
+            "PARTY_RELATED" => node.value.downcast_ref::<PartyRelated>().map(AsRm::as_rm),
+            "PARTY_IDENTIFIED" => node
+                .value
+                .downcast_ref::<PartyIdentified>()
+                .map(AsRm::as_rm),
+            _ => None,
+        };
+        if let Some(object) = object {
+            check_party(&format!("{root}{path}"), Typed::Object(object), findings);
+        }
+    }
+
+    /// `Ok` for no finding, else the `422` refusal carrying one entry per
+    /// finding, each keyed by its own RM path.
+    ///
+    /// # Errors
+    /// [`ServiceError::ValidationFailed`] when `refused` holds a finding.
+    pub(crate) fn refuse(refused: Vec<Finding>) -> Result<(), ServiceError> {
         if refused.is_empty() {
             return Ok(());
         }

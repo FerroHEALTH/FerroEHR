@@ -111,6 +111,30 @@ pub(crate) async fn enforce(
 /// the one statement that reads the version (#5773).
 const JUDGED_ON_READ: &str = "composition_get";
 
+/// Refuses a request narrowed to episodes of care, by its SMART on openEHR
+/// launch, that names one no live care relationship of the caller names,
+/// `400` as `caseload_episodes` refuses it (draft ITS-REST page, Queries and
+/// the Caseload).
+///
+/// # Errors
+/// The `400`, and a `503` when the care copy cannot be read.
+pub(crate) async fn enforce_launch() -> Result<(), Box<Response>> {
+    let Some(access) = current().filter(|access| access.narrowed()) else {
+        return Ok(());
+    };
+    let principal = current_principal();
+    match access.narrowed_held().await {
+        Ok(true) => Ok(()),
+        Ok(false) => Err(Box::new(
+            RestError::from(ApiError::BadRequest(
+                "episodeId: an episode no live care relationship of the caller names".to_owned(),
+            ))
+            .into_response(),
+        )),
+        Err(error) => Err(Box::new(unavailable(principal.as_ref(), error.into()))),
+    }
+}
+
 /// What a read that judges its own row is judged under: the request's access,
 /// and the EHR its path names with that EHR's verdict.
 #[derive(Debug)]
@@ -553,6 +577,9 @@ const fn reason(code: Refusal) -> &'static str {
         Refusal::NoCareRelationship => {
             "the access policy requires a care relationship to the subject and the caller has none"
         }
+        // NOTE: draft access control decision procedure, Refusals, a shown
+        // refused-outside-episode carries none of the datum's episodes.
+        Refusal::OutsideEpisode => "the data lie outside the episodes of care this access reaches",
         Refusal::PurposeMissing => "the access policy requires a declared purpose of use",
         Refusal::ConsentRequired => "the EHR needs consent and no permit directive applies",
         Refusal::NotSubject => "the caller's patient context names another EHR",

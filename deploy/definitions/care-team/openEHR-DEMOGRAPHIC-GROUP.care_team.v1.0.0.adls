@@ -14,7 +14,7 @@ description
         ["en"] = <
             language = <[ISO_639-1::en]>
             purpose = <"A team of healthcare professionals, such as a care team or a department, whose members are the professionals' PERSONs. A SCIM Group is provisioned as one.">
-            use = <"Adapted from the openEHR CKM archetypes the derived_from entry names: the team's identifiers in details and its name in identities, every element optional so a team provisioned with only a name is complete. Its name is the team's type (RM PARTY.type(), invariant Type_valid: type = name): a DV_TEXT for a group of any kind, or the DV_CODED_TEXT care_team of the draft openEHR access terminology openehr_access for a care team, bound in term_bindings, whose members' memberships coded MBR of HL7 v3 RoleClass put them in the care of its patients. Each member's PERSON holds a membership PARTY_RELATIONSHIP to the team.">
+            use = <"Adapted from the openEHR CKM archetypes the derived_from entry names: the team's identifiers in details and its name in identities, every element optional so a team provisioned with only a name is complete. Its name is the team's type (RM PARTY.type(), invariant Type_valid: type = name): a DV_TEXT for a group of any kind, or the DV_CODED_TEXT care_team of the draft openEHR access terminology openehr_access for a care team, bound in term_bindings, whose members' memberships coded member_of of openehr_access put them in the care of its patients. Each member's PERSON holds a membership PARTY_RELATIONSHIP to the team.">
             copyright = <"© openEHR Foundation">
         >
     >

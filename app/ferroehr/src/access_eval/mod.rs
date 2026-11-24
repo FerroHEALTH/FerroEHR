@@ -34,6 +34,7 @@ pub mod care_tie;
 pub mod caseload;
 pub mod class;
 pub mod condition;
+mod coverage;
 mod delegation;
 mod directive;
 pub mod episodes;

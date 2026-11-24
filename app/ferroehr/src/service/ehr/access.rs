@@ -124,7 +124,7 @@ impl FerroEhrService {
                     subject,
                 },
             };
-            self.ehr_access.insert(ehr_id, entry).await;
+            self.ehr_access.insert(ehr_id, Arc::new(entry)).await;
         }
     }
 
@@ -207,11 +207,11 @@ impl FerroEhrService {
     /// # Errors
     /// `service_overloaded` (`503`) when the projection cannot be read, and
     /// as `entry_of`.
-    async fn load_ehr_access(&self, ehr_id: EhrId) -> Result<EhrEntry, ServiceError> {
+    async fn load_ehr_access(&self, ehr_id: EhrId) -> Result<Arc<EhrEntry>, ServiceError> {
         let stored = crate::storage::access_projection::settings_of(&self.pool, ehr_id)
             .await
             .map_err(|e| ServiceError::overloaded(UNANSWERED, e))?;
-        entry_of(ehr_id, stored)
+        entry_of(ehr_id, stored).map(Arc::new)
     }
 
     /// The entries of `ehr_ids` from this replica's copy, the ones it does not
@@ -225,7 +225,7 @@ impl FerroEhrService {
     pub async fn ehr_access_entries(
         &self,
         ehr_ids: &[EhrId],
-    ) -> Result<Vec<(EhrId, EhrEntry)>, ServiceError> {
+    ) -> Result<Vec<(EhrId, Arc<EhrEntry>)>, ServiceError> {
         self.ehr_access.forget_stale().await;
         let listening = !self.ehr_access_listened.unlistened();
         let mut entries = Vec::with_capacity(ehr_ids.len());
@@ -250,9 +250,9 @@ impl FerroEhrService {
         }
         let read = read.map_err(|e| ServiceError::overloaded(UNANSWERED, e))?;
         for (ehr_id, stored) in read {
-            let entry = entry_of(ehr_id, stored)?;
+            let entry = Arc::new(entry_of(ehr_id, stored)?);
             if listening {
-                self.ehr_access.keep(ehr_id, entry.clone(), seen).await;
+                self.ehr_access.keep(ehr_id, Arc::clone(&entry), seen).await;
             }
             entries.push((ehr_id, entry));
         }
@@ -267,7 +267,7 @@ impl FerroEhrService {
     /// # Errors
     /// [`ServiceError`] when the miss path fails; the error is shared across
     /// concurrent callers of the single-flight load.
-    pub async fn ehr_access_entry(&self, ehr_id: EhrId) -> Result<EhrEntry, ServiceError> {
+    pub async fn ehr_access_entry(&self, ehr_id: EhrId) -> Result<Arc<EhrEntry>, ServiceError> {
         self.ehr_access.forget_stale().await;
         if self.ehr_access_listened.unlistened() {
             return self.load_ehr_access(ehr_id).await;
@@ -293,7 +293,7 @@ impl FerroEhrService {
         &self,
         ehr_id: EhrId,
     ) -> Result<Arc<Option<EhrAccessSettings>>, ServiceError> {
-        Ok(self.ehr_access_entry(ehr_id).await?.settings)
+        Ok(Arc::clone(&self.ehr_access_entry(ehr_id).await?.settings))
     }
 
     /// The settings classes the store holds: the input of the condition a

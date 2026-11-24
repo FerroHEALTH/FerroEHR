@@ -123,8 +123,8 @@ impl AccessCondition {
 /// leaves to the statement.
 fn reads_ehr_facts(pred: &Pred) -> bool {
     match pred {
-        Pred::Ehr(_) | Pred::Care(_) => true,
-        Pred::True | Pred::False | Pred::Data(..) => false,
+        Pred::Ehr(_) | Pred::Care(_) | Pred::Covered(_) => true,
+        Pred::True | Pred::False | Pred::Data(..) | Pred::InEpisodes(_) => false,
         Pred::Not(inner) => reads_ehr_facts(inner),
         Pred::All(preds) | Pred::Any(preds) => preds.iter().any(reads_ehr_facts),
     }

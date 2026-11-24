@@ -245,7 +245,7 @@ pub enum Operation {
     /// Reach the DEMOGRAPHIC API, which no SMART on openEHR resource family
     /// covers.
     AccessDemographic,
-    /// Write the membership (`MBR`) and `under_care_of` relationships of
+    /// Write the membership (`member_of`) and `under_care_of` relationships of
     /// [`openehr_rm::draft::access_control::terminology::CareRelationship`] and the
     /// [`openehr_rm::draft::access_control::terminology::RecordSubject`] element of a
     /// `PERSON` through the Demographic API, as a hospital's ADT system does,
@@ -435,7 +435,7 @@ mod tests {
         assert!(is_qualifier(LOGIN_ISSUER) && is_qualifier(ADMIT_IDP));
         assert!(is_qualifier(NO_SUBJECT_NAMESPACE));
         assert!(!is_qualifier("sensitivity_clearance") && !is_qualifier("permitted_purpose"));
-        assert!(is_qualifier("under_care_of") && !is_qualifier("member_of"));
+        assert!(is_qualifier("under_care_of") && is_qualifier("member_of"));
         assert!(is_qualifier("care_team"));
         assert!(is_qualifier("record_subject"));
         assert!(is_qualifier(PROVIDER) && is_qualifier(TARGET_KIND));

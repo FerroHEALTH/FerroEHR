@@ -171,7 +171,7 @@ async fn ensure_not_access_restricted_tx(
     };
     let judged = access.judgement(ehr_id);
     let named = judged.is_some();
-    let verdict = if let Some(judged) = judged.filter(|judged| judged.revision == seen) {
+    let verdict = if let Some(judged) = judged.filter(|judged| judged.entry.revision == seen) {
         judged.verdict
     } else if let Some(verdict) = access.take_ahead(ehr_id, &seen) {
         verdict
@@ -188,12 +188,12 @@ async fn ensure_not_access_restricted_tx(
             None => None,
         };
         let (subject, version) = Box::pin(subject_and_access_version(&mut *tx, ehr_id)).await?;
-        let entry = crate::access_eval::condition::EhrEntry {
+        let entry = Arc::new(crate::access_eval::condition::EhrEntry {
             version: settings.as_ref().and(version),
             settings: Arc::new(settings),
             subject,
             revision: seen,
-        };
+        });
         Box::pin(access.judge_ehr(ehr_id, &entry)).await?
     };
     let facts = match vo_id {
