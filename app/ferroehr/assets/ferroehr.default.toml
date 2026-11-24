@@ -229,7 +229,7 @@ profile = "sandbox"
 #? deployment = "unknown"
 
 # Authentication: the `ferrohealth-smart` section, whose serialization writes
-# every secret as `***`, `[auth.idp]`, `[auth.smart]` and `[auth.scim]`.
+# every secret as `***`, `[auth.smart]` and `[auth.scim]`.
 #? [auth]
 # Whether inbound authentication is on; a product may refuse `false`. Optional
 # (trust).
@@ -696,8 +696,8 @@ profile = "sandbox"
 #? emergency_access_role = ""
 # The issuers whose role claims may grant `admin_role` and
 # `emergency_access_role`, each the name of an `[auth.issuer.<name>]` table of
-# a `persons` issuer; empty, the default, lets no token grant them. Optional
-# (trust).
+# an issuer other than a `federation` one; empty, the default, lets no token
+# grant them. Optional (trust).
 #? role_issuers = []
 # The Basic user of `[auth.basic.users]` that holds `admin_role` and `[auth]
 # product_scope` from this file (`FERROEHR__AUTHZ__RBAC__FIRST_ADMIN`, default
@@ -836,8 +836,8 @@ profile = "sandbox"
 # The path of the patient's name, a `DV_TEXT` in `identities`. Optional.
 #? name = "/identities[id6]/details[id7]/items[id8]"
 
-# How FerroEHR reads each `persons` issuer's tokens when it creates a
-# provisional `PERSON` at a first login (`[authz.party_binding.issuer]`).
+# How FerroEHR reads each bound issuer's tokens when it creates a provisional
+# `PERSON` at a first login (`[authz.party_binding.issuer]`).
 #? [[authz.party_binding.issuer]]
 # The bound issuer the table holds for. It renders with any userinfo masked.
 # Optional (trust).
