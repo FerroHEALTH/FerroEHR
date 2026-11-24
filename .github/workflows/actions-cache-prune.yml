@@ -8,11 +8,20 @@
 # every main entry a newer one of its family replaced, and every sccache object
 # main has not read for three days (scripts/watch/actions-cache-prune.sh).
 #
+# It runs when a workflow that writes main's caches completes on main, so an
+# entry a new lockfile replaced goes at once, and every six hours for the
+# sccache objects that age out. The `workflow_run` job runs main's copy of
+# this file and reads no pull-request data.
+#
 # RUN COLOUR: the run goes red only when the cache list cannot be read or a
 # delete fails.
 name: Actions cache prune
 
 on:
+  workflow_run: # zizmor: ignore[dangerous-triggers] main's own runs only; API reads and deletes, no checkout of their code
+    workflows: [CI, SonarQube Cloud, Fuzz]
+    types: [completed]
+    branches: [main]
   schedule:
     # Every six hours at :29, a slot of its own. Read the estate's slots with
     # `grep -rE '^ +- cron:' .github/workflows/`.
