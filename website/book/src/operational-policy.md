@@ -230,7 +230,7 @@ own in it, which the change request does not propose. A `CAPABILITY` grants an o
 | `sign_in_persons` | Be a client the persons of its token issuer sign in through: a person's token through it is the person's own, or their representative's |
 | `act_for_persons` | Act for the persons of its token issuer, as a third-party client or as the RFC 8693 actor a person's token names in `act` |
 | `access_without_scope` | Be admitted, as a system caller whose token carries no resource scope, to every SMART on openEHR requirement |
-| `write_care_relationship` | Write the membership (`MBR` of `HL7_RoleClass`) and `under_care_of` care relationships through the Demographic API, as a hospital's ADT system does ([The access control terminology](#the-access-control-terminology)) |
+| `write_care_relationship` | Write the membership (`member_of`) and `under_care_of` care relationships through the Demographic API, as a hospital's ADT system does ([The access control terminology](#the-access-control-terminology)) |
 | `write_representation` | Write a representation (`represents`) through the Demographic API, for the providers its `provider` elements name ([Representatives in the patient portal](#representatives-in-the-patient-portal)) |
 | `write_access_policy` | Write the controller's `ACCESS_POLICY` |
 
@@ -326,10 +326,13 @@ terminology, which the access control change request proposes to openEHR
 as "openEHR access (draft)". Where an HL7 code system publishes a code of
 the same meaning, the group's term is that code, under the code system's
 id: `HL7_ConsentProvisionType` (`http://hl7.org/fhir/consent-provision-type`),
-`HL7_SecurityRoleType`
-(`http://terminology.hl7.org/CodeSystem/extra-security-role-type`) and
-`HL7_RoleClass` (`http://terminology.hl7.org/CodeSystem/v3-RoleClass`). The
-groups below are the stable contract: the access evaluator and the access
+and `HL7_SecurityRoleType`
+(`http://terminology.hl7.org/CodeSystem/extra-security-role-type`). A care-team
+membership is the exception: it is `member_of` of `openehr_access`, and
+`MBR` of `HL7_RoleClass` (`http://terminology.hl7.org/CodeSystem/v3-RoleClass`)
+is only its broader mapping, so a relationship your own archetypes code
+`HL7_RoleClass::MBR` keeps its HL7 meaning and FerroEHR attaches no access
+rule to it. The groups below are the stable contract: the access evaluator and the access
 write checks read these codes and no archetype id, so you model consent,
 restriction and care relationships with your own archetypes and bind their
 coded attributes to these groups. A value of a terminology the group holds
@@ -347,7 +350,7 @@ design.
 | `access relationship` | `care`, `representative`, `proxy` | `ACCESS_ACTOR_SCOPE.relationship`: the caller's relationship to the subject |
 | `access caller kind` | `professional`, `access_service`, `datasubject` of `HL7_SecurityRoleType` (the subject), `representative`, `system` | `ACCESS_ACTOR_SCOPE.caller_kind`. An `access_service` caller is one holding the `access_service` grant |
 | `access operation` | `read`, `write`, `export`, `query` | `ACCESS_DIRECTIVE.operations`: the operation classes a directive applies to. No capability grants one |
-| `care relationship` | `MBR` of `HL7_RoleClass`, `under_care_of` | The `name` or `details` of a `PARTY_RELATIONSHIP`: with `MBR`, the source, a professional's `PERSON`, is a member of the target, a care-team `GROUP`, or the source, a provider `ORGANISATION`, is a member of the target `GROUP`; with `under_care_of`, the source, a patient's `PERSON`, is under the care of the target, a team `GROUP` or an organisational unit |
+| `care relationship` | `member_of`, `under_care_of` | The `name` or `details` of a `PARTY_RELATIONSHIP`: with `member_of`, the source, a professional's `PERSON`, is a member of the target, a care-team `GROUP`, or the source, a provider `ORGANISATION`, is a member of the target `GROUP`; with `under_care_of`, the source, a patient's `PERSON`, is under the care of the target, a team `GROUP` or an organisational unit |
 | `representation` | `represents` | The `name` of a `PARTY_RELATIONSHIP` of its own: the source represents the target, the subject ([Representatives in the patient portal](#representatives-in-the-patient-portal)) |
 | `representation element` | `basis`, `provider`, `evidence` | The `name` of an `ELEMENT` in the `details` of a `represents` relationship |
 | `kinship`, `kinship element` | `related_to`; `kinship` | The `name` or `details` of a `PARTY_RELATIONSHIP` of its own: its source and target, two `PERSON`s, are kin, and its `kinship` element codes how ([Exclusions and conflicts of interest](#exclusions-and-conflicts-of-interest)) |
@@ -1672,8 +1675,8 @@ and your deployment, is listed in
 Beside its grants, a caller carries the facts the access evaluator reads:
 the roles it performs, the care teams it belongs to and the providers it
 acts for. A patient carries its care relationships. FerroEHR reads them in
-any archetype (a membership by HL7 v3 `RoleClass` `MBR`, care by
-`openehr_access` `under_care_of`), never by an archetype id, and holds them
+any archetype (a membership by `openehr_access` `member_of`, care by
+`under_care_of`), never by an archetype id, and holds them
 on every replica beside the grants, so a request reads them with no
 transaction of its own.
 
@@ -1707,7 +1710,7 @@ rule](#controller-rules) names them in an `applies_to` entry's
 `organisation_type`, compared by terminology and code.
 
 **Memberships.** A `PARTY_RELATIONSHIP` in a `PERSON`'s `relationships`
-whose `name` or `details` carry `MBR` of `HL7_RoleClass` makes the
+whose `name` or `details` carry `member_of` of `openehr_access` makes the
 professional a member of the care team or unit its `target` names, for as
 long as its `time_validity` holds. A membership of a party other than a
 `PERSON` or an `ORGANISATION`, and one whose target is no party of this
@@ -1793,7 +1796,7 @@ episodes with `caseload_episodes` ([Narrowing a query to your
 caseload](querying-aql.md#narrowing-a-query-to-your-caseload)).
 
 **Group memberships of a provider.** A `PARTY_RELATIONSHIP` in an
-`ORGANISATION`'s `relationships` carrying `MBR` of `HL7_RoleClass` makes that provider a
+`ORGANISATION`'s `relationships` carrying `member_of` makes that provider a
 member of the `GROUP` its `target` names, such as the providers of a
 regional health network, for as long as its `time_validity` holds. A system
 client acting for the `ORGANISATION` then acts for the `GROUP` too, so a
@@ -1821,7 +1824,7 @@ decision procedure, Writing Relationships):
 - **A membership** is covered when one `provider` element names a provider
   of the `ORGANISATION` it targets, or of the `ORGANISATION` the `GROUP` it
   targets belongs to. A `GROUP` belongs to an `ORGANISATION` by its own
-  `MBR` relationship to it; a `GROUP` that belongs to none, such as a
+  `member_of` relationship to it; a `GROUP` that belongs to none, such as a
   region, takes memberships from an administrator alone.
 
 A grant with no `provider` or no `target_kind` element writes nothing it
@@ -1849,7 +1852,7 @@ another relationship before it changes none.
 The care delivery environment reaches FerroEHR on two channels, and a
 deployment uses either or both:
 
-- **The ADT or rostering system** writes memberships (`MBR` of `HL7_RoleClass`) and `under_care_of`
+- **The ADT or rostering system** writes memberships (`member_of`) and `under_care_of`
   through the Demographic API. On the `PERSON` of a SCIM User, which the
   party binding protects, a version whose only change is to its care
   relationships commits under the grant; any other change it makes stays
@@ -1929,7 +1932,7 @@ the typical `GROUP`, so this reading is FerroEHR's own design. The Demographic
 IM makes a party's type its name (`PARTY.type()`, invariant
 `Type_valid: type = name`, and `PARTY_RELATIONSHIP.type()` likewise), so its
 `GROUP` is named by the coded `care_team` and each member's membership by the
-coded `MBR` of `HL7_RoleClass`, and the evaluator counts the member in the team's care on
+coded `member_of`, and the evaluator counts the member in the team's care on
 the next request. FerroEHR reads the kind by that code, never by the template
 or a path. `careTeam` is immutable (RFC 7643 §2.2): a
 Group never changes kind with its members in it.
@@ -1938,7 +1941,7 @@ Creating a care-team Group, and every membership change of one, needs the
 client's `write_care_relationship` grant in the CDR beside its
 `scim_provision` grant; without it the request is refused `403` naming the
 grant. The Group belongs to the provider the client acts for: its `GROUP`
-carries an `MBR` relationship to the client's `acts_for` `ORGANISATION`,
+carries a `member_of` relationship to the client's `acts_for` `ORGANISATION`,
 written when the Group is created, so the grant's `provider` element names
 that provider's identifier. A client that acts for no provider creates no
 care-team Group (`403`). A membership from SCIM has no `time_validity`, since RFC 7643 has

@@ -14,7 +14,7 @@ description
         ["en"] = <
             language = <[ISO_639-1::en]>
             purpose = <"The membership of a professional in a care team that puts them in the care of the team's patients: a PARTY_RELATIONSHIP from the professional's PERSON, its source, to the care team's GROUP, its target.">
-            use = <"Held in the professional's PERSON.relationships, written by the care delivery environment, such as a hospital's ADT or rostering system, under a write_care_relationship grant, with time_validity bounding the membership. Its details hold the code that makes it a care relationship, MBR of the HL7 v3 RoleClass code system (terminology id HL7_RoleClass), a member of a group, and the member's optional role in the team. Adapted from the PARTY_RELATIONSHIP the openEHR CKM archetype the derived_from entry names constrains inline.">
+            use = <"Held in the professional's PERSON.relationships, written by the care delivery environment, such as a hospital's ADT or rostering system, under a write_care_relationship grant, with time_validity bounding the membership. Its details hold the code that makes it a care relationship, member_of of the draft openEHR access terminology openehr_access, and the member's optional role in the team. Adapted from the PARTY_RELATIONSHIP the openEHR CKM archetype the derived_from entry names constrains inline.">
             copyright = <"© openEHR Foundation">
         >
     >
@@ -44,7 +44,7 @@ terminology
         ["en"] = <
             ["id1"] = <text = <"Care team membership"> description = <"The membership of a professional in a care team.">>
             ["id2"] = <text = <"Details"> description = <"The details of the care relationship.">>
-            ["id3"] = <text = <"Care relationship code"> description = <"The code that makes the relationship a care relationship: MBR of the HL7 v3 RoleClass code system (terminology id HL7_RoleClass), a member of a group.">>
+            ["id3"] = <text = <"Care relationship code"> description = <"The code that makes the relationship a care relationship: member_of of the draft openEHR access terminology openehr_access.">>
             ["id6"] = <text = <"Role in the team"> description = <"The role the member holds in the team.">>
         >
     >

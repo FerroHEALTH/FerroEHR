@@ -1008,7 +1008,7 @@ demographic `GROUP` of the group template:
   `mutability`). A care team is served with `careTeam = true` and the
   extension in its `schemas`; any other Group is served without either. A
   care team's `GROUP` is named by the coded `care_team` and each membership
-  by the coded `MBR` of HL7 `HL7_RoleClass` (RM demographic `PARTY.type()` is the `name`), so
+  by the coded `member_of` of `openehr_access` (RM demographic `PARTY.type()` is the `name`), so
   its members are in the care of the patients under the team's care.
   Creating one and changing its members needs the client's
   `write_care_relationship` grant beside `scim_provision`, and is **403**

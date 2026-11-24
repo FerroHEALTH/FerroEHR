@@ -58,8 +58,8 @@ fn party_ref(kind: &str, id: VoId) -> Value {
             "id": { "_type": "HIER_OBJECT_ID", "value": id.to_string() } })
 }
 
-/// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
-pub(crate) const MEMBER: (&str, &str) = ("HL7_RoleClass", "MBR");
+/// A professional's membership of a care team: `openehr_access::member_of`.
+pub(crate) const MEMBER: (&str, &str) = ("openehr_access", "member_of");
 /// The provider the examples' care relationships are in the care of.
 pub(crate) fn provider() -> ferroehr::party_binding::grants::caller::care_of::ProviderKey {
     ferroehr::party_binding::grants::caller::care_of::ProviderKey::new(

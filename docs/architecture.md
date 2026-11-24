@@ -1686,8 +1686,10 @@ from the party binding outcome (`BindingCode::term`). Each is a closed set of te
 by terminology id and code. A term whose meaning an HL7 code system
 publishes is that code under the code system's id: `HL7_ConsentProvisionType`
 `permit` and `deny`, `HL7_SecurityRoleType` `datasubject` (the subject
-caller kind and the subject-of-care accessor kind), `HL7_RoleClass` `MBR` (a
-care-team membership) and `HL7_AuditEventAction` `C`, `R`, `U`, `D`. A value of
+caller kind and the subject-of-care accessor kind) and `HL7_AuditEventAction`
+`C`, `R`, `U`, `D`. A care-team membership is `openehr_access` `member_of`,
+with `HL7_RoleClass` `MBR` as its broader mapping: a client's own relationship
+coded with the generic HL7 code takes no access meaning. A value of
 a terminology the group holds no term of, or a code outside the group, is
 refused. The operations gain the grants `write_care_relationship` and
 `write_access_policy`, and the care relationship codes are qualifiers, never
@@ -1848,15 +1850,15 @@ party-store statement to resolve it. **Our own design.**
 
 **Caller facts** (#5511). Beside the grants, the side table holds what the
 access evaluator reads about a caller (migrations `party/0039`, `party/0042`;
-`party/0044` keys a membership by its code, `MBR`):
+a membership is keyed by its code, `member_of`):
 `binding_caller_fact`, one row per `ROLE` whose `name` is a `DV_CODED_TEXT`
 of the jurisdiction's terminology (the role its performer holds while the
 `ROLE` is in force, read with `ForeignCode::read`, #5621), per `ORGANISATION`
 whose `name` is one (its own type, `organisation_type`, `party/0046`, #5691),
 and per care
 relationship a `PERSON` holds (an inline
-`PARTY_RELATIONSHIP` whose `name` or `details` carry a membership, HL7 v3
-`RoleClass#MBR`, or `openehr_access::under_care_of`, RM demographic `party_relationship.adoc`: `source`,
+`PARTY_RELATIONSHIP` whose `name` or `details` carry a membership,
+`openehr_access::member_of`, or `openehr_access::under_care_of`, RM demographic `party_relationship.adoc`: `source`,
 `target`, `time_validity`), each with the term of its holder. The patient's
 `under_care_of` team ids are projected at the commit of the patient's
 `PERSON`. A commit whose facts changed stamps every party whose facts
@@ -1946,7 +1948,7 @@ only for a caller holding `write_care_relationship` or an administrator
 (BASE Architecture Overview `master07-security.adoc` §The Problem of Roles:
 the care delivery environment evaluates "care deliverer"). A care
 relationship of another party kind or of its own container is refused
-`422`. An `ORGANISATION`'s `MBR` relationship is its membership of a
+`422`. An `ORGANISATION`'s `member_of` relationship is its membership of a
 `GROUP` (#5575): written as its own facts on the commit of the
 `ORGANISATION` under the same grant rule, and resolved for a client by
 `LiveGrants::memberships` of the provider its acts-for relationship names,
@@ -1976,7 +1978,7 @@ holder of `write_care_relationship`, and the care check decides it, so the
 ADT system rosters a provisioned professional (#5617). A SCIM Group created
 with `careTeam` in FerroEHR's Group extension is a care team: its `GROUP`
 is named by the coded `openehr_access::care_team` (group `group kind`) and
-each membership by the coded `HL7_RoleClass::MBR`, both bound in the default
+each membership by the coded `openehr_access::member_of`, both bound in the default
 definitions' `term_bindings`, since RM demographic `PARTY.type()` and
 `PARTY_RELATIONSHIP.type()` are the `name` (`Type_valid`); creating
 one needs the client's `write_care_relationship` grant, and its membership

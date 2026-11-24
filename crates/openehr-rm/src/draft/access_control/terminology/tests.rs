@@ -39,10 +39,6 @@ fn a_term_with_a_standard_code_is_read_by_that_code_alone() {
         Ok(CallerKind::Subject)
     );
     assert_eq!(
-        CareRelationship::read(TERMINOLOGY_ID_ROLE_CLASS, "MBR"),
-        Ok(CareRelationship::MemberOf)
-    );
-    assert_eq!(
         Action::read(TERMINOLOGY_ID_AUDIT_EVENT_ACTION, "R"),
         Ok(Action::Read)
     );
@@ -61,7 +57,11 @@ fn a_term_with_a_standard_code_is_read_by_that_code_alone() {
             code: "subject".to_owned()
         })
     );
-    assert!(CareRelationship::read(TERMINOLOGY_ID_ACCESS, "member_of").is_err());
+    assert!(CareRelationship::read("HL7_RoleClass", "MBR").is_err());
+    assert_eq!(
+        CareRelationship::read(TERMINOLOGY_ID_ACCESS, "member_of"),
+        Ok(CareRelationship::MemberOf)
+    );
     assert!(Action::read(TERMINOLOGY_ID_ACCESS, "read").is_err());
     assert_eq!(
         CareRelationship::read(TERMINOLOGY_ID_ACCESS, "under_care_of"),

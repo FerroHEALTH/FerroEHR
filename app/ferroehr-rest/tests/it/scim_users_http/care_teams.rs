@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Care teams of SCIM-provisioned professionals, through their real callers
-//! (#5617, #5640): the ADT system writing a membership (`MBR`) on a SCIM User's
+//! (#5617, #5640): the ADT system writing a membership (`member_of`) on a SCIM User's
 //! `PERSON` through the Demographic API, and a SCIM client creating a
 //! care-team Group with FerroEHR's Group extension (`careTeam`).
 //!
 //! The party protection leaves a version that changes only the care
 //! relationships to the `write_care_relationship` grant, held in the CDR. A
 //! care-team Group's `GROUP` is named by the coded `care_team` and each
-//! membership by the coded `MBR` (RM demographic `PARTY.type()` and
+//! membership by the coded `member_of` (RM demographic `PARTY.type()` and
 //! `PARTY_RELATIONSHIP.type()` are the `name`), written under the same grant. A Group change
 //! compares what the care relationships say, never their position. No openEHR
 //! spec gives a relationship an access meaning or governs who writes a party:
@@ -127,15 +127,15 @@ pub(super) async fn write_person(
     (status, body)
 }
 
-/// The membership code: HL7 v3 `RoleClass#MBR`, "a member of a group".
+/// The membership code: `openehr_access::member_of`.
 fn membership_code() -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": "member of",
         "defining_code": { "_type": "CODE_PHRASE",
-            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_RoleClass" },
-            "code_string": "MBR" } })
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
+            "code_string": "member_of" } })
 }
 
-/// A membership (`MBR`) care relationship of the default archetype from the
+/// A membership (`member_of`) care relationship of the default archetype from the
 /// `PERSON` `member` to the `GROUP` `team`, valid from 2026-01-01.
 pub(super) fn member_of(member: &str, team: &str) -> Value {
     let reference = |class: &str, id: &str| {
@@ -197,10 +197,10 @@ pub(super) async fn relationships(app: &Router, id: &str) -> Vec<Value> {
         .unwrap_or_default()
 }
 
-/// Whether `relationship` carries the membership code, `HL7_RoleClass::MBR`.
+/// Whether `relationship` carries the membership code, `openehr_access::member_of`.
 pub(super) fn carries_member_of(relationship: &Value) -> bool {
     let text = relationship.to_string();
-    text.contains("\"code_string\":\"MBR\"") && text.contains("\"value\":\"HL7_RoleClass\"")
+    text.contains("\"code_string\":\"member_of\"") && text.contains("\"value\":\"openehr_access\"")
 }
 
 /// The ADT system rosters a SCIM User on a team: a version of the User's
@@ -273,7 +273,7 @@ async fn a_roster_without_the_grant_is_refused() {
 
 /// A care-team Group: its creation and each membership need the client's
 /// `write_care_relationship` grant; its members' memberships carry
-/// `MBR`; `careTeam` is served and never changes; and removing a member
+/// `member_of`; `careTeam` is served and never changes; and removing a member
 /// removes the care relationship.
 #[tokio::test]
 async fn a_care_team_group_writes_member_of_under_the_grant() {
@@ -290,8 +290,8 @@ async fn a_care_team_group_writes_member_of_under_the_grant() {
             &held[0]["name"]["defining_code"]["terminology_id"]["value"],
             &held[0]["name"]["defining_code"]["code_string"]
         ),
-        (&json!("HL7_RoleClass"), &json!("MBR")),
-        "the membership is named by the coded MBR: {held:?}"
+        (&json!("openehr_access"), &json!("member_of")),
+        "the membership is named by the coded member_of: {held:?}"
     );
     let request = common::req("GET", format!("{BASE}/demographic/group/{team}"))
         .auth(&system_token(ADT))

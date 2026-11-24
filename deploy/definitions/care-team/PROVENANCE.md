@@ -15,13 +15,13 @@ SCIM can provision Groups:
    membership a member's `PERSON` holds to the team's `GROUP`, named by
    `[authz.party_binding.membership] archetype_id` in its interface form,
    `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1`. Its `name` is a
-   `DV_TEXT`, or the coded `MBR` of HL7 v3 `RoleClass` when the team is a care
-   team, bound in its `term_bindings`; the care team's `GROUP` binds its coded
-   `care_team` of `openehr_access` the same way.
+   `DV_TEXT`, or the coded `member_of` of `openehr_access` when the team is a
+   care team, bound in its `term_bindings`; the care team's `GROUP` binds its
+   coded `care_team` the same way.
 3. `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.1.adls`: an example
    care-team membership a professional's `PERSON` holds to the team's
-   `GROUP`, whose details carry the membership code `MBR` of HL7 v3
-   `RoleClass` (terminology id `HL7_RoleClass`).
+   `GROUP`, whose details carry the membership code `member_of` of
+   `openehr_access`.
 4. `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v1.0.0.adls`: an
    example care relationship a patient's `PERSON` holds to a care team's
    `GROUP` or a unit, with the admission as its `time_validity`, whose details

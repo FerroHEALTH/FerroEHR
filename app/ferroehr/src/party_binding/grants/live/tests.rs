@@ -118,7 +118,7 @@ async fn stamp_membership(tx: &mut sqlx::PgConnection, party: Uuid) {
     sqlx::query(
         "INSERT INTO binding_caller_fact (holder_id, ordinal, kind, party_id, target_id, \
          lifecycle_state, role_validity, validity) \
-         VALUES ($1, 0, 'MBR', $1, $2, '532', '(,)', '(,)')",
+         VALUES ($1, 0, 'member_of', $1, $2, '532', '(,)', '(,)')",
     )
     .bind(party)
     .bind(Uuid::now_v7())

@@ -55,7 +55,7 @@ ITS-REST 1.1.0 has no resource for a relationship; its Demographic API (`x-statu
 |The reverse reading: the relationships that reach a carer, paged by `offset` and `fetch`. For the systems that manage relationships.
 |===
 
-The same resources serve memberships, representations and kinships by the code of the relationship's `_name_` (`kind=MBR`, `represents`, `related_to`).
+The same resources serve memberships, representations and kinships by the code of the relationship's `_name_` (`kind=member_of`, `represents`, `related_to`).
 
 That a person is under the care of a given professional or service is data concerning health (GDPR Art 4(15), Art 9). Every read of these resources is decided per subject it reveals: a relationship of a subject whose record the caller may not read is left out of a list, and its role and episode are returned only to a caller that may read the record or to the writer for its own provider. Each read is recorded in the access log once per subject it reveals.
 

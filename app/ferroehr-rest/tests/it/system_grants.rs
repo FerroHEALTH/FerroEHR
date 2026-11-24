@@ -132,7 +132,7 @@ pub(crate) async fn group(svc: &FerroEhrService, name: &str) -> VoId {
 }
 
 /// Commits, as the server, a `GROUP` named `name` belonging to a provider
-/// `ORGANISATION` identified by `provider` (`(issuer, id)`) by an `MBR`
+/// `ORGANISATION` identified by `provider` (`(issuer, id)`) by a `member_of`
 /// relationship of its own, so a `write_care_relationship` grant naming that
 /// provider writes its memberships (#6073); the `GROUP`'s container.
 pub(crate) async fn provider_group(
@@ -152,8 +152,8 @@ pub(crate) async fn provider_group(
         "archetype_node_id": "at0050",
         "name": { "_type": "DV_CODED_TEXT", "value": "member of",
             "defining_code": { "_type": "CODE_PHRASE",
-                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_RoleClass" },
-                "code_string": "MBR" } },
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
+                "code_string": "member_of" } },
         "source": reference("GROUP", team), "target": reference("ORGANISATION", hospital) }]);
     Box::pin(svc.party_update(
         PartyKind::Group,
@@ -168,7 +168,7 @@ pub(crate) async fn provider_group(
 
 /// Commits, as the server, a provider `ORGANISATION` identified by
 /// `(issuer, id)`, a member of each `GROUP` of `groups` by a relationship
-/// coded HL7 v3 `RoleClass#MBR`; its container.
+/// coded `openehr_access::member_of`; its container.
 pub(crate) async fn provider_organisation(
     svc: &FerroEhrService,
     (issuer, id): (&str, &str),
@@ -193,8 +193,8 @@ pub(crate) async fn provider_organisation(
                         "name": { "_type": "DV_CODED_TEXT", "value": "member of",
                             "defining_code": { "_type": "CODE_PHRASE",
                                 "terminology_id": { "_type": "TERMINOLOGY_ID",
-                                    "value": "HL7_RoleClass" },
-                                "code_string": "MBR" } },
+                                    "value": "openehr_access" },
+                                "code_string": "member_of" } },
                         "source": reference("ORGANISATION", hospital),
                         "target": reference("GROUP", *group) })
             })
