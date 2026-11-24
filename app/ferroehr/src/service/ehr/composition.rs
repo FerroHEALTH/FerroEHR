@@ -77,9 +77,13 @@ impl FerroEhrService {
         // after the EHR gates, in pre-check order. 553|incomplete| relaxes its
         // strictness (master06 §Version Lifecycle). A valid body's large media
         // go to the blob store before a connection is held.
-        let validated = self
+        let validated = match self
             .accept_body(Kind::Composition, &mut composition, incomplete)
-            .await?;
+            .await?
+        {
+            Ok(()) => self.placement_declared(ehr_id, &composition).await,
+            refused => refused,
+        };
         let persistent = persistent_template(&composition);
         // A create a later attempt judges again could only commit after a
         // double flip of the EHR, so it keeps no copy of its content.
@@ -402,8 +406,13 @@ impl FerroEhrService {
         // A valid body's large media go to the blob store before a connection is held.
         let validated = match &resolved {
             Ok(parts) => Some(
-                self.accept_body(Kind::Composition, &mut composition, parts.incomplete)
-                    .await?,
+                match self
+                    .accept_body(Kind::Composition, &mut composition, parts.incomplete)
+                    .await?
+                {
+                    Ok(()) => self.placement_declared(ehr_id, &composition).await,
+                    refused => refused,
+                },
             ),
             Err(_) => None,
         };

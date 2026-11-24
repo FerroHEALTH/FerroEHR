@@ -308,6 +308,7 @@ impl Projector {
                         writer: care.writer(),
                         self_declared: care.self_declared(),
                         role: care.role().clone(),
+                        episode: care.episode().map(|episode| episode.key),
                     });
                 }
             }

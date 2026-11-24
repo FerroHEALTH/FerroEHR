@@ -46,6 +46,7 @@
 pub mod attestation;
 pub(crate) mod bounds;
 pub mod care_of;
+pub mod care_ref;
 pub mod facts;
 pub(crate) mod kin;
 pub mod patient;
