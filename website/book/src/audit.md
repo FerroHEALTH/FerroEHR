@@ -1157,7 +1157,7 @@ A request writes each system record once, in `audit.audit_event`, and never
 changes it. Its position (`seq`) is drawn after its transaction took its
 id, and its content digest is computed by the server when it writes the
 record: the SHA-256 of the RFC 8785 form of the array
-`["ferroehr.audit_event.v6", {column: value}]` over every column but `seq`
+`["ferroehr.audit_event.v7", {column: value}]` over every column but `seq`
 and the digest, with SQL `NULL` as `null`, booleans as booleans, text and
 UUIDs as strings, integers (`integer[]` element by element) as decimal
 strings, instants as `YYYY-MM-DDTHH:MM:SS.ffffffZ` in UTC, dates as
