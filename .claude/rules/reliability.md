@@ -33,8 +33,8 @@ chapters, the Clippy book, and the Cargo/rustdoc books.)
    changelog guard,
    attribution guard, rustfmt, the rustdoc job (`cargo doc` with
    `RUSTDOCFLAGS=-D warnings` — the `[workspace.lints.rustdoc]` table is
-   inert without a doc run), the MSRV job (`cargo hack check
-   --rust-version`), and the scheduled latest-deps workflow.
+   inert without a doc run), the nightly MSRV job (`cargo hack check
+   --rust-version`, `nightly.yml`), and the scheduled latest-deps workflow.
 5. **Review-enforced** (weakest; minimize): only for properties no tool can
    check — each is explicitly marked below.
 

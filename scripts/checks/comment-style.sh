@@ -24,6 +24,18 @@
 #   8. empty sections      a bare `/// # Errors` / `# Panics` heading with no
 #                          body satisfies the doc lints and tells a caller
 #                          nothing.
+#   9. narration           a comment describes the code as it is: a phrase
+#                          that dates it ("has since", "fell by", "since
+#                          #NNNN", "measured beside the merge base") is
+#                          history, which belongs in the PR and in git.
+#  10. item doc length     an item's `///` doc is at most $DOC_MAX prose lines,
+#                          counting neither its `# Errors`, `# Panics`,
+#                          `# Examples` and `# Safety` sections, its code
+#                          blocks nor its table rows. A doc that feeds the
+#                          served OpenAPI document or the configuration
+#                          schema (`utoipa`, `ToSchema`, `IntoParams`,
+#                          `OpenApi`, `JsonSchema` on the item) is product
+#                          text and exempt.
 #
 # NOT machine-checked, deliberately (#2981): module-doc (`//!`) block LENGTH.
 # The tree's longest module docs are governing-section maps and matching-rule
@@ -46,6 +58,7 @@ set -euo pipefail
 
 NOTE_MAX=3
 RUN_MAX=8
+DOC_MAX=12
 
 caller="$PWD"
 cd "$(dirname "$0")/../.."
@@ -107,7 +120,7 @@ fi
 # window was closed only by the SPDX headers that happened to fill it (#2323).
 fail=0
 # shellcheck disable=SC2016 # an awk program, which xargs runs
-out="$(printf '%s\0' "${files[@]}" | xargs -0 awk -v NOTE_MAX="$NOTE_MAX" -v RUN_MAX="$RUN_MAX" '
+out="$(printf '%s\0' "${files[@]}" | xargs -0 awk -v NOTE_MAX="$NOTE_MAX" -v RUN_MAX="$RUN_MAX" -v DOC_MAX="$DOC_MAX" '
     function flush_note() {
       if (note_len > NOTE_MAX)
         printf "%s:%d: NOTE block is %d lines (max %d) — a NOTE is a citation + one sentence; move the essay to the PR/issue\n", file, note_start, note_len, NOTE_MAX
@@ -128,8 +141,14 @@ out="$(printf '%s\0' "${files[@]}" | xargs -0 awk -v NOTE_MAX="$NOTE_MAX" -v RUN
         printf "%s:%d: `# %s` doc section has no body — it satisfies the doc lint and tells a caller nothing; write the contract or drop the heading\n", file, sec_start, sec_name
       sec_start = 0
     }
+    function flush_item(  ) {
+      if (item_pend && !item_served && item_len > DOC_MAX)
+        printf "%s:%d: item doc is %d prose lines (max %d) — keep the summary, the contract, the citations and the rustdoc sections; the rest belongs on the PR/issue\n", file, item_start, item_len, DOC_MAX
+      item_pend = 0; item_depth = 0
+    }
     FNR == 1 {
-      flush_note(); flush_run(); flush_doc_note(); flush_sec()
+      flush_note(); flush_run(); flush_doc_note(); flush_sec(); flush_item()
+      item_in = 0
       file = FILENAME
       skip = (index($0, "// @generated") == 1)
     }
@@ -139,6 +158,36 @@ out="$(printf '%s\0' "${files[@]}" | xargs -0 awk -v NOTE_MAX="$NOTE_MAX" -v RUN
       sub(/^[[:space:]]+/, "", line)
       is_doc  = (line ~ /^\/\/[\/!]/)
       is_line = (!is_doc && line ~ /^\/\//)
+      is_item = (line ~ /^\/\/\/([^\/]|$)/)
+
+      # 10. the item doc budget. A block of `///` lines is counted as it is
+      # read; once it ends, the attributes up to the item decide whether it
+      # is served text.
+      if (is_item) {
+        if (item_pend) flush_item()
+        if (!item_in) {
+          item_in = 1; item_start = FNR; item_len = 0; item_fence = 0; item_sec = 0
+        }
+        body = line; sub(/^\/\/\/[[:space:]]?/, "", body)
+        if (body ~ /^[[:space:]]*```/) item_fence = !item_fence
+        else if (!item_fence) {
+          if (body ~ /^#/) item_sec = (body ~ /^#+[[:space:]]*(Errors|Panics|Examples|Safety)[[:space:]]*$/)
+          else if (body !~ /^[[:space:]]*$/ && body !~ /^[[:space:]]*\|/ && !item_sec) item_len++
+        }
+      } else if (item_in) {
+        item_in = 0; item_pend = 1; item_served = 0; item_depth = 0
+      }
+      if (item_pend && !is_item) {
+        if ($0 ~ /utoipa|ToSchema|IntoParams|OpenApi|JsonSchema/) item_served = 1
+        if (line ~ /^#\[/ || item_depth > 0 || line ~ /^\/\//) {
+          t = $0; opens = gsub(/\(/, "(", t); closes = gsub(/\)/, ")", t)
+          item_depth += opens - closes
+        } else flush_item()
+      }
+
+      # 9. narration: a phrase that dates the code is history.
+      if ((is_doc || is_line) && tolower(line) ~ /fell by|beside the merge base|has since|have since|where (it|they) (sent|made|ran|wrote) [0-9]|(before|since|until) #[0-9]|formerly|used to be|now correctly|previously-failing/)
+        printf "%s:%d: comment narrates history — describe the code as it is; the history belongs in the PR and in git\n", file, FNR
 
       # 1. block comments on code lines: a `/*` at line start or after
       # whitespace, before any string literal on the line. The position
@@ -224,7 +273,7 @@ out="$(printf '%s\0' "${files[@]}" | xargs -0 awk -v NOTE_MAX="$NOTE_MAX" -v RUN
       }
       flush_note(); flush_run(); flush_doc_note(); flush_sec()
     }
-    END { flush_note(); flush_run(); flush_doc_note(); flush_sec() }
+    END { flush_note(); flush_run(); flush_doc_note(); flush_sec(); if (item_in) { item_pend = 1; item_served = 0 }; flush_item() }
   ')"
 if [[ -n "$out" ]]; then
   printf '%s\n' "$out"

@@ -2,5 +2,8 @@
   "schemaVersion": 1,
   "label": "EEHRxF draft 2026-11-23 · PDF/A originals",
   "message": "byte-identical 2/2",
-  "color": "blue"
+  "color": "blue",
+  "labelColor": "#003399",
+  "namedLogo": "europeanunion",
+  "logoColor": "#FFCC00"
 }

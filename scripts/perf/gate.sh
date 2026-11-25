@@ -61,6 +61,8 @@
 #
 # Environment:
 #   PERF_OUT      the report directory (default target/perf)
+#   PERF_PAIRS    the A/B load-phase pairs, an even count (default 4, the
+#                 tool's own); the nightly judges over 8 (#6458)
 #   PERF_POPULATION  the EHRs the seed adds for the population query
 #                 (default 2000; the release lane seeds 20000)
 #   PERF_SIGNING_KEY the algorithm of the generated signing key, ed25519
@@ -745,7 +747,7 @@ ab() {
   "$bin" ab --plan "$OUT/plan.toml" \
     --head-url "$head_url" --head-container "$head_container" --head-database-url "$head_db" \
     --base-url "$SERVER_URL" --base-container "${TARGET[1]}" --base-database-url "$DATABASE_URL" \
-    "${vars[@]}" --out-dir "$OUT" --summary "$OUT/summary.md" || status=$?
+    --pairs "${PERF_PAIRS:-4}" "${vars[@]}" --out-dir "$OUT" --summary "$OUT/summary.md" || status=$?
   population_summary "$OUT/summary.md"
   storage_summary "$OUT/summary.md"
   statements_summary "$OUT/summary.md"
