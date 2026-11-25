@@ -364,7 +364,7 @@ impl Builder<'_> {
             let search = read(function, column);
             let mut test = match texts {
                 [text] => search.eq(Expr::val(text.as_str())),
-                _ => in_hidden_set(search, texts.to_vec(), "text"),
+                _ => in_hidden_set(search, texts.to_vec(), SetElement::Text),
             };
             if !numbers.is_empty() {
                 let number = read("node_number", Node::ValueNum);
@@ -376,7 +376,7 @@ impl Builder<'_> {
                     _ => in_hidden_set(
                         number,
                         numbers.iter().map(|text| (*text).to_owned()).collect(),
-                        "numeric",
+                        SetElement::Numeric,
                     ),
                 });
             }
@@ -665,11 +665,19 @@ pub(super) fn text_leaf(steps: &[FragmentStep]) -> Option<TextLeaf> {
 /// `element`s and read through an initplan, so a custom plan sees the set no
 /// better than the generic plan does and the statement settles on the
 /// generic one (`PostgreSQL` docs, `PREPARE`, "Notes"; #6544).
-fn in_hidden_set(value: Expr, members: Vec<String>, element: &str) -> Expr {
-    Expr::cust_with_exprs(
-        format!("$1 = ANY(CAST((SELECT CAST($2 AS {element}[])) AS {element}[]))"),
-        [value, Expr::val(members)],
-    )
+fn in_hidden_set(value: Expr, members: Vec<String>, element: SetElement) -> Expr {
+    let template = match element {
+        SetElement::Text => "$1 = ANY(CAST((SELECT CAST($2 AS text[])) AS text[]))",
+        SetElement::Numeric => "$1 = ANY(CAST((SELECT CAST($2 AS numeric[])) AS numeric[]))",
+    };
+    Expr::cust_with_exprs(template, [value, Expr::val(members)])
+}
+
+/// The element type the members of a hidden set are bound as.
+#[derive(Debug, Clone, Copy)]
+enum SetElement {
+    Text,
+    Numeric,
 }
 
 /// Whether `text` is how a number renders as text, `-?digits[.digits]`: a
