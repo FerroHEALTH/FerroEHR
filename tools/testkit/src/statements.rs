@@ -147,7 +147,7 @@ pub enum StatementsEvicted {
         "pg_stat_statements evicted statements while the test counted them ({since} evictions \
          before, {now} after), so the count may have lost some: the server's \
          pg_stat_statements.max is too small for the run (tools/testkit/src/server_settings.rs, \
-         scripts/lib/test-postgres.sh)"
+         docker/ci-postgres/Dockerfile)"
     )]
     Evicted {
         /// The evictions when the count began.
