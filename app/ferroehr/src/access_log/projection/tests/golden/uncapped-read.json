@@ -174,7 +174,7 @@
       {
         "type": {
           "code": "XrequestId",
-          "display": "X-Request-Id",
+          "display": "transport specific unique identifier where http X-Request-Id is used",
           "system": "https://profiles.ihe.net/ITI/BALP/CodeSystem/BasicAuditEntityType"
         },
         "what": {
