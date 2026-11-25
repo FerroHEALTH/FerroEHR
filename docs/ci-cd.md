@@ -80,7 +80,9 @@ The timing lanes judge for a stable signal with no threshold changed:
 perf A/B runs eight load-phase pairs, so a metric breaches in most pairs or
 not at all and one low base sample cannot carry a breach (#6458), and the
 CPU budget runs three rounds on three runners and fails only when two
-breach, since a small write's share moves with the runner host (#6477).
+breach, since a small write's share moves with the runner host (#6477); a
+round the test refuses as too noisy to judge, which it checks only once
+every path passed, counts as no breach (#6569).
 
 A pull request runs the nightly timing lanes when it carries `ci:perf`, and
 every lane of `nightly.yml` when it carries `ci:heavy`. Adding the label
