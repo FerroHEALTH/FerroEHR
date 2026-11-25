@@ -13,9 +13,11 @@
 #   all        true when the change reaches every package
 #   packages   the reached packages, space-separated, in workspace order
 #   rust       true when any package is reached
-#   viewer     true when ferroehr-viewer is reached
-#   server     true when a package other than ferroehr-viewer is reached
-#   cargo_args the package arguments of the server lanes (viewer excluded):
+#   runs       the reached packages whose code changed, not only comments
+#              (scripts/lib/comment-only.sh); the lanes that run code read it
+#   viewer     true when ferroehr-viewer's code is reached
+#   server     true when the code of a package other than the viewer is reached
+#   cargo_args the package arguments of the server lanes, from `runs` (viewer excluded):
 #              `--workspace --exclude ferroehr-viewer`, or `-p a -p b ...`
 #   all_args   the package arguments of the whole-workspace lanes (clippy,
 #              rustdoc): `--workspace`, or `-p a -p b ...`
@@ -194,12 +196,15 @@ reach() {
   '
 }
 
+# emit ALL PACKAGES [RUNS]: RUNS (default PACKAGES) are the packages whose
+# code changed, not only their comments; the lanes that run code read them.
 emit() {
-  local all="$1" packages="$2" p args=""
+  local all="$1" packages="$2" runs="${3-$2}" p args=""
   echo "all=$all"
   echo "packages=$packages"
+  echo "runs=$runs"
   if [[ -n "$packages" ]]; then echo "rust=true"; else echo "rust=false"; fi
-  if has "$packages" "$VIEWER"; then echo "viewer=true"; else echo "viewer=false"; fi
+  if has "$runs" "$VIEWER"; then echo "viewer=true"; else echo "viewer=false"; fi
   local every=""
   if [[ "$all" = true ]]; then
     args="--workspace --exclude $VIEWER"
@@ -207,6 +212,8 @@ emit() {
   else
     for p in $packages; do
       every+="${every:+ }-p $p"
+    done
+    for p in $runs; do
       [[ "$p" = "$VIEWER" ]] || args+="${args:+ }-p $p"
     done
   fi
@@ -288,7 +295,13 @@ case "${1:-}" in
   *)
     base="$1"
     head="${2:?usage: $0 <base-rev> <head-rev>}"
-    seeds="$(bash scripts/lib/changed-paths.sh "$base" "$head" | seeds_of)"
-    if [[ "$seeds" = ALL ]]; then everything; else emit false "$(reach "$seeds")"; fi
+    paths="$(bash scripts/lib/changed-paths.sh "$base" "$head")"
+    seeds="$(seeds_of <<<"$paths")"
+    if [[ "$seeds" = ALL ]]; then
+      everything
+    else
+      exec_seeds="$(bash scripts/lib/comment-only.sh "$base" "$head" <<<"$paths" | seeds_of)"
+      emit false "$(reach "$seeds")" "$(reach "$exec_seeds")"
+    fi
     ;;
 esac
