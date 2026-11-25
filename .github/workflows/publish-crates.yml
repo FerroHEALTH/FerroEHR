@@ -73,7 +73,7 @@ jobs:
       - id: semver-pin
         name: Read the cargo-semver-checks pin
         run: echo "version=$(bash scripts/checks/semver.sh --pin)" >> "$GITHUB_OUTPUT"
-      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-semver-checks@${{ steps.semver-pin.outputs.version }}
       - name: Plan and stamp the lockstep version
@@ -122,7 +122,7 @@ jobs:
       - id: semver-pin
         name: Read the cargo-semver-checks pin
         run: echo "version=$(bash scripts/checks/semver.sh --pin)" >> "$GITHUB_OUTPUT"
-      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-semver-checks@${{ steps.semver-pin.outputs.version }}
       - name: Plan and stamp the lockstep version
