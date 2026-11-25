@@ -272,21 +272,14 @@ fn upload_response(
     resp
 }
 
-/// Serve the service-owned Better `WebTemplate` for `template_id` (single
-/// resolution seam via `state.backend().web_template(..)`) under the media
-/// type `fmt` names: `application/openehr.wt+json` for the Web Template
-/// document type, `application/json` when that is what the client negotiated.
-/// The body is identical — only the declared type follows the negotiation
-/// (`docs/specs/openehr/ITS-REST/specifications/docs/overview/Resources.md`
-/// §JSON Format: the response carries the `Content-Type` of the representation
-/// the client asked for).
+/// Serves the Web Template for `template_id` under the media type `fmt`
+/// names: `application/openehr.wt+json`, or `application/json` when the client
+/// negotiated that (ITS-REST overview `Resources.md` §JSON Format); the body
+/// is the same.
 ///
-/// The Web Template representation itself is spec-named, not an extension:
-/// Resources.md §Simplified Formats assigns "`application/openehr.wt+json` for
-/// the Operational Template definition as Web Template JSON format", and the
-/// retrieval operation declares that media type on its `200`. The document's
-/// internal shape follows the Better `web-template` model, for which no
-/// openEHR spec defines a schema — our own design/extension there.
+/// `Resources.md` §Simplified Formats names the media type. The document's
+/// shape follows the Better `web-template` model, for which no openEHR spec
+/// defines a schema: our own design.
 async fn web_template_response(
     state: &AppState,
     template_id: &str,

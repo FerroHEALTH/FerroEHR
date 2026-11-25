@@ -79,22 +79,13 @@ pub fn declared_abstract_root_type(element: &str) -> Option<&'static str> {
         .map(|r| r.declared_type)
 }
 
-/// Deserialize an RM value from a canonical openEHR XML document.
+/// Deserializes an RM value from a canonical openEHR XML document.
 ///
-/// Reading is namespace-agnostic by construction: the reader dispatches on
-/// local element names and `xsi:type`, and never inspects the document's root
-/// `xmlns`. Both published lineages therefore parse identically. The 2.0.0
-/// restructure changed the namespace the schemas declare
-/// (`docs/specs/openehr/ITS-XML/README.adoc` §"Releases and IM Versions":
-/// "Simultaneously, the internal namespace used in the schemas is also changed
-/// to `http://schemas.openehr.org/v2`") — it did NOT make the two bundles
-/// interchangeable: the flat `Release-1.0.2v2` bundle is frozen at an older RM
-/// generation and declares neither `FOLDER.details` nor 22 other RM 1.2.0
-/// attributes, nor 50 RM 1.2.0 classes at all
-/// (`schemas/xml/PROVENANCE.md` §"Two lineages"). runtime::Namespace-agnostic READING
-/// stays sound regardless, because every element name and `xsi:type` the
-/// reader dispatches on is spelled identically in both lineages; only what the
-/// two schemas ACCEPT differs.
+/// The reader dispatches on local element names and `xsi:type`, never on the
+/// root `xmlns`, and both published lineages spell those alike, so both
+/// parse the same. The lineages differ in what their schemas accept
+/// (`docs/specs/openehr/ITS-XML/README.adoc` §"Releases and IM Versions";
+/// `schemas/xml/PROVENANCE.md` §"Two lineages").
 ///
 /// # Errors
 /// Propagates parse errors.

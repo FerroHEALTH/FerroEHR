@@ -456,21 +456,14 @@ async fn delete_accepts_the_weak_if_match_form() {
     );
 }
 
-/// The demographic direct routes honour BOTH halves of the committal merge —
-/// the `UPDATE_AUDIT` attributes AND the VERSION `lifecycle_state`.
+/// The demographic direct routes merge both the `UPDATE_AUDIT` attributes and
+/// the VERSION `lifecycle_state` from the committal headers.
 ///
-/// ITS-REST overview `Requests_and_responses.md` §"openehr-version and
-/// openehr-audit-details" makes the merge a MUST on the direct commits:
-/// "services MUST accept `openehr-version` and `openehr-audit-details` custom
-/// request headers", and "whatever is provided it MUST be merged with the
-/// default VERSION and `VERSION.audit_details` attributes on commit runtime" —
-/// the VERSION attributes named first. A demographic party's `UPDATE_VERSION`
-/// envelope never travels in the body, so these headers are its only committal
-/// channel.
-///
-/// `553|incomplete|` is the openEHR `version_lifecycle_state` code for content
-/// still being authored (RM common `master06-change_control_package.adoc`
-/// §Version Lifecycle / §Incomplete Content).
+/// Whatever the headers provide "MUST be merged with the default VERSION and
+/// `VERSION.audit_details` attributes" (ITS-REST overview
+/// `Requests_and_responses.md` §"openehr-version and openehr-audit-details"),
+/// and a party's `UPDATE_VERSION` never travels in the body. `553|incomplete|`
+/// is RM common `master06-change_control_package.adoc` §Incomplete Content.
 #[tokio::test]
 async fn direct_party_write_honours_the_openehr_version_lifecycle_state() {
     let (_pg, app) = common::app(common::api_config(false)).await;

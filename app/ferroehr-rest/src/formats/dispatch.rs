@@ -415,20 +415,13 @@ pub(crate) async fn contribution_to_simplified(
 
 // ── Non-templated resources: uniform reject ────────────────────────────────
 
-/// Reject Simplified-Formats negotiation on a resource that has no
-/// Simplified-Formats mapping — EHR, `EHR_STATUS`, FOLDER, and the demographic
-/// PARTY types. `415` when the request `Content-Type` is a simplified type
-/// (input), `406` when the `Accept` cannot be satisfied by canonical JSON/XML
-/// (output). Canonical requests pass through untouched.
+/// Refuses Simplified Formats negotiation on a resource with no Simplified
+/// Formats mapping (EHR, `EHR_STATUS`, FOLDER and the demographic PARTY
+/// types): `415` for a simplified `Content-Type`, `406` for an `Accept` that
+/// canonical JSON or XML cannot satisfy.
 ///
-/// NOTE (`ITS-REST/docs/simplified_formats/master05-rm_mapping.adoc`
-/// §scope + `master02-overview.adoc` §Relationship to Other Specifications):
-/// simplified field identifiers are generated from an Operational Template, and
-/// master05 defines mappings only for COMPOSITION and the classes it contains.
-/// The OAS declares the simplified media types on these endpoints via
-/// `Accept_LOCATABLE`/`ContentType_LOCATABLE`, but no spec governs their
-/// simplified serialization — so we reject rather than guess. If a future
-/// ITS-REST release defines these mappings, this reject branch is replaced.
+/// NOTE: `ITS-REST/docs/simplified_formats/master05-rm_mapping.adoc` maps only
+/// COMPOSITION and its contents, so these resources have no simplified form.
 pub(crate) fn guard_non_templated(headers: &HeaderMap) -> Result<(), RestError> {
     if let Some(WireFormat::Flat | WireFormat::Structured | WireFormat::WebTemplate) =
         negotiate::content_type_format(headers)

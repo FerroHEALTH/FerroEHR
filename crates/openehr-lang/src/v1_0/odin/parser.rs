@@ -190,19 +190,12 @@ fn schema_identifier<'a>() -> impl Parser<'a, &'a [Token], super::OdinSchemaId, 
 
 /// `attr_vals : ( attr_val ';'? )+` → [`OdinValue::Object`].
 ///
-/// Sibling attribute names must be unique — `LANG/docs/odin/master05-content`
-/// §General Structure rule *VDATU*: "attribute name uniqueness: sibling
-/// attributes occurring within an object node must be uniquely named with
-/// respect to each other, in the same way as in class definitions in an
-/// information model", stated as the principle "Sibling attribute names must
-/// be unique" in `AM/docs/ADL1.4/master04-dadl` §General Form. A repeat is a
-/// typed [`Failure::DuplicateAttribute`], never a silent last-one-wins
-/// overwrite.
+/// Sibling attribute names must be unique (`LANG/docs/odin/master05-content`
+/// §General Structure rule VDATU), so a repeat is a
+/// [`Failure::DuplicateAttribute`].
 ///
-/// NOTE: the attribute key is `ALPHA_LC_ID` alone — the Release-1.0.0
-/// `base_patterns.g4` `attribute_id : ALPHA_LC_ID` (the docs text names no
-/// lexical class, so the appendix is the specific syntax authority; the
-/// broader `odin_object_key` postdates this generation).
+/// NOTE: the attribute key is `ALPHA_LC_ID` alone, the Release-1.0.0
+/// `base_patterns.g4` `attribute_id`, since the docs text names no lexical class.
 fn attr_vals<'a>(
     block: impl Parser<'a, &'a [Token], OdinValue, Err<'a>> + Clone + 'a,
 ) -> impl Parser<'a, &'a [Token], OdinValue, Err<'a>> + Clone {

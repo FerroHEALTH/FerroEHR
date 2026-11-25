@@ -133,19 +133,13 @@ impl BmmModel {
 
     /// `BMM_MODEL.class_definition`: "Retrieve the class definition
     /// corresponding to `a_type_name` (which may contain a generic part)"
-    /// (class doc §Functions) — the generic part is stripped before the lookup,
-    /// because `class_definitions` is keyed by class name and "names of classes
-    /// are just the root name, even if the class is generic"
-    /// (`org.openehr.lang.bmm.bmm_class.adoc` §Attributes).
+    /// (class doc §Functions).
     ///
-    /// Matching is CASE-INSENSITIVE with underscores significant —
-    /// `LANG/docs/bmm3/master05-core-model.adoc` §Naming Convention: "When
-    /// used computationally within an instantiated BMM model, it is assumed
-    /// that case-insensitive matching is used. This means that the class name
-    /// `"Hashable"` refers to the same class as `"HASHABLE"`. Note however
-    /// that underscores are not removed during matching". An exact-key hit
-    /// wins without a scan; the fold never rewrites the returned class's own
-    /// name.
+    /// The generic part is stripped, since class names "are just the root name,
+    /// even if the class is generic" (`org.openehr.lang.bmm.bmm_class.adoc`).
+    /// Matching is case-insensitive with underscores significant
+    /// (`LANG/docs/bmm3/master05-core-model.adoc` §Naming Convention); an exact
+    /// key wins without a scan.
     #[must_use]
     pub fn class_definition(&self, a_type_name: &str) -> Option<&BmmClass> {
         let definitions = self.class_definitions.as_ref()?;
@@ -382,12 +376,9 @@ impl BmmModel {
     /// constrainer types, or Any during the conformance testing process."
     /// (class doc §Functions).
     ///
-    /// The three rules of the v3 counterpart
-    /// (`org.openehr.lang.bmm3.bmm_model.adoc` §Functions) as written: equal or
-    /// ancestor non-generic types; both generic with matching, recursively
-    /// conformant parameters; a generic descendant of a non-generic ancestor. A
-    /// non-generic descendant of a generic ancestor does not conform
-    /// (`master06-core-types.adoc` §Type Conformance). An open ancestor
+    /// The three rules of `org.openehr.lang.bmm3.bmm_model.adoc` §Functions,
+    /// under which a non-generic descendant of a generic ancestor does not
+    /// conform (`master06-core-types.adoc` §Type Conformance). An open ancestor
     /// parameter becomes its positional conformance type
     /// (`org.openehr.lang.bmm3.bmm_generic_class.adoc` §Functions), else `Any`.
     #[must_use]

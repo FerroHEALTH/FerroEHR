@@ -438,19 +438,13 @@ mod tests {
         })
     }
 
-    /// The published document element for a `VERSION` resource is
-    /// `<xs:element name="version" type="VERSION"/>` over the ABSTRACT
-    /// `<xs:complexType name="VERSION" abstract="true">`
-    /// (`crates/openehr-its/schemas/xml/its-xml-1.0.2-nsv1/ALL/Version.xsd`;
-    /// the 2.0.0 lineage repeats it in `RM/latest/documents/Version.xsd` +
-    /// `RM/latest/Common.xsd`), so a served `ORIGINAL_VERSION` is that root
-    /// PLUS the `xsi:type` XML Schema Part 1 §2.6.1/§3.4.6 requires of an
-    /// instance of an abstract type
-    /// (<https://www.w3.org/TR/xmlschema-1/#xsi_type>). ITS-REST overview
-    /// `Resources.md` §"XML Format" is what binds the schemas to the wire:
-    /// "both request payloads and responses MUST conform to the [published
-    /// XSDs]". `original_version` is a document element NEITHER published
-    /// lineage declares.
+    /// A served `ORIGINAL_VERSION` is the published `version` document element
+    /// over the abstract `VERSION` type
+    /// (`crates/openehr-its/schemas/xml/its-xml-1.0.2-nsv1/ALL/Version.xsd`) with
+    /// the `xsi:type` an instance of an abstract type requires
+    /// (<https://www.w3.org/TR/xmlschema-1/#xsi_type>), since responses "MUST
+    /// conform to the [published XSDs]" (ITS-REST overview `Resources.md` §"XML
+    /// Format").
     #[tokio::test]
     async fn respond_rm_renders_original_version_under_the_published_version_root() {
         use http_body_util::BodyExt;
