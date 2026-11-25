@@ -66,7 +66,7 @@ pub(super) const VERSION_ROOT_TAG: &str = "version";
 
 // NOTE: no specification governs this: our own design. No ITS-XML bundle declares
 // an element for EHR, VERSIONED_COMPOSITION, VERSIONED_EHR_STATUS, VERSIONED_EHR_ACCESS
-// or REVISION_HISTORY, so each root is named after its class until #4652 settles.
+// or REVISION_HISTORY, so each root is named after its class (#4652).
 /// The canonical-XML root tag of the `EHR` document.
 pub(super) const EHR_ROOT_TAG: &str = "ehr";
 /// The canonical-XML root tag of the `VERSIONED_COMPOSITION` document.

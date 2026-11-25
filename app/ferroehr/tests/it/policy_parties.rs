@@ -408,7 +408,7 @@ async fn each_worked_example_fits_its_definition() {
 }
 
 /// The privileged `ROLE` v1.0.1 offers no Identifier reader kind (`at12`),
-/// which grants nothing since its read is gone (#6097); v1.0.0 keeps it as
+/// which grants nothing (#6097); v1.0.0 keeps it as
 /// published, and a `ROLE` that carries it still fits v1.0.0.
 #[tokio::test]
 async fn the_identifier_reader_kind_is_offered_only_by_the_first_privileged_version() {
