@@ -71,5 +71,6 @@ secrets: []
 # No vulnerability exceptions. This gate reports only findings that have a fix,
 # and those are fixed by a rebuild or a base bump. A finding without a fix gets
 # its argument as an OpenVEX statement in `security/vex/*.json`, which the
-# release record and the weekly published-image scan read.
+# release record, the tag gate's app and viewer scans and the weekly
+# published-image scan read.
 vulnerabilities: []

@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/rust-dependencies-of-published-releases",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-11-05T00:00:00Z",
-  "version": 1,
+  "timestamp": "2026-11-25T00:00:00Z",
+  "version": 2,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -35,6 +35,41 @@
       "status": "affected",
       "impact_statement": "The server binary and the ferroehr image of FerroEHR 5.5.0 and every earlier release that locks zip 9.0.4 carry the crate, which the server links for the administrator's dump and load archive (app/ferroehr/src/service/admin/dump_load.rs: zip::ZipWriter to write it, zip::ZipArchive to read it). Through 9.0.4, ZipArchive takes a file's name from the central directory while ZipStreamReader takes it from the local file header, so one crafted archive can name two different files. FerroEHR's own code calls no streaming reader, but the vulnerable crate ships in these releases, so the statement does not argue the finding away. The viewer image does not link the crate. FerroEHR 5.6.0 locks zip 9.1.3 and its workspace requires 9.0.5 or later, so 5.6.0 and later releases carry no affected version.",
       "action_statement": "Upgrade to FerroEHR 5.6.0 or later, whose server binary and ferroehr image carry zip 9.1.3; 5.6.0 is the first release that fixes the finding, and no release before it receives the fix. Until the upgrade, load through POST /admin/load only archives that this FerroEHR wrote with POST /admin/dump and that no one else could alter."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-124851",
+        "aliases": [
+          "GHSA-65wm-j22v-56c3"
+        ]
+      },
+      "products": [
+        {
+          "@id": "pkg:cargo/ferroehr-server",
+          "subcomponents": [
+            {
+              "@id": "pkg:cargo/zstd-sys@2.0.16%2Bzstd.1.5.7"
+            },
+            {
+              "@id": "pkg:cargo/zstd-sys@2.1.2%2Bzstd.1.5.7"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:cargo/zstd-sys@2.0.16%2Bzstd.1.5.7"
+            },
+            {
+              "@id": "pkg:cargo/zstd-sys@2.1.2%2Bzstd.1.5.7"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The server binary and the ferroehr image of FerroEHR 3.0.0 to 5.7.0 statically link Zstandard 1.5.7 through zstd-sys (2.0.16+zstd.1.5.7 up to 5.4.2, 2.1.2+zstd.1.5.7 from 5.5.0). The server's outbound HTTP clients (reqwest with tower-http response decompression) advertise the zstd content coding and decompress a zstd-encoded response with that code. In Zstandard 1.5.1 to 1.5.7, crafted compressed data can expose the decoder's internal buffer (64 KiB by default), which may hold uninitialised memory or literals of earlier decompressions on the same context, through the decompressed output. A server FerroEHR calls could send such a response and read back what the decompressed body reaches. The viewer image does not link Zstandard. FerroEHR 6.0.0 links zstd-sys 2.2.0+zstd.1.6.0, which carries the upstream fix, so 6.0.0 and later releases carry no affected version.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later, whose server binary and ferroehr image link Zstandard 1.6.0; no earlier release receives the fix. Until the upgrade, point outbound integrations only at servers you operate or trust, through a proxy that does not pass the zstd content coding through."
     }
   ]
 }
