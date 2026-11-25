@@ -164,6 +164,32 @@ fn synthesizes_the_composition_in_context_children() {
     assert!(ctx.is_some(), "the context wrapper is synthesized");
 }
 
+const ACTION_PARTICIPATIONS: &str = "features/reference_model/participations/openEHR-EHR-ACTION.procedure_participations.v1.0.0.adls";
+
+/// The in-context child of `node` at `aql_path`, asserted `DV_DATE_TIME`, 1..1.
+fn in_context_datetime<'a>(node: &'a WebTemplateNode, aql_path: &str) -> &'a WebTemplateNode {
+    let child = node
+        .children
+        .iter()
+        .find(|c| c.aql_path == aql_path)
+        .unwrap_or_else(|| panic!("{} has no child at {aql_path}", node.aql_path));
+    assert_eq!(child.rm_type, "DV_DATE_TIME", "{aql_path}");
+    assert_eq!((child.min, child.max), (Some(1), 1), "{aql_path}");
+    assert_eq!(child.in_context, Some(true), "{aql_path}");
+    child
+}
+
+#[test]
+fn synthesizes_action_time_and_history_origin() {
+    // RM `ehr` §ACTION `time`, `data_structures` §HISTORY `origin`; ITS-REST
+    // `simplified_formats` master05 §ACTION `/time`, §OBSERVATION `/history_origin`.
+    let action = web_template(ACTION_PARTICIPATIONS);
+    assert_eq!(in_context_datetime(&action.tree, "/time").id, "time");
+    let observation = web_template(OBS_APGAR);
+    let origin = in_context_datetime(&observation.tree, "/data[id3]/origin");
+    assert_eq!(origin.id, "history_origin");
+}
+
 // ── generation + the validation bar (RM invariants + terminology) ────────────
 
 #[test]

@@ -317,7 +317,17 @@ fn walk_children<'a>(
     // Instances per container cardinality, so an optional child stops at the
     // upper bound.
     let mut card_counts = vec![0usize; node.cardinalities.len()];
-    for child in groups {
+    let mut emitted_paths: Vec<&str> = Vec::new();
+    let (origins, members): (Vec<&&WebTemplateNode>, Vec<&&WebTemplateNode>) =
+        groups.iter().partition(|c| history_origin_of(c).is_some());
+    for child in members.into_iter().chain(origins) {
+        // NOTE: RM `data_structures` §HISTORY `Events_valid`: a HISTORY holds an
+        // event or a summary, so its in-context `origin` follows its content.
+        if let Some(history) = history_origin_of(child)
+            && !emitted_paths.iter().any(|p| p.starts_with(history))
+        {
+            continue;
+        }
         // An attribute the RM does not declare (`ELEMENT.null_flavor` in the OPT 1.4
         // corpus) is not materialised.
         if !rm_declares(&child.aql_path) {
@@ -336,9 +346,23 @@ fn walk_children<'a>(
             continue;
         }
         included.push(child.aql_path.as_str());
-        emitted |= walk_child(node, child, cx, &mut card_counts, out);
+        if walk_child(node, child, cx, &mut card_counts, out) {
+            emitted = true;
+            emitted_paths.push(child.aql_path.as_str());
+        }
     }
     (emitted, included)
+}
+
+/// The `<history>/` prefix of an in-context HISTORY `origin` leaf, else `None`.
+fn history_origin_of(child: &WebTemplateNode) -> Option<&str> {
+    if child.in_context != Some(true) || child.id != "history_origin" {
+        return None;
+    }
+    child
+        .aql_path
+        .strip_suffix("origin")
+        .filter(|history| history.ends_with('/'))
 }
 
 /// Whether an optional child is left out: one with no conforming instance
