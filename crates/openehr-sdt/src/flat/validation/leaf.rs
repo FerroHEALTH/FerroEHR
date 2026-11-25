@@ -155,7 +155,13 @@ fn check_coded_text<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &We
         .and_then(|c| c.attr("terminology_id"))
         .and_then(|t| t.attr("value"))
         .and_then(Instance::as_str);
-    check_code_membership(v, wt, code_input, code, terminology);
+    check_code_membership(
+        v,
+        &wt.aql_path,
+        wt.coded_terminology_local,
+        code_input,
+        (code, terminology),
+    );
 }
 
 fn check_code_phrase<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
@@ -167,7 +173,13 @@ fn check_code_phrase<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &W
         .attr("terminology_id")
         .and_then(|t| t.attr("value"))
         .and_then(Instance::as_str);
-    check_code_membership(v, wt, code_input, code, terminology);
+    check_code_membership(
+        v,
+        &wt.aql_path,
+        wt.coded_terminology_local,
+        code_input,
+        (code, terminology),
+    );
 }
 
 /// `DV_ORDINAL` / `DV_SCALE` against a `C_DV_ORDINAL` / `C_DV_SCALE` list.
@@ -272,16 +284,16 @@ fn paired_value_matches<'i, I: Instance<'i>>(
 /// Report a coded value outside a closed option list whose terminology matches
 /// the instance code's (AOM 1.4 §`C_CODE_PHRASE`).
 ///
-/// An explicitly `local` list ([`WebTemplateNode::coded_terminology_local`])
-/// also refuses a code from any other terminology
-/// (`org.openehr.am.aom14.c_coded_text.adoc` §C_CODED_TEXT); otherwise a
-/// differently scoped code is left to the terminology pass.
-fn check_code_membership(
+/// An explicitly `local` list (`local_only`,
+/// [`WebTemplateNode::coded_terminology_local`]) also refuses a code from any
+/// other terminology (`org.openehr.am.aom14.c_coded_text.adoc` §C_CODED_TEXT);
+/// otherwise a differently scoped code is left to the terminology pass.
+pub(super) fn check_code_membership(
     v: &mut Validator,
-    wt: &WebTemplateNode,
+    path: &str,
+    local_only: bool,
     input: &WebTemplateInput,
-    code: Option<&str>,
-    terminology: Option<&str>,
+    (code, terminology): (Option<&str>, Option<&str>),
 ) {
     if input.list.is_empty() || input.list_open == Some(true) {
         return;
@@ -290,7 +302,7 @@ fn check_code_membership(
     if terminology_matches(input.terminology.as_deref(), terminology) {
         if !input.list.iter().any(|cv| cv.value == code) {
             v.push(
-                &wt.aql_path,
+                path,
                 format!("coded value '{code}' is not in the constrained value set"),
                 ValidationKind::CodedValue,
             );
@@ -298,9 +310,9 @@ fn check_code_membership(
         return;
     }
     // Only an explicitly `local` closed list refuses a foreign terminology.
-    if wt.coded_terminology_local {
+    if local_only {
         v.push(
-            &wt.aql_path,
+            path,
             format!(
                 "coded value '{code}' (terminology '{}') is not in the constrained local value set",
                 terminology.unwrap_or("")

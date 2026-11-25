@@ -255,6 +255,11 @@ pub struct WebTemplateNode {
     /// `rm_type_name`). Build-time only (`#[serde(skip)]`).
     #[serde(skip)]
     pub name_rm_type: Option<String>,
+    /// The `code` input of the template's `DV_CODED_TEXT` constraint on the
+    /// node's `name` (RM common `LOCATABLE.name`), whose code list a coded name
+    /// must keep to. Build-time only (`#[serde(skip)]`).
+    #[serde(skip)]
+    pub name_code_input: Option<Box<WebTemplateInput>>,
     /// The `C_STRING` a template puts on a non-data RM String attribute such as
     /// `ACTIVITY.action_archetype_id`, as the input carrying its pattern or list.
     #[serde(skip)]
@@ -324,6 +329,7 @@ impl WebTemplateNode {
             name_code: None,
             name_coded: None,
             name_rm_type: None,
+            name_code_input: None,
             string_constraint: None,
             archetype_ref: None,
             rm_release: None,
