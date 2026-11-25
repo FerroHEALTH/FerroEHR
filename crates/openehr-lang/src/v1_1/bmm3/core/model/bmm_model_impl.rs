@@ -110,22 +110,14 @@ impl BmmModel {
     }
 
     /// `BMM_MODEL.all_ancestor_classes`: every ancestor class name of
-    /// `a_class`, up to the root class, excluding `a_class` itself.
+    /// `a_class`, up to the root, excluding `a_class`.
     ///
-    /// The walk unions two sources so it is total on both persisted shapes: the
-    /// ancestor TYPES a class carries ([`BmmClass::all_ancestors`] — v3 states
-    /// inheritance as types, `org.openehr.lang.bmm3.bmm_class.adoc`
-    /// §Description) and, for every name reached, that name's own definition in
-    /// this model, so a class whose embedded ancestors are stubs still resolves
-    /// all the way up. Cycle-safe; deduped.
-    ///
-    /// The `Any` top is implicit: "the `Any` type … will be used as the
-    /// inheritance parent for every class in the model that doesn't have any
-    /// other inheritance parent. As a result, the inheritance graph will always
-    /// have the `Any` type as its top node"
-    /// (`LANG/docs/bmm3/master05-core-model.adoc` §The Any Class and Type), so
-    /// a defined, parentless class other than `Any` itself closes its ancestor
-    /// list with `Any`.
+    /// The walk unions the ancestor types a class carries
+    /// ([`BmmClass::all_ancestors`]) with each reached name's own definition in
+    /// this model, so stub ancestors still resolve; it is cycle-safe and
+    /// deduped. A defined parentless class other than `Any` closes with `Any`,
+    /// the top of every inheritance graph (`LANG/docs/bmm3/master05-core-model.adoc`
+    /// §The Any Class and Type).
     #[must_use]
     pub fn all_ancestor_classes(&self, a_class: &str) -> Vec<String> {
         let mut out: Vec<String> = Vec::new();

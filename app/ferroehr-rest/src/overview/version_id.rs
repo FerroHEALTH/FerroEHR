@@ -98,22 +98,13 @@ pub(crate) fn object_id_uuid(ovid: &ObjectVersionId) -> Option<Uuid> {
     }
 }
 
-/// The `preceding_version_uid` for an operation whose `If-Match` header is
-/// **required** (`ehr_status_update`, `composition_update`, `directory_update`,
-/// `directory_delete` — all `required: true`, `parameters/If-Match`). The value
-/// is the full quoted `OBJECT_VERSION_ID`; a malformed or empty value is a
-/// client error rather than a silently-skipped precondition.
+/// The `preceding_version_uid` for an operation whose `If-Match` is required
+/// (`ehr_status_update`, `composition_update`, `directory_update`,
+/// `directory_delete`): the quoted `OBJECT_VERSION_ID`, weak (`W/"…"`) or
+/// bare (§"Deprecated headers"), read by [`entity_tag_value`].
 ///
-/// NOTE (wire, spec-silent): ITS-REST defines only the "received and the
-/// condition evaluates to false → `412`" case; it says nothing about a
-/// syntactically invalid `If-Match`. We map an unparseable required `If-Match`
-/// to `400 Bad Request` (the general "malformed request syntax" rule), never to
-/// a silent bypass of the optimistic-concurrency guard.
-///
-/// Both the weak (`W/"…"`) and the bare quoted (`"…"`) forms are accepted: the
-/// server emits the weak form, and a client echoing the deprecated bare form
-/// "MAY still" be supported (§"Deprecated headers"); [`entity_tag_value`] reads
-/// either as the inner `OBJECT_VERSION_ID`.
+/// NOTE: ITS-REST names no status for a malformed `If-Match`; an unparseable
+/// one is `400 Bad Request`, never a skipped precondition.
 pub(crate) fn require_if_match(if_match: &str) -> Result<ObjectVersionId, ApiError> {
     let value = entity_tag_value(if_match);
     let token = value.as_ref();

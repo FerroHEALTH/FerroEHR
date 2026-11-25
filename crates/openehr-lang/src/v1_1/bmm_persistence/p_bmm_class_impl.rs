@@ -100,21 +100,15 @@ impl PBmmClass {
         class_leaf!(self, |leaf| leaf.ancestor_defs.as_ref(), None)
     }
 
-    /// Every inheritance parent a persisted class names, from `ancestors` and from
-    /// each `ancestor_defs` entry, once each in that order.
+    /// Every inheritance parent a persisted class names, from `ancestors` and
+    /// from each `ancestor_defs` entry, once each in that order
+    /// (`…p_bmm_class.adoc` §Attributes).
     ///
-    /// `ancestor_defs` holds every ancestor of a class with a generic one, "any
-    /// non-generic ancestor of the same class is then also listed here, as a
-    /// `P_BMM_SIMPLE_TYPE`" (`…p_bmm_class.adoc` §Attributes), so an entry of
-    /// each `P_BMM_BASE_TYPE` form names a parent.
+    /// NOTE: v2 `BMM_CLASS.ancestors` holds classes (`org.openehr.lang.bmm.bmm_class.adoc`),
+    /// so only a generic ancestor's root class is carried here.
     ///
-    /// NOTE: the v2 `BMM_CLASS.ancestors` is a map of CLASSES
-    /// (`org.openehr.lang.bmm.bmm_class.adoc` §Attributes), so a generic
-    /// ancestor's parameter binding has nowhere to land here — only the root
-    /// class is carried, the binding staying readable in `P_BMM_CLASS.
-    /// ancestor_defs`; the v3 generation types `ancestors` as TYPES
-    /// (`…bmm3.bmm_class.adoc`) and [`crate::v1_1::bmm_persistence::create_bmm3_model`] carries the binding into
-    /// it — a boundary of this transform's target generation, not the pipeline.
+    /// [`crate::v1_1::bmm_persistence::create_bmm3_model`] carries the binding into
+    /// the v3 model.
     #[must_use]
     pub fn ancestor_names(&self) -> Vec<String> {
         let mut out: Vec<String> = Vec::new();

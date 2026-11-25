@@ -368,23 +368,14 @@ fn is_wire_class(name: &str) -> bool {
 // 1. The nsv2 lineage cannot be compiled by a conformant XSD processor
 // ---------------------------------------------------------------------------
 
-/// The nsv2 bundle's `archetypeNodeId` facet is not a valid XML Schema regular
-/// expression, so NO conformant processor can compile the lineage — and no
-/// document can therefore be validated against it.
+/// The nsv2 bundle's `archetypeNodeId` facet is no valid XML Schema regular
+/// expression, so no conformant processor can compile the lineage.
 ///
-/// `its-xml-2.0.0-nsv2/BASE/latest/BaseTypes.xsd` (`xs:simpleType
-/// archetypeNodeId`) carries a Perl-flavoured pattern built from `(?:…)`
-/// non-capturing groups, with an upstream comment pointing at regex101. XML
-/// Schema Part 2 Appendix F defines the regular-expression language for the
-/// `pattern` facet, and its `atom` production admits only a character, a
-/// character class, or a parenthesised `regExp` — there is no `(?…)` construct
-/// at all (<https://www.w3.org/TR/xmlschema-2/#regexs>). libxml2 rejects it,
-/// as any conformant implementation must. The same defective facet is present
-/// in `BASE/Release-1.1.0`, `BASE/Release-1.2.0` and the nsv2 `RM/Release-1.0.2`
-/// plus `RM/Release-1.0.3` local `BaseTypes.xsd`, and every nsv2 RM release
-/// folder includes one of them — so the defect covers the whole lineage, not
-/// just `latest`. The v1 bundle's own `archetypeNodeId` facet
-/// (`its-xml-1.0.2-nsv1/ALL/BaseTypes.xsd`) is plain XSD regex and compiles.
+/// `its-xml-2.0.0-nsv2/BASE/latest/BaseTypes.xsd` uses `(?:…)` groups, which
+/// the `pattern` facet language has no production for
+/// (<https://www.w3.org/TR/xmlschema-2/#regexs>), and every nsv2 RM release
+/// folder includes such a `BaseTypes.xsd`. The v1 bundle's facet
+/// (`its-xml-1.0.2-nsv1/ALL/BaseTypes.xsd`) compiles.
 #[test]
 fn nsv2_lineage_is_uncompilable_by_a_conformant_xsd_processor() {
     let driver = write_driver(&V2, "nsv2_compile_probe", &[("folder", "FOLDER")]);

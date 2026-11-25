@@ -292,21 +292,13 @@ fn element_c_the_priority_category_is_recorded_and_rendered_in_fhir_only() {
 }
 
 /// (a) "identification of the healthcare provider or other individuals having
-/// accessed" — the provider the party binding attributes the access to,
+/// accessed": the provider the party binding attributes the access to,
 /// recorded and rendered in FHIR as an organisation.
 ///
-/// Read beside (b), this element asks for the ORGANISATION on whose behalf the
-/// access happened, distinct from the natural person (b) names. FHIR R4 takes
-/// it as a further `agent` whose `who` is a logical reference to an
-/// `Organization` (`Reference.type` and `Reference.identifier`) and which
-/// declares no `type` — `agent.type` is 0..1, so no participation code has to
-/// be invented (<https://hl7.org/fhir/R4/auditevent.html>,
-/// <https://hl7.org/fhir/R4/references.html>).
-///
-/// The DICOM rendering carries nothing, and that half is pinned as the format
-/// limit it is: PS3.15 §A.5 gives `ActiveParticipant` no organisation
-/// attribute, and `AuditEnterpriseSiteID` names the reporting source's site
-/// rather than the caller's organisation
+/// FHIR R4 takes it as a further `agent` whose `who` references an
+/// `Organization`, with no `type` (<https://hl7.org/fhir/R4/auditevent.html>).
+/// The DICOM rendering carries nothing: PS3.15 §A.5 has no organisation
+/// attribute
 /// (<https://dicom.nema.org/medical/dicom/current/output/chtml/part15/sect_A.5.html>).
 #[test]
 fn element_a_the_accessing_organisation_is_recorded_and_rendered_in_fhir() {
@@ -374,22 +366,14 @@ fn element_e_the_origin_of_the_data_is_recorded_and_rendered_in_fhir() {
     assert_eq!(event.client_ip.as_deref(), Some("10.0.0.9"));
 }
 
-/// The declared purpose of use reaches the FHIR rendering, and only that one
-/// could carry it.
+/// The declared purpose of use reaches the FHIR rendering, the only one that
+/// can carry it.
 ///
-/// FHIR R4 `AuditEvent` defines `agent.purposeOfUse` as a 0..* `CodeableConcept`
-/// on the agent (<https://hl7.org/fhir/R4/auditevent.html>), so it lands on the
-/// requesting person's agent. The code is from the vocabulary the deployment
-/// agrees with its callers, which has no published code system, so the coding
-/// carries the code alone — `Coding.system` is optional
-/// (<https://hl7.org/fhir/R4/datatypes.html>).
-///
-/// The DICOM Audit Message schema of PS3.15 §A.5 defines no purpose element at
-/// all: `EventIdentification`, `ActiveParticipant`, `AuditSourceIdentification`
-/// and `ParticipantObjectIdentification`, and none of them has one
+/// FHIR R4 `AuditEvent.agent.purposeOfUse` takes it on the requesting
+/// person's agent, as a coding with no `system`, since the deployment's
+/// vocabulary has none (<https://hl7.org/fhir/R4/auditevent.html>). The DICOM
+/// Audit Message of PS3.15 §A.5 has no purpose element
 /// (<https://dicom.nema.org/medical/dicom/current/output/chtml/part15/sect_A.5.html>).
-/// That half is a limit of the format rather than of this code, and stays
-/// pinned as one.
 #[test]
 fn the_declared_purpose_reaches_the_fhir_rendering_only() {
     let event = access_event();
