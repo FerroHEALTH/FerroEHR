@@ -164,6 +164,13 @@ impl Deployment {
             .as_ref()
             .map(|one| (one.issuer.clone(), one.id.clone()))
     }
+
+    /// [`Self::provider`], borrowed from the deployment's configuration.
+    pub(super) fn provider_named(&self) -> Option<(&str, &str)> {
+        self.provider
+            .as_ref()
+            .map(|one| (one.issuer.as_str(), one.id.as_str()))
+    }
 }
 
 impl Binding {

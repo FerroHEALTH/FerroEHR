@@ -27,6 +27,8 @@
   - [CRA risk assessment](compliance/cra-risk-assessment.md)
   - [Hazard log: the logging component](compliance/hazard-log.md)
   - [The logging component's intended performance](compliance/logging-performance.md)
+  - [The EHDS logging checklist](compliance/logging-checklist.md)
+  - [EEHRxF metadata from the Reference Model](compliance/eehrxf-annex-iii.md)
   - [Claims review](compliance/claims-review.md)
 
 # Integrate
@@ -98,6 +100,7 @@
   - [Access path metrics and runbooks](operations-access-path.md)
   - [Admin & messaging APIs](operations-admin-apis.md)
   - [Operational policy](operational-policy.md)
+    - [Care relationships and episodes of care](care-relationships.md)
     - [What the CDR leaves to the application](application-boundary.md)
   - [Usage report](usage-report.md)
   - [Returning to the original state](operations-reset.md)

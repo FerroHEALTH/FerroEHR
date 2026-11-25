@@ -79,36 +79,23 @@ impl FerroEhrService {
         .await
     }
 
-    /// Validate one uploaded ADL2 source with the `openehr-adl` engine and store
-    /// it (`adl2_persist`), returning its `ARCHETYPE_HRID`.
+    /// Validates one uploaded ADL2 source with the `openehr-adl` engine and
+    /// stores it, returning its `ARCHETYPE_HRID` (`POST /definition/template/adl2`).
     ///
-    /// The repository read, the validation and the write share one transaction
-    /// under `adl2_repo::write_lock`, which the delete takes too, so of an upload
-    /// and a delete that race, the second gets the refusal it gets alone.
-    ///
-    /// Invalidity splits on the syntax/semantics line: an unparseable source
-    /// (S-codes) is syntactically invalid content, the released `400` branch
-    /// (`responses/400.yaml`, via `syntax_bad_request`), while an AOM2
-    /// validation-phase failure (V-codes) on a parsed source is a
-    /// `ValidationFailed` carrying the rule-code mnemonics, which the template
-    /// upload answers `400` too
-    /// (`operations/definition_template_adl2_upload.yaml` declares no `422`). The openEHR
-    /// RM, extended by the draft packages ([`RM_WITH_DRAFTS`]), governs
-    /// openEHR-published archetypes; a foreign or
-    /// test model skips the RM pass, which would false-fire VCORM
-    /// (`AOM2/master04.3` §Reference Model Type Matching). External term
-    /// bindings are verified through the terminology-service resolver (VETDF,
-    /// `master03` §Validity Rules; see `adl2_terminology_resolver`). Under a
-    /// `spec_profile` whose BASE states them (BASE 1.3.0,
-    /// `org.openehr.base.resource.resource_description.adoc` §Invariants), an
-    /// empty `original_author` or `lifecycle_state` is such a failure too.
-    /// This is `POST /definition/template/adl2`, which declares
-    /// `409_template_already_exists.yaml` for an existing HRID.
+    /// The read, the validation and the write share one transaction under
+    /// `adl2_repo::write_lock`, which the delete takes too. The openEHR RM with
+    /// the draft packages ([`RM_WITH_DRAFTS`]) governs openEHR-published
+    /// archetypes; a foreign model skips the RM pass (`AOM2/master04.3`
+    /// §Reference Model Type Matching). External term bindings are verified
+    /// through the terminology resolver (VETDF, `master03` §Validity Rules).
+    /// Under a `spec_profile` whose BASE states them, an empty `original_author`
+    /// or `lifecycle_state` is invalid too.
     ///
     /// # Errors
     ///
-    /// - Unparseable source → `BadRequest` (`400`).
-    /// - AOM2-invalid source → `ValidationFailed` with the rule codes.
+    /// - Unparseable source (S-codes) → `BadRequest` (`400`, `responses/400.yaml`).
+    /// - AOM2-invalid source (V-codes) → `ValidationFailed` with the rule codes,
+    ///   answered `400` (`operations/definition_template_adl2_upload.yaml`).
     /// - An artefact with the same HRID already stored → `Conflict` (`409`).
     /// - A database failure (`500`).
     pub async fn template_adl2_upload(&self, source: &str) -> Result<String, ServiceError> {

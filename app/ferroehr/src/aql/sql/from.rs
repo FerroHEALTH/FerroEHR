@@ -508,20 +508,14 @@ impl Builder<'_> {
     /// object of its own, and returns the group its nested containment binds
     /// under.
     ///
-    /// The node binding admits exactly the nodes the branch's containment
-    /// filter admits under `anchor` ([`Self::anchor_correlation`]): the
-    /// object's version in the operand's scope, `LATEST_VERSION` being the
-    /// trunk head, and no restricted object. A logically deleted version has
-    /// no node rows (RM common master06 §Logical Deletion: its data is Void),
-    /// so it binds nothing, as on the non-`OR` path. Under an EHR the node's
-    /// `ehr_id` is that EHR, whose own gates then cover it, as they cover a
-    /// joined root; otherwise the binding carries the root gates of
-    /// [`Self::apply_ehr_scope`] and [`Self::apply_population_gate`] itself.
-    /// The node's version row is then bound one-to-one beside it, so the
-    /// server-assigned `uid` synthesizes as for a joined root (RM common
-    /// master06 §Version Identification), and the pair is reported to the
-    /// access log. A row where the branch did
-    /// not match carries `NULL` in both bindings.
+    /// The binding admits exactly the nodes the branch's containment filter
+    /// admits under `anchor` ([`Self::anchor_correlation`]). A logically deleted
+    /// version has no node rows (RM common master06 §Logical Deletion), so it
+    /// binds nothing. Outside an EHR the binding carries the root gates of
+    /// [`Self::apply_ehr_scope`] and [`Self::apply_population_gate`] itself. The
+    /// node's version row is bound beside it, so the `uid` synthesizes as for a
+    /// joined root, and a row where the branch did not match carries `NULL` in
+    /// both.
     ///
     /// # Errors
     /// [`SqlError::Unsupported`] for a version predicate on the operand, plus

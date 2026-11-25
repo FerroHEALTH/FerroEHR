@@ -1455,9 +1455,10 @@ async fn a_query_pinned_to_one_ehr_is_decided_before_the_statement() {
 
 /// A verdict judged on a copy of the EHR's settings older than the row in
 /// force never answers from that copy: the statement fails, the service
-/// reads the copy again and answers what the row in force admits; a store
-/// whose revision keeps moving past every copy is refused with `503` once
-/// the wait has passed, never answered with no rows (#5746, #5794).
+/// reads the copy again and answers what the row in force admits, however
+/// slowly it reads; a store whose revision keeps moving past every copy is
+/// refused with `503` once the wait has passed, never answered with no rows
+/// (#5746, #5794, #6546).
 #[tokio::test]
 async fn a_pinned_verdict_judged_on_an_older_copy_is_judged_again_or_refused() {
     let world = Box::pin(World::new()).await;
@@ -1498,6 +1499,18 @@ async fn a_pinned_verdict_judged_on_an_older_copy_is_judged_again_or_refused() {
             .await
         }
     };
+    // NOTE: our own design (#6546), a read of the copy slower than the wait on a store that
+    // holds still is simulated by a revision that sleeps before it answers.
+    sqlx::raw_sql(
+        "CREATE OR REPLACE VIEW clinical.access_revision_of AS \
+         SELECT e.id AS ehr_id, json_build_array(s.sys_version, e.subject_namespace, \
+         e.subject_id)::text AS revision FROM clinical.ehr e \
+         LEFT JOIN clinical.access_settings s ON s.ehr_id = e.id \
+         CROSS JOIN LATERAL (SELECT pg_sleep(0.15)) AS slow",
+    )
+    .execute(&world.db.pool())
+    .await
+    .expect("the revision reads slowly");
     for older in [false, true] {
         let outcome = run(older).await.expect("the query runs");
         let served: Vec<String> = outcome.result_set.to_value().unwrap()["rows"]

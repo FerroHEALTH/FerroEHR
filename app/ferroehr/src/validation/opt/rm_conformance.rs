@@ -48,28 +48,19 @@ static LOCATABLE_META_ATTRS: LazyLock<BTreeSet<&str>> = LazyLock::new(|| {
         .collect()
 });
 
-/// The `(class, attribute)` pairs tolerated for prior-art OPT compatibility:
-/// only the ones the generated RM model cannot answer, each with the released
-/// text that says why it is absent from the model. Everything derivable is
-/// derived instead, an attribute the RM declares under the British orthography
-/// being matched by [`is_us_orthography_of_rm_attribute`].
+/// The `(class, attribute)` pairs tolerated in OPT 1.4 templates that the
+/// generated RM model cannot answer, which the AOM2 VCARM rule would
+/// otherwise refuse wholesale.
 ///
-/// - `EVENT.offset` / `POINT_EVENT.offset` / `INTERVAL_EVENT.offset` — a
-///   FUNCTION, not an attribute, in RM 1.2.0:
-///   `UML/classes/org.openehr.rm.data_structures.event.adoc` lists `offset ():
-///   DV_DURATION` under §Functions ("computed as time.diff(parent.origin)").
-/// - `DV_PROPORTION.is_integral` — likewise a §Functions member
-///   (`UML/classes/org.openehr.rm.data_types.dv_proportion.adoc`:
-///   `is_integral (): Boolean`).
-/// - `ITEM_TABLE.rotated` — declared by NO released RM class this pin carries
-///   (`UML/classes/org.openehr.rm.data_structures.item_table.adoc` §Attributes
-///   declares `rows` alone); an RM 1.0.x-era attribute that later releases
-///   dropped.
+/// - `EVENT.offset` and its subtypes, and `DV_PROPORTION.is_integral`: RM
+///   1.2.0 §Functions members, not attributes
+///   (`UML/classes/org.openehr.rm.data_structures.event.adoc`,
+///   `UML/classes/org.openehr.rm.data_types.dv_proportion.adoc`).
+/// - `ITEM_TABLE.rotated`: declared by no RM class of this pin
+///   (`UML/classes/org.openehr.rm.data_structures.item_table.adoc`).
 ///
-/// The generated RM model carries classes and attributes only, so none of these
-/// five resolves from it. All appear in widely-deployed OPT 1.4 artifacts (the
-/// vendored RIPPLE, `clinical_content` and Better corpus templates), which the
-/// AOM2 VCARM rule would otherwise refuse wholesale.
+/// An attribute the RM spells in British orthography is matched by
+/// [`is_us_orthography_of_rm_attribute`].
 const LEGACY_RM_ATTRS: &[(&str, &str)] = &[
     ("EVENT", "offset"),
     ("POINT_EVENT", "offset"),
@@ -210,32 +201,16 @@ fn rm_conformance(
     Ok(())
 }
 
-/// VCACA's numeric arm: the archetype cardinality interval must be CONTAINED in
-/// the RM's declared container cardinality — "the same or narrower"
+/// VCACA's numeric arm: the archetype cardinality interval must be the same
+/// as or narrower than the RM's container cardinality
 /// (`AOM2/master04.5-constraint_model-class_definitions.adoc` line 162).
 ///
-/// The RM bounds come from the BMM-generated static model
-/// ([`openehr_rm::v1_2::model::RmAttribute::cardinality`], the BMM `cardinality` of a
-/// container attribute); an attribute the BMM leaves unconstrained has no RM
-/// interval to conform to and is skipped. Containment is the ordinary interval
-/// rule in both directions:
-///
-/// - the archetype LOWER bound may not fall below the RM's — e.g. `CLUSTER.items`
-///   is `List<ITEM> [1..*]`
-///   (`RM/docs/UML/classes/org.openehr.rm.data_structures.cluster.adoc`
-///   §Attributes), so an OPT stating `items cardinality {0..*}` widens the RM by
-///   admitting an empty CLUSTER the RM forbids;
-/// - the archetype UPPER bound may not exceed the RM's (an unbounded archetype
-///   upper against a finite RM upper is the widest case of that).
-///
-/// The fully-open `{0..*}` is read as "no cardinality override" rather than as
-/// a widening — see the in-body citations.
+/// The RM bounds are [`openehr_rm::v1_2::model::RmAttribute::cardinality`];
+/// an attribute the BMM leaves unconstrained is skipped. The fully open
+/// `{0..*}` reads as no override.
 ///
 /// NOTE: only the numeric part is judged; `ADL1.4/master05-cadl.adoc` line 268
-/// hedges the `ordered`/`unordered`/`unique` half ("How such constraints are
-/// evaluated in practice may depend somewhat on knowledge of the software
-/// system"), and that hedge is about container semantics rather than the
-/// membership range.
+/// leaves the `ordered`/`unordered`/`unique` half to the software system.
 fn check_rm_cardinality(
     card: &Cardinality,
     attr_name: &str,

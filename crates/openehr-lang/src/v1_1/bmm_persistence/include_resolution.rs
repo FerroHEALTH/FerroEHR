@@ -123,22 +123,12 @@ enum ClassList {
 /// Adds every class of `incoming` the includer does not already define, under
 /// its key.
 ///
-/// A class name is looked up across BOTH of the includer's lists, because
-/// `master04-syntax.adoc` §Classes for Primitive Types says primitive types
-/// "are just normal class definitions within a `primitive_types` block …
-/// otherwise are processed in the same way as types defined in the main
-/// `class_definitions` group" — so one name means one class regardless of which
-/// list holds it. The surviving (including) definition is marked
-/// `is_override = True`.
-///
-/// A persisted `P_BMM_INTERFACE` is one of these list members
-/// (`master02-overview.adoc` §Conceptual Approach; see
-/// [`crate::v1_1::bmm_persistence::reader::read_schema`]) and takes part in exactly
-/// the same name-collision rule: its `name` is the collision key, and the
-/// includer's definition wins whether either side is an interface or an
-/// ordinary class. The only thing an interface cannot do is RECORD the
-/// override flag — it declares no `is_override` attribute, so
-/// [`PBmmClass::set_is_override`] is a no-op for it (documented there).
+/// A name is looked up across both of the includer's lists, since primitive
+/// types "are processed in the same way as types defined in the main
+/// `class_definitions` group" (`master04-syntax.adoc` §Classes for Primitive
+/// Types). The includer's definition wins and is marked `is_override`; a
+/// `P_BMM_INTERFACE` takes part by its `name` but records no override
+/// ([`PBmmClass::set_is_override`]).
 fn absorb_classes(
     includer: &mut PBmmSchema,
     incoming: BTreeMap<String, PBmmClass>,

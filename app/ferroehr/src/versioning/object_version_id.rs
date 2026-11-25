@@ -401,27 +401,14 @@ pub fn entity_tag_value(field: &str) -> Cow<'_, str> {
     }
 }
 
-/// The expected (current) version from an `If-Match` header value: a quoted or
-/// bare `OBJECT_VERSION_ID` (strict BASE parse — the `object_id` need not be a
-/// UUID for precondition purposes), or a bare trunk integer.
+/// The expected version from an `If-Match` header value: a quoted or bare
+/// `OBJECT_VERSION_ID` (strict BASE parse), or a bare trunk integer.
 ///
-/// Returns `Ok(None)` only for `If-Match: *` — RFC 9110 §If-Match's "matches any
-/// current representation" wildcard: a must-exist precondition with no specific
-/// version to compare, so no version-tree precondition is extracted and the
-/// versioning path enforces existence alone.
-///
-/// A value that is neither a well-formed `OBJECT_VERSION_ID`, a bare
-/// `VERSION_TREE_ID` trunk integer, nor `*` is **rejected** as
-/// [`VersionIdError::Malformed`], never silently discarded: ITS-REST overview
-/// §"If-Match and accidental overwrites" requires the precondition be honoured
-/// ("if a service receives this header, and the condition evaluates to `false`,
-/// it MUST NOT perform the requested method"), so a header that cannot be
-/// evaluated must not run as if no precondition was sent (the lost-update
-/// window). The spec does not name a code for a *malformed* `If-Match`; we map
-/// it to `400 Bad Request` (the general "malformed request syntax" rule), the
-/// same choice `ferroehr-rest::overview::version_id::require_if_match` makes for
-/// the required-`If-Match` endpoints. `VersionIdError` converts into that `400`
-/// at each caller's error type.
+/// Returns `Ok(None)` only for `If-Match: *`, which "matches any current
+/// representation" (RFC 9110 §If-Match). Any other value is
+/// [`VersionIdError::Malformed`], answered `400`, since a precondition that
+/// cannot be evaluated must not run as if none was sent (ITS-REST overview
+/// §"If-Match and accidental overwrites").
 pub(crate) fn expected_from_if_match(if_match: &str) -> Result<Option<TreeId>, VersionIdError> {
     let value = entity_tag_value(if_match);
     let token = value.as_ref();

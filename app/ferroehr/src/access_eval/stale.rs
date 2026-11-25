@@ -13,8 +13,8 @@ use std::time::Duration;
 
 use crate::ids::EhrId;
 
-/// How long a request reads a copy again after it first found the copy
-/// older than the store, before it is refused with `503`.
+/// How long a request waits for a copy older than the store before it is
+/// refused with `503`.
 pub const STALE_WAIT: Duration = Duration::from_millis(100);
 
 /// The pause between two reads that found the copy still older.
