@@ -13,10 +13,12 @@
 #
 # A badge names its source and the source's date and shows N/M. No label or
 # message may say certified, compliant or conformant, and the README's EHDS
-# badges are held to the same words.
+# badges are held to the same words. Every badge carries the EU emblem on EU
+# blue, and every static badge of the README a logo, from
+# scripts/checks/badge-logos/.
 #
 # Usage: scripts/render/ehds-badges.sh              rewrite the documents
-#        scripts/render/ehds-badges.sh --check      fail on a stale document or a forbidden word
+#        scripts/render/ehds-badges.sh --check      fail on a stale document, a forbidden word or a missing logo
 #        scripts/render/ehds-badges.sh --self-test  the counting and the word guard on fixtures
 # No specification governs the badges: our own design.
 set -euo pipefail
@@ -33,6 +35,8 @@ case "${1:-}" in
 esac
 [[ "$#" -le 1 ]] || guard_usage "$GRAMMAR"
 cd "$(dirname "$0")/../.."
+# shellcheck source=scripts/checks/badge-logos/logo.sh
+. scripts/checks/badge-logos/logo.sh
 
 BOOK=website/book/src/compliance
 OUT=docs/conformance/ehds
@@ -75,8 +79,8 @@ count_rows() {
 
 # Writes the endpoint document $1 with label $2 and message $3.
 badge() {
-  jq -n --arg label "$2" --arg message "$3" \
-    '{schemaVersion: 1, label: $label, message: $message, color: "blue"}' > "$1"
+  jq -n --arg label "$2" --arg message "$3" --argjson logo "$(badge_logo_fields eu)" \
+    '{schemaVersion: 1, label: $label, message: $message, color: "blue"} + $logo' > "$1"
 }
 
 # Writes the three documents into the directory $1 from the tree in the
@@ -135,6 +139,11 @@ EOF
   badge "$tmp/out/bad.json" "EHDS certified" "1/1"
   [[ -n "$(forbidden_words "$tmp/out" "$tmp/README.md")" ]] || { echo "self-test: a certified label passed" >&2; exit 1; }
   rm "$tmp/out/bad.json"
+  badge_logo_check "$tmp"/out/*.json || { echo "self-test: a rendered badge carries no EU emblem on EU blue" >&2; exit 1; }
+  jq 'del(.labelColor)' "$tmp/out/logging.json" > "$tmp/bare.json"
+  if badge_logo_check "$tmp/bare.json" 2> /dev/null; then echo "self-test: an EU emblem without the EU blue label passed" >&2; exit 1; fi
+  printf '[![x](https://img.shields.io/badge/x-y-blue)](x)\n' > "$tmp/README.md"
+  if badge_logo_readme "$tmp/README.md" 2> /dev/null; then echo "self-test: a static badge without a logo passed" >&2; exit 1; fi
   printf '[![EEHRxF conformant](x)](y)\n' > "$tmp/README.md"
   [[ -n "$(forbidden_words "$tmp/out" "$tmp/README.md")" ]] || { echo "self-test: a conformant README badge passed" >&2; exit 1; }
   echo "ehds-badges: self-test passed"
@@ -164,5 +173,7 @@ if [[ -n "$words" ]]; then
   echo "::error::an EHDS badge says certified, compliant or conformant, which no conformity assessment supports (EHDS Art. 28)" >&2
   fail=1
 fi
-[[ "$fail" -eq 0 ]] && echo "ehds-badges: the badges match their tables and claim no certification"
+badge_logo_check "$OUT"/*.json || fail=1
+badge_logo_readme README.md || fail=1
+[[ "$fail" -eq 0 ]] && echo "ehds-badges: the badges match their tables, carry their logos and claim no certification"
 exit "$fail"
