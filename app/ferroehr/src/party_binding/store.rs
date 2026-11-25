@@ -271,7 +271,7 @@ pub(crate) async fn reindex_imported(
     vo_id: VoId,
 ) -> Result<(), ServiceError> {
     if kind.is_demographic() {
-        crate::party_binding::policy_mark::mark_stored(tx, mapping, Some(vo_id)).await?;
+        crate::party_binding::policy_mark::mark_stored(tx, Some(vo_id)).await?;
         reindex_stored(tx, mapping, policy, kind, vo_id).await?;
     }
     Ok(())
@@ -293,7 +293,7 @@ pub(crate) async fn reindex_loaded(
     kind: &str,
     vo_id: VoId,
 ) -> Result<(), ServiceError> {
-    crate::party_binding::policy_mark::mark_stored(tx, mapping, Some(vo_id)).await?;
+    crate::party_binding::policy_mark::mark_stored(tx, Some(vo_id)).await?;
     match Kind::from_type(kind) {
         Some(kind) => reindex_stored(tx, mapping, policy, kind, vo_id).await,
         None => Ok(party_reverse::rebuild(tx, vo_id).await?),
@@ -355,7 +355,7 @@ async fn write_performers(
 /// [`StorageError::Database`] on a driver failure.
 pub async fn refill(tx: &mut PgConnection, mapping: &BindingMapping) -> Result<(), StorageError> {
     crate::party_binding::live::note_change();
-    crate::party_binding::policy_mark::mark_stored(tx, mapping, None).await?;
+    crate::party_binding::policy_mark::mark_stored(tx, None).await?;
     for statement in [
         "DELETE FROM binding_identifier",
         "DELETE FROM binding_membership",

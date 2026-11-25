@@ -174,8 +174,7 @@ pub(crate) async fn check(
     }
     let binding = !mapping.is_empty() && matches!(kind, Kind::Person | Kind::Role | Kind::Group);
     let (current, previous, marked) = standing(tx, committed, facts, prior).await?;
-    let committed_policy =
-        mark_committed(tx, mapping, (kind, vo_id), (marked, current), facts).await?;
+    let committed_policy = mark_committed(tx, (kind, vo_id), (marked, current), facts).await?;
     if !(binding || mapping.names_policy()) {
         return Ok(());
     }
@@ -727,18 +726,17 @@ fn refuse_policy(
 /// What makes the version `current` the commit `tx` wrote of the party
 /// `vo_id` of `kind`, holding `facts`, a policy party
 /// ([`policy_mark::policy_content`]), marking the party when it was not
-/// `marked` before; coded policy content marks the party whatever the
-/// mapping, and a client identifier under the configured policy.
+/// `marked` before; a policy version marks the party whatever the mapping, so
+/// the mark is a fact of the versions.
 async fn mark_committed(
     tx: &mut PgConnection,
-    mapping: &BindingMapping,
     (kind, vo_id): (Kind, VoId),
     (marked, current): (bool, Option<i32>),
     facts: Option<&Facts>,
 ) -> Result<Option<PolicyContent>, ServiceError> {
     let committed = match (current, facts) {
         (Some(_), Some(facts)) => facts.policy.clone(),
-        (Some(sys_version), None) => stored_policy(tx, mapping, kind, vo_id, sys_version).await?,
+        (Some(sys_version), None) => stored_policy(tx, kind, vo_id, sys_version).await?,
         (None, _) => None,
     };
     if committed.is_some() && !marked {
@@ -748,11 +746,10 @@ async fn mark_committed(
 }
 
 /// What makes the stored version `sys_version` of `vo_id` of `kind` a policy
-/// party under `mapping` ([`policy_mark::policy_content`]), read from its
-/// body; `None` for a version without one.
+/// party ([`policy_mark::policy_content`]), read from its body; `None` for a
+/// version without one.
 async fn stored_policy(
     tx: &mut PgConnection,
-    mapping: &BindingMapping,
     kind: Kind,
     vo_id: VoId,
     sys_version: i32,
@@ -760,7 +757,7 @@ async fn stored_policy(
     let Some(body) = body(tx, vo_id, sys_version).await? else {
         return Ok(None);
     };
-    Ok(parsed(kind, &body, mapping)?.policy)
+    Ok(parsed(kind, &body, &BindingMapping::default())?.policy)
 }
 
 /// What `facts`, held by a party of `kind`, hold that is protected.
