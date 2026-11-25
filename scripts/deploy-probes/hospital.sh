@@ -647,7 +647,8 @@ h_client() {
   shift 3
   h_party "$name" agent "$(j_named_party AGENT "$client" "$(jq -nc --arg c "$client" --arg i "${H_CLIENT_ISSUER:-$HS_ISSUER}" \
     '{details:{_type:"ITEM_TREE",archetype_node_id:"at0010",name:{_type:"DV_TEXT",value:"details"},
-      items:[{_type:"ELEMENT",archetype_node_id:"at0011",name:{_type:"DV_TEXT",value:"client"},
+      items:[{_type:"ELEMENT",archetype_node_id:"at0011",name:{_type:"DV_CODED_TEXT",value:"client_id",
+        defining_code:{_type:"CODE_PHRASE",terminology_id:{_type:"TERMINOLOGY_ID",value:"openehr_access"},code_string:"client_id"}},
         value:{_type:"DV_IDENTIFIER",issuer:$i,id:$c,type:"client_id"}}]}}')")" || return 1
   h_relate 1 admin agent "$(hv "$name")" \
     "[$(j_care acts_for AGENT "$(hv "$name")" ORGANISATION "$org" "$(j_dates "$(h_day -365)")")]" || return 1

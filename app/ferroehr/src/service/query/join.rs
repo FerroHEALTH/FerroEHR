@@ -197,7 +197,7 @@ impl FerroEhrService {
             Box::pin(self.query_caseload(QueryDomain::Clinical, job.request.caseload.as_ref()))
                 .await
                 .map_err(Failure::analysis)?;
-        let mut stale_since = None;
+        let mut rejudge = super::stale::Rejudge::default();
         let result = loop {
             let access_settings = Box::pin(self.query_access_readers(&ehr_access))
                 .await
@@ -226,13 +226,12 @@ impl FerroEhrService {
                 // or the query is refused; it never answers fewer rows.
                 Err(e) => match e.stale_copy() {
                     Some(copy) => {
-                        let since = *stale_since.get_or_insert_with(std::time::Instant::now);
                         ehr_access = Box::pin(self.judged_again(
                             copy,
                             &job.request.ehr_access,
                             Some(&ehrs),
                             &ehr_access,
-                            since,
+                            &mut rejudge,
                         ))
                         .await
                         .map_err(Failure::exec_refused)?;

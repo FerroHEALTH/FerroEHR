@@ -193,7 +193,7 @@ async fn every_page_and_total_matches_the_read_of_the_union_view() {
             for offset in [0, 1, 4, 13, 59, 60, 61, 119, 500] {
                 let (want_total, want_page) = reference(&pool, case.sql, count, offset).await;
                 let what = format!("{}, _count={count}, _offset={offset}", case.name);
-                // A page read without its total (the default since #5702) says
+                // A page read without its total (the default, #5702) says
                 // whether another follows; one read with `_total` counts too.
                 let uncounted = store
                     .search(&AuditSearchFilter {

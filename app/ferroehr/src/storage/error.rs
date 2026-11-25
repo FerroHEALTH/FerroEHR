@@ -221,56 +221,24 @@ const CANCELLED_MESSAGE: &str = "the database cancelled the request's statement;
 /// full detail goes to `tracing` at the bridge below.
 pub(crate) const CODEC_MESSAGE: &str = "the server encountered an internal storage-codec error";
 
-/// Classify a raw [`sqlx::Error`] at the storage boundary into the call status
-/// it should surface, emitting **one** structured trace record so the SQLSTATE
-/// code + constraint name are never lost. No openEHR spec governs the
-/// persistence mechanism or server-overload behaviour — this is our own design;
-/// the resulting HTTP status codes are the ITS-REST-governed ones (overview
-/// §HTTP status codes: `409 Conflict`; RFC 9110 §15.6.4: `503`).
+/// Classifies a raw [`sqlx::Error`] at the storage boundary into the call
+/// status it surfaces, emitting one trace record with the SQLSTATE and the
+/// constraint.
 ///
-/// No driver string ever reaches a client body: every branch returns one of the
-/// curated constants above, and the SQLSTATE, constraint, table and
-/// driver text are recorded on the trace record only, a PostgreSQL message
-/// naming schema objects the client can neither use nor be trusted with.
+/// No driver text reaches a client body. The split follows the PostgreSQL
+/// error codes (<https://www.postgresql.org/docs/18/errcodes-appendix.html>):
 ///
-/// The SQLSTATE split follows the PostgreSQL error-code table
-/// (<https://www.postgresql.org/docs/18/errcodes-appendix.html>) and answers
-/// whose invariant broke:
+/// - `23505`, `23503`, `23001`, `23P01`: a conflict (`409`) with data the
+///   repository holds.
+/// - `23514`, `23502` and every other class-23 code: a fault (`500`), a
+///   violated server-side invariant.
+/// - `40001` and `40P01`: a conflict (`409`, retryable).
+/// - [`sqlx::Error::PoolTimedOut`], [`session::is_connect_failure`],
+///   [`session::is_cut_session`] and `57014`: overloaded (`503` with
+///   `Retry-After`, RFC 9110 §15.6.4).
+/// - anything else: a fault (`500`).
 ///
-/// - `23505` `unique_violation`, `23503` `foreign_key_violation`, `23001`
-///   `restrict_violation`, `23P01` `exclusion_violation` →
-///   a conflict (`409`): collisions with data the repository
-///   already holds, which is what `409` means (ITS-REST overview §HTTP status
-///   codes).
-/// - `23514` `check_violation`, `23502` `not_null_violation`, the generic
-///   `23000` and any other class-23 code → a fault (`500`):
-///   a CHECK or NOT NULL reaching the driver is a violated server-side
-///   invariant, either a value the service layer failed to refuse or a drift
-///   between schema and code, and presenting it as `409` would invite an endless
-///   retry against an optimistic-lock failure that never happened.
-/// - `40001` `serialization_failure` and `40P01` `deadlock_detected` →
-///   a conflict (`409`, retryable).
-/// - [`sqlx::Error::PoolTimedOut`] → overloaded (`503`
-///   plus `Retry-After`, the admission contract).
-/// - a failure only opening a connection can produce ([`session::is_connect_failure`])
-///   → overloaded (`503` plus `Retry-After`): no
-///   statement ran, so repeating the request is safe once the database answers.
-/// - a session the database or the network cut ([`session::is_cut_session`]: a
-///   database restart, a crash, a reset connection) →
-///   overloaded (`503` plus `Retry-After`): the
-///   outage is temporary, which is what `503` says (RFC 9110 §15.6.4). A
-///   transaction the cut interrupted is rolled back by the server; only a
-///   `COMMIT` cut between its execution and its reply leaves the outcome
-///   unknown, as it would behind a `500`.
-/// - `57014` `query_canceled` → overloaded (`503`
-///   plus `Retry-After`): the cancelled statement rolled back, so repeating the
-///   request is safe. By default the `[server]` request timeout (30 s)
-///   answers a request before the `[database]` `statement_timeout` backstop (60 s)
-///   fires, so on a request path an operator's cancel or a forward step of the
-///   database host's wall clock, which `PostgreSQL` measures its timeouts
-///   against, raises it.
-/// - anything else → a fault (`500`, a genuine fault),
-///   including a protocol error, which no restart produces.
+/// No openEHR spec governs the persistence mechanism: our own design.
 pub(crate) fn classify_sqlx(e: sqlx::Error) -> ServiceError {
     match verdict(&e) {
         Verdict::Overloaded(message) => ServiceError::overloaded(message, e),

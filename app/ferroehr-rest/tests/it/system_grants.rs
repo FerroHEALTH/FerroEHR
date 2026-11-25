@@ -225,7 +225,7 @@ pub(crate) async fn acting_client(
     let identifiers: Vec<Value> = clients
         .iter()
         .map(|(issuer, client_id)| {
-            json!({ "_type": "ELEMENT", "archetype_node_id": "at0012", "name": text("client"),
+            json!({ "_type": "ELEMENT", "archetype_node_id": "at0012", "name": { "_type": "DV_CODED_TEXT", "value": "client_id", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "client_id" } },
                     "value": { "_type": "DV_IDENTIFIER", "issuer": issuer, "id": client_id,
                                "type": "client_id" } })
         })

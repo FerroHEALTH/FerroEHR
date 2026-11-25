@@ -146,32 +146,20 @@ pub async fn list_tag_sets(
         .partition(|row| row.target_version.is_none()))
 }
 
-/// Replaces the whole tag collection of one target in one scope.
+/// Replaces the whole tag collection of one target in one scope (`PUT`
+/// semantics; an empty set clears all), and returns the stored collection in
+/// the `list_tags` order.
 ///
-/// Drops the existing collection, inserts the given set (`PUT`
-/// full-collection semantics; an empty set clears all), and returns the
-/// STORED collection in the `list_tags` order — the write path never re-reads
-/// what it just wrote.
-///
-/// A tag that survives the replace keeps its original `created_at`. An
-/// `ITEM_TAG` identity, the (`key`, `target_path`) pair within one target
-/// (ITS-REST overview `Requests_and_responses.md` §item-tag headers), appearing
-/// in both the stored and the posted set is the same tag re-asserted, and its
-/// creation instant is observable through the admin dump/export. An identity
-/// absent from the posted set is removed and a new identity is created, so both
-/// take the current instant.
-///
-/// NOTE: no openEHR spec governs this — our own design; RM common
-/// `master07-tags.adoc` and RM ehr `master04-ehr_package.adoc` §Tags model
-/// `ITEM_TAG` with no timestamp, so `created_at` is a storage column of ours.
-///
-/// The carry-forward is computed in three statements rather than one
-/// data-modifying CTE because a `WITH prior AS (DELETE … RETURNING) INSERT …`
-/// would have the insert's unique-index check race the CTE's delete within one
-/// command, which PostgreSQL does not define away
+/// A tag whose identity, the (`key`, `target_path`) pair (ITS-REST overview
+/// `Requests_and_responses.md` §item-tag headers), is in both the stored and
+/// the posted set keeps its `created_at`. The carry-forward takes three
+/// statements on the caller's transaction, since a data-modifying CTE would
+/// race its own unique-index check
 /// (<https://www.postgresql.org/docs/18/queries-with.html> §Data-Modifying
-/// Statements in WITH). All three run on the caller's transaction, so the
-/// replace stays atomic.
+/// Statements in WITH).
+///
+/// NOTE: RM common `master07-tags.adoc` models `ITEM_TAG` with no timestamp,
+/// so `created_at` is a storage column of our own design.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.

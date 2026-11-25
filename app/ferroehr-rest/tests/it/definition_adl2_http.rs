@@ -770,8 +770,7 @@ async fn upload_with_unheld_constituents_is_400_naming_each_with_varxr() {
 /// `master03-opt_raw.adoc` §Archetype References): its operational form and
 /// its example answer a `422` whose `VARXR` violations carry exactly the
 /// missing archetype ids, while its source stays readable. The API refuses
-/// that delete since #4522, so the row is removed in SQL, standing for a store
-/// written before the guard.
+/// that delete (#4522), so the row is removed in SQL.
 #[tokio::test]
 async fn a_template_whose_constituent_is_deleted_names_it_on_every_compiled_read() {
     let (pg, app) = common::app(common::api_config(false)).await;

@@ -88,6 +88,7 @@ mod care_roles_query;
 mod care_writer_marking;
 mod care_writer_scope;
 mod change_control_integrity;
+mod client_identifier_policy;
 mod codec_corpus;
 mod cohort_bench;
 mod cohort_query;

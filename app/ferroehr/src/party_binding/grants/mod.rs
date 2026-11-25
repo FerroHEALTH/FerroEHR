@@ -6,9 +6,10 @@
 //!
 //! They are held in the binding side table and resolved on every request
 //! with no read of its own. Nothing is recognised by archetype: a client is
-//! any `ACTOR` carrying a `DV_IDENTIFIER` of type `client_id` whose issuer is
-//! the token issuer (RM demographic `master02-demographic_package.adoc`
-//! §Party Identification), and a party may do an operation when a
+//! any `ACTOR` carrying an `ELEMENT` named `openehr_access::client_id` whose
+//! `DV_IDENTIFIER`'s issuer is the token issuer
+//! (`policy_mark::client_identifier`; RM demographic
+//! `master02-demographic_package.adoc` §Party Identification), and a party may do an operation when a
 //! `CAPABILITY` of a `ROLE` whose `performer` names it
 //! (`org.openehr.rm.demographic.role.adoc`) holds that operation's code of
 //! [`super::policy_mark::TERMINOLOGY`] anywhere in its `credentials`, valid on the

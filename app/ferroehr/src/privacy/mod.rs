@@ -309,36 +309,18 @@ fn walk<'a, T: Tree<'a>>(at: &mut String, node: T, findings: &mut Vec<Finding>) 
     }
 }
 
-/// Refuse the party-proxy attributes that identify the record's subject.
+/// Refuses the party-proxy attributes that identify the record's subject.
 ///
-/// `PARTY_IDENTIFIED.name` is permitted: the class is "Proxy data for an
-/// identified party **other than the subject of the record**", "Typically for
-/// health care providers, e.g. name and provider number of an institution"
-/// (RM common `UML/classes/org.openehr.rm.common.party_identified.adoc`
-/// §Description), so a name there is clinician or institution identity — the
-/// class's own paradigm case, not patient identity.
-///
-/// `PARTY_IDENTIFIED.identifiers` is permitted for the same reason: the class
-/// is "Used to describe parties where only identifiers may be known … e.g.
-/// name and provider number of an institution" (same file, §Description), so
-/// a clinician's registration number is its paradigm case, and the Simplified
-/// Formats build exactly that from `ctx/participation_identifiers`
-/// (ITS-REST `simplified_formats` master06 §Participation). The SUBJECT's
-/// identifier is what the boundary keeps off the clinical side (#3254).
-///
-/// Both `name` and `identifiers` are refused only where the party IS the subject. The
-/// class is "Proxy type for identifying a party **and its relationship to the
-/// subject** of the record", and its `relationship` is "coded as self" when
-/// "it is the patient" (RM common
-/// `UML/classes/org.openehr.rm.common.party_related.adoc` §Attributes; `self`
-/// is code `0` of the openEHR `subject relationship` group, TERM
-/// `SupportTerminology/codesets/openehr_terminology-vocabularies.adoc`). A
-/// named mother, guardian or donor is a third party the RM models on purpose,
-/// not the subject's identity, and the released spec obliges a server to
-/// accept it (#3252). A relationship that cannot be read is treated as `self`:
-/// the rule refuses what it cannot prove harmless, and the RM validator names
-/// the missing 1..1 attribute on its own. `Basic_validity` is satisfied by
-/// `external_ref` alone, so every refused proxy stays expressible.
+/// `PARTY_IDENTIFIED.name` and `identifiers` are permitted: the class is
+/// "Proxy data for an identified party other than the subject of the record",
+/// "Typically for health care providers" (RM common
+/// `UML/classes/org.openehr.rm.common.party_identified.adoc` §Description).
+/// On `PARTY_RELATED` both are refused only where its `relationship` is
+/// `self`, code `0` of the openEHR `subject relationship` group (RM common
+/// `UML/classes/org.openehr.rm.common.party_related.adoc` §Attributes); a
+/// relationship that cannot be read counts as `self`. `Basic_validity` is
+/// satisfied by `external_ref` alone, so every refused proxy stays
+/// expressible (#3252, #3254).
 fn check_party<'a, T: Tree<'a>>(at: &str, map: T, findings: &mut Vec<Finding>) {
     let related = match map.get_text("_type").as_deref() {
         Some("PARTY_RELATED") => true,

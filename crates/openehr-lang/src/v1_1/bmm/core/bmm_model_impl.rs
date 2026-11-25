@@ -382,38 +382,14 @@ impl BmmModel {
     /// constrainer types, or Any during the conformance testing process."
     /// (class doc §Functions).
     ///
-    /// The three rules are stated verbatim in the v3 counterpart
-    /// (`org.openehr.lang.bmm3.bmm_model.adoc` §Functions) and implemented
-    /// exactly as written:
-    ///
-    /// * "[base class test] types are non-generic, and either type names are
-    ///   identical, or else `_a_desc_type_` has `_an_anc_type_` in its
-    ///   ancestors";
-    /// * "both types are generic and pass base class test; number of generic
-    ///   params matches, and each generic parameter type, after 'open parameter'
-    ///   substitution, recursively passes";
-    /// * "descendant type is generic and ancestor type is not, and they pass
-    ///   base classes test".
-    ///
-    /// A non-generic descendant against a generic ancestor is therefore NOT
-    /// conformant — the rule set admits generic parameters only on the
-    /// descendant side. Deliberate: the published algorithm's final case
-    /// returns exactly `not valid_generic_type_name(anc_type)`
-    /// (`master06-core-types.adoc` §Type Conformance), so a simple class
-    /// closing a generic ancestor (`Multiplicity_interval` against
-    /// `Interval<Ordered>`) has NO published substitution rule; the gap is
-    /// reported upstream, and this stays the faithful reading until a rule
-    /// is published.
-    ///
-    /// An open ancestor parameter is "replaced with their appropriate
-    /// constrainer types, or Any": the constrainer is resolved POSITIONALLY
-    /// from the ancestor root's own generic-parameter declarations
-    /// (`BMM_GENERIC_CLASS.generic_parameter_conformance_type` —
-    /// `org.openehr.lang.bmm3.bmm_generic_class.adoc` §Functions;
-    /// `master06-core-types.adoc` §Type Conformance's
-    /// `generic_parameter_conformance_type` step), and `Any` remains only the
-    /// genuinely-unconstrained fallback
-    /// (`org.openehr.lang.bmm3.bmm_definitions.adoc` §Functions `Any_class`).
+    /// The three rules of the v3 counterpart
+    /// (`org.openehr.lang.bmm3.bmm_model.adoc` §Functions) as written: equal or
+    /// ancestor non-generic types; both generic with matching, recursively
+    /// conformant parameters; a generic descendant of a non-generic ancestor. A
+    /// non-generic descendant of a generic ancestor does not conform
+    /// (`master06-core-types.adoc` §Type Conformance). An open ancestor
+    /// parameter becomes its positional conformance type
+    /// (`org.openehr.lang.bmm3.bmm_generic_class.adoc` §Functions), else `Any`.
     #[must_use]
     pub fn type_conforms_to(&self, a_desc_type: &str, an_anc_type: &str) -> bool {
         let (descendant_root, descendant_parameters) = split_type(a_desc_type);

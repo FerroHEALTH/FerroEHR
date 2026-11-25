@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ITI-81 statements of each search shape a store has run (#6362), built
-//! once per shape by [`super::search_page`] and bound to each search's values.
+//! The audit search statements of each search shape a store has run, built
+//! once per shape and bound to each search's values: the ITI-81 page
+//! (#6362), and the person's own trail and the EHRs it names (#6467).
 
 use std::sync::{Arc, PoisonError};
 
@@ -45,15 +46,16 @@ impl AuditStore {
         let cursor = self.cursor.bound(&mut conn).await?;
         let Statements {
             template,
-            count_values,
-            values,
-        } = self.page_shapes.statements(filter, &resolved, cursor);
+            values: [count_values, values],
+        } = self
+            .page_shapes
+            .statements(Kind::Page, filter, &resolved, cursor);
         // NOTE: our own design (#6005), a shape's text is a named statement that PostgreSQL may
         // plan once per connection (plan_cache_mode auto); any other text goes unnamed.
         let shaped = search_page::shaped(filter);
         let total = if filter.total {
             let total: i64 =
-                sqlx::query_scalar_with(sqlx::AssertSqlSafe(template.count_sql()), count_values)
+                sqlx::query_scalar_with(sqlx::AssertSqlSafe(template.sql(0)), count_values)
                     .persistent(shaped)
                     .fetch_one(&mut *conn)
                     .await?;
@@ -61,7 +63,7 @@ impl AuditStore {
         } else {
             None
         };
-        let mut rows = sqlx::query_with(sqlx::AssertSqlSafe(template.sql()), values)
+        let mut rows = sqlx::query_with(sqlx::AssertSqlSafe(template.sql(1)), values)
             .persistent(shaped)
             .fetch_all(&mut *conn)
             .await?;
@@ -79,13 +81,28 @@ impl AuditStore {
             more,
         })
     }
+
+    /// The single `kind` statement of a search for `filter`, its token
+    /// criteria resolved to `resolved`, with its values.
+    pub(crate) fn shaped(
+        &self,
+        kind: Kind,
+        filter: &AuditSearchFilter,
+        resolved: &[Option<TokenMatch>],
+    ) -> (Arc<Template>, SqlxValues) {
+        let Statements {
+            template,
+            values: [values, _],
+        } = self.page_shapes.statements(kind, filter, resolved, 0);
+        (template, values)
+    }
 }
 
 /// The most search shapes a store keeps the statements of; a search of
 /// another shape builds its statements.
 const SHAPES_KEPT: usize = 64;
 
-/// The ITI-81 statements of each search shape a store has run (#6362): the
+/// The audit search statements of each search shape a store has run: the
 /// text depends on the shape alone (which parameters are present, how many
 /// values each has, what a token criterion resolved to, the date bounds,
 /// what the page carries), so it is built once per shape and each search
@@ -95,15 +112,47 @@ pub(crate) struct PageShapes {
     templates: std::sync::RwLock<std::collections::BTreeMap<String, Arc<Template>>>,
 }
 
+/// The statements a search runs: the ITI-81 count and page (#6362), the
+/// person's own trail, or the EHRs a search names (#6467).
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Kind {
+    Page,
+    Trail,
+    Ehrs,
+}
+
+impl Kind {
+    /// The statements of this kind for a search, with their values.
+    fn build(
+        self,
+        filter: &AuditSearchFilter,
+        resolved: &[Option<TokenMatch>],
+        cursor: i64,
+        numbers: Numbers,
+        carried: &CarriedRead,
+    ) -> Vec<(String, SqlxValues)> {
+        match self {
+            Self::Page => {
+                let (count_sql, count_values, sql, values) =
+                    build(filter, resolved, cursor, numbers, carried);
+                vec![(count_sql, count_values), (sql, values)]
+            }
+            Self::Trail => vec![crate::system_log::withheld::trail_statement(
+                filter, resolved,
+            )],
+            Self::Ehrs => vec![crate::system_log::withheld::ehrs_statement(
+                filter, resolved,
+            )],
+        }
+    }
+}
+
 /// The statements of one shape, and where each of their parameters comes
 /// from.
 #[derive(Debug)]
-pub(super) struct Template {
+pub(crate) struct Template {
     slots: usize,
-    count_sql: String,
-    count_binds: Vec<Bind>,
-    sql: String,
-    binds: Vec<Bind>,
+    statements: Vec<(String, Vec<Bind>)>,
 }
 
 /// The source of one parameter of a [`Template`]: a value of the search, by
@@ -114,43 +163,38 @@ enum Bind {
     Fixed(sea_query::Value),
 }
 
-/// The two statements of one search and their values.
+/// The statements of one search and their values, in the order its
+/// [`Kind`] builds them; a kind of one statement leaves the second empty.
 #[derive(Debug)]
-pub(super) struct Statements {
+pub(crate) struct Statements {
     /// The statements' text.
-    pub(super) template: Arc<Template>,
-    /// The count statement's values.
-    pub(super) count_values: SqlxValues,
-    /// The page statement's values.
-    pub(super) values: SqlxValues,
+    pub(crate) template: Arc<Template>,
+    /// Each statement's values.
+    pub(crate) values: [SqlxValues; 2],
 }
 
 impl Template {
-    /// The count statement.
-    pub(super) fn count_sql(&self) -> &str {
-        &self.count_sql
-    }
-
-    /// The page statement.
-    pub(super) fn sql(&self) -> &str {
-        &self.sql
+    /// The text of statement `at`, empty past the last.
+    pub(crate) fn sql(&self, at: usize) -> &str {
+        self.statements.get(at).map_or("", |(sql, _)| sql.as_str())
     }
 }
 
 impl PageShapes {
-    /// The statements of a search for `filter`, its token criteria resolved
-    /// to `resolved`, bound to the index cursor `cursor`: from the shape's
-    /// template when this store has one, else built, and kept while fewer
-    /// than [`SHAPES_KEPT`] shapes are.
-    pub(super) fn statements(
+    /// The `kind` statements of a search for `filter`, its token criteria
+    /// resolved to `resolved`, bound to the index cursor `cursor`: from the
+    /// shape's template when this store has one, else built, and kept while
+    /// fewer than [`SHAPES_KEPT`] shapes are.
+    pub(crate) fn statements(
         &self,
+        kind: Kind,
         filter: &AuditSearchFilter,
         resolved: &[Option<TokenMatch>],
         cursor: i64,
     ) -> Statements {
         let numbers = Numbers::of(filter);
         let carried = carried_of(filter);
-        let key = shape_key(filter, resolved, &carried);
+        let key = shape_key(kind, filter, resolved, &carried);
         let held = self
             .templates
             .read()
@@ -158,7 +202,7 @@ impl PageShapes {
             .get(&key)
             .cloned();
         let template = held.unwrap_or_else(|| {
-            let template = Arc::new(template_of(filter, resolved, &carried));
+            let template = Arc::new(template_of(kind, filter, resolved, &carried));
             let mut templates = self
                 .templates
                 .write()
@@ -170,31 +214,44 @@ impl PageShapes {
         });
         let slots = slots(filter, resolved, cursor, numbers, &carried);
         if slots.len() == template.slots
-            && let Some(count_values) = bound(&template.count_binds, &slots)
-            && let Some(values) = bound(&template.binds, &slots)
+            && let Some(values) = bound_all(&template, &slots)
         {
-            return Statements {
-                template,
-                count_values,
-                values,
-            };
+            return Statements { template, values };
         }
         // NOTE: our own design (#6362), a search whose values its shape's template does not
         // place builds its own statements.
-        let (count_sql, count_values, sql, values) =
-            build(filter, resolved, cursor, numbers, &carried);
+        let mut values = [empty(), empty()];
+        let mut statements = Vec::new();
+        for (slot, (sql, bound)) in values
+            .iter_mut()
+            .zip(kind.build(filter, resolved, cursor, numbers, &carried))
+        {
+            *slot = bound;
+            statements.push((sql, Vec::new()));
+        }
         Statements {
             template: Arc::new(Template {
                 slots: 0,
-                count_sql,
-                count_binds: Vec::new(),
-                sql,
-                binds: Vec::new(),
+                statements,
             }),
-            count_values,
             values,
         }
     }
+}
+
+/// No values.
+fn empty() -> SqlxValues {
+    SqlxValues(sea_query::Values(Vec::new()))
+}
+
+/// The values each statement of `template` takes from `slots`; `None` when a
+/// bind names a value `slots` does not hold.
+fn bound_all(template: &Template, slots: &[sea_query::Value]) -> Option<[SqlxValues; 2]> {
+    let mut values = [empty(), empty()];
+    for (slot, (_, binds)) in values.iter_mut().zip(&template.statements) {
+        *slot = bound(binds, slots)?;
+    }
+    Some(values)
 }
 
 /// The values `binds` take from `slots`; `None` when a bind names a value
@@ -213,6 +270,7 @@ fn bound(binds: &[Bind], slots: &[sea_query::Value]) -> Option<SqlxValues> {
 /// The key of the shape of a search for `filter`, its token criteria
 /// resolved to `resolved`, carrying `carried`.
 fn shape_key(
+    kind: Kind,
     filter: &AuditSearchFilter,
     resolved: &[Option<TokenMatch>],
     carried: &CarriedRead,
@@ -221,7 +279,12 @@ fn shape_key(
     let mut key = String::with_capacity(32);
     let _ = write!(
         key,
-        "{}{}{}{}",
+        "{}{}{}{}{}",
+        match kind {
+            Kind::Page => 'P',
+            Kind::Trail => 'T',
+            Kind::Ehrs => 'E',
+        },
         u8::from(filter.from.is_some()),
         u8::from(filter.until.is_some()),
         u8::from(filter.until_inclusive),
@@ -320,6 +383,7 @@ fn criterion_values(criterion: &AuditCriterion, slots: &mut Vec<sea_query::Value
 /// so each parameter is told apart as a value of the search or a value of
 /// the shape.
 fn template_of(
+    kind: Kind,
     filter: &AuditSearchFilter,
     resolved: &[Option<TokenMatch>],
     carried: &CarriedRead,
@@ -394,8 +458,6 @@ fn template_of(
     };
     let cursor = i64::MIN + 1;
     let slots = slots(&probe, &probe_resolved, cursor, numbers, &probe_carried);
-    let (count_sql, count_values, sql, values) =
-        build(&probe, &probe_resolved, cursor, numbers, &probe_carried);
     let binds_of = |values: SqlxValues| -> Vec<Bind> {
         values
             .0
@@ -409,9 +471,10 @@ fn template_of(
     };
     Template {
         slots: slots.len(),
-        count_sql,
-        count_binds: binds_of(count_values),
-        sql,
-        binds: binds_of(values),
+        statements: kind
+            .build(&probe, &probe_resolved, cursor, numbers, &probe_carried)
+            .into_iter()
+            .map(|(sql, values)| (sql, binds_of(values)))
+            .collect(),
     }
 }

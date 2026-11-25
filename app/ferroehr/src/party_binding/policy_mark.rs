@@ -10,8 +10,10 @@
 //!   `DV_CODED_TEXT` of the draft access terminology ([`TERMINOLOGY`]);
 //! - a `PARTY_RELATIONSHIP`, at its root or inline, whose `name` or whose
 //!   `details` hold the acts-for code ([`ACTS_FOR`]) of that terminology;
-//! - a `DV_IDENTIFIER` of the client identifier type ([`CLIENT_ID`]), which
-//!   binds an actor to an OAuth 2.0 client.
+//! - an `ELEMENT` named by the client identifier code ([`CLIENT_ID`]) of that
+//!   terminology and holding a `DV_IDENTIFIER`, which binds an actor to an
+//!   OAuth 2.0 client (`client_identifier`). A `DV_IDENTIFIER` merely typed
+//!   `client_id` is the deployment's own data and marks nothing.
 //!
 //! A party with such a version is marked in `vo_head.policy_party_at`: the
 //! commit of the version sets it in its own transaction
@@ -52,7 +54,8 @@ pub const ACTS_FOR: &str = "acts_for";
 /// subject's own record. It makes no policy party.
 pub const REPRESENTS: &str = "represents";
 
-/// The `DV_IDENTIFIER.type` of an OAuth 2.0 `client_id`.
+/// The code of [`TERMINOLOGY`] that names the `ELEMENT` holding an actor's
+/// OAuth 2.0 `client_id`.
 pub const CLIENT_ID: &str = "client_id";
 
 /// The SQL/JSON path that holds exactly when `policy_content` finds content.
@@ -66,7 +69,10 @@ exists(@.name?(@._type == \"DV_CODED_TEXT\" \
 || exists(@.details.**?(@._type == \"DV_CODED_TEXT\" \
 && @.defining_code.terminology_id.value == \"openehr_access\" \
 && @.defining_code.code_string == \"acts_for\")))) \
-|| exists($.**?(@._type == \"DV_IDENTIFIER\" && @.type == \"client_id\")))";
+|| exists($.**?(@._type == \"ELEMENT\" && @.value._type == \"DV_IDENTIFIER\" \
+&& @.name._type == \"DV_CODED_TEXT\" \
+&& @.name.defining_code.terminology_id.value == \"openehr_access\" \
+&& @.name.defining_code.code_string == \"client_id\")))";
 
 /// What makes a version a policy party.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -75,7 +81,7 @@ pub enum PolicyContent {
     Grant(String),
     /// A `PARTY_RELATIONSHIP` carries the acts-for code.
     ActsFor,
-    /// A `DV_IDENTIFIER` names an OAuth 2.0 client.
+    /// An `ELEMENT` coded [`CLIENT_ID`] names an OAuth 2.0 client.
     Client,
 }
 
@@ -84,7 +90,7 @@ impl fmt::Display for PolicyContent {
         match self {
             Self::Grant(code) => write!(f, "a capability granting {TERMINOLOGY}::{code}"),
             Self::ActsFor => write!(f, "an acts-for relationship ({TERMINOLOGY}::{ACTS_FOR})"),
-            Self::Client => write!(f, "a {CLIENT_ID} identifier"),
+            Self::Client => write!(f, "a client identifier ({TERMINOLOGY}::{CLIENT_ID})"),
         }
     }
 }
@@ -188,6 +194,24 @@ fn openehr_relationship<'a, T: Tree<'a>>(item: T) -> Option<String> {
     .then(|| code.into_owned())
 }
 
+/// The `(issuer, id)` of `value` when it is a client identifier: an `ELEMENT`
+/// whose `name` is [`TERMINOLOGY`]`::`[`CLIENT_ID`], holding a
+/// `DV_IDENTIFIER` with an `issuer`, whatever its `type`; the one rule the
+/// policy mark and the client rows read (#6542).
+pub(crate) fn client_identifier<'a, T: Tree<'a>>(value: T) -> Option<(String, String)> {
+    let identifier = value.get("value")?;
+    (text(value, "_type").as_deref() == Some("ELEMENT")
+        && value.get("name").and_then(coded).as_deref() == Some(CLIENT_ID)
+        && text(identifier, "_type").as_deref() == Some("DV_IDENTIFIER"))
+    .then(|| {
+        Some((
+            text(identifier, "issuer")?.into_owned(),
+            text(identifier, "id")?.into_owned(),
+        ))
+    })
+    .flatten()
+}
+
 /// What makes the party body `body`, in canonical JSON, a policy party, or
 /// `None` when it holds none of it.
 #[must_use]
@@ -200,9 +224,7 @@ pub(crate) fn policy_content<'a, T: Tree<'a>>(body: T) -> Option<PolicyContent> 
         "PARTY_RELATIONSHIP" => {
             carries(value, TERMINOLOGY, ACTS_FOR).then_some(PolicyContent::ActsFor)
         }
-        "DV_IDENTIFIER" => {
-            (text(value, "type").as_deref() == Some(CLIENT_ID)).then_some(PolicyContent::Client)
-        }
+        "ELEMENT" => client_identifier(value).map(|_| PolicyContent::Client),
         _ => None,
     })
 }
@@ -290,6 +312,12 @@ mod tests {
             "name": { "_type": "DV_TEXT", "value": "item" }, "value": value })
     }
 
+    /// An `ELEMENT` named [`CLIENT_ID`] of [`TERMINOLOGY`], holding `value`.
+    fn client_element(value: &Value) -> Value {
+        json!({ "_type": "ELEMENT", "archetype_node_id": "at1",
+            "name": coded_text(CLIENT_ID, TERMINOLOGY), "value": value })
+    }
+
     /// A `ROLE` of a deployment's own archetype with one capability whose
     /// credentials hold `items` in a cluster.
     fn role(items: &Value) -> Value {
@@ -366,9 +394,22 @@ mod tests {
                 json!({ "_type": "AGENT", "archetype_node_id": "org.example::openEHR-DEMOGRAPHIC-AGENT.gateway.v2",
                     "identities": [{ "_type": "PARTY_IDENTITY", "archetype_node_id": "at8",
                         "details": { "_type": "ITEM_TREE", "archetype_node_id": "at9",
-                            "items": [element(&json!({ "_type": "DV_IDENTIFIER",
-                                "issuer": "https://login.example", "id": "lab", "type": CLIENT_ID }))] } }] }),
+                            "items": [client_element(&json!({ "_type": "DV_IDENTIFIER",
+                                "issuer": "https://login.example", "id": "lab", "type": "system" }))] } }] }),
                 Some(PolicyContent::Client),
+            ),
+            (
+                json!({ "_type": "AGENT", "archetype_node_id": "org.example::openEHR-DEMOGRAPHIC-AGENT.gateway.v2",
+                    "details": { "_type": "ITEM_TREE", "archetype_node_id": "at9",
+                        "items": [element(&json!({ "_type": "DV_IDENTIFIER",
+                            "issuer": "https://login.example", "id": "lab", "type": "client_id" }))] } }),
+                None,
+            ),
+            (
+                json!({ "_type": "ORGANISATION", "archetype_node_id": "x",
+                    "details": { "_type": "ITEM_TREE", "archetype_node_id": "at9",
+                        "items": [client_element(&json!({ "_type": "DV_TEXT", "value": "lab" }))] } }),
+                None,
             ),
             (
                 json!({ "_type": "PERSON", "archetype_node_id": "x",

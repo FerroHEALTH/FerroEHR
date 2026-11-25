@@ -408,7 +408,7 @@ async fn each_worked_example_fits_its_definition() {
 }
 
 /// The privileged `ROLE` v1.0.1 offers no Identifier reader kind (`at12`),
-/// which grants nothing since its read is gone (#6097); v1.0.0 keeps it as
+/// which grants nothing (#6097); v1.0.0 keeps it as
 /// published, and a `ROLE` that carries it still fits v1.0.0.
 #[tokio::test]
 async fn the_identifier_reader_kind_is_offered_only_by_the_first_privileged_version() {
@@ -574,7 +574,7 @@ async fn only_an_administrator_grants_a_policy_role() {
     );
     identified["details"] = json!({ "_type": "ITEM_TREE", "archetype_node_id": "at0010",
         "name": text("details"), "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0011",
-            "name": text("client"), "value": { "_type": "DV_IDENTIFIER", "issuer": federation,
+            "name": { "_type": "DV_CODED_TEXT", "value": "client_id", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "client_id" } }, "value": { "_type": "DV_IDENTIFIER", "issuer": federation,
                 "id": "remote-portal", "type": "client_id" } }] });
     let (partner, _) = as_admin(create(&svc, PartyKind::Organisation, &identified))
         .await

@@ -11,7 +11,7 @@
 # passes over a commit only for the one reason it exists for: a base whose
 # database suite fails cannot boot, and would block the change that repairs
 # it (#5740). A commit is broken when a CI run of it on push, or a merge-queue
-# run of its tree, ran a `build & test (pgN)` shard that failed, and no run
+# run of its tree, ran a `test (pgN)` shard that failed, and no run
 # of it passed every shard. A commit whose CI is still running, whose run did
 # not reach the shards, or whose run failed only in another job (cargo-deny,
 # a lint) is the base: none of that says the server cannot boot.
@@ -59,8 +59,8 @@ verdict() {
   while IFS= read -r run; do
     [[ -n "$run" ]] || continue
     found="$(run_jobs "$run")" || { [[ "$state" == broken ]] || state=unreadable; continue; }
-    ran="$(awk -F'\t' '$1 ~ /^build & test \(pg[0-9]+\)/ && $2 != "skipped"' <<<"$found" | wc -l | tr -d ' ')"
-    failed="$(awk -F'\t' '$1 ~ /^build & test \(pg[0-9]+\)/ && $2 != "skipped" && $2 != "success"' <<<"$found" | wc -l | tr -d ' ')"
+    ran="$(awk -F'\t' '$1 ~ /^test \(pg[0-9]+\)/ && $2 != "skipped"' <<<"$found" | wc -l | tr -d ' ')"
+    failed="$(awk -F'\t' '$1 ~ /^test \(pg[0-9]+\)/ && $2 != "skipped" && $2 != "success"' <<<"$found" | wc -l | tr -d ' ')"
     if [[ "$ran" -gt 0 && "$failed" -eq 0 ]]; then
       echo green
       return
@@ -132,7 +132,7 @@ if [[ "${1:-}" == "--self-test" ]]; then
     printf '%s\tconclusion\t%s\n' "$id" "$conclusion" >>"$work/stub/jobs"
     for shard in "$@"; do
       n=$((n + 1))
-      printf '%s\tbuild & test (pg19) %s/%s\t%s\n' "$id" "$n" "$#" "$shard" >>"$work/stub/jobs"
+      printf '%s\ttest (pg19) %s/%s\t%s\n' "$id" "$n" "$#" "$shard" >>"$work/stub/jobs"
     done
   }
   # expect LABEL MAX WANT [START]: the walk from START (default c4, a pull

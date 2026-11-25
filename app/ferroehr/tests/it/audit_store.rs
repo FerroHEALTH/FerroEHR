@@ -1515,7 +1515,7 @@ async fn request_ids_and_version_uids_add_no_token_and_stay_searchable() {
 }
 
 /// Retention removes the search tokens no remaining record names, among them
-/// the request id token of a record written before #4524, keeps a token a
+/// the request id token an older record carries (#4524), keeps a token a
 /// live record names, and the chain verifies records written before and
 /// after; outside reaping no token can be deleted, and within it no token a
 /// record names.

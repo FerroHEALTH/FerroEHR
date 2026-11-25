@@ -305,8 +305,8 @@ key and inside `query_parameters`, the named key wins.
 
 ## Narrowing a query to your caseload
 
-A professional's worklist ("my patients") is a query narrowed to the
-patients the caller holds a live care relationship to. FerroEHR takes three
+A professional's worklist ("my patients") is a query narrowed to your
+[caseload](care-relationships.md#the-caseload). FerroEHR takes three
 members beside `q` in the JSON body of `POST /query/aql` and of a stored
 query's `POST` execution. They are a FerroEHR extension (the draft access
 control package, Queries and the Caseload); the AQL text stays standard and
