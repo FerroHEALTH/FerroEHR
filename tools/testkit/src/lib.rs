@@ -34,6 +34,7 @@
 mod admission;
 pub mod https;
 pub mod json_literals;
+pub mod kx;
 pub mod roles;
 pub mod seeded;
 mod server_settings;

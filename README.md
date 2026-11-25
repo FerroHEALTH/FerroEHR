@@ -29,6 +29,7 @@
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/FerroHEALTH/FerroEHR/codeql.yml?branch=main&logo=github&label=CodeQL)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/codeql.yml)
 [![Signed releases](https://img.shields.io/badge/releases-signed-brightgreen?logo=github)](https://ferroehr.eu/docs/latest/verifying-releases.html)
 [![SLSA Build L3](https://slsa.dev/images/gh-badge-level3.svg)](https://ferroehr.eu/docs/latest/verifying-releases.html#what-slsa-level-each-artifact-reaches)
+[![Post-quantum safe uses](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fpost-quantum.json)](docs/post-quantum.md)
 
 **openEHR conformance**<br>
 <sub>(self-tested and self-assessed counts; none is a certification)</sub><br>

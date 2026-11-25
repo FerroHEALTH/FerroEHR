@@ -2154,6 +2154,7 @@ dependencies = [
  "rand 0.8.7",
  "regex",
  "reqwest",
+ "rustls",
  "schemars 1.2.3",
  "sea-query",
  "sea-query-sqlx",
@@ -2399,9 +2400,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-server"
-version = "0.12.2"
+version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26080981973ace77a850adbbba06131f6408d9e4ddc4e3e87903b6a7e6238d34"
+checksum = "b70fdd6d5e2c17d72b91fe98d92a66f6c37f9292867b3a3bf3a691084ea5dd4e"
 dependencies = [
  "axum",
  "clap",

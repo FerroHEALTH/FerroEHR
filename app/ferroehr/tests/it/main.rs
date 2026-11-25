@@ -167,6 +167,7 @@ mod policy_grants;
 mod policy_listeners;
 mod policy_parties;
 mod policy_parties_aql;
+mod post_quantum;
 mod privacy_leak;
 mod privacy_policy;
 mod privacy_rules;

@@ -60,6 +60,22 @@ pub(super) async fn forwarder(
     let hostname = if hostname.is_empty() { "-" } else { hostname };
     let framer =
         Sender::new(hostname, app_name, PROCID).map_err(|e| AuditError::Transport(Box::new(e)))?;
+    let repository = repository(config).await?;
+    let outbox = StoreOutbox::syslog(store, framer, notify, IDLE);
+    Ok(Forwarder::syslog_from(
+        outbox,
+        repository,
+        config.retry.max_backoff.get(),
+    ))
+}
+
+/// The Audit Record Repository `config` names, reached over TLS with the
+/// `[audit.syslog.tls]` material.
+///
+/// # Errors
+/// [`AuditError::Transport`] when the address is no `tls://host:port` URL or
+/// the TLS material cannot be read or is refused.
+async fn repository(config: &SyslogConfig) -> Result<Repository, AuditError> {
     let address = config
         .address()
         .map_err(|e| AuditError::Transport(e.into()))?;
@@ -70,14 +86,8 @@ pub(super) async fn forwarder(
     .await
     .map_err(|e| AuditError::Transport(Box::new(e)))?
     .map_err(|e| AuditError::Transport(Box::new(e)))?;
-    let repository = Repository::tls(&address, Arc::new(tls), TIMEOUTS)
-        .map_err(|e| AuditError::Transport(Box::new(e)))?;
-    let outbox = StoreOutbox::syslog(store, framer, notify, IDLE);
-    Ok(Forwarder::syslog_from(
-        outbox,
-        repository,
-        config.retry.max_backoff.get(),
-    ))
+    Repository::tls(&address, Arc::new(tls), TIMEOUTS)
+        .map_err(|e| AuditError::Transport(Box::new(e)))
 }
 
 #[cfg(test)]
@@ -117,6 +127,43 @@ mod tests {
                 "urn:oid:2.999.7|provider-1".to_owned()
             )),
             "{text}"
+        );
+    }
+
+    /// The group the repository connection agreed on with `peer`, whose
+    /// certificate no root trusts, so the connection ends after the key exchange.
+    async fn agreed_by_the_repository(peer: &testkit::kx::KxPeer) -> Option<rustls::NamedGroup> {
+        let config = SyslogConfig {
+            url: ferrohealth_secret::secret_url::SecretUrl::new(format!(
+                "tls://{}",
+                peer.address()
+            )),
+            ..SyslogConfig::default()
+        };
+        let repository = repository(&config).await.expect("the repository builds");
+        assert!(
+            repository.connect().await.is_err(),
+            "the peer's certificate is trusted by no root"
+        );
+        peer.agreed(0).expect("the connection is recorded")
+    }
+
+    /// The ARR connection prefers X25519MLKEM768 (RFC 10024) and agrees on
+    /// X25519 with a repository that lacks it.
+    #[tokio::test]
+    async fn the_repository_connection_prefers_x25519mlkem768_and_falls_back_to_x25519() {
+        use rustls::crypto::aws_lc_rs::kx_group;
+        let hybrid = testkit::kx::KxPeer::start(vec![kx_group::X25519, kx_group::X25519MLKEM768])
+            .expect("the peer starts");
+        assert_eq!(
+            Some(rustls::NamedGroup::X25519MLKEM768),
+            agreed_by_the_repository(&hybrid).await
+        );
+        let classical =
+            testkit::kx::KxPeer::start(vec![kx_group::X25519]).expect("the peer starts");
+        assert_eq!(
+            Some(rustls::NamedGroup::X25519),
+            agreed_by_the_repository(&classical).await
         );
     }
 }

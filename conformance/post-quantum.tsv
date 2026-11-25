@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+# The post-quantum inventory: docs/post-quantum.md and scripts/render/post-quantum.sh.
+use	algorithm	safe	pq_standard	location
+TLS 1.3 key exchange of the REST and viewer listeners	X25519MLKEM768 first; X25519, P-256, P-384 for a peer without it	yes	RFC 10024	ferrohealth-server tls, app/ferroehr-rest/src/lib.rs (serve_full), app/ferroehr-viewer/src/cli.rs
+TLS 1.3 key exchange of the clients FerroEHR builds itself: the ITI-20 syslog connection and the multimedia S3 client	X25519MLKEM768 first (rustls prefer-post-quantum); X25519, P-256, P-384 for a peer without it	yes	RFC 10024	app/ferroehr/src/system_log/syslog.rs (repository), app/ferroehr-ext/src/multimedia/blob.rs (from_params)
+TLS 1.3 key exchange of the outbound integration clients: the ITI-20 FHIR feed, the PIXm query, the PMIR subscription, the terminology server and the viewer's CDR and SMART launch clients	X25519MLKEM768 first; X25519, P-256, P-384 for a peer without it	yes	RFC 10024	ferrohealth-smart client outbound, app/ferroehr/src/system_log/feed.rs, app/ferroehr/src/service/ehr_index/ihe.rs, app/ferroehr/src/service/demographic/identity_feed/subscribe.rs, app/ferroehr/src/service/terminology/fhir.rs, app/ferroehr-viewer/src/cdr.rs, app/ferroehr-viewer/src/launch.rs
+TLS 1.3 key exchange of the family clients: the issuer key sets, the viewer's OpenID Provider, the OTLP export and the FerroPULSE report	X25519MLKEM768 first (rustls prefer-post-quantum); X25519, P-256, P-384 for a peer without it	yes	RFC 10024	ferrohealth-smart resource, ferrohealth-smart oidc, ferrohealth-telemetry otlp, ferrohealth-usage-report
+TLS 1.3 key exchange of the PostgreSQL connection	X25519MLKEM768 first (rustls prefer-post-quantum), agreed when the server's TLS library offers it	yes	RFC 10024	Cargo.toml (sqlx tls-rustls-aws-lc-rs)
+TLS 1.2 key exchange where min_version lowers the floor	ECDHE over X25519, P-256 or P-384	no	no standard yet	ferrohealth-server tls (protocol_versions)
+TLS server and client certificate authentication	ECDSA, RSA or Ed25519, as the operator's certificates hold	no	no standard yet	ferrohealth-server tls, ferrohealth-server tls_client
+TLS record protection	AES-128-GCM, AES-256-GCM, ChaCha20-Poly1305	yes	NIST IR 8547 4.1.3	ferrohealth-server tls
+VERSION.signature in digest mode	SHA-256 of the canonical form	yes	NIST IR 8547 4.1.3	app/ferroehr/src/versioning/signature/signer.rs
+VERSION.signature in pgp mode, signing	OpenPGP detached signature over SHA-256, Ed25519 (v4 EdDSA or RFC 9580) or RSA	no	RFC 9980	app/ferroehr/src/versioning/signature/key.rs
+VERSION.signature in pgp mode, verification against the current and retired keys	OpenPGP, the algorithm each configured key holds	no	RFC 9980	app/ferroehr/src/versioning/signature/verify.rs, app/ferroehr/src/versioning/signature/signer.rs
+Access-log checkpoint and exported bundle signatures	OpenPGP, the signing keyring's Ed25519 or RSA key	no	RFC 9980	app/ferroehr/src/access_log/checkpoint.rs, app/ferroehr/src/access_log/store.rs
+Verification of imported access-log bundles and checkpoints	OpenPGP, the algorithm each trusted system's certificate holds	no	RFC 9980	app/ferroehr/src/versioning/signature/trust.rs, app/ferroehr/src/access_log/imported.rs
+System-log seal signatures	OpenPGP, the signing keyring's Ed25519 or RSA key	no	RFC 9980	app/ferroehr/src/system_log/seal.rs
+Access-log and system-log seal chains and bundle digests	SHA-256	yes	NIST IR 8547 4.1.3	app/ferroehr/src/access_log/seal.rs, app/ferroehr/src/access_log/chain.rs, app/ferroehr/src/system_log/content_digest.rs
+Content digests and content keys: the DV_MULTIMEDIA integrity check and blob key, the access-log facts digest and the digest keys of results and settings	SHA-256	yes	NIST IR 8547 4.1.3	app/ferroehr/src/digest.rs, app/ferroehr-ext/src/multimedia/offload.rs, app/ferroehr-ext/src/multimedia/blob.rs, app/ferroehr/src/access_log/stored_form/parts/facts.rs
+Licence token verification	OpenPGP cleartext signature by the Licensor's Ed25519 key	no	RFC 9980	app/ferroehr/src/licence/verify.rs, app/ferroehr/src/licence/token.rs
+Licence stamp	HMAC-SHA-256	yes	NIST IR 8547 4.1.3	app/ferroehr/src/licence/stamp.rs
+Basic password hashing	Argon2id	yes	NIST IR 8547 4.1.3	ferrohealth-smart basic, app/ferroehr-rest/src/extensions/access/authn
+Access token and DPoP proof verification	RS256, RS384, PS256, PS384, ES256, ES384	no	RFC 9964	ferrohealth-smart resource, app/ferroehr-rest/src/extensions/access/authn
+Client assertions of the outbound client credentials grant (private_key_jwt)	RS256, RS384, RS512, PS256, PS384, PS512, ES256, ES384 or EdDSA, as the key holds	no	RFC 9964	ferrohealth-smart client assertion, app/ferroehr/src/outbound.rs
+Viewer SMART launch client assertions	RS384 or ES384	no	RFC 9964	app/ferroehr-viewer/src/launch.rs
+Viewer sign-in ID token verification	RS256, RS384, RS512, PS256, PS384, PS512, ES256, ES384, EdDSA	no	RFC 9964	ferrohealth-smart oidc, app/ferroehr-viewer/src/cli.rs
+Viewer session cookie in sealed mode	AES-256-GCM	yes	NIST IR 8547 4.1.3	ferrohealth-session sessions, app/ferroehr-viewer/src/config.rs
+Helm chart signatures	cosign keyless (Sigstore, ECDSA P-256)	no	no standard yet	.github/workflows/build-chart.yml
+crates.io publishing	Trusted Publishing (OIDC token from GitHub, RS256)	no	no standard yet	.github/workflows/publish-crates.yml
+Release, image and chart provenance and SBOM attestations	Sigstore attestation (ECDSA P-256)	no	no standard yet	.github/workflows/build-image.yml, .github/workflows/release-build.yml, .github/workflows/build-chart.yml

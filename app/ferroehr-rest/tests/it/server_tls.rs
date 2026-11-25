@@ -9,7 +9,8 @@
 //! at the handshake; with `"optional"` it is served. The accept-path for a
 //! *valid* client certificate is rustls' `WebPkiClientVerifier` (upstream-
 //! tested); the test leaf is serverAuth-only, so it cannot double as a client
-//! identity here.
+//! identity here. The listener agrees on X25519MLKEM768 (RFC 10024) with a
+//! client that offers it, and on X25519 with one that does not.
 
 use std::future::Future;
 use std::io::Write;
@@ -894,5 +895,55 @@ async fn a_rotated_client_ca_verifies_without_a_restart() {
     assert!(
         served_with_client_certificate(port).await,
         "the rotated CA stays in force"
+    );
+}
+
+// ── the key exchange ──────────────────────────────────────────────────────────
+
+/// The group a TLS 1.3 client offering `groups`, in that order, agrees on
+/// with the listener at `port`.
+async fn agreed_with_the_listener(
+    port: u16,
+    groups: Vec<&'static dyn rustls::crypto::SupportedKxGroup>,
+) -> Option<rustls::NamedGroup> {
+    tokio::task::spawn_blocking(move || {
+        let provider = rustls::crypto::CryptoProvider {
+            kx_groups: groups,
+            ..rustls::crypto::aws_lc_rs::default_provider()
+        };
+        let config = rustls::ClientConfig::builder_with_provider(std::sync::Arc::new(provider))
+            .with_protocol_versions(&[&rustls::version::TLS13])
+            .expect("TLS 1.3")
+            .with_root_certificates(test_roots())
+            .with_no_client_auth();
+        let name = rustls::pki_types::ServerName::try_from("localhost").expect("a server name");
+        let mut connection =
+            rustls::ClientConnection::new(std::sync::Arc::new(config), name).expect("a client");
+        let mut socket = std::net::TcpStream::connect(("127.0.0.1", port)).expect("connect");
+        while connection.is_handshaking() {
+            connection.complete_io(&mut socket).expect("the handshake");
+        }
+        connection
+            .negotiated_key_exchange_group()
+            .map(rustls::crypto::SupportedKxGroup::name)
+    })
+    .await
+    .expect("the client task")
+}
+
+/// The listener agrees on the hybrid X25519MLKEM768 (RFC 10024) with a client
+/// that offers it first, and on X25519 with a client that offers no hybrid.
+#[tokio::test]
+async fn the_listener_agrees_on_x25519mlkem768_and_still_on_x25519() {
+    use rustls::crypto::aws_lc_rs::kx_group;
+    let dir = assert_fs::TempDir::new().expect("tempdir");
+    let port = serve_tls(tls_files(&dir, ClientAuth::None)).await;
+    assert_eq!(
+        Some(rustls::NamedGroup::X25519MLKEM768),
+        agreed_with_the_listener(port, vec![kx_group::X25519MLKEM768, kx_group::X25519]).await
+    );
+    assert_eq!(
+        Some(rustls::NamedGroup::X25519),
+        agreed_with_the_listener(port, vec![kx_group::X25519]).await
     );
 }
