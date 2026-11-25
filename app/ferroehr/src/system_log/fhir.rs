@@ -223,6 +223,7 @@ pub(crate) fn access_record(
         .purpose_codings()
         .into_iter()
         .map(|coding| Purpose {
+            text: event.purpose_text(&coding.code),
             system: coding.system,
             code: coding.code,
         })
@@ -348,6 +349,7 @@ fn exchange(
                     .purpose_codings()
                     .into_iter()
                     .map(|coding| PurposeOfUse {
+                        text: event.purpose_text(&coding.code),
                         system: coding.system,
                         code: coding.code,
                     })
