@@ -594,6 +594,7 @@ fn copy_values(from: &WebTemplateNode, to: &mut WebTemplateNode) {
     to.name_code.clone_from(&from.name_code);
     to.name_coded.clone_from(&from.name_coded);
     to.name_rm_type.clone_from(&from.name_rm_type);
+    to.name_code_input.clone_from(&from.name_code_input);
 
     let to_is_dv = to.rm_type.starts_with("DV_");
     if to.min.is_none()

@@ -18,6 +18,7 @@ mod cardinality_unique;
 mod category_default;
 mod ckm_full_pack;
 mod cnf_vitals_template;
+mod coded_name_constraint;
 mod coded_names;
 mod constraint_binding_capture;
 mod content_constraint_capture;
