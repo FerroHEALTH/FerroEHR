@@ -158,8 +158,9 @@ guarded_handler! {
                                           `application/json` only.",
              body = serde_json::Value),
             (status = 422, description = "The stored source no longer converts: it \
-                                          does not parse, or the result carries a \
-                                          node ADL 2 has no syntax for. The same \
+                                          does not parse, a specialised archetype's \
+                                          parent is not stored, or the result \
+                                          carries a node ADL 2 has no syntax for. The same \
                                           status an archetype upload answers for a \
                                           source it cannot accept.",
              body = serde_json::Value)

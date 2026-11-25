@@ -23,6 +23,7 @@ use std::collections::BTreeMap;
 use std::str::FromStr;
 
 use openehr_adl::adl14::convert::{ConvertConfig, ConvertError, convert};
+use openehr_adl::adl14::differ::differentiate;
 use openehr_adl::adl14::log::ConversionLog;
 use openehr_adl::adl14::opt::{ConvertedRoot, OptConversion, convert_opt_to_adl2};
 use openehr_adl::adl14::specialised_codes::check_introduced_codes;
@@ -96,9 +97,10 @@ impl FerroEhrService {
     /// The conversion keeps every 1.4 code, so a composition recorded against
     /// the 1.4 archetype validates against a template over it
     /// (`ADL2/master01-preface.adoc` §Backward Compatibility). A specialised
-    /// source is first checked against its stored parent's terminology.
-    /// Identity is case-insensitive (BASE master05 §Composite Identifiers and
-    /// Case).
+    /// source, authored flat in ADL 1.4, is checked against its stored parent's
+    /// terminology and reduced to its differential form against the parent's
+    /// conversion (`ADL2/master09.02` §Differential and Flat Forms). Identity
+    /// is case-insensitive (BASE master05 §Composite Identifiers and Case).
     ///
     /// NOTE: no openEHR spec governs 1.4 to 2 conversion: our own design, served
     /// as the extension route `GET /definition/archetype/adl1.4/{archetype_id}/adl2`.
@@ -107,9 +109,9 @@ impl FerroEhrService {
     ///
     /// - No archetype with that id → `artefact_does_not_exist` (`404`).
     /// - The stored source does not convert (parse / unsupported kind), a
-    ///   specialised source introduces a term code without the dots its depth
-    ///   requires, or the conversion result carries a node with no ADL2
-    ///   syntax → `content_invalid` (`422`).
+    ///   specialised source's parent is not stored or introduces a term code
+    ///   without the dots its depth requires, or the conversion result carries
+    ///   a node with no ADL2 syntax → `content_invalid` (`422`).
     /// - A database failure (`exception` → `500`).
     pub async fn adl14_convert_to_adl2(
         &self,
@@ -118,10 +120,19 @@ impl FerroEhrService {
         let source = self.get_archetype(&an_id).await?;
         let archetype = parse_artefact(&source, Dialect::Adl14)
             .map_err(|errs| conversion_refused(ConvertError::Parse(errs)))?;
-        self.check_codes_against_stored_parent(&archetype).await?;
+        let parent = self.stored_parent(&archetype).await?;
         let mut log = ConversionLog::default();
-        let converted =
+        let mut converted =
             convert(&archetype, &ConvertConfig::default(), &mut log).map_err(conversion_refused)?;
+        if let Some(parent) = parent {
+            let flat_parent = convert(
+                &parent,
+                &ConvertConfig::default(),
+                &mut ConversionLog::default(),
+            )
+            .map_err(conversion_refused)?;
+            differentiate(&mut converted, &flat_parent);
+        }
         let adl2 = openehr_adl::print::print(&converted).map_err(|e| {
             ServiceError::content_invalid(
                 Violation::new(format!("1.4 → 2 conversion produced unprintable ADL2: {e}"))
@@ -149,33 +160,35 @@ impl FerroEhrService {
         })
     }
 
-    /// Refuses a specialised 1.4 archetype whose new term codes lack the
-    /// specialisation dots its depth requires, judged against its stored
-    /// parent ([`check_introduced_codes`], AOM 1.4 `master07-ontology_package.adoc`
-    /// §Specialisation Depth).
-    ///
-    /// NOTE: a parent that is not stored leaves no terminology to tell a new code from an
-    /// inherited one, so the check passes; no openEHR spec governs that, our own design.
+    /// The stored 1.4 parent of a specialised archetype, `None` for a
+    /// top-level one, once the child's new term codes carry the specialisation
+    /// dots its depth requires ([`check_introduced_codes`], AOM 1.4
+    /// `master07-ontology_package.adoc` §Specialisation Depth).
     ///
     /// # Errors
     ///
-    /// - The check refuses the child, or the stored parent does not parse →
-    ///   `content_invalid` (`422`).
+    /// - The parent is not stored or does not parse, or the check refuses the
+    ///   child → `content_invalid` (`422`).
     /// - A database failure (`500`).
-    async fn check_codes_against_stored_parent(
+    async fn stored_parent(
         &self,
         archetype: &Archetype,
-    ) -> Result<(), ServiceError> {
+    ) -> Result<Option<Archetype>, ServiceError> {
         let Some(parent_id) = summarize(archetype).parent_archetype_id else {
-            return Ok(());
+            return Ok(None);
         };
-        let Some(parent_source) = archetype_repo::archetype_adl(&self.pool, &parent_id).await?
-        else {
-            return Ok(());
-        };
+        let parent_source = archetype_repo::archetype_adl(&self.pool, &parent_id)
+            .await?
+            .ok_or_else(|| {
+                ServiceError::content_invalid(Violation::new(format!(
+                    "1.4 → 2 conversion failed: the parent archetype {parent_id} is not \
+                     stored, so the specialised archetype's differential form cannot be derived"
+                )))
+            })?;
         let parent = parse_artefact(&parent_source, Dialect::Adl14)
             .map_err(|errs| conversion_refused(ConvertError::Parse(errs)))?;
-        check_introduced_codes(archetype, &parent).map_err(conversion_refused)
+        check_introduced_codes(archetype, &parent).map_err(conversion_refused)?;
+        Ok(Some(parent))
     }
 
     /// Converts a stored ADL 1.4 **operational template** (by its `template_id`)
