@@ -112,7 +112,7 @@ issue per image behind.
 | Image | Pin | Licence |
 |---|---|---|
 | `ferrosmart` | `ghcr.io/ferrohealth/ferrosmart:0.3.0@sha256:ee09ccd1526dbb8200b17d1ab30c6cf39a62a43b786bb13caf84e75e732b456c` | BUSL-1.1 (FerroHEALTH) |
-| `keycloak` | `quay.io/keycloak/keycloak:26.8.2@sha256:723b1d6e254c0fc96d5cffec860c7e0744d6a3277822b865bb538cf891575e41` | Apache-2.0, the pin of `docker-compose.keycloak.yml` |
+| `keycloak` | `quay.io/keycloak/keycloak:26.8.2@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3` | Apache-2.0, the pin of `docker-compose.keycloak.yml` |
 | `zitadel` | `ghcr.io/zitadel/zitadel:v4.20.3@sha256:1b30fea7ed88826dc0a98dacee4e2f2c8b05201fd26f5e4cb5386615b29f7638` | AGPL-3.0-only, run unmodified |
 | `zitadel-login` | `ghcr.io/zitadel/zitadel-login:v4.20.3@sha256:8f730428dfd65cd8979d07ef4e34a59d44978e956692b7dbbc3bba4e4abb4f92` | MIT (`apps/login/`) |
 
