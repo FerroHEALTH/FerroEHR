@@ -68,15 +68,16 @@ access tokens, the DPoP proofs, the client assertions and the viewer's
 sign-in stay classical until the issuers FerroEHR works with sign with
 ML-DSA (RFC 9964).
 
-The OpenPGP signatures (`VERSION.signature` in `pgp` mode, the access-log
-checkpoints and bundles and the system-log seals) are Ed25519 or RSA on
-`main`. Pull request #6614 moves them to the RFC 9980 composite
-ML-DSA-65+Ed25519 (algorithm ID 30) through `ferrohealth-openpgp-pq`, with a
-classical key only behind `record.signing.allow_classical_key`; when it
-merges, the signing, checkpoint and seal rows turn `yes` and the
-verification row stays `no` while classical retired keys verify the
-signatures already stored. Licence token verification moves to ID 30 with
-#6607.
+The OpenPGP signatures FerroEHR makes (`VERSION.signature` in `pgp` mode,
+the access-log checkpoints and bundles and the system-log seals) are the
+RFC 9980 composite ML-DSA-65+Ed25519 (algorithm ID 30) through
+`ferrohealth-openpgp-pq`, and a classical signing key is refused at boot
+(#6600). Verification against the current and retired keys stays `no`:
+the signatures releases before it stored keep verifying against their
+retired classical certificates. Licence token verification accepts
+ML-DSA-65+Ed25519 anchors through the same path (#6607) and stays `no` while
+the Licensor's anchors are Ed25519, until a hardware token can hold an
+ML-DSA key.
 
 ## The inventory
 
@@ -91,14 +92,14 @@ signatures already stored. Licence token verification moves to ID 30 with
 | TLS server and client certificate authentication | ECDSA, RSA or Ed25519, as the operator's certificates hold | no | no standard yet | `ferrohealth-server tls, ferrohealth-server tls_client` |
 | TLS record protection | AES-128-GCM, AES-256-GCM, ChaCha20-Poly1305 | yes | NIST IR 8547 4.1.3 | `ferrohealth-server tls` |
 | VERSION.signature in digest mode | SHA-256 of the canonical form | yes | NIST IR 8547 4.1.3 | `app/ferroehr/src/versioning/signature/signer.rs` |
-| VERSION.signature in pgp mode, signing | OpenPGP detached signature over SHA-256, Ed25519 (v4 EdDSA or RFC 9580) or RSA | no | RFC 9980 | `app/ferroehr/src/versioning/signature/key.rs` |
-| VERSION.signature in pgp mode, verification against the current and retired keys | OpenPGP, the algorithm each configured key holds | no | RFC 9980 | `app/ferroehr/src/versioning/signature/verify.rs, app/ferroehr/src/versioning/signature/signer.rs` |
-| Access-log checkpoint and exported bundle signatures | OpenPGP, the signing keyring's Ed25519 or RSA key | no | RFC 9980 | `app/ferroehr/src/access_log/checkpoint.rs, app/ferroehr/src/access_log/store.rs` |
-| Verification of imported access-log bundles and checkpoints | OpenPGP, the algorithm each trusted system's certificate holds | no | RFC 9980 | `app/ferroehr/src/versioning/signature/trust.rs, app/ferroehr/src/access_log/imported.rs` |
-| System-log seal signatures | OpenPGP, the signing keyring's Ed25519 or RSA key | no | RFC 9980 | `app/ferroehr/src/system_log/seal.rs` |
+| VERSION.signature in pgp mode, signing | OpenPGP v6 detached signature over SHA2-512, ML-DSA-65+Ed25519 (RFC 9980 algorithm ID 30); a classical signing key is refused at boot | yes | RFC 9980 | `app/ferroehr/src/versioning/signature/key.rs` |
+| VERSION.signature in pgp mode, verification against the current and retired keys | ML-DSA-65+Ed25519 through ferrohealth-openpgp-pq; the signatures stored before it against the retired Ed25519, RSA, ECDSA or Ed448 certificates | no | RFC 9980 | `app/ferroehr/src/openpgp.rs, app/ferroehr/src/versioning/signature/key.rs` |
+| Access-log checkpoint and exported bundle signatures | OpenPGP, the signing keyring's ML-DSA-65+Ed25519 key (RFC 9980 algorithm ID 30) | yes | RFC 9980 | `app/ferroehr/src/access_log/checkpoint.rs, app/ferroehr/src/access_log/store.rs` |
+| Verification of imported access-log bundles and checkpoints | OpenPGP, the algorithm each trusted system's certificate holds: ML-DSA-65+Ed25519 or classical | no | RFC 9980 | `app/ferroehr/src/openpgp.rs, app/ferroehr/src/versioning/signature/trust.rs, app/ferroehr/src/access_log/imported.rs` |
+| System-log seal signatures | OpenPGP, the signing keyring's ML-DSA-65+Ed25519 key (RFC 9980 algorithm ID 30) | yes | RFC 9980 | `app/ferroehr/src/system_log/seal.rs` |
 | Access-log and system-log seal chains and bundle digests | SHA-256 | yes | NIST IR 8547 4.1.3 | `app/ferroehr/src/access_log/seal.rs, app/ferroehr/src/access_log/chain.rs, app/ferroehr/src/system_log/content_digest.rs` |
 | Content digests and content keys: the DV_MULTIMEDIA integrity check and blob key, the access-log facts digest and the digest keys of results and settings | SHA-256 | yes | NIST IR 8547 4.1.3 | `app/ferroehr/src/digest.rs, app/ferroehr-ext/src/multimedia/offload.rs, app/ferroehr-ext/src/multimedia/blob.rs, app/ferroehr/src/access_log/stored_form/parts/facts.rs` |
-| Licence token verification | OpenPGP cleartext signature by the Licensor's Ed25519 key | no | RFC 9980 | `app/ferroehr/src/licence/verify.rs, app/ferroehr/src/licence/token.rs` |
+| Licence token verification | OpenPGP cleartext signature by the Licensor's key: the Ed25519 anchors in use; ML-DSA-65+Ed25519 anchors verified the same way | no | RFC 9980 | `app/ferroehr/src/licence/verify.rs, app/ferroehr/src/openpgp.rs, app/ferroehr/src/licence/token.rs` |
 | Licence stamp | HMAC-SHA-256 | yes | NIST IR 8547 4.1.3 | `app/ferroehr/src/licence/stamp.rs` |
 | Basic password hashing | Argon2id | yes | NIST IR 8547 4.1.3 | `ferrohealth-smart basic, app/ferroehr-rest/src/extensions/access/authn` |
 | Access token and DPoP proof verification | RS256, RS384, PS256, PS384, ES256, ES384 | no | RFC 9964 | `ferrohealth-smart resource, app/ferroehr-rest/src/extensions/access/authn` |
