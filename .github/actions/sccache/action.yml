@@ -1,0 +1,84 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# .github/actions/sccache: sccache on an S3-compatible bucket (Cloudflare R2),
+# switched on by the bucket's name (#6521). With `bucket` empty it does
+# nothing, so a job runs exactly as it does without it. With it set, the job's
+# later cargo steps compile through sccache under the key prefix
+# `ferroehr/`, read-only when `read-only` is true (a pull request), so a pull
+# request never writes an entry main reads
+# (https://github.com/mozilla/sccache/blob/main/docs/S3.md). Release lanes
+# never call it. No specification governs this: our own design.
+name: sccache on the object store
+description: Compile through sccache against the S3-compatible bucket when one is configured.
+
+inputs:
+  bucket:
+    description: The bucket name (the SCCACHE_BUCKET variable); empty switches the action off.
+    required: false
+    default: ""
+  endpoint:
+    description: The S3 endpoint (the SCCACHE_ENDPOINT variable), `https://<account>.r2.cloudflarestorage.com` for R2.
+    required: false
+    default: ""
+  access-key-id:
+    description: The key id, the read-only one on a pull request.
+    required: false
+    default: ""
+  secret-access-key:
+    description: The key's secret.
+    required: false
+    default: ""
+  read-only:
+    description: Whether the job only reads the cache ('true' or 'false').
+    required: false
+    default: "true"
+
+outputs:
+  enabled:
+    description: Whether sccache is on for this job ('true' or 'false').
+    value: ${{ steps.switch.outputs.enabled }}
+
+runs:
+  using: composite
+  steps:
+    - id: switch
+      shell: bash
+      env:
+        BUCKET: ${{ inputs.bucket }}
+        KEY_ID: ${{ inputs.access-key-id }}
+      run: |
+        set -euo pipefail
+        if [ -n "$BUCKET" ] && [ -n "$KEY_ID" ]; then
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+          echo "sccache: no bucket or no key configured, so cargo compiles as it would without it"
+        fi
+    - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+      if: steps.switch.outputs.enabled == 'true'
+    - shell: bash
+      if: steps.switch.outputs.enabled == 'true'
+      env:
+        BUCKET: ${{ inputs.bucket }}
+        ENDPOINT: ${{ inputs.endpoint }}
+        KEY_ID: ${{ inputs.access-key-id }}
+        SECRET: ${{ inputs.secret-access-key }}
+        READ_ONLY: ${{ inputs.read-only }}
+      run: |
+        set -euo pipefail
+        echo "::add-mask::$SECRET"
+        mode=READ_WRITE
+        [ "$READ_ONLY" = true ] && mode=READ_ONLY
+        {
+          echo "RUSTC_WRAPPER=sccache"
+          echo "CARGO_INCREMENTAL=0"
+          echo "SCCACHE_BUCKET=$BUCKET"
+          echo "SCCACHE_ENDPOINT=$ENDPOINT"
+          echo "SCCACHE_REGION=auto"
+          echo "SCCACHE_S3_KEY_PREFIX=ferroehr/"
+          echo "SCCACHE_S3_RW_MODE=$mode"
+          echo "AWS_ACCESS_KEY_ID=$KEY_ID"
+          echo "AWS_SECRET_ACCESS_KEY=$SECRET"
+        } >> "$GITHUB_ENV"
+        echo "sccache: bucket $BUCKET, $mode"
