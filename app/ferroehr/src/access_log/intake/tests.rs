@@ -113,7 +113,7 @@ async fn a_failure_with_no_answer_refuses_every_request() {
     assert!(second_answer.await.expect("an answer").is_err());
 }
 
-/// The intake form as the `Value` path wrote it before #5849: the entry's
+/// The reference intake form, built over a `Value` (#5849): the entry's
 /// JSON value without its link, canonicalised whole, split, its row without
 /// the members its columns give back (#5784), and read at the derive's
 /// paths, its digest taken over those stored facts (#6322).

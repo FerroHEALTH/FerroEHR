@@ -1,0 +1,11 @@
+{
+  "instrument": "cargo nextest run -p ferroehr --no-capture -j 1 -E 'test(the_caseload_plans_hold_at_practice_scale)'",
+  "measured_at_commit": "dfb39c4fdc7cc5f43c3f30d3d1671aba5bf50a68",
+  "environment": "a developer laptop (Apple silicon, macOS), PostgreSQL 19 in a Podman VM, one session, warm cache, a debug build of FerroEHR",
+  "store": { "ehrs": 151700, "compositions_per_ehr": 2 },
+  "rows": [
+    { "patients": 100, "check_ms": 0.045, "page_ms": 10.24, "count_ms": 7.11, "episode_page_ms": 4.97, "episode_count_ms": 6.81 },
+    { "patients": 1600, "check_ms": 0.037, "page_ms": 6.44, "count_ms": 42.63, "episode_page_ms": 8.08, "episode_count_ms": 41.98 },
+    { "patients": 50000, "check_ms": 0.037, "page_ms": 24.51, "count_ms": 1177.81, "episode_page_ms": 31.45, "episode_count_ms": 1174.84 }
+  ]
+}

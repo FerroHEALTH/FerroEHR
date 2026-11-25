@@ -351,26 +351,13 @@ const ORDERED_CORPUS: &[&str] = &[
     "3",
 ];
 
-/// The readings that deliberately differ from the first generation's, as
-/// `(function, input, the reading now)` with `None` for NULL.
+/// The readings that refuse what is no openEHR value, as
+/// `(function, input, reading)` with `None` for NULL.
 ///
-/// Every one of them is the first generation reading something that is not an
-/// openEHR value, and the deviations fall into five groups.
-///
-/// The year came out of `text::integer`, which skips leading whitespace and
-/// accepts a sign, so `  12` was the year 12 and `+2021-01-02` the year 202.
-/// Neither is an ISO 8601 date (BASE `foundation_types` master06-time_types.adoc
-/// and the `Iso8601_date` class table), and the length contract now says the
-/// characters it reads are digits.
-///
-/// `openehr_timestamp` tried PostgreSQL's own date/time input first and used
-/// whatever came back, which accepted four things openEHR does not define: a
-/// date that is not zero-padded or is ordinal (`2021-1-2`, `2021-002`,
-/// `2021-0102`), the words `now`, `today`, `yesterday`, `epoch` and
-/// `infinity` — of which the first two made a stored value read as the current
-/// time — and, after a full-precision date-time, a zone NAME or a ` BC` era,
-/// where BASE `foundation_types` master06-time_types.adoc `§Iso8601_date_time`
-/// ends the value at the offset.
+/// A year is digits alone, and `openehr_timestamp` accepts no unpadded or
+/// ordinal date, no special word (`now`, `epoch`) and nothing after the
+/// offset of a date-time (BASE `foundation_types` master06-time_types.adoc
+/// §`Iso8601_date`, §`Iso8601_date_time`).
 const DIVERGENCES: &[(&str, &str, Option<&str>)] = &[
     ("openehr_date_days", "  12", None),
     ("openehr_date_days", "+2021-01-02", None),

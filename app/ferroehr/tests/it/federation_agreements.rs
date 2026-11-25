@@ -127,7 +127,7 @@ async fn partner(svc: &FerroEhrService, issuers: &[&str]) -> VoId {
     let items: Vec<Value> = issuers
         .iter()
         .map(|issuer| {
-            json!({ "_type": "ELEMENT", "archetype_node_id": "at0011", "name": text("client"),
+            json!({ "_type": "ELEMENT", "archetype_node_id": "at0011", "name": { "_type": "DV_CODED_TEXT", "value": "client_id", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "client_id" } },
                     "value": { "_type": "DV_IDENTIFIER", "issuer": issuer, "id": "remote",
                                "type": "client_id" } })
         })

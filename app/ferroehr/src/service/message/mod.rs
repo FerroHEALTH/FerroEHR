@@ -35,26 +35,16 @@ use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
 
 impl FerroEhrService {
-    /// Emit one IHE-ATNA EHR-Extract audit event for a completed export or
-    /// import of `ehr_id`, written before the result is reported: a record
-    /// that cannot be written withholds the operation's result
+    /// Emits one IHE-ATNA EHR-Extract audit event for a completed export or
+    /// import of `ehr_id`, written before the result is reported
     /// ([`FerroEhrService::record_access`]).
     ///
-    /// EHR-Extract communication carries patient-identifiable clinical data
-    /// across systems and is audited for **non-repudiation** — the security
-    /// chapter requires that "logging of communication of Extracts … can be
-    /// used to guarantee non-repudiation of information passed between systems"
-    /// (BASE `architecture_overview/master07-security.adoc` §Non-repudiation).
-    /// The event carries [`ObjectClass::Extract`], which renders the
-    /// Patient-Record `EventID` family (DICOM PS3.15 §A.5.1, code 110110) with
-    /// `originalText="extract"` and an ehr-id-scoped patient participant
-    /// (`crate::system_log::codes`); the export-vs-import direction is carried
-    /// by the [`EventActionCode`] (`Read` out / `Create` in). The user is the
-    /// request's authenticated committer, which
-    /// [`FerroEhrService::record_access`] stamps; the purpose and the data
-    /// permit the caller declared (EHDS Art. 68) are the request's. `content` is what the
-    /// Extract served or landed, which the record carries as its EHDS priority
-    /// categories (Annex II 3.2(c), `docs/law/eu/ehds/text.html`).
+    /// Extract communication is logged for non-repudiation (BASE
+    /// `architecture_overview/master07-security.adoc` §Non-repudiation). The
+    /// event carries [`ObjectClass::Extract`] (DICOM PS3.15 §A.5.1, code 110110)
+    /// and an [`EventActionCode`] of `Read` out or `Create` in; `content` is what
+    /// the Extract served or landed, recorded as its EHDS priority categories
+    /// (Annex II 3.2(c), `docs/law/eu/ehds/text.html`).
     ///
     /// # Errors
     /// [`ServiceError::Unrecorded`] when the record cannot be written.

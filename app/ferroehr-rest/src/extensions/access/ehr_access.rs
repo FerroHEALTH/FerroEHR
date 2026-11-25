@@ -523,11 +523,13 @@ fn not_found(missing: Missing, message: String) -> Response {
     RestError::from(ServiceError::not_found(missing, message)).into_response()
 }
 
-/// The `503` of a settings store that cannot answer, and the fail-closed
-/// `500` of settings that cannot be read.
+/// The `503` of a settings store that cannot answer or of an access state
+/// being refreshed, and the fail-closed `500` of settings that cannot be read.
 fn unavailable(principal: Option<&Arc<Principal>>, error: ServiceError) -> Response {
     let mut resp = match error {
-        overloaded @ ServiceError::Overloaded(_) => RestError::from(overloaded).into_response(),
+        busy @ (ServiceError::Overloaded(_) | ServiceError::AccessRefreshing(_)) => {
+            RestError::from(busy).into_response()
+        }
         other => {
             return server_error(
                 principal,
@@ -617,8 +619,8 @@ fn server_error(principal: Option<&Arc<Principal>>, detail: &str) -> Response {
 mod tests {
     use super::*;
 
-    /// A settings store that cannot answer is `503`, and settings that do
-    /// not read are `500`.
+    /// A settings store that cannot answer and an access state being
+    /// refreshed are `503`, and settings that do not read are `500` (#6527).
     #[test]
     fn an_unanswering_store_is_503_and_unreadable_settings_500() {
         let overloaded = ServiceError::overloaded(
@@ -627,6 +629,10 @@ mod tests {
         );
         assert_eq!(
             unavailable(None, overloaded).status(),
+            http::StatusCode::SERVICE_UNAVAILABLE
+        );
+        assert_eq!(
+            unavailable(None, ServiceError::access_refreshing()).status(),
             http::StatusCode::SERVICE_UNAVAILABLE
         );
         let unreadable = ServiceError::internal("settings", std::io::Error::other("bogus"));

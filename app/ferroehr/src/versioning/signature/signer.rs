@@ -16,26 +16,14 @@ use super::config::{Mode, SigningConfig, VerifyOnRead};
 use super::key::{KeyError, PgpKey, PgpSignError};
 use super::verify::{self, Verdict};
 
-/// The self-describing prefix stamped on a digest signature so a bare radix-64
-/// hash is not ambiguous.
+/// The self-describing prefix stamped on a digest signature, so a bare
+/// radix-64 hash names its algorithm.
 ///
-/// Both spec sentences behind this are quoted here because the property they
-/// state is the same and the wordings are easy to conflate. RM common
-/// `master06-change_control_package.adoc` §Digital Signature makes it a
-/// property of the format openEHR chose: "The openPGP standard ensures that the
-/// trasformations and algorithms used to create the signature are indicated
-/// within it" (upstream's own "trasformations" typo, quoted verbatim). BASE
-/// `architecture_overview/master07-security.adoc` §Digital Signature names the
-/// property when it gives the reason for that choice: openPGP is "A likely
-/// candidate for defining the signature and digest strings in openEHR … due to
-/// being an open specification and self-describing".
-///
-/// This prefix carries that self-description into the DIGEST form, which the
-/// same master06 section admits as the other depth of the mechanism ("If only
-/// the hashing step is done, the digest acts as a data integrity check") but
-/// leaves without a wire spelling of its own — a bare radix-64 hash names
-/// neither its algorithm nor its encoding. The `sha256:` prefix is OUR OWN
-/// extension: no released openEHR text licenses this token.
+/// openPGP was chosen for being "self-describing" (BASE
+/// `architecture_overview/master07-security.adoc` §Digital Signature), and
+/// RM common `master06-change_control_package.adoc` §Digital Signature admits
+/// a digest alone but gives it no wire spelling. The `sha256:` prefix is our
+/// own extension.
 pub(crate) const DIGEST_PREFIX: &str = "sha256:";
 
 /// A failure constructing a [`Signer`] at boot.
