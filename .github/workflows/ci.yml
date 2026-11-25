@@ -1188,6 +1188,17 @@ jobs:
         if: ${{ !cancelled() }}
         run: bash scripts/checks/image-labels.sh
 
+      # ---- ehds-badges -------------------------------------------------
+      # The README's EHDS badges are endpoint documents counted from the
+      # book's evidence tables (#6537): a table that moves without its
+      # document, or a badge that claims certification, fails here.
+      - name: ehds-badges / The counting and the word guard hold on their fixtures
+        if: ${{ !cancelled() }}
+        run: bash scripts/render/ehds-badges.sh --self-test
+      - name: ehds-badges / Each EHDS badge matches its table and claims no certification
+        if: ${{ !cancelled() }}
+        run: bash scripts/render/ehds-badges.sh --check
+
       # ---- control-matrix ----------------------------------------------
       # The published compliance control matrix is GENERATED from the tracker
       # (scripts/render/control-matrix.sh), the same way the conformance pages

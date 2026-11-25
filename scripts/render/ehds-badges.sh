@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+# The EHDS badges (#6537): shields.io endpoint documents under
+# docs/conformance/ehds/, counted from the book's evidence tables.
+#
+# - logging.json: the rows of compliance/logging-checklist.md whose state is
+#   Evidenced and whose every cited test function exists.
+# - annex-iii.json: the elements of compliance/eehrxf-annex-iii.md whose state
+#   is Sourced.
+# - pdf-originals.json: the round trips of compliance/eehrxf-pdf-originals.md
+#   whose state is Byte-identical and whose test function exists.
+#
+# A badge names its source and the source's date and shows N/M. No label or
+# message may say certified, compliant or conformant, and the README's EHDS
+# badges are held to the same words.
+#
+# Usage: scripts/render/ehds-badges.sh              rewrite the documents
+#        scripts/render/ehds-badges.sh --check      fail on a stale document or a forbidden word
+#        scripts/render/ehds-badges.sh --self-test  the counting and the word guard on fixtures
+# No specification governs the badges: our own design.
+set -euo pipefail
+
+# shellcheck source=scripts/lib/guard-args.sh
+. "$(dirname "$0")/../lib/guard-args.sh"
+GRAMMAR="[--check | --self-test]"
+mode="write"
+case "${1:-}" in
+  "") ;;
+  --check) mode=check ;;
+  --self-test) mode=self-test ;;
+  *) guard_usage "$GRAMMAR" ;;
+esac
+[[ "$#" -le 1 ]] || guard_usage "$GRAMMAR"
+cd "$(dirname "$0")/../.."
+
+BOOK=website/book/src/compliance
+OUT=docs/conformance/ehds
+FORBIDDEN='certif|complian|conforman'
+
+# Prints `<total> <counted>` for the table rows of $1 whose first cell is code:
+# a row counts when its last cell is $2 and every test function it cites, as
+# `path.rs` (`fn`, ...) or a bare `fn` beside $3, exists in that file. The
+# tree is read from the current directory.
+count_rows() {
+  perl -e '
+    my ($file, $want, $default) = @ARGV;
+    open my $fh, "<", $file or die "$file: $!\n";
+    my ($total, $counted) = (0, 0);
+    while (my $row = <$fh>) {
+      next unless $row =~ /^\|\s*`/;
+      $total++;
+      my @cells = split /\|/, $row;
+      my $state = $cells[-2] // "";
+      $state =~ s/^\s+|\s+$//g;
+      next unless $state eq $want;
+      my $ok = 1;
+      my %cited;
+      while ($row =~ /`((?:app|crates|tools)\/[^`]+\.rs)` \(([^)]*)\)/g) {
+        my ($path, $list) = ($1, $2);
+        push @{$cited{$path}}, $list =~ /`([a-z0-9_]+)`/g;
+      }
+      if ($default ne "" && !%cited) {
+        push @{$cited{$default}}, $row =~ /`([a-z][a-z0-9_]*_[a-z0-9_]+)`/g;
+      }
+      for my $path (keys %cited) {
+        my $src = do { local $/; open my $s, "<", $path or do { $ok = 0; next }; <$s> };
+        for my $fn (@{$cited{$path}}) { $ok = 0 unless $src =~ /\bfn \Q$fn\E\b/ }
+      }
+      $counted++ if $ok;
+    }
+    print "$total $counted\n";
+  ' "$1" "$2" "${3:-}"
+}
+
+# Writes the endpoint document $1 with label $2 and message $3.
+badge() {
+  jq -n --arg label "$2" --arg message "$3" \
+    '{schemaVersion: 1, label: $label, message: $message, color: "blue"}' > "$1"
+}
+
+# Writes the three documents into the directory $1 from the tree in the
+# current directory.
+render() {
+  local dir="$1" total counted
+  mkdir -p "$dir"
+  read -r total counted < <(count_rows "$BOOK/logging-checklist.md" Evidenced)
+  badge "$dir/logging.json" "EHDS logging checklist · Xt-EHR D8.2 2026-05-19" "$counted/$total evidenced"
+  read -r total counted < <(count_rows "$BOOK/eehrxf-annex-iii.md" Sourced)
+  badge "$dir/annex-iii.json" "EEHRxF draft 2026-11-23 · Annex III from the RM" "$counted/$total elements sourced"
+  read -r total counted < <(count_rows "$BOOK/eehrxf-pdf-originals.md" Byte-identical \
+    app/ferroehr-rest/tests/it/pdf_original_http.rs)
+  badge "$dir/pdf-originals.json" "EEHRxF draft 2026-11-23 · PDF/A originals" "byte-identical $counted/$total"
+}
+
+# Prints each badge label or message under $1, and each README badge of the
+# EHDS group, that uses a forbidden word.
+forbidden_words() {
+  local readme="$2"
+  jq -r '.label, .message' "$1"/*.json | grep -iE "$FORBIDDEN" || true
+  grep -E '^\[!\[[^]]*(EHDS|EEHRxF|xShare)' "$readme" | grep -ioE '^\[!\[[^]]*\]' \
+    | grep -iE "$FORBIDDEN" || true
+}
+
+if [[ "$mode" == self-test ]]; then
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' EXIT
+  mkdir -p "$tmp/$BOOK" "$tmp/app/x/src" "$tmp/app/ferroehr-rest/tests/it"
+  printf 'fn a_test() {}\n' > "$tmp/app/x/src/lib.rs"
+  printf 'fn kept_round_trip() {}\n' > "$tmp/app/ferroehr-rest/tests/it/pdf_original_http.rs"
+  cat > "$tmp/$BOOK/logging-checklist.md" <<'EOF'
+| Item | EHDS | Evidence | State |
+|---|---|---|---|
+| `one` | 3.2 | `app/x/src/lib.rs` (`a_test`) | Evidenced |
+| `two` | 3.2 | `app/x/src/lib.rs` (`a_gone_test`) | Evidenced |
+| `three` | 3.3 | a gap | Gap |
+EOF
+  cat > "$tmp/$BOOK/eehrxf-annex-iii.md" <<'EOF'
+| C | `GET` | not an element row, its first cell is no code |
+| `subject` | 1 | x | C | Sourced |
+| `period` | 1 | x | C | Partly sourced |
+EOF
+  cat > "$tmp/$BOOK/eehrxf-pdf-originals.md" <<'EOF'
+| `inline` | `kept_round_trip` | Byte-identical |
+| `xml` | `gone_round_trip` | Byte-identical |
+EOF
+  (cd "$tmp" && BOOK="$BOOK" render out)
+  for want in 'logging.json 1/3 evidenced' 'annex-iii.json 1/2 elements sourced' \
+    'pdf-originals.json byte-identical 1/2'; do
+    got=$(jq -r .message "$tmp/out/${want%% *}")
+    [[ "$got" == "${want#* }" ]] || { echo "self-test: ${want%% *} says '$got', want '${want#* }'" >&2; exit 1; }
+  done
+  printf '[![EHDS logging](x)](y)\n' > "$tmp/README.md"
+  [[ -z "$(forbidden_words "$tmp/out" "$tmp/README.md")" ]] || { echo "self-test: clean badges flagged" >&2; exit 1; }
+  badge "$tmp/out/bad.json" "EHDS certified" "1/1"
+  [[ -n "$(forbidden_words "$tmp/out" "$tmp/README.md")" ]] || { echo "self-test: a certified label passed" >&2; exit 1; }
+  rm "$tmp/out/bad.json"
+  printf '[![EEHRxF conformant](x)](y)\n' > "$tmp/README.md"
+  [[ -n "$(forbidden_words "$tmp/out" "$tmp/README.md")" ]] || { echo "self-test: a conformant README badge passed" >&2; exit 1; }
+  echo "ehds-badges: self-test passed"
+  exit 0
+fi
+
+if [[ "$mode" == write ]]; then
+  render "$OUT"
+  echo "ehds-badges: wrote $OUT"
+  exit 0
+fi
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+render "$tmp"
+fail=0
+for doc in "$tmp"/*.json; do
+  name=$(basename "$doc")
+  if ! cmp -s "$doc" "$OUT/$name"; then
+    echo "::error::$OUT/$name is not what the book's table says: run scripts/render/ehds-badges.sh and commit it" >&2
+    fail=1
+  fi
+done
+words=$(forbidden_words "$OUT" README.md)
+if [[ -n "$words" ]]; then
+  echo "$words" >&2
+  echo "::error::an EHDS badge says certified, compliant or conformant, which no conformity assessment supports (EHDS Art. 28)" >&2
+  fail=1
+fi
+[[ "$fail" -eq 0 ]] && echo "ehds-badges: the badges match their tables and claim no certification"
+exit "$fail"
