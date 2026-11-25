@@ -51,22 +51,15 @@ impl FerroEhrService {
             .map_err(ServiceError::flattened)
     }
 
-    /// `GET /definition/template/adl1.4` — the stored template summaries,
-    /// filtered by the wire's `filter_template_id`/`concept`/`version` globs
-    /// (`*` wildcard) and cursored by `offset`/`fetch`
+    /// `GET /definition/template/adl1.4`: the stored template summaries, filtered
+    /// by `filter_template_id`, `concept` and `version` globs and cursored by
+    /// `offset` and `fetch`
     /// (`docs/specs/openehr/ITS-REST/specifications/operations/definition_template_adl1.4_list.yaml`).
     ///
-    /// NOTE: the version value derives from the `template_id`'s `.vN` axis
-    /// (`crate::templates::identity::template_version`), which is the template's
-    /// whole version and lifecycle mechanism; no parallel lifecycle-state model
-    /// exists.
-    ///
-    /// With `version` absent the listing collapses to the latest version of each
-    /// template, and any glob lists every matching stored version. The ITS-REST
-    /// docs text is silent, so the released OAS grounds it: "Filter by version
-    /// (e.g. `1.2.*` or use `*` for all versions), taken from `template_id`; if
-    /// missing, then only the latest version will be returned"
-    /// (`specifications/parameters/query/filter_version.yaml`).
+    /// Without `version` only the latest version of each template is listed
+    /// (`specifications/parameters/query/filter_version.yaml`), the version being
+    /// the `template_id`'s `.vN` axis
+    /// (`crate::templates::identity::template_version`).
     ///
     /// # Errors
     ///
@@ -312,22 +305,16 @@ fn filter_templates(list: Vec<Value>, filter: &TemplateListFilter, page: Page) -
     paginate(effective.into_iter(), page)
 }
 
-/// Collapse a filtered template listing to the latest version of each
-/// template — the ABSENT-`version` wire behaviour
-/// (`parameters/query/filter_version.yaml`: "if missing, then only the latest
-/// version will be returned").
+/// Collapses a filtered template listing to the latest version of each
+/// template (`parameters/query/filter_version.yaml`).
 ///
-/// "The same template" means the same base identifier once the `.vN` version
-/// axis (`crate::templates::identity::template_version`) is stripped, compared
-/// case-insensitively like every template identity
-/// (`crate::templates::identity::canonical_key`). Version axes order
-/// numerically segment by segment (`1.10` > `1.2`); on a numeric-prefix tie
-/// the longer, more precise axis wins (`1.0` > `1`).
+/// Templates are the same when their ids match case-insensitively without
+/// the `.vN` axis (`crate::templates::identity::canonical_key`). Axes order
+/// numerically by segment (`1.10` > `1.2`), and on a tie the longer axis wins
+/// (`1.0` > `1`).
 ///
-/// NOTE: no openEHR spec relates an id without a version axis to a versioned
-/// sibling or orders numerically equal axes, so an unversioned id stays its own
-/// identity and is always listed and the prefix-tie rule is our own
-/// deterministic tiebreak — our own design/extension.
+/// NOTE: no openEHR spec relates an unversioned id to a versioned sibling or orders
+/// equal axes, so an unversioned id is its own identity: our own design.
 fn collapse_to_latest(rows: Vec<Value>) -> Vec<Value> {
     // The best (row index, version axis) seen per base identity, in first-seen
     // order so the collapse is stable with respect to the store's listing.

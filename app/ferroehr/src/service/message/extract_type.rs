@@ -10,23 +10,14 @@ use serde_json::Value;
 use crate::error::ServiceError;
 
 /// The RM-named string tokens `EXTRACT_SPEC.extract_type` may carry, beside
-/// the TERM `extract_content_type` vocabulary codes.
+/// the TERM `extract_content_type` codes.
 ///
-/// The first five are the ones the RM names outright — RM `ehr_extract`
-/// `master04-common_package.adoc` §Content Criteria Specification:
-/// "`_extract_type_`: what kind of Extract this is, e.g. `|openehr-ehr|`,
-/// `|openehr-demographic|`, `|openehr-synchronisation|`, `|openehr-generic|`,
-/// `|generic-emr|`, etc". TERM `SupportTerminology/master03-terminology.adoc`
-/// §Vocabularies additionally binds the attribute to the
-/// `extract_content_type` group (concepts 803 "openEHR EHR" … 808 "other"),
-/// validated against the bundle in [`validate_extract_type`] — the two value
-/// spaces are never reconciled upstream, so both are accepted.
-///
-/// NOTE: the RM's "etc" (`master04-common_package.adoc` §Content Criteria
-/// Specification) makes its list illustrative, and this service still validates,
-/// an unrecognized type silently exporting an openEHR-EHR extract being a
-/// payload that misdescribes itself; the accepted set is a superset of every
-/// code the RM names and of the whole TERM group.
+/// RM `ehr_extract` `master04-common_package.adoc` §Content Criteria
+/// Specification names these tokens with an "etc", and TERM
+/// `SupportTerminology/master03-terminology.adoc` §Vocabularies binds the
+/// attribute to the `extract_content_type` group, checked in
+/// [`validate_extract_type`]. Both value spaces are accepted, and nothing
+/// else, so an Extract never misdescribes itself.
 const EXTRACT_CONTENT_TYPES: [&str; 6] = [
     "openehr-ehr",
     "openehr-demographic",

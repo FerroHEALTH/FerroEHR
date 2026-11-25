@@ -402,17 +402,10 @@ pub enum AnalysisError {
     /// An `archetype_node_id = '<literal>'` criterion whose operand is neither
     /// an archetype identifier nor an archetype term code.
     ///
-    /// QUERY `master03-syntax.adoc` §"Archetype predicate" and §"Node
-    /// predicate" define the two shortcut forms — `[openEHR-EHR-OBSERVATION.…]`
-    /// and `[at0002]` — as EQUIVALENT to the standard predicates
-    /// `archetype_node_id = 'openEHR-EHR-OBSERVATION.…'` and
-    /// `archetype_node_id=at0002` ("These predicates could also be written as
-    /// standard predicates"). The admissible operand set of the standard form
-    /// is therefore exactly the two the shortcut forms carry, which is also
-    /// what the RM allows the attribute to hold (`LOCATABLE.archetype_node_id`:
-    /// an archetype id at a root, an at-code inside). A third shape addresses
-    /// nothing, so it is refused rather than silently planned as an archetype
-    /// constraint that can never match.
+    /// QUERY `master03-syntax.adoc` §"Archetype predicate" and §"Node predicate"
+    /// make the standard form equivalent to the two shortcut forms, which carry
+    /// an archetype id or an at-code, as `LOCATABLE.archetype_node_id` does; any
+    /// other operand addresses nothing.
     #[error(
         "archetype_node_id criterion `{0}` is neither an archetype identifier \
          nor an archetype node code (QUERY §Archetype predicate / §Node predicate)"

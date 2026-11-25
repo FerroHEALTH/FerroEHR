@@ -16,19 +16,12 @@ use crate::service::terminology::fhir::TermExistence;
 
 /// A memoised [`TerminologyResolver`] for ADL2 VETDF validation.
 ///
-/// `openehr-adl` is a network-free spec engine whose VETDF check consults a
-/// synchronous [`TerminologyResolver`] seam, while a terminology lookup is
-/// asynchronous. The service therefore pre-resolves every external term binding
-/// of the uploaded archetype against its terminology service
-/// ([`FerroEhrService::term_existence`], on the system and code the binding
-/// URI names) and hands the validator this memoised map.
-///
-/// `code_exists` returns `Some(true)`/`Some(false)` for a binding the service
-/// could answer, and `None` for one it could not (no external provider
-/// configured, a code system the server does not serve, or a transport
-/// fault) — matching the
-/// VETDF "subject to tool accessibility; … no verification was possible"
-/// carve-out (AM ADL2 `master03-archetype_package.adoc` §Validity Rules).
+/// The `openehr-adl` resolver seam is synchronous and a terminology lookup is
+/// not, so the service resolves every external term binding first
+/// ([`FerroEhrService::term_existence`]) and hands the validator this map.
+/// `code_exists` answers `Some` for a binding the service could answer and
+/// `None` for one it could not, the VETDF "no verification was possible"
+/// case (AM ADL2 `master03-archetype_package.adoc` §Validity Rules).
 #[derive(Debug, Default)]
 pub(super) struct AdlTerminologyResolver {
     /// `(terminology_id, external target)` → the target's existence, for every
@@ -45,23 +38,16 @@ impl TerminologyResolver for AdlTerminologyResolver {
 }
 
 impl FerroEhrService {
-    /// Pre-resolve every external term binding of `archetype` against the
-    /// terminology service, building the [`AdlTerminologyResolver`] the VETDF
-    /// check consults (see its docs — the seam is synchronous, a lookup is not).
+    /// Resolves every external term binding of `archetype` against the
+    /// terminology service into the [`AdlTerminologyResolver`] the VETDF check
+    /// consults.
     ///
-    /// A binding target is a URI in the IHTSDO model (`…/id/<code>`), so it is
-    /// taken apart into the FHIR `(system, code)` the server is asked about
-    /// ([`code_system_and_code`]); a target of another shape is asked as
-    /// written under the binding's own terminology id. Only a definite answer
-    /// lands in the resolver: exists, or absent from a code system the server
-    /// serves. A binding the service cannot verify — no configured external
-    /// provider, a code system the server does not serve, a transport fault —
-    /// is left unresolved and logged, so VETDF is not raised for it
-    /// (`master03` §Validity Rules: "codes for inaccessible terminologies
-    /// should be flagged with a warning indicating that no verification was
-    /// possible"). Only genuinely external terminologies are consulted; the
-    /// archetype-internal `local`/`openehr` ids are excluded by
-    /// [`external_term_bindings`] (their keys are covered by VTTBK/VTCBK).
+    /// A target URI in the IHTSDO form (`…/id/<code>`) is asked as its FHIR
+    /// `(system, code)` ([`code_system_and_code`]), any other as written under
+    /// the binding's terminology id. Only a definite answer is recorded; a
+    /// binding the service cannot verify is logged and left open, so VETDF is not
+    /// raised (`master03` §Validity Rules). The `local` and `openehr` ids are
+    /// excluded by [`external_term_bindings`].
     pub(super) async fn adl2_terminology_resolver(
         &self,
         archetype: &Archetype,

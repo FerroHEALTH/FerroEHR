@@ -152,21 +152,16 @@ impl FerroEhrService {
         }
     }
 
-    /// The EHRs of the patient `subject` names once the installed provider
-    /// has resolved it into the clinical domain: the EHR whose
-    /// `EHR_STATUS.subject` names the clinical subject, and the EHR of every
-    /// other record subject the `PERSON` declaring it carries
-    /// ([`Self::ehr_ids_for_person`]), which after an identity merge
-    /// includes the merged patient's EHR; empty when no EHR names it or the
-    /// identity source knows no clinical identifier for it.
+    /// The EHRs of the patient `subject` names, once the installed provider
+    /// resolves it into the clinical domain: the EHR whose `EHR_STATUS.subject`
+    /// names it and the EHR of every other record subject its `PERSON` carries
+    /// ([`Self::ehr_ids_for_person`]), a merged patient's among them; empty when
+    /// none.
     ///
-    /// Under [`EhrIndexProvider::Local`] the subject names itself; under
-    /// [`EhrIndexProvider::Ihe`] a subject outside the clinical domain is
-    /// cross-referenced by the PIX Manager, which answers the survivor's
-    /// pseudonym for a merged identifier (PIXm 3.1.0 §2:3.83.4.2.2.5 leaves
-    /// that to policy). Reaching the merged patient's EHR through the
-    /// survivor's `PERSON` is the consumer's handling of the merge (PMIR 1.6.0
-    /// §2:3.93.4.1.3): our own design (#5649).
+    /// Under [`EhrIndexProvider::Ihe`] a subject outside the clinical domain is
+    /// cross-referenced by the PIX Manager, which answers the survivor for a
+    /// merged identifier (PIXm 3.1.0 §2:3.83.4.2.2.5; PMIR 1.6.0 §2:3.93.4.1.3):
+    /// our own design (#5649).
     ///
     /// # Errors
     /// [`IndexError::Unconfigured`] with no provider installed,
@@ -182,20 +177,15 @@ impl FerroEhrService {
             .await?)
     }
 
-    /// The EHRs of the patient a contact point's treatment relationship
-    /// confirmation names by `patient`, an identifier of the patient's
-    /// domain, found in the party domain with no call to an identity source.
+    /// The EHRs of the patient a treatment relationship confirmation names by
+    /// `patient`, found in the party domain without the identity source.
     ///
-    /// The patient is the `PERSON` that carries `patient` at the
-    /// `[authz.party_binding.patient]` identifier path, matched on the issuer
-    /// and the value, and its EHRs are the ones its own reference and its record subjects
-    /// name ([`Self::ehr_ids_for_person`]). Under
-    /// [`EhrIndexProvider::Local`] the identifier also names the EHR whose
-    /// `EHR_STATUS` carries it, as a local subject names itself. An
-    /// identifier no `PERSON`, or more than one, carries finds no EHR in the
-    /// party domain, so the caller refuses: it fails closed. eHDSI XCA Profile 8.0.1 §4.2.1 names the TRC patient
-    /// and leaves finding its record to the data holder; resolving it in the
-    /// party domain keeps admitting a request off the identity source: our own
+    /// The patient is the one `PERSON` carrying `patient` at the
+    /// `[authz.party_binding.patient]` path, and its EHRs those of its reference
+    /// and record subjects ([`Self::ehr_ids_for_person`]); under
+    /// [`EhrIndexProvider::Local`] the identifier also names its own EHR. No or
+    /// several such `PERSON`s find no EHR, and the caller refuses. eHDSI XCA
+    /// Profile 8.0.1 §4.2.1 leaves finding the record to the data holder: our own
     /// design (#5648).
     ///
     /// # Errors

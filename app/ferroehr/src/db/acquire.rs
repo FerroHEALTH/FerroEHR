@@ -271,23 +271,14 @@ pub fn release_held() {
     }
 }
 
-/// Awaits `wait`, a wait for work another task does or for a pool, after
-/// giving back every connection the current [`request_scope`] keeps
+/// Awaits `wait`, a wait for another task's work, a pool or another server,
+/// after giving back every connection the current [`request_scope`] keeps
 /// ([`release_held`]).
 ///
-/// A request that kept a connection across such a wait would hold it while
-/// the work it waits for may need a connection of the same pool: requests
-/// each keeping one and waiting so hold the pool until the acquire timeout
-/// (#5879, #6008). Every wait of a request for another task's work goes
-/// through here.
-///
-/// A request can run two reads side by side, each on its own pool. A
-/// connection one of them gives back while the other waits here is not kept
-/// either ([`Checkout`]): kept, it would be held across the rest of this
-/// wait, and requests each keeping one pool's connection so while they wait
-/// for another's stall as above (#6027). A request's wait on another
-/// server, the terminology server or the blob store, goes through here too
-/// (#5774). No specification governs this: our own design.
+/// A connection kept across such a wait could hold its pool while the work
+/// waited for needs it, until the acquire timeout (#5879, #6008). A
+/// connection a side-by-side read gives back meanwhile is not kept either
+/// ([`Checkout`], #6027). No specification governs this: our own design.
 pub async fn handoff<F: Future>(wait: F) -> F::Output {
     let _waiting = Waiting::begin();
     release_held();

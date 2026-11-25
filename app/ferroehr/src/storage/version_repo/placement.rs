@@ -117,24 +117,15 @@ macro_rules! is_lineage_tip {
     };
 }
 
-/// The version-tree placement read, merged into ONE statement — the thaw
-/// included.
+/// The version-tree placement read in one statement, the thaw included.
 ///
-/// Returns the preceding lineage tip (the version `expected` names, or the open
-/// TRUNK tip), the next storage commit ordinal, and the transaction timestamp.
-/// The timestamp is the commit instant every row of this transaction stamps
-/// (`now()` is stable for the whole transaction), so the caller can compute the
-/// `VERSION.signature` over `time_committed` BEFORE any insert (RM common
-/// master06 §Digital Signature) and commit through the folded CTE
-/// unconditionally.
-///
-/// A new version must never land in the hot tier while its predecessors sit in
-/// the cold one, so the statement's leading data-modifying CTEs move any
-/// archived rows back first. The reads need no union to see them: `version` is
-/// partitioned by tier, so naming the parent relation reads both tiers, and the
-/// thaw's own effects being invisible to the sibling scans
-/// (<https://www.postgresql.org/docs/18/queries-with.html>) does not matter
-/// when the pre-statement snapshot already carries the rows.
+/// Returns the preceding lineage tip (the version `expected` names, or the
+/// open TRUNK tip), the next commit ordinal, and the transaction timestamp,
+/// which every row of the transaction stamps, so the signature over
+/// `time_committed` is computed before any insert (RM common master06
+/// §Digital Signature). The leading CTEs move archived rows back to the hot
+/// tier, so a version never lands beside cold predecessors; the reads see
+/// both tiers through the partitioned parent.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.

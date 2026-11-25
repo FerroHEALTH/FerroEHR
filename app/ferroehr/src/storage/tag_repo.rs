@@ -274,22 +274,14 @@ pub async fn replace_tags(
     Ok(out)
 }
 
-/// Delete a target collection's tags by key, returning whether any row was
+/// Deletes a target collection's tags by key, returning whether any row was
 /// deleted.
 ///
-/// The wire addresses tags by `key` alone (the Release-1.1.0 tag routes carry
-/// no path selector), while the `ITEM_TAG` identity is the (`key`,
-/// `target_path`) pair — so a key delete removes EVERY tag under that key in
-/// the addressed collection, a set delete.
+/// The tag routes address by `key` alone, so a delete removes every tag
+/// under that key, whatever its `target_path`.
 ///
-/// NOTE: the delete is PHYSICAL — no openEHR spec governs this, our own design,
-/// and the alternative is unrepresentable: "logical delete" is a change-control
-/// concept (a new VERSION in lifecycle state `523|deleted|`, RM common
-/// `master06-change_control_package.adoc`), while RM ehr
-/// `master04-ehr_package.adoc` §Tags puts `ITEM_TAG` outside change control
-/// entirely — unversioned, no `uid`, no lifecycle state, so there is no object
-/// for a tombstone to be a version OF. The released wire agrees by omission: the
-/// tag DELETE's only success branch is `204`.
+/// NOTE: the delete is physical: `ITEM_TAG` is outside change control (RM ehr
+/// `master04-ehr_package.adoc` §Tags), so no version can mark it deleted.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.

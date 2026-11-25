@@ -39,22 +39,14 @@ use crate::versioning::change::precondition::{ensure_preceding, tip_uid};
 use crate::versioning::change::{Change, Write};
 
 impl FerroEhrService {
-    /// Keep the EHR's promoted subject columns (`ehr.subject_id` /
-    /// `subject_namespace`) in sync with the `EHR_STATUS` being committed
-    /// (`subject.external_ref.id.value` + `.namespace`). The partial unique
-    /// index `ehr_subject_uq` enforces **one EHR per subject** at the database
-    /// (RM ehr master04 §EHR Status; ITS-REST `409_EHR.yaml`; CNF
-    /// `create_ehr-two_ehrs_same_patient`) — a violation maps to
-    /// [`ServiceError::Conflict`] (→ 409). A status without an `external_ref`
-    /// (e.g. anonymous `PARTY_SELF`) clears the columns and never conflicts.
+    /// Keeps the EHR's promoted subject columns in step with the `EHR_STATUS`
+    /// being committed, inside the commit transaction of the EHR create, the
+    /// `EHR_STATUS` update and the CONTRIBUTION path.
     ///
-    /// This is the EHR-owned commit hook (RM common master06 §Committal
-    /// and Audits), called inside the commit transaction of the EHR-create and
-    /// `EHR_STATUS`-update paths and, for the CONTRIBUTION path, from
-    /// [`crate::service::contribution`]. The `UPDATE`
-    /// stays inline here because it maps the subject-uniqueness constraint
-    /// violation to a service-level [`ServiceError::Conflict`]; the
-    /// `ehr.subject_*` columns are spec-silent index plumbing (our own design).
+    /// The partial unique index `ehr_subject_uq` holds one EHR per subject (RM
+    /// ehr master04 §EHR Status; ITS-REST `409_EHR.yaml`; CNF
+    /// `create_ehr-two_ehrs_same_patient`). A status without an `external_ref`
+    /// clears the columns. The columns are our own design.
     ///
     /// # Errors
     /// [`ServiceError::Conflict`] when the subject already owns another EHR
@@ -85,22 +77,15 @@ impl FerroEhrService {
             })
     }
 
-    /// Re-promotes the `ehr` columns from the stored current `EHR_STATUS`, the
-    /// seam for the paths that land `EHR_STATUS` versions without the service
-    /// write hook: the EHR Extract import and the admin archive load.
+    /// Re-promotes the `ehr` columns from the stored current `EHR_STATUS`, for
+    /// the EHR Extract import and the admin archive load, which bypass the write
+    /// hook.
     ///
-    /// The current status root fragment is read on the caller's transaction
+    /// The current status root is read on the caller's transaction
     /// ([`ehr_repo::current_status_root`]) and handed to
-    /// [`Self::sync_ehr_subject`], so an imported or loaded EHR is visible to
-    /// the subject lookup (`get_ehrs_for_subject`) and bound by
-    /// the one-EHR-per-subject rule (RM ehr master04 §EHR Status) like any
-    /// other. An EHR with no current `EHR_STATUS` keeps its column defaults.
-    ///
-    /// A subject already owned by another EHR is rejected before the UPDATE so
-    /// the caller can report which subject clashed and which EHR holds it. The
-    /// `uq_ehr_subject` index remains the backstop for a holder this pre-check
-    /// cannot see, such as a concurrent writer or a row RLS hides, which
-    /// surfaces as [`Self::sync_ehr_subject`]'s own conflict.
+    /// [`Self::sync_ehr_subject`]. A subject another EHR owns is refused first,
+    /// naming both; `uq_ehr_subject` remains the backstop for a holder this check
+    /// cannot see. An EHR with no current `EHR_STATUS` keeps its defaults.
     ///
     /// # Errors
     /// [`ServiceError::Conflict`] when another EHR already owns the status's

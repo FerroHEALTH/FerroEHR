@@ -275,22 +275,12 @@ pub struct Layout {
 
 /// The alias prefix of the hidden per-row EHR columns the access log reads.
 ///
-/// An AQL statement is one access to every EHR it actually served, and NEN 7513
-/// and EHDS Art. 9 ask which records were accessed rather than how many. The
-/// executed statement therefore carries the EHR id of each bound `EHR` source
-/// and each bound VO root beside the projection, so the served set is read off
-/// the rows that were served, and a statement that projects only an EHR names
-/// it too. It is never read off a second, unpaged scan, which would name EHRs
-/// the query matched and never disclosed.
-///
-/// `SELECT DISTINCT` cannot carry it, since an extra column changes which
-/// rows are distinct, and is recorded as a statement-level access with a row
-/// count and no per-EHR breakdown. An aggregate projection, where an
-/// ungrouped column is not valid SQL, carries per row the array of the
-/// distinct EHRs its aggregate read, so every EHR whose data shaped the
-/// result is named (EHDS Art. 9, #5639).
-///
-/// **No openEHR spec governs this — our own design/extension.**
+/// A statement is one access to every EHR it served (NEN 7513, EHDS Art. 9),
+/// so it carries the EHR id of each bound `EHR` source and VO root beside the
+/// projection, and the served set is read off the served rows. A `SELECT
+/// DISTINCT` carries none and is recorded as a statement-level access; an
+/// aggregate carries per row the array of the EHRs it read (#5639). No openEHR
+/// spec governs this: our own design.
 pub const ACCESS_EHR_PREFIX: &str = "access_ehr_";
 
 /// The alias of the hidden column holding the policy revision a judged

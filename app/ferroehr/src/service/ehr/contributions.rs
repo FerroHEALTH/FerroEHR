@@ -149,23 +149,17 @@ impl FerroEhrService {
 // ── The CONTRIBUTION call surface ─────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// The EHR contribution-list extension (`GET /ehr/{ehr_id}/contribution`,
-    /// no uid): the EHR's CONTRIBUTIONs newest-first, paged, as
+    /// The EHR contribution-list extension (`GET /ehr/{ehr_id}/contribution`
+    /// without a uid): the EHR's CONTRIBUTIONs newest first, paged, as
     /// `{ "rows": [ { uid, time_committed, committer, inserted_by_person,
     /// change_type, change_type_rubric } ], "total" }`.
     ///
-    /// NOTE: no openEHR spec governs this listing — our own design/extension;
-    /// the ITS-REST contract defines only the by-uid CONTRIBUTION GET.
+    /// `committer` is the committer's `name`, `inserted_by_person` whether the
+    /// committer is `PARTY_SELF` or `PARTY_RELATED` (EHDS Art. 5), and
+    /// `change_type_rubric` the rubric of `change_type` in the
+    /// `audit_change_type` group. `offset` and `fetch` come clamped.
     ///
-    /// `committer` is the audit committer `PARTY_PROXY`'s `name`, a summary
-    /// string rather than the full rendering the by-uid GET returns, and
-    /// `inserted_by_person` whether that committer is `PARTY_SELF` or
-    /// `PARTY_RELATED`, the record's person or their representative (EHDS
-    /// Art. 5);
-    /// `change_type` is the stored `audit.change_type` code and
-    /// `change_type_rubric` its display rubric from the `audit_change_type`
-    /// group, so consumers never map codes locally. `offset` and `fetch` are
-    /// already clamped by the protocol adapter.
+    /// NOTE: ITS-REST defines only the by-uid CONTRIBUTION GET; this listing is our own design.
     ///
     /// # Errors
     /// [`ServiceError`] — the EHR-existence check fails (unknown EHR → 404), or a read fails.
