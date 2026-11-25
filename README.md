@@ -14,7 +14,7 @@
 [![Release](https://img.shields.io/github/v/release/FerroHEALTH/FerroEHR?logo=github&label=release)](https://github.com/FerroHEALTH/FerroEHR/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/FerroHEALTH/FerroEHR/ci.yml?branch=main&logo=githubactions&logoColor=white&label=CI)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/ci.yml)
 [![Containers](https://img.shields.io/github/actions/workflow/status/FerroHEALTH/FerroEHR/containers.yml?branch=main&logo=githubactions&logoColor=white&label=containers)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml)
-[![License: BUSL-1.1](https://img.shields.io/badge/License-BUSL--1.1-blue)](LICENSE)
+[![License: BUSL-1.1](https://img.shields.io/badge/License-BUSL--1.1-blue?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgZD0iTTEyIDN2MThNNyAyMWgxME00IDdoMTZNNCA3TDEgMTRhMyAzIDAgMCAwIDYgMFpNMjAgN2wtMyA3YTMgMyAwIDAgMCA2IDBaIi8%2BPC9zdmc%2B)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-ferroehr.eu-blue?logo=mdbook)](https://ferroehr.eu/docs/latest/)
 [![GHCR](https://img.shields.io/badge/ghcr.io-ferroehr-2496ED?logo=docker&logoColor=white)](https://github.com/FerroHEALTH/FerroEHR/pkgs/container/ferroehr)
 [![Image pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2FFerroHEALTH%2FFerroEHR%2Fferroehr&query=downloadCount&label=image%20pulls&logo=github)](https://github.com/FerroHEALTH/FerroEHR/pkgs/container/ferroehr)
@@ -22,8 +22,8 @@
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21940279-blue?logo=zenodo&logoColor=white)](https://doi.org/10.5281/zenodo.21940279)
 
 **Quality and security**<br>
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/FerroHEALTH/FerroEHR/badge)](https://scorecard.dev/viewer/?uri=github.com/FerroHEALTH/FerroEHR)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13982/badge)](https://www.bestpractices.dev/projects/13982)
+[![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/FerroHEALTH/FerroEHR?label=openssf%20scorecard&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgZD0iTTEyIDJsOCAzdjZjMCA1LTMuNSA5LjUtOCAxMS00LjUtMS41LTgtNi04LTExVjVaTTguNSAxMmwyLjUgMi41IDQuNS01Ii8%2BPC9zdmc%2B)](https://scorecard.dev/viewer/?uri=github.com/FerroHEALTH/FerroEHR)
+[![OpenSSF Best Practices](https://img.shields.io/cii/level/13982?label=openssf%20best%20practices&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgZD0iTTEyIDJhNiA2IDAgMSAwIDAgMTIgNiA2IDAgMSAwIDAtMTJaTTguNSAxMyA3IDIybDUtMyA1IDMtMS41LTkiLz48L3N2Zz4%3D)](https://www.bestpractices.dev/projects/13982)
 [![Quality gate](https://img.shields.io/sonar/quality_gate/FerroHEALTH_FerroEHR?server=https%3A%2F%2Fsonarcloud.io&logo=sonarqubecloud&label=quality%20gate)](https://sonarcloud.io/summary/new_code?id=FerroHEALTH_FerroEHR)
 [![Coverage](https://img.shields.io/sonar/coverage/FerroHEALTH_FerroEHR?server=https%3A%2F%2Fsonarcloud.io&logo=sonarqubecloud&label=coverage)](https://sonarcloud.io/component_measures?id=FerroHEALTH_FerroEHR&metric=coverage)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/FerroHEALTH/FerroEHR/codeql.yml?branch=main&logo=github&label=CodeQL)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/codeql.yml)
@@ -44,14 +44,14 @@
 [![veredictum · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/instrument.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
 <br>
 **Compliance**<br>
-[![EHDS](https://img.shields.io/badge/EHDS-readiness%20statement-blue?logo=europeanunion)](https://ferrohealth.eu/docs/ehds/readiness.html)
-[![CRA](https://img.shields.io/badge/CRA-risk%20assessment-blue?logo=europeanunion)](https://ferroehr.eu/docs/latest/compliance/cra-risk-assessment.html)
+[![EHDS](https://img.shields.io/badge/EHDS-readiness%20statement-blue?logo=europeanunion&labelColor=003399&logoColor=FFCC00)](https://ferrohealth.eu/docs/ehds/readiness.html)
+[![CRA](https://img.shields.io/badge/CRA-risk%20assessment-blue?logo=europeanunion&labelColor=003399&logoColor=FFCC00)](https://ferroehr.eu/docs/latest/compliance/cra-risk-assessment.html)
 <br>
 **EHDS**<br>
 <sub>Counted by CI from the book's evidence tables; no conformity assessment has examined them</sub><br>
-[![EHDS logging checklist · Xt-EHR D8.2](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Flogging.json&logo=europeanunion)](https://ferroehr.eu/docs/dev/compliance/logging-checklist.html)
-[![EEHRxF draft · Annex III from the RM](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Fannex-iii.json&logo=europeanunion)](https://ferroehr.eu/docs/dev/compliance/eehrxf-annex-iii.html)
-[![EEHRxF draft · PDF/A originals](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Fpdf-originals.json&logo=europeanunion)](https://ferroehr.eu/docs/dev/compliance/eehrxf-pdf-originals.html)
+[![EHDS logging checklist · Xt-EHR D8.2](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Flogging.json)](https://ferroehr.eu/docs/dev/compliance/logging-checklist.html)
+[![EEHRxF draft · Annex III from the RM](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Fannex-iii.json)](https://ferroehr.eu/docs/dev/compliance/eehrxf-annex-iii.html)
+[![EEHRxF draft · PDF/A originals](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Fpdf-originals.json)](https://ferroehr.eu/docs/dev/compliance/eehrxf-pdf-originals.html)
 
 </div>
 

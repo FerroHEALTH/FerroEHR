@@ -136,3 +136,19 @@ prefix `ferroehr/`. A pull request reads with the read-only token and
 merge queue reads; the merge queue, `main` and the nightly write. With the
 bucket set, rust-cache keeps only the registry and the tools of those jobs.
 The release lanes call no cache.
+
+## The CI PostgreSQL image
+
+The database jobs (the test shards, the merge group's smoke set, the CPU
+budget, the coverage run and the stress lane) run
+`ghcr.io/ferrohealth/ferroehr-ci-postgres`, pinned by digest in
+`docker/ci-postgres/image.ref`. Its recipe, `docker/ci-postgres/Dockerfile`,
+builds on `docker/postgres`'s base digest and starts PostgreSQL with the
+non-durable settings (<https://www.postgresql.org/docs/current/non-durability.html>),
+`pg_stat_statements` preloaded and 400 connections, because a service
+container takes no command
+(<https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idservices>).
+`ci-postgres.yml` builds it on a pull request that changes it and pushes it
+on `main`, printing the digest; a change that moves the base updates
+`image.ref` to that digest in the next pull request. It is a test image and
+never ships.
