@@ -1,0 +1,4 @@
+<!-- SPDX-FileCopyrightText: Cadasto B.V. -->
+<!-- SPDX-License-Identifier: BUSL-1.1 -->
+<!-- FerroHEALTH badge logo; the master copy lives in FerroHEALTH/FerroSMART, scripts/checks/badge-logos/. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3M9 2h6v4H9ZM8 10.5h.01M11 10.5h5M8 14h.01M11 14h5M8 17.5h.01M11 17.5h5"/></svg>
