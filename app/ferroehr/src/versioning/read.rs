@@ -151,31 +151,16 @@ impl VersionRead {
     }
 }
 
-/// Compose a [`VersionRead`] from the storage read shape
-/// ([`crate::storage::version_repo::read::StoredVersion`]): the tree id is rebuilt
-/// from its column ints and the flattened audit becomes the `commit_audit`.
-/// A locally committed deleted version (lifecycle `523`) stores no node rows, so
-/// storage already yields `canonical = Value::Null`: master06 §Logical Deletion
-/// states the data removal and the state change as one act, and every
-/// content-carrying local route refuses the `deleted` state
-/// ([`crate::versioning::lifecycle::reject_deleted_with_data`]). The EHR-Extract
-/// import replay is the one exception, reproducing a foreign `ORIGINAL_VERSION`
-/// verbatim (master06 §Copying), so a foreign `523` version that arrived
-/// carrying data reads back with that content.
+/// Composes a [`VersionRead`] from the storage read shape
+/// ([`crate::storage::version_repo::read::StoredVersion`]).
 ///
-/// This is also the one seam a stored version body passes through on its way out
-/// of `version` and `node`, so it carries two read-time gates. The first is the
-/// restriction mark (`vo_head.restricted_at`): a restricted object answers
-/// `403`, because GDPR Art. 18(2) leaves storage as the only processing it
-/// admits (`docs/law/eu/gdpr/text.html`) — our own design/extension, no openEHR
-/// spec governs restriction of processing. The second is the `spec_profile` gate
-/// ([`crate::versioning::profile::gate`]): under the `stable` profile a version
-/// whose body only the development generations can express is a typed refusal.
-/// The gate sits here rather than per handler because every served kind reaches
-/// the wire through this function. AQL reads `node` rows directly instead, so it
-/// carries the same gate twice: on the query text at planning time
-/// (`crate::aql::analyze`) and on every projected version body at result
-/// assembly (`crate::versioning::profile::gate_result_bodies`).
+/// A local deleted version (lifecycle `523`) stores no body, so `canonical`
+/// is `Value::Null` (master06 §Logical Deletion); a foreign `523` version
+/// the import replayed with data reads back with it (master06 §Copying).
+/// Every served version body passes here, so it carries two gates: a
+/// restricted object answers `403`, since GDPR Art. 18(2) leaves storage as
+/// the only processing it admits (`docs/law/eu/gdpr/text.html`, our own
+/// design), and the `spec_profile` gate ([`crate::versioning::profile::gate`]).
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] when an imported row's stored wrapped

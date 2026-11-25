@@ -1587,21 +1587,12 @@ fn plan_row_estimates(node: &Value, out: &mut Vec<f64>) {
 /// cost neither picks the join order of a statement many times larger nor
 /// switches on JIT compilation (#4430, #4431).
 ///
-/// Each binding of a path step probes the children of one node row. Lowered
-/// as a set-returning function over an array the planner cannot see into, a
-/// binding was estimated at ten rows (PostgreSQL 18 `estimate_array_length`'s
-/// default), so a chain of eleven multiplied the estimate by 10^11: the
-/// storage bench's wide projection over one EHR spent a second in LLVM
-/// compilation on every execution, because the planner JIT-compiles a
-/// statement whose estimated cost passes `jit_above_cost` (PostgreSQL 19
-/// §30.2 "When to JIT?"). PostgreSQL 19 turns `jit` off by default
-/// (<https://www.postgresql.org/docs/19/runtime-config-query.html>), so a
-/// plan without a `JIT` section proves nothing on its own; the total cost is
-/// held under `jit_above_cost` for a deployment that turns it on. The flat
-/// shape's bindings are probed in the same
-/// order and are planned from their own subquery plans. No estimate of a
-/// binding chain can exceed the node rows the store holds: each binding
-/// yields the children of one row, or one all-`NULL` row.
+/// A planner estimate past `jit_above_cost` JIT-compiles the statement
+/// (PostgreSQL 19 §30.2 "When to JIT?"). `jit` is off by default
+/// (<https://www.postgresql.org/docs/19/runtime-config-query.html>), so the
+/// test holds the total cost under `jit_above_cost` for a deployment that
+/// turns it on. No binding chain's estimate can exceed the node rows the
+/// store holds.
 #[tokio::test]
 async fn a_chain_of_path_bindings_is_estimated_at_the_rows_it_reads() {
     let db = testkit::db().await.expect("testkit database");

@@ -100,25 +100,15 @@ macro_rules! descriptor {
 }
 
 impl SchemaDescriptor {
-    /// Describe the schema file at `path` from a metadata read of its header.
+    /// Describes the schema file at `path` from a metadata read of its header.
     ///
-    /// NOTE (adjudicated): the P_BMM reader is whole-document
-    /// ([`crate::v1_1::bmm_persistence::reader::read_schema`]), and the pinned syntax
-    /// offers no partial-parse entry point — `master04-syntax.adoc`
-    /// §Serialisation Formats describes one file shape whose "File heading" is
-    /// simply its first attributes — so the metadata read is realized by reading
-    /// the whole document and keeping only the header items. The observable
-    /// behaviour is the class doc's: a descriptor that is not yet loaded.
-    ///
-    /// The built leaf is `P_BMM_SCHEMA_DESCRIPTOR`, the class the spec defines for
-    /// exactly this job: "Concrete descendant of `BMM_SCHEMA_DESCRIPTOR` that
-    /// provides a way to read an ODIN or other similarly encoded P_BMM schema
-    /// file"
-    /// (`org.openehr.lang.bmm_persistence.p_bmm_schema_descriptor.adoc`
-    /// §Description) — exactly what this facade does. Its own `bmm_schema`
-    /// attribute re-declares the inherited `p_schema` verbatim ("Persistent form
-    /// of model"), so only the inherited slot is populated and
-    /// [`SchemaDescriptor::p_schema`] reads either.
+    /// The P_BMM reader is whole-document
+    /// ([`crate::v1_1::bmm_persistence::reader::read_schema`]), so the read keeps
+    /// only the header items of the whole document. The leaf is
+    /// `P_BMM_SCHEMA_DESCRIPTOR`
+    /// (`org.openehr.lang.bmm_persistence.p_bmm_schema_descriptor.adoc`), with
+    /// the inherited `p_schema` slot populated, which
+    /// [`SchemaDescriptor::p_schema`] reads.
     ///
     /// # Errors
     /// Returns [`RmAccessError::File`] when `path` cannot be read and

@@ -45,11 +45,7 @@ const USERS: u32 = 50;
 const PER_REQUEST: u32 = 8;
 
 /// The ceiling on the bytes an entry takes in every relation of the access
-/// log, heap and indexes: this seed measured 1 844 to 1 893 with the index
-/// in a table of its own, and 1 781 to 1 806 with one row per entry (#5784).
-/// Written once with no intake row or link (#6242) it measured 1 154 to
-/// 1 193 against 1 327 to 1 391 beside the merge base, and the ceiling fell
-/// by the drop of the median, 187.
+/// log, heap and indexes (#5784).
 const CEILING: i64 = 1_653;
 
 /// The EHR id of EHR `n`.

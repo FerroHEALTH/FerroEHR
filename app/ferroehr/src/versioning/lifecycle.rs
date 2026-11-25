@@ -118,15 +118,9 @@ pub(crate) fn reject_deleted_with_data(lifecycle: &str) -> Result<(), ServiceErr
     ))
 }
 
-/// Whether a `version_lifecycle_state` transition `from -> to` is sanctioned by
-/// the master06 §Version Lifecycle state machine.
-///
-/// The authority is the FORMAL machine the section designates — "The following
-/// diagram shows the formal state machine of the
-/// `ORIGINAL_VERSION._lifecycle_state_` attribute"
-/// (`RM/docs/UML/diagrams/RM-version_lifecycle.svg`); the §Abandoned and
-/// Inactive States prose table covers only that pair's transitions. The
-/// diagram's exact edge set:
+/// Whether a `version_lifecycle_state` transition `from -> to` is an edge of
+/// the formal state machine of RM common master06 §Version Lifecycle
+/// (`RM/docs/UML/diagrams/RM-version_lifecycle.svg`).
 ///
 /// | from | allowed to (edge) |
 /// |---|---|
@@ -137,16 +131,8 @@ pub(crate) fn reject_deleted_with_data(lifecycle: &str) -> Result<(), ServiceErr
 /// | `abandoned`  | `incomplete` (retrieve), `deleted` (delete) |
 /// | `deleted`    | `complete`/`incomplete` (revert) |
 ///
-/// The machine draws self-`update` loops only on `complete` and `incomplete`, so
-/// a same-state re-commit of `inactive`, `abandoned` or `deleted` content is not
-/// a drawn transition; editing resumes through `reactivate`, `retrieve` or
-/// `revert` first.
-///
-/// A transition outside this table is a `422` naming the state machine. The
-/// import replay does not call this, preserving source history verbatim
-/// (master06 §Copying), and the logical-delete path targets `deleted` from any
-/// live state (master06 §Logical Deletion, matching the diagram's four `delete`
-/// edges).
+/// Any other transition is a `422` naming the state machine. The import
+/// replay does not call this (master06 §Copying).
 pub(crate) fn validate_transition(from: Option<&str>, to: &str) -> Result<(), ServiceError> {
     use state::{ABANDONED, COMPLETE, DELETED, INACTIVE, INCOMPLETE};
 

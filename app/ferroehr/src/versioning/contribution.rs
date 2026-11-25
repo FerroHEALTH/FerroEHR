@@ -301,23 +301,12 @@ const COMMITTABLE_MEMBER_TYPES: [&str; 2] = ["UPDATE_VERSION", "ORIGINAL_VERSION
 /// assigns or self-tags as a class this wire does not commit, and reads its
 /// merge provenance.
 ///
-/// `UPDATE_VERSION` is an open object: ITS-REST `schemas/ehr/UpdateVersion.yaml`
-/// (and its demographic copy) declares six properties and no
-/// `additionalProperties`, where the release closes an object it means to close
-/// with `additionalProperties: false` (`ItemTag.yaml`). An undeclared member
-/// with no meaning on a locally created `ORIGINAL_VERSION` (RM common
-/// `org.openehr.rm.common.original_version.adoc`) is accepted and ignored, as on
-/// `NewContribution` and `UpdateAudit`; `item` is one, being `IMPORTED_VERSION`'s.
-///
-/// Two RM attributes are the server's to assign and refused by name. `uid`: RM
-/// common `master06-change_control_package.adoc` §Version Identification sets a
-/// local version's `creating_system_id` to "the identifier of the local system"
-/// and numbers its `version_tree_id` from 1. `contribution`: master06 §Version
-/// and its Subtypes says a committed version "records the Contribution in the
-/// `_contribution_` attribute", the one this commit creates. Ignoring either
-/// would commit under a value other than the one the client stated.
-///
-/// `other_input_version_uids` is recorded ([`object_version_id::parse_merge_inputs`]).
+/// ITS-REST `schemas/ehr/UpdateVersion.yaml` leaves the object open, so an
+/// undeclared member with no meaning on a local `ORIGINAL_VERSION` is
+/// ignored. `uid` and `contribution` are the server's to assign (RM common
+/// `master06-change_control_package.adoc` §Version Identification, §Version
+/// and its Subtypes) and refused by name. `other_input_version_uids` is
+/// recorded ([`object_version_id::parse_merge_inputs`]).
 ///
 /// NOTE: `_type` must name "the uppercase class name from the RM specification"
 /// (ITS-REST `specifications/docs/overview/Resources.md` §Resource

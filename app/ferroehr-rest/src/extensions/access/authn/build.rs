@@ -123,25 +123,15 @@ impl RoleIssuers {
 }
 
 impl Authenticator {
-    /// Builds the authenticator of `config`. A JWT issuer read from its
-    /// metadata is read in the background from the start: until it is, its
-    /// tokens are refused with `503` (`issuer-unread`) and the readiness
-    /// route reports the server not ready (its `auth_issuers` indicator),
-    /// so the server starts whether or not its authorization server is up. A
-    /// `jwks_file` issuer and an introspected issuer are read here, from a
-    /// local file and the introspection endpoint, and one that cannot be
-    /// read refuses the start.
+    /// Builds the authenticator of `config`.
     ///
-    /// `[auth.smart] issuer_metadata_file` is the metadata of the issuer it names,
-    /// whose key set is a `jwks_file`, so its discovery document can name a
-    /// `token_endpoint`. When the SMART discovery document is served, it
-    /// describes the issuer `ferrohealth-smart`'s `describe` chooses:
-    /// `[auth] described_issuer`, else the one SMART issuer whose metadata is
-    /// available. The `DPoP` proof
-    /// check of `[auth.dpop]` compares a proof's `htu` with the server's
-    /// public root (`[server] public_base_url` with `server.base_path`) and
-    /// the request path, and records each accepted proof in `replay`, which
-    /// the server builds over the clinical pool every replica shares.
+    /// A JWT issuer read from its metadata is read in the background: until it
+    /// is, its tokens are refused with `503` (`issuer-unread`) and the readiness
+    /// route reports the server not ready. A `jwks_file` issuer and an
+    /// introspected issuer are read here, and one that cannot be read refuses the
+    /// start. The `DPoP` check of `[auth.dpop]` compares a proof's `htu` with the
+    /// server's public root and the request path, and records each accepted proof
+    /// in `replay`.
     ///
     /// # Errors
     /// A message naming the refused setting, the `jwks_file` or introspected

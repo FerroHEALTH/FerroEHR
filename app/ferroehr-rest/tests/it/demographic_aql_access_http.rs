@@ -90,7 +90,7 @@ fn policy_person() -> Value {
         "name": { "_type": "DV_TEXT", "value": "details" },
         "items": [{
             "_type": "ELEMENT", "archetype_node_id": "at0011",
-            "name": { "_type": "DV_TEXT", "value": "client" },
+            "name": { "_type": "DV_CODED_TEXT", "value": "client_id", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "client_id" } },
             "value": { "_type": "DV_IDENTIFIER", "issuer": "https://machines.example",
                        "id": "lab", "type": "client_id" }
         }]

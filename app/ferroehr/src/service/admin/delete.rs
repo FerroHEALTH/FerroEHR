@@ -89,27 +89,15 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Physically delete one EHR and every trace of it.
+    /// Physically deletes one EHR and every trace of it.
     ///
-    /// 1. `DELETE FROM ehr` deletes the versions' `node` rows in the same
-    ///    statement and cascades through `vo_head`, `version` (both tier
-    ///    partitions), `vo_attestation`, `contribution`,
-    ///    `commit_audit`, `item_tag`, `ehr_folder`, `restriction`,
-    ///    `retention_anchor`, `blob_ref` and the EHR's `event_outbox` rows.
-    ///    The `commit_audit` rows are the exception: nothing references `ehr`
-    ///    from them, so their ids are captured before the cascade removes the
-    ///    version and contribution rows that name them, and they are deleted
-    ///    after it.
-    /// 2. An erasure tombstone is appended to the outbox before the
-    ///    transaction commits, so every registered reader is told what to
-    ///    delete downstream (Art. 19: the controller communicates an erasure
-    ///    "to each recipient to whom the personal data have been disclosed").
-    /// 3. The externalized blobs this EHR referenced and no surviving version
-    ///    still does are removed from the object store.
-    ///
-    /// The access records naming the EHR stay: Art. 17(3)(b) withholds erasure
-    /// where processing is necessary "for compliance with a legal obligation",
-    /// and the logging periods are that obligation.
+    /// The `ehr` row's delete cascades through its versions, nodes and every
+    /// table that references it; the `commit_audit` rows, which reference no
+    /// `ehr`, are read first and deleted after. An erasure tombstone goes into
+    /// the outbox in the same transaction (GDPR Art. 19), and the blobs no
+    /// surviving version references are removed from the object store. The
+    /// access records naming the EHR stay: the logging periods are a legal
+    /// obligation (Art. 17(3)(b)).
     ///
     /// NOTE: ITS-REST `operations/admin_ehr_delete.yaml` answers `404` for an
     /// unknown id, so `ehr_id_does_not_exist` maps to `NotFound`.
@@ -411,25 +399,15 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Append one erasure tombstone per erased EHR, inside the transaction that
+    /// Appends one erasure tombstone per erased EHR, inside the transaction that
     /// erased it.
     ///
     /// GDPR Art. 19 (`docs/law/eu/gdpr/text.html`) makes the controller
     /// communicate an erasure "to each recipient to whom the personal data have
-    /// been disclosed", and a consumer of the change-event stream is such a
-    /// recipient: it holds whatever it derived from this EHR and cannot know
-    /// the record is gone unless the stream says so. The row carries the erased
-    /// `ehr_id` and nothing else, and it is written before the commit for the
-    /// same reason every commit event is — an erasure that committed without
-    /// its tombstone would leave the derived copies standing. It is written on
-    /// the same gate as those events, because a deployment with no configured
-    /// consumer has disclosed nothing through this channel.
-    ///
-    /// It carries no contribution: the EHR's contributions went with it, and
-    /// their outbox rows with them. Like every outbox insert it holds the
-    /// outbox lock shared to the commit's end ([`crate::extensions::outbox`]).
-    /// No openEHR spec governs eventing — our own extension; ITS-REST 1.1.0
-    /// defines no change notification.
+    /// been disclosed", and a change-event consumer is one. The row carries the
+    /// erased `ehr_id` alone, on the same gate as the commit events, and holds
+    /// the outbox lock shared to the commit's end ([`crate::extensions::outbox`]).
+    /// No openEHR spec governs eventing: our own extension.
     ///
     /// # Errors
     /// [`ServiceError::Storage`] when the insert fails.
