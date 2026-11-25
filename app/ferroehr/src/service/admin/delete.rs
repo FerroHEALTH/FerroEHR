@@ -430,23 +430,15 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Append the erasure tombstone for one physically deleted party, inside
-    /// the transaction that erased it.
+    /// Appends the erasure tombstone for one physically deleted party, inside the
+    /// transaction that erased it.
     ///
-    /// The clinical twin of this row is [`Self::write_erase_tombstones`], and
-    /// the ground is the same: GDPR Art. 19 (`docs/law/eu/gdpr/text.html`)
-    /// makes the controller communicate an erasure "to each recipient to whom
-    /// the personal data have been disclosed", and a consumer of the party
-    /// change-event stream holds whatever it derived from this party. Without
-    /// the row it is never told the identity is gone, because every event it
-    /// did receive announced a commit that no longer has a subject.
-    ///
-    /// One row covers the whole call: the party and every `PARTY_RELATIONSHIP`
-    /// erased with it get an entry under their own RM type, so a consumer bound
-    /// to relationships alone receives the erasure of the ones it tracked. The
-    /// row carries no contribution, because the party's contributions went with
-    /// it, and it is written before the commit for the same reason every commit
-    /// event is. No openEHR spec governs eventing — our own extension.
+    /// As for [`Self::write_erase_tombstones`], GDPR Art. 19
+    /// (`docs/law/eu/gdpr/text.html`) makes the controller tell each recipient,
+    /// and a party change-event consumer is one. One row names the party and
+    /// every `PARTY_RELATIONSHIP` erased with it, each under its own RM type, and
+    /// carries no contribution. No openEHR spec governs eventing: our own
+    /// extension.
     ///
     /// # Errors
     /// [`ServiceError::Storage`] when the insert fails.

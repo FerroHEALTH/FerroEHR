@@ -143,21 +143,12 @@ impl FerroEhrService {
     /// Re-derives the `node` rows of every damaged version in `scope` from its
     /// `version.body`, one transaction per version.
     ///
-    /// Only the versions the sweep reports are written, so a healthy scope is
-    /// left untouched.
-    ///
-    /// Each version is repaired in its own transaction and re-derived from the
-    /// new rows before the commit. A body that does not decompose or reproduce
-    /// rolls its transaction back and is reported; the rebuild goes on.
-    ///
-    /// An ARCHIVED object is thawed into the primary tier for the repair and
-    /// re-frozen with its archive marker in the same transaction, because the
-    /// tier's own rule is that a write always thaws first
-    /// (`crate::storage::version_repo::tier`) — a versioned object is never
-    /// split across tiers.
-    ///
-    /// NOTE: no openEHR spec governs storage mechanics — our own
-    /// design/extension (the module docs carry the full derivation).
+    /// Only the versions the sweep reports are written. Each is re-derived from
+    /// its new rows before the commit; a body that does not decompose or
+    /// reproduce rolls back and is reported, and the rebuild goes on. An
+    /// archived object is thawed for the repair and re-frozen in the same
+    /// transaction (`crate::storage::version_repo::tier`). No openEHR spec
+    /// governs storage mechanics: our own design.
     ///
     /// # Errors
     /// - `exception` — a database fault while enumerating or reading versions.

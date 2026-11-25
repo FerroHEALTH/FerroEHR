@@ -28,18 +28,14 @@ use super::{NodeView, RuleViolation, attribute_children};
 // ─── VATID (node-id codes defined in terminology) ───────────────────────────────
 
 /// VATID: "check that all codes mentioned in `definition` are defined in
-/// terminology" (`AOM2/master08-validation.adoc` line 56). Applied to at-code
-/// `node_id`s (the addressable, sibling-identifying codes, AOM14/04 §`Node_id`).
-/// What counts as a term code is the RM's own reading of `archetype_node_id`
-/// ([`archetype_node_id_is_term_code`] — an `at`/`id` leader followed by
-/// `.`-separated numeric segments), so this pass and the RM path layer can
-/// never disagree about which node ids are codes. Empty `node_ids`
-/// (non-addressable leaves), archetype-root ids, and free text are exempt: VATID
-/// constrains *codes*, and a string outside the code grammar is not one.
-/// The defined-code set is collected globally across the flattened OPT (the
-/// definition roots + every `component_ontologies` set), which is deliberately
-/// lenient about per-archetype scoping — it still catches a `node_id` that is
-/// defined nowhere while never mis-rejecting a correctly-scoped code.
+/// terminology" (`AOM2/master08-validation.adoc` line 56), applied to at-code
+/// `node_id`s (AOM14/04 §`Node_id`).
+///
+/// A term code is what the RM path layer reads as one
+/// ([`archetype_node_id_is_term_code`]); an empty `node_id`, an archetype id
+/// or free text is exempt. The defined codes are collected across the whole
+/// flattened OPT, which catches a code defined nowhere and never refuses a
+/// correctly scoped one.
 pub(super) fn check_node_id(
     node_id: &str,
     defined_at: &HashSet<String>,

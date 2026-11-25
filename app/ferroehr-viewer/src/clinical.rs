@@ -109,18 +109,9 @@ fn header_attributes(rm_type: &str) -> &'static [&'static str] {
 
 /// The attributes walked as structure, per RM type, in RM declaration order.
 ///
-/// Spec (same class files as [`header_attributes`]):
-/// `COMPOSITION._context_`/`_content_`; `EVENT_CONTEXT._other_context_`;
-/// `SECTION._items_` (`...composition.section.adoc`);
-/// `OBSERVATION._data_`/`_state_` + `CARE_ENTRY._protocol_`
-/// (`...composition.observation.adoc`, `...composition.care_entry.adoc`);
-/// `EVALUATION._data_`, `ADMIN_ENTRY._data_`, `INSTRUCTION._activities_`,
-/// `ACTION._description_`/`_ism_transition_`; `HISTORY._events_`/`_summary_`;
-/// `EVENT._data_`/`_state_`; `ITEM_TREE._items_`/`ITEM_LIST._items_`/
-/// `CLUSTER._items_`/`ITEM_TABLE._rows_`/`ITEM_SINGLE._item_`
-/// (`...data_structures.item_tree.adoc` and siblings);
-/// `EHR_STATUS._other_details_`; `FOLDER._items_`/`_folders_` (RM common
-/// `master05-directory_package.adoc`).
+/// The attribute names are those of the class files [`header_attributes`]
+/// reads, for the composition, entry and data-structure classes, and of RM
+/// common `master05-directory_package.adoc` for `FOLDER`.
 fn child_attributes(rm_type: &str) -> &'static [&'static str] {
     match rm_type {
         "COMPOSITION" => &["context", "content"],

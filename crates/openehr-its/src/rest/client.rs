@@ -40,21 +40,14 @@ pub struct RequestTimeout(pub Duration);
 
 /// An HTTP engine the client sends through.
 ///
-/// The request and response are `http` values carrying whole bodies, so an
-/// engine adapts in a few lines and the client never depends on one. The
-/// engine owns the connection pool, TLS and the per-request timeout; a request
-/// that carries a [`RequestTimeout`] extension must not run past it, or the
-/// caller's deadline is not kept. An engine sends each request once and
-/// returns the answer it read, a `3xx` included: following a redirect would
-/// re-send the request, credentials and all, to a host the caller never named.
-/// The client itself sends a request again only within its [`RetryPolicy`]
-/// and, under [`Credentials::Dpop`] with a [`DpopProver`], once more to the
-/// same URL to answer a `use_dpop_nonce` challenge (RFC 9449 §8 and §9).
-///
-/// An engine that wraps another may add request headers. A DPoP client
-/// without a [`DpopProver`] adds its `DPoP` proof this way: the request it
-/// receives carries the final method and URI, and `Authorization: DPoP
-/// <token>` names the access token the proof's `ath` hashes (RFC 9449 §4.2).
+/// The engine owns the connection pool, TLS and the per-request timeout, and
+/// must keep a [`RequestTimeout`] extension's deadline. It sends each request
+/// once and returns the answer it read, a `3xx` included, since following a
+/// redirect would send the credentials to a host the caller never named. The
+/// client re-sends only within its [`RetryPolicy`] and, under
+/// [`Credentials::Dpop`] with a [`DpopProver`], to answer a `use_dpop_nonce`
+/// challenge (RFC 9449 §8, §9). A wrapping engine may add headers, as a DPoP
+/// client without a [`DpopProver`] adds its proof (RFC 9449 §4.2).
 #[async_trait::async_trait]
 pub trait Transport: Send + Sync {
     /// Sends `request` and reads the whole response.
@@ -812,21 +805,15 @@ impl<T: Transport> Client<T> {
         Ok(answer)
     }
 
-    /// Sends `request` once under the base URL and returns whatever the
-    /// service answered, for an intermediary passing a request through.
+    /// Sends `request` once under the base URL and returns whatever the service
+    /// answered, for an intermediary passing a request through.
     ///
-    /// Nothing is classified and nothing is retried, except the one re-send
-    /// that answers a DPoP `use_dpop_nonce` challenge: a `401`, `403` or `5xx`
-    /// is an [`Answer`] like any other, and the status, every header (`ETag`,
-    /// `Location`) and the body bytes are as received. A `3xx` is returned,
-    /// never followed: [`ReqwestTransport`] is always built with redirects off,
-    /// and a caller's own [`Transport`] must not follow them either. The request goes out as
-    /// built — path, query ([`Request::raw_query`]), headers and body
-    /// ([`Request::raw_body`]) unchanged — except that the client's credentials,
-    /// when configured, set `Authorization` (and `DPoP`, under a
-    /// [`DpopProver`]), and `Accept` defaults to
-    /// `application/json` when absent. Stripping hop-by-hop fields (RFC 9110
-    /// §7.6.1) is the caller's.
+    /// Nothing is classified or retried but the DPoP nonce re-send: the status,
+    /// the headers and the body come as received, and a `3xx` is returned
+    /// ([`ReqwestTransport`] never follows one). The request goes out as built
+    /// ([`Request::raw_query`], [`Request::raw_body`]), except that configured
+    /// credentials set `Authorization` (and `DPoP`) and `Accept` defaults to
+    /// `application/json`. Hop-by-hop fields (RFC 9110 §7.6.1) are the caller's.
     ///
     /// # Errors
     /// Returns [`ClientError::Transport`] when the request did not complete,

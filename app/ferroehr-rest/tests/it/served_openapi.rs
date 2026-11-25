@@ -258,21 +258,14 @@ async fn versioned_writes_document_if_match_and_412() {
     );
 }
 
-/// The four EHR-resource operations are documented to full step-6
-/// completeness: every real status branch, a `headers(...)` block on every
-/// success response, the `Prefer`-conditional 201 body as a named example
-/// pair, and a UUID-only `ehr_id`.
+/// The four EHR-resource operations declare every status branch, a
+/// `headers(...)` block on every success response, the `Prefer`-conditional
+/// 201 body as a named example pair, and a UUID-only `ehr_id`.
 ///
-/// The branches are the released ITS-REST docs text (which wins every
-/// conflict with the released OAS):
-/// `Requests_and_responses.md` §"HTTP status codes" assigns `400` to
-/// "malformed request syntax, syntactically invalid content", `409` to a
-/// request that "might generate a duplicate or a conflict" and `422` to a
-/// well-formed request "unable to be followed due to semantic errors";
-/// `Resources.md` §"XML Format"/§"JSON Format"/§"Simplified Formats" make an
-/// unprocessable request payload a `415` MUST and an unfulfillable `Accept` a
-/// `406` MUST. `Requests_and_responses.md` §Location confines `Location` to
-/// creation responses, so a read MUST NOT declare it.
+/// The branches follow ITS-REST `Requests_and_responses.md` §"HTTP status
+/// codes" (`400`, `409`, `422`) and `Resources.md` §"XML Format", §"JSON
+/// Format" and §"Simplified Formats" (`415`, `406`); §Location confines
+/// `Location` to creation responses.
 #[tokio::test]
 #[expect(
     clippy::too_many_lines,
@@ -439,23 +432,17 @@ async fn system_options_operation_is_documented() {
     );
 }
 
-/// The Demographic API group's 26 released operations are documented to full
-/// step-6 completeness: every served status branch, a `headers(...)` block on
-/// every success response that emits headers, released-shaped examples, and no
-/// `Location` on a read or a delete.
+/// The Demographic API group's 26 operations declare every served status
+/// branch, a `headers(...)` block on every success response that emits
+/// headers, released-shaped examples, and no `Location` on a read or a
+/// delete.
 ///
-/// The branches are the RELEASED ITS-REST docs text (the OAS is the
-/// subordinate source). The five
-/// party CRUD quintets are byte-identical on the wire
-/// (`specifications/operations/{person,agent,group,organisation,role}_*.yaml`
-/// and their `$ref`d responses), so the loop below asserts each kind
-/// individually — a quintet that drifts apart fails here.
-/// `Requests_and_responses.md` §Location confines `Location` to creation
-/// responses and §"Deprecated headers" deprecates it on `GET`/`DELETE`;
-/// §"If-Match and accidental overwrites" gives the update's `412` and its
-/// missing-header `400`; `Resources.md` §"XML Format"/§"JSON Format"/
-/// §"Simplified Formats" make an unprocessable payload a `415` and an
-/// unfulfillable `Accept` a `406`.
+/// The five party CRUD quintets are identical on the wire
+/// (`specifications/operations/{person,agent,group,organisation,role}_*.yaml`),
+/// so the loop asserts each kind. `Requests_and_responses.md` §Location and
+/// §"Deprecated headers" place `Location`, §"If-Match and accidental
+/// overwrites" gives `412` and `400`, and `Resources.md` gives `415` and
+/// `406`.
 #[tokio::test]
 #[expect(
     clippy::too_many_lines,
@@ -749,23 +736,16 @@ async fn demographic_operations_are_fully_documented() {
     );
 }
 
-/// The Demographic API group's sixteen released `ITEM_TAG` operations are
-/// documented to full step-6 completeness: every served status branch, the
-/// dual-form `uid_based_id` prose with its disjointness reading, the
-/// `Prefer`/`Preference-Applied` pair on the five PUTs, the released-shaped
-/// examples, and — because a tag collection is not change-controlled — NO
-/// `ETag`, `Last-Modified` or `Location` anywhere on the family.
+/// The Demographic API group's sixteen `ITEM_TAG` operations declare every
+/// served status branch, the dual-form `uid_based_id` prose, the `Prefer` and
+/// `Preference-Applied` pair on the five PUTs, released-shaped examples, and
+/// no `ETag`, `Last-Modified` or `Location`, since tags are not
+/// change-controlled.
 ///
-/// The five typed quintets are byte-identical on the released wire
-/// (`specifications/operations/{person,agent,group,organisation,role}_tags_{get,update,delete}.yaml`
-/// and their `$ref`d responses), so the loop asserts each kind individually — a
-/// quintet that drifts apart fails here. The space-wide
-/// `demographic_tags_get.yaml` is the delta: no scoping parameter at all, and
-/// `200`/`400` as its only released branches (there is nothing to fail to
-/// find, hence no `404`). `Resources.md` §"XML Format"/§"JSON Format" make the
-/// unfulfillable `Accept` a `406` and the unprocessable payload a `415`;
-/// `Requests_and_responses.md` §"Representation details negotiation" gives the
-/// `Prefer` split and its `Preference-Applied` echo.
+/// The five typed quintets are identical on the wire
+/// (`specifications/operations/{person,agent,group,organisation,role}_tags_{get,update,delete}.yaml`),
+/// so the loop asserts each kind; `demographic_tags_get.yaml` has no scoping
+/// parameter and only `200` and `400`.
 #[tokio::test]
 #[expect(
     clippy::too_many_lines,
@@ -1029,21 +1009,15 @@ async fn demographic_item_tag_operations_are_fully_documented() {
     );
 }
 
-/// The Admin API group's five served operations are documented to full step-6
-/// completeness: every branch this server actually emits, the `Allow` header on
-/// every config-gate `405`, worked examples, and NO `Location` anywhere.
+/// The Admin API group's five operations declare every branch this server
+/// emits, the `Allow` header on every config-gate `405`, worked examples, and
+/// no `Location`.
 ///
-/// The branches are the RELEASED ITS-REST docs text (the OAS is the
-/// subordinate source). The two
-/// released operations (`operations/admin_ehr_delete.yaml`,
-/// `operations/admin_ehr_delete_all.yaml`) `$ref` only description-carrying
-/// response files (`responses/{202,204_deleted_hard,404,404_unknown_ehr_id,405}.yaml`
-/// declare no `headers:` at all), so the only response header this group may
-/// declare is the `Allow` RFC 9110 §15.5.6 makes mandatory on a `405`.
-/// `Requests_and_responses.md` §"Deprecated headers" deprecates `Location` on
-/// `GET` and `DELETE` responses — which is every route here — and §"HTTP
-/// Methods" is the ground for the `405` on every route EXCEPT
-/// `admin_ehr_delete_all`, whose own NOTE covers it.
+/// The released response files (`responses/{202,204_deleted_hard,404,404_unknown_ehr_id,405}.yaml`)
+/// declare no headers, so the one header is the `Allow` RFC 9110 §15.5.6
+/// requires on a `405`. `Requests_and_responses.md` §"Deprecated headers"
+/// deprecates `Location` on `GET` and `DELETE`, and §"HTTP Methods" grounds
+/// the `405` on every route but `admin_ehr_delete_all`, whose own NOTE does.
 #[tokio::test]
 #[expect(
     clippy::too_many_lines,

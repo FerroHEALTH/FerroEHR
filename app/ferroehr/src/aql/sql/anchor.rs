@@ -255,21 +255,16 @@ impl<'a> Builder<'a> {
         }
     }
 
-    /// The anchor of the equality of the relationship target
-    /// `relationships/target/id/value` of a party root with one of `texts`:
-    /// the parties whose trunk head names, among its relationships, one of
-    /// the parties the texts name, read from the open rows of
-    /// `party_relationship_target`; `None` for any other leaf, a text that
-    /// names no party, or a scope other than `LATEST_VERSION`.
+    /// The anchor of the equality of `relationships/target/id/value` of a party
+    /// root with one of `texts`: the parties whose trunk head targets a party the
+    /// texts name, from the open rows of `party_relationship_target`; `None` for
+    /// any other leaf, a text that names no party, or a scope other than
+    /// `LATEST_VERSION`.
     ///
-    /// The table holds the target a reference names as
-    /// [`crate::party_binding::derive::container`] reads it (its root before
-    /// any `::`, case-folded, a hyphenated UUID), so a text the comparison
-    /// keeps names the same party and the parties it yields hold every party
-    /// the comparison keeps, and more. Its open rows name what each trunk head
-    /// names, so the anchor holds only for a query that reads the trunk head;
-    /// under `ALL_VERSIONS` or a version predicate a party's older versions
-    /// would be lost, and the comparison has no entry.
+    /// The table holds each target as
+    /// [`crate::party_binding::derive::container`] reads it, so the anchor keeps
+    /// every party the comparison keeps. Its open rows describe trunk heads only,
+    /// hence the scope.
     fn target_anchor(&mut self, leaf: &LeafPath, texts: &[&str]) -> Option<ValueAnchor> {
         if self.ir.domain != QueryDomain::Demographic || !leaf.anchor.is_empty() {
             return None;

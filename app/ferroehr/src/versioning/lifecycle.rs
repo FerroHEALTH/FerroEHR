@@ -86,21 +86,13 @@ pub(crate) fn resolve_lifecycle(token: Option<String>) -> Result<String, Service
     }
 }
 
-/// Refuse `523|deleted|` on a commit that carries `data`.
+/// Refuses `523|deleted|` on a commit that carries `data`.
 ///
-/// master06 §Logical Deletion states deletion as one indivisible procedure,
-/// "create a new Version in the normal way; delete its `_data_` …; set the
-/// `_lifecycle_state_` value to the code for `deleted`; commit in the normal
-/// way", so a data-carrying version in the `deleted` state is not producible by
-/// the spec's own procedure: it would serve `204` for the resource while its
-/// content stayed stored and AQL-queryable. `ORIGINAL_VERSION.data` is typed
-/// `0..1` precisely so a deleted version can carry none.
-///
-/// This mirrors the CONTRIBUTION `classify` rule coupling change type `523` to
-/// data-absence, on the lifecycle axis, so the CONTRIBUTION member
-/// (`UPDATE_VERSION.lifecycle_state`) and the direct route's `openehr-version`
-/// header reach the same refusal. The code is the ITS-REST overview 422 row
-/// (`Requests_and_responses.md` §HTTP status codes).
+/// master06 §Logical Deletion deletes the data in the same act that sets the
+/// state, and `ORIGINAL_VERSION.data` is `0..1` so a deleted version carries
+/// none. The CONTRIBUTION member and the direct route's `openehr-version`
+/// header reach the same refusal, the `422` of ITS-REST overview
+/// `Requests_and_responses.md` §HTTP status codes.
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] when `lifecycle` is `523|deleted|`.

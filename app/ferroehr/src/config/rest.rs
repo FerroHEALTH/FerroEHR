@@ -262,16 +262,11 @@ impl ApiConfig {
     /// (`/status`, `/swagger-ui`, `/api-docs/openapi.json`,
     /// `/.well-known/smart-configuration`).
     ///
-    /// The rule is the base path with the segments that name the openEHR API
-    /// removed: the trailing `v1` API-version segment, which
-    /// [`crate::config::FerroEhrConfig::validate`] guarantees is present, and an
-    /// `openehr` segment immediately before it when the deployment spells one.
-    /// So the default `/ferroehr/rest/openehr/v1` roots at `/ferroehr/rest`,
-    /// `/ferroehr/openehr/v1` and `/ferroehr/v1` both root at `/ferroehr`, and
-    /// `/ferroehr/cdr/v1` roots at `/ferroehr/cdr`. The result is always a
-    /// strict parent of the base path, so a root-hosted route can never collide
-    /// with the API nest. No openEHR spec governs where a server roots its
-    /// non-API surfaces — our own design/extension.
+    /// The base path without its trailing `v1` segment, which
+    /// [`crate::config::FerroEhrConfig::validate`] guarantees, and an `openehr`
+    /// segment before it: `/ferroehr/rest/openehr/v1` roots at `/ferroehr/rest`,
+    /// `/ferroehr/cdr/v1` at `/ferroehr/cdr`. It is always a strict parent of the
+    /// base path. No openEHR spec governs this: our own design.
     #[must_use]
     pub fn rest_root(&self) -> String {
         let without_version = self

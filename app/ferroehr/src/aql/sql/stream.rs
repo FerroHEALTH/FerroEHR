@@ -284,22 +284,15 @@ pub(super) fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
 }
 
 impl Builder<'_> {
-    /// Emit the STREAMING FROM shape for a LIMIT-bearing, unordered query: the
-    /// version spine (`version`) is the single FROM item and every node source
-    /// hangs off it as a `LATERAL` subquery (`OFFSET 0` as the planner's
-    /// pull-up fence), so PostgreSQL walks current versions lazily and stops at
-    /// the LIMIT instead of materializing an archetype-anchor bitmap over the
-    /// whole corpus.
+    /// Emits the streaming FROM shape for a LIMIT-bearing, unordered query: the
+    /// version spine is the single FROM item and every node source a `LATERAL`
+    /// under the `OFFSET 0` fence, so PostgreSQL stops at the LIMIT.
     ///
-    /// Semantics are identical to the flat shape: each `LATERAL` returns
-    /// ALL matching nodes per outer row, so row-per-binding multiplicity
-    /// is preserved (QUERY master03 §DISTINCT — duplicates exist by
-    /// default); a logically deleted version, which the flat shape drops for
-    /// having no node rows, is dropped here too ([`Self::stream_root`]); and
-    /// QUERY master03 §LIMIT makes WHICH rows return explicitly
-    /// non-deterministic without `ORDER BY`, so the changed visit order is
-    /// conformant. No openEHR spec governs the join mechanics — the shape
-    /// selection is our own design.
+    /// It answers what the flat shape answers: each `LATERAL` returns all
+    /// matching nodes (QUERY master03 §DISTINCT), a logically deleted version
+    /// contributes no row ([`Self::stream_root`]), and without `ORDER BY` the rows
+    /// returned are unspecified (QUERY master03 §LIMIT). No openEHR spec governs
+    /// the join mechanics: our own design.
     ///
     /// # Errors
     /// [`SqlError::Unsupported`] when the plan names a source of the wrong
@@ -467,24 +460,13 @@ impl Builder<'_> {
     }
 
     /// Emits the streaming root's node lateral, or elides it, and returns the
-    /// alias the scope/gate machinery group-tracks.
+    /// node alias, or the spine, which carries `ehr_id`, when elided.
     ///
-    /// The lateral is elided when the root source carries no node-level
-    /// condition beyond its RM type, which the spine's `kind` filter already
-    /// pins, and no identified path reads the root's node row
-    /// ([`root_node_referenced`]).
-    ///
-    /// The probe's other effect is kept without it: a version with no root
-    /// node contributes no row. Exactly the logically deleted versions have
-    /// none — a deletion commits a version whose data is Void (RM common
-    /// master06 §Logical Deletion) with lifecycle state `523`, and every other
-    /// commit decomposes a body into at least its root row — so the elided
-    /// shape filters the spine on `lifecycle_state <> '523'`, and both shapes
-    /// answer the same rows. No openEHR spec governs the join mechanics — our
-    /// own design.
-    ///
-    /// Returns the node alias, or the spine when elided (it carries the
-    /// `ehr_id` those gates filter on).
+    /// The lateral is elided when the root carries no condition beyond its RM
+    /// type and no path reads its node row ([`root_node_referenced`]). Only a
+    /// logically deleted version has no root node (RM common master06 §Logical
+    /// Deletion), so the elided shape filters on `lifecycle_state <> '523'`. No
+    /// openEHR spec governs the join mechanics: our own design.
     ///
     /// # Errors
     /// [`AqlError`] from the root's condition lowerings.

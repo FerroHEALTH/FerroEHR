@@ -347,20 +347,16 @@ fn projected(care: &ProjectedCare, target: Expr, unscoped: bool) -> Expr {
 }
 
 /// The caseload bound on the EHR `target` of a statement whose condition
-/// admits no row of an EHR outside the caller's care: the EHRs whose subject
-/// the clinical care projection holds in the caller's care as [`projected`]
-/// reads it, beside every EHR of a settings class the condition does not
-/// know (`known`), whose rows the condition must still reach so the
-/// statement fails on them ([`super::access`]). `None` unless the condition
-/// reads care from the projection.
+/// admits no row outside the caller's care: the EHRs whose subject the
+/// clinical care projection holds in the caller's care ([`projected`]),
+/// beside every EHR of a settings class the condition does not know
+/// (`known`), so the statement still fails on them ([`super::access`]).
+/// `None` unless the condition reads care from the projection.
 ///
-/// The bound only restates what the condition already requires, so it admits
-/// no row the condition refuses; it is an uncorrelated `IN`, which
-/// PostgreSQL turns into a semi-join, so the planner may start from the
-/// caller's rows of `ix_access_care_caseload` and reach each EHR by
-/// `ix_ehr_subject_digest`, or keep starting from the clinical rows and probe
-/// per row, by the statistics of the caseload's size (PostgreSQL 18 §14.1).
-/// No openEHR spec governs this: our own design (#6074).
+/// The bound restates the condition, so it admits no row the condition
+/// refuses; as an uncorrelated `IN` it lets the planner start from
+/// `ix_access_care_caseload` (PostgreSQL 18 §14.1). No openEHR spec governs
+/// this: our own design (#6074).
 pub(super) fn caseload(condition: &ConditionGroups, target: Expr, known: Vec<i64>) -> Option<Expr> {
     let Care::Projected(care) = &condition.cared else {
         return None;

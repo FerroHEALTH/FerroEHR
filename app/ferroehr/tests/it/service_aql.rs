@@ -532,20 +532,15 @@ async fn archetype_specialisation_subsumption() {
     );
 }
 
-/// Template-derived lineage matching: a query naming an **AOM2-era** parent
-/// archetype retrieves data committed under a specialisation child whose
-/// concept shares nothing with the parent's — the lineage comes solely from the
-/// stored ADL2 family.
+/// A query naming an AOM2-era parent archetype retrieves data committed under
+/// a specialisation child whose concept shares nothing with the parent's,
+/// through the stored ADL2 family.
 ///
-/// Spec: BASE Artefact Identification, Referencing §Supporting Archetype-based
-/// Querying — "for specialised archetypes, the specialisation lineage can only
-/// be obtained from the operational form of the archetype, found in the template
-/// used to create the data"; BASE Artefact Identification, Source Artefact
-/// Identification §Legacy ADL 1.4 Semantics — for AOM2-era identifiers the `-`
-/// separator "no longer has any semantic significance", so a
-/// `.vMAJOR.MINOR.PATCH` query must NOT subsume by concept prefix, while the
-/// major-only ADL 1.4 form keeps that rule (BASE
-/// `architecture_overview` master10 §Design-time Relationships).
+/// The lineage comes "from the operational form of the archetype, found in
+/// the template used to create the data" (BASE Artefact Identification,
+/// Referencing §Supporting Archetype-based Querying), and an AOM2-era id is
+/// not subsumed by concept prefix (Source Artefact Identification §Legacy
+/// ADL 1.4 Semantics).
 #[tokio::test]
 async fn archetype_lineage_from_the_stored_adl2_family() {
     let db = testkit::db().await.expect("testkit database");

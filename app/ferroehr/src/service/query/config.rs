@@ -37,19 +37,12 @@ pub struct QueryConfig {
     /// The largest page of rows one query execution serves; `0` means
     /// unbounded.
     ///
-    /// A query that neither the AQL nor the request bounds takes it as its
-    /// page: without that, a query carrying no `LIMIT`, called with no `fetch`,
-    /// generates SQL with no `LIMIT` and materialises every matching row before
-    /// the `RESULT_SET` is built — so a one-line request is an unbounded,
-    /// caller-chosen allocation (the OWASP Denial of Service Cheat Sheet's
-    /// "input-based resource allocation control"). A page asked for explicitly,
-    /// by AQL `LIMIT` or the `fetch` parameter, is served as written up to the
-    /// ceiling and refused above it with a `400` naming the ceiling, never
-    /// silently shortened.
-    ///
-    /// ITS-REST leaves both the `fetch` default and its maximum to the
-    /// implementation — query `Request.md` §Common Headers and Query
-    /// Parameters: "the default depends on the implementation".
+    /// A query neither the AQL nor the request bounds takes it as its page, so
+    /// no request is an unbounded allocation (OWASP Denial of Service Cheat
+    /// Sheet, "input-based resource allocation control"). A page asked for by
+    /// AQL `LIMIT` or `fetch` above it is refused with a `400` naming the
+    /// ceiling. ITS-REST leaves the `fetch` maximum to the implementation (query
+    /// `Request.md` §Common Headers and Query Parameters).
     pub max_result_rows: i64,
 }
 

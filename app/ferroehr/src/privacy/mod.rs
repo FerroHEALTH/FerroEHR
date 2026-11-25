@@ -150,29 +150,17 @@ impl PrivacyPolicy {
     }
 
     /// The clinical-side data-minimisation pass over one decoded body of RM
-    /// type `rm_type`, rendered the one way every write path answers it.
+    /// type `rm_type`, read through either shape ([`crate::versioning::tree`]).
     ///
-    /// Refusals (the subject-reference rule and the identified-party rule)
-    /// are unconditional whenever their rule is in force. A finding never
-    /// carries the offending value, so nothing identifying reaches the
-    /// response body, the access log or the trace.
-    ///
-    /// The commit path runs it, and so do the verbatim-replay paths
-    /// (EHR-Extract import, admin load), which store a body exactly as received
-    /// and can therefore only REFUSE it: a record that carries an identifier
-    /// into the clinical side is refused whichever door it arrives through,
-    /// never rewritten (#3237).
-    ///
-    /// **No openEHR spec governs this — our own design/extension.** The wire
-    /// status is `422`: the request is well-formed and the refusal is
-    /// semantic, which is what ITS-REST `overview/Requests_and_responses.md`
-    /// §HTTP status codes assigns to `422` ("The request was well-formed but
-    /// was unable to be followed due to semantic errors").
+    /// Its refusals hold whenever their rule is in force, on the commit path and
+    /// on the verbatim-replay paths (EHR-Extract import, admin load), which can
+    /// only refuse (#3237). A finding never carries the offending value. The
+    /// status is `422` (ITS-REST `overview/Requests_and_responses.md` §HTTP status
+    /// codes). No openEHR spec governs this: our own design.
     ///
     /// # Errors
     /// [`ServiceError::ValidationFailed`] carrying one entry per refused finding,
     /// each keyed by its own RM path (→ 422).
-    /// The body is read through either shape ([`crate::versioning::tree`]).
     pub(crate) fn enforce<'a, T: Tree<'a>>(
         &self,
         rm_type: &str,

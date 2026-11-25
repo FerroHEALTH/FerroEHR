@@ -45,22 +45,14 @@ impl Parser<'_> {
         }
     }
 
-    /// Consume a trailing list-continuation marker (`, ...`) — the comma is
-    /// already eaten by the caller, so this only tests for the `...`.
+    /// Consumes a trailing list-continuation marker (`, ...`); the caller has
+    /// already eaten the comma.
     ///
-    /// Every ODIN list production ends with the alternative
-    /// `',' SYM_LIST_CONTINUE` (`odin_values.g4` `string_list_value` and its
-    /// siblings), and the cADL 1.4 grammar spells it out for strings as
-    /// `c_string_spec : … | string_list_value ',' SYM_LIST_CONTINUE`
-    /// (`ADL1.4/master05-cadl.adoc` §Syntax L1244-1249).
+    /// Every ODIN list production ends with `',' SYM_LIST_CONTINUE`
+    /// (`odin_values.g4`; `ADL1.4/master05-cadl.adoc` §Syntax L1244-1249).
     ///
-    /// NOTE: the marker adds no member and no openness flag — its only
-    /// normative gloss is a LIST INDICATOR (`ADL1.4/master04-dadl` §Data of
-    /// any primitive type L686; `LANG/docs/odin/master07-leaf_data` §Lists
-    /// L208), no vendored text binds it to AOM 1.4's `list_open`, and the
-    /// AOM2 `C_STRING` built here has no such property — so the constraint is
-    /// exactly the listed values (inferred openness would silently turn a
-    /// stated constraint into "any value").
+    /// NOTE: the marker is only a list indicator (`ADL1.4/master04-dadl` L686), so it
+    /// adds no member and no openness: the constraint is the listed values.
     pub(crate) fn eat_list_continue(&mut self) -> bool {
         self.eat(|t| matches!(t, Token::SymListContinue))
     }
@@ -90,20 +82,15 @@ impl Parser<'_> {
         }
     }
 
-    /// A `|…|` interval (`odin_values.g4` interval forms): two-sided
-    /// (`|a..b|`, `|>a..<b|`, `|a>..<b|`), single-relop (`|>a|`,`|<=a|`), point
-    /// (`|a|`), or centre±delta (`|a+/-b|`). Either endpoint may be an unbounded
-    /// marker (see [`Parser::parse_endpoint`]).
+    /// A `|…|` interval (`odin_values.g4`): two-sided (`|a..b|`, `|>a..<b|`,
+    /// `|a>..<b|`), single-relop (`|>a|`, `|<=a|`), point (`|a|`), or
+    /// centre±delta (`|a+/-b|`); either endpoint may be unbounded
+    /// ([`Parser::parse_endpoint`]).
     ///
-    /// The exclusive LOWER bound of a two-sided interval has two spellings and
-    /// both are accepted: the prefix `>` of the normative grammar
-    /// (`odin_values.g4` `integer_interval_value : '|' SYM_GT? integer_value
-    /// '..' SYM_LT? integer_value '|'`) and the postfix `>` the ADL 1.4 chapters
-    /// write — `ADL1.4/master04-dadl.adoc` §Intervals of Ordered Primitive Types
-    /// L611-614 (`|N>..M|` "the two-sided range N > x <= M", `|N>..<M|`) and the
-    /// cADL chapter's own worked example `length matches {|0>..<1000|}`
-    /// (`ADL1.4/master05-cadl.adoc` §Interval of Integer L769). Accepting both is
-    /// a superset that rejects nothing either source admits.
+    /// An exclusive lower bound takes the grammar's prefix `>` or the postfix
+    /// `>` the ADL 1.4 chapters write (`ADL1.4/master04-dadl.adoc` §Intervals of
+    /// Ordered Primitive Types L611-614; `ADL1.4/master05-cadl.adoc` §Interval of
+    /// Integer L769).
     fn parse_bar_interval<V: CadlValue>(&mut self) -> PResult<Interval<V>> {
         self.check_interval_timezone_symmetry()?;
         self.pos += 1; // opening '|'
@@ -177,20 +164,13 @@ impl Parser<'_> {
     /// The timezone-symmetry rule for a two-sided date/time interval, checked
     /// with the cursor still on the opening `|`.
     ///
-    /// `ADL1.4/master05-cadl.adoc` §Intervals L932: "Within any interval
-    /// containing two literal date/time values (i.e. not one-sided intervals),
-    /// if a timezone is used on one, it must be used on both, to ensure
-    /// comparability. The timezones need not be identical." So the rule fires
-    /// exactly when the `|…|` window holds TWO literal time / date-time values
-    /// whose timezone presence differs; a one-sided form (one value) and a
-    /// date interval (dates carry no timezone) are outside its scope.
+    /// "if a timezone is used on one, it must be used on both"
+    /// (`ADL1.4/master05-cadl.adoc` §Intervals L932): the rule fires when the
+    /// window holds two literal time or date-time values whose timezone presence
+    /// differs.
     ///
-    /// NOTE: the openEHR `S*` catalogue
-    /// (`ADL2/master04.6-cadl_validity_rules.adoc` §Syntax Validity Rules) has
-    /// no dedicated code for this rule, and this crate never invents one — so
-    /// the refusal reuses the catalogue code this parser already uses for a bad
-    /// time / date-time value in a constraint position (`SCTAV` / `SCDTAV`) and
-    /// names the rule in the message.
+    /// NOTE: `ADL2/master04.6-cadl_validity_rules.adoc` has no code for this rule, so
+    /// the refusal reuses `SCTAV` / `SCDTAV` and names the rule in its message.
     fn check_interval_timezone_symmetry(&mut self) -> PResult<()> {
         let mut endpoints: Vec<(bool, SyntaxErrorCode)> = Vec::new();
         let mut i = self.pos + 1;

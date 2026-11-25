@@ -330,19 +330,11 @@ impl<'a> Builder<'a> {
 
     /// Builds one `BMM_CLASS` at the given embedding depth.
     ///
-    /// NOTE: a persisted `P_BMM_INTERFACE` materialises as an ABSTRACT class
-    /// with no properties — the v2 `BMM_*` model has no interface class
-    /// (`master02-overview.adoc` §Conceptual Approach;
-    /// `org.openehr.lang.bmm.bmm_class.adoc`), so the abstract-class
-    /// projection is the only faithful destination that keeps interface-typed
-    /// references resolvable. Its FUNCTIONS stay in the P_BMM graph — the
-    /// v2 `BMM_CLASS` declares no function map; the v3 target of
-    /// `create_bmm3_model` lands them.
+    /// NOTE: v2 has no interface class (`master02-overview.adoc` §Conceptual Approach),
+    /// so a `P_BMM_INTERFACE` becomes an abstract class with no properties.
     ///
-    /// `BMM_CLASS.source_schema_id` is `1..1` ("Reference to original source
-    /// schema defining this class", class doc §Attributes) while an interface
-    /// declares no such attribute to stamp, so it takes the id of the schema
-    /// being materialised.
+    /// Its functions stay in the P_BMM graph for `create_bmm3_model`, and its
+    /// `source_schema_id` is the id of the schema being materialised.
     fn build_class(
         &self,
         entry: &ClassEntry<'a>,
@@ -934,21 +926,15 @@ struct ClassCore {
     is_override: bool,
 }
 
-/// Checks the two `BMM_ENUMERATION` validity rules a persisted enumeration must
-/// satisfy before it can be materialised.
+/// Checks the two `BMM_ENUMERATION` validity rules a persisted enumeration
+/// must satisfy before it is materialised.
 ///
-/// * "may have only one ancestor" (`LANG/docs/bmm3/master07-core-classes.adoc`
-///   §Range-Constrained Classes; `org.openehr.lang.bmm3.bmm_enumeration.adoc`
-///   §Description) — the ancestor provides the base type the range constraint
-///   applies to, which is what `BMM_ENUMERATION.underlying_type_name` names
-///   (`org.openehr.lang.bmm.bmm_enumeration.adoc` §Attributes), so two ancestors
-///   leave it ambiguous. An enumeration with NO ancestor stays legal: the v2
-///   class doc's "It is designed so that the default type is Integer"
-///   (§Description) supplies the base type
-///   ([`crate::v1_1::bmm_persistence::p_bmm_enumeration_impl::DEFAULT_UNDERLYING_TYPE_NAME`]).
-/// * `item_values` "Must be 1:1 with `item_names` list" (same §Attributes) —
-///   checked only when values are stated, since "If no values are supplied, the
-///   integer values 0, 1, 2, ... are assumed".
+/// - It "may have only one ancestor" (`LANG/docs/bmm3/master07-core-classes.adoc`
+///   §Range-Constrained Classes), the base type `underlying_type_name` names;
+///   with none, the base type is
+///   [`crate::v1_1::bmm_persistence::p_bmm_enumeration_impl::DEFAULT_UNDERLYING_TYPE_NAME`].
+/// - Stated `item_values` "Must be 1:1 with `item_names` list"
+///   (`org.openehr.lang.bmm.bmm_enumeration.adoc` §Attributes).
 ///
 /// # Errors
 /// [`PBmmReadError::EnumerationAncestorCount`] or

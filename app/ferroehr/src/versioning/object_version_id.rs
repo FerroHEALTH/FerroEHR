@@ -158,22 +158,13 @@ pub(crate) fn hier_object_id(raw: &str) -> Result<HierObjectId, VersionIdError> 
     })
 }
 
-/// The typed `OBJECT_VERSION_ID` for a version this CDR minted or stored: the
-/// same three parts [`object_version_id`] formats, composed through the BASE
-/// grammar rather than a struct literal.
+/// The typed `OBJECT_VERSION_ID` of a version this CDR minted or stored,
+/// composed through the BASE grammar from the three parts
+/// [`object_version_id`] formats.
 ///
-/// The generated `OBJECT_VERSION_ID` carries a `pub(crate)` field behind a
-/// validating door, so this is the one place the platform library turns its
-/// storage triple into the spec type, and a malformed identifier cannot be
-/// smuggled into a served payload.
-///
-/// Two of the three parts are valid by their Rust type ([`VoId`] is a UUID,
-/// [`TreeId`] renders `N` / `N.B.V` with every part `>= 1`). The third,
-/// `creating_system_id`, is a `String` — a config value for a version this
-/// deployment mints, a stored column for one it read back — and BASE
-/// `master05-identification_package.adoc` §Syntaxes types it `creating_system_id
-/// = uid`. It is therefore the only part that can fail, and it fails LOUDLY
-/// rather than producing an identifier the CDR's own reader would refuse.
+/// [`VoId`] and [`TreeId`] are valid by type; `creating_system_id` is a
+/// `uid` (BASE `master05-identification_package.adoc` §Syntaxes) from the
+/// configuration or a stored column, and the one part that can fail.
 ///
 /// # Errors
 /// [`VersionIdError::Malformed`] when `creating_system_id` is not a legal

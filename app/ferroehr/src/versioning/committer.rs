@@ -190,20 +190,14 @@ pub fn refuse_attesting() -> Result<(), ServiceError> {
 /// Refuses a stated committer that the server can show is not the request's
 /// authenticated caller.
 ///
-/// `AUDIT_DETAILS.committer` is the "identity [...] of user who committed the
-/// item" (RM `UML/classes/org.openehr.rm.common.audit_details.adoc`), in the
-/// form of "a system login identifier", with `PARTY_SELF` "when the committer
-/// is the record subject" (RM common master04 §Audit Information). A login is
-/// verifiable when it is issued by the caller's own issuer or by this
-/// deployment: a `PARTY_IDENTIFIED.identifiers` entry whose `issuer`, or an
-/// `external_ref` `GENERIC_ID` whose `scheme`, names one of them must carry
-/// the caller's subject. A `PARTY_SELF` committer from a caller not acting as
-/// the person states that the record subject committed, the EHDS Art. 5 marker
-/// (`docs/law/eu/ehds/text.html`). A name, or an identifier of another
-/// authority, cannot be compared with a login and is kept as the caller's
-/// account (ITS-REST `schemas/common/UpdateAudit.yaml`). With no authenticated
-/// caller there is nothing to compare with. No openEHR spec governs who checks
-/// the committer: our own design.
+/// `AUDIT_DETAILS.committer` names the user who committed (RM
+/// `UML/classes/org.openehr.rm.common.audit_details.adoc`; RM common master04
+/// §Audit Information). A `PARTY_IDENTIFIED` identifier whose `issuer`, or an
+/// `external_ref` whose `scheme`, names the caller's issuer or this
+/// deployment must carry the caller's subject. A `PARTY_SELF` committer from
+/// a caller not acting as the person is refused (EHDS Art. 5,
+/// `docs/law/eu/ehds/text.html`). Any other committer is kept as stated. No
+/// openEHR spec governs who checks the committer: our own design.
 ///
 /// # Errors
 /// [`ServiceError::Restricted`] (`403`, `auth_failure`) for a committer naming
@@ -267,21 +261,15 @@ where
     REQUEST_COMMITTER.scope(identity, fut).await
 }
 
-/// The committer a write records when the request supplied none: the
-/// authenticated caller, or the system identity when there is none.
+/// The committer a write records when the request supplied none, and the one
+/// source of every default committer.
 ///
-/// A caller the server knows is its [`bound::server_committer`]. Any other
-/// caller is a `PARTY_IDENTIFIED` named by its subject, with one
-/// `DV_IDENTIFIER` whose `issuer` is the token issuer for a Bearer caller and
-/// this deployment's own ([`CommitterIdentity::local_issuer`]) for a Basic
-/// one. With no caller the committer is the system itself, named by its
-/// `system_id`.
-/// `DV_IDENTIFIER.issuer` is the "authority which issues the kind of id used
-/// in the id field of this object" (RM `data_types`
-/// `UML/classes/org.openehr.rm.data_types.dv_identifier.adoc` §Attributes), and
-/// `AUDIT_DETAILS.committer` is `1..1` (RM common master04 §Audit Details).
-/// Every default committer the server writes, in the service and in a protocol
-/// adapter, comes from here.
+/// A caller the server knows is its [`bound::server_committer`]; any other is
+/// a `PARTY_IDENTIFIED` named by its subject with one `DV_IDENTIFIER` whose
+/// `issuer` is the token issuer, or this deployment's
+/// ([`CommitterIdentity::local_issuer`]) for a Basic caller (RM `data_types`
+/// `UML/classes/org.openehr.rm.data_types.dv_identifier.adoc`). With no
+/// caller it is the system, named by its `system_id`.
 // NOTE: no openEHR spec governs which string names the issuing authority; our own design.
 #[must_use]
 pub fn default_committer(identity: Option<CommitterIdentity>, system_id: &str) -> PartyProxy {

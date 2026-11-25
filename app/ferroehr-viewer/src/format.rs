@@ -61,21 +61,15 @@ impl ReprFormat {
 
 /// Completes a browser `datetime-local` value into a `version_at_time` instant.
 ///
-/// Query parameters that are datetimes "MUST always use the _extended_ ISO 8601
-/// format", whose general form is `YYYY-MM-DDThh:mm:ss.sss[Z|±hh:mm]`
+/// A datetime parameter "MUST always use the _extended_ ISO 8601 format"
 /// (`docs/specs/openehr/ITS-REST/specifications/docs/overview/Resources.md`
-/// §Datetime format) — and a `datetime-local` control emits only the
-/// `YYYY-MM-DDThh:mm` prefix of that.
+/// §Datetime format), and a `datetime-local` control emits only its
+/// `YYYY-MM-DDThh:mm` prefix. Absent seconds become `:00` and the zone `Z`; a
+/// value naming its zone is returned unchanged, and empty input yields an
+/// empty string.
 ///
-/// Absent seconds default to `:00` and the zone to `Z`; a value naming its zone
-/// is returned unchanged, and empty input yields an empty string.
-///
-/// NOTE: the zone is stamped deliberately — a zone-less parameter means "the
-/// local timezone is assumed"
-/// (`docs/specs/openehr/ITS-REST/specifications/docs/overview/Resources.md`
-/// §Datetime format), which on the wire is the CDR's local zone, not the
-/// operator's; every picker feeding this function labels its field as UTC, so
-/// the `Z` states the instant the operator actually asked for.
+/// NOTE: a zone-less parameter means the CDR's local zone (`Resources.md`
+/// §Datetime format), and every picker labels its field as UTC, so `Z` is stamped.
 #[must_use]
 pub fn datetime_local_to_rfc3339(local: &str) -> String {
     let trimmed = local.trim();

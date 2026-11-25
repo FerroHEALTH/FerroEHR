@@ -355,9 +355,11 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   own reads. Its access record is held first, and its transaction opens with
   one guarded statement that takes the key-space gate shared, requires the
   tip the gate read found and writes the version, its outbox row, the
-  reservation and the reverse-relationship index. There is no EHR or policy
-  guard: the version keys and the tip arbitrate, and a moved tip is judged
-  again. The side-table settle follows in the same transaction as ordered
+  reservation and the reverse-relationship index. There is no EHR guard:
+  the version keys and the tip arbitrate, and a moved tip is judged again.
+  Where the party domain shares the clinical database, the gate read selects
+  the policy and definition revisions through `clinical_door.policy_revisions()`
+  and the guarded statement requires them unchanged (#6252). The side-table settle follows in the same transaction as ordered
   statements (`party_binding::store::settle`): one statement deletes and
   retires every grant, caller fact, record subject, patient identifier,
   identifier and membership row the new head no longer holds, the next
@@ -2134,9 +2136,11 @@ ITI-81 page selects the party store's revisions the same way where its audit
 role may run the door (`system_log::store::carried`).
 
 A COMPOSITION create, update or delete, a
-CONTRIBUTION commit, an `EHR_STATUS` commit and a directory create, update or
-delete make no read first either: the gate read of the write
-returns the revisions, the write is decided on the copies as they stand, and a
+CONTRIBUTION commit, an `EHR_STATUS` commit, a directory create, update or
+delete, and a party or PARTY_RELATIONSHIP create, update or delete make no
+read first either: the gate read of the write returns the revisions (a party
+write's through the clinical door, or in one statement of its own where the
+party domain has a database of its own, #6252), the write is decided on the copies as they stand, and a
 copy found behind those revisions refuses the write with `access-refreshing`
 before anything is written, so the run is dropped and runs once more behind
 the up-front confirm. A run that reached its write is the request's answer and

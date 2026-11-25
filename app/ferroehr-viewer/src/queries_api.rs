@@ -149,20 +149,16 @@ pub async fn fetch_stored_query(
         .to_owned())
 }
 
-/// Store a query at an explicit version, or at the server-assigned version
-/// when `version` is absent — the two ITS-REST store operations, with the AQL
-/// as `text/plain`:
+/// Stores a query, with the AQL as `text/plain`, at `version` or at the
+/// server-assigned version when `version` is absent.
 ///
-/// - `version` present → `PUT definition/query/{name}/{version}`, storing the
-///   query at that one version. A stored query is identified by its qualified
-///   name AND its version (ITS-REST docs text,
-///   `docs/specs/openehr/ITS-REST/specifications/docs/query/Qualified_query_name.md`
-///   §Qualified query name), and that pair is IMMUTABLE here: an existing one
-///   answers `409`, never an overwrite — which is why the save screens propose
-///   a bumped version when re-saving a loaded query
+/// - `version` present: `PUT definition/query/{name}/{version}`. The
+///   (`name`, `version`) pair identifies a stored query (ITS-REST
+///   `docs/query/Qualified_query_name.md`) and an existing one answers `409`,
+///   so the save screens propose a bumped version
 ///   ([`next_minor`](crate::query_namespace::next_minor)).
-/// - `version` absent → `PUT definition/query/{name}`: the server owns the
-///   version, and a query already stored at it is REPLACED.
+/// - `version` absent: `PUT definition/query/{name}`, which replaces the
+///   query stored at the server's version.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -211,24 +207,16 @@ pub async fn store_query(
     Ok(())
 }
 
-/// Execute a STORED query with parameter bindings and return one page of its
-/// `RESULT_SET`.
+/// Executes a stored query with parameter bindings and returns one page of
+/// its `RESULT_SET`.
 ///
-/// An empty `version` sends `POST query/{qualified_query_name}`, which runs the
-/// latest version; a full or partial (`{major}`, `{major}.{minor}`) one is sent
-/// as the path segment (ITS-REST
-/// `specifications/docs/query/Qualified_query_name.md` §Qualified query name),
-/// composed with [`resolve_version`](crate::query_namespace::resolve_version).
-///
-/// `parameters_json` is the `query_parameters` object — the request body carries
-/// the bindings rather than the URL: "we recommend clients using the `POST`
-/// method instead of `GET`" (ITS-REST `specifications/docs/query/Request.md`
-/// §GET vs POST). The names are unprefixed (`temperature`, not `$temperature`)
-/// per that document's §Common Headers and Query Parameters, and the viewer
-/// derives them with [`placeholders`](crate::aql_text::placeholders).
-///
-/// `paged` false sends no `fetch`/`offset`, for a stored definition that
-/// carries its own AQL window.
+/// An empty `version` runs the latest version; a full or partial one is the
+/// path segment (ITS-REST `docs/query/Qualified_query_name.md`), composed with
+/// [`resolve_version`](crate::query_namespace::resolve_version).
+/// `parameters_json` is the `query_parameters` body, as ITS-REST
+/// `docs/query/Request.md` §GET vs POST recommends, with unprefixed names from
+/// [`placeholders`](crate::aql_text::placeholders). `paged` false sends no
+/// `fetch` or `offset`, for a definition with its own window.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
