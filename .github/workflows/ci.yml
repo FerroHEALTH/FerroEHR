@@ -189,14 +189,14 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      # The image docker/postgres builds on, read from its FROM, the one place a
-      # Dependabot bump changes; every PostgreSQL service below runs it (#5112).
+      # The CI PostgreSQL image, pinned by digest in docker/ci-postgres/image.ref
+      # (#6520): non-durable, pg_stat_statements preloaded, 400 connections.
       - id: postgres
         run: |
           set -euo pipefail
-          image="$(bash scripts/lib/base-image.sh ref docker/postgres/Dockerfile)"
-          [[ "$image" =~ ^[^@[:space:]]+@sha256:[0-9a-f]{64}$ ]] || {
-            echo "::error::docker/postgres/Dockerfile resolves to '$image', not name@sha256:<digest>"
+          image="$(tr -d '[:space:]' < docker/ci-postgres/image.ref)"
+          [[ "$image" =~ ^ghcr\.io/ferrohealth/ferroehr-ci-postgres@sha256:[0-9a-f]{64}$ ]] || {
+            echo "::error::docker/ci-postgres/image.ref holds '$image', not ghcr.io/ferrohealth/ferroehr-ci-postgres@sha256:<digest>"
             exit 1
           }
           echo "image=$image" >> "$GITHUB_OUTPUT"
@@ -1628,9 +1628,13 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      packages: read # the CI PostgreSQL image on GHCR
     services:
       postgres:
-        image: ${{ needs.changes.outputs.postgres_image }} # zizmor: ignore[unpinned-images] the digest-pinned FROM of docker/postgres, checked name@sha256 where it is read
+        image: ${{ needs.changes.outputs.postgres_image }} # zizmor: ignore[unpinned-images] docker/ci-postgres/image.ref, checked name@sha256 where it is read
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
         env:
           POSTGRES_USER: openehr
           POSTGRES_PASSWORD: openehr
@@ -1649,16 +1653,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Non-durable test tuning
-        # xmllint (libxml2-utils) is what the C14N XML parity gate shells out
-        # to (serialization.md). scripts/lib/test-postgres.sh applies the
-        # non-durable settings for throwaway data and loads
-        # pg_stat_statements, which the statement budget test reads.
-        env:
-          PG_SERVICE: ${{ job.services.postgres.id }}
-        run: |
-          sudo apt-get update && sudo apt-get install -y postgresql-client libxml2-utils
-          PGPASSWORD=openehr bash scripts/lib/test-postgres.sh "$PG_SERVICE"
+      # xmllint is what the C14N XML parity gate shells out to (serialization.md).
+      - name: xmllint
+        run: command -v xmllint >/dev/null || { sudo apt-get update && sudo apt-get install -y libxml2-utils; }
       # The toolchain without a cache: the codegen drift tests run rustfmt.
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
@@ -1693,9 +1690,13 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+      packages: read # the CI PostgreSQL image on GHCR
     services:
       postgres:
-        image: ${{ needs.changes.outputs.postgres_image }} # zizmor: ignore[unpinned-images] the digest-pinned FROM of docker/postgres, checked name@sha256 where it is read
+        image: ${{ needs.changes.outputs.postgres_image }} # zizmor: ignore[unpinned-images] docker/ci-postgres/image.ref, checked name@sha256 where it is read
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
         env:
           POSTGRES_USER: openehr
           POSTGRES_PASSWORD: openehr
@@ -1714,16 +1715,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Non-durable test tuning
-        # xmllint (libxml2-utils) is what the C14N XML parity gate shells out
-        # to (serialization.md). scripts/lib/test-postgres.sh applies the
-        # non-durable settings for throwaway data and loads
-        # pg_stat_statements, which the statement budget test reads.
-        env:
-          PG_SERVICE: ${{ job.services.postgres.id }}
-        run: |
-          sudo apt-get update && sudo apt-get install -y postgresql-client libxml2-utils
-          PGPASSWORD=openehr bash scripts/lib/test-postgres.sh "$PG_SERVICE"
+      # xmllint is what the C14N XML parity gate shells out to (serialization.md).
+      - name: xmllint
+        run: command -v xmllint >/dev/null || { sudo apt-get update && sudo apt-get install -y libxml2-utils; }
       # The toolchain without a cache: the codegen drift tests run rustfmt.
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:

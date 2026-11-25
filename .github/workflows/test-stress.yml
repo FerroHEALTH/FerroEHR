@@ -57,12 +57,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The CI PostgreSQL image, pinned by digest (#6520).
       - id: postgres
         run: |
           set -euo pipefail
-          image="$(bash scripts/lib/base-image.sh ref docker/postgres/Dockerfile)"
-          [[ "$image" =~ ^[^@[:space:]]+@sha256:[0-9a-f]{64}$ ]] || {
-            echo "::error::docker/postgres/Dockerfile resolves to '$image', not name@sha256:<digest>"
+          image="$(tr -d '[:space:]' < docker/ci-postgres/image.ref)"
+          [[ "$image" =~ ^ghcr\.io/ferrohealth/ferroehr-ci-postgres@sha256:[0-9a-f]{64}$ ]] || {
+            echo "::error::docker/ci-postgres/image.ref holds '$image', not ghcr.io/ferrohealth/ferroehr-ci-postgres@sha256:<digest>"
             exit 1
           }
           echo "image=$image" >> "$GITHUB_OUTPUT"
@@ -74,9 +75,13 @@ jobs:
     timeout-minutes: 120
     permissions:
       contents: read
+      packages: read # the CI PostgreSQL image on GHCR
     services:
       postgres:
-        image: ${{ needs.postgres-image.outputs.postgres_image }} # zizmor: ignore[unpinned-images] the digest-pinned FROM of docker/postgres, checked name@sha256 where it is read
+        image: ${{ needs.postgres-image.outputs.postgres_image }} # zizmor: ignore[unpinned-images] docker/ci-postgres/image.ref, checked name@sha256 where it is read
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
         env:
           POSTGRES_USER: openehr
           POSTGRES_PASSWORD: openehr
@@ -96,14 +101,9 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache-save-if: false
-      - name: Non-durable test tuning
-        # The same tuning and tools as the test job in ci.yml, so a failure here
-        # is a failure of the suite that job runs.
-        env:
-          PG_SERVICE: ${{ job.services.postgres.id }}
-        run: |
-          sudo apt-get update && sudo apt-get install -y postgresql-client libxml2-utils
-          PGPASSWORD=openehr bash scripts/lib/test-postgres.sh "$PG_SERVICE"
+      # xmllint is what the C14N XML parity gate shells out to (serialization.md).
+      - name: xmllint
+        run: command -v xmllint >/dev/null || { sudo apt-get update && sudo apt-get install -y libxml2-utils; }
       - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-nextest
