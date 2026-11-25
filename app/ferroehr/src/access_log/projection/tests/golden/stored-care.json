@@ -93,7 +93,8 @@
                 "code": "ETREAT",
                 "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
               }
-            ]
+            ],
+            "text": "unconscious on arrival"
           }
         ],
         "requestor": true,
@@ -176,7 +177,7 @@
       {
         "type": {
           "code": "XrequestId",
-          "display": "X-Request-Id",
+          "display": "transport specific unique identifier where http X-Request-Id is used",
           "system": "https://profiles.ihe.net/ITI/BALP/CodeSystem/BasicAuditEntityType"
         },
         "what": {
@@ -404,7 +405,8 @@
             "code": "ETREAT",
             "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
           }
-        ]
+        ],
+        "text": "unconscious on arrival"
       }
     ],
     "recorded": "2026-11-13T10:15:30.123456Z",
