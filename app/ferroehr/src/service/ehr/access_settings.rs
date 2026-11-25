@@ -30,7 +30,7 @@ use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use serde_json::Value;
 
-use crate::error::ServiceError;
+use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
@@ -376,17 +376,27 @@ fn foreign(path: &str, kind: ForeignKind, codes: &[DvCodedText]) -> Result<(), D
 /// scheme: our own design.
 ///
 /// # Errors
-/// [`ServiceError::bad_request`] (400) naming the first defect: another
-/// scheme's `_type`, a member that does not decode, or the first broken
-/// invariant as `CLASS.Invariant`.
+/// - [`ServiceError::bad_request`] (`400`) when the settings do not read as
+///   the class: another scheme's `_type`, none, or a member that does not
+///   decode.
+/// - [`ServiceError::content_invalid`] (`422`) when settings that read break
+///   a rule: the first broken invariant as `CLASS.Invariant`, or a code
+///   outside the terminology its attribute is bound to, naming its path.
 pub fn check_written_settings(settings: &Value) -> Result<(), ServiceError> {
-    read_settings(settings).map(drop).map_err(|defect| {
-        let detail = match std::error::Error::source(&defect) {
-            Some(cause) => format!("{defect}: {cause}"),
-            None => defect.to_string(),
-        };
-        ServiceError::bad_request(detail, defect)
-    })
+    read_settings(settings)
+        .map(drop)
+        .map_err(|defect| match defect {
+            Defect::Code { .. } | Defect::Invariant(_) => {
+                ServiceError::content_invalid(Violation::new(defect.to_string()))
+            }
+            Defect::Scheme(_) | Defect::NoScheme | Defect::Decode(_) => {
+                let detail = match std::error::Error::source(&defect) {
+                    Some(cause) => format!("{defect}: {cause}"),
+                    None => defect.to_string(),
+                };
+                ServiceError::bad_request(detail, defect)
+            }
+        })
 }
 
 #[cfg(test)]
@@ -438,11 +448,21 @@ mod tests {
         s
     }
 
-    /// The refusal message `settings` draw, which must be a `400`.
-    fn refused(settings: &Value) -> String {
+    /// The refusal message `settings` that do not read draw, which must be a
+    /// `400`.
+    fn malformed(settings: &Value) -> String {
         match check_written_settings(settings) {
             Err(ServiceError::BadRequest(refusal)) => refusal.message,
             other => panic!("a 400 for {settings}, got {other:?}"),
+        }
+    }
+
+    /// The refusal `settings` that read but break a rule draw, which must be a
+    /// `422`, as its rendered violation.
+    fn refused(settings: &Value) -> String {
+        match check_written_settings(settings) {
+            Err(ServiceError::Unprocessable { violation, .. }) => violation.to_string(),
+            other => panic!("a 422 for {settings}, got {other:?}"),
         }
     }
 
@@ -462,9 +482,9 @@ mod tests {
     #[test]
     fn another_scheme_is_refused() {
         let old = json!({ "_type": "FERROEHR_ACCESS_CONTROL_V1", "default_access": "restricted" });
-        assert!(refused(&old).contains("\"FERROEHR_ACCESS_CONTROL_V1\""));
-        assert!(refused(&json!({ "default_access": term("open") })).contains("Scheme_valid"));
-        assert!(refused(&json!({ "_type": "SOME_SCHEME" })).contains("SOME_SCHEME"));
+        assert!(malformed(&old).contains("\"FERROEHR_ACCESS_CONTROL_V1\""));
+        assert!(malformed(&json!({ "default_access": term("open") })).contains("Scheme_valid"));
+        assert!(malformed(&json!({ "_type": "SOME_SCHEME" })).contains("SOME_SCHEME"));
     }
 
     /// A member the class does not declare, or an empty list, is refused by the
@@ -473,10 +493,10 @@ mod tests {
     fn a_member_that_does_not_decode_is_refused() {
         let mut extra = settings("open", &[]);
         extra["access_list"] = json!([]);
-        assert!(refused(&extra).contains("do not read"));
+        assert!(malformed(&extra).contains("do not read"));
         let mut empty = settings("open", &[]);
         empty["gate_keepers"] = json!([]);
-        assert!(refused(&empty).contains("do not read"));
+        assert!(malformed(&empty).contains("do not read"));
     }
 
     /// Each invariant of the settings and the classes they hold is refused,
@@ -719,23 +739,11 @@ mod tests {
         }
     }
 
-    /// No configuration names an access service: it is a grant of
-    /// `access_service`, which the default ceiling does not allow, and the
-    /// removed role list is refused from the environment (#5521).
+    /// An access service is a grant of `access_service`, which the default
+    /// ceiling does not allow (#5521).
     #[test]
-    fn an_access_service_is_a_grant_and_the_removed_role_list_is_refused() {
+    fn an_access_service_is_a_grant_the_default_ceiling_does_not_allow() {
         use crate::party_binding::grants::operation::{GrantCeiling, Operation};
         assert!(!GrantCeiling::default().allows(Operation::AccessService));
-        let env: std::collections::HashMap<String, String> = [(
-            "FERROEHR__AUTHZ__RBAC__ACCESS_SERVICE_ROLES",
-            "EHDS-PORTAL,EHDS-PROFESSIONAL",
-        )]
-        .into_iter()
-        .map(|(k, v)| (k.to_owned(), v.to_owned()))
-        .collect();
-        let refused = crate::config::assemble(None, &env, &[])
-            .expect_err("the removed key is unknown")
-            .to_string();
-        assert!(refused.contains("ACCESS_SERVICE_ROLES"), "{refused}");
     }
 }

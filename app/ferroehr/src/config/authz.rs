@@ -73,8 +73,8 @@ pub struct RbacConfig {
     pub emergency_access_role: Option<String>,
     /// The issuers whose role claims may grant `admin_role` and
     /// `emergency_access_role`, each the name of an `[auth.issuer.<name>]`
-    /// table of a `persons` issuer; empty, the default, lets no token grant
-    /// them.
+    /// table of an issuer other than a `federation` one; empty, the default,
+    /// lets no token grant them.
     pub role_issuers: Vec<String>,
     /// The Basic user of `[[auth.basic.users]]` that holds `admin_role` and
     /// `[auth] product_scope` from this file
@@ -233,12 +233,19 @@ mod tests {
         assert!(c.validate().is_ok());
     }
 
-    /// `user_role` is an unknown key.
     #[test]
-    fn user_role_is_an_unknown_key() {
-        let err = toml::from_str::<AuthzConfig>("[rbac]\nuser_role = \"USER\"\n")
-            .expect_err("an unknown key");
-        assert!(err.to_string().contains("user_role"), "{err}");
+    fn an_unknown_key_is_refused() {
+        for text in [
+            "colour = \"blue\"\n",
+            "[rbac]\ncolour = \"blue\"\n",
+            "[colour]\n",
+        ] {
+            let err = toml::from_str::<AuthzConfig>(text).expect_err("an unknown key");
+            assert!(
+                err.to_string().contains("unknown field `colour`"),
+                "{text}: {err}"
+            );
+        }
     }
 
     #[test]
@@ -295,13 +302,5 @@ mod tests {
             parsed.rbac.ehr_access_default,
             default.rbac.ehr_access_default
         );
-    }
-
-    /// `[authz.abac]` is gone with every key it held: the access evaluator
-    /// takes no switch, engine or claim (#5515).
-    #[test]
-    fn the_abac_table_is_unknown() {
-        let err = toml::from_str::<AuthzConfig>("[abac]\n").expect_err("an unknown table");
-        assert!(err.to_string().contains("unknown field `abac`"), "{err}");
     }
 }

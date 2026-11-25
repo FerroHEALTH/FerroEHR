@@ -237,7 +237,7 @@ trusted ([Who is the committer](committer.md)), and each caller is held to a
 rate.
 
 - [ ] Every professional is provisioned through SCIM, adopted, or admitted by
-      just-in-time creation before their `persons` issuer is added
+      just-in-time creation before their issuer is added
       ([bootstrap and migration](../installation/party-binding-migration.md)).
 - [ ] `[server.caller_rate]` is set. It limits each authenticated caller on
       the clinical API, is kept per replica, and is off unless configured

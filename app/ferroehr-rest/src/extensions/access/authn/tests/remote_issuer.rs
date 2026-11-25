@@ -58,7 +58,6 @@ async fn authenticator(
         },
         None,
         memory(),
-        test_support::standing(),
     )
     .await
 }

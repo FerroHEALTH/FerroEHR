@@ -142,7 +142,6 @@ async fn serve_over(
         auth,
         ..common::api_config(true)
     };
-    common::patient_context(&mut config, CONTACT_POINT);
     config.public_root = Some(
         ferroehr::config::server::PublicRoot::new("https://ehr.example", "")
             .expect("a public root"),

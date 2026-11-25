@@ -75,12 +75,17 @@ guarded_handler! {
                                           person (EHDS Art. 10(2)). No status, header or \
                                           count says that either exists.",
              body = serde_json::Value),
-            (status = 400, description = "The body is not the object above; the settings \
-                                          are not settings of the `access_directives` \
-                                          scheme whose every invariant holds; a \
-                                          `restriction` or `opt_out` directive sets \
-                                          `emergency_override` false; or an `opt_out` \
-                                          directive is committed while \
+            (status = 400, description = "The body is not the object above, or the \
+                                          settings do not read as an \
+                                          `ACCESS_DIRECTIVE_SETTINGS` of the \
+                                          `access_directives` scheme. The problem names \
+                                          the first defect.",
+             body = serde_json::Value),
+            (status = 422, description = "The settings read but break a rule: a broken \
+                                          invariant of the draft access control BMM, a \
+                                          code outside the terminology its attribute is \
+                                          bound to, a party the demographic store does \
+                                          not hold, or an `opt_out` directive while \
                                           `authz.grants.allowed` does not allow \
                                           `access_service`. The problem names the first \
                                           defect.",
@@ -140,7 +145,7 @@ async fn commit(state: AppState, parts: RequestParts) -> Result<Response, RestEr
             .ceiling()
             .allows(Operation::AccessService)
     {
-        return Err(RestError::from(ApiError::BadRequest(
+        return Err(RestError::from(ApiError::Unprocessable(
             "this deployment allows no EHDS Art. 10 access-service caller ([authz.grants] \
              allowed does not allow access_service), so an opt_out directive would hold for \
              nobody; allow access_service and grant it to the access services in the CDR first"

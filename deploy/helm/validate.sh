@@ -620,7 +620,7 @@ refusal_registry_gate() {
     "bridge.yaml|with an empty bridge.networkPolicy.ingressFrom|${bridge}|--set bridge.networkPolicy.ingressFrom=null|bridge.networkPolicy.ingressFrom;auth.enabled"
     "bridge.yaml|with an empty bridge.cdr.existingSecret|${bridge}|--set bridge.cdr.existingSecret=|bridge.cdr.existingSecret;client_secret"
     "_helpers.tpl|without bridge.cdr.oauth.issuer and bridge.cdr.oauth.clientId|${bridge}|--set bridge.cdr.oauth.clientId=|bridge.cdr.oauth.issuer;bridge.cdr.oauth.clientId;system/"
-    "_helpers.tpl|is not a \`machines\` issuer of config.auth.issuer|${bridge}|--set bridge.cdr.oauth.issuer=https://untrusted.example.org|config.auth.issuer;kind: machines"
+    "_helpers.tpl|is not an issuer of config.auth.issuer|${bridge}|--set bridge.cdr.oauth.issuer=https://untrusted.example.org|config.auth.issuer;audience"
     "bridge.yaml|with an empty bridge.mappings.files|${bridge}|--set bridge.mappings.files=null|bridge.mappings.files;..data"
     "bridge.yaml|with an empty bridge.mappings.existingConfigMap|${bridge}|--set bridge.mappings.existingConfigMap=|bridge.mappings.existingConfigMap"
     "_helpers.tpl|service.tls.caExistingSecret is empty|${bridge}|--set config.server.tls.certificate_file=/tls.crt --set config.server.tls.key_file=/tls.key|FerroBRIDGE (bridge.enabled);service.tls.caExistingSecret;DNS SAN"

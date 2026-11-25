@@ -810,7 +810,8 @@ async fn a_record_of_another_digest_version_is_refused() {
     .await
     .expect("the columns");
     let columns = columns.join(", ");
-    for version in [1, 5, 7] {
+    let current = ferroehr::system_log::content_digest::VERSION;
+    for version in [1, current - 1, current + 1] {
         let refused = sqlx::query(AssertSqlSafe(format!(
             "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_current_xact_id() AS taken) \
              INSERT INTO audit.audit_event (id, digest_version, {columns}) \

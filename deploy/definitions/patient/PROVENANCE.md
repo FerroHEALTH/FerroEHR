@@ -38,8 +38,7 @@ the provider each with the patient identifiers it issues, and the care
 relationships (`id32`) to the teams and units the patient is under the care
 of, and a slot (`id37`) for a representation the person holds of another,
 such as one of `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1`,
-since a patient portal provisions a representative as a `PERSON` of this
-archetype (#5611).
+since a representative's own `PERSON` may be of this archetype (#5611).
 
 ## Source
 

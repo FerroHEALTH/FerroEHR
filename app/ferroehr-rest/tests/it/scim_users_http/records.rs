@@ -13,7 +13,7 @@
 
 use std::sync::Arc;
 
-use ferroehr::config::binding::{ProviderId, Providers};
+use ferroehr::config::binding::ProviderId;
 use http::StatusCode;
 use serde_json::{Value, json};
 
@@ -68,10 +68,10 @@ async fn records_of(pool: &sqlx::PgPool, person: &str, operations: &[&str]) -> V
 #[tokio::test]
 async fn a_bound_persons_read_query_and_write_record_its_party_groups_and_provider() {
     let mut config = config();
-    config.party_binding.provider = Some(Providers::One(ProviderId {
+    config.party_binding.provider = Some(ProviderId {
         issuer: PROVIDER_ISSUER.to_owned(),
         id: PROVIDER_ID.to_owned(),
-    }));
+    });
     let (_db, pool, service, _) = Box::pin(app_of(config.clone(), true)).await;
     // NOTE: `ferroehr_rest::build_full` hands the authenticator the local party source, as here.
     let source = Arc::new(service.party_source("demographic"));

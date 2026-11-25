@@ -5,38 +5,33 @@
 
 use super::*;
 
-fn keyed(issuers: &[&str], portal: &[&str]) -> BindingMapping {
+fn keyed(issuers: &[&str]) -> BindingMapping {
     let key = IdentifierSelector::new("/details[at0001]/items[at0002]", "guid")
         .expect("parses")
         .with_issuers(issuers.iter().copied());
-    BindingMapping::default()
-        .with_person("Person", key)
-        .with_portal_issuers(portal.iter().copied())
+    BindingMapping::default().with_person("Person", key)
 }
 
 #[test]
 fn a_key_issuer_moves_no_digest_and_is_a_key_space() {
-    let one = keyed(&["urn:a"], &[]);
-    let two = keyed(&["urn:a", "https://portal"], &["https://portal"]);
+    let one = keyed(&["urn:a"]);
+    let two = keyed(&["urn:a", "https://login"]);
     assert_eq!(one.digest(), two.digest(), "a key issuer is a key space");
     assert_eq!(
         two.key_spaces(),
-        BTreeMap::from([
-            ("https://portal".to_owned(), true),
-            ("urn:a".to_owned(), false)
-        ])
+        BTreeSet::from(["https://login".to_owned(), "urn:a".to_owned()])
     );
     assert_ne!(
-        keyed(&[], &[]).digest(),
+        keyed(&[]).digest(),
         one.digest(),
         "a key selector holding every issuer derives other rows than one holding a list"
     );
-    assert!(keyed(&[], &[]).key_spaces().is_empty());
+    assert!(keyed(&[]).key_spaces().is_empty());
 }
 
 #[test]
 fn a_selector_or_template_change_moves_the_digest() {
-    let base = keyed(&["urn:a"], &[]);
+    let base = keyed(&["urn:a"]);
     assert_ne!(
         base.digest(),
         base.clone().with_professional_role("Role").digest()
