@@ -48,9 +48,6 @@ store, or before it can trust anything:
 - the provider the instance acts for (`[authz.party_binding] provider`);
 - the security floors: the assurance minimum, `ehr_access_default` and the
   cohort thresholds;
-- break-glass: `[authz.rbac] emergency_access_role` and
-  `[audit] emergency_purpose_codes`, which must work as configured when the
-  party store does not answer;
 - the Basic users as credentials alone, `user` with its password hash, since
   a secret never becomes versioned openEHR data, and `[authz.rbac]
   first_admin`, the one Basic user that holds `admin_role` and the product
@@ -466,15 +463,16 @@ subject, and without it the call is `403`
 
 **Acting as an access service.** A caller with an `access_service` grant is
 an EHDS Art. 10 access service: an EHR whose person opted out reads as
-absent to it at every route, query and export, unless it declares one of
-`[audit] emergency_purpose_codes` and acts for no person (Art. 10(2)).
+absent to it at every route, query and export, unless it invokes an
+emergency justification of the access policy with a reason and acts for no
+person (Art. 10(2)).
 While `[authz.grants] allowed` does not allow `access_service`, recording an
 opt-out is refused with `422`, since it would hold for nobody
 ([Opt-out from the access services](security.md#opt-out-from-the-access-services-ehds-art-10)).
 
 A role a token names never grants any of these four: each comes from its
-grant alone, under the grant ceiling. The privileged roles of
-`[authz.rbac]`, `admin_role` and `emergency_access_role`, come from the
+grant alone, under the grant ceiling. The privileged role of
+`[authz.rbac]`, `admin_role`, comes from the
 configuration and the token issuers `role_issuers` lists, and never from a
 `hold_roles` grant: a `ROLE` whose `hold_roles` grant names one is refused at
 commit with `403`, and one stored before the role was configured is never
@@ -2626,9 +2624,10 @@ Four rules, as you write them in the policy body (a role code of
   request that declares none. Wabvpz Art. 15f is a rule of this kind: you commit it,
   FerroEHR holds no copy of it.
 
-A rule whose `emergency_override` is true is lifted for the holder of
-`authz.rbac.emergency_access_role` declaring an emergency purpose, and the
-access record names the rule. The access record of a refusal names the
+A rule whose `emergency_override` is true is lifted for a caller that
+invokes an emergency
+[justification](security.md#justified-access-outside-the-care-relationships)
+with a reason, and the access record names the rule. The access record of a refusal names the
 rule by its uid, its first identifier or its position in `rules`, and a
 `legal obligation` ground carrying the rule's `legal_grounds`. The `403`
 problem body carries them in its `legal_grounds` member beside `refusal`,

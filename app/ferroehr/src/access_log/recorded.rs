@@ -310,10 +310,13 @@ pub(crate) fn stored(
         .find(|authorisation| authorisation.kind.defining_code.code_string == "permit")
         .and_then(|authorisation| authorisation.reference.as_ref())
         .map(|reference| reference.id.clone());
-    event.emergency_access = entry.is_emergency;
     event.decided = crate::access_eval::record::Decision::of_recorded(
         entry.authorisations.as_deref().unwrap_or_default(),
     );
+    event.justification = event
+        .decided
+        .as_ref()
+        .and_then(|decided| decided.justification.clone());
     labelled(&mut event, entry);
     event.query = entry.query.as_ref().and_then(|query| {
         Some(QueryNaming {

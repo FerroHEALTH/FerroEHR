@@ -285,6 +285,12 @@ fn build_node(
     };
     let mut node = create_node(ctx, term, child_term, owner, co, parent, identity);
     node.facts = WebTemplateNodeFacts::of_v2_4(co, child_term, &ctx.default_language);
+    if let Some(name) = attr_children(co, "name").next() {
+        node.name_rm_type = Some(object_rm_type(name).to_owned());
+        node.name_code_input = (object_rm_type(name) == "DV_CODED_TEXT")
+            .then(|| coded_text_inputs(ctx, child_term, name))
+            .and_then(|inputs| code_input(inputs).map(Box::new));
+    }
     build_children(ctx, child_term, co, &mut node, path);
     node
 }
@@ -558,6 +564,13 @@ fn coded_text_inputs(
         return external_coded_inputs();
     };
     coded_inputs_from(ctx, term, ctc)
+}
+
+/// The `code` input among a coded constraint's inputs.
+fn code_input(inputs: Vec<WebTemplateInput>) -> Option<WebTemplateInput> {
+    inputs
+        .into_iter()
+        .find(|i| i.suffix.as_deref() == Some("code"))
 }
 
 fn code_phrase_inputs(

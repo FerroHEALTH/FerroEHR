@@ -113,7 +113,7 @@ An `ACCESS_DIRECTIVE` is one instruction about access to the data of the EHR. `_
 
 An empty list applies to everything of its kind, so a directive with no `_data_` covers the whole EHR, including data recorded after it. A directive outside its `_time_validity_` is kept as history and decides nothing.
 
-`_exceptions_` holds narrower directives of the opposite effect, one level deep, such as "deny mental health data, except to my GP". `_emergency_override_` states whether a declared emergency lifts the directive (EHDS Art 11(5) for a restriction; Art 10(2) for an opt-out where national law allows it). `_instructed_by_`, `_instructed_`, `_legal_grounds_`, `_evidence_` and `_identifiers_` record who gave the instruction, when, on which legal ground, where the signed record of it sits (the `ADMIN_ENTRY` of the consent, RM EHR IM Entry Package), and its identifiers in other systems. `_details_` carries the deployment's archetyped detail, which the procedure never reads.
+`_exceptions_` holds narrower directives of the opposite effect, one level deep, such as "deny mental health data, except to my GP". `_emergency_override_` states whether an emergency justification of the controller's policy lifts the directive (EHDS Art 11(5) for a restriction; Art 10(2) for an opt-out where national law allows it). `_instructed_by_`, `_instructed_`, `_legal_grounds_`, `_evidence_` and `_identifiers_` record who gave the instruction, when, on which legal ground, where the signed record of it sits (the `ADMIN_ENTRY` of the consent, RM EHR IM Entry Package), and its identifiers in other systems. `_details_` carries the deployment's archetyped detail, which the procedure never reads.
 
 The kinds carry the rights of the subject:
 
@@ -193,6 +193,10 @@ The policy states how the controller's care relationships are read and written:
 |The conflicts of interest allowed through the professional path, and for whom.
 |none: both conflicts refuse
 
+|`_justifications_`
+|The grounds on which a caller is admitted outside its care relationships: the purposes of use that invoke each (`HL7_ActReason`, such as `TREAT` for a consultation or a second opinion, `ETREAT` or `BTG` for an emergency), the callers that may invoke it, and whether it is an emergency. An access that rests on one states a reason, which the access log keeps (xref:decision_procedure.adoc#_terms[Terms]).
+|none: nobody is admitted on a justification
+
 |`_concealed_confidentialities_`
 |The levels whose refused records read as absent.
 |refused records read as forbidden
@@ -269,6 +273,8 @@ include::ROOT:partial$classes/access_relationship_validity.adoc[]
 include::ROOT:partial$classes/access_relationship_writer.adoc[]
 
 include::ROOT:partial$classes/access_conflict_rule.adoc[]
+
+include::ROOT:partial$classes/access_justification.adoc[]
 
 include::ROOT:partial$classes/access_value_set.adoc[]
 

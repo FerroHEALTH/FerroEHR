@@ -1,0 +1,143 @@
+-- SPDX-FileCopyrightText: Cadasto B.V.
+-- SPDX-License-Identifier: BUSL-1.1
+-- An at-coded ADL 2.4 template over CKM ADL 1.4 archetypes, two of them
+-- pre-releases referenced by their full identifiers: the health summary
+-- COMPOSITION holding the vaccination list SECTION
+-- (immunisation_list.v0.0.1-alpha, an overlay parent) and an ad hoc SECTION
+-- of medical devices (device_summary.v0.0.1-alpha). No specification governs
+-- this template: our own test fixture.
+template (adl_version=2.4.0; rm_release=1.1.0)
+    openEHR-EHR-COMPOSITION.t_pre_release_summary.v1.0.0
+
+specialize
+    openEHR-EHR-COMPOSITION.health_summary.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    lifecycle_state = <"unmanaged">
+    original_author = <
+        ["name"] = <"FerroEHR">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A summary over pre-release ADL 1.4 archetypes.">
+        >
+    >
+
+definition
+    COMPOSITION[at0000.1] matches {
+        content matches {
+            use_archetype SECTION[at0000.2, openEHR-EHR-SECTION.immunisation_list-t_pre_release.v0]
+            use_archetype SECTION[at0000.3, openEHR-EHR-SECTION.adhoc-t_devices.v1]
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Pre-release summary">
+                description = <"A summary over pre-release archetypes.">
+            >
+            ["at0000.2"] = <
+                text = <"Vaccination list">
+                description = <"The vaccination list.">
+            >
+            ["at0000.3"] = <
+                text = <"Medical devices">
+                description = <"The medical devices.">
+            >
+        >
+    >
+
+------------------------------------------------------------------------
+template_overlay
+    openEHR-EHR-SECTION.immunisation_list-t_pre_release.v0.0.0
+
+specialize
+    openEHR-EHR-SECTION.immunisation_list.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    lifecycle_state = <"unmanaged">
+    original_author = <
+        ["name"] = <"FerroEHR">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+        >
+    >
+
+definition
+    SECTION[at0000.1] matches {
+        items matches {
+            use_archetype EVALUATION[at0002.1, openEHR-EHR-EVALUATION.exclusion_global.v1]
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Vaccination list">
+                description = <"The vaccination list.">
+            >
+            ["at0002.1"] = <
+                text = <"Exclusion statement">
+                description = <"A global exclusion statement.">
+            >
+        >
+    >
+
+------------------------------------------------------------------------
+template_overlay
+    openEHR-EHR-SECTION.adhoc-t_devices.v1.0.0
+
+specialize
+    openEHR-EHR-SECTION.adhoc.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    lifecycle_state = <"unmanaged">
+    original_author = <
+        ["name"] = <"FerroEHR">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+        >
+    >
+
+definition
+    SECTION[at0000.1] matches {
+        name matches {
+            DV_TEXT matches {
+                value matches {"Medical devices"}
+            }
+        }
+        items matches {
+            use_archetype EVALUATION[at0000.2, openEHR-EHR-EVALUATION.device_summary.v0.0.1-alpha] occurrences matches {0..*}
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Medical devices">
+                description = <"The medical devices.">
+            >
+            ["at0000.2"] = <
+                text = <"Medical device">
+                description = <"A medical device.">
+            >
+        >
+    >

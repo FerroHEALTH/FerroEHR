@@ -51,7 +51,6 @@ fn entry(system_id: &str) -> AccessLogEntry {
         "accessor": { "_type": "ACCESSOR", "kind": coded("person"),
             "party": { "_type": "PARTY_IDENTIFIED", "name": "a professional" } },
         "ehr_id": { "_type": "HIER_OBJECT_ID", "value": EHR },
-        "is_emergency": false,
         "retention": { "_type": "ACCESS_RETENTION",
             "retain_until": { "_type": "DV_DATE", "value": "2031-11-07" },
             "grounds": [coded("read")] }

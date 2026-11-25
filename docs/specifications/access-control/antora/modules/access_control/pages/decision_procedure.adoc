@@ -15,7 +15,7 @@ The schemes `confidentiality` and `access_directives` fix how an access is decid
 * A caller *performs a role* when it is the `_performer_` of a `ROLE` in force (its `_time_validity_` holds the date of the access, and its versioned object is not deleted) whose `_name_` is a `DV_CODED_TEXT` of that role's terminology and code (RM Demographic IM, `PARTY.type()`). An actor scope's `_role_` matches a caller that performs it.
 * The *data* of a read are the stored objects it reaches. The data of a write are the version being committed: its template (`archetype_details.template_id`), its root archetype, its origins, the episodes it is placed in, the sensitivities the policy's classifications give it and the confidentiality of its EHR.
 * The *episodes* of a datum are those its current version is placed in (xref:access_control_package.adoc#_episodes_of_care[Episodes of Care]); a datum placed in none is *unplaced*.
-* A caller *declares an emergency* when it states a purpose of use the system documents as an emergency purpose (where the policy binds a value set for `emergency_purpose`, a code of it) and holds the role the system's emergency rules require.
+* An access *invokes a justification* of `ACCESS_POLICY._justifications_` when it declares one of the justification's `_purposes_` and the caller matches one of its `_applies_to_` scopes (void: a caller of kind `professional`); where several match, the first in order is invoked. The subject and a representative invoke none. An access *states a reason* when it carries, beside its purpose, the caller's own words for the access; FHIR R4 `AuditEvent.purposeOfEvent.text` is where the reason travels on. An access *invokes an emergency justification* when the justification it invokes has `_emergency_` set and it states a reason.
 * The *labels* of a datum are the sensitivities of the `ACCESS_LABEL` instances that target it and of the `ACCESS_POLICY` classifications whose scope it falls in.
 * The *confidentiality* of a datum is the highest `level()` of the marking of its EHR (`CONFIDENTIALITY_SETTINGS._marking_`), the marking of an `ACCESS_LABEL` that targets it, and the `_confidentiality_` of each classification whose scope it falls in. With none of them it is `N`.
 * The *day* of an access is its date in the time zone of `ACCESS_POLICY._time_zone_`, or in UTC when that is void. A relationship's `_time_validity_` holds a day when the day is not before its lower bound and not after its upper bound; both bounds are included.
@@ -77,15 +77,15 @@ The steps run in order for each EHR the access reaches. The first step that refu
 |`refused-consent-reference-missing`
 
 |0. Exclusion
-|An exclusion of `CONFIDENTIALITY_SETTINGS._exclusions_` that applies refuses the caller, a representative and a gate-keeper included. A permit of the subject or of a representative does not lift it, and it never binds the subject. An emergency lifts it only where its `_emergency_override_` holds and the caller is not a representative.
+|An exclusion of `CONFIDENTIALITY_SETTINGS._exclusions_` that applies refuses the caller, a representative and a gate-keeper included. A permit of the subject or of a representative does not lift it, and it never binds the subject. An emergency justification lifts it only where its `_emergency_override_` holds.
 |`refused-excluded`
 
 |1. Opt-out
-|An `opt_out` directive in force binds callers of kind `access_service`. Unless its `_emergency_override_` holds and the caller declares an emergency, and the caller does not act for the subject, the EHR MUST be answered as one that does not exist.
+|An `opt_out` directive in force binds callers of kind `access_service`. Unless its `_emergency_override_` holds and the caller invokes an emergency justification, and does not act for the subject, the EHR MUST be answered as one that does not exist.
 |`refused-opt-out`, not shown
 
 |2. Restriction
-|A `restriction` directive that applies binds callers of kind `professional`, the systems that act for a provider, and a caller of kind `representative` its `_applies_to_` names by party or by the `representative` relationship. Data it covers MUST be answered as data that do not exist: a named object as absent, and left out of queries and exports. A caller that declares an emergency, where `_emergency_override_` holds, passes, and the access MUST be marked as an emergency override (EHDS Art 11(5)).
+|A `restriction` directive that applies binds callers of kind `professional`, the systems that act for a provider, and a caller of kind `representative` its `_applies_to_` names by party or by the `representative` relationship. Data it covers MUST be answered as data that do not exist: a named object as absent, and left out of queries and exports. A caller that invokes an emergency justification, where `_emergency_override_` holds, passes, and the access MUST be marked as an emergency override (EHDS Art 11(5)).
 |`refused-restricted`, not shown
 
 |3. Consent deny
@@ -93,15 +93,15 @@ The steps run in order for each EHR the access reaches. The first step that refu
 |`refused-consent-denied`
 
 |4. Purpose
-|Where `ACCESS_POLICY._purpose_required_` holds, an access without a declared purpose is refused, whatever rules the policy holds. The check reads the request alone and runs before any rule is read. Which purposes a caller may declare is a rule of step 5: a deny rule with a permit exception naming the purposes.
-|`refused-purpose-missing`
+|Where `ACCESS_POLICY._purpose_required_` holds, an access without a declared purpose is refused, whatever rules the policy holds. The check reads the request alone and runs before any rule is read. Which purposes a caller may declare is a rule of step 5: a deny rule with a permit exception naming the purposes. An access that invokes a justification whose `_emergency_` is set and states no reason is refused here, before any directive is lifted, so the refusal reveals no restriction.
+|`refused-purpose-missing`, `refused-reason-missing`
 
 |5. Conflict
 |A professional caller in conflict with the subject is refused the professional path, unless an `ACCESS_POLICY._conflict_rules_` entry of that conflict names the caller (and, for `related`, the kinship). An access admitted under such an entry MUST be marked in the access log. The subject reaches their own record through the subject path, as step 0 allows.
 |`refused-conflict`
 
 |5. Controller rule
-|A deny rule of `ACCESS_POLICY._rules_` that applies refuses, whatever the subject's directives permit, unless its `_emergency_override_` holds and the caller declares an emergency. A rule that sets `_purposes_` applies only to an access that declares one of them.
+|A deny rule of `ACCESS_POLICY._rules_` that applies refuses, whatever the subject's directives permit, unless its `_emergency_override_` holds and the caller invokes an emergency justification. A rule that sets `_purposes_` applies only to an access that declares one of them.
 |`refused-policy-denied`
 
 |6. Sensitivity
@@ -113,8 +113,8 @@ The steps run in order for each EHR the access reaches. The first step that refu
 |`refused-confidentiality`
 
 |7. Care relationship
-|Where `ACCESS_POLICY._care_relationship_required_` holds and the caller is a professional, the caller needs, for each datum, a live care relationship to the subject that covers it, a permit directive that applies, or an entry in `_gate_keepers_`. A datum no live relationship covers is refused with `refused-outside-episode` when the caller holds a live relationship to the subject, and with `refused-no-care-relationship` otherwise.
-|`refused-no-care-relationship`, `refused-outside-episode`
+|Where `ACCESS_POLICY._care_relationship_required_` holds and the caller is a professional, the caller needs, for each datum, a live care relationship to the subject that covers it, a permit directive that applies, or an entry in `_gate_keepers_`. A datum no live relationship covers is refused with `refused-outside-episode` when the caller holds a live relationship to the subject, and with `refused-no-care-relationship` otherwise. An access that invokes a justification passes for such a datum when it states a reason, and the access log names the justification with the reason; without a reason the datum is refused with `refused-reason-missing`. Under the default `restricted` the same holds for step 8.
+|`refused-no-care-relationship`, `refused-outside-episode`, `refused-reason-missing`
 
 |8. Default
 |`open` admits. `restricted` admits a caller that a permit directive that applies, an entry in `_gate_keepers_` or a live care relationship that covers the datum names. `consent_required` admits only a caller that a permit directive that applies names.
@@ -127,7 +127,7 @@ Directives and rules combine by deny-overrides: where a permit and a deny both a
 
 Steps 4 and 5 come after the subject's opt-out and restriction, so restricted data still read as absent rather than forbidden (EHDS Art 8, Art 11(5)). A controller deny is shown, because it reveals a rule of the controller and nothing about the subject. A permit of the subject cannot lift it: who may record or read which kind of data is the competence of the care delivery environment (xref:BASE:architecture_overview:security.adoc[Security], The Problem of Roles), not the subject's to grant. A permit rule acts only on sensitivity and confidentiality, where a permit of the subject also acts, so opening confidential data stays the subject's to do as well as the controller's.
 
-With no rule that names a confidentiality, an EHR marked `R` or `V` is read by its subject alone: the safe state needs no configuration. A care relationship is a ground in steps 7 and 8 and, through a rule's actor scope, in steps 5 and 6; it never lifts an exclusion, the subject's opt-out, restriction or consent deny, or a conflict. An emergency lifts steps 6 to 8, the narrowing to an episode with them, and each rule or directive whose `_emergency_override_` holds, and creates no relationship.
+With no rule that names a confidentiality, an EHR marked `R` or `V` is read by its subject alone: the safe state needs no configuration. A care relationship is a ground in steps 7 and 8 and, through a rule's actor scope, in steps 5 and 6; it never lifts an exclusion, the subject's opt-out, restriction or consent deny, or a conflict. An emergency justification lifts steps 6 to 8, the narrowing to an episode with them, and each rule or directive whose `_emergency_override_` holds, and creates no relationship. Any other justification stands in for a live care relationship at steps 7 and 8 alone: like a relationship it never lifts an exclusion, the subject's opt-out, restriction or consent deny, a controller rule, a sensitivity, a confidentiality or a conflict (EHDS Art 8, GDPR Art 18). A reason is asked only where the access rests on the justification: inside the caller's care relationships none is asked. Justified access and the reason are this proposal's own; the codes come from `HL7_ActReason` (`TREAT`, `ETREAT`, `BTG`).
 
 The subject reading or writing their own record skips steps 3 to 8: the subject's own right of access (EHDS Art 3) is not the controller's to deny. A representative is held to the exclusion and to steps 1 to 3 and 5: to the subject's directives, to any `delegation` directive that names them, and to the controller's rules, so a controller can keep, for example, a minor's confidential data from a parent. An EHR whose `EHR_ACCESS` has no settings is decided by the system's documented default.
 

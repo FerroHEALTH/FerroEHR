@@ -132,6 +132,14 @@ pub fn checked(body: &Value) -> Result<AccessPolicy, PolicyDefect> {
             scope_codes(scope)?;
         }
     }
+    for justification in policy.justifications.as_deref().unwrap_or_default() {
+        for scope in justification.applies_to.as_deref().unwrap_or_default() {
+            scope_codes(scope)?;
+        }
+        for purpose in &justification.purposes {
+            ForeignCode::read(ForeignKind::Purpose, purpose)?;
+        }
+    }
     relationship_codes(&policy)?;
     for purpose in policy.care_purposes.iter().flatten() {
         ForeignCode::read(ForeignKind::Purpose, purpose)?;

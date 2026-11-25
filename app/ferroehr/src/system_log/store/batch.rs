@@ -16,8 +16,8 @@ use jiff_sqlx::Timestamp;
 use super::{
     AuditRecord, RecordEnd, access_ehr_id, action_str, binding_columns, categories_json,
     category_basis, category_content_json, category_evidence_json, category_map_digest, event_code,
-    nonempty_opt, operation, origin_count, origins_json, outcome_smallint, resource_class,
-    result_count, roles_json, token_attributes_json,
+    justification_json, nonempty_opt, operation, origin_count, origins_json, outcome_smallint,
+    resource_class, result_count, roles_json, token_attributes_json,
 };
 use crate::system_log::AuditError;
 use crate::system_log::content_digest::{self, Record};
@@ -74,7 +74,7 @@ batch_columns! {
     levels: Option<&'static str>,
     values: Option<&'a str>,
     professionals: Option<&'a str>,
-    emergency: bool,
+    justifications: Option<serde_json::Value>,
     ends: Option<String>,
     stated: bool,
     permits: Option<&'a str>,
@@ -148,7 +148,7 @@ impl<'a> BatchColumns<'a> {
         self.values.push(event.actor.assurance_value.as_deref());
         self.professionals
             .push(event.actor.professional_id.as_deref());
-        self.emergency.push(event.emergency_access);
+        self.justifications.push(justification_json(event));
         self.ends.push(match end {
             Some(RecordEnd::On(date)) => Some(date.to_string()),
             Some(RecordEnd::Never) | None => None,
@@ -248,7 +248,7 @@ impl BatchColumns<'_> {
             assurance_level: self.levels[i],
             assurance_value: self.values[i],
             professional_id: self.professionals[i],
-            emergency_access: self.emergency[i],
+            justification: self.justifications[i].as_ref(),
             retention_ends: self.ends[i].as_deref(),
             retention_stated: self.stated[i],
             permit: self.permits[i],

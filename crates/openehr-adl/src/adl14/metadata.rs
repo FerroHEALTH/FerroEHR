@@ -10,7 +10,6 @@
 
 use std::collections::BTreeMap;
 
-use openehr_am::v2_4::aom2::archetype::archetype_hrid_impl::version_status_of_modifier;
 use openehr_am::v2_4::aom2::archetype::authored_archetype::AuthoredArchetypeData;
 use openehr_am::v2_4::resource::resource_description::ResourceDescription;
 use openehr_base::v1_3::resource::translation_details::TranslationDetails;
@@ -223,43 +222,4 @@ fn take_keyed_lines(
             .collect(),
     );
     other.remove(key);
-}
-
-/// Write a 1.4 `revision` string into the ADL2 HRID's version fields.
-pub(super) fn set_release_version(
-    hrid: &mut openehr_am::v2_4::aom2::archetype::archetype_hrid::ArchetypeHrid,
-    version: &str,
-) {
-    // `version` may be `1.1.0` or `0.0.1-alpha`; split a `-status.build` tail.
-    let (numeric, status, build) = split_version(version);
-    hrid.release_version = numeric;
-    hrid.version_status = version_status_of_modifier(status)
-        .unwrap_or_else(|| openehr_base::prelude::VersionStatus::from_wire(status));
-    hrid.build_count = build;
-}
-
-/// Split a 1.4 revision string into `(numeric, version status, build count)`.
-fn split_version(v: &str) -> (String, &'static str, String) {
-    for (marker, status) in [("-rc", "rc"), ("-alpha", "alpha"), ("-beta", "beta")] {
-        if let Some((numeric, tail)) = v.split_once(marker) {
-            let numeric = normalise_numeric(numeric);
-            let build = tail.strip_prefix('.').unwrap_or("").to_owned();
-            return (numeric, status, build);
-        }
-    }
-    (normalise_numeric(v), "", String::new())
-}
-
-/// Pad a partial `major[.minor[.patch]]` string to a full three-part version.
-fn normalise_numeric(v: &str) -> String {
-    let mut parts = v.split('.');
-    let major = parts.next().unwrap_or("1");
-    let minor = parts.next().unwrap_or("0");
-    let patch = parts.next().unwrap_or("0");
-    format!(
-        "{}.{}.{}",
-        if major.is_empty() { "1" } else { major },
-        if minor.is_empty() { "0" } else { minor },
-        if patch.is_empty() { "0" } else { patch }
-    )
 }

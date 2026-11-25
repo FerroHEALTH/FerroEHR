@@ -119,15 +119,6 @@ impl FerroEhrConfig {
                 crate::access_log::intake::GATHER_WINDOW_MAX
             )));
         }
-        for code in &self.audit.emergency_purpose_codes {
-            if !self.audit.purpose_codes.contains(code) {
-                errors.push(ConfigError::semantic(format!(
-                    "audit.emergency_purpose_codes names {code:?}, which is not on \
-                     audit.purpose_codes; an emergency code must be one of the purpose codes \
-                     this deployment agrees with its callers, so add it there"
-                )));
-            }
-        }
     }
 
     /// `[audit.syslog]` names a `tls://` address, and its

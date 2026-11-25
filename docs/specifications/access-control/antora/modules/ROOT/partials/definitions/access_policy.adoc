@@ -70,6 +70,10 @@ h|*0..1*
 a|The conflicts of interest the controller allows through the professional path. Void allows none: a professional who is the subject, or is related to the subject, is refused.
 
 h|*0..1*
+|*justifications*: `xref:{class_list}[List]<xref:access_control:access_control_package.adoc#_access_justification_class[ACCESS_JUSTIFICATION]>`
+a|The grounds on which a caller is admitted outside its care relationships, by a declared purpose of use and a stated reason. Void admits nobody on a justification.
+
+h|*0..1*
 |*concealed_confidentialities*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
 a|The confidentiality levels whose refused records are answered as absent. Void answers every refused named record as forbidden.
 
@@ -151,6 +155,9 @@ h|
 
 h|
 2+a|__Conflict_rules_valid__: `conflict_rules /= Void implies not conflict_rules.is_empty`
+
+h|
+2+a|__Justifications_valid__: `justifications /= Void implies not justifications.is_empty`
 
 h|
 2+a|__Concealed_valid__: `concealed_confidentialities /= Void implies (not concealed_confidentialities.is_empty and concealed_confidentialities.for_all (c | c.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality)))`

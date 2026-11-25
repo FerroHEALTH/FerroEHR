@@ -1,0 +1,1 @@
+- `GET /definition/archetype/adl1.4/{archetype_id}/adl2` reduces a specialised ADL 1.4 archetype to its ADL 2 differential form against the conversion of its stored parent. Before, the result kept every inherited node and term, so storing it failed with VTSD. A specialised archetype whose parent is not stored now answers 422 naming the parent.

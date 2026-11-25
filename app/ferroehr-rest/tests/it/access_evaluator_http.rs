@@ -30,7 +30,14 @@ use crate::common::{BASE, EXT};
 
 /// The header the default configuration reads the declared purpose from.
 const PURPOSE: &str = "x-purpose-of-use";
-/// The `persons` issuer of Dr B, whose role claims grant the emergency role.
+/// The header the default configuration reads the reason for a justified
+/// access from.
+pub(crate) const REASON: &str = "x-access-reason";
+/// The purpose of use of the tests' emergency justification.
+pub(crate) const EMERGENCY: &str = "ETREAT";
+/// The reason every emergency of these tests states, percent-encoded.
+pub(crate) const EMERGENCY_REASON: &str = "Unconscious%20on%20arrival";
+/// The `persons` issuer of Dr B.
 const MEDICS: &str = "https://medics.example";
 
 /// The `machines` issuer of the regional providers' system clients.
@@ -39,9 +46,8 @@ const MACHINES: &str = "https://machines.example";
 /// across EHRs.
 const SYSTEM_SCOPES: &str = "system/composition-*.rs system/aql-*.s";
 
-/// The credential of `name`: Dr B's token of [`MEDICS`], holding the
-/// emergency role, an app-only token of [`MACHINES`] for `client:<id>`, or a
-/// Basic user's.
+/// The credential of `name`: Dr B's token of [`MEDICS`], an app-only token
+/// of [`MACHINES`] for `client:<id>`, or a Basic user's.
 pub(crate) fn credential(name: &str) -> String {
     if let Some(client) = name.strip_prefix("client:") {
         return crate::caller_kinds_http::bearer(
@@ -54,15 +60,14 @@ pub(crate) fn credential(name: &str) -> String {
         let exp = jiff::Timestamp::now().as_second() + 3600;
         return common::bearer(&json!({
             "sub": "drb", "iss": MEDICS, "aud": "ferroehr", "exp": exp,
-            "roles": ["USER", "EMERGENCY"],
+            "roles": ["USER"],
         }));
     }
     common::basic_credential(name)
 }
 
-/// An audited app with `ETREAT` an emergency purpose and `EMERGENCY` the
-/// emergency access role; Basic users for the administrator, a nurse and a
-/// psychiatrist, each bound to a `PERSON`; Dr B of [`MEDICS`]; the system
+/// An audited app with `TREAT` and `ETREAT` agreed purposes; Basic users for
+/// the administrator, a nurse and a psychiatrist, each bound to a `PERSON`; Dr B of [`MEDICS`]; the system
 /// clients of [`MACHINES`]; and the IPS template uploaded.
 pub(crate) async fn app() -> (
     testkit::TestDb,
@@ -117,7 +122,6 @@ pub(crate) async fn app_over_pools(
 ) {
     let audit = ferroehr::system_log::config::AuditConfig {
         purpose_codes: vec!["TREAT".to_owned(), "ETREAT".to_owned()],
-        emergency_purpose_codes: vec!["ETREAT".to_owned()],
         ..common::local_audit()
     };
     let (sender, _handle): (_, AuditHandle) = start(audit, None, pool.clone())
@@ -152,8 +156,6 @@ pub(crate) async fn app_over_pools(
     common::add_issuer(&mut config, crate::caller_kinds_http::machines(MACHINES));
     common::bind_issuer(&mut config, MEDICS);
     common::bind_subjects(&pool, &[(MEDICS, "drb")]).await;
-    config.rbac.role_issuers = vec![common::name_of(MEDICS)];
-    config.rbac.emergency_access_role = Some("EMERGENCY".to_owned());
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
     let authz = AuthzHandle::build(&authz, &config.api.base_path).map(Arc::new);
@@ -172,7 +174,8 @@ pub(crate) async fn app_over_pools(
 }
 
 /// Sends `method uri` as `user`, with an optional declared purpose and body,
-/// asking for the full problem details.
+/// asking for the full problem details. A request declaring [`EMERGENCY`]
+/// states [`EMERGENCY_REASON`].
 pub(crate) async fn send(
     app: &Router,
     method: &str,
@@ -189,6 +192,9 @@ pub(crate) async fn send(
         .header("Prefer", "return=representation");
     if let Some(purpose) = purpose {
         req = req.header(PURPOSE, purpose);
+    }
+    if purpose == Some(EMERGENCY) {
+        req = req.header(REASON, EMERGENCY_REASON);
     }
     let req = match body {
         Some((content_type, body)) => req
@@ -230,6 +236,43 @@ pub(crate) async fn ehr_with_composition(app: &Router) -> (String, String) {
         .expect("object id")
         .to_owned();
     (ehr, vo)
+}
+
+/// Writes the controller's first policy as the administrator: an emergency
+/// justification of every professional for [`EMERGENCY`], with `members`.
+pub(crate) async fn put_emergency_policy(app: &Router, members: &Value) {
+    let archetype = "openEHR-EHR-ACCESS_POLICY.controller.v1";
+    let mut policy = json!({
+        "_type": "ACCESS_POLICY",
+        "name": { "_type": "DV_TEXT", "value": "Hospital access policy" },
+        "archetype_node_id": archetype,
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+            "rm_version": "1.2.0" },
+        "controller": { "_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
+            "id": { "_type": "HIER_OBJECT_ID", "value": "2c3d4e5f-6a7b-4c8d-9e0f-a1b2c3d4e5f7" } },
+        "care_relationship_required": false,
+        "purpose_required": false,
+        "justifications": [{ "_type": "ACCESS_JUSTIFICATION", "emergency": true,
+            "purposes": [{ "_type": "DV_CODED_TEXT", "value": "emergency treatment",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_ActReason" },
+                    "code_string": EMERGENCY } }] }]
+    });
+    if let (Some(p), Some(members)) = (policy.as_object_mut(), members.as_object()) {
+        p.extend(members.clone());
+    }
+    let (status, _, body) = common::send(
+        app,
+        Request::put(format!("{EXT}/admin/access_policy"))
+            .header(header::AUTHORIZATION, credential("root"))
+            .header(header::CONTENT_TYPE, "application/json")
+            .header(header::IF_NONE_MATCH, "*")
+            .body(Body::from(policy.to_string()))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "the policy: {body}");
 }
 
 /// A term of the access control groups.
@@ -306,11 +349,12 @@ pub(crate) async fn queried(app: &Router, user: &str, purpose: Option<&str>) -> 
 }
 
 /// The ex-partner: Ms A's consent deny names Dr B, who is refused with the
-/// consent code everywhere he reaches her record, until he declares an
-/// emergency with the break-glass role; everyone else reads it.
+/// consent code everywhere he reaches her record, until he invokes the
+/// emergency justification with a reason; everyone else reads it.
 #[tokio::test]
 async fn the_ex_partner_is_refused_until_his_emergency() {
     let (_db, pool, svc, app) = Box::pin(app()).await;
+    put_emergency_policy(&app, &json!({})).await;
     let (ehr, vo) = ehr_with_composition(&app).await;
     let drb = common::issuer_person(&pool, MEDICS, "drb").await;
     let deny = directive(
@@ -485,11 +529,12 @@ async fn a_classification_refuses_the_uncleared() {
     );
 }
 
-/// A restriction no emergency may lift is accepted, and holds against the
-/// break-glass role declaring an emergency.
+/// A restriction no emergency may lift is accepted, and holds against an
+/// emergency justification invoked with a reason.
 #[tokio::test]
 async fn an_absolute_restriction_holds_in_an_emergency() {
     let (_db, _pool, svc, app) = Box::pin(app()).await;
+    put_emergency_policy(&app, &json!({})).await;
     let (ehr, vo) = ehr_with_composition(&app).await;
     let mut absolute = common::access_directive("restriction", &[&vo]);
     absolute["emergency_override"] = json!(false);

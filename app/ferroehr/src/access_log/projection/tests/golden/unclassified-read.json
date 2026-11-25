@@ -69,7 +69,8 @@
         ],
         "policy": [
           "jti-7f3e",
-          "permit-42"
+          "permit-42",
+          "policy::cdr.example.org::2"
         ],
         "purposeOfUse": [
           {
@@ -77,13 +78,6 @@
               {
                 "code": "ETREAT",
                 "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
-              }
-            ]
-          },
-          {
-            "coding": [
-              {
-                "code": "TREAT"
               }
             ]
           }
@@ -182,13 +176,6 @@
           {
             "code": "ETREAT",
             "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
-          }
-        ]
-      },
-      {
-        "coding": [
-          {
-            "code": "TREAT"
           }
         ]
       }

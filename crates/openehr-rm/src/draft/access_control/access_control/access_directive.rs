@@ -62,7 +62,7 @@ pub struct AccessDirective {
     pub data: Option<openehr_base::containers::NonEmptyVec<AccessDataScope>>,
     /// When the directive is in force. Void is in force from the commit of the version that adds it until a later version removes it.
     pub time_validity: Option<DvInterval<DvDateTime>>,
-    /// Whether a caller declaring an emergency purpose of use, under the system's emergency rules, is exempt from this directive (EHDS Art.
+    /// Whether a caller that invokes an emergency justification of the controller's policy is exempt from this directive (EHDS Art.
     ///
     /// 11(5) for a restriction; Art. 10(2) for an opt-out where national law allows it).
     pub emergency_override: bool,

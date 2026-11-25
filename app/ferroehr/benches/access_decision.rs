@@ -34,7 +34,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess};
-use ferroehr::access_eval::procedure::{Caller, Emergency};
+use ferroehr::access_eval::procedure::Caller;
 use ferroehr::access_eval::scope::CategoryIndex;
 use ferroehr::party_binding::grants::caller::CareTeam;
 use ferroehr::party_binding::grants::caller::facts::CallerFacts;
@@ -222,7 +222,8 @@ fn request() -> RequestAccess {
         Asking {
             operation: OperationClass::Read,
             purpose: Some("TREAT".to_owned()),
-            emergency: Emergency::default(),
+            reason: None,
+            opt_out_override: false,
             episodes: None,
         },
         InForce {

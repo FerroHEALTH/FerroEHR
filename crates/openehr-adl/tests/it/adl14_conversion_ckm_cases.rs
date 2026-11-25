@@ -21,6 +21,7 @@ use openehr_adl::adl14::log::ConversionLog;
 use openehr_adl::adl14::specialised_codes::check_introduced_codes;
 use openehr_adl::artefact::ArchetypeRepository;
 use openehr_adl::assemble::parse_artefact;
+use openehr_adl::codes::NodeCoding;
 use openehr_adl::parse::Dialect;
 use openehr_adl::print::print;
 use openehr_adl::validate::bindings::NoTerminologyResolver;
@@ -52,8 +53,13 @@ fn read(path: &Path) -> String {
     std::fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
 }
 
+/// The id-coded conversion of `src`, whose renumbering these cases pin.
 fn converted(src: &str, log: &mut ConversionLog) -> Archetype {
-    parse_and_convert(src, &ConvertConfig::default(), log).expect("the 1.4 source converts")
+    let cfg = ConvertConfig {
+        coding: NodeCoding::Id,
+        ..ConvertConfig::default()
+    };
+    parse_and_convert(src, &cfg, log).expect("the 1.4 source converts")
 }
 
 fn data(a: &Archetype) -> &AuthoredArchetypeData {

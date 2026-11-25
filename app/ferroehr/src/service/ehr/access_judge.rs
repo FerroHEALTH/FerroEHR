@@ -625,8 +625,9 @@ impl FerroEhrService {
     /// the EHDS Art. 10(2) override of its opt-out, once per EHR; an EHR whose
     /// verdict lifted no opt-out records nothing.
     ///
-    /// Each record carries the declared purpose, which gives it the emergency
-    /// mark, beside the access record of the request itself.
+    /// Each record carries the declared purpose and the emergency
+    /// justification with its reason, beside the access record of the
+    /// request itself.
     ///
     /// # Errors
     /// As [`Self::ehr_verdict`]; `service_overloaded` when an access record
@@ -641,14 +642,15 @@ impl FerroEhrService {
         let named: std::collections::BTreeSet<EhrId> = ehr_ids.iter().copied().collect();
         for ehr_id in named {
             let verdict = self.ehr_verdict(&access, ehr_id).await?;
-            if verdict.lifted.contains(&Lifted::OptOut) {
-                self.emit_mark_access(
+            if verdict.lifted.contains(&Lifted::OptOut) && self.audit_enabled() {
+                let mut event = self.mark_record(
                     crate::system_log::event::EventActionCode::Execute,
                     ehr_id,
                     None,
                     OPT_OUT_OVERRIDE,
-                )
-                .await?;
+                );
+                event.justification = access.decision(Some(ehr_id)).justification;
+                self.record_access(event).await?;
             }
         }
         Ok(())

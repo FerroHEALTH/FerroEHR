@@ -1210,10 +1210,13 @@ which is what makes an optional stage safe to disable:
    write would stop care being documented and its `404` would hint at the
    restriction; they decide a write for the EHR alone, and the data written
    stay covered by them for reading (owner ruling on #5621). An
-   emergency purpose lifts an opt-out for an access service that may
-   override it (Art. 10(2)), and, with `[authz.rbac] emergency_access_role`,
-   a restriction, a consent deny or a deny rule whose `emergency_override`
-   holds and steps 6 to 8 (Art. 11(5)).
+   emergency justification of the access policy, invoked with a reason,
+   lifts an opt-out for an access service that may override it (Art.
+   10(2)), and a restriction, a consent deny, an exclusion or a deny rule
+   whose `emergency_override` holds and steps 6 to 8 (Art. 11(5)). Any other
+   justification stands in for a live care relationship at steps 7 and 8
+   when the request states a reason, and is refused `refused-reason-missing`
+   without one (#6587, `access_eval::justification`).
 
    **Controller rules** (#5621, #5624, #5627; our own design, proposed in
    the draft specification). `ACCESS_POLICY.rules` holds the controller's
@@ -1486,9 +1489,9 @@ of exceptions are our own design.
 - **EHDS** (Regulation (EU) 2025/327, `docs/law/eu/ehds/text.html`): Art. 8
   is the `restriction` directive, invisible to the provider (`404`, and the
   settings absent from every read but the subject's, the gate-keepers' and
-  the administrator's); Art. 11(5) is its `emergency_override`, lifted for
-  `[authz.rbac] emergency_access_role` with an emergency purpose and logged
-  with the emergency mark; Art. 10 is the `opt_out` directive for access
+  the administrator's); Art. 11(5) is its `emergency_override`, lifted by an
+  emergency justification of the access policy invoked with a reason and
+  logged with the reason and the emergency mark; Art. 10 is the `opt_out` directive for access
   services, Art. 10(2) its emergency lift and recital 55 an override held
   false; Art. 4(2) is the representation `PARTY_RELATIONSHIP` narrowed by
   `delegation` directives; Art. 11(3) is the controller's rules; Annex II 3.4
@@ -1531,8 +1534,8 @@ access facts. What a Cedar policy could say moved as follows: an
 organisation condition to the acts-for relationship and its organisation
 type; a patient match to the evaluator's confinement of a subject and a
 representative; a template allow-list or a revoked template to a controller
-deny rule with a permit exception; a break-glass role to
-`emergency_access_role` with a declared emergency purpose; a read-only
+deny rule with a permit exception; a break-glass role to an emergency
+justification of the access policy naming that role; a read-only
 client to the SMART scope layer and the operation codes; a category or
 origin rule to a classification or a data scope; a rule on one caller to a
 directive or rule naming that caller's party. A condition on a raw scope,
@@ -1540,8 +1543,7 @@ claim or `sub` string, and free boolean composition, have no form, by
 design. Cedar could not express purpose, care relationships, the subject's
 own directives or per-object sensitivity; the model has them. What stays in
 `ferroehr.toml` is trust and the floor the policy can only tighten:
-`[authz.rbac] admin_role`, `emergency_access_role` and
-`ehr_access_default`, and `[audit] emergency_purpose_codes`.
+`[authz.rbac] admin_role` and `ehr_access_default`.
 
 **Operations.**
 
@@ -1601,8 +1603,7 @@ audit sinks, signing, the issuers with their keys and trust bounds,
 `[auth] product_scope`, `[authz.rbac] admin_role` with `role_issuers` (the
 authority that writes policy parties), the party mapping (digest-locked),
 the `provider`, the security floors (assurance, `ehr_access_default`, the
-cohort thresholds), break-glass (`emergency_access_role`,
-`emergency_purpose_codes`) and the Basic users' password hashes. A key that
+cohort thresholds) and the Basic users' password hashes. A key that
 moves into the party store is removed and refused as an unknown key, like
 any other. The policy parties add no configuration key, required or
 optional. No openEHR spec governs configuration: our own design.
@@ -2331,10 +2332,10 @@ the matching import, `read_subject_audit` the ITI-81 read of one subject's acces
 `access_service` an EHDS Art. 10 access service, each read from the
 request's `Capabilities` with no transaction added; `[authz.rbac]` names no
 role for any of them, and the four keys that did are unknown keys. The
-privileged roles of `[authz.rbac]` (`admin_role`, `emergency_access_role`)
-are reserved: a `hold_roles` grant naming one is
+privileged role of `[authz.rbac]` (`admin_role`) is reserved: a
+`hold_roles` grant naming it is
 `403` at commit (`GrantCeiling::with_reserved_roles`) and never honoured, so
-the administrator authority and break-glass never come from the party
+the administrator authority never comes from the party
 store. The keys `[[auth.basic.users]] roles` and `scopes` belong to
 `ferrohealth-smart`, so they leave the schema with that crate. **Our own
 design.**
@@ -2455,11 +2456,15 @@ drops a representation (EHDS Art. 4(2)). **Our own design**, as no openEHR
 spec governs resolving a login to a party, SCIM provisioning or who may
 write a relationship.
 
-**Break-glass stays in the configuration.** Emergency access (EHDS Art.
-11(5)) must work when the party store does not answer, so
-`emergency_access_role` and `emergency_purpose_codes` stay TOML. **Our own
-design:** no specification governs break-glass when the policy store is
-down.
+**Break-glass is a justification of the access policy** (#6587). Emergency
+access (EHDS Art. 11(5)) is one kind of justified access outside the care
+relationships, so the controller writes it in `ACCESS_POLICY.justifications`
+beside the others, with the callers it names, and every request needs a
+reason the access record keeps. The policy is held in memory on every
+replica and decides without a database read, so an emergency works while
+the policy store does not answer, as long as the replica read the policy
+once. **Our own design:** no specification governs where a CDR keeps its
+break-glass rule.
 
 **The default definitions** sit under `app/ferroehr/assets/definitions/policy/`
 with a `PROVENANCE.md`: the `AGENT` and the acts-for relationship adapt CKM's

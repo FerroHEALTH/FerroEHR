@@ -113,7 +113,7 @@ The same record at the three levels, each caller acting for H:
 |`refused-confidentiality`
 |`refused-confidentiality`
 
-|Any clinician declaring an emergency
+|Any clinician invoking an emergency justification
 |none
 |admitted, marked
 |admitted, marked
@@ -164,7 +164,7 @@ patient:P1#care[RESP]@person:huisman  provider G (the GP), no episode
 |admitted
 |admitted
 
-|Any clinician declaring an emergency
+|Any clinician invoking an emergency justification
 |admitted, marked
 |admitted, marked
 |admitted, marked

@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 656 keys. A deployment that holds real data sets the 8 below,
+# This file lists 655 keys. A deployment that holds real data sets the 8 below,
 # the only live lines; every other key is optional and runs on the built-in
 # default its `#?` line shows, or stays unset where its note says so.
 #
@@ -692,14 +692,9 @@ profile = "sandbox"
 # granting roles (a restriction overrides a grant). Supports the conformance
 # catalogue's authorization-separation cases. Optional (trust).
 #? readonly_role = "READONLY"
-# The role that may reach data under an EHDS Art. 8 access restriction in an
-# emergency (`FERROEHR__AUTHZ__RBAC__EMERGENCY_ACCESS_ROLE`, default unset).
-# Optional, unset by default (trust).
-#? emergency_access_role = ""
-# The issuers whose role claims may grant `admin_role` and
-# `emergency_access_role`, each the name of an `[auth.issuer.<name>]` table of
-# an issuer other than a `federation` one; empty, the default, lets no token
-# grant them. Optional (trust).
+# The issuers whose role claims may grant `admin_role`, each the name of an
+# `[auth.issuer.<name>]` table of an issuer other than a `federation` one;
+# empty, the default, lets no token grant them. Optional (trust).
 #? role_issuers = []
 # The Basic user of `[auth.basic.users]` that holds `admin_role` and `[auth]
 # product_scope` from this file (`FERROEHR__AUTHZ__RBAC__FIRST_ADMIN`, default
@@ -1162,17 +1157,17 @@ profile = "sandbox"
 # (`FERROEHR__AUDIT__PERMIT_HEADER`), recorded on every access record.
 # Optional.
 #? permit_header = "x-data-permit"
+# The request header carrying the reason a caller states for an access that
+# rests on a justification of the access policy rather than a care relationship
+# (`FERROEHR__AUDIT__REASON_HEADER`), recorded with the access. Optional.
+#? reason_header = "x-access-reason"
 # The purpose codes this deployment accepts (`FERROEHR__AUDIT__PURPOSE_CODES`).
 # Optional.
 #? purpose_codes = []
-# The code system `purpose_codes` and `emergency_purpose_codes` belong to
+# The code system `purpose_codes` belong to
 # (`FERROEHR__AUDIT__PURPOSE_SYSTEM`), the canonical URL of a FHIR
 # `CodeSystem`. Optional.
 #? purpose_system = "http://terminology.hl7.org/CodeSystem/v3-ActReason"
-# The declared purpose codes that mark an access as an emergency access
-# (`FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES`). Empty (the default) marks
-# nothing. Optional (trust).
-#? emergency_purpose_codes = []
 # The legal basis this deployment processes under
 # (`FERROEHR__AUDIT__LEGAL_BASIS`), recorded on every access record. Optional,
 # unset by default (infrastructure).

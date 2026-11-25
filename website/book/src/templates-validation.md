@@ -319,11 +319,27 @@ The answer is `application/json`:
 
 An id nothing is stored under answers **404**. A stored source that no
 longer converts answers **422**, the status an archetype upload answers
-for a source it cannot accept. A specialised archetype whose stored parent
+for a source it cannot accept. ADL 1.4 writes a specialised archetype in
+flat form and ADL 2 in differential form, so the route reduces a specialised
+archetype against the conversion of its stored parent. Upload the parent
+first: without it the route answers **422** and names the parent. A
+specialised archetype whose stored parent
 lacks a term code the archetype introduces without its specialisation dots
 (`at0006` where depth 1 needs `at0.1`) also answers **422**: AOM 1.4 requires
 the dots on every code a specialisation adds. The routes only read, so the
 read-only role may call them.
+
+Each converted archetype is at-coded ADL 2.4: it keeps every ADL 1.4 node
+and value code as written, so a composition recorded against the ADL 1.4
+archetype validates unchanged against a template built over the conversion.
+The ADL 2 specification makes the at-coded system the openEHR primary code
+system and states that at-coded ADL 2.4 is fully backwards compatible with
+RM data created from ADL 1.4 archetypes. A converted archetype carries the
+full version its ADL 1.4 `revision` item states, so
+`openEHR-EHR-EVALUATION.device_summary.v0` with revision `0.0.1-alpha`
+converts to `openEHR-EHR-EVALUATION.device_summary.v0.0.1-alpha`. A template
+names a pre-release such as this one by that full identifier, since a
+major-version reference never reaches an alpha or beta version.
 
 The description meta-data follows the conversion rules of the AOM 2
 specification (Release 2.3 changes): each line of a translation's

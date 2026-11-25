@@ -7,25 +7,27 @@
 //! 1. **Opt-out** (EHDS Art. 10): an `opt_out` directive in force binds the
 //!    access services; the EHR reads as absent (`refused-opt-out`), unless
 //!    its `emergency_override` holds and an access service that may override
-//!    declares an emergency purpose without acting for the subject
+//!    invokes an emergency justification without acting for the subject
 //!    (Art. 10(2)).
 //! 2. **Restriction** (EHDS Art. 8): a `restriction` directive in force binds
 //!    professionals, the systems that act for a provider and the access
 //!    services; the data it covers read as absent (`refused-restricted`),
-//!    unless its `emergency_override` holds and the break-glass role declares
-//!    an emergency purpose (Art. 11(5)).
+//!    unless its `emergency_override` holds and the caller invokes an
+//!    emergency justification (Art. 11(5)).
 //! 3. **Consent deny**: any other deny directive that applies, with no
 //!    exception that applies, refuses (`refused-consent-denied`), lifted the
 //!    same way. A representative named by a `delegation` directive reads only
 //!    what an applying delegation permit covers (EHDS Art. 4(2)).
 //! 4. **Purpose**: where the policy requires one, a request without a
 //!    declared purpose is refused (`refused-purpose-missing`) before any rule
-//!    is read; which purposes a caller may declare is a rule of step 5.
+//!    is read; which purposes a caller may declare is a rule of step 5. An
+//!    emergency justification invoked without a reason is refused here
+//!    (`refused-reason-missing`), before any datum is read.
 //! 5. **Controller rule** (EHDS Art. 11(3)): a deny rule of the controller's
 //!    `ACCESS_POLICY` that applies, with no exception that applies, refuses
 //!    whatever the subject's directives permit (`refused-policy-denied`),
-//!    unless its `emergency_override` holds and the break-glass role declares
-//!    an emergency purpose. A rule that sets purposes applies only to a
+//!    unless its `emergency_override` holds and the caller invokes an
+//!    emergency justification. A rule that sets purposes applies only to a
 //!    request that declares one of them.
 //! 6. **Sensitivity**: data carrying a sensitivity, from an `ACCESS_LABEL` or
 //!    the controller's classifications, that no applying permit directive or
@@ -38,7 +40,10 @@
 //!    needs a live care relationship to the subject, a permit naming them, or
 //!    a gate-keeper entry (`refused-no-care-relationship`; BASE Architecture
 //!    Overview `master07-security.adoc` §Security Policy, "Time-limitation of
-//!    access").
+//!    access"). A justification of the policy the caller invokes stands in
+//!    for the relationship with a reason, and is refused
+//!    `refused-reason-missing` without one
+//!    ([`crate::access_eval::justification`]).
 //! 8. **Default disposition**: `open` admits, `restricted` admits a permit, a
 //!    gate-keeper or a live care relationship, `consent_required` a permit or
 //!    a gate-keeper (`refused-consent-required`); an EHR with no settings
@@ -70,7 +75,7 @@
 //! and a representative is held to steps 1 to 3 and 5, the `delegation`
 //! directives of that EHR's `EHR_ACCESS` included, and skips 4 and 6 to 8: a
 //! controller rule can keep, say, a minor's confidential data from a parent.
-//! A declared emergency by the break-glass role lifts steps 6 to 8.
+//! An emergency justification invoked with a reason lifts steps 6 to 8.
 //!
 //! A directive permit decides only through steps 6, 7 and 8; a permit rule
 //! only through step 6, and a rule's permit exception only inside its deny.
@@ -85,6 +90,7 @@
 use openehr_rm::draft::access_control::access_control::access_conflict_rule::AccessConflictRule;
 use openehr_rm::draft::access_control::access_control::access_data_scope::AccessDataScope;
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
+use openehr_rm::draft::access_control::access_control::access_justification::AccessJustification;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
     AccessDefault, CallerKind, Confidentiality, Conflict, DirectiveKind, Effect, ForeignCode,
@@ -94,6 +100,7 @@ use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
 use crate::access_eval::care_tie::{Cared, Tie, care_needs, granting};
 use crate::access_eval::directive::{Permit, Reader, kind_and_effect, names_sensitivity};
+use crate::access_eval::justification::{Invoked, Justified};
 use crate::access_eval::scope::{Item, Pred, Scopes};
 use crate::ids::EhrId;
 use crate::party_binding::grants::caller::facts::CallerFacts;
@@ -104,6 +111,7 @@ use crate::versioning::episode::EpisodeKey;
 mod confidentiality;
 mod covering;
 mod narrowing;
+mod permits;
 
 /// Who asks, as the procedure reads them.
 #[derive(Debug, Clone, PartialEq)]
@@ -177,31 +185,14 @@ pub struct Asked<'a> {
     pub operation: OperationClass,
     /// The declared purpose of use, by its code.
     pub purpose: Option<&'a str>,
-    /// What the caller declared in an emergency.
-    pub emergency: Emergency,
+    /// Whether the request states a reason for a justified access.
+    pub reasoned: bool,
+    /// Whether the caller is an access service that may lift an opt-out for
+    /// a vital interest, and does not act for the subject (EHDS Art. 10(2)).
+    pub opt_out_override: bool,
     /// The episodes of care the request is narrowed to, sorted; `None` when
     /// it is not narrowed.
     pub episodes: Option<&'a [EpisodeKey]>,
-}
-
-/// An emergency as the caller declared it.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct Emergency {
-    /// The request declares one of `[audit] emergency_purpose_codes`.
-    pub declared: bool,
-    /// The caller holds `[authz.rbac] emergency_access_role`.
-    pub break_glass: bool,
-    /// The caller is an access service that may override an opt-out for a
-    /// vital interest, and does not act for the subject (EHDS Art. 10(2)).
-    pub opt_out_override: bool,
-}
-
-impl Emergency {
-    /// Whether the break-glass role declares an emergency purpose.
-    #[must_use]
-    pub const fn break_glass(self) -> bool {
-        self.declared && self.break_glass
-    }
 }
 
 /// What the controller's `ACCESS_POLICY` requires of clinical access.
@@ -224,6 +215,9 @@ pub struct Policy<'a> {
     pub concealed: [bool; 2],
     /// `episode_shared`: the data every episode covers.
     pub episode_shared: &'a [AccessDataScope],
+    /// `justifications`: the grounds of an access outside the care
+    /// relationships.
+    pub justifications: &'a [AccessJustification],
 }
 
 impl<'a> Policy<'a> {
@@ -252,6 +246,7 @@ impl<'a> Policy<'a> {
                 concealed.contains(&Confidentiality::VeryRestricted),
             ],
             episode_shared: policy.episode_shared.as_deref().unwrap_or_default(),
+            justifications: policy.justifications.as_deref().unwrap_or_default(),
         }
     }
 
@@ -364,9 +359,12 @@ pub struct Grounds {
     /// The conflicts a conflict rule of the policy allowed, which mark the
     /// access (draft decision procedure step 5).
     pub conflicts: Vec<Conflict>,
+    /// The justification the verdict rests on, with the data it admitted.
+    pub justification: Option<Justified>,
 }
 
-/// A directive or a step an emergency lifted, which marks the access.
+/// A directive or a step an emergency justification lifted, which marks the
+/// access.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Lifted {
     /// An opt-out (EHDS Art. 10(2)).
@@ -377,7 +375,7 @@ pub enum Lifted {
     Consent,
     /// A deny rule of the controller's policy.
     Rule,
-    /// Steps 6 to 8, by the break-glass role.
+    /// Steps 6 to 8.
     Policy,
     /// An exclusion of the controller.
     Exclusion,
@@ -391,7 +389,7 @@ pub struct Verdict {
     pub rules: Vec<Rule>,
     /// The answer for an item no rule covers.
     pub otherwise: Outcome,
-    /// What an emergency lifted.
+    /// What an emergency justification lifted.
     pub lifted: Vec<Lifted>,
     /// What the verdict rests on beside its rules.
     pub grounds: Grounds,
@@ -534,19 +532,19 @@ fn procedure(judged: &Judged<'_>) -> Verdict {
     }
     let (directives, exclusions, held_closed) = lists(judged.ehr.settings);
     let read = Reader { judged };
-    let placed = |at: usize| judged.scopes.layout().and_then(|l| l.directives.get(at));
-    crate::access_eval::exclusion::excluded(&read, exclusions, &mut verdict);
-    denials(&read, directives, &mut verdict);
+    let invoked = crate::access_eval::justification::invoked(&read);
+    let lifts = invoked.is_some_and(Invoked::lifts);
+    crate::access_eval::exclusion::excluded(&read, exclusions, lifts, &mut verdict);
+    denials(&read, directives, lifts, &mut verdict);
     if caller.kind == CallerKind::Representative {
         crate::access_eval::delegation::delegation(&read, directives, &mut verdict);
-        controller_denials(&read, &mut verdict);
+        controller_denials(&read, false, &mut verdict);
         return verdict;
     }
-    // Step 4: a purpose, checked as input before any rule is read (#5737).
-    if judged.policy.purpose_required && judged.asked.purpose.is_none() {
+    if let Some(refusal) = missing_input(judged, invoked) {
         verdict.rules.push(Rule {
             when: Pred::True,
-            then: Outcome::Refused(Refusal::PurposeMissing),
+            then: Outcome::Refused(refusal),
             by: Vec::new(),
         });
         return verdict;
@@ -555,31 +553,23 @@ fn procedure(judged: &Judged<'_>) -> Verdict {
         verdict.rules.push(refused);
         return verdict;
     }
-    controller_denials(&read, &mut verdict);
-    if judged.asked.emergency.break_glass() {
+    controller_denials(&read, lifts, &mut verdict);
+    if let Some(invoked) = invoked.filter(|invoked| invoked.lifts()) {
         verdict.lifted.push(Lifted::Policy);
+        verdict.grounds.justification = Some(Justified {
+            at: invoked.at,
+            emergency: true,
+            cover: Pred::True,
+        });
         return verdict;
     }
-    let permits: Vec<Permit<'_>> = directives
-        .iter()
-        .enumerate()
-        .filter(|(_, d)| kind_and_effect(d) == (DirectiveKind::Consent, Effect::Permit))
-        .filter_map(|(at, d)| {
-            let binds = read.binds(DirectiveKind::Consent, d, placed(at));
-            (binds != Pred::False).then(|| Permit {
-                at,
-                directive: d,
-                certain: binds == Pred::True,
-                cover: Pred::all(vec![binds, read.cover(d, Effect::Permit, placed(at))]),
-            })
-        })
-        .collect();
+    let permits = permits::consent_permits(&read, directives);
     verdict.grounds.permits = permits
         .iter()
         .filter(|permit| permit.certain)
         .map(|permit| permit.at)
         .collect();
-    let rule_permits = rule_permits(&read);
+    let rule_permits = permits::rule_permits(&read);
     let naming: Vec<&Permit<'_>> = permits.iter().chain(&rule_permits).collect();
     confidentiality::step_6(&read, &naming, &mut verdict);
     let keeper = Pred::any(vec![Pred::of(caller.administrator), read.keeper()]);
@@ -610,6 +600,7 @@ fn procedure(judged: &Judged<'_>) -> Verdict {
             live,
             care_read,
             default,
+            justified: invoked,
         },
         &mut verdict,
     );
@@ -620,6 +611,19 @@ fn procedure(judged: &Judged<'_>) -> Verdict {
     };
     disposition(admitted, permits, &mut verdict);
     verdict
+}
+
+/// Step 4: the refusal of a request missing what it must declare before any
+/// rule is read: the purpose the policy requires (#5737), or the reason of
+/// the emergency justification it invokes (#6587).
+fn missing_input(judged: &Judged<'_>, invoked: Option<Invoked>) -> Option<Refusal> {
+    if judged.policy.purpose_required && judged.asked.purpose.is_none() {
+        Some(Refusal::PurposeMissing)
+    } else if invoked.is_some_and(|invoked| invoked.emergency && !invoked.reasoned) {
+        Some(Refusal::ReasonMissing)
+    } else {
+        None
+    }
 }
 
 /// The directives and the exclusions of `settings`, and whether the EHR is
@@ -658,10 +662,15 @@ fn disposition(admitted: Pred, permits: Vec<Permit<'_>>, verdict: &mut Verdict) 
 }
 
 /// Steps 1 to 3: every deny directive that binds the caller, in step order
-/// (opt-out, restriction, consent), or the mark of an emergency that lifts
-/// it.
-fn denials(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &mut Verdict) {
-    let emergency = read.judged.asked.emergency;
+/// (opt-out, restriction, consent), or the mark of an emergency
+/// justification that lifts it, when `lifts`.
+fn denials(
+    read: &Reader<'_, '_>,
+    directives: &[AccessDirective],
+    lifts: bool,
+    verdict: &mut Verdict,
+) {
+    let opt_out_override = lifts && read.judged.asked.opt_out_override;
     for (at, directive) in directives.iter().enumerate() {
         let placed = read.placed(at);
         let (kind, effect) = kind_and_effect(directive);
@@ -672,27 +681,27 @@ fn denials(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &mut 
         if binds == Pred::False {
             continue;
         }
-        let (refusal, lifted, lifts) = match kind {
+        let (refusal, lifted, lifted_here) = match kind {
             DirectiveKind::OptOut => (
                 Outcome::Absent(Refusal::OptOut),
                 Lifted::OptOut,
-                emergency.declared && emergency.opt_out_override,
+                opt_out_override,
             ),
             DirectiveKind::Restriction => (
                 Outcome::Absent(Refusal::Restricted),
                 Lifted::Restriction,
-                emergency.break_glass(),
+                lifts,
             ),
             DirectiveKind::Consent | DirectiveKind::Delegation => (
                 Outcome::Refused(Refusal::ConsentDenied),
                 Lifted::Consent,
-                emergency.break_glass(),
+                lifts,
             ),
             // NOTE: draft BMM `Directives_not_controller_rules`, an EHR's directives hold no rule
             // and no exclusion.
             DirectiveKind::ControllerRule | DirectiveKind::Exclusion => continue,
         };
-        if directive.emergency_override && lifts {
+        if directive.emergency_override && lifted_here {
             if binds == Pred::True {
                 verdict.lifted.push(lifted);
                 verdict
@@ -721,30 +730,11 @@ const fn step(outcome: Outcome) -> u8 {
     }
 }
 
-/// The permit rules of the controller's policy that may bind the caller.
-fn rule_permits<'a>(read: &Reader<'_, 'a>) -> Vec<Permit<'a>> {
-    read.judged
-        .rules
-        .iter()
-        .enumerate()
-        .filter(|(_, rule)| kind_and_effect(rule).1 == Effect::Permit)
-        .filter_map(|(at, rule)| {
-            let binds = read.binds(DirectiveKind::ControllerRule, rule, None);
-            (binds != Pred::False).then(|| Permit {
-                at,
-                directive: rule,
-                certain: binds == Pred::True,
-                cover: Pred::all(vec![binds, read.cover(rule, Effect::Permit, None)]),
-            })
-        })
-        .collect()
-}
-
 /// Step 5: every deny rule of the controller's policy that binds the
-/// caller, or the mark of an emergency that lifts it. A rule binds every
-/// caller but the subject, whatever the subject's directives permit.
-fn controller_denials(read: &Reader<'_, '_>, verdict: &mut Verdict) {
-    let break_glass = read.judged.asked.emergency.break_glass();
+/// caller, or the mark of an emergency justification that lifts it, when
+/// `lifts`. A rule binds every caller but the subject, whatever the
+/// subject's directives permit.
+fn controller_denials(read: &Reader<'_, '_>, lifts: bool, verdict: &mut Verdict) {
     for (at, rule) in read.judged.rules.iter().enumerate() {
         if kind_and_effect(rule).1 != Effect::Deny {
             continue;
@@ -753,7 +743,7 @@ fn controller_denials(read: &Reader<'_, '_>, verdict: &mut Verdict) {
         if binds == Pred::False {
             continue;
         }
-        if rule.emergency_override && break_glass {
+        if rule.emergency_override && lifts {
             if binds == Pred::True {
                 verdict.lifted.push(Lifted::Rule);
                 verdict

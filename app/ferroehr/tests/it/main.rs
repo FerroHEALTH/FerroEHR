@@ -53,6 +53,8 @@ mod access_origins;
 mod access_path_metrics;
 mod access_policy;
 mod adl14_knowledge_archetypes;
+mod adl14_pre_release_commit;
+mod adl14_specialised_conversion;
 mod adl2_content_commit;
 mod adl2_fixture;
 mod adl2_quantity_property;

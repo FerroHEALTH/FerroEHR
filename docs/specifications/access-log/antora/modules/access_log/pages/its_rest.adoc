@@ -9,13 +9,13 @@ NOTE: This page proposes an addition to the xref:ITS-REST::index.adoc[openEHR RE
 |Resource |Behaviour
 
 |`GET {baseUrl}/ehr/{ehr_id}/access_log`
-|The entries of one EHR, newest first. Query parameters: `from`, `to` (ISO 8601 date-times), `action`, `outcome`, `accessor_kind`, `emergency`, `include_self`, `offset`, `fetch`. `action`, `outcome` and `accessor_kind` name a term by its coded content, the FHIR token `terminology_id\|code` of its `defining_code`, such as `HL7_AuditEventAction\|R`, `openehr_access\|query` or `HL7_SecurityRoleType\|datasubject`; a value without a terminology, or one naming no term of the attribute's group, is a `400`. `include_self` defaults to false and leaves out the subject's own reads of their log.
+|The entries of one EHR, newest first. Query parameters: `from`, `to` (ISO 8601 date-times), `action`, `outcome`, `accessor_kind`, `justification`, `include_self`, `offset`, `fetch`. `action`, `outcome` and `accessor_kind` name a term by its coded content, the FHIR token `terminology_id\|code` of its `defining_code`, such as `HL7_AuditEventAction\|R`, `openehr_access\|query` or `HL7_SecurityRoleType\|datasubject`; a value without a terminology, or one naming no term of the attribute's group, is a `400`. `justification` is `justification` or `emergency` and keeps the entries with an authorisation of that kind. `include_self` defaults to false and leaves out the subject's own reads of their log.
 
 |`GET {baseUrl}/ehr/{ehr_id}/access_log/{uid}`
 |One entry or tombstone.
 
 |`GET {baseUrl}/admin/access-log`
-|Entries across EHRs, for review. Query parameters: `ehr_id`, `party_namespace`, `party_type`, `party_id`, `issuer`, `subject`, `request_id`, `from`, `to`, `outcome`, `emergency`, `offset`, `fetch`.
+|Entries across EHRs, for review. Query parameters: `ehr_id`, `party_namespace`, `party_type`, `party_id`, `issuer`, `subject`, `request_id`, `from`, `to`, `outcome`, `justification`, `offset`, `fetch`.
 
 |`GET {baseUrl}/admin/access-log/seals`
 |The seal of each window that covers a record number between `from_id` and `to_id`.

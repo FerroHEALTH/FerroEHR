@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The RM type of a node's `name` against the template's constraint on it.
+//! A node's `name` against the template's constraint on it: its RM type and,
+//! for a coded name, its code list.
 
 use crate::flat::instance::Instance;
 
+use super::leaf::check_code_membership;
 use super::{Validator, subtype};
 use crate::flat::webtemplate::model::WebTemplateNode;
 use crate::rm_instance::ValidationKind;
@@ -34,6 +36,24 @@ impl Validator {
                 format!("{path}/name"),
                 format!("expected RM type conforming to {want} but found {found}"),
                 ValidationKind::WrongType,
+            );
+            return;
+        }
+        if let (Some(input), Some(name)) = (wt.name_code_input.as_deref(), holder.attr("name")) {
+            let code = name.attr("defining_code");
+            let code_string = code
+                .and_then(|c| c.attr("code_string"))
+                .and_then(Instance::as_str);
+            let terminology = code
+                .and_then(|c| c.attr("terminology_id"))
+                .and_then(|t| t.attr("value"))
+                .and_then(Instance::as_str);
+            check_code_membership(
+                self,
+                &format!("{path}/name"),
+                false,
+                input,
+                (code_string, terminology),
             );
         }
     }

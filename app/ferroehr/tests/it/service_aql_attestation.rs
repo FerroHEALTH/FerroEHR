@@ -604,3 +604,74 @@ fn last_over_anything_but_one_attestation_path_is_refused() {
         );
     }
 }
+
+/// The column shapes of #6590: the attestations of a version are one flat
+/// list, each the `ATTESTATION` the version read serves, and a path below
+/// them the flat list of its values; a version with none answers `null`, the
+/// cell QUERY master04 §Result structure gives a missing data item, since
+/// `ORIGINAL_VERSION.Attestations_valid` admits no empty list.
+#[tokio::test]
+async fn attestation_columns_are_one_flat_list_and_null_without_attestations() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr = crate::fixtures::create_ehr(&svc).await;
+    let mut by_a = attestation_by("A", "first", false);
+    by_a["committer"]["external_ref"] = json!({
+        "_type": "PARTY_REF", "namespace": "hr", "type": "PERSON",
+        "id": { "_type": "GENERIC_ID", "value": "a-1", "scheme": "local" }
+    });
+    let v1 = commit_with(
+        &svc,
+        ehr,
+        "result",
+        json!([by_a, attestation_by("B", "second", true)]),
+    )
+    .await;
+    let vo: VoId = vo_of(&v1).parse().expect("vo id");
+    let v2 = svc
+        .update_composition(ehr, vo, uv(&composition("result"), "251", Some(&v1)))
+        .await
+        .expect("a second version")
+        .version_uid();
+    let served = svc
+        .composition_version_envelope(ehr, v1.parse().expect("an OBJECT_VERSION_ID"))
+        .await
+        .expect("the version read")
+        .body["attestations"]
+        .clone();
+    let committed = |n: usize| served[n]["time_committed"]["value"].clone();
+
+    let latest = run(
+        &svc,
+        "SELECT v/uid/value, v/attestations FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c",
+        ehr,
+    )
+    .await;
+    assert_eq!(latest, [json!([v2, null])]);
+
+    let mut every = run(
+        &svc,
+        "SELECT v/uid/value, v/attestations, v/attestations/committer/name, \
+                v/attestations/committer/external_ref/id/value, \
+                v/attestations/time_committed/value, v/attestations/reason/value, \
+                v/attestations/is_pending \
+         FROM EHR e CONTAINS VERSION v[ALL_VERSIONS] CONTAINS COMPOSITION c",
+        ehr,
+    )
+    .await;
+    every.sort_by_key(|row| row[0].as_str().map(str::to_owned));
+    assert_eq!(
+        every,
+        [
+            json!([
+                v1,
+                served,
+                ["A", "B"],
+                ["a-1"],
+                [committed(0), committed(1)],
+                ["first", "second"],
+                [false, true]
+            ]),
+            json!([v2, null, null, null, null, null, null]),
+        ]
+    );
+}

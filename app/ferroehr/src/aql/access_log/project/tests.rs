@@ -45,7 +45,7 @@ const PATHS: [&str; 28] = [
     "l/action",
     "l/purposes",
     "l/purposes/defining_code/code_string",
-    "l/is_emergency",
+    "l/authorisations/reason",
     "l/items",
     "l/items/version_id/value",
     "l/items/origins",

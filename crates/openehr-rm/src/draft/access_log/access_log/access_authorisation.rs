@@ -15,7 +15,7 @@ use crate::v1_2::data_types::uri::dv_uri::DvUri;
 #[doc(alias = "ACCESS_AUTHORISATION")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AccessAuthorisation {
-    /// The kind of ground, coded in the draft `openehr_access` terminology's `access authorisation` group: a role, a treatment relationship, an agreement, a consent decision, a permit, an emergency override, the subject's own access, a representation, a legal obligation, or a conflict allowance.
+    /// The kind of ground, coded in the draft `openehr_access` terminology's `access authorisation` group: a role, a treatment relationship, an agreement, a consent decision, a permit, a justification, an emergency, the subject's own access, a representation, a legal obligation, or a conflict allowance.
     pub kind: DvCodedText,
     /// The policy or agreement the ground is defined in.
     pub policy: Option<DvUri>,
@@ -27,6 +27,8 @@ pub struct AccessAuthorisation {
     pub reference: Option<DvIdentifier>,
     /// The legal provisions the ground rests on.
     pub legal_grounds: Option<Vec<DvCodedText>>,
+    /// For a justification or an emergency, the reason the accessor stated, in its own words (HL7 FHIR R4 `AuditEvent.purposeOfEvent.text`).
+    pub reason: Option<String>,
     /// For a treatment relationship, the care relationship the access rested on: where several admitted it, the one the decision procedure chooses (`direct` before `team` before `self_declared` before `attested`, then by the order of the roles in the scope that matched).
     pub care: Option<Box<AccessCareGround>>,
 }

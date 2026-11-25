@@ -28,6 +28,7 @@
         "ACCESS_RELATIONSHIP_VALIDITY",
         "ACCESS_RELATIONSHIP_WRITER",
         "ACCESS_CONFLICT_RULE",
+        "ACCESS_JUSTIFICATION",
         "ACCESS_VALUE_SET",
         "ACCESS_LOG_RESTRICTION",
         "ACCESS_LOG_RETENTION",
@@ -294,7 +295,7 @@
         "emergency_override": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "emergency_override",
-          "documentation": "Whether a caller declaring an emergency purpose of use, under the system's emergency rules, is exempt from this directive (EHDS Art. 11(5) for a restriction; Art. 10(2) for an opt-out where national law allows it).",
+          "documentation": "Whether a caller that invokes an emergency justification of the controller's policy is exempt from this directive (EHDS Art. 11(5) for a restriction; Art. 10(2) for an opt-out where national law allows it).",
           "is_mandatory": true,
           "type": "Boolean"
         },
@@ -813,6 +814,19 @@
             "upper_unbounded": true
           }
         },
+        "justifications": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "justifications",
+          "documentation": "The grounds on which a caller is admitted outside its care relationships, by a declared purpose of use and a stated reason. Void admits nobody on a justification.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_JUSTIFICATION"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
         "concealed_confidentialities": {
           "_type": "P_BMM_CONTAINER_PROPERTY",
           "name": "concealed_confidentialities",
@@ -916,6 +930,7 @@
         "Attested_care_valid": "attested_care /= Void implies not attested_care.is_empty",
         "Episode_shared_valid": "episode_shared /= Void implies not episode_shared.is_empty",
         "Conflict_rules_valid": "conflict_rules /= Void implies not conflict_rules.is_empty",
+        "Justifications_valid": "justifications /= Void implies not justifications.is_empty",
         "Concealed_valid": "concealed_confidentialities /= Void implies (not concealed_confidentialities.is_empty and concealed_confidentialities.for_all (c | c.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality)))",
         "Value_sets_valid": "value_sets /= Void implies not value_sets.is_empty"
       }
@@ -1100,6 +1115,50 @@
         "Kinships_valid": "kinships /= Void implies (not kinships.is_empty and conflict.defining_code.code_string.is_equal (\"related\"))"
       }
     },
+    "ACCESS_JUSTIFICATION": {
+      "name": "ACCESS_JUSTIFICATION",
+      "documentation": "A ground on which the controller admits a caller to an EHR outside its care relationships: a purpose of use the caller declares, with a reason it states, such as a consultation, a second opinion or an emergency. An access that rests on it is marked in the access log with the reason.",
+      "properties": {
+        "purposes": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "purposes",
+          "documentation": "The purposes of use, such as the `HL7_ActReason` codes `TREAT`, `ETREAT` or `BTG`, whose declaration invokes the justification.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 1,
+            "upper_unbounded": true
+          },
+          "is_mandatory": true
+        },
+        "applies_to": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "applies_to",
+          "documentation": "The callers that may invoke the justification. Void means every caller of kind `professional`.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_ACTOR_SCOPE"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "emergency": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "emergency",
+          "documentation": "Whether the justification is an emergency: it then lifts each directive, rule and exclusion whose `_emergency_override_` holds and the steps on sensitivity, confidentiality, care relationship and default, and the access is marked as an emergency access (EHDS Art. 11(5)). Otherwise it stands in for a live care relationship alone.",
+          "is_mandatory": true,
+          "type": "Boolean"
+        }
+      },
+      "invariants": {
+        "Purposes_valid": "not purposes.is_empty",
+        "Applies_to_valid": "applies_to /= Void implies not applies_to.is_empty"
+      }
+    },
     "ACCESS_VALUE_SET": {
       "name": "ACCESS_VALUE_SET",
       "documentation": "A value set the controller binds a coded attribute of the package to.",
@@ -1107,7 +1166,7 @@
         "binding": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "binding",
-          "documentation": "What the value set codes, in the `access value set binding` group: `care_role`, `representation_basis`, `kinship`, `organisation_type`, `care_purpose` or `emergency_purpose`.",
+          "documentation": "What the value set codes, in the `access value set binding` group: `care_role`, `representation_basis`, `kinship`, `organisation_type` or `care_purpose`.",
           "is_mandatory": true,
           "type": "DV_CODED_TEXT"
         },

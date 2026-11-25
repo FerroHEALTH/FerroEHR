@@ -1,0 +1,1 @@
+- A composition commit now refuses a coded `name` outside the code list its template constrains it to, at the node's `/name` path. For example, the CKM `exclusion_global` statement's name must be one of `local::at0003` to `at0007`. Before, only the name's RM type was checked, and only for ADL 1.4 templates. An ADL 2 template now checks the name's RM type too.
