@@ -13,10 +13,14 @@
 #                            URI, for the logo= parameter of a static badge
 #   badge_logo_check FILE... fails for each endpoint badge without a logo
 #   badge_logo_readme FILE   fails for each static badge without a logo
+#   badge_caption_check FILE fails unless the conformance caption sits on its
+#                            own line directly under a bold badge heading
 #
 # Needs jq.
 
 badge_logo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# NOTE: owner decision 2026-11-25; the badges stay short and this caption says once what they count.
+badge_caption='<sub>(self-tested and self-assessed counts; none is a certification)</sub>'
 
 # The pictogram NAME as one line of SVG, its comments removed.
 badge_logo_svg() {
@@ -73,4 +77,15 @@ badge_logo_readme() {
     fi
   done < <(grep -oE 'https://img\.shields\.io/[^)" ]+' "$1" | grep -v '^https://img\.shields\.io/endpoint?' || true)
   [[ "$failures" -eq 0 ]]
+}
+
+badge_caption_check() {
+  if ! awk -v caption="$badge_caption" '
+    previous ~ /^\*\*[^*]+\*\*(<br>)?$/ && ($0 == caption || $0 == caption "<br>") { found = 1 }
+    { previous = $0 }
+    END { exit !found }
+  ' "$1"; then
+    echo "badge logo: $1 has no line $badge_caption directly under a bold badge heading" >&2
+    return 1
+  fi
 }
