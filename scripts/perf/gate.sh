@@ -171,8 +171,8 @@ teardown() {
 # generated for this run (a committed key would be a defect of its own), each
 # with its passphrase in a file beside it. The head signs with an
 # ML-DSA-65+Ed25519 key (RFC 9980 algorithm ID 30) from ferrohealth-sop in
-# $OUT/signing; a base that predates that algorithm signs with a classical
-# key of PERF_SIGNING_KEY's algorithm from gpg in $OUT/signing-base.
+# $OUT/signing; a base whose tree predates that algorithm signs with a
+# classical key of PERF_SIGNING_KEY's algorithm from gpg in $OUT/signing-base.
 signing_key() {
   local algorithm="${PERF_SIGNING_KEY:-ed25519}" home fpr
   [[ "$algorithm" == ed25519 || "$algorithm" == rsa3072 ]] \
@@ -202,18 +202,13 @@ signing_key() {
   chmod 644 "$OUT"/signing*/signing.asc "$OUT"/signing*/passphrase
 }
 
-# signing_dir <image>: the directory of the key <image> signs with, the
-# classical one when its binary predates ML-DSA-65+Ed25519 keys.
+# signing_dir <suffix>: the directory of the key an arm signs with. The base
+# arm keeps the classical key while its tree predates ML-DSA-65+Ed25519 keys.
 signing_dir() {
-  if docker run --rm -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml \
-    -e FERROEHR__DATABASE__URL=postgres://check:check@localhost/check \
-    -v "$ROOT/perf/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro" \
-    -v "$ROOT/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro" \
-    -e FERROEHR__RECORD__SIGNING__ALLOW_CLASSICAL_KEY=false \
-    "$1" config check >/dev/null 2>&1; then
-    echo "$OUT/signing"
-  else
+  if [[ "$1" == -base ]] && ! grep -q '^ferrohealth-openpgp-pq' "$BASE_TREE/Cargo.toml"; then
     echo "$OUT/signing-base"
+  else
+    echo "$OUT/signing"
   fi
 }
 
@@ -238,7 +233,7 @@ up() {
   [[ "$suffix" == -base ]] && CODE_TREE="$BASE_TREE"
   local http_port="${5:-$HTTP_PORT}" pg_port="${6:-$PG_PORT}"
   local pg="$PG$suffix" server="$SERVER$suffix" keys
-  keys=$(signing_dir "$image")
+  keys=$(signing_dir "$suffix")
   docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create "$NETWORK" >/dev/null
   # The cluster lives in memory (#5866): every request commits before it
   # answers (#5789), and a hosted runner's WAL fsync ranges from 0.08 to
@@ -739,7 +734,7 @@ base_tree() {
 # that refuses it runs under its own tree's, as BASE_TREE holds it.
 base_config_tree() {
   local keys
-  keys=$(signing_dir "$1")
+  keys=$(signing_dir -base)
   if docker run --rm -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml \
     -e FERROEHR__DATABASE__URL=postgres://check:check@localhost/check \
     -v "$ROOT/perf/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro" \

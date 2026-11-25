@@ -30,9 +30,8 @@ pub enum Mode {
     #[default]
     Digest,
     /// An RFC 9580 detached signature over the canonical form with a
-    /// server-held `OpenPGP` key, ML-DSA-65+Ed25519 (RFC 9980 algorithm ID 30)
-    /// unless `allow_classical_key` admits a classical one: authentication
-    /// and non-repudiation.
+    /// server-held ML-DSA-65+Ed25519 `OpenPGP` key (RFC 9980 algorithm ID 30):
+    /// authentication and non-repudiation.
     Pgp,
 }
 
@@ -76,15 +75,10 @@ pub struct SigningConfig {
     /// Signing mode: `digest` | `pgp`.
     pub mode: Mode,
     /// Armored RFC 9580 secret key; **required for `pgp` mode** (validated at
-    /// boot, fail-closed). An ML-DSA-65+Ed25519 key (RFC 9980 algorithm ID 30),
-    /// as `ferrohealth-sop generate-key --signing-only` makes one.
+    /// boot, fail-closed): an ML-DSA-65+Ed25519 key (RFC 9980 algorithm ID 30),
+    /// as `ferrohealth-sop generate-key --signing-only` makes one. A classical
+    /// key is refused at boot.
     pub key_file: Option<PathBuf>,
-    /// Sign with a classical (Ed25519, `EdDSA` or RSA) key in `key_file`.
-    /// **Off by default**: a classical key is refused at boot, naming it. On,
-    /// the server signs with it and warns at boot that high-risk use must move
-    /// to post-quantum signatures by 31.12.2030 (EU coordinated implementation
-    /// roadmap). ECDSA and Ed448 keys are refused either way.
-    pub allow_classical_key: bool,
     /// Key passphrase, kept in [`ferrohealth_secret::secret::Secret`] and redacted from any
     /// config snapshot.
     pub key_passphrase: Option<Secret>,
@@ -113,7 +107,6 @@ impl Default for SigningConfig {
             enabled: true,
             mode: Mode::default(),
             key_file: None,
-            allow_classical_key: false,
             key_passphrase: None,
             key_passphrase_file: None,
             retired_key_files: Vec::new(),
@@ -160,10 +153,6 @@ mod tests {
         assert_eq!(c.verify_on_read, None);
         assert_eq!(c.effective_verify_on_read(), VerifyOnRead::Strict);
         assert!(c.key_file.is_none());
-        assert!(
-            !c.allow_classical_key,
-            "a classical key is refused by default"
-        );
     }
 
     #[test]
@@ -209,7 +198,6 @@ mod tests {
             &std::path::Path,
             Option<&Secret>,
             &[PathBuf],
-            bool,
         ) -> Result<
             crate::versioning::signature::key::PgpKey,
             crate::versioning::signature::key::KeyError,

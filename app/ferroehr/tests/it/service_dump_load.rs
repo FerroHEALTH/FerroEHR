@@ -1154,7 +1154,6 @@ async fn attestations_round_trip_and_the_restored_signature_verifies() {
         enabled: true,
         mode: Mode::Digest,
         key_file: None,
-        allow_classical_key: false,
         key_passphrase: None,
         key_passphrase_file: None,
         retired_key_files: Vec::new(),

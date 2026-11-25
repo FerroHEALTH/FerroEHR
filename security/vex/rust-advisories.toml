@@ -109,10 +109,8 @@ form), which uses no asymmetric key at all, so the default artifact performs no 
 RSA private-key operation. A deployment that does enable `pgp` mode signs with \
 an ML-DSA-65+Ed25519 key (RFC 9980 algorithm ID 30) whose both halves run in \
 `aws-lc-rs` through `ferrohealth-openpgp-pq`, which keeps `rsa` off the signing \
-path entirely; an RSA signing key is refused at boot unless \
-`[record.signing] allow_classical_key = true`, and a deployment that sets it \
-with an RSA key is outside this statement and should move to an \
-ML-DSA-65+Ed25519 key. `ferroehr-ext` reaches the crate \
+path entirely, and an RSA signing key is refused at boot. An RSA certificate \
+kept in `retired_key_files` only verifies, over public values. `ferroehr-ext` reaches the crate \
 through the same two carriers as the platform library it extends, so the same \
 argument covers it. The viewer (`ferroehr-viewer`) ships no RSA code: its OIDC \
 sign-in is `ferrohealth-session` over `ferrohealth-smart`, which verifies ID \

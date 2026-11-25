@@ -148,11 +148,8 @@ fhir-types.workspace = true
 # The SCIM filter grammar properties (`tests/it/scim_protocol/filter_properties.rs`).
 proptest = { workspace = true }
 # The flamegraph-under-signing test (`tests/it/management_flamegraph_signing.rs`,
-# #5723) generates its `OpenPGP` keys; rand is pinned to the generation `pgp`
-# takes its `OsRng` from, as `app/ferroehr` pins it.
-pgp = { workspace = true }
+# #5723) generates its ML-DSA-65+Ed25519 `OpenPGP` keys.
 ferrohealth-openpgp-pq = { workspace = true }
-rand = "0.8"
 
 
 [features]

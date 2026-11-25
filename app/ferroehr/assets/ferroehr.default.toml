@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 656 keys. A deployment that holds real data sets the 8 below,
+# This file lists 655 keys. A deployment that holds real data sets the 8 below,
 # the only live lines; every other key is optional and runs on the built-in
 # default its `#?` line shows, or stays unset where its note says so.
 #
@@ -1588,16 +1588,10 @@ subject_namespaces = []
 # Signing mode: `digest` | `pgp`. Optional (infrastructure).
 #? mode = "digest"
 # Armored RFC 9580 secret key; **required for `pgp` mode** (validated at boot,
-# fail-closed). An ML-DSA-65+Ed25519 key (RFC 9980 algorithm ID 30), as
-# `ferrohealth-sop generate-key --signing-only` makes one. Optional, unset by
-# default (infrastructure).
+# fail-closed): an ML-DSA-65+Ed25519 key (RFC 9980 algorithm ID 30), as
+# `ferrohealth-sop generate-key --signing-only` makes one. A classical key is
+# refused at boot. Optional, unset by default (infrastructure).
 #? key_file = ""
-# Sign with a classical (Ed25519, `EdDSA` or RSA) key in `key_file`. **Off by
-# default**: a classical key is refused at boot, naming it. On, the server
-# signs with it and warns at boot that high-risk use must move to post-quantum
-# signatures by 31.12.2030 (EU coordinated implementation roadmap). ECDSA and
-# Ed448 keys are refused either way. Optional (infrastructure).
-#? allow_classical_key = false
 # Key passphrase, kept in `ferrohealth_secret::secret::Secret` and redacted
 # from any config snapshot. Optional, unset by default (infrastructure).
 #? key_passphrase = ""

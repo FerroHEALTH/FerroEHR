@@ -362,9 +362,9 @@ recording while you investigate.
   change show a key the server cannot sign with; an append whose checkpoint
   cannot be signed is not stored, and `access_log_entries_total` stops.
 - **What to do:**
-  1. Add a new signing subkey to the certificate, or move the old
-     certificate's public half to `retired_key_files` and configure the new
-     key ([Retired keys and rotation](signing/pgp.md#retired-keys-and-rotation)).
+  1. Move the old certificate's public half to `retired_key_files` and
+     configure the new ML-DSA-65+Ed25519 key
+     ([Retired keys and rotation](signing/pgp.md#retired-keys-and-rotation)).
      A checkpoint records no key identifier, so the old key has to stay
      verifiable.
   2. Roll the change to every instance together. Instances that sign with
