@@ -78,10 +78,12 @@ count_rows() {
   ' "$1" "$2" "${3:-}"
 }
 
-# Writes the endpoint document $1 with label $2 and message $3.
+# Writes the endpoint document $1 with label $2 and message $3, coloured by
+# the count $4 of $5 (owner decision, 2026-11-25).
 badge() {
-  jq -n --arg label "$2" --arg message "$3" --argjson logo "$(badge_logo_fields eu)" \
-    '{schemaVersion: 1, label: $label, message: $message, color: "blue"} + $logo' > "$1"
+  jq -n --arg label "$2" --arg message "$3" --arg color "$(badge_count_color "$4" "$5")" \
+    --argjson logo "$(badge_logo_fields eu)" \
+    '{schemaVersion: 1, label: $label, message: $message, color: $color} + $logo' > "$1"
 }
 
 # Writes the three documents into the directory $1 from the tree in the
@@ -90,12 +92,12 @@ render() {
   local dir="$1" total counted
   mkdir -p "$dir"
   read -r total counted < <(count_rows "$BOOK/logging-checklist.md" Evidenced)
-  badge "$dir/logging.json" "EHDS logging checklist · Xt-EHR D8.2 2026-05-19" "$counted/$total evidenced"
+  badge "$dir/logging.json" "EHDS logging checklist · Xt-EHR D8.2 2026-05-19" "$counted/$total evidenced" "$counted" "$total"
   read -r total counted < <(count_rows "$BOOK/eehrxf-annex-iii.md" Sourced)
-  badge "$dir/annex-iii.json" "EEHRxF draft 2026-11-23 · Annex III from the RM" "$counted/$total elements sourced"
+  badge "$dir/annex-iii.json" "EEHRxF draft 2026-11-23 · Annex III from the RM" "$counted/$total elements sourced" "$counted" "$total"
   read -r total counted < <(count_rows "$BOOK/eehrxf-pdf-originals.md" Byte-identical \
     app/ferroehr-rest/tests/it/pdf_original_http.rs)
-  badge "$dir/pdf-originals.json" "EEHRxF draft 2026-11-23 · PDF/A originals" "byte-identical $counted/$total"
+  badge "$dir/pdf-originals.json" "EEHRxF draft 2026-11-23 · PDF/A originals" "byte-identical $counted/$total" "$counted" "$total"
 }
 
 # Prints each badge label or message under $1, and each README badge of the
@@ -137,7 +139,7 @@ EOF
   done
   printf '[![EHDS logging](x)](y)\n' > "$tmp/README.md"
   [[ -z "$(forbidden_words "$tmp/out" "$tmp/README.md")" ]] || { echo "self-test: clean badges flagged" >&2; exit 1; }
-  badge "$tmp/out/bad.json" "EHDS certified" "1/1"
+  badge "$tmp/out/bad.json" "EHDS certified" "1/1" 1 1
   [[ -n "$(forbidden_words "$tmp/out" "$tmp/README.md")" ]] || { echo "self-test: a certified label passed" >&2; exit 1; }
   rm "$tmp/out/bad.json"
   badge_logo_check "$tmp"/out/*.json || { echo "self-test: a rendered badge carries no EU emblem on EU blue" >&2; exit 1; }
@@ -147,6 +149,14 @@ EOF
   if badge_logo_readme "$tmp/README.md" 2> /dev/null; then echo "self-test: a static badge without a logo passed" >&2; exit 1; fi
   printf '**EHDS**<br>\n%s<br>\n' "$badge_caption" > "$tmp/README.md"
   badge_caption_check "$tmp/README.md" || { echo "self-test: the conformance caption was not found" >&2; exit 1; }
+  badge_color_check "$tmp"/out/*.json || { echo "self-test: a rendered badge's colour does not follow its count" >&2; exit 1; }
+  for want in "0 2 red" "1 2 yellow" "2 2 brightgreen"; do
+    read -r n m colour <<< "$want"
+    badge "$tmp/colour.json" "EHDS logging checklist" "$n/$m evidenced" "$n" "$m"
+    [[ "$(jq -r .color "$tmp/colour.json")" == "$colour" ]] || { echo "self-test: $n of $m is not $colour" >&2; exit 1; }
+  done
+  jq '.color = "blue"' "$tmp/colour.json" > "$tmp/blue.json"
+  if badge_color_check "$tmp/blue.json" 2> /dev/null; then echo "self-test: a counted badge in blue passed" >&2; exit 1; fi
   printf '**EHDS**<br>\n' > "$tmp/README.md"
   if badge_caption_check "$tmp/README.md" 2> /dev/null; then echo "self-test: a README without the conformance caption passed" >&2; exit 1; fi
   printf '[![EEHRxF conformant](x)](y)\n' > "$tmp/README.md"
@@ -181,5 +191,6 @@ fi
 badge_logo_check "$OUT"/*.json || fail=1
 badge_logo_readme README.md || fail=1
 badge_caption_check README.md || fail=1
+badge_color_check "$OUT"/*.json || fail=1
 [[ "$fail" -eq 0 ]] && echo "ehds-badges: the badges match their tables, carry their logos and claim no certification"
 exit "$fail"
