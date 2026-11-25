@@ -44,6 +44,8 @@
 version = 2
 # Fail on any RustSec advisory. Add exceptions explicitly and dated.
 yanked = "deny"
+# Every crate in the graph: cargo-deny 0.22 checks only direct dependencies by default.
+unmaintained = "all"
 # EVERY ignore names the event that deletes it (#2406: adjudication is not
 # elimination — an ignore is a standing liability driven to zero, re-checked
 # at every dependency-bump cycle; the scheduled latest-deps lane is the
