@@ -164,9 +164,7 @@ pub(super) async fn flushed(pool: &PgPool, to: &str) {
 /// parallel run's timing puts them in the window are left out, as are the
 /// records of the shared catalogs and of every other database. A TOAST
 /// table's index belongs to the schema of the table the TOAST table serves,
-/// so the index of `pg_statistic`'s is a catalog relation too: an autoanalyze
-/// in the window wrote 770 bytes through it, the figure a path's budget was
-/// over by on CI (#6035).
+/// so the index of `pg_statistic`'s is a catalog relation too (#6035).
 ///
 /// Only the records a statement writes for each row count: a heap insert,
 /// update, delete or lock, a B-tree leaf insert and a GIN pending-list insert.
