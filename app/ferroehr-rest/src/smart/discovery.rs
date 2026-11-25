@@ -61,17 +61,13 @@ const LAUNCH_BASE64_JSON: &str = "launch-base64-json";
 /// What FerroEHR adds to the document the crate builds from the issuer's
 /// metadata.
 ///
-/// `org.openehr.rest` is the one service (master04 §Services: "At a minimum,
-/// the `services` section must include the openEHR REST API"), its `baseUrl`
-/// absolute; `org.fhir.rest` is never advertised, since the one FHIR route this
-/// server serves is the ITI-81 audit retrieval, not a FHIR API for clinical
-/// data. The capabilities are those the server enforces: the openEHR resource
-/// scopes and the `ehrId` launch context on every route, `permission-user`
-/// because a `user/` grant counts, and `permission-patient` only when an issuer
-/// is bound so a `patient/` grant counts (SMART App Launch 2.2.0, Conformance,
-/// §Capabilities: a capability is one "that the server supports"). The
-/// episode capability rides its flag, and `[auth] capabilities` are added
-/// (`launch-base64-json` among them when a deployment advertises it).
+/// `org.openehr.rest` is the one service, with an absolute `baseUrl`
+/// (master04 §Services). The capabilities are those the server enforces
+/// (SMART App Launch 2.2.0, Conformance, §Capabilities): the openEHR resource
+/// scopes and the `ehrId` launch context, `permission-user`, and
+/// `permission-patient` only when an issuer is bound for `patient/` grants.
+/// The episode capability follows its flag, and `[auth] capabilities` are
+/// added.
 #[must_use]
 pub fn options(cfg: &AppConfig, patient_context: bool) -> SmartOptions {
     let smart = &cfg.auth.smart;

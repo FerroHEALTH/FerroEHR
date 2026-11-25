@@ -1112,20 +1112,11 @@ async fn party_update_if_match_is_case_insensitive_and_quote_tolerant() {
 }
 
 /// A PARTY version committed with an inline `relationships` list keeps that
-/// list VERBATIM, and it stays disjoint from the service-managed relationship
-/// containers.
+/// list verbatim, apart from the service-managed relationship containers.
 ///
-/// RM demographic `docs/demographic/master02-demographic_package.adoc` §Party
-/// Relationships (L44) makes the list compositional data of the source party —
-/// "`PARTY_RELATIONSHIPs` are stored as part of the data of the `PARTY`
-/// designated as the source. This means that the relationships attribute is by
-/// value, while the `PARTY_RELATIONSHIP._source_` and `_target_` are
-/// represented by references. The actual kind of reference is via the use of
-/// `OBJECT_REFs` containing `HIER_OBJECT_IDs` to denote the Version container
-/// of a Party, rather than `OBJECT_VERSION_IDs`" — and §Versioning Semantics
-/// (L48) versions it with the party: "A Version of a `PARTY` includes all the
-/// compositional parts, such as identities, contacts, Party relationships of
-/// which it is the source."
+/// The list is data of the source party, "by value", and is versioned with
+/// it (RM demographic `docs/demographic/master02-demographic_package.adoc`
+/// §Party Relationships, §Versioning Semantics).
 #[tokio::test]
 async fn inline_relationships_are_stored_and_served_verbatim() {
     let db = testkit::db().await.expect("testkit database");
@@ -1199,19 +1190,15 @@ async fn inline_relationships_are_stored_and_served_verbatim() {
 }
 
 /// `PARTY.Relationships_validity`'s source-identity arm compares against the
-/// party's VERSION CONTAINER id, so a round-tripped party (GET → edit → PUT)
+/// party's version container id, so a round-tripped party (GET, edit, PUT)
 /// carrying an inline `relationships` list commits.
 ///
-/// RM demographic `docs/demographic/master02-demographic_package.adoc` §Party
-/// Relationships (L44) requires the refs to be "`OBJECT_REFs` containing
-/// `HIER_OBJECT_IDs` to denote the Version container of a Party, rather than
-/// `OBJECT_VERSION_IDs`, which would denote particular versions" — while a
-/// served party's `uid` is the three-part `OBJECT_VERSION_ID` of the version it
-/// was read from (BASE `master05-identification_package.adoc` §Syntaxes:
-/// `object_version_id = object_id, '::', creating_system_id, '::',
-/// version_tree_id`). Comparing the container-scoped `source` against the whole
-/// version id can never hold, so the two shapes here are BOTH pinned: the
-/// container id accepts, a foreign container id still refuses.
+/// The references denote "the Version container of a Party, rather than
+/// `OBJECT_VERSION_IDs`" (RM demographic
+/// `docs/demographic/master02-demographic_package.adoc` §Party
+/// Relationships), while a served party's `uid` is a whole
+/// `OBJECT_VERSION_ID`. Both shapes are pinned: the container id accepts, a
+/// foreign container id refuses.
 #[tokio::test]
 async fn inline_relationship_source_matches_the_version_container_not_the_version() {
     let (_db, svc) = crate::fixtures::service().await;
@@ -1299,23 +1286,17 @@ async fn inline_relationship_source_matches_the_version_container_not_the_versio
     );
 }
 
-/// The `owner_id` of an ehr-less demographic version container names the
-/// SERVING SYSTEM, in the shape the published `VersionedParty` example uses.
+/// The `owner_id` of a demographic version container names the serving
+/// system, in the shape of the published `VersionedParty` example.
 ///
-/// `VERSIONED_OBJECT.owner_id` is `OBJECT_REF` 1..1, "Reference to object to
-/// which this version container belongs, e.g. the id of the containing EHR or
-/// other relevant owning entity" (RM common
-/// `UML/classes/org.openehr.rm.common.versioned_object.adoc` §Attributes) — but
-/// a demographic party has no containing EHR (RM demographic
-/// `docs/demographic/master02-demographic_package.adoc` §Versioning Semantics:
-/// "Every Party is stored in its own Version container"), so the first limb has
-/// no referent and the second is read as the serving system. The one concrete
-/// released shape is the `VersionedParty` example in the vendored ITS-REST OAS
-/// (`crates/openehr-its/vendor/rest-oas/demographic-codegen.openapi.yaml`,
-/// `components.schemas.VersionedParty.example`): an `OBJECT_REF` with
-/// `namespace: local`, `type: SYSTEM` over a `HIER_OBJECT_ID`; the docs text
-/// fixes nothing here, so the `id` is the configured system identifier,
-/// cross-checked here against the value the commit audits carry.
+/// A party has no containing EHR (RM demographic
+/// `docs/demographic/master02-demographic_package.adoc` §Versioning
+/// Semantics), so of `VERSIONED_OBJECT.owner_id`'s "containing EHR or other
+/// relevant owning entity" (RM common
+/// `UML/classes/org.openehr.rm.common.versioned_object.adoc`) the owner is
+/// the system: an `OBJECT_REF` with `namespace: local` and `type: SYSTEM`
+/// (`crates/openehr-its/vendor/rest-oas/demographic-codegen.openapi.yaml`)
+/// over the configured system identifier.
 #[tokio::test]
 async fn versioned_party_owner_id_names_the_serving_system() {
     let (_db, svc) = crate::fixtures::service().await;

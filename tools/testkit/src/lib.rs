@@ -355,25 +355,14 @@ async fn ipv4_address(host: &str, port: u16) -> Result<std::net::SocketAddr, Tes
         .ok_or_else(|| no_ipv4("the lookup returned only IPv6 addresses".to_owned()))
 }
 
-/// Starts — or adopts — the reusable named `PostgreSQL` 18 container.
+/// Starts, or adopts, the reusable named `PostgreSQL` 18 container.
 ///
-/// Concurrent first boots race on the fixed name; the losers retry and the
-/// reuse lookup then finds the winner's container.
-/// Fails fast, with the way out in the message, when no Docker daemon can
-/// answer — BEFORE testcontainers burns its retry ladder on connection
-/// refusals.
-///
-/// The live failure class this closes (#3009): `/var/run/docker.sock` on a
-/// developer box can be a dead symlink to another runtime's socket (a podman
-/// machine that is not running) while Docker Desktop serves its real socket
-/// at `~/.docker/run/docker.sock`; testcontainers then reports a bare
-/// `ConnectionRefused` per test. `std::env::set_var` is unsafe in edition
-/// 2024 and this workspace forbids `unsafe`, so the harness cannot switch
-/// sockets itself — it names the exact `DOCKER_HOST` to run with instead.
-///
-/// An explicit `DOCKER_HOST` is trusted as given: a TCP endpoint is not
-/// probed here (testcontainers owns that connection), and a Unix endpoint is
-/// probed so a dead override still gets the fast, named failure.
+/// Concurrent first boots race on the fixed name; the losers retry and find
+/// the winner's container. With no Docker daemon answering it fails fast,
+/// naming the `DOCKER_HOST` to run with, since `/var/run/docker.sock` can be
+/// a dead symlink while Docker Desktop serves `~/.docker/run/docker.sock`
+/// (#3009) and the harness cannot set the variable without `unsafe`. An
+/// explicit TCP `DOCKER_HOST` is not probed; a Unix one is.
 fn probe_docker(docker_host: Option<&str>) -> Result<(), TestkitError> {
     fn answers(path: &std::path::Path) -> bool {
         std::os::unix::net::UnixStream::connect(path).is_ok()

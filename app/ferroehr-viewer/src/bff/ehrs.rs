@@ -115,21 +115,14 @@ pub async fn list_ehrs(
     parse_result_set(&response.body, offset)
 }
 
-/// Build a subject-bound `EHR_STATUS` for `POST /ehr`: a `PARTY_SELF` whose
-/// `external_ref` (a `PARTY_REF`) carries the subject `id.value` +
-/// `namespace`, which is exactly what `GET /ehr?subject_id&subject_namespace`
-/// matches against (ITS-REST EHR API `ehr_get_by_subject`; RM ehr master04
-/// §EHR Status — `subject` is a `PARTY_SELF`, the subject is identified via
-/// its `external_ref`, never a `PARTY_IDENTIFIED`). `is_queryable` /
-/// `is_modifiable` default true.
+/// Builds a subject-bound `EHR_STATUS` for `POST /ehr`: a `PARTY_SELF` whose
+/// `external_ref` carries the subject's `id.value` and `namespace`, which
+/// `GET /ehr?subject_id&subject_namespace` matches (RM ehr master04 §EHR
+/// Status).
 ///
-/// `archetype_details` is not decoration: `EHR_STATUS` carries the invariant
-/// `Is_archetype_root`
-/// (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.ehr.ehr_status.adoc`),
-/// and `LOCATABLE`'s `Archetyped_valid` is
-/// `is_archetype_root xor archetype_details = Void`
-/// (`.../org.openehr.rm.common.locatable.adoc`) — so an `EHR_STATUS` without an
-/// `ARCHETYPED` is invalid and the CDR refuses it `422`.
+/// `EHR_STATUS` is an archetype root (`Is_archetype_root`,
+/// `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.ehr.ehr_status.adoc`),
+/// so it carries `archetype_details` or the CDR refuses it `422`.
 pub(crate) fn subject_ehr_status(subject_id: &str, subject_namespace: &str) -> Value {
     serde_json::json!({
         "_type": "EHR_STATUS",

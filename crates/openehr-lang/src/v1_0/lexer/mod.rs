@@ -85,21 +85,14 @@ pub fn lex_odin(src: &str) -> Result<Vec<Spanned>, LexError> {
     Ok(out)
 }
 
-/// Re-tag `true`/`false`/`infinity` to identifiers where they stand as ODIN
-/// attribute names.
+/// Re-tags `true`, `false` and `infinity` as identifiers where they stand as
+/// ODIN attribute names.
 ///
-/// `LANG/docs/odin/master03-basics.adoc` §Keywords: "ODIN has no keywords of
-/// its own: all identifiers are assumed to come from an information model" —
-/// yet these three words stay TOKENS under the ODIN reading because they are
-/// genuine ODIN VALUES (`master07-leaf_data` §Boolean Data; the interval
-/// endpoints of `AM/docs/ADL1.4/master04-dadl` §Intervals of Ordered Primitive
-/// Types), so the per-token `reclassify` pass cannot demote them. Key
-/// position is decidable with one token of lookahead instead: an attribute
-/// name is always followed by `=` (the Release-1.0.0 `odin.g4`
-/// `attr_val : attribute_id '=' object_block`), and no VALUE position ever
-/// is — so a value word immediately before `SYM_EQ` is re-tagged to the
-/// identifier its spelling gives, exactly as the reclassification pass
-/// demotes every other keyword.
+/// "ODIN has no keywords of its own" (`LANG/docs/odin/master03-basics.adoc`
+/// §Keywords), yet the three are ODIN values (`master07-leaf_data` §Boolean
+/// Data), so `reclassify` keeps them as tokens. An attribute name is always
+/// followed by `=` (`odin.g4` `attr_val`) and a value never is, so a value
+/// word before `SYM_EQ` becomes its identifier.
 fn retag_odin_value_words_in_key_position(src: &str, spanned: &mut [Spanned]) {
     let mut index = 0;
     while index < spanned.len() {
@@ -161,17 +154,12 @@ fn narrow(
 /// Where the ODIN lexer stops consuming when the shared DFA gets stuck at
 /// `start` after reaching `union_end`.
 ///
-/// A DFA walks as far as ANY of its patterns can still be matching before it
-/// reports failure, so the union's extent overshoots a member whose
-/// production set cannot leave the start state on that character at all.
-/// Exactly one character in the union is in that position: `?`, which starts
-/// a token only through the leading `??` field of `TIME_CONSTRAINT_PATTERN`
-/// (`ADL1.4/master05-cadl.adoc` §Symbols L1420), a cADL-only production — the
-/// ODIN reading cannot begin any token with it, so it fails on the character
-/// itself. Every other union-only class produces a whole TOKEN that the
-/// reclassification pass refuses, which [`narrow`] already resolves. The
-/// failing OFFSET is the same either way; this keeps the reported extent the
-/// same too.
+/// The union's extent can overshoot a member that cannot leave its start
+/// state on that character. Only `?` is such a character: it starts a token
+/// only through the `??` of `TIME_CONSTRAINT_PATTERN`
+/// (`ADL1.4/master05-cadl.adoc` §Symbols L1420), a cADL production, so the
+/// ODIN reading fails on the character itself. [`narrow`] resolves every
+/// other class; this keeps the reported extent equal too.
 fn stuck_at(src: &str, start: usize, union_end: usize) -> usize {
     if src.get(start..).is_some_and(|rest| rest.starts_with('?')) {
         next_boundary(src, start)

@@ -2437,20 +2437,16 @@ async fn directory_has_version() {
     );
 }
 
-/// The write-path fixes must not change the wire: a write response
-/// built from the CONTRIBUTION commit results (never a post-commit re-read) has
-/// to be identical to what a fresh read yields.
+/// A write response built from the commit results matches what a fresh read
+/// yields.
 ///
-/// - Fix E: the EHR create representation is assembled from the commit `Committed`
-///   rows (`ehr_created_object`, from the create-time stash) and MUST be
-///   byte-identical to a fresh `ehr_summary` read (`ehr_object`) for a new EHR.
-/// - Fix D: the DIRECTORY create/update response `OBJECT_VERSION_ID`
-///   (`committed_response`) MUST equal the `uid` a fresh read injects (RM common
-///   master06 §Committal and Audits: the written version identity).
-/// - Item 34: the `EHR_STATUS` update response `OBJECT_VERSION_ID`
-///   (`committed_response`, replacing the discarded post-commit reassembly) MUST
-///   equal a fresh read's `uid`, and the mutation MUST persist (the folded
-///   `subject/is_queryable` sync rides the write's UPDATE).
+/// - The EHR create representation, assembled from the commit rows
+///   (`ehr_created_object`), is byte-identical to a fresh `ehr_summary` read.
+/// - The DIRECTORY create and update response's `OBJECT_VERSION_ID` equals
+///   the `uid` a fresh read injects (RM common master06 §Committal and
+///   Audits).
+/// - The `EHR_STATUS` update response's `OBJECT_VERSION_ID` equals a fresh
+///   read's `uid`, and the change persists.
 #[tokio::test]
 async fn write_responses_match_a_fresh_read() {
     let (_db, svc) = crate::fixtures::service().await;

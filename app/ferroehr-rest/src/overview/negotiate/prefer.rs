@@ -63,23 +63,14 @@ pub(crate) fn prefers(headers: &HeaderMap, preference: Preference) -> bool {
         })
 }
 
-/// The return preference a write response ACTUALLY applied — the value the
-/// `Preference-Applied` response header declares.
-///
-/// ITS-REST overview `Requests_and_responses.md` §Representation details
-/// negotiation: "The service MAY include a `Preference-Applied` header in the
-/// response, such as `Preference-Applied: return=minimal` or
-/// `Preference-Applied: return=representation`, to indicate that the client's
-/// preference has been honored" — so the header states what the response DID,
-/// never what the client merely asked for (RFC 7240 §3, the field
-/// definition this section builds on).
+/// The return preference a write response applied, which the
+/// `Preference-Applied` header declares (ITS-REST overview
+/// `Requests_and_responses.md` §Representation details negotiation; RFC 7240
+/// §3).
 ///
 /// [`Identifier`](AppliedPreference::Identifier) carries the identifier it
-/// renders, which makes the identifier branch unreachable without one: that is
-/// the structural guarantee behind §"Prefer only identifier" — "a variant of
-/// preference that implies minimal response semantics, but with a non-empty
-/// response body (i.e. the status will be `201 Created` or `200 OK`, never
-/// `204 No Content`)".
+/// renders, so an identifier response always has a body (§"Prefer only
+/// identifier").
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum AppliedPreference<'a> {
     /// `return=minimal` — the default when no `Prefer` is sent: no body, and

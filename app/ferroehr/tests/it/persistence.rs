@@ -810,22 +810,11 @@ async fn a_trunk_position_is_unique_across_creating_systems_but_a_branch_id_is_n
 
 /// An as-of read resolves along the TRUNK.
 ///
-/// `VERSIONED_OBJECT.version_at_time (a_time): VERSION[1]`
-/// (`UML/classes/org.openehr.rm.common.versioned_object.adoc` §Functions)
-/// returns exactly one version, yet a container may have several valid tips at
-/// one instant — the trunk tip plus one per open branch — so only the trunk
-/// makes the answer unique. The class draws the same line elsewhere:
-/// `latest_version` is "the most recently added version (i.e. on trunk or any
-/// branch)" while `latest_trunk_version` and `trunk_lifecycle_state` read the
-/// trunk alone, the latter being how the spec says to decide "if the version
-/// container is logically deleted".
-///
-/// The corollary this pins on the other side: a container holding branches but
-/// no trunk version has no as-of answer — and that container is a state RM
-/// common `master06-change_control_package.adoc` §Copying §Subsequent Local
-/// Modifications rules out, since "branch versions … cannot be copied without
-/// their corresponding preceding versions on the same branch (if any) and trunk
-/// versions also being copied".
+/// `VERSIONED_OBJECT.version_at_time` returns one version
+/// (`UML/classes/org.openehr.rm.common.versioned_object.adoc` §Functions), and
+/// only the trunk makes it unique. A container with branches and no trunk
+/// version has no as-of answer, a state RM common
+/// `master06-change_control_package.adoc` §Copying rules out.
 #[tokio::test]
 #[expect(
     clippy::disallowed_methods,

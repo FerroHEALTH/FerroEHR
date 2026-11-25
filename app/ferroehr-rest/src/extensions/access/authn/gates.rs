@@ -32,21 +32,14 @@ use ferroehr::telemetry::stage::{self, Stage};
 /// Runs the RBAC gate over an authenticated caller: the matched operation's
 /// class against the caller's roles, then the read-only restriction.
 ///
-/// A bearer token whose SMART on openEHR resource scopes are all `system/`
-/// scopes passes the clinical class without a role: its scopes decide access,
-/// in [`smart_refusal`]. So does the record's person and whoever represents
-/// them: their right comes from who they are (EHDS Art. 3 and 4(2)), SMART App
-/// Launch defines no role claim for a patient's token, and the access
-/// evaluator confines them to the one EHR ([`crate::extensions::access::delay::acts_for_the_person`]),
-/// as it confines a bound person holding no role to the records whose subject
-/// is their `PERSON` ([`crate::extensions::access::caller::bound_person_alone`]).
-/// Any other `user/` or `patient/` token keeps the role gate, as does a Basic
-/// user.
-///
-/// A principal carrying the configured read-only role is refused on every write
-/// operation, overriding any grant. Both denials produce the same `403`,
-/// attributed to the caller so the ATNA audit layer records it. No openEHR spec
-/// governs role semantics — our own design/extension.
+/// A token whose SMART resource scopes are all `system/` passes the clinical
+/// class without a role, since its scopes decide ([`smart_refusal`]). So does
+/// the record's person and whoever represents them (EHDS Art. 3 and 4(2)),
+/// whom the access evaluator confines to the one EHR
+/// ([`crate::extensions::access::delay::acts_for_the_person`],
+/// [`crate::extensions::access::caller::bound_person_alone`]). The read-only
+/// role is refused every write. Both denials are the same `403`, attributed
+/// to the caller. No openEHR spec governs role semantics: our own design.
 pub(super) fn rbac_refusal(
     layer: &AuthLayer,
     req: &Request,
