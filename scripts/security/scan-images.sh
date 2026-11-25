@@ -36,6 +36,7 @@ OWNER=${OWNER:-ferrohealth}
 
 # Each entry is "ref|platform"; an empty platform scans the ref as built.
 targets=()
+source_args=()
 if [[ "${1:-}" = "--candidate" ]]; then
   shift
   [[ $# -ge 1 ]] || { echo "--candidate needs at least one image ref" >&2; exit 2; }
@@ -46,6 +47,8 @@ elif [[ $# -gt 0 ]]; then
   echo "unknown argument: $1 (only --candidate IMAGE... is accepted)" >&2
   exit 2
 else
+  # A published tag is read from the registry, never from a local copy of it.
+  source_args=(--image-src remote)
   for image in ferroehr ferroehr-postgres ferroehr-viewer; do
     for platform in linux/amd64 linux/arm64; do
       targets+=("ghcr.io/${OWNER}/${image}:${SCAN_TAG}|${platform}")
@@ -73,8 +76,8 @@ for target in "${targets[@]}"; do
   report="$out_dir/${safe}.json"
   echo "── scanning ${ref} ${platform:-(as built)}"
   trivy image --skip-version-check --config trivy.yaml --scanners vuln \
-    ${platform_args[@]+"${platform_args[@]}"} ${vex_args[@]+"${vex_args[@]}"} \
-    -f json -o "$report" "$ref"
+    ${source_args[@]+"${source_args[@]}"} ${platform_args[@]+"${platform_args[@]}"} \
+    ${vex_args[@]+"${vex_args[@]}"} -f json -o "$report" "$ref"
   count=$(jq '[.Results[]?.Vulnerabilities // [] | .[]] | length' "$report")
   if [[ "$count" -gt 0 ]]; then
     jq -r '.Results[]? | .Target as $t | (.Vulnerabilities // [])[]
