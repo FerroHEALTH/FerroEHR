@@ -111,6 +111,7 @@ use crate::versioning::episode::EpisodeKey;
 mod confidentiality;
 mod covering;
 mod narrowing;
+mod permits;
 
 /// Who asks, as the procedure reads them.
 #[derive(Debug, Clone, PartialEq)]
@@ -562,13 +563,13 @@ fn procedure(judged: &Judged<'_>) -> Verdict {
         });
         return verdict;
     }
-    let permits = consent_permits(&read, directives);
+    let permits = permits::consent_permits(&read, directives);
     verdict.grounds.permits = permits
         .iter()
         .filter(|permit| permit.certain)
         .map(|permit| permit.at)
         .collect();
-    let rule_permits = rule_permits(&read);
+    let rule_permits = permits::rule_permits(&read);
     let naming: Vec<&Permit<'_>> = permits.iter().chain(&rule_permits).collect();
     confidentiality::step_6(&read, &naming, &mut verdict);
     let keeper = Pred::any(vec![Pred::of(caller.administrator), read.keeper()]);
@@ -727,47 +728,6 @@ const fn step(outcome: Outcome) -> u8 {
         Outcome::Absent(_) => 2,
         _ => 3,
     }
-}
-
-/// The consent permits among `directives` that may bind the caller.
-fn consent_permits<'a>(
-    read: &Reader<'_, '_>,
-    directives: &'a [AccessDirective],
-) -> Vec<Permit<'a>> {
-    directives
-        .iter()
-        .enumerate()
-        .filter(|(_, d)| kind_and_effect(d) == (DirectiveKind::Consent, Effect::Permit))
-        .filter_map(|(at, d)| {
-            let placed = read.placed(at);
-            let binds = read.binds(DirectiveKind::Consent, d, placed);
-            (binds != Pred::False).then(|| Permit {
-                at,
-                directive: d,
-                certain: binds == Pred::True,
-                cover: Pred::all(vec![binds, read.cover(d, Effect::Permit, placed)]),
-            })
-        })
-        .collect()
-}
-
-/// The permit rules of the controller's policy that may bind the caller.
-fn rule_permits<'a>(read: &Reader<'_, 'a>) -> Vec<Permit<'a>> {
-    read.judged
-        .rules
-        .iter()
-        .enumerate()
-        .filter(|(_, rule)| kind_and_effect(rule).1 == Effect::Permit)
-        .filter_map(|(at, rule)| {
-            let binds = read.binds(DirectiveKind::ControllerRule, rule, None);
-            (binds != Pred::False).then(|| Permit {
-                at,
-                directive: rule,
-                certain: binds == Pred::True,
-                cover: Pred::all(vec![binds, read.cover(rule, Effect::Permit, None)]),
-            })
-        })
-        .collect()
 }
 
 /// Step 5: every deny rule of the controller's policy that binds the
