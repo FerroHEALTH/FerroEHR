@@ -2314,22 +2314,12 @@ async fn an_undeclared_contribution_member_key_is_accepted_and_assigned_ones_ref
     }
 }
 
-/// The CONTRIBUTION's own `audit.change_type` is REQUIRED and never derived.
+/// The CONTRIBUTION's own `audit.change_type` is required and never derived.
 ///
-/// RM common `UML/classes/org.openehr.rm.common.audit_details.adoc` §Attributes
-/// types `change_type` 1..1 on the mandatory `CONTRIBUTION.audit`, and the
-/// released commit schema requires it on the wire
-/// (`specifications/schemas/ehr/NewContribution.yaml` `required: [versions,
-/// audit]` over `specifications/schemas/common/UpdateAudit.yaml` `required:
-/// [change_type, committer]`). The ITS-REST docs text is silent on the
-/// contribution BODY — its "None of these headers are mandatory" sentence
-/// governs the direct routes' header merge — so the released OAS grounds the
-/// requirement, and a body missing a schema-required member is the
-/// "syntactically invalid … content" of `responses/400_CONTRIBUTION.yaml`: each
-/// refusal below is the 400 (#3550). master06 §Contributions calls the
-/// aggregate value approximate and "not expected to be used as a computable
-/// value", which is precisely why the server must not invent one under the
-/// client's name.
+/// `change_type` is 1..1 on the mandatory `CONTRIBUTION.audit` (RM common
+/// `UML/classes/org.openehr.rm.common.audit_details.adoc`), and the commit
+/// schema requires it (`specifications/schemas/common/UpdateAudit.yaml`), so a
+/// body without it is the `400` of `responses/400_CONTRIBUTION.yaml` (#3550).
 #[tokio::test]
 async fn contribution_audit_change_type_is_required_not_derived() {
     let (_db, svc) = crate::fixtures::service().await;

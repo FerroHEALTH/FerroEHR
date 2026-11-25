@@ -330,22 +330,15 @@ impl Builder<'_> {
     }
 
     /// Binds, once per row, every structure step the SELECT paths descend
-    /// through (QUERY master03 §SELECT: "Where an identified path is specified,
-    /// the data item(s) having that archetype path are returned").
+    /// through (QUERY master03 §SELECT).
     ///
-    /// The row grain is our own design, since the specification does not say
-    /// how rows multiply when a path crosses a multi-valued attribute: each
-    /// structure step a SELECT path (a column or a function argument)
-    /// descends through is bound as if it were a FROM variable, with [`Builder::left_bind`]. Paths rooted at the same
-    /// variable that share a step prefix share its binding, so two leaves
-    /// below one `EVENT` read the same `EVENT` in a row and never pair values
-    /// of different events; a step matching several nodes yields one row per
-    /// node (an archetype path "can correspond to more than one item in
-    /// runtime data", BASE `architecture_overview/master11-paths.adoc`
-    /// §Archetype path Predicate); a step matching none yields one row whose
-    /// cells below it are `NULL`, so the projection never removes a row the
-    /// FROM and WHERE clauses matched. WHERE and ORDER BY read through these
-    /// bindings wherever their own path shares the bound prefix.
+    /// Each step is bound as a FROM variable with [`Builder::left_bind`], and
+    /// paths that share a step prefix share its binding, so two leaves under one
+    /// `EVENT` read the same `EVENT`. A step matching several nodes yields a row
+    /// per node (BASE `architecture_overview/master11-paths.adoc` §Archetype path
+    /// Predicate); one matching none yields one row with `NULL` cells, so the
+    /// projection removes no row. The row grain is our own design, since the
+    /// specification leaves it open.
     ///
     /// # Errors
     /// [`AqlError`] from resolving a path's source node or a step predicate.
@@ -433,20 +426,15 @@ impl Builder<'_> {
 }
 
 /// Builds an aggregate over every data item a path selects, across all rows
-/// (QUERY master03 §Aggregate functions: the input values are "selected by an
-/// expression in a form of an identified path applied to data items filtered
-/// by `FROM` and `WHERE` clauses").
+/// (QUERY master03 §Aggregate functions).
 ///
-/// `items` is the per-row walk ([`Builder::leaf_items`]), already carrying the
-/// WHERE clause for the steps it shares with it ([`Builder::where_filter_for`]),
-/// and `item` the value of one item. Each row aggregates its own items in a correlated subquery and
-/// the rows combine: `COUNT` sums the per-row counts (0 over no rows, QUERY
-/// master03 §COUNT), `SUM` sums the sums, `MIN`/`MAX` take the extreme of the
-/// extremes, `AVG` divides the summed sums by the summed counts, and
-/// `COUNT(DISTINCT …)` collects each row's items as a jsonb array and counts
-/// the distinct elements of all of them. The walk adds no row to the result,
-/// so `COUNT(*)` and the other aggregates of the SELECT see the rows FROM and
-/// WHERE define. No openEHR spec governs the lowering — our own design.
+/// `items` is the per-row walk ([`Builder::leaf_items`]) with the WHERE
+/// clause of the steps it shares ([`Builder::where_filter_for`]), and `item`
+/// one item's value. Each row aggregates its items in a correlated subquery
+/// and the rows combine: `COUNT` and `SUM` sum, `MIN` and `MAX` take the
+/// extreme, `AVG` divides summed sums by summed counts, and `COUNT(DISTINCT
+/// …)` counts the distinct elements of the rows' jsonb arrays. The walk adds
+/// no row. No openEHR spec governs the lowering: our own design.
 fn aggregate_over_items(
     func: AggFunc,
     distinct: bool,

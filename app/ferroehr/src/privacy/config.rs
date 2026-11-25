@@ -39,21 +39,16 @@ pub struct PrivacyConfig {
     /// `id.value`.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = true)))]
     pub subject_namespaces: Vec<String>,
-    /// Accept `PARTY_IDENTIFIED` / `PARTY_RELATED` carrying `name` or
+    /// Accepts `PARTY_IDENTIFIED` and `PARTY_RELATED` carrying `name` or
     /// `identifiers` in clinical content
     /// (`FERROEHR__PRIVACY__ALLOW_IDENTIFIED_PARTIES_IN_EHR`).
     ///
-    /// Off by default, and announced at boot when on. Off refuses two of the
-    /// four combinations: `identifiers` on either class — "One or more formal
-    /// identifiers (possibly computable)" (RM common
-    /// `UML/classes/org.openehr.rm.common.party_identified.adoc` §Attributes),
-    /// the national-identifier slot — and `name` on `PARTY_RELATED`, which is
-    /// defined by its relationship to the subject and may be the subject
-    /// itself (RM common `UML/classes/org.openehr.rm.common.party_related.adoc`
-    /// §Attributes). A `PARTY_IDENTIFIED.name` is accepted either way: that
-    /// class is the proxy for a party "other than the subject of the record",
-    /// "Typically for health care providers". `Basic_validity` is satisfied by
-    /// `external_ref` alone, so the refused shapes stay expressible.
+    /// Off by default, and announced at boot when on. Off refuses `identifiers`
+    /// on either class and `name` on a `PARTY_RELATED` that is the subject, as
+    /// [`crate::privacy`] reads RM common
+    /// `UML/classes/org.openehr.rm.common.party_identified.adoc` and
+    /// `party_related.adoc`; every refused proxy stays expressible through
+    /// `external_ref`.
     pub allow_identified_parties_in_ehr: bool,
     /// `[privacy.cohort]` — the cross-domain cohort-query allow-list and
     /// limits.

@@ -623,19 +623,13 @@ fn local_commit_instant(index: usize, base: jiff::Timestamp) -> jiff::Timestamp 
 /// Replays the containers under one local import CONTRIBUTION, returning its
 /// id.
 ///
-/// Every container's per-object lock is taken first, before its stored state
-/// is read, so a concurrent import or commit of the same container waits for
-/// this transaction and then numbers its versions after the ones landed here
-/// (a re-import of the same versions is then refused as the conflict
-/// [`append_to_existing_clone`] names). With `skip_existing`, a container
-/// already held locally is left untouched.
-///
-/// All versions of a container are committed in the single local import act,
-/// so they get a synthetic strictly-increasing local `committed_at` chain
-/// (base = import time, 1 µs steps): master06 §Copying, "the commit times
-/// always reflect the local (more recent) act of committal". The source
-/// chronology moves inside the wrapped `ORIGINAL_VERSION`, where §Committal
-/// and Audits puts it.
+/// Each container's lock is taken before its state is read, so a concurrent
+/// writer numbers its versions after these, and a re-import is refused
+/// ([`append_to_existing_clone`]). With `skip_existing`, a container already
+/// held is left alone. The versions take a strictly increasing local
+/// `committed_at` chain from the import time in 1 µs steps, since "the commit
+/// times always reflect the local (more recent) act of committal" (master06
+/// §Copying).
 ///
 /// # Errors
 /// [`ServiceError::Conflict`] on a duplicated version identity, a foreign

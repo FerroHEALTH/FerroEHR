@@ -4,25 +4,20 @@
 //! Which phase of a database session a driver error comes from: the
 //! establishing of a connection, or an open session cut under a request.
 
-/// Returns whether `e` is a failure that only establishing a new connection
+/// Returns whether `e` is a failure only establishing a new connection
 /// produces, so no statement of the request reached the database.
 ///
-/// It serves the errors that carry no acquire phase
-/// ([`super::classify_acquire`] classifies the others), so only identities an
-/// established session cannot produce qualify.
+/// It serves the errors with no acquire phase ([`super::classify_acquire`]
+/// classifies the others):
 ///
-/// - [`sqlx::Error::Tls`]: raised only while configuring and negotiating TLS at
-///   connect time (sqlx 0.9, <https://docs.rs/sqlx/0.9.0/sqlx/enum.Error.html>).
-/// - an I/O error of kind `ConnectionRefused` or `AddrNotAvailable`: the
-///   `connect(2)` errors `ECONNREFUSED` and `EADDRNOTAVAIL`; a peer resetting an
-///   established session reports `ConnectionReset` instead.
-/// - a server refusal of a new session's start-up, by SQLSTATE
-///   (<https://www.postgresql.org/docs/18/errcodes-appendix.html>): class `28`
-///   (invalid authorization), `3D000` `invalid_catalog_name`, `53300`
-///   `too_many_connections` and `57P03` `cannot_connect_now`. None of them
-///   answers a statement this server issues on an open session.
+/// - [`sqlx::Error::Tls`], raised only at connect time
+///   (<https://docs.rs/sqlx/0.9.0/sqlx/enum.Error.html>).
+/// - an I/O error of kind `ConnectionRefused` or `AddrNotAvailable`.
+/// - a refused session start-up
+///   (<https://www.postgresql.org/docs/18/errcodes-appendix.html>): class `28`,
+///   `3D000`, `53300` and `57P03`.
 ///
-/// No openEHR spec governs this — our own design.
+/// No openEHR spec governs this: our own design.
 pub(crate) fn is_connect_failure(e: &sqlx::Error) -> bool {
     match e {
         sqlx::Error::Tls(_) => true,
@@ -38,21 +33,16 @@ pub(crate) fn is_connect_failure(e: &sqlx::Error) -> bool {
 }
 
 /// Returns whether `e` reports an open session that the database or the
-/// network cut, an outage that a repeated request outlives.
+/// network cut, an outage a repeated request outlives.
 ///
-/// - SQLSTATE class `08` connection exception, except `08P01`
-///   `protocol_violation`, and the class `57` codes a shutdown, a crash or a
-///   start-up raises: `57P01` `admin_shutdown`, `57P02` `crash_shutdown`,
-///   `57P03` `cannot_connect_now` and `57P05` `idle_session_timeout`
-///   (<https://www.postgresql.org/docs/18/errcodes-appendix.html>). `57014`
-///   `query_canceled` (a statement timeout or cancel) and `57P04`
-///   `database_dropped` are no outage; [`super::classify_sqlx`] answers each on its
-///   own.
+/// - SQLSTATE class `08` but `08P01`, and `57P01`, `57P02`, `57P03` and
+///   `57P05` (<https://www.postgresql.org/docs/18/errcodes-appendix.html>);
+///   `57014` and `57P04` are no outage, and [`super::classify_sqlx`] answers
+///   each on its own.
 /// - an I/O error of kind `ConnectionReset`, `ConnectionAborted`,
-///   `BrokenPipe`, `NotConnected` or `UnexpectedEof`: the socket closed under
-///   the session.
+///   `BrokenPipe`, `NotConnected` or `UnexpectedEof`.
 ///
-/// No openEHR spec governs this — our own design.
+/// No openEHR spec governs this: our own design.
 pub(crate) fn is_cut_session(e: &sqlx::Error) -> bool {
     match e {
         sqlx::Error::Io(io) => matches!(

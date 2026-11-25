@@ -139,6 +139,7 @@ mod party_binding_http;
 mod party_key_space_replicas;
 mod party_reverse_relationships_http;
 mod patient_data_assurance;
+mod pdf_original_http;
 mod pmir_feed_http;
 mod pmir_messages_http;
 mod policy_fixture;

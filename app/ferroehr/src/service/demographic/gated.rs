@@ -67,18 +67,19 @@ impl FerroEhrService {
         let materials = Materials::once((change(body, envelope), audit));
         let materials = &materials;
         let committed = self
-            .commit_gated(&self.demographic_pool, move || {
+            .on_party_pool(self.commit_gated(&self.demographic_pool, move || {
                 async move |conn| {
                     let gate = gate::party(conn, None).await?;
-                    let now = gate.now;
+                    self.ensure_party_gate_policy_held().await?;
+                    let (now, revisions) = (gate.now, gate.revisions);
                     let (_, prior) = gate.split();
                     let (create, audit) = materials.take_first()?;
                     Ok(Write::new(None, create, audit)
                         .at(now)
-                        .guarded(self.party_guard(None, prior)))
+                        .guarded(self.party_guard(None, prior, revisions)))
                 }
-            })
-            .await?;
+            }))
+            .await??;
         Ok((committed, served))
     }
 
@@ -120,9 +121,11 @@ impl FerroEhrService {
         let unchecked = std::sync::Mutex::new(unchecked);
         let (materials, unchecked, precondition) = (&materials, &unchecked, &precondition);
         let committed = self
-            .commit_gated(&self.demographic_pool, move || {
+            .on_party_pool(self.commit_gated(&self.demographic_pool, move || {
                 async move |conn| {
-                    let (target, prior) = judged(conn, (kind, vo_id), precondition).await?;
+                    let (target, prior, revisions) =
+                        judged(conn, (kind, vo_id), precondition).await?;
+                    self.ensure_party_gate_policy_held().await?;
                     let tip = target
                         .placement
                         .tip
@@ -151,10 +154,11 @@ impl FerroEhrService {
                         )));
                     };
                     let change = Change::modify(vo_id, kind, body, None, None, envelope);
-                    Ok(self.guarded(Write::new(None, change, audit), target, prior))
+                    let write = Write::new(None, change, audit);
+                    Ok(self.guarded(write, target, (prior, revisions)))
                 }
-            })
-            .await?;
+            }))
+            .await??;
         Ok((committed, served))
     }
 
@@ -176,9 +180,11 @@ impl FerroEhrService {
     ) -> Result<ServiceResponse, ServiceError> {
         let (request, precondition) = (&request, &precondition);
         let committed = self
-            .commit_gated(&self.demographic_pool, move || {
+            .on_party_pool(self.commit_gated(&self.demographic_pool, move || {
                 async move |conn| {
-                    let (target, prior) = judged(conn, (kind, vo_id), precondition).await?;
+                    let (target, prior, revisions) =
+                        judged(conn, (kind, vo_id), precondition).await?;
+                    self.ensure_party_gate_policy_held().await?;
                     let tip = target
                         .placement
                         .tip
@@ -200,10 +206,11 @@ impl FerroEhrService {
                         description,
                     )?;
                     let change = Change::delete(vo_id, kind, None);
-                    Ok(self.guarded(Write::new(None, change, audit), target, prior))
+                    let write = Write::new(None, change, audit);
+                    Ok(self.guarded(write, target, (prior, revisions)))
                 }
-            })
-            .await?;
+            }))
+            .await??;
         Ok(ServiceResponse::deleted(ResourceMeta::new(
             String::new(),
             object_version_id(vo_id, &committed.creating_system_id, committed.tree),
@@ -211,21 +218,30 @@ impl FerroEhrService {
     }
 
     /// `write` of the existing `target` guarded, placed and marked as its
-    /// gate read found it, with `prior`, what it found of the versions before.
-    fn guarded(&self, write: Write, target: Target, prior: Prior) -> Write {
+    /// gate read found it, with `prior`, what it found of the versions before,
+    /// and the policy and definition revisions it read.
+    fn guarded(
+        &self,
+        write: Write,
+        target: Target,
+        (prior, revisions): (Prior, Option<(i64, i64)>),
+    ) -> Write {
         write
-            .guarded(self.party_guard(target.head, prior))
+            .guarded(self.party_guard(target.head, prior, revisions))
             .object_marked(target.restricted)
             .placed(target.placement)
     }
 
     /// What a direct write's guarded statement requires and takes: the head
-    /// `head` its gate read found (`None` for a create), and the key-space
-    /// gate when a binding mapping is configured; `prior` is what the gate read
-    /// found of the versions before it.
-    fn party_guard(&self, head: Option<i32>, prior: Prior) -> Guard {
+    /// `head` its gate read found (`None` for a create), the key-space gate
+    /// when a binding mapping is configured, and the policy and definition
+    /// `revisions` it read through the clinical door, unchanged (#6252);
+    /// `prior` is what the gate read found of the versions before it.
+    fn party_guard(&self, head: Option<i32>, prior: Prior, revisions: Option<(i64, i64)>) -> Guard {
         Guard {
             expected_head: head,
+            policy: revisions.map(|(policy, _)| policy),
+            definitions: revisions.map(|(_, definitions)| definitions),
             party: Some(Box::new(PartySync {
                 key_space: !self.binding.is_empty(),
                 reverse: None,
@@ -237,8 +253,9 @@ impl FerroEhrService {
 }
 
 /// The target of a direct write of the object `vo_id` of `kind`, read on
-/// `conn` with what its gate read found of the versions before it, once
-/// `precondition` names its tip in full.
+/// `conn` with what its gate read found of the versions before it and the
+/// revisions it read through the clinical door, once `precondition` names its
+/// tip in full.
 ///
 /// # Errors
 /// [`ServiceError::NotFound`] as [`addressed`], the precondition's refusal
@@ -247,13 +264,15 @@ async fn judged(
     conn: &mut sqlx::PgConnection,
     (kind, vo_id): (Kind, VoId),
     precondition: &Precondition,
-) -> Result<(Target, Prior), ServiceError> {
-    let (target, prior) = gate::party(conn, Some(vo_id)).await?.split();
+) -> Result<(Target, Prior, Option<(i64, i64)>), ServiceError> {
+    let gate = gate::party(conn, Some(vo_id)).await?;
+    let revisions = gate.revisions;
+    let (target, prior) = gate.split();
     let target = addressed(target, kind, vo_id)?;
     if let Some(tip) = target.placement.tip.as_ref() {
         precondition.check_full(vo_id, tip)?;
     }
-    Ok((target, prior))
+    Ok((target, prior, revisions))
 }
 
 /// The target of a direct write of `kind` its gate read found, when it is

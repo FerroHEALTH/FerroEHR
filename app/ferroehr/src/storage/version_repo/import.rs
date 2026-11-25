@@ -201,25 +201,15 @@ pub struct VerbatimVersionRow<'a> {
     pub body: Option<&'a Value>,
 }
 
-/// Insert verbatim `version` rows from an archive record in ONE statement.
+/// Inserts verbatim `version` rows from an archive record in one statement.
 ///
-/// This is the one version writer that does not derive the version tree position
-/// itself: the live write paths compute the next `VERSION_TREE_ID` from the
-/// container's own tip (RM common master06 §Copying §Subsequent Local
-/// Modifications), so neither can produce a second trunk row at an occupied
-/// position, while a record replayed from an arbitrary archive file can. The
-/// invariant is therefore checked before the insert and reported as
-/// [`StorageError::TrunkPositionInUse`], the trunk line being one global
-/// sequence across creating systems (§Distributed Versioning makes branch ids
-/// system-local). The per-partition trunk-position unique index is the
-/// backstop; this check names the container, the position and the holder.
-///
-/// One probe checks the whole batch against PRE-EXISTING rows; a corrupt record
-/// that duplicates a trunk position within itself falls to the per-partition
-/// trunk-position unique-index backstop instead of the named error.
-///
-/// Nothing is written when a row names a CONTRIBUTION or commit audit the
-/// store does not hold.
+/// Unlike the live writers, which place a version after its container's tip
+/// (RM common master06 §Copying), a replayed record can name an occupied
+/// trunk position, and the trunk is one sequence across creating systems
+/// (§Distributed Versioning). One probe checks the batch against the stored
+/// rows first and names the container, the position and the holder; the
+/// trunk-position unique index catches a duplicate inside the batch. Nothing
+/// is written when a row names a CONTRIBUTION or commit audit not stored.
 ///
 /// # Errors
 /// Returns [`StorageError::TrunkPositionInUse`] when another creating system

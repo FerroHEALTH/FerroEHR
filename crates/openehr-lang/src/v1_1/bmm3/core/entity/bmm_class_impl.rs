@@ -542,18 +542,12 @@ impl BmmClass {
     /// from this class and all inheritance ancestors"
     /// (`org.openehr.lang.bmm3.bmm_class.adoc` §Functions).
     ///
-    /// Ancestor features are merged first and this class's own last, so a
-    /// redefinition in the nearer class replaces the inherited definition of the
-    /// same name — the differential-vs-flat distinction of
-    /// `LANG/docs/bmm3/master08-core-features.adoc` §Overview ("Differential vs
-    /// flat feature sets"). The result is name-ordered, so it is deterministic.
+    /// Ancestor features are merged first and this class's own last, so a nearer
+    /// redefinition wins (`LANG/docs/bmm3/master08-core-features.adoc`
+    /// §Overview); the result is ordered by name.
     ///
-    /// NOTE (adjudicated): same-named features arriving from DIFFERENT ancestors
-    /// are a clash the spec says needs resolution
-    /// (`master07-core-classes.adoc` §Inheritance), and the model records no
-    /// resolution a schema chose; the merge order here is a total function over
-    /// the graph, not a clash verdict. Reporting clashes would need a
-    /// validation-report shape openEHR does not define.
+    /// NOTE: a clash between ancestors (`master07-core-classes.adoc` §Inheritance) is
+    /// merged in a fixed order, not reported: openEHR defines no report shape for it.
     #[must_use]
     pub fn flat_features(&self) -> Vec<BmmFeature> {
         let mut by_name: BTreeMap<String, BmmFeature> = BTreeMap::new();

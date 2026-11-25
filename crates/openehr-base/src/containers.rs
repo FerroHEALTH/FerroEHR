@@ -13,24 +13,16 @@
 //! §Invariants, `Links_valid`) has nothing to judge unless both are
 //! representable.
 
-/// Wrap a collected member list in the optional-container shape, mapping an
+/// Wraps a collected member list in the optional-container shape, mapping an
 /// empty list to `None`.
 ///
-/// **An empty collected list means the attribute was ABSENT in the source.**
-/// Every serialization openEHR defines writes a member list by writing its
-/// members, so "no members" and "no attribute" are the same input text and a
-/// builder cannot have observed anything else:
-///
-/// - canonical JSON omits an empty list rather than writing `[]`
-///   (`docs/specs/openehr/ITS-REST/specifications/docs/overview/Resources.md`
-///   §JSON Format: "The RM attributes (even required ones) that are `Null` or
-///   an empty list (array) SHOULD be absent when serialized as JSON");
-/// - canonical XML has no representation for it at all — a repeated element
-///   with zero occurrences IS absence;
-/// - the ODIN/ADL persistence forms attach a member list to a keyword block
-///   that is written only when it carries content
-///   (`docs/specs/openehr/AM/docs/ADL2/master04-syntax.adoc` §Structure,
-///   `docs/specs/openehr/LANG/docs/ODIN/master04-syntax.adoc` §Objects).
+/// An empty collected list means the attribute was absent, since every
+/// openEHR serialization writes a list by writing its members: canonical
+/// JSON omits an empty list
+/// (`docs/specs/openehr/ITS-REST/specifications/docs/overview/Resources.md`
+/// §JSON Format), canonical XML cannot express one, and the ODIN and ADL
+/// forms write a block only with content
+/// (`docs/specs/openehr/AM/docs/ADL2/master04-syntax.adoc` §Structure).
 #[must_use]
 pub fn present<T>(members: Vec<T>) -> Option<Vec<T>> {
     (!members.is_empty()).then_some(members)

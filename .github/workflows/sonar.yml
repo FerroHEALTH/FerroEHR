@@ -20,17 +20,20 @@
 # (SonarSource/sonarqube-scan-action README, v8.2.1).
 name: SonarQube Cloud
 
-# Nightly on main, never on a pull request or a push (owner decision D-5,
-# 2026-11-24, #6515): the analysis and its coverage run gate nothing, so a
-# day's merges are analysed together. A dispatch runs it on demand.
+# On a push to main and weekly, never on a pull request or a merge group
+# (owner decision 2026-11-25, #6574): the analysis and its coverage run are advisory
+# (ai-code-review.md) and gate nothing. A newer push cancels the older
+# analysis on its ref, so main is analysed at its latest commit.
 on:
+  push:
+    branches: [main]
   schedule:
-    - cron: "17 1 * * *" # daily 01:17 UTC, off the hour
+    - cron: "17 1 * * 1" # Mondays 01:17 UTC, off the hour
   workflow_dispatch:
 
 concurrency:
   group: sonar-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions: {}
 

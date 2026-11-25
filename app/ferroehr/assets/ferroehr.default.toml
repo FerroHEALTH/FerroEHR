@@ -1528,9 +1528,9 @@ profile = "sandbox"
 # — the pseudonymisation domains this deployment issues subject pseudonyms
 # in. Must set (trust).
 subject_namespaces = []
-# Accept `PARTY_IDENTIFIED` / `PARTY_RELATED` carrying `name` or `identifiers`
-# in clinical content (`FERROEHR__PRIVACY__ALLOW_IDENTIFIED_PARTIES_IN_EHR`).
-# Optional (trust).
+# Accepts `PARTY_IDENTIFIED` and `PARTY_RELATED` carrying `name` or
+# `identifiers` in clinical content
+# (`FERROEHR__PRIVACY__ALLOW_IDENTIFIED_PARTIES_IN_EHR`). Optional (trust).
 #? allow_identified_parties_in_ehr = false
 
 # The cross-domain cohort-query allow-list and limits.

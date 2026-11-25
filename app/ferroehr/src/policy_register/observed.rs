@@ -78,6 +78,12 @@ pub fn reads_clinical_door() -> bool {
     DOOR.try_with(|()| ()).is_ok() && SEEN.try_with(|_| ()).is_ok()
 }
 
+/// Whether the running request confirms its policy copies after it ran: it
+/// runs inside a [`scope`].
+pub(crate) fn confirming_after() -> bool {
+    SEEN.try_with(|_| ()).is_ok()
+}
+
 /// The newest revisions the running request's statements read so far;
 /// `None` outside a [`scope`] or before any statement read them.
 pub(crate) fn current() -> Option<Observed> {

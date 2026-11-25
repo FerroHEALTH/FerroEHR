@@ -17,7 +17,8 @@
 //! COMPOSITION or CONTRIBUTION commit confirms after it was decided the same
 //! way: its gate read returns the revisions, and a copy found behind them
 //! refuses the write before anything is written, so the dropped run leaves
-//! nothing; a run that reached its write is never run again (#6256). No
+//! nothing; a run that reached its write is never run again (#6256). A party
+//! write does the same on its party gate read (#6252). No
 //! openEHR spec governs this: our own design.
 
 use std::future::Future;
@@ -59,8 +60,9 @@ where
 
 /// The commits that confirm their policy copies after they were decided:
 /// each one's gate read returns the revisions before anything is written
-/// (#6256, #6257).
-const COMMITS_AFTER: [&str; 8] = [
+/// (#6256, #6257), a party write's through the clinical door, or one indexed
+/// read where the door is closed (#6252).
+const COMMITS_AFTER: [&str; 26] = [
     "composition_create",
     "composition_update",
     "composition_delete",
@@ -69,6 +71,24 @@ const COMMITS_AFTER: [&str; 8] = [
     "directory_create",
     "directory_update",
     "directory_delete",
+    "agent_create",
+    "agent_update",
+    "agent_delete",
+    "group_create",
+    "group_update",
+    "group_delete",
+    "organisation_create",
+    "organisation_update",
+    "organisation_delete",
+    "person_create",
+    "person_update",
+    "person_delete",
+    "role_create",
+    "role_update",
+    "role_delete",
+    "party_relationship_create",
+    "party_relationship_update",
+    "party_relationship_delete",
 ];
 
 /// The reads that confirm their policy copies after they ran: each one's
