@@ -97,7 +97,7 @@ RUN --mount=type=cache,target=/app/target,sharing=locked \
 # Both final targets inherit this stage's EXPOSE/HEALTHCHECK/ENTRYPOINT/LABELs,
 # so they are byte-for-byte identical except the one binary-provenance layer
 # (D5 — zero drift).
-FROM gcr.io/distroless/cc-debian13:nonroot@sha256:cb87acc574abe719b6e5c547384defa2f7b1f24af9605d3f618cf852495d8be2 AS runtime-base
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:532c7a94f9e96ba9db75eb9388f4227751131c7cb0a411d1a8521af4096135de AS runtime-base
 # The `:nonroot` tag already runs as uid 65532, but a scanner reading the
 # Dockerfile cannot see a base image.s user — and neither can a reader. Stating
 # it makes the posture a property of this file rather than of a tag someone

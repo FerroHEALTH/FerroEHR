@@ -15,7 +15,8 @@
 # message may say certified, compliant or conformant, and the README's EHDS
 # badges are held to the same words. Every badge carries the EU emblem on EU
 # blue, and every static badge of the README a logo, from
-# scripts/checks/badge-logos/.
+# scripts/checks/badge-logos/. The small caption under the README's badge
+# heading says once what the badges count (owner decision, 2026-11-25).
 #
 # Usage: scripts/render/ehds-badges.sh              rewrite the documents
 #        scripts/render/ehds-badges.sh --check      fail on a stale document, a forbidden word or a missing logo
@@ -144,6 +145,10 @@ EOF
   if badge_logo_check "$tmp/bare.json" 2> /dev/null; then echo "self-test: an EU emblem without the EU blue label passed" >&2; exit 1; fi
   printf '[![x](https://img.shields.io/badge/x-y-blue)](x)\n' > "$tmp/README.md"
   if badge_logo_readme "$tmp/README.md" 2> /dev/null; then echo "self-test: a static badge without a logo passed" >&2; exit 1; fi
+  printf '**EHDS**<br>\n%s<br>\n' "$badge_caption" > "$tmp/README.md"
+  badge_caption_check "$tmp/README.md" || { echo "self-test: the conformance caption was not found" >&2; exit 1; }
+  printf '**EHDS**<br>\n' > "$tmp/README.md"
+  if badge_caption_check "$tmp/README.md" 2> /dev/null; then echo "self-test: a README without the conformance caption passed" >&2; exit 1; fi
   printf '[![EEHRxF conformant](x)](y)\n' > "$tmp/README.md"
   [[ -n "$(forbidden_words "$tmp/out" "$tmp/README.md")" ]] || { echo "self-test: a conformant README badge passed" >&2; exit 1; }
   echo "ehds-badges: self-test passed"
@@ -175,5 +180,6 @@ if [[ -n "$words" ]]; then
 fi
 badge_logo_check "$OUT"/*.json || fail=1
 badge_logo_readme README.md || fail=1
+badge_caption_check README.md || fail=1
 [[ "$fail" -eq 0 ]] && echo "ehds-badges: the badges match their tables, carry their logos and claim no certification"
 exit "$fail"

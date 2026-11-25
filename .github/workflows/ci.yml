@@ -189,14 +189,14 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      # The image docker/postgres builds on, read from its FROM, the one place a
-      # Dependabot bump changes; every PostgreSQL service below runs it (#5112).
+      # The CI PostgreSQL image, pinned by digest in docker/ci-postgres/image.ref
+      # (#6520): non-durable, pg_stat_statements preloaded, 400 connections.
       - id: postgres
         run: |
           set -euo pipefail
-          image="$(bash scripts/lib/base-image.sh ref docker/postgres/Dockerfile)"
-          [[ "$image" =~ ^[^@[:space:]]+@sha256:[0-9a-f]{64}$ ]] || {
-            echo "::error::docker/postgres/Dockerfile resolves to '$image', not name@sha256:<digest>"
+          image="$(tr -d '[:space:]' < docker/ci-postgres/image.ref)"
+          [[ "$image" =~ ^ghcr\.io/ferrohealth/ferroehr-ci-postgres@sha256:[0-9a-f]{64}$ ]] || {
+            echo "::error::docker/ci-postgres/image.ref holds '$image', not ghcr.io/ferrohealth/ferroehr-ci-postgres@sha256:<digest>"
             exit 1
           }
           echo "image=$image" >> "$GITHUB_OUTPUT"
@@ -443,7 +443,7 @@ jobs:
       # check that reads workflows. It needs `changes` for the verified push alone.
       - name: zizmor
         if: ${{ !cancelled() }}
-        uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+        uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: zizmor@1.31.1
       - name: zizmor / Audit .github/workflows + .github/actions
@@ -779,7 +779,7 @@ jobs:
       # The lane is a committed script so local and CI run the identical check.
       - name: shellcheck
         if: ${{ !cancelled() }}
-        uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+        uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: shellcheck@0.11.0
       - name: shellcheck / Every shell program is clean at severity=style
@@ -904,7 +904,7 @@ jobs:
       # posture path the script reads out of the image.
       - name: hosted-deploy-script
         if: ${{ !cancelled() }}
-        uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+        uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: shellcheck@0.11.0
       # The seed-subject check reads privacy.subject_namespaces with the runner's
@@ -1400,7 +1400,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-deny
       - run: cargo deny check
@@ -1516,8 +1516,17 @@ jobs:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
+          # sccache holds the compiled crates when its bucket exists (#6521).
+          cache-targets: ${{ vars.SCCACHE_BUCKET == '' }}
           components: rustfmt
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: ./.github/actions/sccache # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          bucket: ${{ vars.SCCACHE_BUCKET }}
+          endpoint: ${{ vars.SCCACHE_ENDPOINT }}
+          access-key-id: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_ACCESS_KEY_ID || secrets.SCCACHE_RW_ACCESS_KEY_ID }}
+          secret-access-key: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_SECRET_ACCESS_KEY || secrets.SCCACHE_RW_SECRET_ACCESS_KEY }}
+          read-only: ${{ github.event_name == 'pull_request' }}
       - name: The drift check reads exactly the generated files, hand-written siblings excluded
         run: bash scripts/checks/codegen-drift.sh --self-test
       - name: Regenerate and diff
@@ -1550,9 +1559,18 @@ jobs:
         # A release-profile lane keeps no cache of its own: it restores main's
         # `build-tests` entry for the registry and writes nothing (#6388).
         with:
+          # sccache holds the compiled crates when its bucket exists (#6521).
+          cache-targets: ${{ vars.SCCACHE_BUCKET == '' }}
           cache-shared-key: build-tests
           cache-save-if: false
-      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+      - uses: ./.github/actions/sccache # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          bucket: ${{ vars.SCCACHE_BUCKET }}
+          endpoint: ${{ vars.SCCACHE_ENDPOINT }}
+          access-key-id: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_ACCESS_KEY_ID || secrets.SCCACHE_RW_ACCESS_KEY_ID }}
+          secret-access-key: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_SECRET_ACCESS_KEY || secrets.SCCACHE_RW_SECRET_ACCESS_KEY }}
+          read-only: ${{ github.event_name == 'pull_request' }}
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-nextest
       - name: Read a document at the nesting limit on the smallest stack, release
@@ -1579,8 +1597,17 @@ jobs:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
+          # sccache holds the compiled crates when its bucket exists (#6521).
+          cache-targets: ${{ vars.SCCACHE_BUCKET == '' }}
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+      - uses: ./.github/actions/sccache # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          bucket: ${{ vars.SCCACHE_BUCKET }}
+          endpoint: ${{ vars.SCCACHE_ENDPOINT }}
+          access-key-id: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_ACCESS_KEY_ID || secrets.SCCACHE_RW_ACCESS_KEY_ID }}
+          secret-access-key: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_SECRET_ACCESS_KEY || secrets.SCCACHE_RW_SECRET_ACCESS_KEY }}
+          read-only: ${{ github.event_name == 'pull_request' }}
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-nextest
       - name: The vendor cache uses a held file at its pin with no download and refuses one off it
@@ -1628,9 +1655,13 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      packages: read # the CI PostgreSQL image on GHCR
     services:
       postgres:
-        image: ${{ needs.changes.outputs.postgres_image }} # zizmor: ignore[unpinned-images] the digest-pinned FROM of docker/postgres, checked name@sha256 where it is read
+        image: ${{ needs.changes.outputs.postgres_image }} # zizmor: ignore[unpinned-images] docker/ci-postgres/image.ref, checked name@sha256 where it is read
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
         env:
           POSTGRES_USER: openehr
           POSTGRES_PASSWORD: openehr
@@ -1649,22 +1680,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Non-durable test tuning
-        # xmllint (libxml2-utils) is what the C14N XML parity gate shells out
-        # to (serialization.md). scripts/lib/test-postgres.sh applies the
-        # non-durable settings for throwaway data and loads
-        # pg_stat_statements, which the statement budget test reads.
-        env:
-          PG_SERVICE: ${{ job.services.postgres.id }}
-        run: |
-          sudo apt-get update && sudo apt-get install -y postgresql-client libxml2-utils
-          PGPASSWORD=openehr bash scripts/lib/test-postgres.sh "$PG_SERVICE"
+      # xmllint is what the C14N XML parity gate shells out to (serialization.md).
+      - name: xmllint
+        run: command -v xmllint >/dev/null || { sudo apt-get update && sudo apt-get install -y libxml2-utils; }
       # The toolchain without a cache: the codegen drift tests run rustfmt.
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           components: rustfmt
           cache: false
-      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-nextest
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -1693,9 +1717,13 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+      packages: read # the CI PostgreSQL image on GHCR
     services:
       postgres:
-        image: ${{ needs.changes.outputs.postgres_image }} # zizmor: ignore[unpinned-images] the digest-pinned FROM of docker/postgres, checked name@sha256 where it is read
+        image: ${{ needs.changes.outputs.postgres_image }} # zizmor: ignore[unpinned-images] docker/ci-postgres/image.ref, checked name@sha256 where it is read
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
         env:
           POSTGRES_USER: openehr
           POSTGRES_PASSWORD: openehr
@@ -1714,22 +1742,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Non-durable test tuning
-        # xmllint (libxml2-utils) is what the C14N XML parity gate shells out
-        # to (serialization.md). scripts/lib/test-postgres.sh applies the
-        # non-durable settings for throwaway data and loads
-        # pg_stat_statements, which the statement budget test reads.
-        env:
-          PG_SERVICE: ${{ job.services.postgres.id }}
-        run: |
-          sudo apt-get update && sudo apt-get install -y postgresql-client libxml2-utils
-          PGPASSWORD=openehr bash scripts/lib/test-postgres.sh "$PG_SERVICE"
+      # xmllint is what the C14N XML parity gate shells out to (serialization.md).
+      - name: xmllint
+        run: command -v xmllint >/dev/null || { sudo apt-get update && sudo apt-get install -y libxml2-utils; }
       # The toolchain without a cache: the codegen drift tests run rustfmt.
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           components: rustfmt
           cache: false
-      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-nextest
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -1758,7 +1779,16 @@ jobs:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
+          # sccache holds the compiled crates when its bucket exists (#6521).
+          cache-targets: ${{ vars.SCCACHE_BUCKET == '' }}
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: ./.github/actions/sccache # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          bucket: ${{ vars.SCCACHE_BUCKET }}
+          endpoint: ${{ vars.SCCACHE_ENDPOINT }}
+          access-key-id: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_ACCESS_KEY_ID || secrets.SCCACHE_RW_ACCESS_KEY_ID }}
+          secret-access-key: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_SECRET_ACCESS_KEY || secrets.SCCACHE_RW_SECRET_ACCESS_KEY }}
+          read-only: ${{ github.event_name == 'pull_request' }}
       - name: Link the reached packages' bins
         env:
           PACKAGES: ${{ needs.changes.outputs.cargo_args }}
@@ -1788,8 +1818,17 @@ jobs:
         # A release-profile lane keeps no cache of its own: it restores main's
         # `build-tests` entry for the registry and writes nothing (#6388).
         with:
+          # sccache holds the compiled crates when its bucket exists (#6521).
+          cache-targets: ${{ vars.SCCACHE_BUCKET == '' }}
           cache-shared-key: build-tests
           cache-save-if: false
+      - uses: ./.github/actions/sccache # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          bucket: ${{ vars.SCCACHE_BUCKET }}
+          endpoint: ${{ vars.SCCACHE_ENDPOINT }}
+          access-key-id: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_ACCESS_KEY_ID || secrets.SCCACHE_RW_ACCESS_KEY_ID }}
+          secret-access-key: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_SECRET_ACCESS_KEY || secrets.SCCACHE_RW_SECRET_ACCESS_KEY }}
+          read-only: ${{ github.event_name == 'pull_request' }}
       - name: Install valgrind
         run: sudo apt-get update && sudo apt-get install -y valgrind
       - run: bash scripts/perf/instructions.sh
@@ -1811,8 +1850,17 @@ jobs:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
+          # sccache holds the compiled crates when its bucket exists (#6521).
+          cache-targets: ${{ vars.SCCACHE_BUCKET == '' }}
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+      - uses: ./.github/actions/sccache # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          bucket: ${{ vars.SCCACHE_BUCKET }}
+          endpoint: ${{ vars.SCCACHE_ENDPOINT }}
+          access-key-id: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_ACCESS_KEY_ID || secrets.SCCACHE_RW_ACCESS_KEY_ID }}
+          secret-access-key: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_SECRET_ACCESS_KEY || secrets.SCCACHE_RW_SECRET_ACCESS_KEY }}
+          read-only: ${{ github.event_name == 'pull_request' }}
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-nextest
       - run: cargo build --locked -p ferroehr-viewer
@@ -2096,7 +2144,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-machete
       # The binary itself, not the `cargo` proxy: through the proxy,
@@ -2219,7 +2267,7 @@ jobs:
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
         if: steps.viewer-cache.outputs.cache-hit != 'true'
-      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         if: steps.viewer-cache.outputs.cache-hit != 'true'
         with:
           tool: cargo-nextest
@@ -2311,7 +2359,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache: false
-      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-nextest
       # The CDR image is PACKAGED here, never compiled here (issue #335 — the
@@ -2399,7 +2447,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache: false
-      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-nextest
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -2678,7 +2726,7 @@ jobs:
       - id: semver-pin
         name: Read the cargo-semver-checks pin
         run: echo "version=$(bash scripts/checks/semver.sh --pin)" >> "$GITHUB_OUTPUT"
-      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-semver-checks@${{ steps.semver-pin.outputs.version }}
       - name: The judge's own arithmetic
