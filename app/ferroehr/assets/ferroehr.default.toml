@@ -873,9 +873,8 @@ profile = "sandbox"
 # use; the name is the `OpenAPI` Specification's, the document the UI renders.
 # Optional (infrastructure).
 #? openapi_ui = "private"
-# This CDR's own openEHR **system identifier** — the identity the deployment
-# stamps into the data it authors (`FERROEHR__API__SYSTEM_ID`). Must set
-# (infrastructure).
+# This CDR's own openEHR system identifier (`FERROEHR__API__SYSTEM_ID`). Must
+# set (infrastructure).
 #? system_id = ""
 # The `DV_IDENTIFIER.issuer` of a Basic user's login
 # (`FERROEHR__API__BASIC_ISSUER`): the authority a committer names a login this

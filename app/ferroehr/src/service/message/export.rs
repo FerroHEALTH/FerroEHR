@@ -349,31 +349,17 @@ impl FerroEhrService {
         Ok(resolved)
     }
 
-    /// The `$ehr`-bound criteria primary set: evaluate each
-    /// `EXTRACT_SPEC.criteria` query against the entity's EHR and collect the
-    /// version containers its result rows identify (RM `ehr_extract`
-    /// `master04-common_package.adoc` §`EXTRACT_SPEC`: criteria "defines in the
-    /// form of generic queries … which items are to be retrieved from each
-    /// entity's record"; "Query expressions use variables such as $ehr to
-    /// mean the current EHR from the `manifest` list").
+    /// The `$ehr`-bound criteria primary set: each `EXTRACT_SPEC.criteria` query
+    /// run against the entity's EHR, and the version containers its result rows
+    /// identify (RM `ehr_extract` `master04-common_package.adoc` §`EXTRACT_SPEC`).
     ///
-    /// The released text names AQL as an example formalism and stops there, so
-    /// the mechanics are our own design:
-    /// - the formalism must be AQL (`DV_PARSABLE.formalism`, case-insensitive
-    ///   `"aql"`), any other being a typed refusal rather than a silent skip;
-    /// - the `$ehr` binding is realized twice, the engine call being scoped to
-    ///   the entity's EHR and a literal `$ehr` parameter in the query text
-    ///   binding to the EHR id;
-    /// - a result row identifies a version container through any cell that is an
-    ///   `OBJECT_VERSION_ID` or UID string or an object carrying `uid.value`,
-    ///   and the union across rows and criteria in first-seen order is the
-    ///   primary set, possibly empty;
-    /// - the criteria run scoped to this one EHR as a named target
-    ///   ([`crate::aql::sql::EhrScopeKind::Named`]), so the population gate does
-    ///   not apply: an EXTRACT is built from the EHR its request names, which is
-    ///   no population query (RM `org.openehr.rm.ehr.ehr_status.adoc`,
-    ///   `is_queryable`: "True if this EHR should be included in population
-    ///   queries").
+    /// The specification names AQL as an example and stops there, so the rest
+    /// is our own design: the formalism must be AQL, `$ehr` scopes the run to the
+    /// entity's EHR and binds as a parameter, a cell that is an
+    /// `OBJECT_VERSION_ID`, a UID or an object with `uid.value` identifies a
+    /// container, and the union in first-seen order is the set. The run names
+    /// its EHR, so the population gate does not apply (`is_queryable`, RM
+    /// `org.openehr.rm.ehr.ehr_status.adoc`).
     ///
     /// # Errors
     /// `precondition_violation` — a non-AQL formalism, or a criterion that

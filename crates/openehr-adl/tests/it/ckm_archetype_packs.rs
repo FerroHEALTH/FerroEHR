@@ -795,7 +795,7 @@ const ADJUDICATED_ADL2_VALIDITY: &[ValidityRefusal] = &[
 pub(crate) struct ValidityOutcome {
     /// Files refused with no adjudication covering them (`name: CODE message`).
     pub(crate) failures: Vec<String>,
-    /// Adjudications that no longer describe reality.
+    /// Adjudications that match no refusal.
     pub(crate) broken_adjudications: Vec<String>,
     /// Files validating with no error-severity issue.
     pub(crate) clean: usize,

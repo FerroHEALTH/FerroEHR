@@ -212,7 +212,7 @@ fn agent(client_id: &str) -> Value {
         "_type": "AGENT", "archetype_node_id": archetype,
         "archetype_details": archetyped(archetype), "name": text("Laboratory system"),
         "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0010", "name": text("details"),
-            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0011", "name": text("client"),
+            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0011", "name": { "_type": "DV_CODED_TEXT", "value": "client_id", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "client_id" } },
                 "value": { "_type": "DV_IDENTIFIER", "issuer": MACHINES, "id": client_id,
                            "type": "client_id" } }] },
         "identities": identities(client_id)
@@ -313,6 +313,51 @@ async fn a_grant_changed_through_the_demographic_api_decides_the_next_request() 
         after.grants(),
         [],
         "the ended grant no longer holds on the next request"
+    );
+}
+
+/// A caller's capabilities are kept between its requests while the copy
+/// stands, and a grant another replica ends decides the caller's next request
+/// on this one: the request's confirm read finds the moved revision, which no
+/// kept capability holds for (#6329).
+#[tokio::test]
+async fn kept_capabilities_give_way_to_a_grant_ended_on_another_replica() {
+    let (_db, pool) = common::migrated_pool().await;
+    let writer = Box::pin(replica(&pool, None, true, GrantCeiling::default())).await;
+    let reader = Box::pin(replica(&pool, None, true, GrantCeiling::default())).await;
+    let (role_uid, lab) = granted_client(&writer, "lab", "Lab.v1").await;
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    let first = loop {
+        let read = capabilities(&reader, &system("lab")).await;
+        if read.holds(Operation::CommitComposition) {
+            break read;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the grant reaches the other replica"
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    };
+    let kept = capabilities(&reader, &system("lab")).await;
+    assert!(
+        Arc::ptr_eq(&first, &kept),
+        "the next request of the caller takes the capabilities kept for it"
+    );
+    let ended = role(&lab, "commit_composition", "Lab.v1", Some(&yesterday()));
+    let (status, _, body) = write(
+        &writer,
+        "PUT",
+        &format!("role/{}", vo(&role_uid)),
+        Some(&role_uid),
+        &ended,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+    let after = capabilities(&reader, &system("lab")).await;
+    assert_eq!(
+        after.grants(),
+        [],
+        "the request after the grant ended is judged on the ended grant"
     );
 }
 

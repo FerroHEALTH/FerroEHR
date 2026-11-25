@@ -382,13 +382,16 @@ statement_timeout = "1min"
 
 ### Sizing the pool
 
-A request checks a connection out of a pool at its first statement and gives
-it back when its handler has answered, so the audit record and the response's
-way out hold none. It gives a pool's connection back earlier when it turns to
-the other domain's pool: the party connection its authentication and access
-decision read on goes back when its clinical work begins. A request also
-gives back what it keeps while it waits on the terminology server or uploads
-large media to the blob store. How long a
+A request checks a connection out of a pool at its first statement and keeps
+it between its statements. It gives it back as soon as it turns to work that
+runs no statement: decoding the request body, encoding the answer, rendering
+an ITI-81 page, and the response's way out once its access record is written.
+It also gives a pool's connection back when it turns to the other domain's
+pool: the party connection its authentication and access decision read on
+goes back when its clinical work begins. A request also gives back what it
+keeps while it waits on the terminology server or uploads large media to the
+blob store. A write keeps its connections from the read that gates it to its
+commit. How long a
 request holds each connection shows in `db_pool_hold_duration_seconds`,
 and how long requests wait for a connection in
 `db_pool_acquire_duration_seconds`. A pool needs about the arrival rate times

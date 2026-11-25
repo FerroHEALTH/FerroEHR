@@ -148,6 +148,7 @@ jobs:
           bash scripts/render/storage-bench.sh
           bash scripts/render/access-index-bench.sh
           bash scripts/render/access-path-bench.sh
+          bash scripts/render/care-caseload-bench.sh
       - name: Perf-assets drift gate (regenerated SVGs match the committed assets)
         run: git diff --exit-code -- website/book/src/perf-assets
       - name: Markdown lint gate

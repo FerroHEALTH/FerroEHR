@@ -159,25 +159,14 @@ fn stored_attestation(stored: &Value) -> Result<AuditDetails, ServiceError> {
 }
 
 /// A versioned-object wire body for `vo_id` owned by `ehr_id`, carrying the
-/// concrete RM `_type` (`VERSIONED_COMPOSITION`, `VERSIONED_EHR_STATUS` or
-/// `VERSIONED_FOLDER`; RM ehr master04 defines the concrete bindings of
-/// `VERSIONED_OBJECT<T>` and the ITS-REST `200_VERSIONED_COMPOSITION` schema
-/// pins the discriminator to the concrete class) and the mandatory
-/// `time_created`, the commit time of the object's first version (RM common
-/// master06 §Versioned Objects).
+/// concrete RM `_type` (RM ehr master04) and `time_created`, the commit time
+/// of the earliest held version (RM common master06 §Versioned Objects); a
+/// latest-only clone may hold no version 1 (master06 §Copying).
 ///
-/// NOTE: the earliest HELD version supplies `time_created` rather than a
-/// hardcoded `sys_version = 1`, a latest-only clone (master06 §Copying)
-/// legitimately holding a partial trunk history whose lowest version is above
-/// one.
-///
-/// Returns the wire body plus the newest held version's commit instant, the
-/// container resource's `Last-Modified` value "derived from
-/// `VERSION.commit_audit.time_committed.value`" (ITS-REST overview
-/// `Requests_and_responses.md` §"`ETag` and Last-Modified"). `None` when the
-/// object has no stored version or is not owned by `ehr_id`, ownership riding
-/// the same statement as the bounds, and each caller maps the miss to its own
-/// resource's 404.
+/// Returns the body and the newest held version's commit instant, the
+/// `Last-Modified` value (ITS-REST overview `Requests_and_responses.md`
+/// §"`ETag` and Last-Modified"), or `None` when the object has no stored
+/// version or is not owned by `ehr_id`.
 ///
 /// # Errors
 /// The storage read error of `version_repo::meta::commit_bounds`;

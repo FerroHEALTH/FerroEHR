@@ -3,6 +3,7 @@
 
 //! The search-statement tests of the audit store.
 
+use super::page_shapes::Kind;
 use super::search_page::build_search_statements;
 use super::{
     AuditCriterion, AuditElement, AuditSearchFilter, AuditToken, AuditTokenSystem, RECORD_COLUMNS,
@@ -504,11 +505,11 @@ fn a_shapes_statements_are_the_built_ones() {
         let cursor = 40 + filter.offset;
         let (count_sql, count_values, sql, values) =
             build_search_statements(&filter, &resolved, cursor);
-        let statements = shapes.statements(&filter, &resolved, cursor);
-        assert_eq!(statements.template.count_sql(), count_sql);
-        assert_eq!(statements.template.sql(), sql);
-        assert_eq!(statements.count_values.0, count_values.0);
-        assert_eq!(statements.values.0, values.0);
+        let statements = shapes.statements(Kind::Page, &filter, &resolved, cursor);
+        assert_eq!(statements.template.sql(0), count_sql);
+        assert_eq!(statements.template.sql(1), sql);
+        assert_eq!(statements.values[0].0, count_values.0);
+        assert_eq!(statements.values[1].0, values.0);
         templates.push(statements.template);
     }
     // The page alone and the token search are each one shape across their
@@ -518,5 +519,37 @@ fn a_shapes_statements_are_the_built_ones() {
             &templates[first],
             &templates[second]
         ));
+    }
+}
+
+/// The person's trail and the EHRs a search names, from their shape's
+/// template, are byte for byte the statements built for each search, and so
+/// are their values (#6467).
+#[test]
+fn a_trail_and_its_ehrs_are_the_built_statements() {
+    use crate::system_log::withheld::{ehrs_statement, trail_statement};
+    type Built = fn(
+        &AuditSearchFilter,
+        &[Option<crate::system_log::search::TokenMatch>],
+    ) -> (String, sea_query_sqlx::SqlxValues);
+    let shapes = super::page_shapes::PageShapes::default();
+    let kinds: [(Kind, Built); 2] = [(Kind::Trail, trail_statement), (Kind::Ehrs, ehrs_statement)];
+    for (kind, build) in kinds {
+        let mut templates = Vec::new();
+        for (filter, resolved) in shaped_searches() {
+            let (sql, values) = build(&filter, &resolved);
+            let statements = shapes.statements(kind, &filter, &resolved, 0);
+            assert_eq!(statements.template.sql(0), sql);
+            assert_eq!(statements.values[0].0, values.0);
+            assert_eq!(statements.values[1].0.0, Vec::new());
+            assert_eq!(statements.template.sql(1), "");
+            templates.push(statements.template);
+        }
+        for (first, second) in [(0, 3), (2, 5)] {
+            assert!(std::sync::Arc::ptr_eq(
+                &templates[first],
+                &templates[second]
+            ));
+        }
     }
 }
