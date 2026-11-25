@@ -1516,8 +1516,17 @@ jobs:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
+          # sccache holds the compiled crates when its bucket exists (#6521).
+          cache-targets: ${{ vars.SCCACHE_BUCKET == '' }}
           components: rustfmt
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: ./.github/actions/sccache # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          bucket: ${{ vars.SCCACHE_BUCKET }}
+          endpoint: ${{ vars.SCCACHE_ENDPOINT }}
+          access-key-id: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_ACCESS_KEY_ID || secrets.SCCACHE_RW_ACCESS_KEY_ID }}
+          secret-access-key: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_SECRET_ACCESS_KEY || secrets.SCCACHE_RW_SECRET_ACCESS_KEY }}
+          read-only: ${{ github.event_name == 'pull_request' }}
       - name: The drift check reads exactly the generated files, hand-written siblings excluded
         run: bash scripts/checks/codegen-drift.sh --self-test
       - name: Regenerate and diff
@@ -1550,8 +1559,17 @@ jobs:
         # A release-profile lane keeps no cache of its own: it restores main's
         # `build-tests` entry for the registry and writes nothing (#6388).
         with:
+          # sccache holds the compiled crates when its bucket exists (#6521).
+          cache-targets: ${{ vars.SCCACHE_BUCKET == '' }}
           cache-shared-key: build-tests
           cache-save-if: false
+      - uses: ./.github/actions/sccache # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          bucket: ${{ vars.SCCACHE_BUCKET }}
+          endpoint: ${{ vars.SCCACHE_ENDPOINT }}
+          access-key-id: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_ACCESS_KEY_ID || secrets.SCCACHE_RW_ACCESS_KEY_ID }}
+          secret-access-key: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_SECRET_ACCESS_KEY || secrets.SCCACHE_RW_SECRET_ACCESS_KEY }}
+          read-only: ${{ github.event_name == 'pull_request' }}
       - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-nextest
@@ -1579,7 +1597,16 @@ jobs:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
+          # sccache holds the compiled crates when its bucket exists (#6521).
+          cache-targets: ${{ vars.SCCACHE_BUCKET == '' }}
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: ./.github/actions/sccache # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          bucket: ${{ vars.SCCACHE_BUCKET }}
+          endpoint: ${{ vars.SCCACHE_ENDPOINT }}
+          access-key-id: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_ACCESS_KEY_ID || secrets.SCCACHE_RW_ACCESS_KEY_ID }}
+          secret-access-key: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_SECRET_ACCESS_KEY || secrets.SCCACHE_RW_SECRET_ACCESS_KEY }}
+          read-only: ${{ github.event_name == 'pull_request' }}
       - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-nextest
@@ -1752,7 +1779,16 @@ jobs:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
+          # sccache holds the compiled crates when its bucket exists (#6521).
+          cache-targets: ${{ vars.SCCACHE_BUCKET == '' }}
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: ./.github/actions/sccache # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          bucket: ${{ vars.SCCACHE_BUCKET }}
+          endpoint: ${{ vars.SCCACHE_ENDPOINT }}
+          access-key-id: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_ACCESS_KEY_ID || secrets.SCCACHE_RW_ACCESS_KEY_ID }}
+          secret-access-key: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_SECRET_ACCESS_KEY || secrets.SCCACHE_RW_SECRET_ACCESS_KEY }}
+          read-only: ${{ github.event_name == 'pull_request' }}
       - name: Link the reached packages' bins
         env:
           PACKAGES: ${{ needs.changes.outputs.cargo_args }}
@@ -1782,8 +1818,17 @@ jobs:
         # A release-profile lane keeps no cache of its own: it restores main's
         # `build-tests` entry for the registry and writes nothing (#6388).
         with:
+          # sccache holds the compiled crates when its bucket exists (#6521).
+          cache-targets: ${{ vars.SCCACHE_BUCKET == '' }}
           cache-shared-key: build-tests
           cache-save-if: false
+      - uses: ./.github/actions/sccache # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          bucket: ${{ vars.SCCACHE_BUCKET }}
+          endpoint: ${{ vars.SCCACHE_ENDPOINT }}
+          access-key-id: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_ACCESS_KEY_ID || secrets.SCCACHE_RW_ACCESS_KEY_ID }}
+          secret-access-key: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_SECRET_ACCESS_KEY || secrets.SCCACHE_RW_SECRET_ACCESS_KEY }}
+          read-only: ${{ github.event_name == 'pull_request' }}
       - name: Install valgrind
         run: sudo apt-get update && sudo apt-get install -y valgrind
       - run: bash scripts/perf/instructions.sh
@@ -1805,7 +1850,16 @@ jobs:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
+          # sccache holds the compiled crates when its bucket exists (#6521).
+          cache-targets: ${{ vars.SCCACHE_BUCKET == '' }}
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: ./.github/actions/sccache # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          bucket: ${{ vars.SCCACHE_BUCKET }}
+          endpoint: ${{ vars.SCCACHE_ENDPOINT }}
+          access-key-id: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_ACCESS_KEY_ID || secrets.SCCACHE_RW_ACCESS_KEY_ID }}
+          secret-access-key: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_SECRET_ACCESS_KEY || secrets.SCCACHE_RW_SECRET_ACCESS_KEY }}
+          read-only: ${{ github.event_name == 'pull_request' }}
       - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-nextest
