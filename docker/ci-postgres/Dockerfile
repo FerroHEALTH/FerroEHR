@@ -12,7 +12,7 @@
 # pg_stat_statements preloaded for the statement budgets, and the connection
 # ceiling the parallel suite needs. The base is docker/postgres's, digest for
 # digest; ci-postgres.yml refuses a drift between the two.
-FROM postgres:19.0@sha256:bb6e70add742cd868fb62cb3b2f67d1dd2bdd2b65a521e778420748753687c60
+FROM postgres:19.0@sha256:aaa10f7ba7328b4a221a6c3184d83eef885bd16bf1f6de864757863156b0a4d1
 
 LABEL org.opencontainers.image.title="FerroEHR CI PostgreSQL" \
       org.opencontainers.image.description="PostgreSQL 19 for FerroEHR's CI database jobs: non-durable, pg_stat_statements preloaded. Not for deployment." \
