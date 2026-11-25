@@ -194,7 +194,7 @@ pub struct AuditEvent {
     /// outside the care relationships, with the reason the caller stated:
     /// an emergency one is the access EHDS Art. 11(5) asks to log for the
     /// person (`docs/law/eu/ehds/text.html`). Set from the access decision.
-    pub justification: Option<crate::access_eval::justification::Justification>,
+    pub justification: Option<Box<crate::access_eval::justification::Justification>>,
     /// The level an access is recorded for review at ([`REVIEW_DETAIL`]): a
     /// care relationship written to a record marked above `N` (draft access
     /// control, The Decision Procedure, Writing Relationships, item 2).

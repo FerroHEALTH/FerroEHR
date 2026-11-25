@@ -90,6 +90,7 @@ fn the_ward_with_its_grace_period() {
                 operation: OperationClass::Read,
                 purpose: Some("TREAT".to_owned()),
                 reason: None,
+                opt_out_override: false,
                 episodes: None,
             },
             InForce {
@@ -141,6 +142,7 @@ fn a_care_relationship_admits_its_carer_only_under_its_provider() {
                 operation: OperationClass::Read,
                 purpose: Some("TREAT".to_owned()),
                 reason: None,
+                opt_out_override: false,
                 episodes: None,
             },
             InForce {

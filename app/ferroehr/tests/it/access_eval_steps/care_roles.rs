@@ -149,6 +149,7 @@ fn judged(caller: &Caller, asked: Asked<'_>, policy: &AccessPolicy, day: &str) -
             operation: asked.operation,
             purpose: asked.purpose.map(str::to_owned),
             reason: reason_of(asked),
+            opt_out_override: asked.opt_out_override,
             episodes: None,
         },
         InForce {
@@ -426,6 +427,7 @@ fn the_record_names_the_relationship_the_procedure_chooses() {
                 operation: OperationClass::Read,
                 purpose: Some("TREAT".to_owned()),
                 reason: None,
+                opt_out_override: false,
                 episodes: None,
             },
             InForce {

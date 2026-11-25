@@ -272,7 +272,6 @@ impl Ask {
                 party: Some(world.nurse.clone()),
                 own_ehrs: Vec::new(),
                 patient_grants_only: false,
-                opt_out_override: false,
                 acts_for: Vec::new(),
                 facts: CallerFacts::default(),
                 administrator: false,
@@ -297,6 +296,7 @@ fn request_of(ask: &Ask) -> Arc<RequestAccess> {
             operation: OperationClass::Query,
             purpose: ask.purpose.map(str::to_owned),
             reason: ask.reason.clone(),
+            opt_out_override: false,
             episodes: ask.episodes.clone(),
         },
         InForce {

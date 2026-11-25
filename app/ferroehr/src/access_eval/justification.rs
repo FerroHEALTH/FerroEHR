@@ -146,8 +146,8 @@ impl Reason {
     /// [`ReasonError`] for a value that is not percent-encoded UTF-8, is
     /// empty, holds a control character or is longer than the bound.
     pub fn from_header(raw: &[u8]) -> Result<Self, ReasonError> {
-        let ascii = std::str::from_utf8(raw).map_err(|_| ReasonError::Encoding)?;
-        let decoded = urlencoding::decode(ascii).map_err(|_| ReasonError::Encoding)?;
+        let ascii = std::str::from_utf8(raw).map_err(|_not_utf8| ReasonError::Encoding)?;
+        let decoded = urlencoding::decode(ascii).map_err(|_not_utf8| ReasonError::Encoding)?;
         Self::new(&decoded)
     }
 

@@ -1126,6 +1126,27 @@ fn justification_json(event: &AuditEvent) -> Option<serde_json::Value> {
     })
 }
 
+/// The justification the `justification` column of `row`, the record at
+/// `chain_seq`, holds.
+///
+/// # Errors
+/// [`AuditError::Unreadable`] for a value this build does not write.
+fn stored_justification(
+    row: &PgRow,
+    chain_seq: i64,
+) -> Result<Option<Box<crate::access_eval::justification::Justification>>, AuditError> {
+    row.try_get::<Option<serde_json::Value>, _>("justification")?
+        .map(|stored| {
+            justification_of(&stored)
+                .map(Box::new)
+                .ok_or(AuditError::Unreadable {
+                    chain_seq,
+                    reason: "its justification does not read",
+                })
+        })
+        .transpose()
+}
+
 /// The justification a stored `justification` column holds; `None` for a
 /// value this build does not write.
 fn justification_of(
@@ -1296,12 +1317,7 @@ pub(super) fn stored_record(row: &PgRow) -> Result<(Vec<u8>, StoredRecord), Audi
         .transpose()
         .map_err(|_unreadable| unreadable("its token attributes do not read"))?;
     event.permit = row.try_get("permit")?;
-    event.justification = row
-        .try_get::<Option<serde_json::Value>, _>("justification")?
-        .map(|stored| {
-            justification_of(&stored).ok_or_else(|| unreadable("its justification does not read"))
-        })
-        .transpose()?;
+    event.justification = stored_justification(row, chain_seq)?;
     event.legal_basis = row.try_get("legal_basis")?;
     event.result_count = count(row, "result_count", chain_seq)?;
     event.origins = strings(row, "origins", chain_seq)?;

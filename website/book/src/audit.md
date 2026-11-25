@@ -723,9 +723,8 @@ merely declared:
   2025/327 Art 11(5)).") and whose `ehds-emergency-purpose` detail names the
   purpose that invoked it. An app keys on the entity and shows its
   description, and shows the reason for every justified access.
-- **The DICOM syslog feed:** the reason travels as the `originalText` of
-  `EventIdentification.PurposeOfUse`; the PS3.15 schema has no element for
-  the emergency mark.
+- **The DICOM syslog feed:** neither the reason nor the mark; the message
+  FerroEHR writes there carries no purpose of use.
 
 ```mermaid
 sequenceDiagram

@@ -34,7 +34,6 @@ fn request(grants: Arc<LiveGrants>) -> RequestAccess {
             party: None,
             own_ehrs: Vec::new(),
             patient_grants_only: false,
-            opt_out_override: false,
             acts_for: Vec::new(),
             facts: CallerFacts::default(),
             administrator: false,
@@ -45,6 +44,7 @@ fn request(grants: Arc<LiveGrants>) -> RequestAccess {
             operation: OperationClass::Read,
             purpose: None,
             reason: None,
+            opt_out_override: false,
             episodes: None,
         },
         InForce {

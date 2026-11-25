@@ -65,7 +65,6 @@ fn request(emergency: bool) -> Arc<RequestAccess> {
             party: Some(party.clone()),
             own_ehrs: Vec::new(),
             patient_grants_only: false,
-            opt_out_override: false,
             acts_for: Vec::new(),
             facts: CallerFacts::default(),
             administrator: false,
@@ -76,6 +75,7 @@ fn request(emergency: bool) -> Arc<RequestAccess> {
             operation: OperationClass::Read,
             purpose: emergency.then(|| "BTG".to_owned()),
             reason: emergency.then(|| Reason::new("cardiac arrest").expect("a reason")),
+            opt_out_override: false,
             episodes: None,
         },
         InForce {

@@ -27,6 +27,10 @@ HX="/ferroehr/rest/extensions/v1"
 H_ISSUER_HTTP="http://localhost:${FERROEHR_ISSUER_PORT}"
 H_TERM="openehr_access"
 H_PURPOSE="x-purpose-of-use"
+# The header a justified access states its reason in, and the reason every
+# emergency of the scenario states (#6587).
+H_REASON="x-access-reason"
+H_EMERGENCY_REASON="Unresponsive%20in%20the%20emergency%20room"
 # The hospital's role code system, the jurisdiction terminology its ROLEs are
 # named in.
 H_ROLES="urn:example:hospital-roles"
@@ -48,9 +52,7 @@ x-hospital-env: &hospital-env
   FERROEHR__AUTH__ISSUER__FERROSMART__PARTY__IDENTIFIER_TYPE: login
   FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: ferrosmart
   FERROEHR__AUTHZ__RBAC__ENABLED: "true"
-  FERROEHR__AUTHZ__RBAC__EMERGENCY_ACCESS_ROLE: EMERGENCY
   FERROEHR__AUDIT__PURPOSE_CODES: TREAT,ETREAT
-  FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES: ETREAT
   FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,query_system_wide,scim_provision,hold_scopes,access_service,write_access_policy,write_care_relationship
   FERROEHR__AUTH__SMART__DISCOVERY: "true"
   FERROEHR__AUTH__DESCRIBED_ISSUER: ferrosmart
@@ -215,6 +217,7 @@ h_call() {
     -H 'Accept: application/json' -H 'Prefer: return=representation'
     -D "$PROBE_TMP/h-headers" -o "$PROBE_TMP/h-body" -w '%{http_code}')
   [[ -n "$purpose" ]] && args+=(-H "$H_PURPOSE: $purpose")
+  [[ "$purpose" = ETREAT ]] && args+=(-H "$H_REASON: $H_EMERGENCY_REASON")
   [[ -n "${H_IF_MATCH:-}" ]] && args+=(-H "If-Match: $H_IF_MATCH")
   [[ -n "${H_IF_NONE_MATCH:-}" ]] && args+=(-H "If-None-Match: $H_IF_NONE_MATCH")
   [[ -n "$body" ]] && args+=(-H "Content-Type: $type" --data-binary "$body")
@@ -854,7 +857,7 @@ j_rule() {
 # role of their SCIM User alone; physicians and psychiatrists are cleared for
 # the restricted (R) HIV results and psychiatrists alone for the very
 # restricted (V) mental-health notes; an emergency purpose is declared under
-# break-glass alone; a nurse does not record a diagnosis; and, with the lab
+# the emergency justification alone (j_policy); a nurse does not record a diagnosis; and, with the lab
 # system's AGENT `lab` given, the lab writes its own template alone.
 j_rules() {
   local lab="${1:-}" physician psychiatrist rules
@@ -867,7 +870,7 @@ j_rules() {
     --argjson cleared_v "$(j_rule "Psychiatrists read mental-health notes" permit "$(jq -nc \
       --argjson p "$psychiatrist" --argjson s "$(j_sensitivity V)" \
       '{applies_to:[$p],data:[{_type:"ACCESS_DATA_SCOPE",sensitivities:[$s]}]}')")" \
-    --argjson emergency "$(j_rule "Emergency treatment under break-glass alone" deny "$(jq -nc \
+    --argjson emergency "$(j_rule "Emergency treatment under the emergency justification alone" deny "$(jq -nc \
       --argjson pro "$(j_term professional)" --argjson sys "$(j_term system)" \
       --argjson e "$(j_coded HL7_ActReason ETREAT)" \
       '{applies_to:[{_type:"ACCESS_ACTOR_SCOPE",caller_kind:$pro},{_type:"ACCESS_ACTOR_SCOPE",caller_kind:$sys}],
@@ -896,12 +899,15 @@ j_rules() {
 # The controller's ACCESS_POLICY: the mental-health note very restricted, the
 # HIV result restricted, a care relationship with a one-day grace and a
 # purpose required, the subject view withholding the roles of a person who
-# accessed (EHDS Art. 9(3)), and the rules of j_rules, for the lab system's
+# accessed (EHDS Art. 9(3)), the emergency justification of the emergency
+# physicians under ETREAT, and the rules of j_rules, for the lab system's
 # AGENT `lab` when one is given.
 j_policy() {
   local arch="openEHR-EHR-ACCESS_POLICY.controller.v1" lab="${1:-}"
   jq -nc --arg a "$arch" --argjson c "$(j_party ORGANISATION "$(hv hospital)")" \
     --argjson rules "$(j_rules "$lab")" \
+    --argjson etreat "$(j_coded HL7_ActReason ETREAT)" \
+    --argjson physician "$(j_role_code EMERGENCY_PHYSICIAN)" \
     --arg mental "$H_T_MENTAL" --arg hiv "$H_T_HIV" \
     --argjson v "$(j_sensitivity V)" --argjson r "$(j_sensitivity R)" \
     --argjson person "$(j_term person)" --argjson roles "$(j_term accessor_roles)" \
@@ -917,6 +923,8 @@ j_policy() {
     care_relationship_required:true,
     relationship_grace:{_type:"DV_DURATION",value:"P1D"},
     purpose_required:true,
+    justifications:[{_type:"ACCESS_JUSTIFICATION",purposes:[$etreat],emergency:true,
+      applies_to:[{_type:"ACCESS_ACTOR_SCOPE",role:$physician}]}],
     log_restrictions:[{_type:"ACCESS_LOG_RESTRICTION",name:{_type:"DV_TEXT",value:"Roles withheld"},
       archetype_node_id:"at0003",accessor_kinds:[$person],withheld:[$roles],legal_grounds:[$ground]}],
     rules:$rules}'
@@ -1004,10 +1012,10 @@ h_expect() {
 # refusal `refusal`; the access-log entry it must write is noted.
 h_read() {
   local n="$1" who="$2" ehr="$3" c="$4" purpose="$5" code="$6" refusal="${7:-}" what="$8"
-  # An access declaring an emergency purpose carries the mark, granted or
-  # refused (EHDS Art. 11(5)).
+  # An access that rests on the emergency justification, by the emergency
+  # physician, names it with its reason (EHDS Art. 11(5)).
   local emergency=false
-  [[ "$purpose" = ETREAT ]] && emergency=true
+  [[ "$purpose" = ETREAT && "$who" = p:dirk ]] && emergency=true
   h_call "$n" "$who" GET "/ehr/$ehr/composition/$(hv "$c")" "" "$purpose"
   h_assert_code "$code" "$what (instance $n): ${H_BODY:0:300}"
   case "$code" in
@@ -1063,14 +1071,16 @@ h_query_agrees() {
 }
 
 # Asserts each noted access-log expectation: exactly one entry for its
-# request, with the result, the refusal and the emergency mark noted.
+# request, with the result, the refusal and the emergency justification noted.
 h_check_log() {
   local row rid result reason emergency what entries
   for row in "${H_EXPECT[@]}"; do
     IFS='|' read -r rid result reason emergency what <<<"$row"
     h_call 1 p:hans GET "$HX/admin/access-log?request_id=$rid"
     entries="$(jq -c '[.entries[]? | {result: .outcome.result.defining_code.code_string,
-      reason: (.outcome.reason.defining_code.code_string // "-"), emergency: (.is_emergency // false)}]' \
+      reason: (.outcome.reason.defining_code.code_string // "-"),
+      emergency: ([.authorisations[]? | select(.kind.defining_code.code_string == "emergency"
+        and .reason != null)] | length > 0)}]' \
       <<<"$H_BODY" 2>/dev/null)"
     assert_eq "[{\"result\":\"$result\",\"reason\":\"$reason\",\"emergency\":$emergency}]" "$entries" \
       "$what: the access-log entries of request $rid"
@@ -1202,7 +1212,7 @@ hospital_abac() {
   probe_done
 
   probe "P-HOSP-ABAC-BREAKGLASS" "$PROBE_WORKING" "server" "#5627" \
-    "Dr. Bakker reads the restricted HIV result only with the emergency role and purpose, marked emergency"
+    "Dr. Bakker reads the restricted HIV result only under the emergency justification with a reason, recorded"
   h_read 1 p:dirk "$eva" c_hiv TREAT 403 refused-sensitivity "Dr. Bakker without an emergency"
   h_read 2 p:dirk "$eva" c_hiv ETREAT 200 "" "Dr. Bakker declares an emergency"
   h_read 1 p:bram "$eva" c_hiv ETREAT 403 refused-policy-denied \

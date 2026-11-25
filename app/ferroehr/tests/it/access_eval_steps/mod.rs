@@ -320,7 +320,6 @@ pub(super) fn caller(kind: CallerKind, party: &str) -> Caller {
         party: Some(party.to_owned()),
         own_ehrs: Vec::new(),
         patient_grants_only: false,
-        opt_out_override: false,
         acts_for: Vec::new(),
         facts: CallerFacts::default(),
         administrator: false,
@@ -394,6 +393,7 @@ pub(super) fn asked(operation: OperationClass, purpose: Option<&str>) -> Asked<'
         operation,
         purpose,
         reasoned: false,
+        opt_out_override: false,
         episodes: None,
     }
 }

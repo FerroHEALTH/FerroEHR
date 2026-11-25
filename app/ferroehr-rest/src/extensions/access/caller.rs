@@ -71,6 +71,7 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
         operation: operation_class(op),
         purpose: ferroehr::system_log::access_context::current_purpose(),
         reason: ferroehr::system_log::access_context::current_reason(),
+        opt_out_override: opt_out_override(principal, caller.kind),
         episodes: launched_episode(state, principal).map(|episode| Arc::from([episode])),
     };
     let server_default = state
@@ -184,7 +185,6 @@ fn caller_of(
             .or_else(|| principal.and_then(own_person_id)),
         own_ehrs: own_ehrs(principal, kind, patient_grants_only),
         patient_grants_only,
-        opt_out_override: opt_out_override(principal, kind),
         acts_for,
         administrator: roles.iter().any(|r| r.eq_ignore_ascii_case(&admin_role)),
         facts: principal.map_or_else(

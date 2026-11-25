@@ -64,7 +64,6 @@ fn entry() -> Value {
         "accessor": { "_type": "ACCESSOR", "kind": coded("openehr_access", "person"),
             "party": { "_type": "PARTY_IDENTIFIED", "name": "A. Clinician" } },
         "ehr_id": { "_type": "HIER_OBJECT_ID", "value": "7d44b88c-4199-4bad-97dc-d78268e01398" },
-        "is_emergency": false,
         "retention": { "_type": "ACCESS_RETENTION",
             "retain_until": { "_type": "DV_DATE", "value": "2031-11-07" },
             "grounds": [coded("http://data.europa.eu/eli/reg/2025/327/oj", "art_9.par_2")] }

@@ -201,9 +201,9 @@ pub(super) fn cared_read(policy: &CompiledPolicy, attested: bool) -> AuditEvent 
 /// the access policy, with the reason its caller stated, as the access
 /// decision stamps it.
 pub(crate) fn justify_in_emergency(event: &mut AuditEvent) {
-    event.purpose = Some("ETREAT".to_owned());
     use crate::access_eval::justification::{Justification, Reason};
     use openehr_rm::draft::access_control::terminology::log::Authorisation;
+    event.purpose = Some("ETREAT".to_owned());
     let reason = Reason::new("unconscious on arrival").expect("a reason");
     let version = "policy::cdr.example.org::2".to_owned();
     let ground =
@@ -217,13 +217,13 @@ pub(crate) fn justify_in_emergency(event: &mut AuditEvent) {
         emergency: true,
         reason,
     };
-    event.justification = Some(justification.clone());
+    event.justification = Some(Box::new(justification.clone()));
     event.decided = Some(Box::new(crate::access_eval::record::Decision {
         refused: None,
         grounds: vec![ground],
         policies: vec![version],
         confidentiality: None,
-        justification: Some(justification),
+        justification: Some(Box::new(justification)),
     }));
 }
 

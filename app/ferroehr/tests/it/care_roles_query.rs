@@ -207,6 +207,7 @@ impl Ward {
                     operation: OperationClass::Read,
                     purpose: Some("TREAT".to_owned()),
                     reason: None,
+                    opt_out_override: false,
                     episodes: None,
                 },
                 InForce {

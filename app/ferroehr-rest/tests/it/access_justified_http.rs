@@ -193,7 +193,8 @@ impl Deployment {
     async fn read(&self, purpose: Option<&str>, reason: Option<&str>) -> (StatusCode, String) {
         let mut req = Request::get(format!("{BASE}/ehr/{}/composition/{}", self.ehr, self.vo))
             .header(header::AUTHORIZATION, basic("clinician"))
-            .header(header::ACCEPT, "application/json");
+            .header(header::ACCEPT, "application/json")
+            .header("Prefer", "return=representation");
         if let Some(purpose) = purpose {
             req = req.header(PURPOSE, purpose);
         }

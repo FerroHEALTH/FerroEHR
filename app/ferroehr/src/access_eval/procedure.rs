@@ -130,9 +130,6 @@ pub struct Caller {
     /// alone, which reach only "data within that patient's EHR" (SMART on
     /// openEHR `master08` §Resource Scopes).
     pub patient_grants_only: bool,
-    /// Whether the caller is an access service that may lift an opt-out for
-    /// a vital interest, and does not act for the subject (EHDS Art. 10(2)).
-    pub opt_out_override: bool,
     /// The ids of the parties the caller acts for or is a member of: its
     /// provider, the `GROUP`s that provider is a member of, its care teams.
     pub acts_for: Vec<String>,
@@ -189,6 +186,9 @@ pub struct Asked<'a> {
     pub purpose: Option<&'a str>,
     /// Whether the request states a reason for a justified access.
     pub reasoned: bool,
+    /// Whether the caller is an access service that may lift an opt-out for
+    /// a vital interest, and does not act for the subject (EHDS Art. 10(2)).
+    pub opt_out_override: bool,
     /// The episodes of care the request is narrowed to, sorted; `None` when
     /// it is not narrowed.
     pub episodes: Option<&'a [EpisodeKey]>,
@@ -531,7 +531,6 @@ fn procedure(judged: &Judged<'_>) -> Verdict {
     }
     let (directives, exclusions, held_closed) = lists(judged.ehr.settings);
     let read = Reader { judged };
-    let placed = |at: usize| judged.scopes.layout().and_then(|l| l.directives.get(at));
     let invoked = crate::access_eval::justification::invoked(&read);
     let lifts = invoked.is_some_and(Invoked::lifts);
     crate::access_eval::exclusion::excluded(&read, exclusions, lifts, &mut verdict);
@@ -541,16 +540,7 @@ fn procedure(judged: &Judged<'_>) -> Verdict {
         controller_denials(&read, false, &mut verdict);
         return verdict;
     }
-    // Step 4: a purpose and an emergency's reason, checked as input before any rule is read
-    // (#5737, #6587).
-    let missing = if judged.policy.purpose_required && judged.asked.purpose.is_none() {
-        Some(Refusal::PurposeMissing)
-    } else if invoked.is_some_and(|invoked| invoked.emergency && !invoked.reasoned) {
-        Some(Refusal::ReasonMissing)
-    } else {
-        None
-    };
-    if let Some(refusal) = missing {
+    if let Some(refusal) = missing_input(judged, invoked) {
         verdict.rules.push(Rule {
             when: Pred::True,
             then: Outcome::Refused(refusal),
@@ -572,20 +562,7 @@ fn procedure(judged: &Judged<'_>) -> Verdict {
         });
         return verdict;
     }
-    let permits: Vec<Permit<'_>> = directives
-        .iter()
-        .enumerate()
-        .filter(|(_, d)| kind_and_effect(d) == (DirectiveKind::Consent, Effect::Permit))
-        .filter_map(|(at, d)| {
-            let binds = read.binds(DirectiveKind::Consent, d, placed(at));
-            (binds != Pred::False).then(|| Permit {
-                at,
-                directive: d,
-                certain: binds == Pred::True,
-                cover: Pred::all(vec![binds, read.cover(d, Effect::Permit, placed(at))]),
-            })
-        })
-        .collect();
+    let permits = consent_permits(&read, directives);
     verdict.grounds.permits = permits
         .iter()
         .filter(|permit| permit.certain)
@@ -635,6 +612,19 @@ fn procedure(judged: &Judged<'_>) -> Verdict {
     verdict
 }
 
+/// Step 4: the refusal of a request missing what it must declare before any
+/// rule is read: the purpose the policy requires (#5737), or the reason of
+/// the emergency justification it invokes (#6587).
+fn missing_input(judged: &Judged<'_>, invoked: Option<Invoked>) -> Option<Refusal> {
+    if judged.policy.purpose_required && judged.asked.purpose.is_none() {
+        Some(Refusal::PurposeMissing)
+    } else if invoked.is_some_and(|invoked| invoked.emergency && !invoked.reasoned) {
+        Some(Refusal::ReasonMissing)
+    } else {
+        None
+    }
+}
+
 /// The directives and the exclusions of `settings`, and whether the EHR is
 /// held closed; none for an EHR with no settings.
 fn lists(settings: Option<&EhrAccessSettings>) -> (&[AccessDirective], &[AccessDirective], bool) {
@@ -679,7 +669,7 @@ fn denials(
     lifts: bool,
     verdict: &mut Verdict,
 ) {
-    let opt_out_override = lifts && read.judged.caller.opt_out_override;
+    let opt_out_override = lifts && read.judged.asked.opt_out_override;
     for (at, directive) in directives.iter().enumerate() {
         let placed = read.placed(at);
         let (kind, effect) = kind_and_effect(directive);
@@ -737,6 +727,28 @@ const fn step(outcome: Outcome) -> u8 {
         Outcome::Absent(_) => 2,
         _ => 3,
     }
+}
+
+/// The consent permits among `directives` that may bind the caller.
+fn consent_permits<'a>(
+    read: &Reader<'_, '_>,
+    directives: &'a [AccessDirective],
+) -> Vec<Permit<'a>> {
+    directives
+        .iter()
+        .enumerate()
+        .filter(|(_, d)| kind_and_effect(d) == (DirectiveKind::Consent, Effect::Permit))
+        .filter_map(|(at, d)| {
+            let placed = read.placed(at);
+            let binds = read.binds(DirectiveKind::Consent, d, placed);
+            (binds != Pred::False).then(|| Permit {
+                at,
+                directive: d,
+                certain: binds == Pred::True,
+                cover: Pred::all(vec![binds, read.cover(d, Effect::Permit, placed)]),
+            })
+        })
+        .collect()
 }
 
 /// The permit rules of the controller's policy that may bind the caller.

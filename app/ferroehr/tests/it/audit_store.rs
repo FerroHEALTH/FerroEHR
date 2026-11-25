@@ -802,12 +802,12 @@ async fn both_inserts_persist_the_justification_and_it_cannot_be_rewritten() {
 
     let mut single = read_event("2026-07-10T11:00:00Z".parse().unwrap());
     single.purpose = Some("ETREAT".to_owned());
-    single.justification = Some(emergency("unconscious on arrival"));
+    single.justification = Some(Box::new(emergency("unconscious on arrival")));
     store.insert(&single, None).await.expect("insert");
 
     let mut marked = read_event("2026-07-10T11:00:01Z".parse().unwrap());
     marked.purpose = Some("ETREAT".to_owned());
-    marked.justification = Some(emergency("cardiac arrest"));
+    marked.justification = Some(Box::new(emergency("cardiac arrest")));
     let mut plain = read_event("2026-07-10T11:00:02Z".parse().unwrap());
     plain.purpose = Some("TREAT".to_owned());
     let records = vec![record(&marked, None), record(&plain, None)];
@@ -892,7 +892,7 @@ fn every_kind_of_record(
     classified.ehr_id = Some("7d44b88c-4199-4bad-97dc-d78268e01398".to_owned());
     classified.subject_namespace = Some("urn:oid:2.999.1.1".to_owned());
     classified.purpose = Some("ETREAT".to_owned());
-    classified.justification = Some(emergency("unconscious on arrival"));
+    classified.justification = Some(Box::new(emergency("unconscious on arrival")));
     classified.permit = Some("permit-1".to_owned());
     classified.legal_basis = Some("gdpr-art-9-2-h".to_owned());
     classified.request_id = Some("req-1".to_owned());

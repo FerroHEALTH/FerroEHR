@@ -208,7 +208,7 @@ pub struct Decision {
     /// control, The Decision Procedure, Refusals).
     pub confidentiality: Option<Confidentiality>,
     /// The justification the access rested on.
-    pub justification: Option<Justification>,
+    pub justification: Option<Box<Justification>>,
 }
 
 impl Decision {
@@ -230,7 +230,7 @@ impl Decision {
             .collect();
         let decision = Self {
             policies: policies_of(&grounds),
-            justification: Justification::of_grounds(&grounds),
+            justification: Justification::of_grounds(&grounds).map(Box::new),
             grounds,
             refused: None,
             confidentiality: None,
@@ -293,7 +293,7 @@ impl RequestAccess {
             policies: policies_of(&grounds),
             grounds,
             confidentiality,
-            justification: justification.map(|(_, justification)| justification),
+            justification: justification.map(|(_, justification)| Box::new(justification)),
         }
     }
 

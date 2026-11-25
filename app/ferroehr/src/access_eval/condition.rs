@@ -66,6 +66,7 @@ pub struct RequestAccess {
     episodes: Option<Arc<[EpisodeKey]>>,
     purpose: Option<String>,
     reason: Option<Reason>,
+    opt_out_override: bool,
     pub(super) policy: Option<Arc<AccessPolicy>>,
     categories: CategoryIndex,
     server_default: AccessDefault,
@@ -169,6 +170,9 @@ pub struct Asking {
     pub purpose: Option<String>,
     /// The reason the caller states for a justified access.
     pub reason: Option<Reason>,
+    /// Whether the caller is an access service that may lift an opt-out for
+    /// a vital interest, and does not act for the subject (EHDS Art. 10(2)).
+    pub opt_out_override: bool,
     /// The episodes of care the request is narrowed to, sorted; `None` when
     /// it is not narrowed.
     pub episodes: Option<Arc<[EpisodeKey]>>,
@@ -199,6 +203,7 @@ impl RequestAccess {
             operation: asking.operation,
             purpose: asking.purpose,
             reason: asking.reason,
+            opt_out_override: asking.opt_out_override,
             episodes: asking.episodes,
             policy: in_force.policy,
             categories: in_force.categories,
@@ -435,6 +440,7 @@ impl RequestAccess {
                 operation: self.operation,
                 purpose: self.purpose.as_deref(),
                 reasoned: self.reason.is_some(),
+                opt_out_override: self.opt_out_override,
                 episodes: self.episodes.as_deref(),
             },
             policy: self.policy(),

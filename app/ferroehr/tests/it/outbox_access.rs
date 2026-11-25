@@ -150,7 +150,6 @@ impl Reader {
             party: self.party.clone(),
             own_ehrs: Vec::new(),
             patient_grants_only: false,
-            opt_out_override: false,
             acts_for: Vec::new(),
             facts: self.facts.clone(),
             administrator: false,
@@ -161,6 +160,7 @@ impl Reader {
             operation: OperationClass::Read,
             purpose: self.purpose.map(str::to_owned),
             reason: None,
+            opt_out_override: false,
             episodes: None,
         };
         let in_force = InForce {

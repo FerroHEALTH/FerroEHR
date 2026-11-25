@@ -8,7 +8,7 @@ use openehr_rm::draft::access_control::terminology::{CallerKind, OperationClass}
 use serde_json::{Value, json};
 
 use super::*;
-use ferroehr::access_eval::procedure::Lifted;
+use ferroehr::access_eval::procedure::{Asked, Lifted};
 
 /// The subject reads their own record whatever the directives say (EHDS Art. 3).
 #[test]
@@ -117,11 +117,11 @@ fn step_1_opt_out() {
         )
     };
     let service = caller(CallerKind::AccessService, DR_B);
-    let overriding = Caller {
-        opt_out_override: true,
-        ..service.clone()
-    };
     let emergency = break_glass(read(Some("ETREAT")));
+    let overriding = Asked {
+        opt_out_override: true,
+        ..emergency
+    };
     let cases: [(&str, bool, &Caller, Asked<'_>, Outcome); 5] = [
         (
             "an access service",
@@ -137,12 +137,12 @@ fn step_1_opt_out() {
             read(None),
             Outcome::Admit,
         ),
-        ("the override", true, &overriding, emergency, Outcome::Admit),
+        ("the override", true, &service, overriding, Outcome::Admit),
         (
             "an absolute opt-out",
             false,
-            &overriding,
-            emergency,
+            &service,
+            overriding,
             ABSENT_OPT_OUT,
         ),
         (

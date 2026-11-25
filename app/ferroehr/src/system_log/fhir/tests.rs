@@ -759,17 +759,17 @@ fn the_emergency_mark_renders_as_its_entity() {
     let unmarked = to_fhir(&e, &marking, None).expect("render");
     assert!(mark(&unmarked).is_none(), "{unmarked}");
     let reason = Reason::new("unconscious on arrival").expect("a reason");
-    e.justification = Some(Justification {
+    e.justification = Some(Box::new(Justification {
         emergency: false,
         reason: reason.clone(),
-    });
+    }));
     let justified = to_fhir(&e, &marking, None).expect("render");
     assert!(mark(&justified).is_none(), "{justified}");
 
-    e.justification = Some(Justification {
+    e.justification = Some(Box::new(Justification {
         emergency: true,
         reason,
-    });
+    }));
     let rendered = to_fhir(&e, &marking, None).expect("render");
     let entity = mark(&rendered).expect("the mark");
     assert_eq!(

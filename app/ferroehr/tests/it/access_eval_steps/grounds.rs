@@ -53,10 +53,13 @@ fn request(caller: Caller, asked: Asked<'_>, policy: Option<AccessPolicy>) -> Re
             operation: asked.operation,
             purpose: asked.purpose.map(str::to_owned),
             reason: reason_of(asked),
+            opt_out_override: asked.opt_out_override,
             episodes: asked.episodes.map(Arc::from),
         },
         InForce {
-            policy: in_force(policy.as_ref(), asked).map(Arc::new),
+            policy: policy
+                .map_or_else(|| in_force(None, asked), |p| in_force(Some(&p), asked))
+                .map(Arc::new),
             categories: categories(),
             server_default: AccessDefault::Open,
             now: now(),
@@ -91,10 +94,13 @@ fn bound(
             operation: asked.operation,
             purpose: asked.purpose.map(str::to_owned),
             reason: reason_of(asked),
+            opt_out_override: asked.opt_out_override,
             episodes: asked.episodes.map(Arc::from),
         },
         InForce {
-            policy: in_force(policy.as_ref(), asked).map(Arc::new),
+            policy: policy
+                .map_or_else(|| in_force(None, asked), |p| in_force(Some(&p), asked))
+                .map(Arc::new),
             categories: categories(),
             server_default: AccessDefault::Open,
             now: now(),

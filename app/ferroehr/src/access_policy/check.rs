@@ -136,7 +136,7 @@ pub fn checked(body: &Value) -> Result<AccessPolicy, PolicyDefect> {
         for scope in justification.applies_to.as_deref().unwrap_or_default() {
             scope_codes(scope)?;
         }
-        for purpose in justification.purposes.iter() {
+        for purpose in &justification.purposes {
             ForeignCode::read(ForeignKind::Purpose, purpose)?;
         }
     }

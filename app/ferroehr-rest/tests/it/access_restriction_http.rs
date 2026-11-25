@@ -509,9 +509,9 @@ async fn a_restricted_ehr_reads_as_absent() {
 
 /// Only the caller the emergency justification names, declaring its purpose
 /// with a reason, reads restricted data, and that access carries the
-/// justification and the reason; a caller it does not name, or no purpose,
-/// reads it as absent, and the purpose without a reason is refused before
-/// any directive is read, so nothing says the data are restricted.
+/// justification and the reason; a caller it does not name, no purpose, or
+/// the purpose without a reason reads it as absent, so nothing says the data
+/// are restricted.
 #[tokio::test]
 async fn only_an_emergency_access_reads_restricted_data_and_is_marked() {
     let (_db, pool, app) = Box::pin(app()).await;
@@ -530,12 +530,8 @@ async fn only_an_emergency_access_reads_restricted_data_and_is_marked() {
         assert_eq!(status, StatusCode::NOT_FOUND, "{user} {purpose:?}: {body}");
     }
     let (status, body) = send(&app, "GET", &path, "medic", Some("ETREAT"), None).await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "no reason: {body}");
-    assert_eq!(
-        serde_json::from_str::<Value>(&body).expect("problem details")["refusal"],
-        json!("refused-reason-missing"),
-        "{body}"
-    );
+    assert_eq!(status, StatusCode::NOT_FOUND, "no reason: {body}");
+    assert!(!body.contains("refused-"), "nothing says why: {body}");
     let (status, body) = send(&app, "GET", &path, "medic", Some(&stated), None).await;
     assert_eq!(
         status,

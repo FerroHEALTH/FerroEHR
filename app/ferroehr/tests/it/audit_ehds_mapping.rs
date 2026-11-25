@@ -485,11 +485,13 @@ fn nen_7513_the_actor_roles_are_recorded_and_rendered_in_both_formats() {
 fn art_11_5_the_emergency_mark_reaches_the_fhir_rendering_only() {
     let mut event = access_event();
     event.purpose = Some("ETREAT".to_owned());
-    event.justification = Some(ferroehr::access_eval::justification::Justification {
-        emergency: true,
-        reason: ferroehr::access_eval::justification::Reason::new("unconscious on arrival")
-            .expect("a reason"),
-    });
+    event.justification = Some(Box::new(
+        ferroehr::access_eval::justification::Justification {
+            emergency: true,
+            reason: ferroehr::access_eval::justification::Reason::new("unconscious on arrival")
+                .expect("a reason"),
+        },
+    ));
     let marking = ctx();
 
     let rendered =

@@ -278,7 +278,6 @@ fn access(team: uuid::Uuid) -> Arc<RequestAccess> {
             party: Some(team.to_string()),
             own_ehrs: Vec::new(),
             patient_grants_only: false,
-            opt_out_override: false,
             acts_for: Vec::new(),
             facts: CallerFacts::default(),
             administrator: false,
@@ -289,6 +288,7 @@ fn access(team: uuid::Uuid) -> Arc<RequestAccess> {
             operation: OperationClass::Query,
             purpose: Some("TREAT".to_owned()),
             reason: None,
+            opt_out_override: false,
             episodes: None,
         },
         InForce {
