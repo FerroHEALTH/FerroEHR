@@ -164,3 +164,46 @@ async fn a_copy_a_later_read_finds_current_decides() {
     provider.force_flush().expect("flush");
     assert_eq!(counted(&exporter, "refused"), 0, "nothing is refused");
 }
+
+/// Inside a request, whose first read of the store's revisions serves every
+/// later one, a copy that a later read finds current still decides: the
+/// wait reads the store again on its own (#6561). The stamp the request's
+/// first read found is gone by the time the copy is read again, so no facts
+/// read the copy installs is past the one that read names.
+#[tokio::test]
+async fn a_copy_a_later_read_finds_current_decides_inside_a_request() {
+    let exporter = InMemoryMetricExporter::default();
+    let provider = SdkMeterProvider::builder()
+        .with_reader(PeriodicReader::builder(exporter.clone()).build())
+        .build();
+    crate::telemetry::access_path::init(&provider.meter("ferroehr"));
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&crate::db::domain::DomainPools::from_shared(&db.pool()));
+    let grants = Arc::clone(svc.grants());
+    grants.refresh().await.expect("the copy reads");
+    let stamped: uuid::Uuid = sqlx::query_scalar(
+        "INSERT INTO party.binding_caller_fact_party (party_id, stamped_xid) \
+         VALUES (uuidv7(), pg_current_xact_id()) RETURNING party_id",
+    )
+    .fetch_one(&db.pool())
+    .await
+    .expect("another replica commits a change");
+    crate::party_binding::request::scope(async {
+        let first = grants
+            .behind()
+            .await
+            .expect("the store answers")
+            .expect("the copy has not read the stamp");
+        sqlx::query("DELETE FROM party.binding_caller_fact_party WHERE party_id = $1")
+            .bind(stamped)
+            .execute(&db.pool())
+            .await
+            .expect("the stamp goes");
+        super::catch_up(&grants, first)
+            .await
+            .expect("a later read finds the copy current");
+    })
+    .await;
+    provider.force_flush().expect("flush");
+    assert_eq!(counted(&exporter, "refused"), 0, "nothing is refused");
+}

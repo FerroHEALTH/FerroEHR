@@ -51,5 +51,5 @@ scan:
 ignorefile: .trivyignore.yaml
 
 # NOTE: the OpenVEX documents under security/vex/ are NOT listed here — Trivy
-# takes VEX sources only as `--vex` arguments, so each lane passes them
-# explicitly (image-scan.yml does).
+# takes VEX sources only as `--vex` arguments (or `TRIVY_VEX`), so each lane
+# passes them explicitly (image-scan.yml and scan-and-tag.yml do).

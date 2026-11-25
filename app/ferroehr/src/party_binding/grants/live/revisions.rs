@@ -138,6 +138,22 @@ impl LiveGrants {
         Ok((!self.holds(&store)).then_some(store))
     }
 
+    /// The revisions in force in the store when the copy as it stands now is
+    /// older than them, from an indexed read of its own that no earlier read
+    /// of the running request serves, so a wait for the copy sees the store
+    /// as it is now (#6561).
+    ///
+    /// # Errors
+    /// [`GrantsUnavailable`] when the party store does not answer.
+    pub async fn behind_now(&self) -> Result<Option<Revisions>, GrantsUnavailable> {
+        let held = self.held_snapshot();
+        let mut conn = crate::db::acquire::acquire(&self.pool)
+            .await
+            .map_err(crate::storage::error::StorageError::from)?;
+        let store = crate::party_binding::grants::store::revisions(&mut conn, Some(&held)).await?;
+        Ok((!self.holds(&store)).then_some(store))
+    }
+
     /// Bring the copy to the store's revisions as the request reads them
     /// ([`crate::party_binding::request`]), so the decision that
     /// follows rests on an indexed read of the store and on no notification's

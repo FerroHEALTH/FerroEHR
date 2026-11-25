@@ -21,10 +21,9 @@
 # brings `.trivyignore.yaml`, `ignore-unfixed` and the HIGH/CRITICAL floor, and
 # `--vex` applies the OpenVEX documents under `security/vex/`.
 #
-# NOTE: the VEX documents bind here though `.trivyignore.yaml` records that
-# they do not bind in the build-time lane: the `pkg:oci/…` products match a
-# PUBLISHED reference, and the build lane scans `ferroehr-postgres` under a
-# local tag.
+# NOTE: the `pkg:oci/…` VEX products match a PUBLISHED reference, so they
+# bind here and in the tag gate's app and viewer scans (scan-and-tag.yml),
+# and not in that gate's `ferroehr-postgres` scan, which uses a local tag.
 #
 # THE RECORD (#4795). Beside that gate the lane runs the release's
 # vulnerability record (scripts/security/vulnerability-record.sh) over the
