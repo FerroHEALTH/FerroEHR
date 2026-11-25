@@ -5,11 +5,12 @@ paths: ["sonar-project.properties", ".github/workflows/sonar.yml", "scripts/sona
 # Machine review (SonarQube Cloud) — what it is and what it is not
 
 SonarQube Cloud analyzes `main`, with coverage, on each push to `main`, weekly
-and on a dispatch (`.github/workflows/sonar.yml`; scope in
-`sonar-project.properties`; #2630). CodeQL runs on the same triggers
-(`.github/workflows/codeql.yml`). Neither runs on a pull request or in the
-merge queue (owner ruling 2026-11-25): both are advisory, and a newer push
-cancels the older analysis.
+and on a dispatch, never on a pull request or in the merge queue, and a newer
+push cancels the older analysis (`.github/workflows/sonar.yml`; scope in
+`sonar-project.properties`; #2630, #6574; owner decision 2026-11-25: "Sonar
+off PRs, CodeQL kept"). CodeQL keeps running on every pull request that
+touches Rust sources, Cargo files, workflows or actions, and daily on `main`
+(`.github/workflows/codeql.yml`).
 It exists because the local gates catch what a lint can catch, review is one
 person, and a deterministic multi-language sweep also covers trees the Rust
 gates never see: shell scripts, workflow YAML, the website's JS/HTML/CSS,

@@ -21,7 +21,7 @@
 name: SonarQube Cloud
 
 # On a push to main and weekly, never on a pull request or a merge group
-# (owner ruling 2026-11-25): the analysis and its coverage run are advisory
+# (owner decision 2026-11-25, #6574): the analysis and its coverage run are advisory
 # (ai-code-review.md) and gate nothing. A newer push cancels the older
 # analysis on its ref, so main is analysed at its latest commit.
 on:

@@ -290,7 +290,7 @@ chapters, the Clippy book, and the Cargo/rustdoc books.)
   `.github/workflows/` at `--min-severity=low` with online audits enabled — the
   `unpinned-uses`, `excessive-permissions`, `artipacked`, `template-injection`,
   `cache-poisoning` and `impostor-commit` rules are the failing checks — plus
-  CodeQL's `actions` language on every push to `main` that changes a workflow. An accepted finding is an
+  CodeQL's `actions` language on every pull request that changes a workflow. An accepted finding is an
   inline `# zizmor: ignore[rule]` carrying its reason, never a silent
   suppression.
 - **A migration that has shipped is never edited** (owner rulings 2026-09-09
