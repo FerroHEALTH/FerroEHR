@@ -117,8 +117,13 @@ ORDER BY o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitud
     `context/participations`, `composer/identifiers`, `mappings`,
     `feeder_audit/originating_system_item_ids`) gives one **cell**. A path
     that ends on the list answers the list itself, and a path that continues
-    below it answers the array of its matches. Both are `null` where nothing
-    matches. Over a composition with a placer and a filler order number,
+    below it answers the array of its matches, never a list inside a list.
+    Both are `null` where nothing matches, never `[]`: AQL answers `NULL`
+    for a missing data item (QUERY, §Result structure), and the RM leaves
+    an absent list `Void`, its invariants refusing an empty `links`,
+    `participations`, `identifiers` or `attestations`. AQL 1.1.0 does not
+    define the JSON of a multi-valued column; this shape is FerroEHR's own
+    decision. Over a composition with a placer and a filler order number,
     `c/feeder_audit/originating_system_item_ids` answers
     `[{"_type": "DV_IDENTIFIER", "id": "ORD-PLACER-1", ...}, {"_type": "DV_IDENTIFIER", "id": "ORD-FILLER-1", ...}]`
     and `c/feeder_audit/originating_system_item_ids/id` answers
@@ -838,10 +843,13 @@ v/attestations[is_pending=false]` is portable AQL. It finds versions that
 were marked pending and never signed, but it misses a version that was
 signed and then marked pending again, so it is not the worklist.
 
-- **`SELECT v/attestations`** returns the version's attestations as one list,
-  those committed with the version first, then in commit order. A path below
-  it returns the list of that attribute, one entry per attestation that has
-  it. A version with no attestation gives an empty cell.
+- **`SELECT v/attestations`** returns the version's attestations as one flat
+  list in one cell, each the `ATTESTATION` the version read returns, those
+  committed with the version first, then in commit order. A path below it
+  returns the flat list of that attribute, one entry per attestation that
+  has it, so `v/attestations/committer/name` over two attestations answers
+  `["A", "B"]`. A version with no attestation answers `null` in each of
+  these columns, never `[]`, by the cell rule above.
 - **A predicate on `attestations`** tests attributes of each attestation
   (`[is_pending=true]`, `[reason/value=$reason]`). An archetype or name
   predicate is refused: `ATTESTATION` has neither.
