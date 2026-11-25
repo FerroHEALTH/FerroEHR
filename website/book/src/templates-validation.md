@@ -319,7 +319,11 @@ The answer is `application/json`:
 
 An id nothing is stored under answers **404**. A stored source that no
 longer converts answers **422**, the status an archetype upload answers
-for a source it cannot accept. A specialised archetype whose stored parent
+for a source it cannot accept. ADL 1.4 writes a specialised archetype in
+flat form and ADL 2 in differential form, so the route reduces a specialised
+archetype against the conversion of its stored parent. Upload the parent
+first: without it the route answers **422** and names the parent. A
+specialised archetype whose stored parent
 lacks a term code the archetype introduces without its specialisation dots
 (`at0006` where depth 1 needs `at0.1`) also answers **422**: AOM 1.4 requires
 the dots on every code a specialisation adds. The routes only read, so the
