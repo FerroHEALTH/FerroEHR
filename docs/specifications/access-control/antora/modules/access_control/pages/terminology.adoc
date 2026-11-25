@@ -130,7 +130,7 @@ The groups of this package follow. The codes in `openehr_access` are proposed; a
 |`ACCESS_CONFLICT_RULE._conflict_` (`Group_id_access_conflict`)
 
 |access value set binding
-|care_role, representation_basis, kinship, organisation_type, care_purpose, emergency_purpose
+|care_role, representation_basis, kinship, organisation_type, care_purpose
 |`ACCESS_VALUE_SET._binding_` (`Group_id_access_value_set_binding`)
 
 |care relationship
@@ -174,7 +174,7 @@ The groups of this package follow. The codes in `openehr_access` are proposed; a
 |The `_name_` of an `ELEMENT` in a composition's `EVENT_CONTEXT._other_context_` whose value is the `DV_IDENTIFIER` of an episode of care the composition is placed in (xref:access_control_package.adoc#_episodes_of_care[Episodes of Care]). The RM has no attribute for it: `_other_context_` is "Other optional context which will be archetyped" (RM EHR IM, `EVENT_CONTEXT`)
 
 |access refusal
-|refused-opt-out, refused-restricted, refused-consent-denied, refused-policy-denied, refused-sensitivity, refused-confidentiality, refused-no-care-relationship, refused-outside-episode, refused-purpose-missing, refused-consent-required, refused-not-subject, refused-not-represented, refused-consent-reference-missing, refused-excluded, refused-conflict
+|refused-opt-out, refused-restricted, refused-consent-denied, refused-policy-denied, refused-sensitivity, refused-confidentiality, refused-no-care-relationship, refused-outside-episode, refused-purpose-missing, refused-reason-missing, refused-consent-required, refused-not-subject, refused-not-represented, refused-consent-reference-missing, refused-excluded, refused-conflict
 |The refusal of each step of xref:decision_procedure.adoc#_procedure[the procedure]
 
 |caseload
@@ -219,10 +219,6 @@ What a care role, a basis of representation, a kinship, an organisation type or 
 |care_purpose
 |`HL7_ActReason`
 |`ACCESS_POLICY._care_purposes_`
-
-|emergency_purpose
-|`HL7_ActReason`
-|the purposes the system reads as declaring an emergency
 |===
 
 `HL7_ParticipationType` defines the parts a professional plays in an act: for example `RESP` is "the person or organization that has primary responsibility for the act" and `SPRF` "a person assisting in an act through his substantial presence and involvement". `PART`, "the target of the participation is involved in some manner in the act, but does not qualify how", is the role a writer states when it knows none, so every care relationship has a role. No role implies another: a rule lists every role it means. The examples on these pages use these codes and fictional parties; they are no default list.

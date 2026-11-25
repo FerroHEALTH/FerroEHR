@@ -39,6 +39,7 @@ mod delegation;
 mod directive;
 pub mod episodes;
 mod exclusion;
+pub mod justification;
 pub mod procedure;
 pub mod record;
 pub mod scope;

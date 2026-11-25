@@ -160,7 +160,7 @@ fn ehds_accessor_rows(f: &Ehds) -> Vec<Row> {
         (
             "purposes and permit: purposes and policies",
             record.accessor.purposes.iter().any(|p| p.code == "ETREAT")
-                && record.accessor.policies == ["permit-42"],
+                && record.accessor.policies == ["permit-42", "policy::cdr.example.org::2"],
         ),
     ]
 }
@@ -221,7 +221,7 @@ fn ehds_object_rows(f: &Ehds) -> Vec<Row> {
             record.retention.period().code() == "indefinite",
         ),
         (
-            "is_emergency: emergency",
+            "an emergency justification: emergency",
             urgent
                 .record
                 .as_ref()

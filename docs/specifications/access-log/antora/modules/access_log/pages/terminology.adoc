@@ -33,7 +33,7 @@ The terms are:
 |person, delegated person, `HL7_SecurityRoleType::datasubject` (subject of care), representative, external person, organisation, system
 
 |access authorisation
-|role, treatment relationship, agreement, consent, permit, emergency, subject of care, representation, legal obligation, conflict allowance
+|role, treatment relationship, agreement, consent, permit, justification, emergency, subject of care, representation, legal obligation, conflict allowance
 
 |access refusal reason
 |not authenticated, credential not bound, not authorised, consent absent, rate limited, system failure

@@ -130,7 +130,6 @@ pub fn entry_of(
                 .collect(),
         ),
         authorisations: nonempty(authorisations(event)),
-        is_emergency: event.emergency_access,
         channel: channel(event),
         security_labels: event
             .decided
@@ -546,13 +545,13 @@ pub(crate) fn authorisation(kind: Authorisation) -> AccessAuthorisation {
         version: None,
         reference: None,
         legal_grounds: None,
+        reason: None,
         care: None,
     }
 }
 
 /// The authorisations the access ran under: the decision grounds the access
-/// decision gave, then the agreement, the representation, the data permit and
-/// the emergency the request carried, unless a decision ground marks it.
+/// decision gave, then the agreement, the representation and the data permit.
 fn authorisations(event: &AuditEvent) -> Vec<AccessAuthorisation> {
     let mut authorisations = event
         .decided
@@ -586,10 +585,6 @@ fn authorisations(event: &AuditEvent) -> Vec<AccessAuthorisation> {
             reference: Some(identifier(permit)),
             ..kind(Authorisation::Permit)
         });
-    }
-    let marked = |kind: Authorisation| authorisations.iter().any(|ground| kind.is(&ground.kind));
-    if event.emergency_access && !marked(Authorisation::Emergency) {
-        authorisations.push(kind(Authorisation::Emergency));
     }
     authorisations
 }

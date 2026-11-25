@@ -26,6 +26,7 @@ task_local! {
     static REQUEST_ORIGIN: RequestOrigin;
     static DECLARED_PURPOSE: Option<String>;
     static DECLARED_PERMIT: Option<String>;
+    static DECLARED_REASON: Option<crate::access_eval::justification::Reason>;
     static REQUEST_ROLES: Vec<String>;
     static ACCESS_DELAY: AccessDelay;
     static COMMITTED_FACILITIES: FacilitySink;
@@ -171,13 +172,40 @@ where
     DECLARED_PERMIT.scope(permit, fut).await
 }
 
-/// Run `fut` with `purpose` and `permit` published as the request's declared
-/// purpose of use and data permit.
-pub async fn with_declared<F>(purpose: Option<String>, permit: Option<String>, fut: F) -> F::Output
+/// The reason the caller stated for a justified access in the current
+/// request; `None` outside a request scope and when it stated none.
+#[must_use]
+pub fn current_reason() -> Option<crate::access_eval::justification::Reason> {
+    DECLARED_REASON.try_with(Clone::clone).ok().flatten()
+}
+
+/// What a caller declares beside its request: the purpose of use, the data
+/// permit and the reason for a justified access.
+#[derive(Debug, Clone, Default)]
+pub struct Declared {
+    /// The purpose of use.
+    pub purpose: Option<String>,
+    /// The data permit.
+    pub permit: Option<String>,
+    /// The reason for a justified access.
+    pub reason: Option<crate::access_eval::justification::Reason>,
+}
+
+/// Run `fut` with `declared` published as the request's declarations.
+pub async fn with_declared<F>(declared: Declared, fut: F) -> F::Output
 where
     F: Future,
 {
-    with_purpose(purpose, with_permit(permit, fut)).await
+    let Declared {
+        purpose,
+        permit,
+        reason,
+    } = declared;
+    with_purpose(
+        purpose,
+        with_permit(permit, DECLARED_REASON.scope(reason, fut)),
+    )
+    .await
 }
 
 /// The longest data permit identifier the trail records.

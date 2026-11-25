@@ -7,8 +7,8 @@
 //! The store keeps a record's facts in columns and renders its FHIR R4
 //! `AuditEvent` when the record is read or fed. The rendering also depends on
 //! configuration: the audit source, the access log retention of the
-//! controller's access policy, the category map an access is classified through, and the
-//! emergency purposes. [`RenderPolicy`] is that configuration. The store keeps
+//! controller's access policy and the category map an access is classified
+//! through. [`RenderPolicy`] is that configuration. The store keeps
 //! each distinct policy once (`audit.audit_render_policy`, keyed by the
 //! SHA-256 of its text) and every record names the policy it was written
 //! under, so a record renders the same document however the configuration
@@ -56,8 +56,6 @@ pub struct RenderPolicy {
     /// The audit category register version every access is classified
     /// through.
     pub categories: CategoryMapConfig,
-    /// `[audit] emergency_purpose_codes`.
-    pub emergency_purpose_codes: Vec<String>,
 }
 
 impl RenderPolicy {
@@ -73,21 +71,17 @@ impl RenderPolicy {
             value_if_missing: config.value_if_missing.clone(),
             retention: LogRetention::default(),
             categories: categories.clone(),
-            emergency_purpose_codes: config.emergency_purpose_codes.clone(),
         }
     }
 
-    /// The context, classifier and emergency purposes this policy renders
-    /// with.
+    /// The context and classifier this policy renders with.
     ///
     /// # Errors
     /// [`AuditError::CategoryMap`] when the category map does not compile,
-    /// [`AuditError::Emergency`] for an empty emergency code, and
-    /// [`AuditError::Policy`] when `ehds-logging` refuses the retention or the
-    /// label policy; the boot validation refuses each of them first.
+    /// and [`AuditError::Policy`] when `ehds-logging` refuses the retention or
+    /// the label policy; the boot validation refuses each of them first.
     pub fn compile(&self) -> Result<CompiledPolicy, AuditError> {
         let categories = self.categories.compile().map_err(AuditError::CategoryMap)?;
-        let emergency = emergency_purposes(&self.emergency_purpose_codes)?;
         let context = AuditContext {
             source_id: self.source_id.clone(),
             role_code_system: self.role_code_system.clone(),
@@ -95,12 +89,11 @@ impl RenderPolicy {
             server_ip: self.server_host.clone(),
             value_if_missing: self.value_if_missing.clone(),
             #[cfg(feature = "fhir")]
-            recording: recording(&self.retention, &categories, &emergency)?,
+            recording: recording(&self.retention, &categories)?,
         };
         Ok(CompiledPolicy {
             context,
             categories,
-            emergency,
         })
     }
 }
@@ -118,31 +111,11 @@ pub struct CompiledPolicy {
     pub context: AuditContext,
     /// The compiled category map.
     pub categories: Classifier,
-    /// The purposes of use that mark an emergency access.
-    pub emergency: ehds_logging::emergency::EmergencyPurposes,
-}
-
-/// The purposes of use `codes` declares, held by `ehds-logging`.
-///
-/// # Errors
-/// [`AuditError::Emergency`] for an empty code; boot validation refuses one
-/// first.
-fn emergency_purposes(
-    codes: &[String],
-) -> Result<ehds_logging::emergency::EmergencyPurposes, AuditError> {
-    let purposes: Vec<ehds_logging::record::Purpose> = codes
-        .iter()
-        .map(|code| ehds_logging::record::Purpose {
-            system: None,
-            code: code.clone(),
-        })
-        .collect();
-    ehds_logging::emergency::EmergencyPurposes::declare(&purposes).map_err(AuditError::Emergency)
 }
 
 /// The policies the EHDS access record is written under: the access log
-/// retention of the access policy in force, the categories' and origins'
-/// labels, and the emergency purposes.
+/// retention of the access policy in force and the categories' and origins'
+/// labels.
 ///
 /// # Errors
 /// [`AuditError::Policy`] when `ehds-logging` refuses the retention or the
@@ -151,7 +124,6 @@ fn emergency_purposes(
 fn recording(
     log: &LogRetention,
     categories: &Classifier,
-    emergency: &ehds_logging::emergency::EmergencyPurposes,
 ) -> Result<crate::system_log::fhir::Recording, AuditError> {
     let retention = log.policy().map_err(|e| AuditError::Policy(Box::new(e)))?;
     let unlabelled = std::collections::BTreeMap::new();
@@ -161,7 +133,6 @@ fn recording(
     Ok(crate::system_log::fhir::Recording {
         retention,
         labels,
-        emergency: emergency.clone(),
         log: log.clone(),
     })
 }
@@ -247,7 +218,6 @@ mod tests {
             source_id = "cdr-1"
             server_host = "cdr.example.org"
             purpose_codes = ["TREAT", "ETREAT"]
-            emergency_purpose_codes = ["ETREAT"]
             "#,
         )
         .expect("parse");

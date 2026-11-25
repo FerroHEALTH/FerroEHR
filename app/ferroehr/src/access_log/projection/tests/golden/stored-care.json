@@ -94,13 +94,6 @@
                 "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
               }
             ]
-          },
-          {
-            "coding": [
-              {
-                "code": "TREAT"
-              }
-            ]
           }
         ],
         "requestor": true,
@@ -376,6 +369,25 @@
           "display": "Other",
           "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type"
         }
+      },
+      {
+        "description": "Emergency access: the accessor declared that the access was necessary to protect the vital interests of the data subject (Regulation (EU) 2025/327 Art 11(5)).",
+        "detail": [
+          {
+            "type": "ehds-emergency-access",
+            "valueString": "true"
+          },
+          {
+            "type": "ehds-emergency-purpose",
+            "valueString": "http://terminology.hl7.org/CodeSystem/v3-ActReason|ETREAT"
+          }
+        ],
+        "name": "ehds-emergency-access",
+        "type": {
+          "code": "4",
+          "display": "Other",
+          "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type"
+        }
       }
     ],
     "meta": {
@@ -391,13 +403,6 @@
           {
             "code": "ETREAT",
             "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
-          }
-        ]
-      },
-      {
-        "coding": [
-          {
-            "code": "TREAT"
           }
         ]
       }

@@ -7,9 +7,14 @@
 4+^h|*Draft, not part of an RM release*
 
 |[[latest_issue]]0.1.0
+|`ACCESS_AUTHORISATION._reason_` and the `access authorisation` code `justification`: the justification of the controller's policy an access outside the care relationships rested on, with the reason the accessor stated (HL7 FHIR R4 `AuditEvent.purposeOfEvent.text`). `ACCESS_LOG_ENTRY._is_emergency_` is withdrawn: an emergency is the authorisation of kind `emergency` that carries a reason.
+|FerroEHR
+|[[latest_issue_date]]25 Nov 2026
+
+|0.1.0
 |`ACCESS_STORED_CARE_GROUND._episode_`: the episode of care the relationship an access rested on is scoped to, so the record names the treatment relationship to the episode (EHDS Art 9, Annex II 3.2). openEHR has no access log, so the attribute is this proposal's own.
 |FerroEHR
-|[[latest_issue_date]]23 Nov 2026
+|23 Nov 2026
 
 |0.1.0
 |Initial draft: the `access_log` package, terminology groups, recording rules, hash chain, retention, subject view, ITS-REST resources and AQL root class.

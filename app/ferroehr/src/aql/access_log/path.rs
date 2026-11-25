@@ -249,11 +249,15 @@ mod tests {
             path("SELECT l/link/sequence FROM ACCESS_LOG_ENTRY l").is_err(),
             "a record carries no link (#6242)"
         );
+        assert!(
+            path("SELECT l/is_emergency FROM ACCESS_LOG_ENTRY l").is_err(),
+            "an entry carries no emergency mark of its own (#6587)"
+        );
         assert_eq!(
-            path("SELECT l/is_emergency FROM ACCESS_LOG_ENTRY l")
+            path("SELECT l/authorisations/reason FROM ACCESS_LOG_ENTRY l")
                 .expect("resolves")
                 .leaf,
-            Leaf::Boolean
+            Leaf::Text
         );
         assert_eq!(
             path("SELECT l FROM ACCESS_LOG_ENTRY l")

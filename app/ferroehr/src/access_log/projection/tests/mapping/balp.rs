@@ -281,7 +281,7 @@ fn balp_authorisation_rows(f: &Balp) -> Vec<Row> {
             ),
         ),
         (
-            "is_emergency: the ehds-emergency-access entity naming its purpose",
+            "an emergency justification: the ehds-emergency-access entity naming its purpose",
             named(&urgent.document, "ehds-emergency-access")
                 .is_some_and(|e| e.to_string().contains("ETREAT")),
         ),

@@ -93,6 +93,7 @@ async fn column(app: &Router, user: &str, q: &str, extra: &Value) -> Vec<Value> 
 #[tokio::test]
 async fn a_marked_record_is_refused_and_left_out_of_every_query() {
     let (_db, _pool, svc, app) = Box::pin(app()).await;
+    crate::access_evaluator_http::put_emergency_policy(&app, &json!({})).await;
     let (marked_ehr, marked_vo) = ehr_with_composition(&app).await;
     let (_, open_vo) = ehr_with_composition(&app).await;
     common::commit_access_settings(&svc, marked_ehr.parse().expect("an EHR id"), marked("R")).await;

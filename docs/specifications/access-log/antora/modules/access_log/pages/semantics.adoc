@@ -42,7 +42,7 @@ The log is personal data about the subject of care and about the people who acce
 A system serves two views of an entry:
 
 * *The full view*, to a party authorised to review the log.
-* *The subject view*, to the subject of care of the EHR and to their representative. It MUST include `_time_recorded_`, `_occurred_`, `_action_`, `_outcome.result_`, `_accessor.kind_`, `_accessor.party_`, `_accessor.provider_`, `_items_` (without `_origins.endpoint_`), `_purposes_` and `_is_emergency_`. It MUST omit `_accessor.credential_`, `_accessor.delegation_`, `_accessor.binding_`, `_channel_`, `_query.text_`, `_query.text_digest_`, `_security_labels_` and `_other_details_`. A system MAY withhold further attributes where the law of the jurisdiction restricts the subject's right to them.
+* *The subject view*, to the subject of care of the EHR and to their representative. It MUST include `_time_recorded_`, `_occurred_`, `_action_`, `_outcome.result_`, `_accessor.kind_`, `_accessor.party_`, `_accessor.provider_`, `_items_` (without `_origins.endpoint_`), `_purposes_` and each `_authorisations_` entry of kind `justification` or `emergency` with its `_reason_`. It MUST omit `_accessor.credential_`, `_accessor.delegation_`, `_accessor.binding_`, `_channel_`, `_query.text_`, `_query.text_digest_`, `_security_labels_` and `_other_details_`. A system MAY withhold further attributes where the law of the jurisdiction restricts the subject's right to them.
 
 The caller's authorisation selects the view. A request parameter MUST NOT widen it.
 

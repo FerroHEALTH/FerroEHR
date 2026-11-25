@@ -142,7 +142,8 @@ fn clients(issuer: &str) -> Vec<&'static str> {
 }
 
 /// The router trusting [`FEDERATION`] with its partner holding `agreements`,
-/// with `ETREAT` agreed as an emergency purpose; returns it with its service.
+/// with `TREAT`, `ETREAT` and `EXAMINATION` agreed purposes; returns it with
+/// its service.
 async fn serve(agreements: Vec<Terms>) -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     Box::pin(serve_also(agreements, None)).await
 }
@@ -169,7 +170,6 @@ async fn serve_observed(
             "ETREAT".to_owned(),
             "EXAMINATION".to_owned(),
         ],
-        emergency_purpose_codes: vec!["ETREAT".to_owned()],
         ..common::local_audit()
     };
     let (sender, _handle): (_, AuditHandle) = start(audit, None, pool.clone())
@@ -292,6 +292,9 @@ async fn read(app: &Router, ehr: &str, credential: &str, purpose: Option<&str>) 
         .accept("application/json");
     if let Some(purpose) = purpose {
         request = request.header(PURPOSE, purpose);
+    }
+    if purpose == Some("ETREAT") {
+        request = request.header(common::REASON_HEADER, "Collapsed%20abroad");
     }
     common::send_body(app, request.build()).await.0
 }
@@ -521,6 +524,8 @@ async fn a_consent_conditioned_read_carrying_its_decision_reference_is_served_an
 async fn an_opted_out_ehr_reads_as_absent_to_every_external_caller() {
     let overriding = agreement(Accessor::Person).overriding();
     let (_db, svc, app) = serve(vec![overriding, agreement(Accessor::Organisation)]).await;
+    let emergency = common::justification(&["ETREAT"], true, &["professional", "access_service"]);
+    common::commit_justified_policy(&svc, std::slice::from_ref(&emergency), &json!({})).await;
     let target = ehr(&svc).await;
     common::commit_access_settings(
         &svc,
@@ -538,7 +543,7 @@ async fn an_opted_out_ehr_reads_as_absent_to_every_external_caller() {
         read(&app, &target, &organisation(&target), None).await,
         StatusCode::NOT_FOUND
     );
-    // The emergency purpose overrides the opt-out for the person alone.
+    // The emergency justification, with a reason, overrides the opt-out for the person alone.
     assert_eq!(
         read(&app, &target, &person, Some("ETREAT")).await,
         StatusCode::OK
@@ -549,6 +554,7 @@ async fn an_opted_out_ehr_reads_as_absent_to_every_external_caller() {
     );
     // Without opt_out_override the person stays refused.
     let (_db, svc, strict) = serve(vec![agreement(Accessor::Person)]).await;
+    common::commit_justified_policy(&svc, &[emergency], &json!({})).await;
     let target = ehr(&svc).await;
     common::commit_access_settings(
         &svc,

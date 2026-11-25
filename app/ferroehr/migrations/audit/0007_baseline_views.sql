@@ -104,7 +104,7 @@ CREATE VIEW audit_record AS
            e.client_ip, e.token_id, e.domain, e.purpose, e.legal_basis, e.result_count,
            e.request_id, e.roles, e.origins, e.origin_count, e.category_map_digest,
            e.acting_mode, e.assurance_level, e.assurance_value, e.professional_id,
-           e.emergency_access, e.permit, e.issuer, e.client_id, e.ehr_id,
+           e.justification, e.permit, e.issuer, e.client_id, e.ehr_id,
            e.subject_namespace, e.subject_lookup_failed, e.review, e.category_content,
            e.render_policy, e.token_attributes, e.search_tokens,
            audit.search_keys(e.search_tokens, e.request_id, e.resource_id) AS search_keys,
@@ -120,7 +120,7 @@ CREATE VIEW audit_record AS
            r.client_ip, NULL::text, NULL::text, NULL::text, NULL::text, NULL::bigint,
            r.request_id, NULL::jsonb, NULL::jsonb, NULL::bigint, NULL::text,
            NULL::text, NULL::text, NULL::text, NULL::text,
-           false, NULL::text, NULL::text, NULL::text, r.classified_ehr_id,
+           NULL::jsonb, NULL::text, NULL::text, NULL::text, r.classified_ehr_id,
            NULL::text, false, NULL::text, NULL::jsonb,
            p.digest, NULL::jsonb, r.search_tokens,
            audit.search_keys(r.search_tokens, r.request_id, r.resource_id),
@@ -147,7 +147,7 @@ CREATE VIEW access_log_by_key AS
            NULL::bigint AS origin_count, NULL::text AS category_map_digest,
            NULL::text AS acting_mode, NULL::text AS assurance_level,
            NULL::text AS assurance_value, NULL::text AS professional_id,
-           false AS emergency_access, NULL::text AS permit, NULL::text AS issuer,
+           NULL::jsonb AS justification, NULL::text AS permit, NULL::text AS issuer,
            NULL::text AS client_id, e.classified_ehr_id AS ehr_id,
            NULL::text AS subject_namespace, false AS subject_lookup_failed,
            NULL::text AS review, NULL::jsonb AS category_content,
@@ -172,7 +172,7 @@ CREATE VIEW access_trail AS
            e.legal_basis, e.result_count, e.request_id, e.roles, e.origins, e.origin_count,
            e.categories, e.category_basis, e.category_evidence, e.category_map_digest,
            e.acting_mode, e.assurance_level, e.assurance_value, e.professional_id,
-           e.emergency_access, e.permit, e.issuer, e.client_id, e.ehr_id,
+           e.justification, e.permit, e.issuer, e.client_id, e.ehr_id,
            e.subject_namespace, e.subject_lookup_failed, e.review, e.category_content,
            e.binding, e.party, e.party_groups, e.provider, e.representation,
            e.external_fields, e.agreement, e.actor_chain, e.facilities, e.binding_detail,
@@ -227,7 +227,10 @@ CREATE VIEW access_trail AS
                     t.doc #>> '{accessor,credential,assurance,defining_code,code_string}'),
            audit.access_detail(t.doc, 'id34') ->> 'value',
            audit.access_detail(t.doc, 'id35') ->> 'value',
-           coalesce((t.doc ->> 'is_emergency')::boolean, false),
+           (SELECT jsonb_build_object('kind', a #>> '{kind,defining_code,code_string}',
+                                      'reason', a ->> 'reason')
+              FROM jsonb_array_elements(coalesce(t.doc -> 'authorisations', '[]'::jsonb)) a
+             WHERE a ->> 'reason' IS NOT NULL LIMIT 1),
            (SELECT a #>> '{reference,id}'
               FROM jsonb_array_elements(coalesce(t.doc -> 'authorisations', '[]'::jsonb)) a
              WHERE a #>> '{kind,defining_code,code_string}' = 'permit' LIMIT 1),

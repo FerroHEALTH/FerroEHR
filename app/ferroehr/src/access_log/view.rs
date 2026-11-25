@@ -7,8 +7,9 @@
 //!
 //! The draft's semantics page (`docs/specifications/access-log`, §Views) fixes the subject view as a reduction of the entry:
 //! it keeps who accessed, when, the action and outcome, the items and
-//! categories, the purposes and the emergency mark (Art. 9(2)(a) to (c), Art.
-//! 11(5)), and leaves out the credential, the delegation chain, the binding
+//! categories, the purposes and the grounds, a justification with the reason
+//! its accessor stated among them (Art. 9(2)(a) to (c), Art. 11(5)), and
+//! leaves out the credential, the delegation chain, the binding
 //! outcome, the channel, the query text and its digest, the security labels,
 //! `other_details`, each origin's endpoint and the link. An entry about data
 //! held from the person under Art. 3(3) is left out of the subject view until

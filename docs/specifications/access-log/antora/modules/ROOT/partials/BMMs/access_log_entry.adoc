@@ -86,7 +86,7 @@
     "authorisations": {
       "_type": "P_BMM_CONTAINER_PROPERTY",
       "name": "authorisations",
-      "documentation": "The grounds on which the access was authorised or refused: roles, agreements, consent decisions, permits, emergency overrides.",
+      "documentation": "The grounds on which the access was authorised or refused: roles, agreements, consent decisions, permits, justifications and emergencies with the reason the accessor stated.",
       "type_def": {
         "container_type": "List",
         "type": "ACCESS_AUTHORISATION"
@@ -95,13 +95,6 @@
         "lower": 0,
         "upper_unbounded": true
       }
-    },
-    "is_emergency": {
-      "_type": "P_BMM_SINGLE_PROPERTY",
-      "name": "is_emergency",
-      "documentation": "True when the access was made under an emergency override of the access policy, such as an access to protect the vital interests of the subject of care.",
-      "is_mandatory": true,
-      "type": "Boolean"
     },
     "channel": {
       "_type": "P_BMM_SINGLE_PROPERTY",

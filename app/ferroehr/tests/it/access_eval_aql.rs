@@ -17,7 +17,8 @@ use ferroehr::access_eval::condition::care::{Care, CaredEhr, CaredSubject};
 use ferroehr::access_eval::condition::{
     AccessCondition, Asking, InForce, RequestAccess, with_request_access,
 };
-use ferroehr::access_eval::procedure::{Caller, Emergency, Outcome};
+use ferroehr::access_eval::justification::Reason;
+use ferroehr::access_eval::procedure::{Caller, Outcome};
 use ferroehr::access_eval::scope::{CategoryIndex, Pred};
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::party_binding::BindingMapping;
@@ -243,7 +244,7 @@ struct Ask {
     policy: Option<AccessPolicy>,
     cared: Vec<EhrSubject>,
     default: AccessDefault,
-    emergency: Emergency,
+    reason: Option<Reason>,
     episodes: Option<Arc<[ferroehr::versioning::episode::EpisodeKey]>>,
 }
 
@@ -281,7 +282,7 @@ impl Ask {
             policy: None,
             cared: Vec::new(),
             default: AccessDefault::Open,
-            emergency: Emergency::default(),
+            reason: None,
             episodes: None,
         }
     }
@@ -294,7 +295,8 @@ fn request_of(ask: &Ask) -> Arc<RequestAccess> {
         Asking {
             operation: OperationClass::Query,
             purpose: ask.purpose.map(str::to_owned),
-            emergency: ask.emergency,
+            reason: ask.reason.clone(),
+            opt_out_override: false,
             episodes: ask.episodes.clone(),
         },
         InForce {
@@ -1552,11 +1554,11 @@ async fn a_pinned_verdict_judged_on_an_older_copy_is_judged_again_or_refused() {
     );
 }
 
-/// Break-glass: where the policy requires a care relationship, the
-/// break-glass role declaring an emergency purpose reads every EHR without
+/// Break-glass: where the policy requires a care relationship, a caller
+/// invoking an emergency justification with a reason reads every EHR without
 /// one, a restriction whose `emergency_override` holds lifted and a consent
-/// deny without it still in force (EHDS Art. 11(5)); without the emergency
-/// it reads nothing.
+/// deny without it still in force (EHDS Art. 11(5)); without the reason it
+/// reads nothing.
 #[tokio::test]
 async fn break_glass_reads_what_the_emergency_lifts() {
     let world = Box::pin(World::new()).await;
@@ -1579,13 +1581,16 @@ async fn break_glass_reads_what_the_emergency_lifts() {
     );
     world.settings(2, &settings("open", &[deny], &[])).await;
     let mut ask = Ask::professional(&world);
-    ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
+    ask.policy = Some(policy(&json!({ "care_relationship_required": true,
+        "justifications": [{ "_type": "ACCESS_JUSTIFICATION", "emergency": true,
+            "purposes": [{ "_type": "DV_CODED_TEXT", "value": "emergency treatment",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_ActReason" },
+                    "code_string": "ETREAT" } }] }] })));
     assert_reads(&world, &ask, &[], "no relationship and no emergency").await;
-    ask.emergency = Emergency {
-        declared: true,
-        break_glass: true,
-        opt_out_override: false,
-    };
+    ask.purpose = Some("ETREAT");
+    assert_reads(&world, &ask, &[], "an emergency without a reason").await;
+    ask.reason = Some(Reason::new("unconscious on arrival").expect("a reason"));
     assert_reads(&world, &ask, &except(&world, &[2], &[]), "break-glass").await;
 }
 

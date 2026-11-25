@@ -201,6 +201,17 @@ fn query_rules(check: &mut Check, query: &AccessQuery) {
 fn authorisation_rules(check: &mut Check, authorisation: &AccessAuthorisation) {
     let kind = Authorisation::read_coded(&authorisation.kind);
     check.hold(kind.is_ok(), "ACCESS_AUTHORISATION", "Kind_valid");
+    check.hold(
+        authorisation.reason.as_deref().is_none_or(|reason| {
+            !reason.is_empty()
+                && matches!(
+                    kind,
+                    Ok(Authorisation::Justification | Authorisation::Emergency)
+                )
+        }),
+        "ACCESS_AUTHORISATION",
+        "Reason_valid",
+    );
     if let Some(care) = &authorisation.care {
         check.hold(
             kind == Ok(Authorisation::TreatmentRelationship),

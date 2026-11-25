@@ -1021,13 +1021,10 @@ async fn only_an_import_grant_admits_an_import() {
 
 #[test]
 fn the_privileged_roles_are_reserved_from_a_hold_roles_grant() {
-    let config = config("[authz.rbac]\nemergency_access_role = \"Break_Glass\"\n");
-    assert_eq!(
-        config.authz.rbac.privileged_roles(),
-        ["ADMIN", "BREAK_GLASS"]
-    );
+    let config = config("[authz.rbac]\nadmin_role = \"Operator\"\n");
+    assert_eq!(config.authz.rbac.privileged_roles(), ["OPERATOR"]);
     let ceiling = config.authz.grants.ceiling(&config.authz.rbac);
-    assert!(ceiling.reserves("admin") && ceiling.reserves("break_glass"));
+    assert!(ceiling.reserves("operator") && !ceiling.reserves("admin"));
     assert!(!ceiling.reserves("READONLY") && !ceiling.reserves("IMPORTER"));
     assert_eq!(
         ceiling.allowed().collect::<Vec<_>>(),

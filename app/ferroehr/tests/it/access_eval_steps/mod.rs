@@ -17,6 +17,7 @@ mod steps;
 mod steps_confidentiality;
 mod steps_episodes;
 mod steps_exclusion;
+mod steps_justification;
 mod steps_policy;
 mod steps_purpose;
 mod steps_rules;
@@ -35,7 +36,7 @@ use ferroehr::access_eval::care_tie::{Cared, Tie};
 use ferroehr::access_eval::class::{Class, classify, resolve_verdict};
 use ferroehr::access_eval::condition::CallerKeys;
 use ferroehr::access_eval::procedure::{
-    Asked, Caller, Ehr, Emergency, Judged, Lifted, Outcome, Policy, Verdict, decide,
+    Asked, Caller, Ehr, Judged, Lifted, Outcome, Policy, Verdict, decide, rules_of,
 };
 use ferroehr::access_eval::scope::{CategoryIndex, Item, Object, Scopes};
 use ferroehr::access_policy::care::CareFacts;
@@ -84,16 +85,50 @@ pub(super) const ABSENT_RESTRICTED: Outcome = Outcome::Absent(Refusal::Restricte
 /// A consent deny refuses.
 pub(super) const DENIED: Outcome = Outcome::Refused(Refusal::ConsentDenied);
 
-/// The break-glass role declaring an emergency.
+/// The purpose of use a [`break_glass`] ask declares when it names none.
+pub(super) const EMERGENCY: &str = "ETREAT";
+
+/// `asked` invoking the tests' emergency justification with a reason: the
+/// case's policy then holds an emergency justification for its purpose
+/// ([`in_force`]).
 pub(super) fn break_glass(asked: Asked<'_>) -> Asked<'_> {
     Asked {
-        emergency: Emergency {
-            declared: true,
-            break_glass: true,
-            opt_out_override: false,
-        },
+        purpose: Some(asked.purpose.unwrap_or(EMERGENCY)),
+        reasoned: true,
         ..asked
     }
+}
+
+/// The reason a [`break_glass`] request states.
+pub(super) fn reason_of(asked: Asked<'_>) -> Option<ferroehr::access_eval::justification::Reason> {
+    asked.reasoned.then(|| {
+        ferroehr::access_eval::justification::Reason::new("suspected sepsis, unconscious")
+            .expect("a reason")
+    })
+}
+
+/// `policy` as a [`break_glass`] ask meets it: with an emergency
+/// justification of every professional and access service for the purpose
+/// `asked` declares, unless the policy states its own justifications.
+pub(super) fn in_force(policy: Option<&AccessPolicy>, asked: Asked<'_>) -> Option<AccessPolicy> {
+    let purpose = asked.purpose.filter(|_| asked.reasoned);
+    let Some(purpose) = purpose else {
+        return policy.cloned();
+    };
+    if policy.is_some_and(|p| p.justifications.is_some()) {
+        return policy.cloned();
+    }
+    let mut value = policy.map_or_else(
+        || json!({}),
+        |p| serde_json::to_value(p).expect("the policy writes"),
+    );
+    value["justifications"] = json!([{ "_type": "ACCESS_JUSTIFICATION",
+        "purposes": [coded(PURPOSE, purpose)], "emergency": true,
+        "applies_to": [
+            { "_type": "ACCESS_ACTOR_SCOPE", "caller_kind": term("professional") },
+            { "_type": "ACCESS_ACTOR_SCOPE", "caller_kind": term("access_service") }
+        ] }]);
+    Some(self::policy(&value))
 }
 
 /// A term of the access control groups.
@@ -357,7 +392,8 @@ pub(super) fn asked(operation: OperationClass, purpose: Option<&str>) -> Asked<'
     Asked {
         operation,
         purpose,
-        emergency: Emergency::default(),
+        reasoned: false,
+        opt_out_override: false,
         episodes: None,
     }
 }
@@ -414,11 +450,11 @@ impl Case {
     /// query reads in SQL (#5588): both answer every probe item alike.
     pub(super) fn verdict(&self, caller: &Caller, asked: Asked<'_>) -> Verdict {
         let verdict = self.direct(caller, asked);
+        let policy = in_force(self.policy.as_ref(), asked);
         if let Some(EhrAccessSettings::Directives(settings)) = &self.settings {
             let classified = classify(settings).expect("the settings classify");
             let class = Class::read(&classified.class.to_string()).expect("the class reads");
-            let classifications = self
-                .policy
+            let classifications = policy
                 .as_ref()
                 .and_then(|p| p.classifications.as_deref())
                 .unwrap_or_default();
@@ -432,9 +468,9 @@ impl Case {
             let symbolic = decide(&Judged {
                 caller,
                 asked,
-                policy: Policy::of(self.policy.as_ref()),
-                rules: self.rules(),
-                conflict_rules: CareFacts::of(self.policy.as_ref()).conflict_allowances(),
+                policy: Policy::of(policy.as_ref()),
+                rules: rules_of(policy.as_ref()),
+                conflict_rules: CareFacts::of(policy.as_ref()).conflict_allowances(),
                 ehr: Ehr {
                     settings: (*class.settings).as_ref(),
                     server_default: self.server_default.unwrap_or(AccessDefault::Open),
@@ -470,25 +506,14 @@ impl Case {
         verdict
     }
 
-    /// The rules of the case's policy.
-    fn rules(
-        &self,
-    ) -> &[openehr_rm::draft::access_control::access_control::access_directive::AccessDirective]
-    {
-        self.policy
-            .as_ref()
-            .and_then(|p| p.rules.as_deref())
-            .unwrap_or_default()
-    }
-
     /// The verdict for `caller` asking `asked`, read from the settings.
     fn direct(&self, caller: &Caller, asked: Asked<'_>) -> Verdict {
         let labels = match &self.settings {
             Some(EhrAccessSettings::Directives(s)) => s.labels.as_deref().unwrap_or_default(),
             _ => &[],
         };
-        let classifications = self
-            .policy
+        let policy = in_force(self.policy.as_ref(), asked);
+        let classifications = policy
             .as_ref()
             .and_then(|p| p.classifications.as_deref())
             .unwrap_or_default();
@@ -501,9 +526,9 @@ impl Case {
         decide(&Judged {
             caller,
             asked,
-            policy: Policy::of(self.policy.as_ref()),
-            rules: self.rules(),
-            conflict_rules: CareFacts::of(self.policy.as_ref()).conflict_allowances(),
+            policy: Policy::of(policy.as_ref()),
+            rules: rules_of(policy.as_ref()),
+            conflict_rules: CareFacts::of(policy.as_ref()).conflict_allowances(),
             ehr: Ehr {
                 settings: self.settings.as_ref(),
                 server_default: self.server_default.unwrap_or(AccessDefault::Open),

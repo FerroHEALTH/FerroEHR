@@ -247,13 +247,14 @@ async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
 /// The content digests of the same entries are the same bytes under one
 /// stored form (#5784, #6322): the digests below are the facts digests of
 /// the example entries with their action coded under `HL7_AuditEventAction`
-/// (#6070), stored in form 1, and the log reads them back from its rows.
+/// (#6070) and a justification with its reason (#6587), stored in form 1,
+/// and the log reads them back from its rows.
 #[tokio::test]
 async fn the_content_digests_of_the_same_entries_are_unchanged_by_the_stored_form() {
     const DIGESTS: [&str; 3] = [
-        "710e124374657c897ccd4647edc18b7837ec2b44f3c7147a3f80e6f93819144c",
-        "39171a480a6f3c867120c851ab2aac76300c877614ee4d36565bd96ad8f4358b",
-        "2e3ab458c57d9abd7528bf800c587e40b9354f14d72fe91f140ac1317aedc48c",
+        "fd22740a75912e5787b8e72248f83b52bd1cd42f9f9e3f642d978374371c1769",
+        "1ba7b2fa8bfa6655656a43ad1a0fdfa7af165ccd461aa384c3b22705cfc9b42f",
+        "1b3e157ea87be1ffa7f1c31a8b6d1f7cc0330bb64ba36caeec57e41b9f4d1313",
     ];
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
@@ -329,8 +330,8 @@ fn access(rubric: &str) -> Value {
                 "code_string": rubric } })
 }
 
-/// An entry carries the grounds of its access decision and its emergency
-/// mark through the store unchanged, and a refused access that reached no
+/// An entry carries the grounds of its access decision, an emergency with
+/// the reason its accessor stated among them, through the store unchanged, and a refused access that reached no
 /// EHR is stored with no EHR: the two shapes the request path (#5126) and
 /// the decision grounds (#5514) write.
 #[tokio::test]
@@ -340,7 +341,6 @@ async fn an_entry_keeps_its_decision_grounds_and_a_refusal_needs_no_ehr() {
     let store = AccessLogStore::new(pool.clone());
 
     let mut grounded = serde_json::to_value(entry(1)).expect("the entry writes");
-    grounded["is_emergency"] = json!(true);
     grounded["authorisations"] = json!([
         { "_type": "ACCESS_AUTHORISATION", "kind": access("role") },
         { "_type": "ACCESS_AUTHORISATION", "kind": access("treatment relationship") },
@@ -352,7 +352,8 @@ async fn an_entry_keeps_its_decision_grounds_and_a_refusal_needs_no_ehr() {
           "policy": { "_type": "DV_URI", "value": "ehr://cdr.example.org/access_policy/1" },
           "name": "access policy", "version": "3",
           "legal_grounds": [access("legal obligation")] },
-        { "_type": "ACCESS_AUTHORISATION", "kind": access("emergency") }
+        { "_type": "ACCESS_AUTHORISATION", "kind": access("emergency"),
+          "reason": "unconscious on arrival" }
     ]);
     let grounded: AccessLogEntry =
         serde_json::from_value(grounded).expect("the grounded entry reads");
@@ -377,7 +378,7 @@ async fn an_entry_keeps_its_decision_grounds_and_a_refusal_needs_no_ehr() {
     }
     let grounds = written[0].authorisations.as_deref().unwrap_or_default();
     assert_eq!(grounds.len(), 5, "every ground is kept");
-    assert!(written[0].is_emergency);
+    assert_eq!(grounds[4].reason.as_deref(), Some("unconscious on arrival"));
 
     let row = sqlx::query(
         "SELECT ehr_id::text AS ehr_id, result_terminology, result_code FROM audit.access_log_record \
@@ -515,7 +516,7 @@ async fn a_changed_shared_part_is_found_at_every_entry_naming_it() {
         "ALTER TABLE audit.access_log_shared DROP CONSTRAINT ck_access_log_shared_digest",
         "ALTER TABLE audit.access_log_shared DISABLE TRIGGER USER",
         "UPDATE audit.access_log_shared \
-         SET content = replace(content, '\"is_emergency\":false', '\"is_emergency\":true')",
+         SET content = replace(content, 'Second opinion', 'Third opinion')",
         "ALTER TABLE audit.access_log_shared ENABLE TRIGGER USER",
     ] {
         sqlx::query(AssertSqlSafe(statement.to_owned()))
@@ -614,7 +615,7 @@ async fn the_table_admits_the_tombstone_replacement_and_nothing_else() {
     let first = written.first().expect("the first entry");
 
     let mut changed = first.clone();
-    changed.is_emergency = true;
+    changed.authorisations = None;
     let foreign: Value = json!({
         "_type": "ACCESS_LOG_TOMBSTONE",
         "uid": { "_type": "HIER_OBJECT_ID", "value": "0193f1a2-7c1e-7b4a-9f00-0000000000aa" },

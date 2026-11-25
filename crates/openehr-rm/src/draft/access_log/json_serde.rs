@@ -721,6 +721,9 @@ impl ::serde::Serialize
         {
             __n += 1;
         }
+        if self.reason.is_some() {
+            __n += 1;
+        }
         if self.care.is_some() {
             __n += 1;
         }
@@ -745,6 +748,9 @@ impl ::serde::Serialize
         {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "legal_grounds", __v)?;
         }
+        if let Some(__v) = &self.reason {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "reason", __v)?;
+        }
         if let Some(__v) = &self.care {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "care", __v)?;
         }
@@ -764,6 +770,7 @@ impl<'de> ::serde::Deserialize<'de>
             "legal_grounds",
             "name",
             "policy",
+            "reason",
             "reference",
             "version",
         ];
@@ -776,6 +783,7 @@ impl<'de> ::serde::Deserialize<'de>
             __F4,
             __F5,
             __F6,
+            __F7,
         }
         impl<'de> ::serde::Deserialize<'de> for __Field {
             fn deserialize<__D: ::serde::Deserializer<'de>>(
@@ -802,7 +810,8 @@ impl<'de> ::serde::Deserialize<'de>
                             "version" => ::core::result::Result::Ok(__Field::__F3),
                             "reference" => ::core::result::Result::Ok(__Field::__F4),
                             "legal_grounds" => ::core::result::Result::Ok(__Field::__F5),
-                            "care" => ::core::result::Result::Ok(__Field::__F6),
+                            "reason" => ::core::result::Result::Ok(__Field::__F6),
+                            "care" => ::core::result::Result::Ok(__Field::__F7),
                             _ => ::core::result::Result::Err(
                                 ::openehr_base::serde_support::unknown_field(
                                     __v,
@@ -836,6 +845,7 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __s4: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s5: ::core::option::Option<_> = None;
                 let mut __s6: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s7: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -901,10 +911,18 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F6 => {
                             if __s6.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("care"),
+                                    ::serde::de::Error::duplicate_field("reason"),
                                 );
                             }
                             __s6 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F7 => {
+                            if __s7.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("care"),
+                                );
+                            }
+                            __s7 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
                         }
                     }
                 }
@@ -915,7 +933,8 @@ name: __s2.flatten(),
 version: __s3.flatten(),
 reference: __s4.flatten(),
 legal_grounds: __s5,
-care: __s6.flatten(),
+reason: __s6.flatten(),
+care: __s7.flatten(),
 })
             }
         }
@@ -1594,7 +1613,7 @@ impl ::serde::Serialize for crate::draft::access_log::access_log::access_log_ent
         &self,
         __serializer: __S,
     ) -> ::core::result::Result<__S::Ok, __S::Error> {
-        let mut __n = 9usize;
+        let mut __n = 8usize;
         if self.occurred.is_some() {
             __n += 1;
         }
@@ -1673,11 +1692,6 @@ impl ::serde::Serialize for crate::draft::access_log::access_log::access_log_ent
         {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "authorisations", __v)?;
         }
-        ::serde::ser::SerializeStruct::serialize_field(
-            &mut __st,
-            "is_emergency",
-            &self.is_emergency,
-        )?;
         if let Some(__v) = &self.channel {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "channel", __v)?;
         }
@@ -1706,7 +1720,6 @@ impl<'de> ::serde::Deserialize<'de>
             "authorisations",
             "channel",
             "ehr_id",
-            "is_emergency",
             "items",
             "occurred",
             "operation",
@@ -1739,7 +1752,6 @@ impl<'de> ::serde::Deserialize<'de>
             __F14,
             __F15,
             __F16,
-            __F17,
         }
         impl<'de> ::serde::Deserialize<'de> for __Field {
             fn deserialize<__D: ::serde::Deserializer<'de>>(
@@ -1773,11 +1785,10 @@ impl<'de> ::serde::Deserialize<'de>
                             "query" => ::core::result::Result::Ok(__Field::__F10),
                             "purposes" => ::core::result::Result::Ok(__Field::__F11),
                             "authorisations" => ::core::result::Result::Ok(__Field::__F12),
-                            "is_emergency" => ::core::result::Result::Ok(__Field::__F13),
-                            "channel" => ::core::result::Result::Ok(__Field::__F14),
-                            "security_labels" => ::core::result::Result::Ok(__Field::__F15),
-                            "retention" => ::core::result::Result::Ok(__Field::__F16),
-                            "other_details" => ::core::result::Result::Ok(__Field::__F17),
+                            "channel" => ::core::result::Result::Ok(__Field::__F13),
+                            "security_labels" => ::core::result::Result::Ok(__Field::__F14),
+                            "retention" => ::core::result::Result::Ok(__Field::__F15),
+                            "other_details" => ::core::result::Result::Ok(__Field::__F16),
                             _ => ::core::result::Result::Err(
                                 ::openehr_base::serde_support::unknown_field(
                                     __v,
@@ -1817,10 +1828,9 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __s11: ::core::option::Option<_> = None;
                 let mut __s12: ::core::option::Option<_> = None;
                 let mut __s13: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s14: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s15: ::core::option::Option<_> = None;
+                let mut __s14: ::core::option::Option<_> = None;
+                let mut __s15: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s16: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s17: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -1942,7 +1952,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F13 => {
                             if __s13.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("is_emergency"),
+                                    ::serde::de::Error::duplicate_field("channel"),
                                 );
                             }
                             __s13 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1950,7 +1960,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F14 => {
                             if __s14.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("channel"),
+                                    ::serde::de::Error::duplicate_field("security_labels"),
                                 );
                             }
                             __s14 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1958,7 +1968,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F15 => {
                             if __s15.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("security_labels"),
+                                    ::serde::de::Error::duplicate_field("retention"),
                                 );
                             }
                             __s15 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1966,18 +1976,10 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F16 => {
                             if __s16.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("retention"),
-                                );
-                            }
-                            __s16 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
-                        }
-                        __Field::__F17 => {
-                            if __s17.is_some() {
-                                return ::core::result::Result::Err(
                                     ::serde::de::Error::duplicate_field("other_details"),
                                 );
                             }
-                            __s17 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                            __s16 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
                         }
                     }
                 }
@@ -2008,15 +2010,12 @@ impl<'de> ::serde::Deserialize<'de>
                         query: __s10.flatten(),
                         purposes: __s11,
                         authorisations: __s12,
-                        is_emergency: __s13
-                            .flatten()
-                            .ok_or_else(|| ::serde::de::Error::missing_field("is_emergency"))?,
-                        channel: __s14.flatten(),
-                        security_labels: __s15,
-                        retention: __s16
+                        channel: __s13.flatten(),
+                        security_labels: __s14,
+                        retention: __s15
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("retention"))?,
-                        other_details: __s17.flatten(),
+                        other_details: __s16.flatten(),
                     },
                 )
             }

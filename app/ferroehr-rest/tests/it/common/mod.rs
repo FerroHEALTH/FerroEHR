@@ -1099,6 +1099,66 @@ pub(crate) fn directive_settings(directives: &[Value]) -> Value {
     settings
 }
 
+/// The header the default configuration reads the reason for a justified
+/// access from.
+pub(crate) const REASON_HEADER: &str = "x-access-reason";
+
+/// A justification of an access policy for the `HL7_ActReason` `purposes`,
+/// an emergency one when `emergency`, invoked by the callers of the `access
+/// caller kind` codes `kinds`.
+pub(crate) fn justification(purposes: &[&str], emergency: bool, kinds: &[&str]) -> Value {
+    let coded = |terminology: &str, code: &str| {
+        serde_json::json!({ "_type": "DV_CODED_TEXT", "value": code,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
+                "code_string": code } })
+    };
+    serde_json::json!({
+        "_type": "ACCESS_JUSTIFICATION",
+        "emergency": emergency,
+        "purposes": purposes.iter().map(|code| coded("HL7_ActReason", code)).collect::<Vec<_>>(),
+        "applies_to": kinds
+            .iter()
+            .map(|kind| serde_json::json!({ "_type": "ACCESS_ACTOR_SCOPE",
+                "caller_kind": coded("openehr_access", kind) }))
+            .collect::<Vec<_>>(),
+    })
+}
+
+/// Commits, as the controller, the first access policy, holding
+/// `justifications`, when there are any, and `members`.
+pub(crate) async fn commit_justified_policy(
+    svc: &FerroEhrService,
+    justifications: &[Value],
+    members: &Value,
+) {
+    let archetype = "openEHR-EHR-ACCESS_POLICY.controller.v1";
+    let mut policy = serde_json::json!({
+        "_type": "ACCESS_POLICY",
+        "name": { "_type": "DV_TEXT", "value": "Access policy" },
+        "archetype_node_id": archetype,
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+            "rm_version": "1.2.0" },
+        "controller": { "_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
+            "id": { "_type": "HIER_OBJECT_ID", "value": "2c3d4e5f-6a7b-4c8d-9e0f-a1b2c3d4e5f7" } },
+        "care_relationship_required": false,
+        "purpose_required": false
+    });
+    if !justifications.is_empty() {
+        policy["justifications"] = Value::Array(justifications.to_vec());
+    }
+    if let (Some(p), Some(members)) = (policy.as_object_mut(), members.as_object()) {
+        p.extend(members.clone());
+    }
+    svc.put_access_policy(
+        &ferroehr::service::admin::access_policy::PolicyPrecondition::Create,
+        &policy,
+    )
+    .await
+    .expect("the controller commits the policy");
+}
+
 /// Commits `settings` as the `EHR_ACCESS` settings of `ehr_id` through the
 /// controller's service call, over the current version.
 pub(crate) async fn commit_access_settings(svc: &FerroEhrService, ehr_id: EhrId, settings: Value) {

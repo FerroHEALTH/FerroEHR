@@ -69,8 +69,10 @@ guarded_handler! {
              description = "A term of the `accessor kind` group by its coded content, the token \
                             `terminology_id|code`, such as \
                             `HL7_SecurityRoleType|datasubject`."),
-            ("emergency" = Option<bool>, Query,
-             description = "Only the entries whose `is_emergency` is this."),
+            ("justification" = Option<String>, Query,
+             description = "`justification` or `emergency`: only the entries an access \
+                            justification of that kind admitted, with the reason the \
+                            accessor stated."),
             ("include_self" = Option<bool>, Query,
              description = "Whether the subject's own reads of their log are included; \
                             default false."),

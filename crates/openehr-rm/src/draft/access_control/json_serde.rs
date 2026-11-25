@@ -1587,6 +1587,150 @@ labels: __s5,
 }
 
 impl ::serde::Serialize
+    for crate::draft::access_control::access_control::access_justification::AccessJustification
+{
+    fn serialize<__S: ::serde::Serializer>(
+        &self,
+        __serializer: __S,
+    ) -> ::core::result::Result<__S::Ok, __S::Error> {
+        let mut __n = 3usize;
+        if self.applies_to.as_ref().is_some_and(|__v| !__v.is_empty()) {
+            __n += 1;
+        }
+        let mut __st =
+            ::serde::Serializer::serialize_struct(__serializer, "ACCESS_JUSTIFICATION", __n)?;
+        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "_type", "ACCESS_JUSTIFICATION")?;
+        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "purposes", &self.purposes)?;
+        if let Some(__v) = &self.applies_to
+            && !__v.is_empty()
+        {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "applies_to", __v)?;
+        }
+        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "emergency", &self.emergency)?;
+        ::serde::ser::SerializeStruct::end(__st)
+    }
+}
+
+impl<'de> ::serde::Deserialize<'de>
+    for crate::draft::access_control::access_control::access_justification::AccessJustification
+{
+    fn deserialize<__D: ::serde::Deserializer<'de>>(
+        __deserializer: __D,
+    ) -> ::core::result::Result<Self, __D::Error> {
+        const __FIELDS: &[&str] = &["applies_to", "emergency", "purposes"];
+        enum __Field {
+            __Type,
+            __F0,
+            __F1,
+            __F2,
+        }
+        impl<'de> ::serde::Deserialize<'de> for __Field {
+            fn deserialize<__D: ::serde::Deserializer<'de>>(
+                __deserializer: __D,
+            ) -> ::core::result::Result<Self, __D::Error> {
+                struct __KeyVisitor;
+                impl<'de> ::serde::de::Visitor<'de> for __KeyVisitor {
+                    type Value = __Field;
+                    fn expecting(
+                        &self,
+                        __f: &mut ::core::fmt::Formatter<'_>,
+                    ) -> ::core::fmt::Result {
+                        __f.write_str("an object member name")
+                    }
+                    fn visit_str<__E: ::serde::de::Error>(
+                        self,
+                        __v: &str,
+                    ) -> ::core::result::Result<__Field, __E> {
+                        match __v {
+                            "_type" => ::core::result::Result::Ok(__Field::__Type),
+                            "purposes" => ::core::result::Result::Ok(__Field::__F0),
+                            "applies_to" => ::core::result::Result::Ok(__Field::__F1),
+                            "emergency" => ::core::result::Result::Ok(__Field::__F2),
+                            _ => ::core::result::Result::Err(
+                                ::openehr_base::serde_support::unknown_field(
+                                    __v,
+                                    "ACCESS_JUSTIFICATION",
+                                    __FIELDS,
+                                ),
+                            ),
+                        }
+                    }
+                }
+                ::serde::Deserializer::deserialize_identifier(__deserializer, __KeyVisitor)
+            }
+        }
+        struct __Visitor;
+        impl<'de> ::serde::de::Visitor<'de> for __Visitor {
+            type Value = crate::draft::access_control::access_control::access_justification::AccessJustification;
+            fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                __f.write_str("an openEHR `ACCESS_JUSTIFICATION` object")
+            }
+            #[inline(never)]
+            fn visit_map<__A: ::serde::de::MapAccess<'de>>(
+                self,
+                mut __map: __A,
+            ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let mut __seen_type = false;
+                let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s1: ::core::option::Option<_> = None;
+                let mut __s2: ::core::option::Option<::core::option::Option<_>> = None;
+                while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
+                    match __key {
+                        __Field::__Type => {
+                            if __seen_type {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("_type"),
+                                );
+                            }
+                            __seen_type = true;
+                            ::serde::de::MapAccess::next_value_seed(
+                                &mut __map,
+                                ::openehr_base::serde_support::ExpectedType("ACCESS_JUSTIFICATION"),
+                            )?;
+                        }
+                        __Field::__F0 => {
+                            if __s0.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("purposes"),
+                                );
+                            }
+                            __s0 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F1 => {
+                            if __s1.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("applies_to"),
+                                );
+                            }
+                            __s1 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F2 => {
+                            if __s2.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("emergency"),
+                                );
+                            }
+                            __s2 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                    }
+                }
+                ::core::result::Result::Ok(crate::draft::access_control::access_control::access_justification::AccessJustification {
+purposes: __s0.flatten().ok_or_else(|| ::serde::de::Error::missing_field("purposes"))?,
+applies_to: __s1,
+emergency: __s2.flatten().ok_or_else(|| ::serde::de::Error::missing_field("emergency"))?,
+})
+            }
+        }
+        ::serde::Deserializer::deserialize_struct(
+            __deserializer,
+            "ACCESS_JUSTIFICATION",
+            __FIELDS,
+            __Visitor,
+        )
+    }
+}
+
+impl ::serde::Serialize
     for crate::draft::access_control::access_control::access_label::AccessLabel
 {
     fn serialize<__S: ::serde::Serializer>(
@@ -2398,6 +2542,13 @@ impl ::serde::Serialize
             __n += 1;
         }
         if self
+            .justifications
+            .as_ref()
+            .is_some_and(|__v| !__v.is_empty())
+        {
+            __n += 1;
+        }
+        if self
             .concealed_confidentialities
             .as_ref()
             .is_some_and(|__v| !__v.is_empty())
@@ -2510,6 +2661,11 @@ impl ::serde::Serialize
         {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "conflict_rules", __v)?;
         }
+        if let Some(__v) = &self.justifications
+            && !__v.is_empty()
+        {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "justifications", __v)?;
+        }
         if let Some(__v) = &self.concealed_confidentialities
             && !__v.is_empty()
         {
@@ -2575,6 +2731,7 @@ impl<'de> ::serde::Deserialize<'de>
             "details",
             "episode_shared",
             "feeder_audit",
+            "justifications",
             "links",
             "log_restrictions",
             "log_retention",
@@ -2620,6 +2777,7 @@ impl<'de> ::serde::Deserialize<'de>
             __F25,
             __F26,
             __F27,
+            __F28,
         }
         impl<'de> ::serde::Deserialize<'de> for __Field {
             fn deserialize<__D: ::serde::Deserializer<'de>>(
@@ -2662,16 +2820,17 @@ impl<'de> ::serde::Deserialize<'de>
                             "caseload" => ::core::result::Result::Ok(__Field::__F17),
                             "episode_shared" => ::core::result::Result::Ok(__Field::__F18),
                             "conflict_rules" => ::core::result::Result::Ok(__Field::__F19),
+                            "justifications" => ::core::result::Result::Ok(__Field::__F20),
                             "concealed_confidentialities" => {
-                                ::core::result::Result::Ok(__Field::__F20)
+                                ::core::result::Result::Ok(__Field::__F21)
                             }
-                            "value_sets" => ::core::result::Result::Ok(__Field::__F21),
-                            "purpose_required" => ::core::result::Result::Ok(__Field::__F22),
-                            "rules" => ::core::result::Result::Ok(__Field::__F23),
-                            "catalogue" => ::core::result::Result::Ok(__Field::__F24),
-                            "log_restrictions" => ::core::result::Result::Ok(__Field::__F25),
-                            "log_retention" => ::core::result::Result::Ok(__Field::__F26),
-                            "details" => ::core::result::Result::Ok(__Field::__F27),
+                            "value_sets" => ::core::result::Result::Ok(__Field::__F22),
+                            "purpose_required" => ::core::result::Result::Ok(__Field::__F23),
+                            "rules" => ::core::result::Result::Ok(__Field::__F24),
+                            "catalogue" => ::core::result::Result::Ok(__Field::__F25),
+                            "log_restrictions" => ::core::result::Result::Ok(__Field::__F26),
+                            "log_retention" => ::core::result::Result::Ok(__Field::__F27),
+                            "details" => ::core::result::Result::Ok(__Field::__F28),
                             _ => ::core::result::Result::Err(
                                 ::openehr_base::serde_support::unknown_field(
                                     __v,
@@ -2719,12 +2878,13 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __s19: ::core::option::Option<_> = None;
                 let mut __s20: ::core::option::Option<_> = None;
                 let mut __s21: ::core::option::Option<_> = None;
-                let mut __s22: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s23: ::core::option::Option<_> = None;
+                let mut __s22: ::core::option::Option<_> = None;
+                let mut __s23: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s24: ::core::option::Option<_> = None;
                 let mut __s25: ::core::option::Option<_> = None;
-                let mut __s26: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s26: ::core::option::Option<_> = None;
                 let mut __s27: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s28: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -2904,9 +3064,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F20 => {
                             if __s20.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field(
-                                        "concealed_confidentialities",
-                                    ),
+                                    ::serde::de::Error::duplicate_field("justifications"),
                                 );
                             }
                             __s20 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2914,7 +3072,9 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F21 => {
                             if __s21.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("value_sets"),
+                                    ::serde::de::Error::duplicate_field(
+                                        "concealed_confidentialities",
+                                    ),
                                 );
                             }
                             __s21 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2922,7 +3082,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F22 => {
                             if __s22.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("purpose_required"),
+                                    ::serde::de::Error::duplicate_field("value_sets"),
                                 );
                             }
                             __s22 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2930,7 +3090,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F23 => {
                             if __s23.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("rules"),
+                                    ::serde::de::Error::duplicate_field("purpose_required"),
                                 );
                             }
                             __s23 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2938,7 +3098,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F24 => {
                             if __s24.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("catalogue"),
+                                    ::serde::de::Error::duplicate_field("rules"),
                                 );
                             }
                             __s24 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2946,7 +3106,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F25 => {
                             if __s25.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("log_restrictions"),
+                                    ::serde::de::Error::duplicate_field("catalogue"),
                                 );
                             }
                             __s25 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2954,7 +3114,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F26 => {
                             if __s26.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("log_retention"),
+                                    ::serde::de::Error::duplicate_field("log_restrictions"),
                                 );
                             }
                             __s26 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2962,10 +3122,18 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F27 => {
                             if __s27.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("details"),
+                                    ::serde::de::Error::duplicate_field("log_retention"),
                                 );
                             }
                             __s27 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F28 => {
+                            if __s28.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("details"),
+                                );
+                            }
+                            __s28 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
                         }
                     }
                 }
@@ -2999,16 +3167,17 @@ impl<'de> ::serde::Deserialize<'de>
                         caseload: __s17.flatten(),
                         episode_shared: __s18,
                         conflict_rules: __s19,
-                        concealed_confidentialities: __s20,
-                        value_sets: __s21,
-                        purpose_required: __s22
+                        justifications: __s20,
+                        concealed_confidentialities: __s21,
+                        value_sets: __s22,
+                        purpose_required: __s23
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("purpose_required"))?,
-                        rules: __s23,
-                        catalogue: __s24,
-                        log_restrictions: __s25,
-                        log_retention: __s26.flatten(),
-                        details: __s27.flatten(),
+                        rules: __s24,
+                        catalogue: __s25,
+                        log_restrictions: __s26,
+                        log_retention: __s27.flatten(),
+                        details: __s28.flatten(),
                     },
                 )
             }

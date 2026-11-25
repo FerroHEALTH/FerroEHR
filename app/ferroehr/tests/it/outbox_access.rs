@@ -14,7 +14,7 @@
 use std::sync::Arc;
 
 use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess, with_request_access};
-use ferroehr::access_eval::procedure::{Caller, Emergency};
+use ferroehr::access_eval::procedure::Caller;
 use ferroehr::access_eval::scope::CategoryIndex;
 use ferroehr::extensions::outbox::OutboxDomain;
 use ferroehr::ids::EhrId;
@@ -159,7 +159,8 @@ impl Reader {
         let asking = Asking {
             operation: OperationClass::Read,
             purpose: self.purpose.map(str::to_owned),
-            emergency: Emergency::default(),
+            reason: None,
+            opt_out_override: false,
             episodes: None,
         };
         let in_force = InForce {

@@ -122,8 +122,8 @@ pub struct Record<'a> {
     pub assurance_value: Option<&'a str>,
     /// `professional_id`.
     pub professional_id: Option<&'a str>,
-    /// `emergency_access`.
-    pub emergency_access: bool,
+    /// `justification`.
+    pub justification: Option<&'a Value>,
     /// `retention_ends`.
     pub retention_ends: Option<&'a str>,
     /// `retention_stated`.
@@ -217,12 +217,12 @@ pub fn of(record: &Record<'_>) -> Result<[u8; 32], Unwritable> {
     w.integer("digest_version", Some(i64::from(record.digest_version)));
     w.text("domain", record.domain);
     w.optional_text("ehr_id", record.ehr_id);
-    w.boolean("emergency_access", record.emergency_access);
     w.text("event_code", record.event_code);
     w.json("external_fields", record.external_fields)?;
     w.json("facilities", record.facilities)?;
     w.uuid("id", record.id);
     w.optional_text("issuer", record.issuer);
+    w.json("justification", record.justification)?;
     w.optional_text("legal_basis", record.legal_basis);
     w.optional_text("operation", record.operation);
     w.integer("origin_count", record.origin_count);
@@ -476,7 +476,7 @@ pub const STORED: &str = "jsonb_build_object(\
      || jsonb_build_object(\
      'acting_mode', e.acting_mode, 'assurance_level', e.assurance_level, \
      'assurance_value', e.assurance_value, 'professional_id', e.professional_id, \
-     'emergency_access', e.emergency_access, \
+     'justification', e.justification, \
      'retention_ends', to_char(e.retention_ends, 'YYYY-MM-DD'), \
      'retention_stated', e.retention_stated, 'permit', e.permit, 'issuer', e.issuer, \
      'client_id', e.client_id, 'ehr_id', e.ehr_id, 'subject_namespace', e.subject_namespace, \
@@ -533,7 +533,7 @@ mod tests {
             assurance_level: None,
             assurance_value: None,
             professional_id: None,
-            emergency_access: false,
+            justification: None,
             retention_ends: Some("2029-11-22"),
             retention_stated: true,
             permit: None,
@@ -595,7 +595,7 @@ mod tests {
             ("assurance_level", Value::Null),
             ("assurance_value", Value::Null),
             ("professional_id", Value::Null),
-            ("emergency_access", Value::Bool(false)),
+            ("justification", Value::Null),
             ("retention_ends", text("2029-11-22")),
             ("retention_stated", Value::Bool(true)),
             ("permit", Value::Null),
@@ -639,7 +639,7 @@ mod tests {
         let digest = of(&record(&roles, "2026-11-22T04:31:28.2Z")).expect("a digest");
         assert_eq!(
             crate::digest::hex(&digest),
-            "f35185db7443a5ca8de6c6dbd4e82ce08721125e054af93365547edfc4c21dfa"
+            "af9baeda2e3e9c7ad5aec32726c7904a10fc08a369618f7aeffe98f6715c2b94"
         );
     }
 
