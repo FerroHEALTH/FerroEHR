@@ -9,7 +9,7 @@ Signature](https://specifications.openehr.org/releases/RM/Release-1.1.0/common.h
 | Mode                   | What is stored                               | What it establishes                              |
 |------------------------|----------------------------------------------|--------------------------------------------------|
 | `digest` (the default) | `sha256:` + base64(SHA-256(canonical form))  | the version has not been altered since committal |
-| `pgp`                  | an ASCII-armored RFC 4880 detached signature | that, plus which key signed it                   |
+| `pgp`                  | an ASCII-armored RFC 9580 detached signature | that, plus which key signed it                   |
 
 Signing is **on by default**, in `digest` mode, and read-time verification of
 the server's own signatures defaults to `strict`: a served version that no

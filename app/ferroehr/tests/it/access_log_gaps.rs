@@ -140,7 +140,7 @@ fn ground(code: &str) -> DvCodedText {
 }
 
 /// The checkpoints of `pool` for [`SYSTEM`], signing with a fresh key.
-fn signed_log(pool: &PgPool) -> (Checkpoints, pgp::composed::SignedSecretKey) {
+fn signed_log(pool: &PgPool) -> (Checkpoints, ferrohealth_openpgp_pq::key::Key) {
     let key = generate_key();
     let log = Checkpoints::new(
         pool.clone(),

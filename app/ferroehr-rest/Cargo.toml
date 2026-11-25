@@ -151,6 +151,7 @@ proptest = { workspace = true }
 # #5723) generates its `OpenPGP` keys; rand is pinned to the generation `pgp`
 # takes its `OsRng` from, as `app/ferroehr` pins it.
 pgp = { workspace = true }
+ferrohealth-openpgp-pq = { workspace = true }
 rand = "0.8"
 
 

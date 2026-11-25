@@ -1298,8 +1298,9 @@ the server's own signatures **strict** by default.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `true` | Server-side signing of committed versions. |
-| `mode` | enum{digest,pgp} | `digest` | A SHA-256 integrity digest, or an OpenPGP (RFC 4880) detached signature. |
-| `key_file` | path | unset | Armored secret key; **required for `pgp`** (a boot error otherwise). |
+| `mode` | enum{digest,pgp} | `digest` | A SHA-256 integrity digest, or an OpenPGP (RFC 9580) detached signature, ML-DSA-65+Ed25519 (RFC 9980). |
+| `key_file` | path | unset | Armored ML-DSA-65+Ed25519 secret key; **required for `pgp`** (a boot error otherwise). |
+| `allow_classical_key` | bool | `false` | Sign with a classical (Ed25519, EdDSA or RSA) key in `key_file`, with a boot warning naming 31.12.2030. Off, a classical key is refused at boot. |
 | `key_passphrase` / `key_passphrase_file` | secret / path | unset | Key passphrase. At most one of the pair. |
 | `retired_key_files` | list of path | `[]` | Armored **public** keys retired from signing and kept for verification, so versions signed before a key rotation keep verifying. |
 | `verify_on_read` | enum{off,warn,strict} | unset ⇒ `strict` when signing is enabled | Read-time recompute-and-compare policy for the server's own signatures. |
@@ -1326,41 +1327,37 @@ takes a comma-separated list
 > `pgp` mode **fails closed at boot** if the key is missing or unusable: the
 > server will not start. Verify the key and passphrase before switching modes.
 
-### Choose an Ed25519 signing key
+### Sign with an ML-DSA-65+Ed25519 key
 
-The server refuses an **ECDSA** (P-256, P-384, P-521, secp256k1, Brainpool)
-or **Ed448** signing key at boot: their private-key arithmetic runs on
+`pgp` mode signs with an ML-DSA-65+Ed25519 key (RFC 9980 algorithm ID 30), a
+composite post-quantum signature that verifies only when both its Ed25519 and
+its ML-DSA-65 half verify. Generate one with `ferrohealth-sop`, the Stateless
+OpenPGP command line of the `ferrohealth-openpgp-pq` crate
+(`cargo install ferrohealth-openpgp-pq --version =0.1.0 --locked`):
+
+```shell
+ferrohealth-sop generate-key --signing-only --with-key-password=pgp-pass \
+  "FerroEHR records <records@example.org>" > signing.asc
+```
+
+A **classical** key (Ed25519, EdDSA or RSA) is refused at boot, naming the key,
+unless `allow_classical_key = true`. With it on, the server signs with the
+classical key and warns at boot that high-risk use must complete the move to
+post-quantum signatures by 31.12.2030 (EU coordinated implementation roadmap).
+An **ECDSA** (P-256, P-384, P-521, secp256k1, Brainpool) or **Ed448** signing
+key is refused either way: their private-key arithmetic runs on
 `crypto-bigint` 0.5, whose constant-time operations can branch on secret
-values (RUSTSEC-2026-0387), with no fixed release on that line. The boot error
-names the advisory. Move to Ed25519 with the steps below; the old certificate
-goes in `retired_key_files`, where it keeps verifying, because verification
-uses only public values.
+values (RUSTSEC-2026-0387). An allowed **RSA** key adds a warning naming the
+Marvin timing sidechannel (RUSTSEC-2023-0071 / CVE-2023-49092).
 
-An **RSA** signing key is accepted, but it makes every commit perform an RSA
-private-key operation, the operation the Marvin timing sidechannel concerns
-(RUSTSEC-2023-0071 / CVE-2023-49092), for which the underlying `rsa` crate has
-no fixed release. An Ed25519 key keeps that code off the signing path entirely.
+To move off a classical key:
 
-The server does **not** refuse an RSA key: a repository whose history is
-already RSA-signed needs that key to keep verifying, and signatures are
-immutable committed facts that cannot be re-issued. Instead it logs a warning
-at boot naming the advisory. To clear it:
-
-1. Generate a new signing key: `gpg --quick-generate-key "…" ed25519 sign`, and
-   export the armored secret key to `key_file`.
+1. Generate an ML-DSA-65+Ed25519 key as above and point `key_file` at it.
 2. Export the **public** half of the old certificate and add it to
-   `retired_key_files`, so versions signed with it still verify (see above).
-3. Restart. New versions are signed with Ed25519; old ones keep verifying.
-
-Rotation inside one certificate is cheaper still: add an Ed25519 **signing
-subkey** to the existing certificate, export the armored secret key again to
-`key_file`, and restart. The server signs with the newest subkey whose binding
-grants signing and that is neither expired nor revoked
-([the rule](../signing/pgp.md#configuring-the-key)), with no
-`retired_key_files` entry needed: the certificate keeps the previous subkey, so
-past signatures continue to verify. For a refused ECDSA or Ed448 key this works
-when the new Ed25519 subkey is the one chosen. The steps above, with a new
-certificate, work in every case.
+   `retired_key_files`, so versions signed with it still verify.
+3. Turn `allow_classical_key` off and restart. New versions are signed with
+   ML-DSA-65+Ed25519; old ones keep verifying, because verification uses only
+   public values.
 
 **On Kubernetes**, `digest` mode needs nothing; it is the default. `pgp` mode
 needs the key as a file and its passphrase as a secret, both of which the chart

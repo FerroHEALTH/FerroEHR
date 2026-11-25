@@ -1,8 +1,11 @@
 # PGP signing
 
 `pgp` mode replaces the stored SHA-256 digest with an OpenPGP
-([RFC 4880](https://www.rfc-editor.org/rfc/rfc4880)) detached signature made
-with a key the server holds. openEHR names that format directly: the
+([RFC 9580](https://www.rfc-editor.org/rfc/rfc9580)) detached signature made
+with a key the server holds. The key is ML-DSA-65+Ed25519, the composite
+post-quantum signature algorithm (ID 30) that
+[RFC 9980](https://www.rfc-editor.org/rfc/rfc9980) requires every
+implementation to support. openEHR names that format directly: the
 signature "is generated according to the openPGP standard", and where a
 digest only detects tampering, a signature "authenticates the user as the
 author of the content to readers of the content" and "acts as a
@@ -20,9 +23,9 @@ covers what changes.
 
 |                      | `digest`                                    | `pgp`                                          |
 |----------------------|---------------------------------------------|------------------------------------------------|
-| Stored value         | `sha256:` + base64(SHA-256(canonical form)) | ASCII-armored RFC 4880 detached signature      |
+| Stored value         | `sha256:` + base64(SHA-256(canonical form)) | ASCII-armored RFC 9580 detached signature      |
 | Key material         | none                                        | an armored secret key the server loads at boot |
-| Hash                 | SHA-256                                     | SHA-256, inside the OpenPGP signature          |
+| Hash                 | SHA-256                                     | SHA2-512, inside the OpenPGP signature         |
 | Proves               | the version was not altered after committal | that, plus which key signed it                 |
 | Boot behaviour       | nothing to validate                         | refuses to start without a usable key          |
 | Verification at read | recompute and compare                       | verify against the configured certificate      |
@@ -34,8 +37,25 @@ differs.
 
 ## Configuring the key
 
-`pgp` mode needs a `key_file` pointing at an armored secret key, and the
-passphrase that unlocks it if it has one:
+`pgp` mode needs a `key_file` pointing at an armored ML-DSA-65+Ed25519
+secret key, and the passphrase that unlocks it if it has one. GnuPG cannot
+make such a key; `ferrohealth-sop`, the Stateless OpenPGP command line of the
+`ferrohealth-openpgp-pq` crate, can:
+
+```shell
+cargo install ferrohealth-openpgp-pq --version =0.1.0 --locked
+ferrohealth-sop generate-key --signing-only --with-key-password=pgp-pass \
+  "FerroEHR records <records@example.org>" > signing.asc
+ferrohealth-sop extract-cert < signing.asc > signing.pub.asc
+```
+
+Its signatures are version 6 signatures over SHA2-512 that carry both an
+Ed25519 and an ML-DSA-65 signature, and verify only when both halves verify
+([RFC 9980 §3.2](https://www.rfc-editor.org/rfc/rfc9980#section-3.2)). A
+signature over a hash with a digest under 256 bits is refused before any
+cryptography ([§5.3.1](https://www.rfc-editor.org/rfc/rfc9980#section-5.3.1)),
+and so is any signature over MD5, SHA-1 or RIPEMD-160
+([RFC 9580 §9.5](https://www.rfc-editor.org/rfc/rfc9580#section-9.5)).
 
 ```toml
 [record.signing]
@@ -67,7 +87,19 @@ string with it. A missing `key_file`, an unparseable file, a wrong
 passphrase, or a certificate with no usable signing component all stop
 startup with an error rather than leaving a running server that cannot sign.
 
-**The signing component is chosen at boot.** No subkey signs while the
+**A classical key is refused unless you allow it.** An Ed25519, EdDSA or
+RSA key in `key_file` stops startup with an error that names the key, unless
+`allow_classical_key = true`. Classical signatures are quantum-vulnerable,
+and a version signature is kept for the life of the record; the EU
+coordinated implementation roadmap for post-quantum cryptography (NIS
+Cooperation Group, v1.1, §4.2) has high-risk use complete the move by
+31.12.2030. With the setting on, the server signs with the classical key and
+warns at boot, naming that date. Move to an ML-DSA-65+Ed25519 key and list
+the classical certificate in `retired_key_files`: the versions it signed
+keep verifying.
+
+**A classical signing component is chosen at boot.** An ML-DSA-65+Ed25519
+key signs with its primary key. For a classical key, no subkey signs while the
 primary key is revoked
 ([RFC 9580 §5.2.1.11](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.1.11):
 "A revoked key is not to be used") or past the Key Expiration Time its
@@ -121,9 +153,9 @@ lets it:
 
 **When neither a subkey nor the primary key may sign, the server refuses
 to start** and names the signing flag. It never signs with a key the
-certificate does not authorise. Add a signing subkey
-(`gpg --quick-add-key <FINGERPRINT> ed25519 sign`), or re-issue the primary
-key's self-signature with the signing flag.
+certificate does not authorise. Generate an ML-DSA-65+Ed25519 key, add a
+signing subkey, or re-issue the primary key's self-signature with the
+signing flag.
 
 The choice holds until the next restart, so restart after adding, revoking
 or expiring a subkey, and before the chosen component expires.
@@ -140,33 +172,32 @@ Holding the unlocked component exposes nothing that holding the passphrase
 did not. Protect the process memory as you protect the key file: no core
 dumps, no swap to unencrypted disk, no debugger attached in production.
 
-**Sign with Ed25519.** It is the one algorithm the server signs with that
-has neither a refusal nor a warning, and the only one to use when the
-server carries clinical load. The server signs every committed version and
-every access-log link, so an access log that records an access to each EHR
-a query serves makes several signatures per request. An RSA private-key
-operation costs some hundred times an Ed25519 signature, so under an RSA key
-the CPU per request rises several times over and every write that signs a
-version (an EHR create, a composition commit) is slower. That cost is the
-RSA operation itself and no setting removes it.
+**Sign with ML-DSA-65+Ed25519.** The server signs every committed version,
+every access-log link and every system-log seal, so an access log that
+records an access to each EHR a query serves makes several signatures per
+request. Both halves run in `aws-lc-rs`, and the ML-DSA-65 half is the
+hedged form RFC 9980 §5.1.2 requires. An RSA private-key operation, allowed
+only behind `allow_classical_key`, costs far more per signature and no
+setting removes that cost.
 
-**An ECDSA or Ed448 signing key is refused at boot.** The private-key
+**An ECDSA or Ed448 signing key is refused at boot**, with or without
+`allow_classical_key`. The private-key
 arithmetic of both runs on `crypto-bigint` 0.5, whose operations meant to be
 constant-time can branch on secret values (RUSTSEC-2026-0387), and the 0.5
 line has no fixed release. That covers ECDSA on every curve (P-256, P-384,
 P-521, secp256k1, Brainpool). The server stops before it makes a single
 signature and names the advisory. Only the signing component counts: a
 certificate whose primary key is ECDSA and whose chosen signing subkey is
-Ed25519 is accepted. Such a certificate stays usable for verification as a
+Ed25519 is accepted when classical keys are allowed. Such a certificate stays usable for verification as a
 [retired key](#retired-keys-and-rotation), since verifying uses only public
 values.
 
-**An RSA signing key is accepted with a warning.** Every commit would then
-perform an RSA private-key operation, the operation the Marvin timing
+**An allowed RSA signing key adds a second warning.** Every commit would
+then perform an RSA private-key operation, the operation the Marvin timing
 sidechannel (RUSTSEC-2023-0071 / CVE-2023-49092) concerns, and the
-underlying `rsa` crate has no fixed release. The server warns at boot and
-keeps working, because a repository whose history is RSA-signed still needs
-that key to verify it. An Ed25519 key keeps that code off the signing path.
+underlying `rsa` crate has no fixed release. An ML-DSA-65+Ed25519 key keeps
+that code off the signing path, and an RSA certificate in
+`retired_key_files` still verifies the history it signed.
 
 ### Retired keys and rotation
 
@@ -174,7 +205,7 @@ A stored `VERSION.signature` records no key identifier, and it is an
 immutable committed fact that cannot be re-issued. Rotating a key therefore
 has to keep the old one verifiable. Two mechanisms do that:
 
-- **A new signing subkey on the same certificate.** After a restart the
+- **A new signing subkey on the same classical certificate.** After a restart the
   server signs with the newest qualifying subkey (see above), the
   certificate retains the previous one, and verification tries the primary
   key and every subkey. Revoking the old subkey stops it signing and keeps
@@ -183,9 +214,9 @@ has to keep the old one verifiable. Two mechanisms do that:
   listed there and consulted during verification. A public key verifies and
   can never sign again, so a retired entry cannot become an active signer.
 
-A retired certificate may use any algorithm the server can verify, ECDSA,
-Ed448 and RSA included, so moving off a refused signing key keeps every
-version it signed verifiable.
+A retired certificate may use any algorithm the server can verify,
+ML-DSA-65+Ed25519, Ed25519, ECDSA, Ed448 and RSA included, so moving to an
+ML-DSA-65+Ed25519 key keeps every version a classical key signed verifiable.
 
 ## Server-generated versus client-supplied signatures
 

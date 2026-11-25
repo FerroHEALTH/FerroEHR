@@ -380,6 +380,7 @@ runs in CI and on a developer machine too, so its pin lives here and
 | Tool | Pin | Read by |
 |---|---|---|
 | `ferrohealth-perf` | `0.15.0` (crates.io, 2026-11-21) | `scripts/perf/gate.sh` |
+| `ferrohealth-openpgp-pq` | `0.1.0` (crates.io, 2026-11-25) | `scripts/sop.sh`, which installs its `ferrohealth-sop` for the deploy probes and the perf gate |
 
 The SemVer judge of the published `openehr-*` crates (#5353) runs on a pull
 request, in the merge queue, in the release plan and on a developer machine,

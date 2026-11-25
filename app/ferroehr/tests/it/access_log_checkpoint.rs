@@ -11,13 +11,13 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use ferrohealth_openpgp_pq::encoding::{self, Encoding};
+use ferrohealth_openpgp_pq::key::Key;
 use openehr_base::containers::NonEmptyVec;
 use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
 use openehr_rm::v1_2::common::generic::party_identified::PartyIdentified;
 use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
-use pgp::composed::{ArmorOptions, KeyType, SecretKeyParamsBuilder, SignedSecretKey};
-use rand::rngs::OsRng;
 use serde_json::{Value, json};
 use sqlx::{AssertSqlSafe, Connection, PgPool};
 
@@ -43,28 +43,27 @@ const MOVED: &str = "7d44b88c-4199-4bad-97dc-000000000001";
 /// An EHR whose log stays.
 const STAYS: &str = "7d44b88c-4199-4bad-97dc-000000000002";
 
-/// A generated Ed25519 `OpenPGP` secret key.
-pub(crate) fn generate_key() -> SignedSecretKey {
-    let params = SecretKeyParamsBuilder::default()
-        .key_type(KeyType::Ed25519Legacy)
-        .can_sign(true)
-        .primary_user_id("access-log test <test@ferroehr.local>".into())
-        .build()
-        .expect("build key params");
-    params.generate(OsRng).expect("generate key")
+/// A generated ML-DSA-65+Ed25519 `OpenPGP` secret key (RFC 9980 algorithm ID 30).
+pub(crate) fn generate_key() -> Key {
+    Key::generate(&["access-log test <test@ferroehr.local>"]).expect("generate key")
+}
+
+/// `bytes`, armored, as text.
+fn text(bytes: Vec<u8>) -> String {
+    String::from_utf8(bytes).expect("armor is text")
 }
 
 /// A `pgp`-mode keyring over `key`.
-pub(crate) fn keyring(key: &SignedSecretKey) -> Arc<Signer> {
+pub(crate) fn keyring(key: &Key) -> Arc<Signer> {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let n = COUNTER.fetch_add(1, Ordering::Relaxed);
     let path = std::env::temp_dir().join(format!(
         "ferroehr-access-log-{}-{n}.asc",
         std::process::id()
     ));
-    let armored = key
-        .to_armored_string(ArmorOptions::default())
-        .expect("armor key");
+    let armored = text(
+        encoding::encode(std::slice::from_ref(key.signed()), Encoding::Armored).expect("armor key"),
+    );
     std::fs::write(&path, armored).expect("write key");
     let config = SigningConfig {
         mode: Mode::Pgp,
@@ -75,11 +74,14 @@ pub(crate) fn keyring(key: &SignedSecretKey) -> Arc<Signer> {
 }
 
 /// The certificates trusting `key`'s public certificate.
-pub(crate) fn trusting(key: &SignedSecretKey) -> Arc<TrustedCertificates> {
-    let armored = key
-        .to_public_key()
-        .to_armored_string(ArmorOptions::default())
-        .expect("armor certificate");
+pub(crate) fn trusting(key: &Key) -> Arc<TrustedCertificates> {
+    let armored = text(
+        encoding::encode(
+            std::slice::from_ref(key.certificate().signed()),
+            Encoding::Armored,
+        )
+        .expect("armor certificate"),
+    );
     Arc::new(TrustedCertificates::from_armored([armored.as_str()]).expect("the certificate reads"))
 }
 

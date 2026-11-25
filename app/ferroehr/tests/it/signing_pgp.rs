@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! `OpenPGP`-mode integration tests: sign→verify round-trip with a
-//! generated key, tamper detection, armor-parse failures, the fail-closed
-//! boot validation (missing path, garbled key, wrong passphrase), the
-//! boot advisory an RSA signing key raises, the refusal of ECDSA and
-//! Ed448 signing keys (RUSTSEC-2026-0387), and the choice of the signing
-//! component, subkey or primary key.
+//! generated ML-DSA-65+Ed25519 key, tamper detection, armor-parse failures, the
+//! fail-closed boot validation (missing path, garbled key, wrong passphrase),
+//! the refusal of a classical key unless `allow_classical_key` admits it, the
+//! boot advisory an allowed RSA signing key raises, the refusal of ECDSA and
+//! Ed448 signing keys (RUSTSEC-2026-0387), and the choice of a classical
+//! signing component, subkey or primary key.
 
 use std::collections::BTreeMap;
+use std::error::Error as _;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -17,6 +19,8 @@ use ferroehr::versioning::signature::config::{Mode, SigningConfig, VerifyOnRead}
 use ferroehr::versioning::signature::key::KeyError;
 use ferroehr::versioning::signature::signer::{Signer, SigningError};
 use ferroehr::versioning::signature::verify::Verdict;
+use ferrohealth_openpgp_pq::encoding::{self, Encoding};
+use ferrohealth_openpgp_pq::key::Key;
 use pgp::composed::{
     ArmorOptions, Deserializable as _, DetachedSignature, KeyType, SecretKeyParamsBuilder,
     SignedSecretKey, SubkeyParamsBuilder,
@@ -34,8 +38,25 @@ use tracing_subscriber::prelude::*;
 /// A short openEHR-canonical-form-like string to sign in the tests.
 const CANONICAL: &str = r#"{"_type":"ORIGINAL_VERSION","uid":{"value":"a::b::1"}}"#;
 
-/// Generate an armored Ed25519 `OpenPGP` secret key, optionally passphrase-locked.
+/// Generate an armored ML-DSA-65+Ed25519 `OpenPGP` secret key (RFC 9980
+/// algorithm ID 30), optionally passphrase-locked.
 fn generate_key(passphrase: Option<&str>) -> String {
+    let mut key =
+        Key::generate(&["ferroehr-signing test <test@ferroehr.local>"]).expect("generate key");
+    if let Some(p) = passphrase {
+        key.lock(&Password::from(p)).expect("lock key");
+    }
+    armored(std::slice::from_ref(key.signed()))
+}
+
+/// `items` as one ASCII-armored block.
+fn armored<T: encoding::Block>(items: &[T]) -> String {
+    String::from_utf8(encoding::encode(items, Encoding::Armored).expect("armor")).expect("text")
+}
+
+/// Generate an armored classical Ed25519 `OpenPGP` secret key, optionally
+/// passphrase-locked.
+fn generate_classical_key(passphrase: Option<&str>) -> String {
     let mut builder = SecretKeyParamsBuilder::default();
     builder
         .key_type(KeyType::Ed25519Legacy)
@@ -66,6 +87,8 @@ fn pgp_signer(armored_key: &str, passphrase: Option<&str>) -> Result<Signer, Sig
         enabled: true,
         mode: Mode::Pgp,
         key_file: Some(temp_file(armored_key)),
+        // NOTE: the classical-key cases below share this helper; an ML-DSA-65+Ed25519 key ignores the flag.
+        allow_classical_key: true,
         key_passphrase: passphrase.map(ferrohealth_secret::secret::Secret::new),
         key_passphrase_file: None,
         retired_key_files: Vec::new(),
@@ -126,6 +149,7 @@ fn boot_fails_when_key_path_missing() {
         enabled: true,
         mode: Mode::Pgp,
         key_file: None,
+        allow_classical_key: false,
         key_passphrase: None,
         key_passphrase_file: None,
         retired_key_files: Vec::new(),
@@ -149,13 +173,80 @@ fn boot_fails_on_garbled_key_file() {
 
 #[test]
 fn boot_fails_on_wrong_passphrase() {
-    // A passphrase-locked key loaded with the wrong passphrase cannot sign →
-    // the boot-time test signature fails → Unusable (fail-closed).
+    // A passphrase-locked key loaded with the wrong passphrase does not
+    // unlock, so the server does not start (fail-closed).
     let key = generate_key(Some("the-right-one"));
     let err = pgp_signer(&key, Some("the-wrong-one")).expect_err("wrong passphrase must fail");
     assert!(
+        matches!(
+            err,
+            SigningError::Key(KeyError::Composite(
+                ferrohealth_openpgp_pq::error::Error::Locked(_)
+            ))
+        ),
+        "got {err:?}"
+    );
+    let classical = generate_classical_key(Some("the-right-one"));
+    let err =
+        pgp_signer(&classical, Some("the-wrong-one")).expect_err("wrong passphrase must fail");
+    assert!(
         matches!(err, SigningError::Key(KeyError::Unusable(_))),
         "got {err:?}"
+    );
+}
+
+/// `pgp` mode signs version 6 ML-DSA-65+Ed25519 signatures (RFC 9980
+/// algorithm ID 30, §5.3.1).
+#[test]
+fn pgp_mode_signs_with_ml_dsa_65_ed25519() {
+    let signer = pgp_signer(&generate_key(None), None).expect("build signer");
+    let armored = signer.sign(CANONICAL).expect("sign");
+    let (signature, _) = DetachedSignature::from_string(&armored).expect("a detached signature");
+    assert_eq!(
+        signature.signature.version(),
+        pgp::packet::SignatureVersion::V6
+    );
+    assert_eq!(
+        signature.signature.config().map(|config| config.pub_alg),
+        Some(PublicKeyAlgorithm::from(30_u8)),
+        "algorithm 30"
+    );
+    assert!(
+        !armored
+            .lines()
+            .any(|line| line.starts_with('=') && line.len() == 5),
+        "no CRC24 (RFC 9580 §6.1)"
+    );
+}
+
+/// A classical key is refused at boot unless `allow_classical_key` is set,
+/// and the refusal names the key and the 31.12.2030 deadline.
+#[test]
+fn a_classical_key_is_refused_unless_allowed() {
+    let config = SigningConfig {
+        enabled: true,
+        mode: Mode::Pgp,
+        key_file: Some(temp_file(&generate_classical_key(None))),
+        allow_classical_key: false,
+        key_passphrase: None,
+        key_passphrase_file: None,
+        retired_key_files: Vec::new(),
+        verify_on_read: Some(VerifyOnRead::Strict),
+    };
+    let err = Signer::from_config(&config).expect_err("a classical key must be refused");
+    let SigningError::Key(KeyError::ClassicalKey {
+        fingerprint,
+        algorithm,
+    }) = &err
+    else {
+        panic!("expected ClassicalKey, got {err:?}");
+    };
+    assert_eq!(*algorithm, PublicKeyAlgorithm::EdDSALegacy);
+    let message = err.source().map(ToString::to_string).unwrap_or_default();
+    assert!(message.contains(fingerprint.as_str()), "{message}");
+    assert!(
+        message.contains("31.12.2030") && message.contains("allow_classical_key"),
+        "{message}"
     );
 }
 
@@ -165,6 +256,7 @@ fn boot_fails_on_missing_key_file() {
         enabled: true,
         mode: Mode::Pgp,
         key_file: Some(PathBuf::from("/nonexistent/ferroehr-signing/key.asc")),
+        allow_classical_key: false,
         key_passphrase: None,
         key_passphrase_file: None,
         retired_key_files: Vec::new(),
@@ -183,6 +275,7 @@ fn digest_mode_verify_matches_and_mismatches() {
         enabled: true,
         mode: Mode::Digest,
         key_file: None,
+        allow_classical_key: false,
         key_passphrase: None,
         key_passphrase_file: None,
         retired_key_files: Vec::new(),
@@ -203,9 +296,20 @@ fn digest_mode_verify_matches_and_mismatches() {
     assert_eq!(signer.verify(CANONICAL, &pgp_sig), Verdict::ClientForeign);
 }
 
-/// Generate a key and return `(armored secret, armored PUBLIC certificate)` —
-/// the public half is what a retired key is configured as.
+/// Generate an ML-DSA-65+Ed25519 key and return `(armored secret, armored
+/// PUBLIC certificate)`; the public half is what a retired key is configured as.
 fn generate_key_pair() -> (String, String) {
+    let key = Key::generate(&["ferroehr-signing rotation <rotation@ferroehr.local>"])
+        .expect("generate key");
+    (
+        armored(std::slice::from_ref(key.signed())),
+        armored(std::slice::from_ref(key.certificate().signed())),
+    )
+}
+
+/// Generate a classical Ed25519 key and return `(armored secret, armored
+/// PUBLIC certificate)`.
+fn generate_classical_key_pair() -> (String, String) {
     let mut builder = SecretKeyParamsBuilder::default();
     builder
         .key_type(KeyType::Ed25519Legacy)
@@ -230,6 +334,7 @@ fn signer_with_retired(active: &str, retired: &[&str]) -> Signer {
         enabled: true,
         mode: Mode::Pgp,
         key_file: Some(temp_file(active)),
+        allow_classical_key: true,
         key_passphrase: None,
         key_passphrase_file: None,
         retired_key_files: retired.iter().map(|cert| temp_file(cert)).collect(),
@@ -268,6 +373,23 @@ fn a_version_signed_before_a_rotation_still_verifies() {
         discarded.verify(CANONICAL, &signature),
         Verdict::PgpInvalid,
         "without the retired certificate the pre-rotation signature cannot verify"
+    );
+}
+
+/// A version signed by a classical key before the move to ML-DSA-65+Ed25519
+/// still verifies afterwards against the retired classical certificate.
+#[test]
+fn a_classical_signature_verifies_after_the_move_to_ml_dsa_65_ed25519() {
+    let (old_secret, old_public) = generate_classical_key_pair();
+    let (new_secret, _) = generate_key_pair();
+    let signature = signer_with_retired(&old_secret, &[])
+        .sign(CANONICAL)
+        .expect("sign with the classical key");
+    let rotated = signer_with_retired(&new_secret, &[&old_public]);
+    assert_eq!(rotated.verify(CANONICAL, &signature), Verdict::PgpValid);
+    assert_eq!(
+        rotated.verify(&format!("{CANONICAL} "), &signature),
+        Verdict::PgpInvalid
     );
 }
 
@@ -477,7 +599,7 @@ fn an_rsa_signing_key_boots_with_a_prominent_advisory() {
 /// advisory at all.
 #[test]
 fn an_ed25519_signing_key_raises_no_advisory() {
-    let advisories: Vec<CapturedEvent> = boot_events(&generate_key(None))
+    let advisories: Vec<CapturedEvent> = boot_events(&generate_classical_key(None))
         .into_iter()
         .filter(|e| e.fields.contains_key("advisory"))
         .collect();
@@ -753,14 +875,14 @@ fn primary_only_certificate(can_sign: bool, age: u32) -> SignedSecretKey {
 }
 
 /// The armored secret key of `key`.
-fn armored(key: &SignedSecretKey) -> String {
+fn armored_secret(key: &SignedSecretKey) -> String {
     key.to_armored_string(ArmorOptions::default())
         .expect("armor secret key")
 }
 
 /// Asserts that loading `key` stops the boot because no key may sign.
 fn assert_no_signing_component(key: &SignedSecretKey) {
-    let err = pgp_signer(&armored(key), None).expect_err("the certificate must be refused");
+    let err = pgp_signer(&armored_secret(key), None).expect_err("the certificate must be refused");
     assert!(
         matches!(err, SigningError::Key(KeyError::NoSigningComponent)),
         "got {err:?}"
@@ -793,7 +915,7 @@ fn a_certify_only_primary_is_not_used_when_its_signing_subkey_is_revoked() {
 #[test]
 fn a_primary_key_with_the_signing_flag_signs() {
     let key = primary_only_certificate(true, 0);
-    let signature = pgp_signer(&armored(&key), None)
+    let signature = pgp_signer(&armored_secret(&key), None)
         .expect("build signer")
         .sign(CANONICAL)
         .expect("sign");
@@ -823,7 +945,7 @@ fn a_version_6_primary_key_signs_from_its_direct_key_signature() {
         !key.details.direct_signatures.is_empty(),
         "the v6 fixture has a Direct Key signature"
     );
-    let signer = pgp_signer(&armored(&key), None).expect("build signer");
+    let signer = pgp_signer(&armored_secret(&key), None).expect("build signer");
     let signature = signer.sign(CANONICAL).expect("sign");
     assert_eq!(signer.verify(CANONICAL, &signature), Verdict::PgpValid);
 }
@@ -1078,7 +1200,7 @@ fn an_older_or_invalid_revocation_leaves_the_direct_key_signature_in_force() {
         let mut key = version_6_signing_key();
         let revocation = direct_key_revocation(&key, created, tamper);
         key.details.direct_signatures.push(revocation);
-        let signer = pgp_signer(&armored(&key), None).expect("build signer");
+        let signer = pgp_signer(&armored_secret(&key), None).expect("build signer");
         let signature = signer.sign(CANONICAL).expect("sign");
         assert_eq!(signer.verify(CANONICAL, &signature), Verdict::PgpValid);
     }

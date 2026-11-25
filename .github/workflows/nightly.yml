@@ -560,7 +560,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache: false
-      - name: Install the pinned ferrohealth-perf
+      - name: Install the pinned ferrohealth-perf and ferrohealth-sop
         run: bash scripts/perf/gate.sh install
       # The artifact download loses the executable bit; the Dockerfile COPYs the
       # binary with `--chmod=0755`.

@@ -281,6 +281,22 @@ precedence = "override"
 SPDX-FileCopyrightText = "Cadasto B.V."
 SPDX-License-Identifier = "BUSL-1.1"
 
+# The ML-DSA-65+Ed25519 signature vectors made with software test keys are
+# Cadasto B.V.'s; the RFC 9980 Appendix A.3 vectors beside them are the IETF
+# Trust's, copied unmodified under BCP 78. The subtree's PROVENANCE.md records
+# the pins.
+[[annotations]]
+path = "corpus/openpgp-id30/**"
+precedence = "override"
+SPDX-FileCopyrightText = "Cadasto B.V."
+SPDX-License-Identifier = "BUSL-1.1"
+
+[[annotations]]
+path = "corpus/openpgp-id30/rfc9980/**"
+precedence = "override"
+SPDX-FileCopyrightText = "IETF Trust and the persons identified as the document authors"
+SPDX-License-Identifier = "LicenseRef-IETF-Trust-Legal-Provisions"
+
 # The IHE PIXm 3.1.0 excerpt is IHE International's, under the CC-BY-4.0 its
 # package manifest declares; the subtree's PROVENANCE.md records the pin and
 # the attribution.

@@ -65,7 +65,7 @@ fn entry_recorded(n: u32, ehr_id: &str, recorded: &str, retain_until: &str) -> A
 }
 
 /// The exporting system's log in `pool`, signing with `key`.
-fn exporter(pool: &PgPool, key: &pgp::composed::SignedSecretKey) -> Checkpoints {
+fn exporter(pool: &PgPool, key: &ferrohealth_openpgp_pq::key::Key) -> Checkpoints {
     Checkpoints::new(
         pool.clone(),
         SYSTEM.to_owned(),
@@ -75,7 +75,7 @@ fn exporter(pool: &PgPool, key: &pgp::composed::SignedSecretKey) -> Checkpoints 
 }
 
 /// The importing system's log in `pool`, trusting `key`.
-fn importer(pool: &PgPool, key: &pgp::composed::SignedSecretKey) -> Checkpoints {
+fn importer(pool: &PgPool, key: &ferrohealth_openpgp_pq::key::Key) -> Checkpoints {
     Checkpoints::new(
         pool.clone(),
         RECEIVER.to_owned(),

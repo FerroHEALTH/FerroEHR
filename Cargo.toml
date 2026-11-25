@@ -355,7 +355,12 @@ opendal = { version = "0.59.5", default-features = false, features = [
   "executors-tokio",
 ] }   # the DV_MULTIMEDIA blob store (#5934); S3 only until rsa 0.10 lets azblob and gcs in (#5940)
 opendal-http-transport-reqwest = { version = "0.59.5", default-features = false, features = ["rustls-no-provider"] }   # sends the blob store's requests through our reqwest client
-pgp = { version = "0.21.0", default-features = false }   # rPGP — pure-Rust OpenPGP (RFC 4880/9580); version signing (no OpenSSL/C, fits the rustls-only stack). default-features off drops the bzip2 (libbz2-rs-sys) dep — detached signatures need no compression, and it fails the cargo-deny license gate.
+pgp = { version = "0.21.1", default-features = false }   # rPGP, OpenPGP (RFC 9580) packets and the stored classical signatures; default-features off drops bzip2, which detached signatures never need and the licence gate refuses.
+# The family's post-quantum OpenPGP signer (FerroSYS, the same Licensor's
+# BUSL-1.1 code): RFC 9980 ML-DSA-65+Ed25519 (algorithm ID 30) keys and
+# signatures over rPGP with its `pqc` feature off and aws-lc-rs 1.19. Pinned
+# exactly. Verified on crates.io 2026-11-25.
+ferrohealth-openpgp-pq = { version = "=0.1.0", default-features = false }
 
 # ── OpenAPI / Swagger (code-first) ───────────────────────────────────────────
 utoipa = { version = "6.0.0", features = ["axum_extras", "chrono", "uuid", "decimal"] }

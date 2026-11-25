@@ -66,7 +66,7 @@ pub enum AttestError {
 pub(crate) enum SignerMode {
     /// SHA-256 digest, radix-64 encoded.
     Digest,
-    /// `OpenPGP` RFC 4880 detached signature with the loaded key.
+    /// `OpenPGP` RFC 9580 detached signature with the loaded key.
     Pgp(Box<PgpKey>),
 }
 
@@ -119,6 +119,7 @@ impl Signer {
                     path,
                     config.key_passphrase.as_ref(),
                     &config.retired_key_files,
+                    config.allow_classical_key,
                 )?))
             }
         };
@@ -156,7 +157,7 @@ impl Signer {
     }
 
     /// Sign a Version's `canonical_form` (master06 §Digital Signature): a
-    /// SHA-256 digest (`sha256:<radix-64>`) or an armored RFC 4880 detached
+    /// SHA-256 digest (`sha256:<radix-64>`) or an armored RFC 9580 detached
     /// signature.
     ///
     /// # Errors
@@ -186,7 +187,7 @@ impl Signer {
     }
 
     /// Sign `data`, a statement of the system other than a version, with the
-    /// keyring's `OpenPGP` key: an armored RFC 4880 detached signature, the
+    /// keyring's `OpenPGP` key: an armored RFC 9580 detached signature, the
     /// form `ATTESTATION._proof_` takes (RM common
     /// `master04-generic_package.adoc` §Attestation).
     ///

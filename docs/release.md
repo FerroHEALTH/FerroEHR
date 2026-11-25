@@ -172,8 +172,10 @@ each EHR with five directives. The clinical groups (EHR read, composition
 commit and read, the AQL queries, the export) are sent as the clinician, so
 the evaluator judges every one by its care relationship, role and
 directives; an older base sends them as its administrator. Every arm signs
-its access-log links with an OpenPGP key the gate generates for the run with
-`gpg`: Ed25519 by default, RSA-3072 with `PERF_SIGNING_KEY=rsa3072`.
+its access-log links with an OpenPGP key the gate generates for the run: an
+ML-DSA-65+Ed25519 key (RFC 9980 algorithm ID 30) from `ferrohealth-sop`, or,
+for a base whose binary predates that algorithm, a classical key from `gpg`,
+Ed25519 by default and RSA-3072 with `PERF_SIGNING_KEY=rsa3072`.
 
 A gate measures a change in the code, so it compares like with like: when
 the base binary accepts this tree's gate configuration (`ferroehr config

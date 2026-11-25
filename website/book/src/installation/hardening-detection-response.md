@@ -253,7 +253,7 @@ annotation and rolls the Deployment by itself.)
 | Audit repository URL | update, then restart | still an environment value (no `*_file` sibling) |
 | Basic user password hash | update, then restart | rotate the password and re-hash at the OWASP Argon2id floor, which the server checks at boot |
 | Viewer OIDC client secret | update, then restart the viewer | rotate at the identity provider in the same window |
-| **Version signing key** | **read the next section first** | rotate the signing *subkey*, not the certificate |
+| **Version signing key** | **read the next section first** | a new certificate, the old one kept in `retired_key_files` |
 
 ### Rotating the version signing key
 
@@ -261,34 +261,17 @@ In the default `digest` mode there is no key: the version signature is a hash of
 the canonical form, recomputed at read time. Nothing to rotate, and nothing
 breaks.
 
-In `pgp` mode there are two mechanisms, and the first is the one to reach for.
-
-**The ordinary path: rotate the signing subkey.** OpenPGP is built for this. A
-certificate is a primary key plus its subkeys ([RFC 9580
-§10.1](https://www.rfc-editor.org/rfc/rfc9580.html)), the primary key certifies
-while a subkey signs, and rotating means issuing a *new signing subkey* on the
-same certificate. The retired subkey stays in the certificate, so every version
-it signed keeps verifying, with no configuration change, no second key file,
-and no window where history is unreadable. It is also the only path that keeps
-the primary key's identity intact; replacing a primary key discards everything
-that has ever been said about it.
+In `pgp` mode the signing key is an ML-DSA-65+Ed25519 certificate with no
+subkeys, so rotating it means a new certificate, and the old one must be
+retained: a stored signature carries no key identifier and a version signature
+is an immutable committed fact that cannot be re-issued. Generate the new key
+with `ferrohealth-sop` and keep the retired **public** key:
 
 ```console
-# add a fresh signing subkey to the existing certificate
-gpg --quick-add-key <FINGERPRINT> ed25519 sign 1y
-# revoke or expire the previous one, then re-export BOTH halves
-gpg --export-secret-keys --armor <FINGERPRINT> > signing.asc
+ferrohealth-sop generate-key --signing-only --with-key-password=pgp-pass \
+  "FerroEHR records <records@example.org>" > signing.asc
+ferrohealth-sop extract-cert < signing-2025.asc > signing-2025.pub.asc
 ```
-
-Update the mounted Secret and roll the pods. The server signs with the newest
-signing-capable subkey and verifies against every subkey the certificate carries,
-so the switch is invisible to readers.
-
-**The exception: a whole certificate is replaced.** A compromised primary key,
-an organisational change, or migrating from a different signer means a genuinely
-new certificate, and then the old one must be retained, because a stored
-signature carries no key identifier and a version signature is an immutable
-committed fact that cannot be re-issued. Keep the retired **public** key:
 
 ```toml
 [record.signing]

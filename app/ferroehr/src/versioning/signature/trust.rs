@@ -8,18 +8,20 @@
 //! Which systems a deployment trusts is its own decision, so the certificates
 //! are trust configuration read at boot. No openEHR spec governs it: our own
 //! design. The signature form is the keyring's (RM common
-//! `master06-change_control_package.adoc` §Digital Signature, RFC 4880).
+//! `master06-change_control_package.adoc` §Digital Signature, RFC 9580), and
+//! each certificate verifies through [`crate::openpgp`].
 
 use std::path::{Path, PathBuf};
 
 use pgp::composed::{Deserializable as _, DetachedSignature, SignedPublicKey};
 
-use super::key::{KeyError, verify_against_certificate};
+use super::key::KeyError;
+use crate::openpgp::Certificate;
 
 /// Armored `OpenPGP` public certificates trusted to verify signatures.
 #[derive(Default)]
 pub struct TrustedCertificates {
-    certificates: Vec<SignedPublicKey>,
+    certificates: Vec<Certificate>,
 }
 
 impl std::fmt::Debug for TrustedCertificates {
@@ -34,8 +36,10 @@ impl TrustedCertificates {
     /// Read the armored public certificates at `paths`.
     ///
     /// # Errors
-    /// [`KeyError::Read`] for a file that does not read and
-    /// [`KeyError::Parse`] for one that holds no armored certificate.
+    /// [`KeyError::Read`] for a file that does not read,
+    /// [`KeyError::Parse`] for one that holds no armored certificate and
+    /// [`KeyError::Composite`] for an ML-DSA-65+Ed25519 certificate that fails
+    /// its checks.
     pub fn load(paths: &[PathBuf]) -> Result<Self, KeyError> {
         let certificates = paths
             .iter()
@@ -47,14 +51,16 @@ impl TrustedCertificates {
     /// Trust the armored public certificates `armored`.
     ///
     /// # Errors
-    /// [`KeyError::Parse`] for a text that holds no armored certificate.
+    /// [`KeyError::Parse`] for a text that holds no armored certificate and
+    /// [`KeyError::Composite`] for an ML-DSA-65+Ed25519 certificate that fails
+    /// its checks.
     pub fn from_armored<'a>(armored: impl IntoIterator<Item = &'a str>) -> Result<Self, KeyError> {
         let certificates = armored
             .into_iter()
             .map(|text| {
-                SignedPublicKey::from_string(text)
-                    .map(|(certificate, _headers)| certificate)
-                    .map_err(KeyError::Parse)
+                let (certificate, _headers) =
+                    SignedPublicKey::from_string(text).map_err(KeyError::Parse)?;
+                Certificate::from_signed(certificate).map_err(KeyError::Composite)
             })
             .collect::<Result<Vec<_>, _>>()?;
         Ok(Self { certificates })
@@ -81,17 +87,17 @@ impl TrustedCertificates {
         };
         self.certificates
             .iter()
-            .any(|certificate| verify_against_certificate(&signature, certificate, data))
+            .any(|certificate| certificate.verify(&signature.signature, data).is_ok())
     }
 }
 
 /// The armored public certificate at `path`.
-fn certificate(path: &Path) -> Result<SignedPublicKey, KeyError> {
+fn certificate(path: &Path) -> Result<Certificate, KeyError> {
     let armored = std::fs::read_to_string(path).map_err(|source| KeyError::Read {
         path: path.display().to_string(),
         source,
     })?;
-    SignedPublicKey::from_string(&armored)
-        .map(|(certificate, _headers)| certificate)
-        .map_err(KeyError::Parse)
+    let (certificate, _headers) =
+        SignedPublicKey::from_string(&armored).map_err(KeyError::Parse)?;
+    Certificate::from_signed(certificate).map_err(KeyError::Composite)
 }

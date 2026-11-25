@@ -59,13 +59,13 @@ replica_ehr() {
 probes_replicas() {
   bold "Two instances on one PostgreSQL (#5589)"
 
-  if ! command -v gpg >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
-    uncovered "two instances (#5589)" "gpg or jq is not available on this host"
+  if ! command -v ferrohealth-sop >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+    uncovered "two instances (#5589)" "ferrohealth-sop or jq is not available on this host"
     return 0
   fi
   local dir
   if ! dir="$(pgp_material replicas)" || [[ -z "$dir" ]]; then
-    uncovered "two instances (#5589)" "this host's gpg would not generate a probe key"
+    uncovered "two instances (#5589)" "ferrohealth-sop would not generate a probe key"
     return 0
   fi
   local overlay
@@ -151,7 +151,7 @@ $(replica_findings "$out")"
     "an instance started with another signing key is named in health from the start"
   local other
   if ! other="$(pgp_material replicas-other)" || [[ -z "$other" ]]; then
-    probe_fail "a second probe key" "gpg refused"
+    probe_fail "a second probe key" "ferrohealth-sop refused"
   else
     local mismatch
     mismatch="$(replica_key_overlay "$other" "$PROBE_TMP/replicas-other.yml" ferroehr-2)"
