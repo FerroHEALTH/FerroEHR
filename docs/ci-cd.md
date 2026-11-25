@@ -24,8 +24,8 @@ changes no threshold, corpus or test.
 | Gate | `pull_request` | change detection, fmt, lint and guards, clippy, the test build and its shards, rustdoc, codegen drift, cargo-deny, the exact budgets, conformance, the deployment harness, chart boot | yes, through `conclusion` |
 | Queue | `merge_group` | change detection, fmt, lint and guards, cargo-deny, the bin link, the test archive and its smoke set (every library and bin test target and the server's wiring tests) | yes, through `conclusion` |
 | Pull request | `pull_request` | the guards that read pull-request context (changelog, crate and chart versions, migrations, screenshots, privacy boundary), the browser lanes when the viewer changed, CodeQL when Rust or workflow paths changed | yes for the guards and the browser lanes; CodeQL is advisory |
-| Main | `push` to `main` | the caches pull requests read, the docs deploy, the images | no |
-| Nightly | `schedule` on `main`, `workflow_dispatch`, the `ci:perf` and `ci:heavy` labels | perf A/B, the CPU budget, coverage with SonarQube Cloud, fuzzing, CodeQL's baseline | no |
+| Main | `push` to `main` | the caches pull requests read, the docs deploy, the images, coverage with SonarQube Cloud | no |
+| Nightly | `schedule` on `main`, `workflow_dispatch`, the `ci:perf` and `ci:heavy` labels | every `ci.yml` lane with the browser lanes in full, perf A/B, the CPU budget, the feature-combination and MSRV sweeps, fuzzing, CodeQL's baseline | no |
 
 The pull request runs the full gate on its own tree, so a merge group runs the light queue set (owner ruling 2026-11-25): it proves the merged tree builds and passes its smoke set, and the nightly full run checks `main`. The merge queue checks the exact tree that lands
 (<https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue>),
@@ -33,14 +33,56 @@ so a push to `main` whose tree a merge-group run passed re-runs nothing: the
 `changes` job finds that run (`scripts/lib/queue-runs.sh`), and each cache
 lane only builds. A push no merge-group run passed runs every lane.
 
+## Which packages a change builds
+
+`scripts/lib/affected.sh` maps the changed paths to workspace packages
+through the `cargo metadata` graph
+(<https://doc.rust-lang.org/cargo/commands/cargo-metadata.html>), and
+clippy, the test build and its shards, and rustdoc run for those packages
+alone. A path under a member reaches that member; any other path reaches the
+members whose Rust sources name its top-level directory or file in a string
+literal; a reached package reaches its dependants, transitively, and their
+dev-dependants. The toolchain, `.cargo/`, `.config/`, the lint, format and
+cargo-deny configurations, `ci.yml`, an orphan under `app/`, `crates/` or
+`tools/`, and a third-party line of `Cargo.toml` or `Cargo.lock` reach every
+package.
+
+A pull request measures its own change. A merge group measures the whole
+group, from where it forked from the base branch to its head: a group's
+`base_sha` is the head of the entry ahead of it, and GitHub merges every
+entry of a group once its last entry passes (#5741). A push, a schedule and
+a base that cannot be resolved build every package, and the nightly full run
+is the backstop for a read the literal scan cannot see.
+
+## The analyzers
+
+Owner decision of 2026-11-25: "Sonar off PRs, CodeQL kept". SonarQube Cloud
+with its coverage run analyses `main` on each push and weekly, and a newer
+push cancels the older analysis (`sonar.yml`, #6574). CodeQL runs on every
+pull request that touches Rust sources, Cargo files, workflows or actions,
+and daily on `main` (`codeql.yml`). Both are advisory
+(`.claude/rules/ai-code-review.md`).
+
 ## The nightly tier
 
+- **`ci.yml`:** every lane, as if the change touched everything, the browser
+  lanes in full included.
 - **`nightly.yml`:** perf A/B (`scripts/perf/gate.sh ab`) against the commit
-  the previous night measured, and the hot-path CPU budget on optimised code.
-- **`sonar.yml`:** coverage over the whole test suite and the SonarQube Cloud
-  analysis.
+  the previous night measured, the hot-path CPU budget on optimised code, the
+  clippy feature-combination sweeps (the slim server, `openehr-its` and
+  `openehr-sdt` on wasm32, the ITS-REST features) and the MSRV check with
+  cargo-hack
+  (<https://doc.rust-lang.org/cargo/guide/continuous-integration.html#verifying-rust-version>).
 - **`fuzz.yml`:** each fuzz target for its time budget.
-- **`codeql.yml`:** both languages on `main`.
+- **`codeql.yml`:** both languages on `main`, daily.
+
+The timing lanes judge for a stable signal with no threshold changed:
+perf A/B runs eight load-phase pairs, so a metric breaches in most pairs or
+not at all and one low base sample cannot carry a breach (#6458), and the
+CPU budget runs three rounds on three runners and fails only when two
+breach, since a small write's share moves with the runner host (#6477); a
+round the test refuses as too noisy to judge, which it checks only once
+every path passed, counts as no breach (#6569).
 
 A pull request runs the nightly timing lanes when it carries `ci:perf`, and
 every lane of `nightly.yml` when it carries `ci:heavy`. Adding the label

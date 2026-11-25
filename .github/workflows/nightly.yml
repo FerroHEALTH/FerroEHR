@@ -115,13 +115,216 @@ jobs:
           fi
           bash scripts/perf/base-rev.sh "$start" 30 | tee -a "$GITHUB_OUTPUT"
 
+  # ── The slim server: the optional-integration features, subtracted ──────────
+  # The clippy job above compiles with --all-features, so this job builds the
+  # server without the optional integrations: every `require_disabled` refusal
+  # path and `#[cfg(not(feature = …))]` block (#1890, #2358).
+  #
+  # Three feature sets, each a real deployment shape: the slim CDR, and the
+  # `fhir` and `multimedia` integrations each enabled on top of it.
+  # None implies another, so each lane proves the gates are not silently coupled.
+  # clippy, not check: the deny-tier lints must cover the gated code too. No
+  # tests — the feature graphs are compile properties, and the test job owns
+  # behaviour.
+  feature-combos:
+    name: clippy (slim server feature combos)
+    needs: lanes
+    # The feature sets ARE the test, and they are declared here (#2373).
+    if: needs.lanes.outputs.heavy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # rust-cache, for the reason the clippy job states: sccache cannot cache
+      # clippy-driver invocations (mozilla/sccache#539). This job's cache entry
+      # is its own (rust-cache keys on the job), which is what it must be — the
+      # target dir here holds a different feature graph than the clippy job's.
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          components: clippy
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: cargo clippy --locked -p ferroehr-server --no-default-features --all-targets -- -D warnings
+      - run: cargo clippy --locked -p ferroehr-server --no-default-features --features fhir --all-targets -- -D warnings
+      - run: cargo clippy --locked -p ferroehr-server --no-default-features --features multimedia --all-targets -- -D warnings
+      # ferroehr-ext alone, per integration: its tests carry feature-scoped
+      # expectations the server lanes never compile (#3703).
+      - run: cargo clippy --locked -p ferroehr-ext --no-default-features --all-targets -- -D warnings
+      - run: cargo clippy --locked -p ferroehr-ext --no-default-features --features multimedia --all-targets -- -D warnings
+      # ferroehr alone: the workspace lanes unify its spec-crate features with
+      # ferroehr-rest's, so a feature it uses and never declares stays hidden
+      # there (#4820).
+      - run: cargo clippy --locked -p ferroehr --all-features --all-targets -- -D warnings
+
+  # ── openehr-its + openehr-sdt on wasm32: the browser-consumer selection ────
+  # `openehr-its` publishes a feature graph whose openEHR content layers
+  # (`json` → `xml` → `opt14`) are meant to compile for a browser client, while
+  # `schema-validation` (jsonschema) and the three ITS-REST features (`rest`,
+  # `rest-server` with axum, `rest-client` with reqwest) are not part of that
+  # selection (the lane after this one clippies them natively); `openehr-sdt`
+  # adds the Simplified Formats (`flat`) on top.
+  # Nothing else in CI compiles those selections: the clippy job runs
+  # --all-features. So the property was claimed by the manifests and checked
+  # by no lane at all.
+  #
+  # Library target only, no --all-targets: the crates' dev-dependencies
+  # (testkit -> sqlx, tokio -> mio) are native by construction and cannot build
+  # for wasm32-unknown-unknown. The features are spelled out rather than left to
+  # the implication chains, so a change to a chain cannot silently narrow what
+  # this lane covers.
+  its-wasm:
+    name: clippy (openehr-its + openehr-sdt on wasm32)
+    needs: lanes
+    # The feature selection IS the test, and it is declared here (#2373).
+    if: needs.lanes.outputs.heavy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # rust-cache, for the reason the clippy job states: sccache cannot cache
+      # clippy-driver invocations (mozilla/sccache#539). Its own cache entry:
+      # this target dir holds a wasm32 build of a different feature graph.
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          components: clippy
+          target: wasm32-unknown-unknown
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: cargo clippy --locked -p openehr-its --target wasm32-unknown-unknown --no-default-features --features opt14,xml,json -- -D warnings
+      - run: cargo clippy --locked -p openehr-sdt --target wasm32-unknown-unknown --no-default-features --features flat -- -D warnings
+
+  # ── openehr-its: the three ITS-REST features, each on its own ──────────────
+  # `rest` is the contract both halves share (DTOs, param structs, route tables,
+  # `ApiError`) over serde and `http`; `rest-server` adds the server traits and
+  # `axum`; `rest-client` adds the generated clients and `reqwest`. The clippy
+  # job compiles them only together (--all-features), where a gate missing from
+  # one half is masked by the other, and the wasm lane compiles none of them. So
+  # each feature is clippied alone, and the dependency split the manifest
+  # promises is read back from `cargo tree`: a contract-only consumer builds
+  # neither HTTP engine, and a client builds no server framework.
+  #
+  # Library target only, no --all-targets: the crate's dev-dependencies pull
+  # every feature in through the test suite and would hide the property.
+  its-rest-features:
+    name: clippy (openehr-its REST features)
+    needs: lanes
+    # The feature selections ARE the test, and they are declared here (#2373).
+    if: needs.lanes.outputs.heavy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # rust-cache, for the reason the clippy job states: sccache cannot cache
+      # clippy-driver invocations (mozilla/sccache#539). Its own cache entry:
+      # this target dir holds three single-feature builds of one crate.
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          components: clippy
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: cargo clippy --locked -p openehr-its --no-default-features --features rest -- -D warnings
+      - run: cargo clippy --locked -p openehr-its --no-default-features --features rest-client -- -D warnings
+      - run: cargo clippy --locked -p openehr-its --no-default-features --features rest-server -- -D warnings
+      - name: The contract pulls no HTTP engine, the client no server framework
+        shell: bash
+        # A tree line names a package as `<name> v<version>`, so the leading
+        # space and the trailing ` v` keep `axum-core` and the like from
+        # matching a banned name.
+        env:
+          CONTRACT_BANNED: axum|reqwest
+          CLIENT_BANNED: axum
+        run: |
+          set -euo pipefail
+          refuse() {
+            local feature="$1" banned="$2" tree found
+            tree="$(cargo tree --locked -p openehr-its --no-default-features --features "$feature" -e normal)"
+            if found="$(grep -E "[[:space:]]($banned) v[0-9]" <<<"$tree")"; then
+              echo "::error::openehr-its --features $feature depends on a package it must not pull:"
+              printf '%s\n' "$found"
+              return 1
+            fi
+            echo "OK: --features $feature pulls none of: $banned"
+          }
+          refuse rest "$CONTRACT_BANNED"
+          refuse rest-client "$CLIENT_BANNED"
+
+  # ── MSRV verification: the declared rust-version must actually build ────────
+  # The Cargo book names cargo-hack as the verification tool — a pinned stable
+  # toolchain plus clippy::incompatible_msrv is not verification
+  # (https://doc.rust-lang.org/cargo/guide/continuous-integration.html#verifying-rust-version).
+  msrv:
+    name: msrv (cargo-hack) ${{ matrix.shard }}
+    needs: lanes
+    if: needs.lanes.outputs.heavy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    # Each member is checked alone, with its own feature resolution, so the
+    # members share few dependency builds (#6306). The shards split the members
+    # by cost, each list beside the members whose builds it reuses; `others`
+    # excludes what the two lists name, so a new member lands in a shard
+    # without an edit here.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [core, server, others]
+    env:
+      MSRV_CORE: openehr-adl openehr-am openehr-base openehr-its openehr-lang openehr-rm openehr-term testkit
+      MSRV_SERVER: ferroehr ferroehr-rest ferroehr-server openehr-query
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          cache-shared-key: msrv-${{ matrix.shard }}
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+        with:
+          tool: cargo-hack
+      - name: Check the shard's members on the declared rust-version
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          set -euo pipefail
+          read -r -a core <<<"$MSRV_CORE"
+          read -r -a server <<<"$MSRV_SERVER"
+          args=()
+          case "$SHARD" in
+            core) for p in "${core[@]}"; do args+=(--package "$p"); done ;;
+            server) for p in "${server[@]}"; do args+=(--package "$p"); done ;;
+            others)
+              args+=(--workspace)
+              for p in "${core[@]}" "${server[@]}"; do args+=(--exclude "$p"); done
+              ;;
+            *) echo "::error::unknown msrv shard '$SHARD'"; exit 1 ;;
+          esac
+          cargo hack check --rust-version --locked --all-targets "${args[@]}"
+
   # The thread-CPU budget of the hot paths (#6321), judged on optimised code:
   # the `budget` profile is the release profile without LTO. ci.yml's test
-  # lane runs the same test in a debug build, where it judges nothing.
+  # lane runs the same test in a debug build, where it judges nothing. A
+  # small write's share moves with the runner host up to twice over (#6477),
+  # so three rounds run on three runners and cpu-budget-verdict fails only
+  # when two of them breach.
   cpu-budget:
-    name: hot-path CPU budget (optimised)
+    name: hot-path CPU budget (optimised) ${{ matrix.round }}/3
     needs: lanes
     if: needs.lanes.outputs.perf == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        round: [1, 2, 3]
     runs-on: ubuntu-latest
     # Room for the optimised test binary built on a cold cache on a busy runner
     # (#6321).
@@ -178,10 +381,75 @@ jobs:
         if: ${{ !cancelled() }}
         run: df -h / && du -sh target/budget 2>/dev/null || true
       - name: Every hot path within its CPU budget, optimised
-        run: cargo nextest run --locked --cargo-profile budget -p ferroehr-rest --all-features --no-capture -E 'test(every_hot_path_stays_within_its_cpu_budget)'
+        id: budget
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          cargo nextest run --locked --cargo-profile budget -p ferroehr-rest --all-features --no-capture \
+            -E 'test(every_hot_path_stays_within_its_cpu_budget)' 2>&1 | tee "$RUNNER_TEMP/cpu-budget.log"
+      # A round is `success`, `unjudged` (the test refused a runner too noisy
+      # to judge, which it checks only once every path passed, #6569), or
+      # `breach` (any other failure).
+      - name: The round's outcome
+        if: ${{ !cancelled() }}
+        env:
+          OUTCOME: ${{ steps.budget.outcome }}
+          ROUND: ${{ matrix.round }}
+        run: |
+          set -euo pipefail
+          mkdir -p cpu-round
+          verdict=breach
+          if [ "$OUTCOME" = success ]; then
+            verdict=success
+          elif grep -Fq 'the runner was too noisy to judge' "$RUNNER_TEMP/cpu-budget.log" 2>/dev/null \
+            && ! grep -Fq 'a hot path exceeds its CPU budget' "$RUNNER_TEMP/cpu-budget.log"; then
+            verdict=unjudged
+          fi
+          echo "round $ROUND: $verdict"
+          echo "$verdict" > "cpu-round/round-$ROUND"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: cpu-round-${{ matrix.round }}
+          path: cpu-round/
+          retention-days: 7
       - name: Disk after the test
         if: ${{ !cancelled() }}
         run: df -h / && du -sh target/budget 2>/dev/null || true
+  # The CPU budget's verdict over its three rounds (#6477): a breach on one
+  # runner is the host, a breach on two is the code, and a round too noisy to
+  # judge is no breach (#6569).
+  cpu-budget-verdict:
+    name: hot-path CPU budget verdict
+    needs: cpu-budget
+    if: ${{ !cancelled() && needs.cpu-budget.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: cpu-round-*
+          merge-multiple: true
+          path: cpu-round
+      - name: Two rounds of three breach, or none fails
+        run: |
+          set -euo pipefail
+          rounds=0; breached=0; unjudged=0
+          for f in cpu-round/round-*; do
+            rounds=$((rounds + 1))
+            outcome="$(cat "$f")"
+            echo "${f##*/}: $outcome"
+            case "$outcome" in
+            success) ;;
+            unjudged) unjudged=$((unjudged + 1)) ;;
+            *) breached=$((breached + 1)) ;;
+            esac
+          done
+          echo "$breached of $rounds rounds breached, $unjudged too noisy to judge" | tee -a "$GITHUB_STEP_SUMMARY"
+          [ "$rounds" -eq 3 ] || { echo "::error::$rounds of 3 rounds reported"; exit 1; }
+          [ "$breached" -lt 2 ]
+
   # The head arm's server binary, through the action ci.yml's ui-e2e-binary
   # runs: the same container, profile and binary cache key, so a tree CI
   # already built is restored and not compiled.
@@ -269,7 +537,7 @@ jobs:
     needs: [lanes, server-binary, perf-base-binary]
     if: needs.lanes.outputs.perf == 'true'
     runs-on: ubuntu-26.04
-    timeout-minutes: 30
+    timeout-minutes: 60
     permissions:
       contents: read
     outputs:
@@ -344,6 +612,9 @@ jobs:
         id: gate
         env:
           EVENT_NAME: ${{ github.event_name }}
+          # Eight pairs, so one low base sample cannot carry a breach: a
+          # metric breaches in most of the pairs or not at all (#6458).
+          PERF_PAIRS: "8"
           BASE_REV: ${{ needs.perf-base-binary.outputs.rev }}
         run: |
           set -euo pipefail
