@@ -69,7 +69,7 @@ done
 # A regex cannot hold `|`, the field separator: ui-e2e names its viewport
 # (`desktop`, `phone`) with `[a-z]+`.
 readonly LANES=(
-  'CI test shards|ci.yml|^build & test \(pg19\) [0-9]+/[0-9]+$|900|Raise TEST_SHARDS in .github/workflows/ci.yml.'
+  'CI test shards|ci.yml|^test \(pg19\) [0-9]+/[0-9]+$|900|Raise TEST_SHARDS in .github/workflows/ci.yml.'
   'CI ui-e2e shards|ci.yml|^ui-e2e [a-z]+ [0-9]+/[0-9]+$|900|Raise UI_E2E_SHARDS in .github/workflows/ci.yml.'
   "CI ui-e2e server binary|ci.yml|^ui-e2e server binary$|900|Not shardable: look at [profile.e2e] in Cargo.toml and the job's sccache hit rate."
   'SonarQube Cloud coverage shards|sonar.yml|^coverage [0-9]+/[0-9]+$|900|Raise COVERAGE_SHARDS in .github/workflows/sonar.yml.'
@@ -84,7 +84,7 @@ readonly SAMPLE=5
 # ci.yml or sonar.yml leaves its lane unbudgeted with no error (#4601), so each
 # form a lane's jobs take today is a case here, beside names it must refuse.
 readonly CASES=(
-  'CI test shards|build & test (pg19) 1/3|yes'
+  'CI test shards|test (pg19) 1/3|yes'
   'CI test shards|build & test (viewer)|no'
   'CI ui-e2e shards|ui-e2e desktop 1/3|yes'
   'CI ui-e2e shards|ui-e2e phone 3/3|yes'
