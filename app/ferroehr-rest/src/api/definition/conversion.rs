@@ -142,7 +142,9 @@ guarded_handler! {
              example = "openEHR-EHR-COMPOSITION.prescription.v1")
         ),
         responses(
-            (status = 200, description = "The ADL 2 conversion: one root, its ADL 2 \
+            (status = 200, description = "The at-coded ADL 2.4 conversion, keeping \
+                                          every ADL 1.4 code and versioned by the \
+                                          `revision` item: one root, its ADL 2 \
                                           source, the conversion log and the \
                                           `conversion_details`, and an empty \
                                           `structure`. No openEHR specification \
@@ -183,7 +185,7 @@ guarded_handler! {
              example = "IDCR Allergies List.v0")
         ),
         responses(
-            (status = 200, description = "The ADL 2 conversion: one root per \
+            (status = 200, description = "The at-coded ADL 2.4 conversion: one root per \
                                           embedded archetype root, the template's \
                                           top root first, each with its ADL 2 \
                                           source, conversion log and \

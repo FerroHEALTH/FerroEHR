@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADL 1.4 → ADL 2 converter core: code planning, renumbering, terminology
+//! The ADL 1.4 → ADL 2 converter core: code planning, node coding, terminology
 //! rebuild and constraint conversion.
 //!
-//! NOTE: no openEHR spec governs 1.4→2 conversion: our own design, pinned by the
-//! `upgrade_from_14` corpus fixtures; a cited AOM2/ADL2 section pins the output
-//! form. The meta-data mapping follows `ADL1.4/masterAppB-extended_metadata.adoc`
+//! NOTE: no openEHR spec governs 1.4→2 conversion: our own design, its id-coded
+//! numbering pinned by the `upgrade_from_14` corpus fixtures; a cited AOM2/ADL2
+//! section pins the output form. The meta-data mapping follows `ADL1.4/masterAppB-extended_metadata.adoc`
 //! §Standardised Items and `AOM2/master01-preface.adoc`, in
 //! `crate::adl14::metadata`.
 
@@ -23,17 +23,18 @@ use openehr_am::v2_4::aom2::terminology::archetype_term::ArchetypeTerm;
 use openehr_am::v2_4::aom2::terminology::archetype_terminology::ArchetypeTerminology;
 use openehr_am::v2_4::aom2::terminology::value_set::ValueSet;
 
-use crate::adl14::code_shift::{first_num, highest_ac_number, shift_code};
+use crate::adl14::code_shift::{first_num, highest_ac_number, recode};
 use crate::adl14::log::ConversionLog;
-use crate::adl14::metadata::{ConversionRecord, convert_meta_data, set_release_version};
+use crate::adl14::metadata::{ConversionRecord, convert_meta_data};
 use crate::adl14::multiplicity::{elide_multiplicity, materialise_adl14_occurrences};
-use crate::adl14::term_constraint::{CodeSpace, TermMinter, rewrite_definition};
+use crate::adl14::term_constraint::{CodeSpace, TermMinter, highest_at_number, rewrite_definition};
 use crate::adl14::walk::{
     cco_data_mut, collect_local_value_codes, collect_node_codes, collect_slot_codes,
 };
 use crate::aom::access::{common_mut, tuple_primitive_node_ids_mut};
 use crate::codes::{NodeCoding, is_new_at_level, specialisation_parent_from_code};
 use crate::error::SyntaxError;
+use crate::hrid::set_release_version;
 
 /// Configuration for a 1.4→2 conversion (all spec-silent — our own design).
 #[derive(Debug, Clone)]
@@ -42,6 +43,14 @@ pub struct ConvertConfig {
     pub adl_version: String,
     /// The `rm_release` to stamp (1.4 sources carry no `rm_release`).
     pub rm_release: String,
+    /// The code system of the converted archetype's nodes. At-coded ADL2 keeps
+    /// every 1.4 code as written, so RM data recorded against the 1.4 archetype
+    /// stays valid (`ADL2/master01-preface.adoc` §Backward Compatibility), and
+    /// is the system openEHR systems must support
+    /// (`org.openehr.am.aom2.adl_code_definitions` §Description); id-coded ADL2
+    /// renumbers the nodes into id-codes (`ADL2/master07.04` §Node Identifier
+    /// Codes), the form of the `upgrade_from_14` reference conversions.
+    pub coding: NodeCoding,
     /// Per-terminology URI templates for synthesised term bindings; `{code}` is
     /// replaced by the external code. A terminology with no template gets a
     /// flagged fabricated fallback (`urn:adl14:<terminology>:<code>`).
@@ -72,8 +81,9 @@ impl Default for ConvertConfig {
             "http://openehr.org/id/{code}".to_owned(),
         );
         Self {
-            adl_version: "2.0.6".to_owned(),
+            adl_version: "2.4.0".to_owned(),
             rm_release: "1.0.3".to_owned(),
+            coding: NodeCoding::At,
             binding_uri_templates,
             collapse_specialised_codes: false,
             source_model: None,
@@ -164,7 +174,7 @@ struct Converter<'a> {
     minter: TermMinter<'a>,
     /// The ADL2 code space of the 1.4 value and value-set codes.
     codes: CollapseMaps,
-    /// old node at-code → new node id-code.
+    /// old node at-code → its ADL2 node code.
     node_map: BTreeMap<String, String>,
     /// Source at-codes referenced as a `local` *value* (they get an at-code
     /// term entry even when the same code is also a node id — a 1.4 at-code
@@ -179,7 +189,9 @@ struct Converter<'a> {
     /// terminology rebuild clones the definition/bindings of the first id
     /// under each minted one (VATDF: every used code must be defined).
     dup_mints: Vec<(String, String)>,
-    /// Next free id-number for synthesised object nodes (top-level id space).
+    /// Next free id-number for synthesised object nodes of an id-coded
+    /// conversion (top-level id space); an at-coded one mints from the
+    /// minter's at-code space.
     next_id: i64,
     /// The converted root node id (the terminology `concept_code`).
     root_id: String,
@@ -191,6 +203,7 @@ impl<'a> Converter<'a> {
             cfg,
             minter: TermMinter::new(&cfg.binding_uri_templates, log),
             codes: CollapseMaps {
+                coding: cfg.coding,
                 collapse: cfg.collapse_specialised_codes,
                 value_map: BTreeMap::new(),
                 ac_map: BTreeMap::new(),
@@ -200,7 +213,7 @@ impl<'a> Converter<'a> {
             assigned_node_ids: std::collections::BTreeSet::new(),
             dup_mints: Vec::new(),
             next_id: 1,
-            root_id: "id1".to_owned(),
+            root_id: root_code(cfg.coding).to_owned(),
         }
     }
 
@@ -237,9 +250,16 @@ impl<'a> Converter<'a> {
         self.plan_redefined_slots(data);
         let (max_at, deferred_values) = self.plan_value_codes(data);
         self.next_id = max_id + 1;
+        // NOTE: an at-coded archetype has one at-code space for nodes and
+        // values (`AOM2/master07-terminology_package.adoc`), so a mint clears
+        // every code it already uses.
+        let max_at = match self.cfg.coding {
+            NodeCoding::At => highest_at_number(&data.definition, &data.terminology),
+            NodeCoding::Id => max_at,
+        };
         self.minter.allocate_above(
             max_at,
-            highest_ac_number(&data.definition, &data.terminology),
+            highest_ac_number(&data.definition, &data.terminology, self.cfg.coding),
         );
         for code in deferred_nodes {
             let fresh = self.alloc_id();
@@ -257,11 +277,12 @@ impl<'a> Converter<'a> {
         }
     }
 
-    /// Maps every node at-code to its shifted id-code, returning the highest
-    /// id-number and the dotted codes the collapse defers (the root takes `id1`).
+    /// Maps every node at-code to its ADL2 node code, returning the highest
+    /// id-number and the dotted codes the collapse defers (the root takes the
+    /// root code).
     fn plan_node_codes(&mut self, data: &AuthoredArchetypeData) -> (i64, Vec<String>) {
         let collapse = self.cfg.collapse_specialised_codes;
-        let root_code = match &data.definition {
+        let source_root = match &data.definition {
             CComplexObject::CComplexObject(d) => d.node_id.clone(),
             CComplexObject::CArchetypeRoot(_) => String::new(),
         };
@@ -272,14 +293,15 @@ impl<'a> Converter<'a> {
                 return;
             }
             if collapse && code.contains('.') {
-                if code == root_code {
-                    self.node_map.insert(code.to_owned(), "id1".to_owned());
+                if code == source_root {
+                    self.node_map
+                        .insert(code.to_owned(), root_code(self.cfg.coding).to_owned());
                 } else if !self.node_map.contains_key(code) && !deferred.iter().any(|c| c == code) {
                     deferred.push(code.to_owned());
                 }
                 return;
             }
-            let new = shift_code(code, "id");
+            let new = recode(self.cfg.coding, code, "id");
             if let Some(n) = first_num(&new) {
                 max_id = max_id.max(n);
             }
@@ -307,7 +329,7 @@ impl<'a> Converter<'a> {
                 parent = specialisation_parent_from_code(p);
             }
             let Some(parent) = parent else { continue };
-            let id = shift_code(&parent, "id");
+            let id = recode(self.cfg.coding, &parent, "id");
             self.minter.log.note(format!(
                 "specialised slot {code} takes the node id {id} of the slot it redefines (VDSSID)"
             ));
@@ -331,7 +353,7 @@ impl<'a> Converter<'a> {
                 value_at_codes.insert(code.to_owned());
                 return;
             }
-            let new = shift_code(code, "at");
+            let new = recode(self.cfg.coding, code, "at");
             if let Some(n) = first_num(&new) {
                 max_at = max_at.max(n);
             }
@@ -341,10 +363,17 @@ impl<'a> Converter<'a> {
         (max_at, deferred)
     }
 
+    /// A fresh node code: the next id-code, or for an at-coded conversion the
+    /// minter's next at-code.
     fn alloc_id(&mut self) -> String {
-        let c = format!("id{}", self.next_id);
-        self.next_id += 1;
-        c
+        match self.cfg.coding {
+            NodeCoding::At => self.minter.alloc_at(),
+            NodeCoding::Id => {
+                let c = format!("id{}", self.next_id);
+                self.next_id += 1;
+                c
+            }
+        }
     }
 
     // ── node-id renumbering ──────────────────────────────────────────────────
@@ -366,7 +395,7 @@ impl<'a> Converter<'a> {
             .node_map
             .get(old)
             .cloned()
-            .unwrap_or_else(|| shift_code(old, "id"));
+            .unwrap_or_else(|| recode(self.cfg.coding, old, "id"));
         if self.assigned_node_ids.insert(mapped.clone()) {
             return mapped;
         }
@@ -449,8 +478,8 @@ impl<'a> Converter<'a> {
     /// Renumbers one 1.4 term definition into its ADL2 entries.
     ///
     /// An ac-code keeps its prefix (`master07.13` §Terminology section); a value
-    /// at-code yields an at-code term, a node at-code an id-code term, and a code
-    /// used both ways both. An `@ internal @` node term is dropped.
+    /// at-code yields an at-code term and a node at-code a node-code term, one
+    /// entry when both are at-codes. An `@ internal @` node term is dropped.
     fn rebuild_term(
         &mut self,
         code: &str,
@@ -478,7 +507,7 @@ impl<'a> Converter<'a> {
             .node_map
             .get(code)
             .cloned()
-            .unwrap_or_else(|| shift_code(code, "id"));
+            .unwrap_or_else(|| recode(self.cfg.coding, code, "id"));
         out.insert(id.clone(), term_with_code(term, id));
     }
 
@@ -535,7 +564,7 @@ impl<'a> Converter<'a> {
                 .ac_map
                 .get(key)
                 .cloned()
-                .unwrap_or_else(|| shift_code(key, "ac"))
+                .unwrap_or_else(|| recode(self.cfg.coding, key, "ac"))
         } else {
             key.to_owned()
         }
@@ -592,7 +621,8 @@ impl<'a> Converter<'a> {
 fn renumber_cco(cco: &mut CComplexObject, cx: &mut Converter<'_>) {
     let Some(d) = cco_data_mut(cco) else { return };
     d.node_id = cx.new_node_id(&d.node_id);
-    tuple_primitive_node_ids_mut(d).for_each(|id| NodeCoding::Id.recode_primitive_node_id(id));
+    let coding = cx.cfg.coding;
+    tuple_primitive_node_ids_mut(d).for_each(|id| coding.recode_primitive_node_id(id));
     for attr in d.attributes.iter_mut().flatten() {
         for child in attr.children.iter_mut().flatten() {
             renumber_obj(child, cx);
@@ -617,9 +647,12 @@ fn renumber_obj(obj: &mut CObject, cx: &mut Converter<'_>) {
         CObject::ArchetypeSlot(s) => {
             s.node_id = cx.new_node_id(&s.node_id);
             let assertions = s.includes.iter_mut().chain(s.excludes.iter_mut()).flatten();
-            assertions.for_each(|a| crate::rules::recode_slot_matcher(a, NodeCoding::Id));
+            assertions.for_each(|a| crate::rules::recode_slot_matcher(a, cx.cfg.coding));
         }
-        primitive => NodeCoding::Id.recode_primitive_node_id(common_mut(primitive).1),
+        primitive => cx
+            .cfg
+            .coding
+            .recode_primitive_node_id(common_mut(primitive).1),
     }
 }
 
@@ -655,9 +688,19 @@ fn converted_predicate_code(code: &str, cx: &Converter<'_>) -> String {
         return id.clone();
     }
     if AdlCodeDefinitionsData::is_at_code(code) {
-        return shift_code(code, "id");
+        return recode(cx.cfg.coding, code, "id");
     }
     code.to_owned()
+}
+
+/// The root node code of a depth-0 archetype in `coding`
+/// (`Root_code_regex_pattern`, `org.openehr.am.aom2.adl_code_definitions`
+/// §Constants).
+fn root_code(coding: NodeCoding) -> &'static str {
+    match coding {
+        NodeCoding::At => "at0000",
+        NodeCoding::Id => "id1",
+    }
 }
 
 fn term_with_code(term: &ArchetypeTerm, code: String) -> ArchetypeTerm {
@@ -669,10 +712,11 @@ fn term_with_code(term: &ArchetypeTerm, code: String) -> ArchetypeTerm {
     }
 }
 
-/// The converter's code space: every 1.4 value and value-set code shifted
-/// into the ADL2 numbering, and under `collapse_specialised_codes` each
-/// dotted one remapped to a fresh flat code.
+/// The converter's code space: every 1.4 value and value-set code spelt in
+/// the ADL2 code system ([`recode`]), and under `collapse_specialised_codes`
+/// each dotted one remapped to a fresh flat code.
 struct CollapseMaps {
+    coding: NodeCoding,
     collapse: bool,
     /// Collapsed-value remapping (dotted `local` value at-codes → fresh flat
     /// at-codes) — populated only under `collapse_specialised_codes`.
@@ -684,12 +728,12 @@ struct CollapseMaps {
 
 impl CollapseMaps {
     /// The ADL2 at-code of a `local` value code: the collapse remap when one
-    /// exists, else the ordinary shift.
+    /// exists, else its ADL2 spelling.
     fn value_at(&self, code: &str) -> String {
         self.value_map
             .get(code)
             .cloned()
-            .unwrap_or_else(|| shift_code(code, "at"))
+            .unwrap_or_else(|| recode(self.coding, code, "at"))
     }
 }
 
@@ -709,8 +753,8 @@ impl CodeSpace for CollapseMaps {
     }
 
     /// The ac-code under the collapse: a dotted ac (specialised constraint
-    /// definition) mints a fresh flat ac on first sight; else the ordinary
-    /// shift.
+    /// definition) mints a fresh flat ac on first sight; else its ADL2
+    /// spelling.
     fn value_set_code(&mut self, minter: &mut TermMinter<'_>, code: &str) -> String {
         if self.collapse && code.contains('.') {
             if let Some(existing) = self.ac_map.get(code) {
@@ -723,6 +767,6 @@ impl CodeSpace for CollapseMaps {
             self.ac_map.insert(code.to_owned(), fresh.clone());
             return fresh;
         }
-        shift_code(code, "ac")
+        recode(self.coding, code, "ac")
     }
 }

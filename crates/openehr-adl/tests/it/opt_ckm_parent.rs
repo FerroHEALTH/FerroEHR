@@ -92,7 +92,7 @@ fn an_opt_over_a_ckm_adl14_archetype_names_it_by_its_full_id() {
     );
     assert_eq!(
         opt.parent_archetype_id.as_deref(),
-        Some("openEHR-EHR-COMPOSITION.report-result.v1.0.0"),
+        Some("openEHR-EHR-COMPOSITION.report-result.v1.1.0"),
         "the OPT names the CKM archetype its template specialises, by its full id"
     );
 }

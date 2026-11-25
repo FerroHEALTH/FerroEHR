@@ -29,6 +29,7 @@ use crate::adl14::code_shift::{first_num, highest_ac_number};
 use crate::adl14::convert::ConvertConfig;
 use crate::adl14::log::ConversionLog;
 use crate::adl14::walk::{cco_data_mut, collect_local_value_codes, collect_node_codes};
+use crate::codes::NodeCoding;
 
 /// The code space a 1.4 code lands in when its constraint is rewritten.
 pub(super) trait CodeSpace {
@@ -301,7 +302,7 @@ pub(crate) fn rewrite_as_authored(
     let mut minter = TermMinter::new(&templates, &mut log);
     minter.allocate_above(
         highest_at_number(definition, terminology),
-        highest_ac_number(definition, terminology),
+        highest_ac_number(definition, terminology, NodeCoding::At),
     );
     rewrite_definition(definition, &mut minter, &mut AsAuthored, "");
     if minter.minted.is_empty() {
@@ -330,7 +331,10 @@ pub(crate) fn rewrite_as_authored(
 
 /// The highest at-number an unconverted archetype already uses, across its
 /// term definitions, its node codes and its local value codes.
-fn highest_at_number(definition: &CComplexObject, terminology: &ArchetypeTerminology) -> i64 {
+pub(super) fn highest_at_number(
+    definition: &CComplexObject,
+    terminology: &ArchetypeTerminology,
+) -> i64 {
     let mut highest = 0i64;
     let mut track = |code: &str| {
         if AdlCodeDefinitionsData::is_at_code(code)

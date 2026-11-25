@@ -19,6 +19,7 @@ use openehr_adl::adl14::convert::{ConvertConfig, convert, parse_and_convert};
 use openehr_adl::adl14::differ::differentiate;
 use openehr_adl::adl14::log::ConversionLog;
 use openehr_adl::assemble::parse_artefact;
+use openehr_adl::codes::NodeCoding;
 use openehr_adl::parse::Dialect;
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::archetype::authored_archetype::AuthoredArchetype;
@@ -65,10 +66,18 @@ fn value_sets(t: &ArchetypeTerminology) -> BTreeMap<String, Vec<String>> {
         .collect()
 }
 
-/// Convert a source (running the differ against a converted parent for a
-/// specialised source), returning the converted archetype.
+/// The id-coded conversion the `upgrade_from_14` reference outputs pin.
+fn id_coded() -> ConvertConfig {
+    ConvertConfig {
+        coding: NodeCoding::Id,
+        ..ConvertConfig::default()
+    }
+}
+
+/// Convert a source to id-coded ADL2 (running the differ against a converted
+/// parent for a specialised source), returning the converted archetype.
 fn convert_pair(adl: &str, parent: Option<&str>) -> Archetype {
-    let cfg = ConvertConfig::default();
+    let cfg = id_coded();
     let mut log = ConversionLog::default();
     let mut got = parse_and_convert(&read(adl), &cfg, &mut log).expect("convert");
     if let Some(p) = parent {
@@ -115,7 +124,7 @@ fn assert_structural_match(adl: &str, adls: &str, parent: Option<&str>) {
 /// Idempotency: re-converting the same source with the *same* log yields an
 /// identical definition (the conversion log makes synthesised codes stable).
 fn assert_idempotent(adl: &str, parent: Option<&str>) {
-    let cfg = ConvertConfig::default();
+    let cfg = id_coded();
     let mut log = ConversionLog::default();
     let first = parse_and_convert(&read(adl), &cfg, &mut log).expect("first convert");
     // Re-run consulting the SAME log (re-parse the source afresh).
@@ -392,7 +401,7 @@ ontology
 "#;
     let cfg = ConvertConfig {
         collapse_specialised_codes: true,
-        ..ConvertConfig::default()
+        ..id_coded()
     };
     let mut log = ConversionLog::default();
     let got = parse_and_convert(src, &cfg, &mut log).expect("convert");
@@ -819,12 +828,8 @@ fn a_converted_slot_assertion_takes_the_id_coded_primitive_node_id() {
         "../../corpus/archetypes/ckm/adl14/openEHR-DEMOGRAPHIC-CLUSTER.provider_identifier.v0.adl",
     ))
     .expect("read the 1.4 archetype");
-    let converted = parse_and_convert(
-        &src,
-        &ConvertConfig::default(),
-        &mut ConversionLog::default(),
-    )
-    .expect("convert");
+    let converted =
+        parse_and_convert(&src, &id_coded(), &mut ConversionLog::default()).expect("convert");
     let (definition, _) = data(&converted);
     let mut ids = Vec::new();
     slot_matcher_node_ids(

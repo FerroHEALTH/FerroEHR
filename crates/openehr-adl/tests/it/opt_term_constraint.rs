@@ -16,6 +16,7 @@ use openehr_adl::adl14::convert::{ConvertConfig, parse_and_convert};
 use openehr_adl::adl14::log::ConversionLog;
 use openehr_adl::artefact::ArchetypeRepository;
 use openehr_adl::assemble::parse_artefact;
+use openehr_adl::codes::NodeCoding;
 use openehr_adl::opt::create_opt;
 use openehr_adl::parse::Dialect;
 use openehr_adl::paths::{enumerate_paths, locate, path_exists};
@@ -161,12 +162,13 @@ terminology
 ";
 
 fn converted_encounter() -> Archetype {
-    parse_and_convert(
-        ENCOUNTER_14,
-        &ConvertConfig::default(),
-        &mut ConversionLog::default(),
-    )
-    .expect("the CKM encounter converts")
+    // The template is id-coded, so its constituent is the id-coded conversion.
+    let cfg = ConvertConfig {
+        coding: NodeCoding::Id,
+        ..ConvertConfig::default()
+    };
+    parse_and_convert(ENCOUNTER_14, &cfg, &mut ConversionLog::default())
+        .expect("the CKM encounter converts")
 }
 
 fn opt_over(constituent: Archetype) -> OperationalTemplate {
