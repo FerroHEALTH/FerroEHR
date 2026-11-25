@@ -1189,7 +1189,7 @@
             }
           },
           "400": {
-            "description": "Neither `If-Match` nor `If-None-Match: *`, an `If-Match` that is no `OBJECT_VERSION_ID`, or a body refused whole: no canonical-JSON `ACCESS_POLICY`, a broken invariant of the draft BMM, a root that is no `ACCESS_POLICY` archetype root, or a controller that is no `ORGANISATION` or not the policy's. The version in force stays.",
+            "description": "Neither `If-Match` nor `If-None-Match: *`, an `If-Match` that is no `OBJECT_VERSION_ID`, or a body that is no canonical-JSON `ACCESS_POLICY`. The version in force stays.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1240,6 +1240,16 @@
           },
           "415": {
             "description": "The body is not `application/json`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The `ACCESS_POLICY` reads but breaks a rule: an invariant of the draft BMM, a root that is no `ACCESS_POLICY` archetype root, a controller that is no `ORGANISATION` or not the policy's, a code of the draft access terminology where the jurisdiction's belongs, the template it names, or a value set it binds. The version in force stays.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2324,7 +2334,7 @@
             }
           },
           "400": {
-            "description": "The body is not the object above; the settings are not settings of the `access_directives` scheme whose every invariant holds; a `restriction` or `opt_out` directive sets `emergency_override` false; or an `opt_out` directive is committed while `authz.grants.allowed` does not allow `access_service`. The problem names the first defect.",
+            "description": "The body is not the object above, or the settings do not read as an `ACCESS_DIRECTIVE_SETTINGS` of the `access_directives` scheme. The problem names the first defect.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2392,6 +2402,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "The settings read but break a rule: a broken invariant of the draft access control BMM, a code outside the terminology its attribute is bound to, a party the demographic store does not hold, or an `opt_out` directive while `authz.grants.allowed` does not allow `access_service`. The problem names the first defect.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           }
         }
       }
@@ -2423,7 +2443,7 @@
             }
           },
           "400": {
-            "description": "The body does not name the EHR, or the settings are not settings of the `access_directives` scheme whose every invariant holds; the problem names the first defect.",
+            "description": "The body does not name the EHR, or the settings do not read as an `ACCESS_DIRECTIVE_SETTINGS` of the `access_directives` scheme; the problem names the first defect.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2484,6 +2504,16 @@
           },
           "415": {
             "description": "The body is not `application/json`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The settings read but break a rule, such as an invariant of the draft access control BMM or a code outside the terminology its attribute is bound to; the problem names the first defect.",
             "content": {
               "application/problem+json": {
                 "schema": {

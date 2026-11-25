@@ -64,8 +64,8 @@ demographic reads. `capacity.sh groups` prints the table the script reads.
 
 The callers are the clinician, judged through a care relationship, the
 controller rule and each EHR's directives, and the administrator. A patient
-reading their own record needs a SMART token from a `persons` issuer whose
-caller is the person (a Basic caller never is), and a system client needs a
+reading their own record needs a SMART token whose login binds their own
+`PERSON` (a Basic caller never is), and a system client needs a
 client-credentials token; the harness mints neither yet, so neither caller
 is measured.
 

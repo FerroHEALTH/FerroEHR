@@ -47,16 +47,18 @@ impl FerroEhrService {
         ehr_id: EhrId,
         kind: Kind,
     ) -> Result<Option<(VoId, TreeId)>, ServiceError> {
-        Ok(
-            crate::storage::version_repo::meta::current_vo(&self.pool, ehr_id, kind.as_str())
-                .await?
-                .map(|r| {
-                    (
-                        r.vo_id,
-                        TreeId::from_columns(r.trunk_version, r.branch_number, r.branch_version),
-                    )
-                }),
+        Ok(crate::storage::version_repo::meta::current_vo(
+            &mut *crate::db::acquire::acquire(&self.pool).await?,
+            ehr_id,
+            kind.as_str(),
         )
+        .await?
+        .map(|r| {
+            (
+                r.vo_id,
+                TreeId::from_columns(r.trunk_version, r.branch_number, r.branch_version),
+            )
+        }))
     }
 
     /// A metadata-only [`ServiceResponse`] for a write, built entirely from the
