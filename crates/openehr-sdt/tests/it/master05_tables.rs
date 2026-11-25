@@ -1188,7 +1188,7 @@ fn master05_element_null_flavoured_without_value() {
     assert_eq!(rebuilt["null_reason"]["value"], json!("sample reason"));
 
     // RM → FLAT → RM → FLAT is stable: the null flavour survives the round
-    // trip that used to drop it.
+    // trip.
     let reflattened = composition_to_flat(&built, &wt).expect("composition_to_flat");
     assert_eq!(
         under(&reflattened, LEAF),

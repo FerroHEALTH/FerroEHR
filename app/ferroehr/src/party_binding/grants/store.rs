@@ -183,7 +183,8 @@ fn clients_gone<'q>(head: GrantHead<'_>) -> Step<'q> {
 }
 
 /// The step that inserts the client rows the live `head` holds; `None` when
-/// it holds none.
+/// it holds none. A client binds only from a party carrying the policy mark,
+/// so only an administrator's write binds one (#6542).
 fn clients_came(head: GrantHead<'_>) -> Option<Step<'_>> {
     let facts = head
         .live()
@@ -200,6 +201,7 @@ fn clients_came(head: GrantHead<'_>) -> Option<Step<'_>> {
         "INSERT INTO binding_client (party_id, issuer, client_id, lifecycle_state, provider_id) \
          SELECT $1, t.issuer, t.client_id, $4, $5 \
          FROM unnest($2::text[], $3::text[]) AS t(issuer, client_id) \
+         WHERE EXISTS (SELECT FROM vo_head h WHERE h.vo_id = $1 AND h.policy_party_at IS NOT NULL) \
          RETURNING party_id AS p, NULL::text AS t",
         Some(Tag::Grants),
         move |query| {
@@ -569,6 +571,18 @@ impl Term {
         let timed = self.not_before.is_none_or(|before| before <= now)
             && self.not_after.is_none_or(|after| now <= after);
         live && dated && timed
+    }
+
+    /// The first instant after `now` at which its instants may make it start
+    /// or stop holding: its `not_before` still to come, or the instant after
+    /// its `not_after`; `None` when neither lies ahead.
+    pub(crate) fn next_change(&self, now: jiff::Timestamp) -> Option<jiff::Timestamp> {
+        let starts = self.not_before.filter(|before| *before > now);
+        let ends = self
+            .not_after
+            .filter(|after| *after >= now)
+            .and_then(|after| after.checked_add(jiff::SignedDuration::from_nanos(1)).ok());
+        starts.into_iter().chain(ends).min()
     }
 
     /// The term of the stored row `row`, read from its `lifecycle_state`,

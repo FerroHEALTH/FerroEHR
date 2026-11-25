@@ -270,8 +270,8 @@ fn is_valid_rm(rm: &Value) -> bool {
     })
 }
 
-/// The previously-failing INSTRUCTION/ACTIVITY fixture now rebuilds valid RM
-/// with the mandatory `ACTIVITY.action_archetype_id`.
+/// The INSTRUCTION/ACTIVITY fixture rebuilds valid RM with the mandatory
+/// `ACTIVITY.action_archetype_id`.
 #[test]
 fn instruction_activity_from_flat_is_valid_rm() {
     let wts = crate::common::web_templates();

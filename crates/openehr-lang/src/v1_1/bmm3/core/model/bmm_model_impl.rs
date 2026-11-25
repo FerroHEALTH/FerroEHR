@@ -212,24 +212,12 @@ impl BmmModel {
     /// `BMM_MODEL.type_conforms_to`: whether `a_desc_type` conforms to
     /// `an_anc_type`, both as type-name strings.
     ///
-    /// `master06-core-types.adoc` §Type Conformance is the algorithm, and its
-    /// three admitting branches are realized as written:
-    ///
-    /// * base-class test — the roots are equal case-insensitively, or the
-    ///   descendant root "has_ancestor_class" the ancestor root;
-    /// * both generic and passing the base-class test, with the same number of
-    ///   generic parameters, each recursively conformant after open-parameter
-    ///   substitution;
-    /// * descendant generic, ancestor not, passing the base-class test —
-    ///   "Conforms - case where anc type is not provided in generic form, but
-    ///   desc is, e.g. `Interval<Integer>` conforms to `Interval`".
-    ///
-    /// An open ancestor parameter is replaced by its conformance type before
-    /// the recursive test, per the section's
-    /// `generic_parameter_conformance_type` step
-    /// (`org.openehr.lang.bmm3.bmm_generic_class.adoc` §Functions), with `Any`
-    /// as the unconstrained fallback
-    /// (`…bmm3.bmm_definitions.adoc` §Functions `Any_class`).
+    /// The three admitting branches of `master06-core-types.adoc` §Type
+    /// Conformance as written: the base-class test (equal roots, compared
+    /// case-insensitively, or an ancestor root); both generic with matching,
+    /// recursively conformant parameters; a generic descendant of a non-generic
+    /// ancestor. An open ancestor parameter becomes its conformance type
+    /// (`org.openehr.lang.bmm3.bmm_generic_class.adoc` §Functions), else `Any`.
     #[must_use]
     pub fn type_conforms_to(&self, a_desc_type: &str, an_anc_type: &str) -> bool {
         let (descendant_root, descendant_parameters) = split_type(a_desc_type);

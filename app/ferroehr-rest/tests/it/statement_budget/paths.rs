@@ -35,9 +35,8 @@
 //! run, through a relay that splits the protocol messages by statement
 //! ([`super::wire`], #6244), and held to its [`Budget`] `wire` ceiling.
 //!
-//! Each figure is held to the ceiling [`BUDGETS`] names: the measured end
-//! state of the core rewrite (#6001) plus a small margin. A ceiling only ever
-//! comes down, on an owner decision. No openEHR spec governs the cost of a
+//! Each figure is held to the ceiling [`BUDGETS`] names: a measured figure
+//! plus a small margin. A ceiling only ever comes down, on an owner decision. No openEHR spec governs the cost of a
 //! request: our own design.
 
 use std::collections::BTreeMap;
@@ -236,278 +235,7 @@ struct Budget {
     wire: u64,
 }
 
-/// The ceilings by path. Before the core rewrite (feat/core-rewrite at
-/// 13cda4c7f, debug build) the paths measured, per request, conversions /
-/// allocations / round trips / nested statements / WAL bytes: recorded on
-/// #6007. The end state (#6001) is the figure measured over four runs at
-/// feat/core-rewrite dfed03d9d plus a margin: none on conversions and round
-/// trips, 2% on allocations, 10% on the peak, 3% on WAL bytes, and one nested
-/// statement on a commit. The nested statements leave out the chainer's
-/// rounds, the release of the records the commits held among them. The
-/// commits have since taken the `event_time` column and the magnitude index
-/// (#6022): 246,564, 247,837, 248,829 and 248,242 WAL bytes measured against
-/// 242,177, 243,204, 244,956 and 244,045, 1.8% more, under the same ceilings.
-/// The conversions and the allocations of the commits and the raw reads are
-/// the figures measured over four runs once a read left the stored audit
-/// undecoded and a commit signed its version from typed members (#6037), with
-/// the same margins.
-/// The commits of a body the data-minimisation pass reads have since lost
-/// their second render and the pass's own allocations (#6038): 18,841
-/// allocations on the JSON commit against 33,307, measured over three runs.
-/// A CONTRIBUTION commit has since read its envelope once from the text and
-/// each member from its own text, and judged its committers as typed RM
-/// (#6038): 6 conversions and 19,010 allocations against 9 and 51,858.
-/// The WAL figure has since been the row records a request writes, read with
-/// `pg_walinspect` as `statement_budget::wal` reads them, with the chain
-/// heads and page maintenance left out and the lower-quartile request judged
-/// (#6035): the sum `pg_stat_statements` gave moved with the chainer's
-/// passes, and a read measured 2,248 to 2,325 bytes between runs. Twelve of
-/// the sixteen paths now measure the same figure in every one of seven runs,
-/// one of them beside 175 other tests, and the other four within 64 bytes,
-/// so the ceilings are the largest of the seven plus 1%.
-/// The four commits of the IPS composition have since taken the index on the
-/// code of an ELEMENT value (#6033): 36 entries of 72 bytes, 2,592 bytes a
-/// commit and 1.08%, inside the 3% that issue allows the index. Their WAL
-/// ceilings rose by that, to the largest of three runs plus 1%: the one rise
-/// of a ceiling, and the trade #6033 states.
-/// The harness has since started the `LISTEN` sessions a server runs with,
-/// and a request confirms the copies its decision rests on with two indexed
-/// reads, one per store (#6048). The round trips are the figures measured
-/// then: a read sends 3 (its own, the party store's revisions, the policy
-/// heads) where the harness without listeners sent 7 and a server before
-/// #6048 sent 1. A party commit moves the binding revision in its
-/// transaction, one nested statement and 88 bytes of WAL, the second rise of
-/// a ceiling and the price #6048 states for a decision that waits on no
-/// notification.
-/// The data-minimisation pass has since stopped reading string leaves for
-/// the shape of a national identifier (#6081): 1,069 fewer allocations on
-/// each of the three composition commits and 1,057 on a CONTRIBUTION commit,
-/// measured beside the merge base, and their ceilings fell by as much.
-/// The population `matches` over a value list (#6084) is measured last, so
-/// its access records stay off the ITI-81 page; its ceilings are the figures
-/// of three runs (5,637 to 5,639 allocations, a median peak of 174,788
-/// bytes, 13,180 WAL bytes) with the margins above.
-/// The demographic population query (#6087) runs as a caller with access
-/// groups after the `matches`, for the same reason; its ceilings are the
-/// figures of three runs (2,630 to 2,644 allocations, a median peak of
-/// 98,022 bytes, 2,062 WAL bytes) with the same margins. It has since judged
-/// no `EHR_ACCESS` condition (#6110): 2,619 to 2,621 allocations and a median
-/// peak of 97,454 bytes over three runs, and its ceilings fell by as much.
-/// The commit of a PERSON holding two ordinals and two scales holds the WAL
-/// the index on their numbers costs (#6090): 4 entries of 72 bytes, 288 of
-/// the 10,489 bytes it wrote in each of three runs. Its ceilings are the
-/// figures of those runs (2,486 allocations, a median peak of at most 120,133
-/// bytes, 20 nested statements) with the margins above; no other path moved.
-/// It is measured last, so the PERSONs it commits stay out of the population
-/// the demographic query reads, which they grew by some 100 allocations.
-/// A Basic user's held roles and scopes have since been read once with the
-/// grant rows (#6013): 34 to 54 fewer allocations on every path, each of
-/// which authenticates a Basic user, measured beside the merge base, and
-/// each ceiling fell by its path's figure.
-/// The version-tree uniqueness has since been declared per partition without
-/// the tier and served the read by version id, and the separate tree index is
-/// gone (#6207): every commit that writes a version writes 96 bytes of WAL
-/// fewer, measured beside the merge base, and each WAL ceiling fell by it.
-/// The read by version id served from the version copy (#5778) is measured
-/// last, on EHRs of its own whose settings name an object, so each read is
-/// judged on its own row; its median request is a copy hit. The copy has
-/// since held the body as shared text (#6205): a hit allocated 564 KiB with a
-/// peak of 272,547 bytes before and 431 to 439 KiB with a peak of at most
-/// 147,965 bytes after, over three runs, and a fill one copy of the body
-/// less. Its ceilings are those figures with the margins above.
-/// The token index has since taken the request and resource ids as keys of
-/// its own, in place of two hash B-trees on each record of both chains
-/// (#6202): 96 to 616 fewer WAL bytes on every path that writes an access
-/// record or a system audit record, the read from the version copy among
-/// them, measured beside the merge base, and each WAL ceiling fell by its
-/// path's figure.
-/// A node row has since stored its own path step, and the node key carries no
-/// tier (#6204): 14,098, 14,016 and 13,880 bytes fewer on the JSON, XML and
-/// FLAT commits of the IPS composition, 13,520 on a CONTRIBUTION commit, and
-/// 64 and 136 on the two party commits, measured beside the merge base, and
-/// each WAL ceiling fell by its path's figure.
-/// A system audit record has since been written once, into `audit_event`,
-/// with an id-list intake row and a narrow link the chainer adds, in place of
-/// a whole intake row copied into the chain (#6203): 370 to 456 fewer WAL
-/// bytes on each path that writes one (the party read and commits and the
-/// demographic query), measured beside the merge base, and each of those WAL
-/// ceilings fell by its path's figure.
-/// A member repeated across a version's node rows has since been stored once
-/// and referenced from the later rows (#6229): 42,162, 41,938 and 41,722
-/// bytes fewer on the JSON, XML and FLAT commits of the IPS composition,
-/// whose entries repeat one participation list, and 41,922 on a CONTRIBUTION
-/// commit, measured beside the merge base, and each WAL ceiling fell by its
-/// path's figure. No other path moved.
-/// The access-log write has since taken no row lock on the shared part an
-/// entry names (#6241): 54 bytes fewer for each access-log entry a path
-/// writes (64 and 80 on the FLAT and XML commits), measured beside the merge
-/// base, and each WAL ceiling fell by its path's figure; the paths that
-/// write no entry of their own did not move.
-/// A request has since confirmed its policy copies with one primary-key read
-/// of `policy_revision` in place of the newest version of every register and
-/// of the access policy (#6251): 8 fewer allocations on every path, measured
-/// beside the merge base, and each allocation ceiling fell by as much.
-/// A read of a COMPOSITION or an EHR has since confirmed its policy copies on
-/// its own statement, which reads the policy and definition revisions beside
-/// its rows, in place of a read of the policy revision before it (#6251): one
-/// round trip fewer on the six read paths those operations serve, measured
-/// beside the merge base, and each of those round-trip ceilings fell by one.
-/// A COMPOSITION update (a PUT with new content) and a delete are measured
-/// last, on the EHRs' own compositions and on compositions committed for
-/// them, and a COMPOSITION write judges its pre-checks on one gate read
-/// (#6256): an update sends 10 round trips where it sent 12, a delete 11
-/// where it sent 16, and a CONTRIBUTION 12 where it sent 13, measured beside
-/// the merge base, and the CONTRIBUTION's ceiling fell by one. The new paths'
-/// ceilings are the figures of two runs (17,495 and 1,623 allocations, median
-/// peaks of 1,386,366 and 134,395 bytes, 186,380 and 5,765 WAL bytes) with
-/// the margins above.
-/// The access-log entry has since been written once by a plain insert, with
-/// no intake row, link, chain head or function around it (#6242): 559 bytes
-/// fewer for each entry a read writes and 556 on each commit, measured
-/// beside the merge base, and each WAL ceiling fell by its path's figure; the
-/// reads and the queries run no nested statement any more, and their nested
-/// ceilings fell to 0. A commit runs 4 nested statements where it ran 3, under
-/// its ceiling, which does not move.
-/// A COMPOSITION commit and a CONTRIBUTION commit have since been decided on
-/// the policy revision their gate read returns, in place of a read of it
-/// before (#6256): one round trip fewer on the three composition commits, the
-/// update, the delete and the CONTRIBUTION commit, measured beside the merge
-/// base, and each of those round-trip ceilings fell by one.
-/// A COMPOSITION create, update and delete have since committed in one guarded
-/// statement with their outbox row, and taken no per-object lock (#6256): 7
-/// round trips where the commits sent 8, the update 9 and the delete 10, the
-/// delete 8, and 25, 25, 31, 37 and 42 fewer allocations on the JSON, XML and
-/// FLAT commits, the update and the delete, measured beside the merge base;
-/// each of those ceilings fell by its path's figure.
-/// A system audit record has since been written once with the content
-/// digest its writer computes, and sealed by window, with no link, intake
-/// row, chain head or row digest in the database (#6242): 5 nested
-/// statements fewer on the party read, the demographic query and both party
-/// commits, and 541, 537, 532 and 532 WAL bytes fewer, measured beside the
-/// merge base, and each of those ceilings fell by its path's figure.
-/// A CONTRIBUTION of COMPOSITION members has since read its EHR and targets
-/// in one gate read after planning and committed in one guarded statement
-/// (#6256): 7 round trips where it sent 11, measured beside the merge base,
-/// and its round-trip ceiling fell by four; its allocations moved from 17,591
-/// to 17,626, under their ceiling, which stays.
-/// A COMPOSITION commit and a CONTRIBUTION of COMPOSITION members have since
-/// written their access record before their one statement, which reserves it
-/// beside their rows, with no transaction of their own (#6256): 4 round trips
-/// where the commits, the update and the CONTRIBUTION sent 7 and the delete 5
-/// where it sent 8, and 39, 45, 38, 45 and 44 fewer allocations on the JSON,
-/// XML and FLAT commits, the update and the delete, measured beside the merge
-/// base; each of those ceilings fell by its path's figure.
-/// A held write's access-log entries have since gone in with what the
-/// gathered writers know the store holds, its shared part left out and its
-/// search tokens named by id (#6244): 4 nested statements fewer on the three
-/// composition commits, the CONTRIBUTION commit, the `EHR_STATUS` commit, the
-/// update and the delete, and 8 to 17 fewer allocations, measured beside the
-/// merge base, and each of those ceilings fell by its path's figure.
-/// The binding side table's trigger has since moved the binding revision and
-/// notified only for a statement that changed a row (#6284): 2 nested
-/// statements and 87 WAL bytes fewer on both party commits, measured beside
-/// the merge base, and each of those ceilings fell by as much.
-/// A COMPOSITION delete has since judged its SMART scope on the template its
-/// gate read returns (#6271): 4 round trips where it sent 5, and 1,514
-/// allocations where it made 1,533, measured twice beside the merge base, and
-/// both ceilings fell by those figures.
-/// An `EHR_STATUS` commit has since been judged on one gate read and written,
-/// its promoted `ehr` columns with it, by one guarded statement after its
-/// access record (#6257): 5 round trips where it sent 14, 1,575 allocations
-/// where it made 1,707 and 54 WAL bytes fewer, measured twice beside the merge
-/// base, and those ceilings fell by those figures. Its peak rose from 141,897
-/// to 148,825 bytes, since the access record is rendered while the prepared
-/// version is held; its ceiling is that figure plus 1%, the one rise the
-/// orchestrator approved as the price of the records-first order.
-/// An `EHR_STATUS` commit has since dropped the EHR's access copy only when it
-/// moved the subject, the one part of the status the copy is revised by
-/// (#6238): 4 round trips where it sent 5, 1,492 allocations where it made
-/// 1,567, a median peak 3 KiB lower and 323 wire bytes fewer, measured beside
-/// the merge base, and those ceilings fell by those figures.
-/// A directory create, update and delete are measured last, each on an EHR of
-/// its own with a composition its FOLDER references, and have since been
-/// judged on one gate read and written by one guarded statement after their
-/// access record, a new hierarchy's `ehr_folder` row with it (#6257): 4 round
-/// trips where they sent 14, 13 and 12, 1,542, 1,518 and 1,388 allocations
-/// where they made 1,687, 1,656 and 1,505, and 4,921, 4,731 and 4,088 wire
-/// bytes where they moved 5,739, 5,551 and 4,787, measured beside the merge
-/// base, with the same WAL. Their ceilings are the merge base's
-/// figures with the margins above, lowered by those drops; their median peaks
-/// rose from 136,915, 138,815 and 131,027 bytes to 145,604, 143,951 and
-/// 133,880, since the access record is rendered while the prepared version is
-/// held, inside the margin.
-/// Every path has since counted its `pg_notify` calls, top-level or nested,
-/// pinned at the counts measured on main 3bf5adead7: 1 on the `EHR_STATUS`
-/// commit and on each PERSON commit, update and delete, 0 elsewhere. A PERSON
-/// update and delete, each on a PERSON of its own, and an ORGANISATION,
-/// GROUP, ROLE and AGENT create are measured last. A party create, update
-/// and delete have since been judged on one gate read and committed behind
-/// one guarded version statement after their access record (#6257): a PERSON
-/// create sends 20 round trips where it sent 29, an update and a delete 20
-/// where they sent 33, an ORGANISATION, GROUP, ROLE and AGENT create 12, 11,
-/// 21 and 10 where they sent 20, 19, 28 and 17, with 111 to 216 fewer
-/// allocations and the same WAL, measured in CI beside the merge base. The
-/// new paths' ceilings are the merge base's figures with the margins above,
-/// lowered by those drops, with their WAL over the largest of three runs.
-/// Their median peaks rose by 6 to 10 KiB, since the access record is
-/// rendered while the prepared version is held: the PERSON commits from
-/// 115,228 and 130,009 bytes to 124,725 and 139,506, and each peak ceiling of
-/// those paths is the figure measured plus 1%, the rise the orchestrator
-/// approved as the price of the records-first order.
-/// A party commit has since settled its access rows in two statements, every
-/// delete and retirement in one and every insert in the next, where it sent
-/// one statement per table (#6257): a PERSON create, update and delete send
-/// 12 round trips where they sent 20 and run 3 nested statements where they
-/// ran 6, with 141, 142, 141 and 144 fewer allocations on the two creates,
-/// the update and the delete; an ORGANISATION, GROUP and ROLE create send
-/// 10, 10 and 19 where they sent 12, 11 and 21, with 26, 10 and 19 fewer
-/// allocations, measured twice beside the merge base, and each of those
-/// ceilings fell by its path's figure. The AGENT create, which settles no
-/// row, sends 10 as before and made 5 to 12 allocations more, and its
-/// ceilings stay. No path's WAL, median peak or notifies moved.
-/// A settle has since built no insert step that writes no row, and sends a
-/// statement of one step as it is written (#6257): the AGENT create makes 4
-/// fewer allocations, the PERSON create, update and delete and the
-/// ORGANISATION create 2 fewer, the GROUP and ROLE creates 1, measured twice
-/// beside the merge base, and each allocation ceiling fell by that figure.
-/// An `EHR_STATUS` read and an AQL query have since confirmed their policy
-/// copies on their own statement, the version read or the query's statement,
-/// which reads the policy and definition revisions beside its rows, in place
-/// of a read of the policy revision before it (#6320): 2 round trips where the
-/// `EHR_STATUS` read and the population query sent 3, and 3 where the
-/// single-EHR query and the `matches` sent 4, measured beside the merge base,
-/// and each of those round-trip ceilings fell by one.
-/// The access-log entry has since written its key and uid alone, its search
-/// columns copied into the search index by the frontier round (#6319): each
-/// path wrote as many WAL bytes fewer as its entries' index records, 614 on a
-/// read, 598 on an EHR read and on each commit's own entry, 1,076 on the
-/// single-EHR query, 3,300 on the population query, 3,404 on the matches
-/// query and 478 on the ITI-81 page, measured beside the merge base, and each
-/// WAL ceiling fell by as much. A composition commit's figure moves by a few
-/// hundred bytes between runs, so its ceiling fell by its entry's drop, 593,
-/// or by the measured drop where that was smaller.
-/// A COMPOSITION read, by version id, at an instant or from the version
-/// copy, an EHR read and an `EHR_STATUS` read have since read the party
-/// store's revisions in their one clinical statement through
-/// `party_door.party_revisions(held)`,
-/// where the two domains share a database, in place of a read of
-/// `binding_grant_revision` on the party pool (#6320): 1 round trip where
-/// they sent 2, measured beside the merge base, and each of those round-trip
-/// ceilings fell by one. The function runs as its owner, so `PostgreSQL`
-/// never inlines it, and its one-row primary-key read counts as a nested
-/// statement: those paths' nested ceilings rose from 0 to 1, the trade the
-/// orchestrator approved for a round trip and a transaction. A party read
-/// takes its revisions the same way on its first party statement: 7 round
-/// trips where it sent 8, and its ceiling fell by one. Each step of such a
-/// ride runs in an allocation of its own, so no peak or allocation ceiling
-/// rose, and a path that does not ride holds 136 bytes less at its peak.
-/// The access-log entry has since been stored as its facts and sealed over
-/// them (#6322): each path wrote as many WAL bytes fewer as its entries' rows
-/// shrank, 592 on a read, 312 on the single-EHR query and on a delete, 1,536
-/// on the matches query, and each WAL ceiling fell by its measured drop, a
-/// composition commit's by at most its entry's 312. A read allocates 9 times
-/// fewer and the ITI-81 page 13 fewer, no longer reading four digest columns
-/// nothing used, and those allocation ceilings fell by as much.
+/// The ceilings by path (#6007): each figure as measured, plus a small margin.
 // NOTE: our own design (#6434), the least request is exact; the window average is a coarse
 // guard, since a pool connection grows its buffers inside a request (#6238).
 const BUDGETS: [Budget; 31] = [
@@ -515,8 +243,8 @@ const BUDGETS: [Budget; 31] = [
         path: Path::CommitJson,
         conversions: 5,
         // NOTE: our own design (#6074), binding the held facts snapshot adds an allocation.
-        least: 14_079,
-        allocations: 17_013,
+        least: 14_016,
+        allocations: 16_950,
         peak_bytes: 1_530_778,
         round_trips: 4,
         nested: 0,
@@ -527,8 +255,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitXml,
         conversions: 5,
-        least: 35_088,
-        allocations: 39_096,
+        least: 35_025,
+        allocations: 39_033,
         peak_bytes: 1_533_031,
         round_trips: 4,
         nested: 0,
@@ -539,8 +267,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitFlat,
         conversions: 5,
-        least: 28_376,
-        allocations: 31_310,
+        least: 28_313,
+        allocations: 31_247,
         peak_bytes: 1_528_525,
         round_trips: 4,
         nested: 0,
@@ -551,8 +279,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadJson,
         conversions: 0,
-        least: 885,
-        allocations: 910,
+        least: 830,
+        allocations: 855,
         peak_bytes: 617_268,
         round_trips: 1,
         nested: 1,
@@ -563,8 +291,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadXml,
         conversions: 2,
-        least: 10_175,
-        allocations: 10_199,
+        least: 10_120,
+        allocations: 10_144,
         peak_bytes: 1_017_140,
         round_trips: 1,
         nested: 1,
@@ -575,8 +303,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadFlat,
         conversions: 2,
-        least: 14_808,
-        allocations: 14_838,
+        least: 14_753,
+        allocations: 14_783,
         peak_bytes: 1_634_407,
         round_trips: 1,
         nested: 1,
@@ -587,8 +315,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::EhrRead,
         conversions: 1,
-        least: 758,
-        allocations: 783,
+        least: 703,
+        allocations: 728,
         peak_bytes: 79_269,
         round_trips: 1,
         nested: 1,
@@ -599,8 +327,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlSingle,
         conversions: 2,
-        least: 1730,
-        allocations: 1789,
+        least: 1675,
+        allocations: 1734,
         peak_bytes: 118_273,
         round_trips: 2,
         nested: 1,
@@ -611,8 +339,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlPopulation,
         conversions: 2,
-        least: 2318,
-        allocations: 2431,
+        least: 2264,
+        allocations: 2377,
         peak_bytes: 158_823,
         round_trips: 1,
         nested: 1,
@@ -623,8 +351,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::Iti81,
         conversions: 0,
-        least: 6719,
-        allocations: 7433,
+        least: 6665,
+        allocations: 7379,
         peak_bytes: 624_026,
         round_trips: 1,
         nested: 1,
@@ -635,8 +363,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyRead,
         conversions: 0,
-        least: 975,
-        allocations: 1058,
+        least: 920,
+        allocations: 1003,
         peak_bytes: 78_848,
         round_trips: 6,
         nested: 1,
@@ -647,8 +375,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitContribution,
         conversions: 6,
-        least: 14_341,
-        allocations: 17_275,
+        least: 14_278,
+        allocations: 17_212,
         peak_bytes: 1_509_372,
         round_trips: 4,
         nested: 0,
@@ -659,8 +387,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadAtTime,
         conversions: 0,
-        least: 898,
-        allocations: 1002,
+        least: 843,
+        allocations: 947,
         peak_bytes: 701_748,
         round_trips: 1,
         nested: 1,
@@ -671,8 +399,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitStatus,
         conversions: 4,
-        least: 1166,
-        allocations: 1209,
+        least: 1103,
+        allocations: 1146,
         peak_bytes: 147_242,
         round_trips: 4,
         nested: 0,
@@ -683,8 +411,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadStatus,
         conversions: 0,
-        least: 815,
-        allocations: 841,
+        least: 760,
+        allocations: 786,
         peak_bytes: 80_973,
         round_trips: 1,
         nested: 1,
@@ -695,8 +423,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitParty,
         conversions: 8,
-        least: 1565,
-        allocations: 1637,
+        least: 1502,
+        allocations: 1575,
         peak_bytes: 125_972,
         round_trips: 10,
         nested: 3,
@@ -707,8 +435,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlMatches,
         conversions: 2,
-        least: 3762,
-        allocations: 3862,
+        least: 3708,
+        allocations: 3807,
         peak_bytes: 192_267,
         round_trips: 2,
         nested: 1,
@@ -719,8 +447,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlParty,
         conversions: 2,
-        least: 2541,
-        allocations: 2626,
+        least: 2486,
+        allocations: 2571,
         peak_bytes: 107_199,
         round_trips: 6,
         nested: 1,
@@ -731,8 +459,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitPartyScored,
         conversions: 8,
-        least: 2002,
-        allocations: 2123,
+        least: 1939,
+        allocations: 2060,
         peak_bytes: 140_901,
         round_trips: 10,
         nested: 3,
@@ -743,8 +471,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadVersion,
         conversions: 0,
-        least: 914,
-        allocations: 989,
+        least: 859,
+        allocations: 934,
         peak_bytes: 162_800,
         round_trips: 1,
         nested: 1,
@@ -755,8 +483,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitUpdate,
         conversions: 5,
-        least: 14_111,
-        allocations: 17_053,
+        least: 14_048,
+        allocations: 16_990,
         peak_bytes: 1_525_458,
         round_trips: 4,
         nested: 0,
@@ -767,8 +495,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitDelete,
         conversions: 2,
-        least: 1129,
-        allocations: 1158,
+        least: 1074,
+        allocations: 1103,
         peak_bytes: 135_002,
         round_trips: 4,
         nested: 0,
@@ -779,8 +507,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::DirectoryCreate,
         conversions: 5,
-        least: 1239,
-        allocations: 1267,
+        least: 1176,
+        allocations: 1204,
         peak_bytes: 150_606,
         round_trips: 4,
         nested: 1,
@@ -791,8 +519,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::DirectoryUpdate,
         conversions: 4,
-        least: 1192,
-        allocations: 1230,
+        least: 1129,
+        allocations: 1167,
         peak_bytes: 152_696,
         round_trips: 4,
         nested: 1,
@@ -803,8 +531,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::DirectoryDelete,
         conversions: 2,
-        least: 1075,
-        allocations: 1108,
+        least: 1018,
+        allocations: 1051,
         peak_bytes: 144_129,
         round_trips: 4,
         nested: 1,
@@ -815,8 +543,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyUpdate,
         conversions: 8,
-        least: 1860,
-        allocations: 1892,
+        least: 1797,
+        allocations: 1830,
         peak_bytes: 129_641,
         round_trips: 10,
         nested: 3,
@@ -827,8 +555,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyDelete,
         conversions: 2,
-        least: 1481,
-        allocations: 1519,
+        least: 1426,
+        allocations: 1464,
         peak_bytes: 112_950,
         round_trips: 10,
         nested: 3,
@@ -839,8 +567,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitOrganisation,
         conversions: 8,
-        least: 1541,
-        allocations: 1566,
+        least: 1478,
+        allocations: 1503,
         peak_bytes: 126_183,
         round_trips: 10,
         nested: 0,
@@ -851,8 +579,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitGroup,
         conversions: 8,
-        least: 1537,
-        allocations: 1561,
+        least: 1474,
+        allocations: 1498,
         peak_bytes: 125_084,
         round_trips: 10,
         nested: 0,
@@ -863,8 +591,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitRole,
         conversions: 9,
-        least: 2040,
-        allocations: 2068,
+        least: 1977,
+        allocations: 2006,
         peak_bytes: 126_256,
         round_trips: 17,
         nested: 5,
@@ -875,8 +603,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitAgent,
         conversions: 8,
-        least: 1527,
-        allocations: 1552,
+        least: 1464,
+        allocations: 1489,
         peak_bytes: 126_026,
         round_trips: 10,
         nested: 0,
@@ -1782,14 +1510,9 @@ impl Measure {
     ///
     /// A request handed a pool connection whose buffers have not grown to
     /// the path's messages yet, or that opens one, grows them inside its
-    /// window, 8 KiB a step, with the allocations around it: on CI the party
-    /// read made 974 allocations with a peak of 72,870 bytes on four requests
-    /// of ten and up to 1,234 and 101,773 on the others, and the demographic
-    /// query 2,543 against up to 2,682, so the median crossed a ceiling
-    /// whenever half a window met such connections. Which requests do depends
-    /// on what the pool hands out; what a request itself allocates more,
-    /// every request allocates more, so the lower quartile still moves with
-    /// it (#6238).
+    /// window, 8 KiB a step. Which requests do depends on what the pool hands
+    /// out; what a request itself allocates more, every request allocates
+    /// more, so the lower quartile still moves with it (#6238).
     fn low(&self, figure: impl Fn(&Allocated) -> u64) -> u64 {
         // NOTE: our own design (#6007), a connection the pool opens inside a request is the
         // pool's work, as its session setup is for the round trips (#5899).
@@ -1845,19 +1568,12 @@ fn head_relation(relation: &str) -> bool {
 /// window: `marks` are the WAL positions before the first request and after
 /// each one, taken once the chainer had moved that request's entries.
 ///
-/// The figure is what [`super::wal`] counts for an access-log entry: the
-/// records a statement writes for each row of the test's own database, read
-/// with `pg_walinspect`. Page maintenance and the records of the chain heads
-/// are left out, since both fall on a request by timing (#6035).
-///
-/// A low request is judged, the third smallest of ten, because timing still
-/// moves single requests. An update that finds no room on its row's page
-/// writes the whole row, a lock record and an entry in each index, and
-/// whether it does depends on what pruning could clear, so on the oldest
-/// transaction open on the shared server: beside the other budget tests a
-/// window of ten `EHR_STATUS` commits wrote 1,550 bytes more. An index insert
-/// that splits its page is logged as the split and leaves the count. What a
-/// request itself writes more, every request writes more.
+/// The figure is what [`super::wal`] counts for an access-log entry, without
+/// page maintenance and the chain heads, which fall on a request by timing
+/// (#6035). The third smallest of ten requests is judged, since an update
+/// that finds no room on its page writes the whole row depending on what
+/// pruning could clear; what a request itself writes more, every request
+/// writes more.
 async fn row_records(pool: &PgPool, marks: &[String]) -> (u64, String) {
     let (Some(from), Some(to)) = (marks.first(), marks.last()) else {
         return (0, String::new());

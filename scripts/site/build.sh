@@ -40,6 +40,7 @@ bash "$ROOT/scripts/render/cohort-bench.sh"
 bash "$ROOT/scripts/render/storage-bench.sh"
 bash "$ROOT/scripts/render/access-index-bench.sh"
 bash "$ROOT/scripts/render/access-path-bench.sh"
+bash "$ROOT/scripts/render/care-caseload-bench.sh"
 
 # 2. Clean + recreate _site.
 rm -rf "$OUT"

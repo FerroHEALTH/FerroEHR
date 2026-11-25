@@ -47,10 +47,7 @@ use super::drained;
 use super::paths::{Path, REQUESTS, World, exchange, order};
 
 /// The most CPU each path's lower-quartile request may take, in thousandths
-/// of the [`reference`] round trip timed on the same thread: the highest
-/// share of three CI runs on main 7db1355587 plus the 50% they spread by at
-/// most (the `EHR_STATUS` commit, the delete and the directory writes; every
-/// other path within 30%).
+/// of the [`reference`] round trip timed on the same thread (#6321).
 const CPU_BUDGETS: [(Path, u64); 31] = [
     (Path::CommitJson, 7420),
     (Path::CommitXml, 9200),
