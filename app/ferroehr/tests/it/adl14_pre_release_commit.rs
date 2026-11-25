@@ -243,3 +243,30 @@ async fn a_composition_with_14_at_codes_commits_under_a_template_over_their_conv
         other => panic!("a code outside the 1.4 value set is refused, got {other:?}"),
     }
 }
+
+/// The exclusion statement's coded name keeps to the code list the converted
+/// archetype constrains it to (RM common `LOCATABLE.name`; AOM2
+/// `C_TERMINOLOGY_CODE`), under the ADL 2 template as under an ADL 1.4 one.
+#[tokio::test]
+async fn a_coded_name_outside_its_14_code_list_is_refused_under_the_adl2_template() {
+    let (_db, svc) = crate::fixtures::service().await;
+    provision(&svc).await;
+    let ehr: EhrId = crate::fixtures::create_ehr(&svc).await;
+    let mut body = composition("at0004");
+    let code = body
+        .pointer_mut("/content/0/items/0/data/items/0/name/defining_code/code_string")
+        .expect("the exclusion statement has a coded name");
+    *code = Value::from("at0099");
+    match svc
+        .create_composition(ehr, crate::fixtures::uv(&body, "249", None))
+        .await
+    {
+        Err(ServiceError::ValidationFailed(violations)) => assert!(
+            violations
+                .iter()
+                .any(|v| v.message.contains("at0099") && v.path.ends_with("/name")),
+            "the unlisted name code is refused at the name: {violations:?}"
+        ),
+        other => panic!("a name code outside the 1.4 code list is refused, got {other:?}"),
+    }
+}
