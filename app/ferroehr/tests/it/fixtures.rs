@@ -583,15 +583,13 @@ pub(crate) async fn service() -> (testkit::TestDb, ferroehr::service::FerroEhrSe
 /// replica's first fill does for its mapping's key issuers: a key binds only
 /// under an active key space (`ferroehr::party_binding::key_space`), and a
 /// test service takes no lease.
-pub(crate) async fn open_key_spaces(db: &testkit::TestDb, issuers: &[(&str, bool)]) {
-    for (issuer, portal) in issuers {
+pub(crate) async fn open_key_spaces(db: &testkit::TestDb, issuers: &[&str]) {
+    for issuer in issuers {
         sqlx::query(
-            "INSERT INTO party.binding_key_space (issuer, portal, state) \
-             VALUES ($1, $2, 'active') \
-             ON CONFLICT (issuer) DO UPDATE SET portal = EXCLUDED.portal, state = 'active'",
+            "INSERT INTO party.binding_key_space (issuer, state) VALUES ($1, 'active') \
+             ON CONFLICT (issuer) DO UPDATE SET state = 'active'",
         )
         .bind(issuer)
-        .bind(portal)
         .execute(&db.pool())
         .await
         .expect("the key space is recorded");

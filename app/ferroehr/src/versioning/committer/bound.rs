@@ -45,10 +45,9 @@ pub struct BoundDetails {
     pub provider: Option<(String, String)>,
     /// The `PARTY_REF.namespace` a bound party is written under.
     pub namespace: String,
-    /// The `PERSON` the server itself binds a `patients` issuer's login to: the
-    /// representative the token admits for its patient, or the patient
-    /// writing the representation that authorises a proxy; `None` for any
-    /// other caller.
+    /// The `PERSON` the server itself binds a login to: a representative
+    /// admitted on a stored representation, or the patient writing the
+    /// representation that authorises a proxy; `None` for any other caller.
     pub portal: Option<PortalParty>,
 }
 

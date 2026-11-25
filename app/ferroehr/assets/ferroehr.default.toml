@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 877 keys. A deployment that holds real data sets the 8 below,
+# This file lists 656 keys. A deployment that holds real data sets the 8 below,
 # the only live lines; every other key is optional and runs on the built-in
 # default its `#?` line shows, or stays unset where its note says so.
 #
@@ -229,7 +229,7 @@ profile = "sandbox"
 #? deployment = "unknown"
 
 # Authentication: the `ferrohealth-smart` section, whose serialization writes
-# every secret as `***`, `[auth.idp]`, `[auth.smart]` and `[auth.scim]`.
+# every secret as `***`, `[auth.smart]` and `[auth.scim]`.
 #? [auth]
 # Whether inbound authentication is on; a product may refuse `false`. Optional
 # (trust).
@@ -260,13 +260,9 @@ profile = "sandbox"
 # The issuer identifier. It renders with any userinfo masked, as `SecretUrl`
 # renders itself. Must set (trust).
 # issuer = ""
-# Whose tokens the issuer signs; the preset's kind when unset (`Preset::kind`),
-# and required under a preset that names none. Optional, unset by default
-# (trust).
-# kind = "persons"
-# The shipped preset the profile starts from (`Preset`); the standards-only
-# `rfc9068` by default. Optional (trust).
-# preset = "rfc9068"
+# `federation` for another party's issuer; unset for a SMART authorization
+# server (`IssuerKind`). Optional, unset by default (trust).
+# kind = "federation"
 # The audiences, of which a token's `aud` must contain one; the base URLs the
 # product resolves the section for when empty. Optional (trust).
 # audience = []
@@ -294,10 +290,6 @@ profile = "sandbox"
 # `groups` and `entitlements` (RFC 9068 §2.2.3.1), and none, never settable,
 # on a `federation` issuer. Optional, unset by default (trust).
 # role_claims = []
-# A profile file a deployment supplies, in the form of the shipped presets: its
-# keys, `kind` and `[federation]` table set over the preset's; absent for none.
-# Optional, unset by default (trust).
-# profile_file = ""
 
 # The introspection check, under `mode = "introspection"`.
 # [auth.issuer.<name>.introspection]
@@ -470,112 +462,6 @@ profile = "sandbox"
 # as for the listener. Optional (trust).
 # min_version = "1.3"
 
-# The profile keys, each optional: a preset's file, or the keys set on one
-# `[auth.issuer.<name>]`, which win over the preset's.
-# [auth.issuer.<name>.profile]
-# `Profile::person_key`. Optional, unset by default (trust).
-# person_key = ""
-# `Profile::tenant_claim`. Optional, unset by default (trust).
-# tenant_claim = ""
-# `Profile::client_claims`. Optional, unset by default (trust).
-# client_claims = []
-# `Profile::impersonation_marker`. Optional, unset by default (trust).
-# impersonation_marker = ""
-# `Profile::expect`. Optional, unset by default (trust).
-# expect = {}
-# `Profile::user_claims`. Optional, unset by default (trust).
-# user_claims = []
-# `Profile::person_equality`. Optional, unset by default (trust).
-# person_equality = []
-# `Profile::unstable_claims`. Optional, unset by default (trust).
-# unstable_claims = []
-# `Profile::onward_preview`. Optional, unset by default (trust).
-# onward_preview = []
-# `Profile::onward_subject_audience`. Optional, unset by default (trust).
-# onward_subject_audience = false
-# `Profile::onward_client_id`. Optional, unset by default (trust).
-# onward_client_id = false
-# `Profile::max_actor_chain`. Optional, unset by default (trust).
-# max_actor_chain = 0
-# `Profile::act_represents_patient`. Optional, unset by default (trust).
-# act_represents_patient = false
-# `Profile::fhir_user_patient`. Optional, unset by default (trust).
-# fhir_user_patient = false
-# `Profile::patient_context`. Optional, unset by default (trust).
-# patient_context = false
-# `Profile::issuer_client_is_person`. Optional, unset by default (trust).
-# issuer_client_is_person = false
-# `Profile::party_identifier_type`. Optional, unset by default (trust).
-# party_identifier_type = ""
-# `Profile::token_types`. Optional, unset by default (trust).
-# token_types = []
-# `Profile::required_claims`. Optional, unset by default (trust).
-# required_claims = []
-# `Profile::adapter`. Optional, unset by default (trust).
-# adapter = ""
-# `Profile::max_onward_lifetime`, a duration such as `"10min"`. Optional, unset
-# by default (trust).
-# max_onward_lifetime = "500ms"
-# `Profile::onward_grant`. Optional, unset by default (trust).
-# onward_grant = "token_exchange"
-# `Profile::onward_indicator`. Optional, unset by default (trust).
-# onward_indicator = "resource"
-# `Profile::onward_parameters`. Optional, unset by default (trust).
-# onward_parameters = {}
-
-# `Profile::app_only`.
-# [[auth.issuer.<name>.profile.app_only]]
-# The claim of `{ claim, value }`. Optional, unset by default (trust).
-# claim = ""
-# The value of `{ claim, value }`. Optional, unset by default (trust).
-# value = ""
-# The claim of `{ absent_claim }`. Optional, unset by default (trust).
-# absent_claim = ""
-# The subjects of `{ subjects }`. Optional, unset by default (trust).
-# subjects = []
-# The `{ sub_is_client = true }` form. Optional, unset by default (trust).
-# sub_is_client = false
-# The claim of `{ differs_from_iss }`. Optional, unset by default (trust).
-# differs_from_iss = ""
-
-# `Profile::guest`.
-# [[auth.issuer.<name>.profile.guest]]
-# The claim of `{ claim, value }`. Optional, unset by default (trust).
-# claim = ""
-# The value of `{ claim, value }`. Optional, unset by default (trust).
-# value = ""
-# The claim of `{ absent_claim }`. Optional, unset by default (trust).
-# absent_claim = ""
-# The subjects of `{ subjects }`. Optional, unset by default (trust).
-# subjects = []
-# The `{ sub_is_client = true }` form. Optional, unset by default (trust).
-# sub_is_client = false
-# The claim of `{ differs_from_iss }`. Optional, unset by default (trust).
-# differs_from_iss = ""
-
-# `Profile::representation`.
-# [auth.issuer.<name>.profile.representation]
-# The claim naming the subject the person represents. Required in its table
-# (trust).
-# claim = ""
-# The claim carrying the ground of the representation, as asserted. Optional,
-# unset by default (trust).
-# ground_claim = ""
-
-# `Profile::scope_claim`.
-# [auth.issuer.<name>.profile.scope_claim]
-# The claim. Required in its table (trust).
-# claim = ""
-# Its JSON form. Optional (trust).
-# form = "string"
-
-# `Profile::app_only_scope_claim`.
-# [auth.issuer.<name>.profile.app_only_scope_claim]
-# The claim. Required in its table (trust).
-# claim = ""
-# Its JSON form. Optional (trust).
-# form = "string"
-
 # The `[auth.issuer.<name>.federation]` table, which a `federation` issuer
 # requires and no other kind takes.
 # [auth.issuer.<name>.federation]
@@ -624,9 +510,8 @@ profile = "sandbox"
 # (trust).
 # person_mapping = ""
 
-# The `[auth.issuer.<name>.attributes]` table: where a `persons` issuer states
-# its professionals' attributes, or a `patients` or `machines` issuer the
-# purpose of use.
+# The `[auth.issuer.<name>.attributes]` table: where a SMART issuer states its
+# professionals' attributes and the purpose of use.
 # [auth.issuer.<name>.attributes]
 # The default sources the table starts from. Optional, unset by default
 # (trust).
@@ -637,7 +522,7 @@ profile = "sandbox"
 # written `system|code`, is read as a purpose of use. Optional (trust).
 # authorization_details_purposes = false
 
-# The `[auth.issuer.<name>.party]` table of a `persons` issuer whose logins are
+# The `[auth.issuer.<name>.party]` table of a SMART issuer whose logins are
 # bound to a party.
 # [auth.issuer.<name>.party]
 # The issuer of the identifiers the key is matched against; no two tables share
@@ -646,7 +531,7 @@ profile = "sandbox"
 # identifier_issuer = ""
 # The type of those identifiers, which declares the key's canonical form:
 # `guid` or `uuid` is compared in lower case, any other type exactly. Empty for
-# the issuer profile's `party_identifier_type`, which `[auth]` sets. Optional
+# `pairwise`, FerroSMART's pairwise `sub`, which `[auth]` sets. Optional
 # (trust).
 # identifier_type = ""
 # The claim naming the groups the token asserts, an array of strings; empty to
@@ -655,9 +540,6 @@ profile = "sandbox"
 # The issuer of the group identifiers the group claim names; set with
 # `group_claim`. Optional (trust).
 # group_identifier_issuer = ""
-# Whether a guest of the issuer is looked up; a guest is not by default.
-# Optional (trust).
-# guests = false
 
 # The assurance level the issuer's tokens carry.
 # [auth.issuer.<name>.assurance]
@@ -670,6 +552,31 @@ profile = "sandbox"
 # The level a request held to the section must carry; none refuses nothing.
 # Optional, unset by default (trust).
 # minimum = "low"
+
+# The `[auth.issuer.<name>.profile]` table: the profile keys set over the
+# defaults.
+# [auth.issuer.<name>.profile]
+# `Profile::max_actor_chain`. Optional, unset by default (trust).
+# max_actor_chain = 0
+# `Profile::token_types`. Optional, unset by default (trust).
+# token_types = []
+# `Profile::required_claims`. Optional, unset by default (trust).
+# required_claims = []
+# `Profile::max_onward_lifetime`, a duration such as `"10min"`. Optional, unset
+# by default (trust).
+# max_onward_lifetime = "500ms"
+# `Profile::onward_grant`. Optional, unset by default (trust).
+# onward_grant = "token_exchange"
+# `Profile::onward_indicator`. Optional, unset by default (trust).
+# onward_indicator = "resource"
+# `Profile::onward_parameters`. Optional, unset by default (trust).
+# onward_parameters = {}
+# `Profile::onward_client_id`. Optional, unset by default (trust).
+# onward_client_id = false
+# `Profile::onward_subject_audience`. Optional, unset by default (trust).
+# onward_subject_audience = false
+# `Profile::onward_preview`. Optional, unset by default (trust).
+# onward_preview = []
 
 # The Basic users of the surface; absent for no Basic.
 #? [auth.basic]
@@ -713,113 +620,6 @@ profile = "sandbox"
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
 # as for the listener. Optional (trust).
-#? min_version = "1.3"
-
-# The `[auth.idp]` table: the vendor adapters a profile may name, each read in
-# a build that compiles it in.
-#? [auth.idp]
-
-# The Microsoft Graph access of the `idp-entra` adapter (`[auth.idp.entra]`),
-# which resolves an Entra ID groups overage.
-#? [auth.idp.entra]
-# The Microsoft Graph root every URL is built from, `https` without a query or
-# a fragment. Optional (infrastructure).
-#? base_url = "https://graph.microsoft.com/v1.0"
-# The adapter's budget for one call, the token fetch and the Graph round trip
-# together; never zero. Optional (infrastructure).
-#? timeout = "2s"
-# The largest Graph answer read; never zero. Optional (infrastructure).
-#? max_response_size = "1MiB"
-# The `securityEnabledOnly` parameter of `getMemberObjects`: `false` reads
-# every group, administrative unit and directory role, `true` only the security
-# groups. Optional (infrastructure).
-#? security_enabled_only = false
-
-# The client credentials grant the Graph token is obtained with, under the
-# Graph permission the deployment grants.
-#? [auth.idp.entra.credentials]
-# The issuer whose metadata names the token endpoint; exclusive with
-# `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
-# itself. Optional (infrastructure).
-#? issuer = ""
-# The token endpoint itself; exclusive with `issuer`. It renders with its
-# userinfo and its query masked. Optional (infrastructure).
-#? token_endpoint = ""
-# The client identifier. Optional (infrastructure).
-#? client_id = ""
-# How the client authenticates. Optional (infrastructure).
-#? client_auth = "client_secret_basic"
-# The client secret, rendered redacted. Optional, unset by default
-# (infrastructure).
-#? client_secret = ""
-# The file holding the client secret. Optional, unset by default
-# (infrastructure).
-#? client_secret_file = ""
-# The PEM file holding the private key of the client assertion under
-# `private_key_jwt`, and of the actor assertion of an onward exchange
-# (`credentials.onward.actor_assertion`) whatever the client authentication.
-# Optional, unset by default (infrastructure).
-#? private_key_file = ""
-# The `kid` the assertion names; the RFC 7638 thumbprint when empty. Optional
-# (infrastructure).
-#? kid = ""
-# The algorithm the assertion is signed with; when unset, by key type, an EC
-# key by its curve (P-256 ES256, P-384 ES384). Optional, unset by default
-# (infrastructure).
-#? assertion_alg = ""
-# The `scope` request parameter; empty for none. Optional (infrastructure).
-#? scope = ""
-# The RFC 8707 resource indicator; empty for none. Optional (infrastructure).
-#? resource = ""
-# The `audience` request parameter; empty for none. Optional (infrastructure).
-#? audience = ""
-# How long before the token expires a new one is fetched. Optional
-# (infrastructure).
-#? refresh_margin = "30s"
-# How long one call to the authorization server may take. Optional
-# (infrastructure).
-#? timeout = "10s"
-# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449). Optional,
-# unset by default (infrastructure).
-#? dpop_key_file = ""
-# Whether the tokens are bound to the client certificate (RFC 8705 §3).
-# Optional (infrastructure).
-#? certificate_bound = false
-# The security profile: `oauth2` (the default) or `fapi2`. Optional
-# (infrastructure).
-#? security_profile = "oauth2"
-# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5). Optional
-# (infrastructure).
-#? mtls_alias_hosts = []
-# The PEM file of the previous assertion key, published, never signing.
-# Optional, unset by default (infrastructure).
-#? previous_private_key_file = ""
-# How long the previous key stays published; `0s` for as long as it is set.
-# Optional (infrastructure).
-#? previous_key_overlap = "0s"
-# The PEM file of the next assertion key, published and never signing.
-# Optional, unset by default (infrastructure).
-#? next_private_key_file = ""
-# The RFC 9396 `authorization_details` JSON text; empty for none. Optional
-# (infrastructure).
-#? authorization_details = ""
-
-# The TLS of the token endpoint connection: trust roots beside the platform's,
-# the client identity presented over mutual TLS (RFC 8705 §2) and the minimum
-# version. The crate reads none of it: a table that names material resolves
-# through the product's `TlsBuilder`.
-#? [auth.idp.entra.credentials.tls]
-# The client certificate chain and its private key, in one PEM. Optional, unset
-# by default (infrastructure).
-#? client_identity = ""
-# A file holding `client_identity`. Optional, unset by default
-# (infrastructure).
-#? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's. Optional, unset by default
-# (infrastructure).
-#? trust_roots_file = ""
-# The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
-# as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
 
 # The SMART App Launch resource-server posture.
@@ -898,8 +698,8 @@ profile = "sandbox"
 #? emergency_access_role = ""
 # The issuers whose role claims may grant `admin_role` and
 # `emergency_access_role`, each the name of an `[auth.issuer.<name>]` table of
-# a `persons` issuer; empty, the default, lets no token grant them. Optional
-# (trust).
+# an issuer other than a `federation` one; empty, the default, lets no token
+# grant them. Optional (trust).
 #? role_issuers = []
 # The Basic user of `[auth.basic.users]` that holds `admin_role` and `[auth]
 # product_scope` from this file (`FERROEHR__AUTHZ__RBAC__FIRST_ADMIN`, default
@@ -934,7 +734,7 @@ profile = "sandbox"
 
 # The healthcare provider this deployment acts for, which every access record
 # of a bound person and every version a person commits name (EHDS Art. 13(4),
-# Annex II 3.2(a)): one provider, or one table per tenant.
+# Annex II 3.2(a)).
 #? [authz.party_binding.provider]
 # The issuer of the identifier. Must set (trust).
 #? issuer = ""
@@ -1038,14 +838,14 @@ profile = "sandbox"
 # The path of the patient's name, a `DV_TEXT` in `identities`. Optional.
 #? name = "/identities[id6]/details[id7]/items[id8]"
 
-# How FerroEHR reads each `persons` issuer's tokens when it creates a
-# provisional `PERSON` at a first login (`[authz.party_binding.issuer]`).
+# How FerroEHR reads each bound issuer's tokens when it creates a provisional
+# `PERSON` at a first login (`[authz.party_binding.issuer]`).
 #? [[authz.party_binding.issuer]]
-# The `persons` issuer the table holds for. It renders with any userinfo
-# masked. Optional (trust).
+# The bound issuer the table holds for. It renders with any userinfo masked.
+# Optional (trust).
 #? issuer = ""
-# The claim the `userName` is read from; the issuer profile's `person_key` when
-# unset. Optional, unset by default (trust).
+# The claim the `userName` is read from; the token's `sub` when unset.
+# Optional, unset by default (trust).
 #? user_name_claim = ""
 # The dotted claim path the identity provider an `admit_idp` admission
 # condition matches is read from. Optional (trust).
@@ -1586,15 +1386,9 @@ profile = "sandbox"
 # token endpoint unless `token_endpoint` is set. It renders with any userinfo
 # masked, as `SecretUrl` renders itself. Optional (infrastructure).
 #? issuer = ""
-# Whose tokens the issuer signs: `persons` (a delegated exchange), `patients`
-# (a patient's own token) or `federation`; required, with no default. Optional,
-# unset by default (infrastructure).
-#? kind = "persons"
-# The preset the issuer's profile starts from. Optional (infrastructure).
-#? preset = "rfc9068"
-# A profile file a deployment supplies, set over the preset; absent for none.
-# Optional, unset by default (infrastructure).
-#? profile_file = ""
+# `federation` for another party's issuer; unset for a SMART authorization
+# server. Optional, unset by default (infrastructure).
+#? kind = "federation"
 # The token endpoint itself; empty to discover it from `issuer`. It renders
 # with its userinfo and its query masked. Optional (infrastructure).
 #? token_endpoint = ""
@@ -1623,50 +1417,15 @@ profile = "sandbox"
 # `false` by default. Optional (infrastructure).
 #? actor_assertion = false
 
-# The `profile` table: the keys set over the preset and the profile file;
-# `max_onward_lifetime` is required in one of the three.
+# The `profile` table: the keys set over the defaults; `max_onward_lifetime` is
+# required.
 #? [audit.fhir_feed.endpoint.credentials.onward.profile]
-# `Profile::person_key`. Optional, unset by default (infrastructure).
-#? person_key = ""
-# `Profile::tenant_claim`. Optional, unset by default (infrastructure).
-#? tenant_claim = ""
-# `Profile::client_claims`. Optional, unset by default (infrastructure).
-#? client_claims = []
-# `Profile::impersonation_marker`. Optional, unset by default (infrastructure).
-#? impersonation_marker = ""
-# `Profile::expect`. Optional, unset by default (infrastructure).
-#? expect = {}
-# `Profile::user_claims`. Optional, unset by default (infrastructure).
-#? user_claims = []
-# `Profile::person_equality`. Optional, unset by default (infrastructure).
-#? person_equality = []
-# `Profile::unstable_claims`. Optional, unset by default (infrastructure).
-#? unstable_claims = []
-# `Profile::first_party_clients`. Optional, unset by default (infrastructure).
-#? first_party_clients = []
-# `Profile::audience_delegates`. Optional, unset by default (infrastructure).
-#? audience_delegates = false
 # `Profile::max_actor_chain`. Optional, unset by default (infrastructure).
 #? max_actor_chain = 0
-# `Profile::act_represents_patient`. Optional, unset by default
-# (infrastructure).
-#? act_represents_patient = false
-# `Profile::fhir_user_patient`. Optional, unset by default (infrastructure).
-#? fhir_user_patient = false
-# `Profile::patient_context`. Optional, unset by default (infrastructure).
-#? patient_context = false
-# `Profile::issuer_client_is_person`. Optional, unset by default
-# (infrastructure).
-#? issuer_client_is_person = false
-# `Profile::party_identifier_type`. Optional, unset by default
-# (infrastructure).
-#? party_identifier_type = ""
 # `Profile::token_types`. Optional, unset by default (infrastructure).
 #? token_types = []
 # `Profile::required_claims`. Optional, unset by default (infrastructure).
 #? required_claims = []
-# `Profile::adapter`. Optional, unset by default (infrastructure).
-#? adapter = ""
 # `Profile::max_onward_lifetime`, a duration such as `"10min"`. Optional, unset
 # by default (infrastructure).
 #? max_onward_lifetime = "500ms"
@@ -1683,72 +1442,6 @@ profile = "sandbox"
 #? onward_subject_audience = false
 # `Profile::onward_preview`. Optional, unset by default (infrastructure).
 #? onward_preview = []
-
-# `Profile::app_only`.
-#? [[audit.fhir_feed.endpoint.credentials.onward.profile.app_only]]
-# The claim of `{ claim, value }`. Optional, unset by default (infrastructure).
-#? claim = ""
-# The value of `{ claim, value }`. Optional, unset by default (infrastructure).
-#? value = ""
-# The claim of `{ absent_claim }`. Optional, unset by default (infrastructure).
-#? absent_claim = ""
-# The subjects of `{ subjects }`. Optional, unset by default (infrastructure).
-#? subjects = []
-# The `{ sub_is_client = true }` form. Optional, unset by default
-# (infrastructure).
-#? sub_is_client = false
-# The claim of `{ differs_from_iss }`. Optional, unset by default
-# (infrastructure).
-#? differs_from_iss = ""
-
-# `Profile::guest`.
-#? [[audit.fhir_feed.endpoint.credentials.onward.profile.guest]]
-# The claim of `{ claim, value }`. Optional, unset by default (infrastructure).
-#? claim = ""
-# The value of `{ claim, value }`. Optional, unset by default (infrastructure).
-#? value = ""
-# The claim of `{ absent_claim }`. Optional, unset by default (infrastructure).
-#? absent_claim = ""
-# The subjects of `{ subjects }`. Optional, unset by default (infrastructure).
-#? subjects = []
-# The `{ sub_is_client = true }` form. Optional, unset by default
-# (infrastructure).
-#? sub_is_client = false
-# The claim of `{ differs_from_iss }`. Optional, unset by default
-# (infrastructure).
-#? differs_from_iss = ""
-
-# `Profile::delegates`.
-#? [[audit.fhir_feed.endpoint.credentials.onward.profile.delegates]]
-# The actor's issuer. Optional, unset by default (infrastructure).
-#? issuer = ""
-# The actor's `sub`. Optional, unset by default (infrastructure).
-#? sub = ""
-# The client. Optional, unset by default (infrastructure).
-#? client = ""
-
-# `Profile::representation`.
-#? [audit.fhir_feed.endpoint.credentials.onward.profile.representation]
-# The claim naming the subject the person represents. Required in its table
-# (infrastructure).
-#? claim = ""
-# The claim carrying the ground of the representation, as asserted. Optional,
-# unset by default (infrastructure).
-#? ground_claim = ""
-
-# `Profile::scope_claim`.
-#? [audit.fhir_feed.endpoint.credentials.onward.profile.scope_claim]
-# The claim. Required in its table (infrastructure).
-#? claim = ""
-# Its JSON form. Optional (infrastructure).
-#? form = "string"
-
-# `Profile::app_only_scope_claim`.
-#? [audit.fhir_feed.endpoint.credentials.onward.profile.app_only_scope_claim]
-# The claim. Required in its table (infrastructure).
-#? claim = ""
-# Its JSON form. Optional (infrastructure).
-#? form = "string"
 
 # What a `federation` issuer asserts, over its preset's defaults;
 # `exchanges_from` and `person_mapping` are required.
@@ -2150,15 +1843,9 @@ subject_namespaces = []
 # token endpoint unless `token_endpoint` is set. It renders with any userinfo
 # masked, as `SecretUrl` renders itself. Optional (infrastructure).
 #? issuer = ""
-# Whose tokens the issuer signs: `persons` (a delegated exchange), `patients`
-# (a patient's own token) or `federation`; required, with no default. Optional,
-# unset by default (infrastructure).
-#? kind = "persons"
-# The preset the issuer's profile starts from. Optional (infrastructure).
-#? preset = "rfc9068"
-# A profile file a deployment supplies, set over the preset; absent for none.
-# Optional, unset by default (infrastructure).
-#? profile_file = ""
+# `federation` for another party's issuer; unset for a SMART authorization
+# server. Optional, unset by default (infrastructure).
+#? kind = "federation"
 # The token endpoint itself; empty to discover it from `issuer`. It renders
 # with its userinfo and its query masked. Optional (infrastructure).
 #? token_endpoint = ""
@@ -2187,50 +1874,15 @@ subject_namespaces = []
 # `false` by default. Optional (infrastructure).
 #? actor_assertion = false
 
-# The `profile` table: the keys set over the preset and the profile file;
-# `max_onward_lifetime` is required in one of the three.
+# The `profile` table: the keys set over the defaults; `max_onward_lifetime` is
+# required.
 #? [terminology.endpoint.credentials.onward.profile]
-# `Profile::person_key`. Optional, unset by default (infrastructure).
-#? person_key = ""
-# `Profile::tenant_claim`. Optional, unset by default (infrastructure).
-#? tenant_claim = ""
-# `Profile::client_claims`. Optional, unset by default (infrastructure).
-#? client_claims = []
-# `Profile::impersonation_marker`. Optional, unset by default (infrastructure).
-#? impersonation_marker = ""
-# `Profile::expect`. Optional, unset by default (infrastructure).
-#? expect = {}
-# `Profile::user_claims`. Optional, unset by default (infrastructure).
-#? user_claims = []
-# `Profile::person_equality`. Optional, unset by default (infrastructure).
-#? person_equality = []
-# `Profile::unstable_claims`. Optional, unset by default (infrastructure).
-#? unstable_claims = []
-# `Profile::first_party_clients`. Optional, unset by default (infrastructure).
-#? first_party_clients = []
-# `Profile::audience_delegates`. Optional, unset by default (infrastructure).
-#? audience_delegates = false
 # `Profile::max_actor_chain`. Optional, unset by default (infrastructure).
 #? max_actor_chain = 0
-# `Profile::act_represents_patient`. Optional, unset by default
-# (infrastructure).
-#? act_represents_patient = false
-# `Profile::fhir_user_patient`. Optional, unset by default (infrastructure).
-#? fhir_user_patient = false
-# `Profile::patient_context`. Optional, unset by default (infrastructure).
-#? patient_context = false
-# `Profile::issuer_client_is_person`. Optional, unset by default
-# (infrastructure).
-#? issuer_client_is_person = false
-# `Profile::party_identifier_type`. Optional, unset by default
-# (infrastructure).
-#? party_identifier_type = ""
 # `Profile::token_types`. Optional, unset by default (infrastructure).
 #? token_types = []
 # `Profile::required_claims`. Optional, unset by default (infrastructure).
 #? required_claims = []
-# `Profile::adapter`. Optional, unset by default (infrastructure).
-#? adapter = ""
 # `Profile::max_onward_lifetime`, a duration such as `"10min"`. Optional, unset
 # by default (infrastructure).
 #? max_onward_lifetime = "500ms"
@@ -2247,72 +1899,6 @@ subject_namespaces = []
 #? onward_subject_audience = false
 # `Profile::onward_preview`. Optional, unset by default (infrastructure).
 #? onward_preview = []
-
-# `Profile::app_only`.
-#? [[terminology.endpoint.credentials.onward.profile.app_only]]
-# The claim of `{ claim, value }`. Optional, unset by default (infrastructure).
-#? claim = ""
-# The value of `{ claim, value }`. Optional, unset by default (infrastructure).
-#? value = ""
-# The claim of `{ absent_claim }`. Optional, unset by default (infrastructure).
-#? absent_claim = ""
-# The subjects of `{ subjects }`. Optional, unset by default (infrastructure).
-#? subjects = []
-# The `{ sub_is_client = true }` form. Optional, unset by default
-# (infrastructure).
-#? sub_is_client = false
-# The claim of `{ differs_from_iss }`. Optional, unset by default
-# (infrastructure).
-#? differs_from_iss = ""
-
-# `Profile::guest`.
-#? [[terminology.endpoint.credentials.onward.profile.guest]]
-# The claim of `{ claim, value }`. Optional, unset by default (infrastructure).
-#? claim = ""
-# The value of `{ claim, value }`. Optional, unset by default (infrastructure).
-#? value = ""
-# The claim of `{ absent_claim }`. Optional, unset by default (infrastructure).
-#? absent_claim = ""
-# The subjects of `{ subjects }`. Optional, unset by default (infrastructure).
-#? subjects = []
-# The `{ sub_is_client = true }` form. Optional, unset by default
-# (infrastructure).
-#? sub_is_client = false
-# The claim of `{ differs_from_iss }`. Optional, unset by default
-# (infrastructure).
-#? differs_from_iss = ""
-
-# `Profile::delegates`.
-#? [[terminology.endpoint.credentials.onward.profile.delegates]]
-# The actor's issuer. Optional, unset by default (infrastructure).
-#? issuer = ""
-# The actor's `sub`. Optional, unset by default (infrastructure).
-#? sub = ""
-# The client. Optional, unset by default (infrastructure).
-#? client = ""
-
-# `Profile::representation`.
-#? [terminology.endpoint.credentials.onward.profile.representation]
-# The claim naming the subject the person represents. Required in its table
-# (infrastructure).
-#? claim = ""
-# The claim carrying the ground of the representation, as asserted. Optional,
-# unset by default (infrastructure).
-#? ground_claim = ""
-
-# `Profile::scope_claim`.
-#? [terminology.endpoint.credentials.onward.profile.scope_claim]
-# The claim. Required in its table (infrastructure).
-#? claim = ""
-# Its JSON form. Optional (infrastructure).
-#? form = "string"
-
-# `Profile::app_only_scope_claim`.
-#? [terminology.endpoint.credentials.onward.profile.app_only_scope_claim]
-# The claim. Required in its table (infrastructure).
-#? claim = ""
-# Its JSON form. Optional (infrastructure).
-#? form = "string"
 
 # What a `federation` issuer asserts, over its preset's defaults;
 # `exchanges_from` and `person_mapping` are required.
@@ -2535,15 +2121,9 @@ subject_namespaces = []
 # token endpoint unless `token_endpoint` is set. It renders with any userinfo
 # masked, as `SecretUrl` renders itself. Optional (infrastructure).
 #? issuer = ""
-# Whose tokens the issuer signs: `persons` (a delegated exchange), `patients`
-# (a patient's own token) or `federation`; required, with no default. Optional,
-# unset by default (infrastructure).
-#? kind = "persons"
-# The preset the issuer's profile starts from. Optional (infrastructure).
-#? preset = "rfc9068"
-# A profile file a deployment supplies, set over the preset; absent for none.
-# Optional, unset by default (infrastructure).
-#? profile_file = ""
+# `federation` for another party's issuer; unset for a SMART authorization
+# server. Optional, unset by default (infrastructure).
+#? kind = "federation"
 # The token endpoint itself; empty to discover it from `issuer`. It renders
 # with its userinfo and its query masked. Optional (infrastructure).
 #? token_endpoint = ""
@@ -2572,50 +2152,15 @@ subject_namespaces = []
 # `false` by default. Optional (infrastructure).
 #? actor_assertion = false
 
-# The `profile` table: the keys set over the preset and the profile file;
-# `max_onward_lifetime` is required in one of the three.
+# The `profile` table: the keys set over the defaults; `max_onward_lifetime` is
+# required.
 #? [pixm.endpoint.credentials.onward.profile]
-# `Profile::person_key`. Optional, unset by default (infrastructure).
-#? person_key = ""
-# `Profile::tenant_claim`. Optional, unset by default (infrastructure).
-#? tenant_claim = ""
-# `Profile::client_claims`. Optional, unset by default (infrastructure).
-#? client_claims = []
-# `Profile::impersonation_marker`. Optional, unset by default (infrastructure).
-#? impersonation_marker = ""
-# `Profile::expect`. Optional, unset by default (infrastructure).
-#? expect = {}
-# `Profile::user_claims`. Optional, unset by default (infrastructure).
-#? user_claims = []
-# `Profile::person_equality`. Optional, unset by default (infrastructure).
-#? person_equality = []
-# `Profile::unstable_claims`. Optional, unset by default (infrastructure).
-#? unstable_claims = []
-# `Profile::first_party_clients`. Optional, unset by default (infrastructure).
-#? first_party_clients = []
-# `Profile::audience_delegates`. Optional, unset by default (infrastructure).
-#? audience_delegates = false
 # `Profile::max_actor_chain`. Optional, unset by default (infrastructure).
 #? max_actor_chain = 0
-# `Profile::act_represents_patient`. Optional, unset by default
-# (infrastructure).
-#? act_represents_patient = false
-# `Profile::fhir_user_patient`. Optional, unset by default (infrastructure).
-#? fhir_user_patient = false
-# `Profile::patient_context`. Optional, unset by default (infrastructure).
-#? patient_context = false
-# `Profile::issuer_client_is_person`. Optional, unset by default
-# (infrastructure).
-#? issuer_client_is_person = false
-# `Profile::party_identifier_type`. Optional, unset by default
-# (infrastructure).
-#? party_identifier_type = ""
 # `Profile::token_types`. Optional, unset by default (infrastructure).
 #? token_types = []
 # `Profile::required_claims`. Optional, unset by default (infrastructure).
 #? required_claims = []
-# `Profile::adapter`. Optional, unset by default (infrastructure).
-#? adapter = ""
 # `Profile::max_onward_lifetime`, a duration such as `"10min"`. Optional, unset
 # by default (infrastructure).
 #? max_onward_lifetime = "500ms"
@@ -2632,72 +2177,6 @@ subject_namespaces = []
 #? onward_subject_audience = false
 # `Profile::onward_preview`. Optional, unset by default (infrastructure).
 #? onward_preview = []
-
-# `Profile::app_only`.
-#? [[pixm.endpoint.credentials.onward.profile.app_only]]
-# The claim of `{ claim, value }`. Optional, unset by default (infrastructure).
-#? claim = ""
-# The value of `{ claim, value }`. Optional, unset by default (infrastructure).
-#? value = ""
-# The claim of `{ absent_claim }`. Optional, unset by default (infrastructure).
-#? absent_claim = ""
-# The subjects of `{ subjects }`. Optional, unset by default (infrastructure).
-#? subjects = []
-# The `{ sub_is_client = true }` form. Optional, unset by default
-# (infrastructure).
-#? sub_is_client = false
-# The claim of `{ differs_from_iss }`. Optional, unset by default
-# (infrastructure).
-#? differs_from_iss = ""
-
-# `Profile::guest`.
-#? [[pixm.endpoint.credentials.onward.profile.guest]]
-# The claim of `{ claim, value }`. Optional, unset by default (infrastructure).
-#? claim = ""
-# The value of `{ claim, value }`. Optional, unset by default (infrastructure).
-#? value = ""
-# The claim of `{ absent_claim }`. Optional, unset by default (infrastructure).
-#? absent_claim = ""
-# The subjects of `{ subjects }`. Optional, unset by default (infrastructure).
-#? subjects = []
-# The `{ sub_is_client = true }` form. Optional, unset by default
-# (infrastructure).
-#? sub_is_client = false
-# The claim of `{ differs_from_iss }`. Optional, unset by default
-# (infrastructure).
-#? differs_from_iss = ""
-
-# `Profile::delegates`.
-#? [[pixm.endpoint.credentials.onward.profile.delegates]]
-# The actor's issuer. Optional, unset by default (infrastructure).
-#? issuer = ""
-# The actor's `sub`. Optional, unset by default (infrastructure).
-#? sub = ""
-# The client. Optional, unset by default (infrastructure).
-#? client = ""
-
-# `Profile::representation`.
-#? [pixm.endpoint.credentials.onward.profile.representation]
-# The claim naming the subject the person represents. Required in its table
-# (infrastructure).
-#? claim = ""
-# The claim carrying the ground of the representation, as asserted. Optional,
-# unset by default (infrastructure).
-#? ground_claim = ""
-
-# `Profile::scope_claim`.
-#? [pixm.endpoint.credentials.onward.profile.scope_claim]
-# The claim. Required in its table (infrastructure).
-#? claim = ""
-# Its JSON form. Optional (infrastructure).
-#? form = "string"
-
-# `Profile::app_only_scope_claim`.
-#? [pixm.endpoint.credentials.onward.profile.app_only_scope_claim]
-# The claim. Required in its table (infrastructure).
-#? claim = ""
-# Its JSON form. Optional (infrastructure).
-#? form = "string"
 
 # What a `federation` issuer asserts, over its preset's defaults;
 # `exchanges_from` and `person_mapping` are required.
@@ -2922,15 +2401,9 @@ subject_namespaces = []
 # token endpoint unless `token_endpoint` is set. It renders with any userinfo
 # masked, as `SecretUrl` renders itself. Optional (infrastructure).
 #? issuer = ""
-# Whose tokens the issuer signs: `persons` (a delegated exchange), `patients`
-# (a patient's own token) or `federation`; required, with no default. Optional,
-# unset by default (infrastructure).
-#? kind = "persons"
-# The preset the issuer's profile starts from. Optional (infrastructure).
-#? preset = "rfc9068"
-# A profile file a deployment supplies, set over the preset; absent for none.
-# Optional, unset by default (infrastructure).
-#? profile_file = ""
+# `federation` for another party's issuer; unset for a SMART authorization
+# server. Optional, unset by default (infrastructure).
+#? kind = "federation"
 # The token endpoint itself; empty to discover it from `issuer`. It renders
 # with its userinfo and its query masked. Optional (infrastructure).
 #? token_endpoint = ""
@@ -2959,50 +2432,15 @@ subject_namespaces = []
 # `false` by default. Optional (infrastructure).
 #? actor_assertion = false
 
-# The `profile` table: the keys set over the preset and the profile file;
-# `max_onward_lifetime` is required in one of the three.
+# The `profile` table: the keys set over the defaults; `max_onward_lifetime` is
+# required.
 #? [pix.endpoint.credentials.onward.profile]
-# `Profile::person_key`. Optional, unset by default (infrastructure).
-#? person_key = ""
-# `Profile::tenant_claim`. Optional, unset by default (infrastructure).
-#? tenant_claim = ""
-# `Profile::client_claims`. Optional, unset by default (infrastructure).
-#? client_claims = []
-# `Profile::impersonation_marker`. Optional, unset by default (infrastructure).
-#? impersonation_marker = ""
-# `Profile::expect`. Optional, unset by default (infrastructure).
-#? expect = {}
-# `Profile::user_claims`. Optional, unset by default (infrastructure).
-#? user_claims = []
-# `Profile::person_equality`. Optional, unset by default (infrastructure).
-#? person_equality = []
-# `Profile::unstable_claims`. Optional, unset by default (infrastructure).
-#? unstable_claims = []
-# `Profile::first_party_clients`. Optional, unset by default (infrastructure).
-#? first_party_clients = []
-# `Profile::audience_delegates`. Optional, unset by default (infrastructure).
-#? audience_delegates = false
 # `Profile::max_actor_chain`. Optional, unset by default (infrastructure).
 #? max_actor_chain = 0
-# `Profile::act_represents_patient`. Optional, unset by default
-# (infrastructure).
-#? act_represents_patient = false
-# `Profile::fhir_user_patient`. Optional, unset by default (infrastructure).
-#? fhir_user_patient = false
-# `Profile::patient_context`. Optional, unset by default (infrastructure).
-#? patient_context = false
-# `Profile::issuer_client_is_person`. Optional, unset by default
-# (infrastructure).
-#? issuer_client_is_person = false
-# `Profile::party_identifier_type`. Optional, unset by default
-# (infrastructure).
-#? party_identifier_type = ""
 # `Profile::token_types`. Optional, unset by default (infrastructure).
 #? token_types = []
 # `Profile::required_claims`. Optional, unset by default (infrastructure).
 #? required_claims = []
-# `Profile::adapter`. Optional, unset by default (infrastructure).
-#? adapter = ""
 # `Profile::max_onward_lifetime`, a duration such as `"10min"`. Optional, unset
 # by default (infrastructure).
 #? max_onward_lifetime = "500ms"
@@ -3019,72 +2457,6 @@ subject_namespaces = []
 #? onward_subject_audience = false
 # `Profile::onward_preview`. Optional, unset by default (infrastructure).
 #? onward_preview = []
-
-# `Profile::app_only`.
-#? [[pix.endpoint.credentials.onward.profile.app_only]]
-# The claim of `{ claim, value }`. Optional, unset by default (infrastructure).
-#? claim = ""
-# The value of `{ claim, value }`. Optional, unset by default (infrastructure).
-#? value = ""
-# The claim of `{ absent_claim }`. Optional, unset by default (infrastructure).
-#? absent_claim = ""
-# The subjects of `{ subjects }`. Optional, unset by default (infrastructure).
-#? subjects = []
-# The `{ sub_is_client = true }` form. Optional, unset by default
-# (infrastructure).
-#? sub_is_client = false
-# The claim of `{ differs_from_iss }`. Optional, unset by default
-# (infrastructure).
-#? differs_from_iss = ""
-
-# `Profile::guest`.
-#? [[pix.endpoint.credentials.onward.profile.guest]]
-# The claim of `{ claim, value }`. Optional, unset by default (infrastructure).
-#? claim = ""
-# The value of `{ claim, value }`. Optional, unset by default (infrastructure).
-#? value = ""
-# The claim of `{ absent_claim }`. Optional, unset by default (infrastructure).
-#? absent_claim = ""
-# The subjects of `{ subjects }`. Optional, unset by default (infrastructure).
-#? subjects = []
-# The `{ sub_is_client = true }` form. Optional, unset by default
-# (infrastructure).
-#? sub_is_client = false
-# The claim of `{ differs_from_iss }`. Optional, unset by default
-# (infrastructure).
-#? differs_from_iss = ""
-
-# `Profile::delegates`.
-#? [[pix.endpoint.credentials.onward.profile.delegates]]
-# The actor's issuer. Optional, unset by default (infrastructure).
-#? issuer = ""
-# The actor's `sub`. Optional, unset by default (infrastructure).
-#? sub = ""
-# The client. Optional, unset by default (infrastructure).
-#? client = ""
-
-# `Profile::representation`.
-#? [pix.endpoint.credentials.onward.profile.representation]
-# The claim naming the subject the person represents. Required in its table
-# (infrastructure).
-#? claim = ""
-# The claim carrying the ground of the representation, as asserted. Optional,
-# unset by default (infrastructure).
-#? ground_claim = ""
-
-# `Profile::scope_claim`.
-#? [pix.endpoint.credentials.onward.profile.scope_claim]
-# The claim. Required in its table (infrastructure).
-#? claim = ""
-# Its JSON form. Optional (infrastructure).
-#? form = "string"
-
-# `Profile::app_only_scope_claim`.
-#? [pix.endpoint.credentials.onward.profile.app_only_scope_claim]
-# The claim. Required in its table (infrastructure).
-#? claim = ""
-# Its JSON form. Optional (infrastructure).
-#? form = "string"
 
 # What a `federation` issuer asserts, over its preset's defaults;
 # `exchanges_from` and `person_mapping` are required.

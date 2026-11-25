@@ -86,7 +86,6 @@ batch_columns! {
     reviews: Option<&'static str>,
     contents: Option<serde_json::Value>,
     bindings: Option<&'static str>,
-    guests: bool,
     parties: Option<serde_json::Value>,
     groups: Option<serde_json::Value>,
     providers: Option<serde_json::Value>,
@@ -163,9 +162,8 @@ impl<'a> BatchColumns<'a> {
         self.lookups_failed.push(event.subject_lookup_failed);
         self.reviews.push(event.review.map(Confidentiality::code));
         self.contents.push(category_content_json(event)?);
-        let (binding, guest, json) = binding_columns(event);
+        let (binding, json) = binding_columns(event);
         self.bindings.push(binding);
-        self.guests.push(guest);
         let [
             party,
             groups,
@@ -264,7 +262,6 @@ impl BatchColumns<'_> {
             render_policy: policy,
             search_tokens: tokens,
             binding: self.bindings[i],
-            guest: self.guests[i],
             party: self.parties[i].as_ref(),
             party_groups: self.groups[i].as_ref(),
             provider: self.providers[i].as_ref(),

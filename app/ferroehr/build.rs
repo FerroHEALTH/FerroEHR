@@ -3,11 +3,14 @@
 
 //! Capture build-time provenance for `/management/info` and the
 //! `ferroehr_build_info` gauge: the git commit, the version the server
-//! reports, the build timestamp, the `rustc` version, and the release date the support period runs from. All are best-effort — a checkout without git, or a build
-//! from a tarball, degrades to `unknown` rather than failing the build.
+//! reports, the build timestamp, the `rustc` version, and the release date the
+//! support period runs from. All are best-effort: a checkout without git, or a
+//! build from a tarball, degrades to `unknown` rather than failing the build.
+//!
+//! Every value is a function of the checkout and the environment, so an
+//! unchanged tree reruns nothing and recompiles nothing.
 
 use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 #[path = "src/telemetry/conformance_record.rs"]
 mod conformance_record;
@@ -16,9 +19,7 @@ mod conformance_record;
     clippy::disallowed_methods,
     reason = "a build script's ONLY input channel is the process environment \
               Cargo populates for it (Cargo book, build-scripts §Inputs), so the \
-              config tree cannot apply here; `SystemTime` is likewise the right \
-              clock for a build-time epoch — jiff is a runtime dependency, not a \
-              build-dependency"
+              config tree cannot apply here"
 )]
 fn main() {
     // Git short SHA: the OCI-standard REVISION value (the same one that fills
@@ -53,18 +54,21 @@ fn main() {
     };
     println!("cargo:rustc-env=FERROEHR_SERVER_VERSION={server_version}");
 
-    // Build timestamp (epoch seconds), honouring SOURCE_DATE_EPOCH for
-    // reproducible builds; rendered to an ISO-8601 string at runtime (jiff).
+    // NOTE: reproducible-builds.org SOURCE_DATE_EPOCH, falling back to the
+    // commit time it recommends, so the timestamp moves only with the tree.
     let epoch = std::env::var("SOURCE_DATE_EPOCH")
         .ok()
-        .and_then(|v| v.parse::<i64>().ok())
-        .unwrap_or_else(|| {
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
+        .filter(|v| v.parse::<i64>().is_ok())
+        .or_else(|| {
+            Command::new("git")
+                .args(["log", "-1", "--format=%ct", "HEAD"])
+                .output()
                 .ok()
-                .and_then(|d| i64::try_from(d.as_secs()).ok())
-                .unwrap_or(0)
-        });
+                .filter(|o| o.status.success())
+                .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
+                .filter(|v| v.parse::<i64>().is_ok())
+        })
+        .unwrap_or_default();
     println!("cargo:rustc-env=FERROEHR_BUILD_EPOCH={epoch}");
 
     // rustc version string.
@@ -137,23 +141,7 @@ fn main() {
     println!("cargo:rerun-if-env-changed=REVISION");
     println!("cargo:rerun-if-env-changed=FERROEHR_RELEASE_TAG");
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
-    // NOTE: in a linked worktree `.git` is a file, so a fixed `../../.git/HEAD`
-    // never exists and Cargo reran this script on every build; git names the
-    // real places (git-rev-parse `--git-dir`, `--git-common-dir`).
-    for (flag, entries) in [
-        ("--git-dir", &["HEAD"][..]),
-        ("--git-common-dir", &["refs", "packed-refs"][..]),
-    ] {
-        let Some(dir) = git_path(flag) else {
-            continue;
-        };
-        for entry in entries {
-            let path = std::path::Path::new(&dir).join(entry);
-            if path.exists() {
-                println!("cargo:rerun-if-changed={}", path.display());
-            }
-        }
-    }
+    watch_checked_out_ref();
     // `sqlx::migrate!` cannot see a newly added file on stable, and the
     // directives above switch off Cargo's rerun-on-any-change, so the
     // embedded migration sets follow the directory here
@@ -161,11 +149,42 @@ fn main() {
     println!("cargo:rerun-if-changed=migrations");
 }
 
-/// The absolute path git reports for `flag` (`--git-dir` or
-/// `--git-common-dir`); `None` outside a git checkout or without git.
-fn git_path(flag: &str) -> Option<String> {
+/// Rerun this script when the checked-out commit moves, so `REVISION` names it.
+fn watch_checked_out_ref() {
+    // NOTE: Cargo book build-scripts `rerun-if-changed`, a directory is scanned whole, so the
+    // script watches only `HEAD` and the one ref it names (#6512), as git places them
+    // (git-rev-parse `--git-dir`, `--git-common-dir`, `--symbolic-full-name`).
+    let head = git_rev_parse(&["--symbolic-full-name", "HEAD"]).filter(|name| name != "HEAD");
+    let git_dir = git_rev_parse(&["--path-format=absolute", "--git-dir"]);
+    let common = git_rev_parse(&["--path-format=absolute", "--git-common-dir"]);
+    let watched = [
+        (git_dir, Some("HEAD".to_owned())),
+        (common.clone(), head),
+        (common, Some("packed-refs".to_owned())),
+    ];
+    for (dir, entry) in watched {
+        let (Some(dir), Some(entry)) = (dir, entry) else {
+            continue;
+        };
+        let path = std::path::Path::new(&dir).join(entry);
+        // A packed ref is written loose by its next commit, beside its siblings.
+        let path = if path.exists() {
+            Some(path)
+        } else {
+            path.parent().map(std::path::Path::to_path_buf)
+        };
+        if let Some(path) = path.filter(|path| path.exists()) {
+            println!("cargo:rerun-if-changed={}", path.display());
+        }
+    }
+}
+
+/// What `git rev-parse` prints for `args`; `None` outside a git checkout or
+/// without git.
+fn git_rev_parse(args: &[&str]) -> Option<String> {
     Command::new("git")
-        .args(["rev-parse", "--path-format=absolute", flag])
+        .arg("rev-parse")
+        .args(args)
         .output()
         .ok()
         .filter(|o| o.status.success())

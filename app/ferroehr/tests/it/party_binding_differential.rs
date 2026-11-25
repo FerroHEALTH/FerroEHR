@@ -375,7 +375,7 @@ async fn applied(db: &testkit::TestDb, replicas: &[&FerroEhrService; 2], start: 
 #[tokio::test]
 async fn every_held_lookup_equals_the_store_through_a_sequence_of_party_writes() {
     let (db, first) = crate::fixtures::service().await;
-    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false)]).await;
+    crate::fixtures::open_key_spaces(&db, &[LOGIN]).await;
     let first = first.with_binding_mapping(mapping());
     let second =
         FerroEhrService::new(&DomainPools::from_shared(&db.pool())).with_binding_mapping(mapping());
