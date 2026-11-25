@@ -89,15 +89,16 @@ impl FerroEhrService {
         Ok(id.value)
     }
 
-    /// Converts a stored ADL 1.4 archetype (by `ARCHETYPE_ID`) to ADL 2: the
-    /// ADL 2 source, the conversion log and the conversion details, as the one
-    /// root of an [`OptConversion`] with no fill structure.
+    /// Converts a stored ADL 1.4 archetype (by `ARCHETYPE_ID`) to at-coded
+    /// ADL 2.4: the ADL 2 source, the conversion log and the conversion
+    /// details, as the one root of an [`OptConversion`] with no fill structure.
     ///
-    /// The stored artefact is 1.4 source text on `archetype_store`, parsed in
-    /// the 1.4 dialect and handed to [`convert`]. A specialised source is first
-    /// checked against its stored parent's terminology, then base-converted,
-    /// renumbered against its own codes. Identity is
-    /// case-insensitive (BASE master05 §Composite Identifiers and Case).
+    /// The conversion keeps every 1.4 code, so a composition recorded against
+    /// the 1.4 archetype validates against a template over it
+    /// (`ADL2/master01-preface.adoc` §Backward Compatibility). A specialised
+    /// source is first checked against its stored parent's terminology.
+    /// Identity is case-insensitive (BASE master05 §Composite Identifiers and
+    /// Case).
     ///
     /// NOTE: no openEHR spec governs 1.4 to 2 conversion: our own design, served
     /// as the extension route `GET /definition/archetype/adl1.4/{archetype_id}/adl2`.

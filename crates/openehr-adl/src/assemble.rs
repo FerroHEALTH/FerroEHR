@@ -35,6 +35,7 @@ use crate::odin::{
 use crate::parse::{Dialect, parse_definition_body};
 
 use self::description::assemble_description;
+use crate::hrid::set_release_version;
 use crate::rules::parse_artefact_rules;
 use crate::source::{ArtefactKind, ArtefactMeta, SourceArtefact, parse_source};
 
@@ -138,7 +139,7 @@ pub(crate) fn assemble(
         return Err(errors);
     }
 
-    Ok(build_archetype(BuildInputs {
+    let mut archetype = build_archetype(BuildInputs {
         art,
         definition,
         terminology,
@@ -149,7 +150,40 @@ pub(crate) fn assemble(
         annotations,
         rm_overlay,
         overlays,
-    }))
+    });
+    if dialect == Dialect::Adl14 {
+        take_adl14_revision(&mut archetype);
+    }
+    Ok(archetype)
+}
+
+/// Gives an ADL 1.4 archetype the full version its `revision` item states, the
+/// "Full version identifier to compensate for only major version numbering in
+/// ADL 1.4 identifiers" (`ADL1.4/masterAppB-extended_metadata.adoc`
+/// §Standardised Items), so it is held and referenced under that identity
+/// (BASE `master07-referencing.adoc` §Referencing). A revision of another
+/// major version than the header's leaves the header id.
+fn take_adl14_revision(archetype: &mut Archetype) {
+    let Archetype::AuthoredArchetype(authored) = archetype else {
+        return;
+    };
+    let AuthoredArchetype::AuthoredArchetype(data) = authored.as_mut() else {
+        return;
+    };
+    let Some(revision) = data
+        .description
+        .as_ref()
+        .and_then(|d| d.other_details.as_ref())
+        .and_then(|o| o.get("revision"))
+        .map(|r| r.trim().to_owned())
+    else {
+        return;
+    };
+    let mut full = data.archetype_id.clone();
+    set_release_version(&mut full, &revision);
+    if full.major_version() == data.archetype_id.major_version() {
+        data.archetype_id = full;
+    }
 }
 
 /// cADL-parse the root `definition` span, span-offsetting errors to the whole

@@ -5,7 +5,9 @@
 //! §Physical Archetype Identifier).
 
 use openehr_am::v2_4::aom2::archetype::archetype_hrid::ArchetypeHrid;
-use openehr_am::v2_4::aom2::archetype::archetype_hrid_impl::HridError;
+use openehr_am::v2_4::aom2::archetype::archetype_hrid_impl::{
+    HridError, version_status_of_modifier,
+};
 
 /// Parse an archetype HRID, or a version-partial specialise reference, into an
 /// [`ArchetypeHrid`], normalising a partial version (`master07.05`).
@@ -117,6 +119,42 @@ pub fn is_archetype_id(id: &str) -> bool {
     }
     // concept.version — must have a version segment starting with a digit or 'v'
     rest.contains('.') && rest.split('.').next_back().is_some_and(|_| true)
+}
+
+/// Write an ADL 1.4 `revision` string (`1.1.0`, `0.0.1-alpha`) into `hrid`'s
+/// version fields.
+pub(crate) fn set_release_version(hrid: &mut ArchetypeHrid, version: &str) {
+    let (numeric, status, build) = split_version(version);
+    hrid.release_version = numeric;
+    hrid.version_status = version_status_of_modifier(status)
+        .unwrap_or_else(|| openehr_base::prelude::VersionStatus::from_wire(status));
+    hrid.build_count = build;
+}
+
+/// Split a 1.4 revision string into `(numeric, version status, build count)`.
+fn split_version(v: &str) -> (String, &'static str, String) {
+    for (marker, status) in [("-rc", "rc"), ("-alpha", "alpha"), ("-beta", "beta")] {
+        if let Some((numeric, tail)) = v.split_once(marker) {
+            let numeric = normalise_numeric(numeric);
+            let build = tail.strip_prefix('.').unwrap_or("").to_owned();
+            return (numeric, status, build);
+        }
+    }
+    (normalise_numeric(v), "", String::new())
+}
+
+/// Pad a partial `major[.minor[.patch]]` string to a full three-part version.
+fn normalise_numeric(v: &str) -> String {
+    let mut parts = v.split('.');
+    let major = parts.next().unwrap_or("1");
+    let minor = parts.next().unwrap_or("0");
+    let patch = parts.next().unwrap_or("0");
+    format!(
+        "{}.{}.{}",
+        if major.is_empty() { "1" } else { major },
+        if minor.is_empty() { "0" } else { minor },
+        if patch.is_empty() { "0" } else { patch }
+    )
 }
 
 #[cfg(test)]

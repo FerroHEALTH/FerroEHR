@@ -12,6 +12,7 @@
 
 mod adl14_aom14_revision;
 mod adl14_assertions;
+mod adl14_at_coded;
 mod adl14_cadl_gates;
 mod adl14_cnf_fixture_slot;
 mod adl14_conversion;

@@ -36,7 +36,7 @@ else; each helper has exactly ONE home.
 | `parse/values` | value lists, `\|…\|` intervals, endpoints, the `CadlValue` kind trait |
 | `parse/patterns` | the date/time constraint-pattern validators |
 | `rules` | the `rules` section + slot assertions (BEL over `openehr_lang`) — full beom trees, plus the `slot_assertion_path`/`slot_assertion_regex` tree accessors every consumer reads through |
-| `assemble` | fold the ODIN sections + `definition` + `rules` into a complete `Archetype` (`parse_artefact(src, dialect)`) |
+| `assemble` | fold the ODIN sections + `definition` + `rules` into a complete `Archetype` (`parse_artefact(src, dialect)`); a 1.4 archetype takes the full version its `revision` item states as its identity |
 | `assemble/description` | the `description` section into the BASE resource types; an ADL 1.4 item `copyright` kept in the item's `other_details` for the converter |
 | `meta` | the read-only artefact summary accessors (`ArtefactSummary`/`summarize`, `regression_tag`) |
 
@@ -74,7 +74,7 @@ else; each helper has exactly ONE home.
 | `adl14/lower` | the 1.4-only cADL productions (qualified/listed term constraints, inline dADL domain blocks) |
 | `adl14/domain` | the inline dADL domain-block lowering to `DV_QUANTITY`/`DV_ORDINAL`/… |
 | `adl14/term_constraint` | the 1.4 terminology-constraint rewrite shared by the converter and `create_opt` (single code → at-code, list → minted value set, external → bound at-code, no codes → one open ac-code per terminology) |
-| `adl14/code_shift` | the 1.4 → 2 code numbering (`shift_code`) and the ac allocation floor |
+| `adl14/code_shift` | the 1.4 → 2 code spelling (`recode`: kept as written at-coded, `shift_code` id-coded) and the ac allocation floor |
 | `adl14/quantity_property` | the ONE owner of the AOM 1.4 `DV_QUANTITY.property` pseudo-attribute: the converter drop and the ADL 2 `VCARM` advice read it |
 | `adl14/specialised_codes` | `check_introduced_codes`: the AOM 1.4 rule that a specialisation's new term codes carry its depth in dots, judged against the 1.4 parent |
 | `adl14/convert` | the 1.4→2 conversion core: code planning, node-id renumbering, terminology rebuild |
@@ -201,6 +201,10 @@ else; each helper has exactly ONE home.
 - **ADL 1.4→2 conversion (`adl14/`) has NO spec basis** — the whole module is
   our own design (archie is prior art only), flagged as such; every heuristic
   is pinned by the paired `upgrade_from_14` corpus fixtures, not a spec clause.
+  `ConvertConfig::coding` picks the node code system: at-coded ADL 2.4 (the
+  default, the openEHR primary code system, `AOM2` `ADL_CODE_DEFINITIONS`)
+  keeps every 1.4 code as written so 1.4 data stays valid; id-coded ADL2 is
+  the spec-defined system the `upgrade_from_14` reference outputs use.
   `ConvertConfig::collapse_specialised_codes` collapses dotted specialised
   codes to a depth-0 flat code space for a standalone flattened-OPT root (the
   differential lineage is unresolvable there); reused 1.4 node codes are

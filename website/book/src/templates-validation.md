@@ -325,6 +325,18 @@ lacks a term code the archetype introduces without its specialisation dots
 the dots on every code a specialisation adds. The routes only read, so the
 read-only role may call them.
 
+Each converted archetype is at-coded ADL 2.4: it keeps every ADL 1.4 node
+and value code as written, so a composition recorded against the ADL 1.4
+archetype validates unchanged against a template built over the conversion.
+The ADL 2 specification makes the at-coded system the openEHR primary code
+system and states that at-coded ADL 2.4 is fully backwards compatible with
+RM data created from ADL 1.4 archetypes. A converted archetype carries the
+full version its ADL 1.4 `revision` item states, so
+`openEHR-EHR-EVALUATION.device_summary.v0` with revision `0.0.1-alpha`
+converts to `openEHR-EHR-EVALUATION.device_summary.v0.0.1-alpha`. A template
+names a pre-release such as this one by that full identifier, since a
+major-version reference never reaches an alpha or beta version.
+
 The description meta-data follows the conversion rules of the AOM 2
 specification (Release 2.3 changes): each line of a translation's
 `other_contributors` detail becomes one entry of that translation's

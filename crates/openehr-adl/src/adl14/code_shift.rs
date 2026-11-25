@@ -1,28 +1,42 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADL 1.4 → ADL 2 code shift: a 1.4 at-code becomes the ADL 2 code one
-//! number up, and the converter allocates new value-set codes above every
-//! code the source already uses. No openEHR spec governs the numbering: it is
-//! pinned by the ADL 2 reference conversion fixtures.
+//! The ADL 1.4 → ADL 2 code spelling: at-coded ADL2 keeps every 1.4 code as
+//! written, id-coded ADL2 takes the code one number up, and the converter
+//! allocates new value-set codes above every code the source already uses. No
+//! openEHR spec governs the id-coded numbering: it is pinned by the ADL 2
+//! reference conversion fixtures.
 
 use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::definitions::adl_code_definitions::AdlCodeDefinitionsData;
 use openehr_am::v2_4::aom2::terminology::archetype_terminology::ArchetypeTerminology;
 
 use crate::adl14::walk::walk_constraints;
+use crate::codes::NodeCoding;
+
+/// The ADL2 spelling of a 1.4 code with the given `prefix` (`"id"`, `"at"`,
+/// `"ac"`) under `coding`: at-coded ADL2 uses the ADL 1.4 code system
+/// (`ADL2/master01-preface.adoc` §ADL 2.4), so the code stays as written;
+/// id-coded ADL2 takes [`shift_code`].
+pub(super) fn recode(coding: NodeCoding, code: &str, prefix: &str) -> String {
+    match coding {
+        NodeCoding::At => code.to_owned(),
+        NodeCoding::Id => shift_code(code, prefix),
+    }
+}
 
 /// The highest ac-number the source already uses, across its terminology
 /// entries and its bare constraint refs.
 pub(super) fn highest_ac_number(
     definition: &CComplexObject,
     terminology: &ArchetypeTerminology,
+    coding: NodeCoding,
 ) -> i64 {
     let mut highest = 0i64;
     let mut track = |code: &str| {
         if AdlCodeDefinitionsData::is_value_set_code(code)
             && !code.contains('.')
-            && let Some(n) = first_num(&shift_code(code, "ac"))
+            && let Some(n) = first_num(&recode(coding, code, "ac"))
         {
             highest = highest.max(n);
         }
