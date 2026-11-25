@@ -99,7 +99,7 @@ type Breaking = (&'static str, fn(&mut Value));
 
 #[test]
 fn each_entry_invariant_refuses_an_entry_that_breaks_it() {
-    let cases: [Breaking; 14] = [
+    let cases: [Breaking; 15] = [
         ("ACCESS_LOG_RECORD.System_id_valid", |e| {
             e["system_id"] = json!("");
         }),
@@ -146,6 +146,11 @@ fn each_entry_invariant_refuses_an_entry_that_breaks_it() {
         ("ACCESS_AUTHORISATION.Kind_valid", |e| {
             e["authorisations"] = json!([{ "_type": "ACCESS_AUTHORISATION",
                 "kind": coded("openehr_access", "hunch", "hunch") }]);
+        }),
+        ("ACCESS_AUTHORISATION.Reason_valid", |e| {
+            e["authorisations"] = json!([{ "_type": "ACCESS_AUTHORISATION",
+                "kind": coded("openehr_access", "role", "role"),
+                "reason": "a reason on a ground that states none" }]);
         }),
     ];
     for (invariant, breaking) in cases {

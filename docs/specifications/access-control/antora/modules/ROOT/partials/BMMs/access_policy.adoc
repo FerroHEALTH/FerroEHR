@@ -149,6 +149,19 @@
         "upper_unbounded": true
       }
     },
+    "justifications": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "justifications",
+      "documentation": "The grounds on which a caller is admitted outside its care relationships, by a declared purpose of use and a stated reason. Void admits nobody on a justification.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_JUSTIFICATION"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
     "concealed_confidentialities": {
       "_type": "P_BMM_CONTAINER_PROPERTY",
       "name": "concealed_confidentialities",
@@ -252,6 +265,7 @@
     "Attested_care_valid": "attested_care /= Void implies not attested_care.is_empty",
     "Episode_shared_valid": "episode_shared /= Void implies not episode_shared.is_empty",
     "Conflict_rules_valid": "conflict_rules /= Void implies not conflict_rules.is_empty",
+    "Justifications_valid": "justifications /= Void implies not justifications.is_empty",
     "Concealed_valid": "concealed_confidentialities /= Void implies (not concealed_confidentialities.is_empty and concealed_confidentialities.for_all (c | c.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality)))",
     "Value_sets_valid": "value_sets /= Void implies not value_sets.is_empty"
   }

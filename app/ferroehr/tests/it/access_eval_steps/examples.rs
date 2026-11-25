@@ -10,7 +10,7 @@ use serde_json::json;
 
 use super::*;
 use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess};
-use ferroehr::access_eval::procedure::{Emergency, Lifted};
+use ferroehr::access_eval::procedure::Lifted;
 
 /// The ex-partner: a consent deny naming Dr B refuses him, and lifts for his
 /// declared emergency with the break-glass role, which marks the access.
@@ -29,14 +29,7 @@ fn the_ex_partner() {
         Outcome::Refused(Refusal::ConsentDenied),
         "Dr B",
     );
-    let emergency = Asked {
-        emergency: Emergency {
-            declared: true,
-            break_glass: true,
-            opt_out_override: false,
-        },
-        ..read(Some("ETREAT"))
-    };
+    let emergency = break_glass(read(Some("ETREAT")));
     let lifted = case.verdict(&dr_b, emergency);
     assert_outcome(&lifted, &Item::Ehr, Outcome::Admit, "Dr B in an emergency");
     assert!(
@@ -96,7 +89,7 @@ fn the_ward_with_its_grace_period() {
             Asking {
                 operation: OperationClass::Read,
                 purpose: Some("TREAT".to_owned()),
-                emergency: Emergency::default(),
+                reason: None,
                 episodes: None,
             },
             InForce {
@@ -147,7 +140,7 @@ fn a_care_relationship_admits_its_carer_only_under_its_provider() {
             Asking {
                 operation: OperationClass::Read,
                 purpose: Some("TREAT".to_owned()),
-                emergency: Emergency::default(),
+                reason: None,
                 episodes: None,
             },
             InForce {

@@ -4,7 +4,7 @@
 //! What the access log must hold of each access a test makes: exactly one
 //! entry per request, granted or refused, with the refusal's code, the step
 //! that decided it and what decided it, the grounds of a granted access, and
-//! the emergency mark (EHDS Annex II 3.2, Art. 9, Art. 11(5),
+//! the emergency justification with its reason (EHDS Annex II 3.2, Art. 9, Art. 11(5),
 //! `docs/law/eu/ehds/text.html`). The entry's shape is the draft
 //! `org.openehr.rm.access_log` 0.1.0; which grounds are named is our own
 //! design (#5514).
@@ -25,7 +25,8 @@ pub(crate) struct Expect {
     pub(crate) refused: Option<(&'static str, u8)>,
     /// The kinds of the grounds a granted access names, beside its roles.
     pub(crate) grounds: &'static [&'static str],
-    /// Whether the entry is marked an emergency.
+    /// Whether the access rested on an emergency justification, which the
+    /// entry names with its reason.
     pub(crate) emergency: bool,
 }
 
@@ -162,10 +163,14 @@ async fn landed(world: &World, marker: &str) -> Vec<(Option<String>, Value)> {
 fn check(noted: &Noted, entry: &Value) {
     let (label, expect) = (noted.label.as_str(), noted.expect);
     let outcome = &entry["outcome"];
+    let justified = entry["authorisations"].as_array().is_some_and(|grounds| {
+        grounds
+            .iter()
+            .any(|ground| ground["kind"]["value"] == "emergency" && ground["reason"].is_string())
+    });
     assert_eq!(
-        entry["is_emergency"],
-        Value::Bool(expect.emergency),
-        "{label}: the emergency mark: {entry}"
+        justified, expect.emergency,
+        "{label}: the emergency justification: {entry}"
     );
     let Some((code, step)) = expect.refused else {
         assert_eq!(outcome["result"]["value"], "granted", "{label}: {entry}");

@@ -13,7 +13,8 @@
 //! tests assert that an opted-out EHR answers an access-service caller at
 //! every route, query and export as an unknown EHR does while every other
 //! caller reads it as before, that a later version without it brings it back,
-//! that an emergency purpose overrides it with the override on the trail,
+//! that an access service the policy's emergency justification names, stating
+//! a reason, overrides it with the override and the reason on the trail,
 //! that recording, reversing and reading it are access records and its history
 //! is kept as `EHR_ACCESS` versions, and that recording is refused while the
 //! deployment declares no access-service caller. No openEHR spec governs an
@@ -41,6 +42,9 @@ use crate::common::EXT;
 
 /// The header the default configuration reads the declared purpose from.
 const PURPOSE: &str = "x-purpose-of-use";
+/// The header the default configuration reads the reason for a justified
+/// access from, and the reason every emergency of these tests states.
+const REASON: (&str, &str) = ("x-access-reason", "Unconscious%20at%20the%20border");
 /// An EHR id no EHR holds.
 const UNKNOWN_EHR: &str = "66666666-7777-4888-9999-000000000000";
 /// A role an access service's own credential may name, which grants nothing:
@@ -55,16 +59,16 @@ fn basic(name: &str) -> String {
     )
 }
 
-/// An audited app with `ETREAT` agreed as an emergency purpose, Basic users
-/// for an administrator, a clinician of the provider's own care, an access
-/// service and a caller naming [`ACCESS_SERVICE`] with no grant, and the IPS
-/// template uploaded; `declared` decides whether `[authz.grants] allowed`
+/// An audited app with `TREAT` and `ETREAT` agreed purposes, an access
+/// policy whose emergency justification for `ETREAT` names the access
+/// services, Basic users for an administrator, a clinician of the provider's
+/// own care, an access service and a caller naming [`ACCESS_SERVICE`] with no
+/// grant, and the IPS template uploaded; `declared` decides whether `[authz.grants] allowed`
 /// allows `access_service` and the CDR grants it to the access service.
 async fn app(declared: bool) -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
     let audit = AuditConfig {
         purpose_codes: vec!["TREAT".to_owned(), "ETREAT".to_owned()],
-        emergency_purpose_codes: vec!["ETREAT".to_owned()],
         ..common::local_audit()
     };
     let (sender, _handle): (_, AuditHandle) = start(audit, None, pool.clone())
@@ -98,6 +102,7 @@ async fn app(declared: bool) -> (testkit::TestDb, PgPool, Router) {
     if declared {
         common::grant_to(&svc, &pool, "service", Operation::AccessService).await;
     }
+    common::grant_to(&svc, &pool, "root", Operation::WriteAccessPolicy).await;
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
     let authz = AuthzHandle::build(&authz, &config.api.base_path).map(Arc::new);
@@ -112,10 +117,45 @@ async fn app(declared: bool) -> (testkit::TestDb, PgPool, Router) {
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "OPT upload: {body}");
+    let archetype = "openEHR-EHR-ACCESS_POLICY.controller.v1";
+    let policy = json!({
+        "_type": "ACCESS_POLICY",
+        "name": { "_type": "DV_TEXT", "value": "Access policy" },
+        "archetype_node_id": archetype,
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+            "rm_version": "1.2.0" },
+        "controller": { "_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
+            "id": { "_type": "HIER_OBJECT_ID", "value": "2c3d4e5f-6a7b-4c8d-9e0f-a1b2c3d4e5f7" } },
+        "care_relationship_required": false,
+        "purpose_required": false,
+        "justifications": [{ "_type": "ACCESS_JUSTIFICATION", "emergency": true,
+            "purposes": [{ "_type": "DV_CODED_TEXT", "value": "emergency treatment",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_ActReason" },
+                    "code_string": "ETREAT" } }],
+            "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "caller_kind": {
+                "_type": "DV_CODED_TEXT", "value": "access_service",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
+                    "code_string": "access_service" } } }] }]
+    });
+    let (status, _, body) = common::send(
+        &app,
+        Request::put(format!("{EXT}/admin/access_policy"))
+            .header(header::AUTHORIZATION, basic("root"))
+            .header(header::CONTENT_TYPE, "application/json")
+            .header(header::IF_NONE_MATCH, "*")
+            .body(Body::from(policy.to_string()))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "the policy: {body}");
     (db, pool, app)
 }
 
-/// Sends `method uri` as `user`, with an optional declared purpose and body.
+/// Sends `method uri` as `user`, with an optional declared purpose and body;
+/// `ETREAT` is declared with [`REASON`].
 async fn send(
     app: &Router,
     method: &str,
@@ -132,6 +172,9 @@ async fn send(
         .header("Prefer", "return=representation");
     if let Some(purpose) = purpose {
         req = req.header(PURPOSE, purpose);
+    }
+    if purpose == Some("ETREAT") {
+        req = req.header(REASON.0, REASON.1);
     }
     let req = match body {
         Some((content_type, body)) => req
@@ -280,14 +323,16 @@ fn error_kind(body: &str) -> Value {
     serde_json::from_str::<Value>(body).expect("an error body")["type"].clone()
 }
 
-/// The `(action, principal, emergency_access)` of every stored record whose
-/// resource is `resource`, polled until `expected` have landed.
+/// The `(action, principal, emergency)` of every stored record whose
+/// resource is `resource`, `emergency` whether it rested on an emergency
+/// justification, polled until `expected` have landed.
 async fn trail(pool: &PgPool, resource: &str, expected: usize) -> Vec<(String, String, bool)> {
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     loop {
         let rows: Vec<(String, Option<String>, bool)> = sqlx::query_as(
-            "SELECT action, principal, emergency_access FROM audit.access_trail \
-             WHERE resource_id = $1 ORDER BY chain_seq",
+            "SELECT action, principal, \
+             coalesce(justification ->> 'kind' = 'emergency', false) AS emergency \
+             FROM audit.access_trail WHERE resource_id = $1 ORDER BY chain_seq",
         )
         .bind(resource)
         .fetch_all(pool)
@@ -443,9 +488,10 @@ async fn recording_reversing_and_reading_the_opt_out_are_access_records() {
     assert_eq!(actions, ["R", "U", "R", "U", "R"]);
 }
 
-/// An access service declaring an emergency purpose reads the opted-out EHR
-/// under Art. 10(2), with the emergency mark on its record and the override
-/// recorded against the EHR; an ordinary purpose does not lift the opt-out.
+/// An access service invoking the emergency justification with a reason
+/// reads the opted-out EHR under Art. 10(2), with the justification and its
+/// reason on its record and the override recorded against the EHR; an
+/// ordinary purpose does not lift the opt-out.
 #[tokio::test]
 async fn the_vital_interest_override_reads_the_ehr_and_is_recorded() {
     let (_db, pool, app) = Box::pin(app(true)).await;
@@ -466,8 +512,8 @@ async fn the_vital_interest_override_reads_the_ehr_and_is_recorded() {
     );
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     loop {
-        let marked: Option<bool> = sqlx::query_scalar(
-            "SELECT emergency_access FROM audit.access_trail \
+        let marked: Option<Option<Value>> = sqlx::query_scalar(
+            "SELECT justification FROM audit.access_trail \
              WHERE operation = 'composition_get' AND outcome = 0 AND principal = 'service' \
              ORDER BY chain_seq DESC LIMIT 1",
         )
@@ -475,7 +521,11 @@ async fn the_vital_interest_override_reads_the_ehr_and_is_recorded() {
         .await
         .expect("read the trail");
         if let Some(marked) = marked {
-            assert!(marked, "the override access carries the emergency mark");
+            assert_eq!(
+                marked,
+                Some(json!({ "kind": "emergency", "reason": "Unconscious at the border" })),
+                "the override access carries the justification and its reason"
+            );
             break;
         }
         assert!(
@@ -648,8 +698,9 @@ async fn entry_of(pool: &PgPool, ehr: &str, keep: impl Fn(&Value) -> bool) -> Va
 
 /// The absent answer of an opt-out is an access-log entry refused under
 /// `refused-opt-out` with its step, though the `404` says nothing (EHDS Art.
-/// 8); the vital-interest override is an entry marked as an emergency with a
-/// ground naming the opt-out it lifted and the `EHR_ACCESS` version (EHDS
+/// 8); the vital-interest override is an entry naming the emergency
+/// justification with its reason and a ground naming the opt-out it lifted
+/// and the `EHR_ACCESS` version (EHDS
 /// Annex II 3.2, Art. 10(2), Art. 11(5)).
 #[tokio::test]
 async fn the_absent_answer_and_the_override_are_recorded_with_their_grounds() {
@@ -683,7 +734,13 @@ async fn the_absent_answer_and_the_override_are_recorded_with_their_grounds() {
     let (status, body) = send(&app, "GET", &composition, "service", Some("ETREAT"), None).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let marked = entry_of(&pool, &ehr, |entry| {
-        entry["is_emergency"] == true && entry["outcome"]["result"]["value"] == "granted"
+        entry["outcome"]["result"]["value"] == "granted"
+            && entry["authorisations"].as_array().is_some_and(|grounds| {
+                grounds.iter().any(|ground| {
+                    ground["kind"]["value"] == "emergency"
+                        && ground["reason"] == "Unconscious at the border"
+                })
+            })
     })
     .await;
     let grounds = marked["authorisations"]
@@ -692,7 +749,7 @@ async fn the_absent_answer_and_the_override_are_recorded_with_their_grounds() {
         .unwrap_or_default();
     let lifted = grounds
         .iter()
-        .find(|ground| ground["kind"]["value"] == "emergency")
+        .find(|ground| ground["kind"]["value"] == "emergency" && ground["reason"].is_null())
         .unwrap_or_else(|| panic!("an emergency ground: {marked}"));
     assert_eq!(lifted["name"], "EHR_ACCESS", "{marked}");
     let version = lifted["version"].as_str().expect("the EHR_ACCESS version");

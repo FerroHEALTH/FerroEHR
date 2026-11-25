@@ -35,8 +35,7 @@ const EXTENSION: &str = "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:
 const GROUP_EXTENSION: &str = "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:Group";
 
 /// The audit configuration of every replica: the purposes of use the
-/// hospital declares, `ETREAT` its emergency purpose, recorded to the local
-/// store.
+/// hospital declares, recorded to the local store.
 pub(crate) fn audit() -> AuditConfig {
     AuditConfig {
         purpose_codes: vec![
@@ -44,7 +43,6 @@ pub(crate) fn audit() -> AuditConfig {
             "ETREAT".to_owned(),
             "HOPERAT".to_owned(),
         ],
-        emergency_purpose_codes: vec!["ETREAT".to_owned()],
         ..common::local_audit()
     }
 }
@@ -557,6 +555,9 @@ pub(crate) async fn policy(world: &World, controller: &str, preceding: Option<&s
                 "templates": [LAB_TEMPLATE] }), "R"),
         ],
         "rules": rules(world),
+        "justifications": [{ "_type": "ACCESS_JUSTIFICATION", "emergency": true,
+            "purposes": purposes_of(&["ETREAT"]),
+            "applies_to": role_scope("emergency-physician") }],
         "care_relationship_required": true,
         "relationship_grace": { "_type": "DV_DURATION", "value": "P14D" },
         "relationship_validity": [{ "_type": "ACCESS_RELATIONSHIP_VALIDITY",

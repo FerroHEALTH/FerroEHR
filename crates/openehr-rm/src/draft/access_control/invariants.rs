@@ -222,7 +222,8 @@ pub fn check_policy(policy: &AccessPolicy) -> Result<(), Violations> {
 
 /// The invariants of the attributes that say how care relationships are
 /// read: `Self_declared_valid`, `Concealed_valid`, and those of each
-/// `ACCESS_CONFLICT_RULE`, `ACCESS_VALUE_SET` and `episode_shared` scope.
+/// `ACCESS_CONFLICT_RULE`, `ACCESS_JUSTIFICATION`, `ACCESS_VALUE_SET` and
+/// `episode_shared` scope.
 fn care_rules(check: &mut Check, policy: &AccessPolicy) {
     for scope in policy.episode_shared.as_deref().unwrap_or_default() {
         data_scope_rules(check, scope);
@@ -252,6 +253,11 @@ fn care_rules(check: &mut Check, policy: &AccessPolicy) {
     );
     for rule in policy.conflict_rules.as_deref().unwrap_or_default() {
         conflict_rule_rules(check, rule);
+    }
+    for justification in policy.justifications.as_deref().unwrap_or_default() {
+        for scope in justification.applies_to.as_deref().unwrap_or_default() {
+            actor_scope_rules(check, scope);
+        }
     }
     for value_set in policy.value_sets.as_deref().unwrap_or_default() {
         check.hold(

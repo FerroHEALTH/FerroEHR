@@ -242,7 +242,7 @@ fn an_unparsable_ehr_segment_names_no_ehr() {
 fn the_decision_grounds_slot_is_carried_into_the_authorisations() {
     let mut event = composition_read();
     event.permit = Some("hdab-nl/2026/0042".to_owned());
-    event.emergency_access = true;
+    crate::access_log::projection::tests::justify_in_emergency(&mut event);
     let entry = linked(entry_of(&event, None, "cdr.example.org", retention()).expect("an entry"));
     let kinds: Vec<&str> = entry
         .authorisations
@@ -251,6 +251,12 @@ fn the_decision_grounds_slot_is_carried_into_the_authorisations() {
         .iter()
         .map(|a| a.kind.value.as_str())
         .collect();
-    assert_eq!(kinds, ["permit", "emergency"]);
-    assert!(entry.is_emergency);
+    assert_eq!(kinds, ["emergency", "permit"]);
+    let reasons: Vec<&str> = entry
+        .authorisations
+        .iter()
+        .flatten()
+        .filter_map(|a| a.reason.as_deref())
+        .collect();
+    assert_eq!(reasons, ["unconscious on arrival"]);
 }

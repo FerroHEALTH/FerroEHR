@@ -13,7 +13,7 @@ use crate::v1_2::data_types::uri::dv_uri::DvUri;
 #[doc(alias = "ACCESS_VALUE_SET")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AccessValueSet {
-    /// What the value set codes, in the `access value set binding` group: `care_role`, `representation_basis`, `kinship`, `organisation_type`, `care_purpose` or `emergency_purpose`.
+    /// What the value set codes, in the `access value set binding` group: `care_role`, `representation_basis`, `kinship`, `organisation_type` or `care_purpose`.
     pub binding: DvCodedText,
     /// The canonical URL of the value set on the terminology server.
     pub value_set: DvUri,

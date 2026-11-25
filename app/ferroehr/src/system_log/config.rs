@@ -299,6 +299,17 @@ pub struct AuditConfig {
     /// specification names a header for it: our own design.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub permit_header: String,
+    /// The request header carrying the reason a caller states for an access
+    /// that rests on a justification of the access policy rather than a care
+    /// relationship (`FERROEHR__AUDIT__REASON_HEADER`), recorded with the
+    /// access.
+    ///
+    /// FHIR R4 `AuditEvent.purposeOfEvent.text` carries the reason; no
+    /// specification names a header for it, so the header, its encoding
+    /// (percent-encoded UTF-8) and its bound of 1000 characters are our own
+    /// design (#6587).
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
+    pub reason_header: String,
     /// The purpose codes this deployment accepts
     /// (`FERROEHR__AUDIT__PURPOSE_CODES`).
     ///
@@ -308,8 +319,8 @@ pub struct AuditConfig {
     /// free text that means nothing at review time.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub purpose_codes: Vec<String>,
-    /// The code system `purpose_codes` and `emergency_purpose_codes` belong
-    /// to (`FERROEHR__AUDIT__PURPOSE_SYSTEM`), the canonical URL of a FHIR
+    /// The code system `purpose_codes` belong to
+    /// (`FERROEHR__AUDIT__PURPOSE_SYSTEM`), the canonical URL of a FHIR
     /// `CodeSystem`.
     ///
     /// The default is HL7's `ActReason` code system, which holds the
@@ -319,21 +330,6 @@ pub struct AuditConfig {
     /// system of a purpose header, so the key is our own design.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub purpose_system: String,
-    /// The declared purpose codes that mark an access as an emergency access
-    /// (`FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES`). Empty (the default) marks
-    /// nothing.
-    ///
-    /// Regulation (EU) 2025/327 Art. 11(5) lets a health professional reach
-    /// data a natural person restricted under Art. 8 where the person's vital
-    /// interests require it, and requires such cases to be "logged in a clear
-    /// and understandable format" and "easily accessible for the data subject"
-    /// (`docs/law/eu/ehds/text.html Art. 11(5)`). An access whose declared
-    /// purpose is on this list carries the emergency mark on its access record.
-    /// The mark records; it lifts no restriction. Every code must also be on
-    /// `purpose_codes`, so the mark never keys on free text; the boot
-    /// validation refuses anything else.
-    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
-    pub emergency_purpose_codes: Vec<String>,
     /// The legal basis this deployment processes under
     /// (`FERROEHR__AUDIT__LEGAL_BASIS`), recorded on every access record.
     ///
@@ -389,9 +385,9 @@ impl Default for AuditConfig {
             server_host: None,
             purpose_header: "x-purpose-of-use".to_owned(),
             permit_header: "x-data-permit".to_owned(),
+            reason_header: "x-access-reason".to_owned(),
             purpose_codes: Vec::new(),
             purpose_system: "http://terminology.hl7.org/CodeSystem/v3-ActReason".to_owned(),
-            emergency_purpose_codes: Vec::new(),
             legal_basis: None,
             store: StoreConfig::default(),
             syslog: None,

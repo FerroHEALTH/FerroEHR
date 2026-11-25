@@ -15,7 +15,7 @@ use opentelemetry_sdk::metrics::{InMemoryMetricExporter, PeriodicReader, SdkMete
 
 use super::CareUnsettled;
 use crate::access_eval::condition::{Asking, InForce, RequestAccess};
-use crate::access_eval::procedure::{Caller, Emergency};
+use crate::access_eval::procedure::Caller;
 use crate::access_eval::scope::CategoryIndex;
 use crate::access_eval::stale::STALE_WAIT;
 use crate::error::ServiceError;
@@ -34,6 +34,7 @@ fn request(grants: Arc<LiveGrants>) -> RequestAccess {
             party: None,
             own_ehrs: Vec::new(),
             patient_grants_only: false,
+            opt_out_override: false,
             acts_for: Vec::new(),
             facts: CallerFacts::default(),
             administrator: false,
@@ -43,7 +44,7 @@ fn request(grants: Arc<LiveGrants>) -> RequestAccess {
         Asking {
             operation: OperationClass::Read,
             purpose: None,
-            emergency: Emergency::default(),
+            reason: None,
             episodes: None,
         },
         InForce {

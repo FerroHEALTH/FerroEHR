@@ -32,8 +32,9 @@ use uuid::Uuid;
 use crate::access_eval::care_tie::Cared;
 use crate::access_eval::class::Class;
 use crate::access_eval::condition::care::{Care, CareUnsettled};
+use crate::access_eval::justification::Reason;
 use crate::access_eval::procedure::{
-    Asked, Caller, Ehr, Emergency, Judged, Outcome, Policy, Verdict, decide, rules_of,
+    Asked, Caller, Ehr, Judged, Outcome, Policy, Verdict, decide, rules_of,
 };
 use crate::access_eval::record::LiftedCovers;
 use crate::access_eval::scope::{CategoryIndex, Item, Scopes};
@@ -64,7 +65,7 @@ pub struct RequestAccess {
     operation: OperationClass,
     episodes: Option<Arc<[EpisodeKey]>>,
     purpose: Option<String>,
-    emergency: Emergency,
+    reason: Option<Reason>,
     pub(super) policy: Option<Arc<AccessPolicy>>,
     categories: CategoryIndex,
     server_default: AccessDefault,
@@ -166,8 +167,8 @@ pub struct Asking {
     pub operation: OperationClass,
     /// The declared purpose of use.
     pub purpose: Option<String>,
-    /// What the caller declared in an emergency.
-    pub emergency: Emergency,
+    /// The reason the caller states for a justified access.
+    pub reason: Option<Reason>,
     /// The episodes of care the request is narrowed to, sorted; `None` when
     /// it is not narrowed.
     pub episodes: Option<Arc<[EpisodeKey]>>,
@@ -197,7 +198,7 @@ impl RequestAccess {
             caller,
             operation: asking.operation,
             purpose: asking.purpose,
-            emergency: asking.emergency,
+            reason: asking.reason,
             episodes: asking.episodes,
             policy: in_force.policy,
             categories: in_force.categories,
@@ -237,10 +238,10 @@ impl RequestAccess {
         &self.caller
     }
 
-    /// What the caller declared in an emergency.
+    /// The reason the caller states for a justified access.
     #[must_use]
-    pub fn emergency(&self) -> Emergency {
-        self.emergency
+    pub fn reason(&self) -> Option<&Reason> {
+        self.reason.as_ref()
     }
 
     /// The lifted denies that covered an object this request admitted.
@@ -433,7 +434,7 @@ impl RequestAccess {
             asked: Asked {
                 operation: self.operation,
                 purpose: self.purpose.as_deref(),
-                emergency: self.emergency,
+                reasoned: self.reason.is_some(),
                 episodes: self.episodes.as_deref(),
             },
             policy: self.policy(),

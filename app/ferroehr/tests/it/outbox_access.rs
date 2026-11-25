@@ -14,7 +14,7 @@
 use std::sync::Arc;
 
 use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess, with_request_access};
-use ferroehr::access_eval::procedure::{Caller, Emergency};
+use ferroehr::access_eval::procedure::Caller;
 use ferroehr::access_eval::scope::CategoryIndex;
 use ferroehr::extensions::outbox::OutboxDomain;
 use ferroehr::ids::EhrId;
@@ -150,6 +150,7 @@ impl Reader {
             party: self.party.clone(),
             own_ehrs: Vec::new(),
             patient_grants_only: false,
+            opt_out_override: false,
             acts_for: Vec::new(),
             facts: self.facts.clone(),
             administrator: false,
@@ -159,7 +160,7 @@ impl Reader {
         let asking = Asking {
             operation: OperationClass::Read,
             purpose: self.purpose.map(str::to_owned),
-            emergency: Emergency::default(),
+            reason: None,
             episodes: None,
         };
         let in_force = InForce {

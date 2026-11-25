@@ -18,15 +18,16 @@
 //! It acts for its care teams, the
 //! provider its client acts for and the `GROUP`s that provider is a member
 //! of (RM demographic `PARTY_RELATIONSHIP`, coded `openehr_access::member_of`; #5575). The
-//! purpose is the declared code the audit layer accepted, and an emergency
-//! is that code being one of `[audit] emergency_purpose_codes`, with
-//! `[authz.rbac] emergency_access_role` for the break-glass steps (EHDS Art. 11(5)). No openEHR spec governs the
+//! purpose is the declared code the audit layer accepted, and the reason the
+//! one it read from `[audit] reason_header`; which justification of the
+//! access policy they invoke is the evaluator's
+//! (`ferroehr::access_eval::justification`). No openEHR spec governs the
 //! caller's kind or its facts: our own design (#5513).
 
 use std::sync::Arc;
 
 use ferroehr::access_eval::condition::{Asking, RecordFacts, RequestAccess};
-use ferroehr::access_eval::procedure::{Caller, Emergency};
+use ferroehr::access_eval::procedure::Caller;
 use ferroehr::config::authz::EhrAccessDefault;
 use ferroehr::ids::EhrId;
 use ferroehr::party_binding::grants::agreement::Accessor;
@@ -66,12 +67,10 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
     let backend = state.backend();
     let capabilities = Capabilities::current();
     let caller = caller_of(state, principal, &capabilities, Some(op));
-    let kind = caller.kind;
-    let purpose = ferroehr::system_log::access_context::current_purpose();
     let asking = Asking {
         operation: operation_class(op),
-        emergency: emergency(state, principal, kind, purpose.as_deref()),
-        purpose,
+        purpose: ferroehr::system_log::access_context::current_purpose(),
+        reason: ferroehr::system_log::access_context::current_reason(),
         episodes: launched_episode(state, principal).map(|episode| Arc::from([episode])),
     };
     let server_default = state
@@ -185,6 +184,7 @@ fn caller_of(
             .or_else(|| principal.and_then(own_person_id)),
         own_ehrs: own_ehrs(principal, kind, patient_grants_only),
         patient_grants_only,
+        opt_out_override: opt_out_override(principal, kind),
         acts_for,
         administrator: roles.iter().any(|r| r.eq_ignore_ascii_case(&admin_role)),
         facts: principal.map_or_else(
@@ -396,22 +396,9 @@ fn operation_class(op: &str) -> OperationClass {
     }
 }
 
-/// What the caller declared in an emergency.
-fn emergency(
-    state: &AppState,
-    principal: Option<&Principal>,
-    kind: CallerKind,
-    purpose: Option<&str>,
-) -> Emergency {
-    let declared = state.backend().is_emergency_purpose(purpose);
-    let break_glass = state
-        .config()
-        .rbac
-        .emergency_access_role
-        .as_deref()
-        .is_some_and(|role| {
-            principal.is_some_and(|p| p.roles.iter().any(|held| held.eq_ignore_ascii_case(role)))
-        });
+/// Whether `principal`, of `kind`, may lift an opt-out for a vital interest
+/// (EHDS Art. 10(2)).
+fn opt_out_override(principal: Option<&Principal>, kind: CallerKind) -> bool {
     // NOTE: an external person may override only where its agreement sets
     // opt_out_override, and an organisation never; our own design under EHDS Art. 10(2).
     let overridable =
@@ -421,10 +408,5 @@ fn emergency(
         });
     // NOTE: EHDS Art. 10(2) admits "a healthcare provider or health professional", so a
     // caller acting for the person is never admitted by the override.
-    let opt_out_override = overridable && !principal.is_some_and(super::delay::acts_for_the_person);
-    Emergency {
-        declared,
-        break_glass,
-        opt_out_override,
-    }
+    overridable && !principal.is_some_and(super::delay::acts_for_the_person)
 }

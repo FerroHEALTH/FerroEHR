@@ -476,27 +476,21 @@ fn nen_7513_the_actor_roles_are_recorded_and_rendered_in_both_formats() {
 
 /// EHDS Art. 11(5): an emergency access "shall be logged in a clear and
 /// understandable format and shall be easily accessible for the data subject"
-/// (`docs/law/eu/ehds/text.html Art. 11(5)`). The FHIR rendering carries the
-/// mark as the `ehds-logging` entity that states it in plain words, with the
-/// purpose that marked it; the DICOM schema has no purpose element, so the
+/// (`docs/law/eu/ehds/text.html Art. 11(5)`). The FHIR rendering of an access
+/// that rested on an emergency justification carries the mark as the
+/// `ehds-logging` entity that states it in plain words, with the purpose that
+/// marked it; the DICOM schema has no purpose element, so the
 /// mark is absent there and that absence is pinned.
 #[test]
 fn art_11_5_the_emergency_mark_reaches_the_fhir_rendering_only() {
     let mut event = access_event();
     event.purpose = Some("ETREAT".to_owned());
-    event.emergency_access = true;
-    let etreat = ehds_logging::record::Purpose {
-        system: None,
-        code: "ETREAT".to_owned(),
-    };
-    let marking = AuditContext {
-        recording: fhir::Recording {
-            emergency: ehds_logging::emergency::EmergencyPurposes::declare(&[etreat])
-                .expect("one emergency purpose"),
-            ..fhir::Recording::default()
-        },
-        ..ctx()
-    };
+    event.justification = Some(ferroehr::access_eval::justification::Justification {
+        emergency: true,
+        reason: ferroehr::access_eval::justification::Reason::new("unconscious on arrival")
+            .expect("a reason"),
+    });
+    let marking = ctx();
 
     let rendered =
         fhir::to_fhir(&event, &marking, Some("patient-42")).expect("the FHIR rendering builds");

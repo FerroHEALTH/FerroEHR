@@ -1,0 +1,47 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_JUSTIFICATION",
+  "documentation": "A ground on which the controller admits a caller to an EHR outside its care relationships: a purpose of use the caller declares, with a reason it states, such as a consultation, a second opinion or an emergency. An access that rests on it is marked in the access log with the reason.",
+  "properties": {
+    "purposes": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "purposes",
+      "documentation": "The purposes of use, such as the `HL7_ActReason` codes `TREAT`, `ETREAT` or `BTG`, whose declaration invokes the justification.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 1,
+        "upper_unbounded": true
+      },
+      "is_mandatory": true
+    },
+    "applies_to": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "applies_to",
+      "documentation": "The callers that may invoke the justification. Void means every caller of kind `professional`.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_ACTOR_SCOPE"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "emergency": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "emergency",
+      "documentation": "Whether the justification is an emergency: it then lifts each directive, rule and exclusion whose `_emergency_override_` holds and the steps on sensitivity, confidentiality, care relationship and default, and the access is marked as an emergency access (EHDS Art. 11(5)). Otherwise it stands in for a live care relationship alone.",
+      "is_mandatory": true,
+      "type": "Boolean"
+    }
+  },
+  "invariants": {
+    "Purposes_valid": "not purposes.is_empty",
+    "Applies_to_valid": "applies_to /= Void implies not applies_to.is_empty"
+  }
+}
+--------

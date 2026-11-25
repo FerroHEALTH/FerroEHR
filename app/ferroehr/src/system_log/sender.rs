@@ -110,12 +110,11 @@ struct SenderInner {
     purpose_header: String,
     /// The header a caller declares the data permit it acts under in.
     permit_header: String,
+    /// The header a caller states the reason for a justified access in.
+    reason_header: String,
     purpose_codes: Vec<String>,
     /// The code system the purpose codes belong to.
     purpose_system: String,
-    /// The purposes of use that mark an access as an emergency access, held
-    /// by `ehds-logging`.
-    emergency: ehds_logging::emergency::EmergencyPurposes,
     legal_basis: Option<String>,
     /// The compiled category register every record is classified through.
     categories: Arc<Classifiers>,
@@ -178,6 +177,13 @@ impl AuditSender {
         &self.inner.permit_header
     }
 
+    /// The request header a caller states the reason for a justified access
+    /// in, lowercased.
+    #[must_use]
+    pub fn reason_header(&self) -> &str {
+        &self.inner.reason_header
+    }
+
     /// The purpose codes this deployment accepts, in configured order; empty
     /// when it accepts any.
     #[must_use]
@@ -201,25 +207,6 @@ impl AuditSender {
         !code.is_empty()
             && (self.inner.purpose_codes.is_empty()
                 || self.inner.purpose_codes.iter().any(|known| known == code))
-    }
-
-    /// Whether `purpose` is one of `[audit] emergency_purpose_codes`, the
-    /// codes that mark an access as declared in the vital interest of the data
-    /// subject (`docs/law/eu/ehds/text.html Art. 11(5)`).
-    ///
-    /// `None`, an empty list, and a code off the list are all `false`: the
-    /// mark is never inferred, only read off a declared, agreed code.
-    #[must_use]
-    pub fn is_emergency_purpose(&self, purpose: Option<&str>) -> bool {
-        purpose.is_some_and(|code| {
-            self.inner
-                .emergency
-                .mark(&[ehds_logging::record::Purpose {
-                    system: None,
-                    code: code.to_owned(),
-                }])
-                .is_some()
-        })
     }
 
     /// The legal basis this deployment records on every access event.
@@ -305,9 +292,8 @@ impl AuditSender {
     /// them after, unless `reservation` holds them until the write they
     /// record is released ([`Self::release_committed`], #5762).
     ///
-    /// Every record is stamped with the digest of the category map in force,
-    /// with the emergency mark when a purpose of use it names is one of
-    /// `[audit] emergency_purpose_codes`, and with the subject of its EHR.
+    /// Every record is stamped with the digest of the category map in force
+    /// and with the subject of its EHR.
     ///
     /// # Errors
     /// The errors of [`AuditStore::write`]: the caller refuses the access it
@@ -373,7 +359,6 @@ impl AuditSender {
         let digest = self.categories().digest();
         for event in &mut events {
             event.category_map_digest = Some(digest);
-            event.emergency_access = event.names_purpose(|c| self.is_emergency_purpose(Some(c)));
         }
         let ctx = self.inner.context.current();
         let subjects = match &self.inner.resolver {
@@ -699,7 +684,6 @@ pub async fn start(
     let CompiledPolicy {
         context: ctx,
         categories,
-        emergency,
     } = policy.compile()?;
     let live = Arc::new(LiveContext::new(policy, ctx));
     let mut workers = Vec::new();
@@ -713,9 +697,9 @@ pub async fn start(
             suppress_login_events: config.suppress_login_events,
             purpose_header: config.purpose_header.to_ascii_lowercase(),
             permit_header: config.permit_header.to_ascii_lowercase(),
+            reason_header: config.reason_header.to_ascii_lowercase(),
             purpose_codes: config.purpose_codes.clone(),
             purpose_system: config.purpose_system.clone(),
-            emergency,
             legal_basis: config.legal_basis.clone(),
             categories: Arc::new(Classifiers::new(categories)),
             context: live,

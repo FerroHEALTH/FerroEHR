@@ -438,41 +438,43 @@ cases be "logged in a clear and understandable format" and be "easily
 accessible for the data subject". An unmarked emergency access hides that it
 happened.
 
-**Control:** a deployment names the purpose-of-use codes its callers declare
-for an emergency (`[audit] emergency_purpose_codes`, each also on
-`purpose_codes`). An access declaring one, in the `[audit] purpose_header` or
-as a purpose of use its IHE IUA access token states (#5323), carries the
-emergency mark in its access record: the `emergency_access` column, and in the
-FHIR `AuditEvent` the `ehds-logging` entity `ehds-emergency-access`, which states the mark in plain
-words and names the purposes that marked it.
-The person's own subject-scoped ITI-81 retrieval serves that document. The
-mark lifts no restriction: an object restricted under GDPR Art. 18 is refused
-with an emergency purpose exactly as without one, and the refused attempt is
-logged with the mark. The same mark is carried by an access-service caller
-that reads an EHR whose person opted out of the access services (EHDS
-Art. 10) under the vital-interest override of Art. 10(2), and a route that
-names that EHR adds an `access-opt-out-override` record against it.
+**Control:** an emergency is a justification of the controller's access
+policy (`ACCESS_POLICY.justifications` with `emergency` set), invoked by the
+callers it names with a declared purpose and a reason in `x-access-reason`.
+Without the reason it is refused before any directive is read. An access
+that rested on it is recorded from the access decision, never from the
+declared purpose alone: the `justification` column holds the kind and the
+reason, the access-log entry names the `emergency` authorisation with the
+reason, and the FHIR `AuditEvent` carries the reason as the text of the
+purpose of use and the `ehds-logging` entity `ehds-emergency-access`, which
+states the mark in plain words. The person's own subject-scoped ITI-81
+retrieval serves that document. A GDPR Art. 18 restriction refuses an
+emergency as any access, and an access-service caller that reads an EHR
+whose person opted out of the access services (EHDS Art. 10) under the
+Art. 10(2) override is recorded the same way, with an
+`access-opt-out-override` record against the EHR.
 
-**Shown by:** `app/ferroehr-rest/tests/it/audit_emergency_access.rs`:
-`an_emergency_access_is_marked_and_shown_in_the_subjects_own_access_log`,
-`an_emergency_purpose_does_not_lift_a_gdpr_restriction`;
+**Shown by:** `app/ferroehr-rest/tests/it/access_justified_http.rs`:
+`an_emergency_lifts_an_overridable_restriction_and_is_marked`,
+`the_subjects_own_log_shows_the_reason`,
+`a_gdpr_restriction_refuses_a_justified_access`;
 `app/ferroehr/tests/it/audit_ehds_mapping.rs`:
 `art_11_5_the_emergency_mark_reaches_the_fhir_rendering_only`;
 `app/ferroehr/tests/it/audit_store.rs`:
-`both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten`;
+`both_inserts_persist_the_justification_and_it_cannot_be_rewritten`;
 `app/ferroehr-rest/tests/it/access_opt_out_http.rs`:
 `the_vital_interest_override_reads_the_ehr_and_is_recorded`;
-`app/ferroehr/src/system_log/event.rs`:
-`a_purpose_the_token_states_is_named_beside_the_declared_one`.
+`app/ferroehr/tests/it/access_eval_steps/steps_justification.rs`:
+`an_emergency_needs_a_reason_and_lifts_an_overridable_restriction`.
 
 **Remains:** the Art. 8 restriction hides restricted data from every
-professional route, query and export, and only a caller holding
-`authz.rbac.emergency_access_role` that declares an emergency purpose reads it
+professional route, query and export, and only a caller an emergency
+justification names, stating a reason, reads it
 (`app/ferroehr-rest/tests/it/access_restriction_http.rs`:
-`only_an_emergency_access_reads_restricted_data_and_is_marked`). The mark rests
-on the purpose the caller declares or its token states, and an emergency
-neither names is not marked. The DICOM syslog rendering has no purpose element and
-does not carry the mark.
+`only_an_emergency_access_reads_restricted_data_and_is_marked`). Whether the
+reason is true is the clinician's responsibility and the reviewer's to
+check; FerroEHR records it as stated. The DICOM syslog rendering has no
+element for the mark.
 
 ## When the log is reviewed
 

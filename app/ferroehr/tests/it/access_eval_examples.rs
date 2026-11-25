@@ -22,7 +22,7 @@ use crate::policy_fixtures::{
     provider_team,
 };
 use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess, with_request_access};
-use ferroehr::access_eval::procedure::{Caller, Emergency, Outcome};
+use ferroehr::access_eval::procedure::{Caller, Outcome};
 use ferroehr::access_eval::scope::{CategoryIndex, Item};
 use ferroehr::error::ServiceError;
 use ferroehr::ids::{EhrId, VoId};
@@ -289,6 +289,7 @@ pub(crate) fn access(
             party: Some(party.to_string()),
             own_ehrs: Vec::new(),
             patient_grants_only: false,
+            opt_out_override: false,
             acts_for,
             facts,
             administrator: false,
@@ -298,7 +299,7 @@ pub(crate) fn access(
         Asking {
             operation: OperationClass::Read,
             purpose: Some("TREAT".to_owned()),
-            emergency: Emergency::default(),
+            reason: None,
             episodes: None,
         },
         InForce {

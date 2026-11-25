@@ -790,24 +790,24 @@ async fn both_inserts_persist_the_authentication_columns() {
     assert!(findings.is_empty(), "{findings:?}");
 }
 
-/// The emergency-access mark (EHDS Art. 11(5), `docs/law/eu/ehds/text.html
-/// Art. 11(5)`): both inserts persist it, an unmarked record stores `false`,
-/// the append-only trigger refuses flipping it afterwards, and the chain
-/// verifies over marked records.
+/// The justification an access rested on, with its reason (EHDS Art. 11(5),
+/// `docs/law/eu/ehds/text.html Art. 11(5)`): both inserts persist it, a
+/// record that rested on none stores `NULL`, the append-only trigger refuses
+/// rewriting it afterwards, and the chain verifies over justified records.
 #[tokio::test]
-async fn both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten() {
+async fn both_inserts_persist_the_justification_and_it_cannot_be_rewritten() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let store = store_over(&pool);
 
     let mut single = read_event("2026-07-10T11:00:00Z".parse().unwrap());
     single.purpose = Some("ETREAT".to_owned());
-    single.emergency_access = true;
+    single.justification = Some(emergency("unconscious on arrival"));
     store.insert(&single, None).await.expect("insert");
 
     let mut marked = read_event("2026-07-10T11:00:01Z".parse().unwrap());
     marked.purpose = Some("ETREAT".to_owned());
-    marked.emergency_access = true;
+    marked.justification = Some(emergency("cardiac arrest"));
     let mut plain = read_event("2026-07-10T11:00:02Z".parse().unwrap());
     plain.purpose = Some("TREAT".to_owned());
     let records = vec![record(&marked, None), record(&plain, None)];
@@ -816,28 +816,37 @@ async fn both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten() {
         .await
         .expect("batch insert");
 
-    let marks: Vec<bool> =
-        sqlx::query_scalar("SELECT e.emergency_access FROM audit.audit_event e ORDER BY e.seq")
+    let marks: Vec<Option<serde_json::Value>> =
+        sqlx::query_scalar("SELECT e.justification FROM audit.audit_event e ORDER BY e.seq")
             .fetch_all(&pool)
             .await
             .expect("rows");
-    assert_eq!(marks, vec![true, true, false]);
+    assert_eq!(
+        marks,
+        vec![
+            Some(serde_json::json!({ "kind": "emergency", "reason": "unconscious on arrival" })),
+            Some(serde_json::json!({ "kind": "emergency", "reason": "cardiac arrest" })),
+            None,
+        ]
+    );
 
     let rewrite = sqlx::query(
-        "UPDATE audit.audit_event SET emergency_access = NOT emergency_access \
+        "UPDATE audit.audit_event SET justification = '{\"kind\": \"emergency\", \"reason\": \"x\"}' \
          WHERE purpose = 'TREAT'",
     )
     .execute(&pool)
     .await;
-    assert!(rewrite.is_err(), "the mark is append-only: {rewrite:?}");
+    assert!(
+        rewrite.is_err(),
+        "the justification is append-only: {rewrite:?}"
+    );
 
     let findings = crate::fixtures::verify_chain(&pool).await.expect("verify");
     assert!(findings.is_empty(), "{findings:?}");
 }
 
 /// The policy of [`a_record_renders_the_document_the_drain_rendered`]: a
-/// category map, an emergency purpose and an access policy's ten-year log
-/// retention, so every part of the EHDS access record has something to write.
+/// category map and an access policy's ten-year log retention, so every part of the EHDS access record has something to write.
 fn classifying_policy() -> RenderPolicy {
     let config: ferroehr::system_log::config::AuditConfig = toml::from_str(
         r#"
@@ -845,7 +854,6 @@ fn classifying_policy() -> RenderPolicy {
         enterprise_site_id = "site-1"
         server_host = "10.42.23.77"
         purpose_codes = ["TREAT", "ETREAT"]
-        emergency_purpose_codes = ["ETREAT"]
         "#,
     )
     .expect("parse");
@@ -884,7 +892,7 @@ fn every_kind_of_record(
     classified.ehr_id = Some("7d44b88c-4199-4bad-97dc-d78268e01398".to_owned());
     classified.subject_namespace = Some("urn:oid:2.999.1.1".to_owned());
     classified.purpose = Some("ETREAT".to_owned());
-    classified.emergency_access = true;
+    classified.justification = Some(emergency("unconscious on arrival"));
     classified.permit = Some("permit-1".to_owned());
     classified.legal_basis = Some("gdpr-art-9-2-h".to_owned());
     classified.request_id = Some("req-1".to_owned());
@@ -1821,4 +1829,12 @@ async fn a_held_record_is_in_no_read() {
             .expect("verify")
             .is_empty()
     );
+}
+
+/// An emergency justification with `reason`.
+fn emergency(reason: &str) -> ferroehr::access_eval::justification::Justification {
+    ferroehr::access_eval::justification::Justification {
+        emergency: true,
+        reason: ferroehr::access_eval::justification::Reason::new(reason).expect("a reason"),
+    }
 }

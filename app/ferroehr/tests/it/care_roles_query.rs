@@ -21,7 +21,7 @@ use crate::policy_fixtures::{
 use ferroehr::access_eval::condition::{
     Asking, InForce, RecordFacts, RequestAccess, current, with_request_access,
 };
-use ferroehr::access_eval::procedure::{Emergency, Outcome};
+use ferroehr::access_eval::procedure::Outcome;
 use ferroehr::access_eval::scope::{CategoryIndex, Item};
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
@@ -206,7 +206,7 @@ impl Ward {
                 Asking {
                     operation: OperationClass::Read,
                     purpose: Some("TREAT".to_owned()),
-                    emergency: Emergency::default(),
+                    reason: None,
                     episodes: None,
                 },
                 InForce {

@@ -13,7 +13,7 @@ use serde_json::{Value, json};
 
 use super::*;
 use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess};
-use ferroehr::access_eval::procedure::{Emergency, Lifted};
+use ferroehr::access_eval::procedure::{Asked, Lifted};
 use ferroehr::party_binding::grants::caller::care_of::CarerKind;
 use ferroehr::party_binding::grants::caller::care_ref::Cover;
 
@@ -142,23 +142,17 @@ fn clinician(person: &str, acting_for: ProviderKey, teams: &[&str]) -> Caller {
 
 /// The evaluator of `operation` by `caller` for `purpose` on `day`, under
 /// `policy`, with the patient's relationships judged.
-fn judged(
-    caller: &Caller,
-    asked: (OperationClass, Option<&str>, Emergency),
-    policy: &AccessPolicy,
-    day: &str,
-) -> Verdict {
-    let (operation, purpose, emergency) = asked;
+fn judged(caller: &Caller, asked: Asked<'_>, policy: &AccessPolicy, day: &str) -> Verdict {
     let access = RequestAccess::new(
         caller.clone(),
         Asking {
-            operation,
-            purpose: purpose.map(str::to_owned),
-            emergency,
+            operation: asked.operation,
+            purpose: asked.purpose.map(str::to_owned),
+            reason: reason_of(asked),
             episodes: None,
         },
         InForce {
-            policy: Some(Arc::new(policy.clone())),
+            policy: in_force(Some(policy), asked).map(Arc::new),
             categories: categories(),
             server_default: AccessDefault::Open,
             now: format!("{day}T12:00:00Z").parse().expect("an instant"),
@@ -169,8 +163,8 @@ fn judged(
 }
 
 /// A read for `purpose`.
-fn reading(purpose: &str) -> (OperationClass, Option<&str>, Emergency) {
-    (OperationClass::Read, Some(purpose), Emergency::default())
+fn reading(purpose: &str) -> Asked<'_> {
+    read(Some(purpose))
 }
 
 /// The datum of `template`, committed on 12 November 2026.
@@ -312,7 +306,7 @@ fn an_ended_relationship_admits_within_the_grace_alone() {
 #[test]
 fn only_the_responsible_practitioner_directly_writes_the_discharge_summary() {
     let hospital_policy = hospital(&json!({}));
-    let writing = (OperationClass::Write, Some("TREAT"), Emergency::default());
+    let writing = asked(OperationClass::Write, Some("TREAT"));
     let denied = Outcome::Refused(Refusal::PolicyDenied);
     for (name, caller, expected) in [
         ("Dr. Jansen", clinician(JANSEN, provider(), &[]), ADMIT),
@@ -346,15 +340,7 @@ fn only_the_responsible_practitioner_directly_writes_the_discharge_summary() {
 #[test]
 fn an_emergency_reads_without_a_relationship_and_names_none() {
     let hospital_policy = hospital(&json!({}));
-    let emergency = (
-        OperationClass::Read,
-        Some("ETREAT"),
-        Emergency {
-            declared: true,
-            break_glass: true,
-            opt_out_override: false,
-        },
-    );
+    let emergency = break_glass(read(Some("ETREAT")));
     let verdict = judged(
         &clinician(SMIT, provider(), &[]),
         emergency,
@@ -398,12 +384,7 @@ fn an_access_under_a_purpose_outside_the_care_purposes_rests_on_no_relationship(
         ),
         ("treatment, listed TREAT", &listed, Some("TREAT"), ADMIT),
     ] {
-        let verdict = judged(
-            &jansen,
-            (OperationClass::Read, purpose, Emergency::default()),
-            policy,
-            "2026-11-22",
-        );
+        let verdict = judged(&jansen, read(purpose), policy, "2026-11-22");
         assert_outcome(&verdict, &datum("vitals.v1"), expected, name);
         assert_eq!(
             verdict.grounds.granting.is_some(),
@@ -444,7 +425,7 @@ fn the_record_names_the_relationship_the_procedure_chooses() {
             Asking {
                 operation: OperationClass::Read,
                 purpose: Some("TREAT".to_owned()),
-                emergency: Emergency::default(),
+                reason: None,
                 episodes: None,
             },
             InForce {

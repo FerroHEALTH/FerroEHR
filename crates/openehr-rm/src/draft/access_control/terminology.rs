@@ -499,8 +499,6 @@ group! {
         OrganisationType => "organisation_type",
         /// The purposes for which a care relationship is a ground.
         CarePurpose => "care_purpose",
-        /// The purposes the system reads as declaring an emergency.
-        EmergencyPurpose => "emergency_purpose",
     }
 }
 
@@ -561,6 +559,9 @@ group! {
         OutsideEpisode => "refused-outside-episode",
         /// The policy needs a declared purpose and the request has none.
         PurposeMissing => "refused-purpose-missing",
+        /// The access invokes a justification of the controller's policy and
+        /// states no reason for it.
+        ReasonMissing => "refused-reason-missing",
         /// The EHR needs consent and no permit directive applies.
         ConsentRequired => "refused-consent-required",
         /// A subject caller asks for an EHR other than the one its patient

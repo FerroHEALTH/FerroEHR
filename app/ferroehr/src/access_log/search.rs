@@ -16,7 +16,9 @@ use jiff::Timestamp;
 
 use crate::db::acquire::acquire;
 use openehr_rm::draft::access_control::terminology::Term;
-use openehr_rm::draft::access_control::terminology::log::{AccessorKind, Action, Outcome};
+use openehr_rm::draft::access_control::terminology::log::{
+    AccessorKind, Action, Authorisation, Outcome,
+};
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
 use super::store::{AccessLogError, AccessLogStore, records, stored};
@@ -55,8 +57,9 @@ pub struct LogQuery {
     pub outcome: Option<Outcome>,
     /// The term of `ACCESSOR.kind`.
     pub accessor_kind: Option<AccessorKind>,
-    /// `is_emergency`.
-    pub emergency: Option<bool>,
+    /// The kind of the justification an entry names with a reason:
+    /// `justification` or `emergency`.
+    pub justification: Option<Authorisation>,
     /// The accessing party.
     pub party: PartyFilter,
     /// `ACCESS_CREDENTIAL.issuer` of the accessor's credential.
@@ -83,7 +86,7 @@ impl Default for LogQuery {
             action: None,
             outcome: None,
             accessor_kind: None,
-            emergency: None,
+            justification: None,
             party: PartyFilter::default(),
             issuer: None,
             subject: None,
@@ -102,7 +105,7 @@ impl AccessLogStore {
     ///
     /// A tombstone keeps no `ehr_id` and no accessor, so a filter on either
     /// leaves it out. Each filter reads the stored part that keeps its member:
-    /// the accessor and the emergency mark the shared part, the channel, the
+    /// the accessor and the authorisations the shared part, the channel, the
     /// items and an EHR id no uuid column keeps the row part (#6005).
     ///
     /// # Errors
@@ -127,7 +130,9 @@ impl AccessLogStore {
              AND ($8::text IS NULL \
                   OR (sh.content::jsonb #>> '{accessor,kind,defining_code,terminology_id,value}' = $8 \
                       AND sh.content::jsonb #>> '{accessor,kind,defining_code,code_string}' = $9)) \
-             AND ($10::boolean IS NULL OR (sh.content::jsonb ->> 'is_emergency')::boolean = $10) \
+             AND ($10::text IS NULL OR EXISTS (SELECT 1 FROM jsonb_array_elements( \
+                  coalesce(sh.content::jsonb -> 'authorisations', '[]'::jsonb)) a \
+                  WHERE a #>> '{kind,defining_code,code_string}' = $10 AND a ? 'reason')) \
              AND ($11::text IS NULL OR sh.content::jsonb #>> '{accessor,party,external_ref,namespace}' = $11) \
              AND ($12::text IS NULL OR sh.content::jsonb #>> '{accessor,party,external_ref,type}' = $12) \
              AND ($13::text IS NULL OR r.party_id = $13) \
@@ -152,7 +157,7 @@ impl AccessLogStore {
         .bind(query.outcome.map(Term::code))
         .bind(query.accessor_kind.map(Term::terminology))
         .bind(query.accessor_kind.map(Term::code))
-        .bind(query.emergency)
+        .bind(query.justification.map(Term::code))
         .bind(query.party.namespace.as_deref())
         .bind(query.party.class.as_deref())
         .bind(query.party.id.as_deref())

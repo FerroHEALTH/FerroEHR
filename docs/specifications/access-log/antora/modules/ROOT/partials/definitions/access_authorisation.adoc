@@ -12,7 +12,7 @@ h|*Attributes*
 
 h|*1..1*
 |*kind*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
-a|The kind of ground, coded in the draft `openehr_access` terminology's `access authorisation` group: a role, a treatment relationship, an agreement, a consent decision, a permit, an emergency override, the subject's own access, a representation, a legal obligation, or a conflict allowance.
+a|The kind of ground, coded in the draft `openehr_access` terminology's `access authorisation` group: a role, a treatment relationship, an agreement, a consent decision, a permit, a justification, an emergency, the subject's own access, a representation, a legal obligation, or a conflict allowance.
 
 h|*0..1*
 |*policy*: `xref:data_types:uri_package.adoc#_dv_uri_class[DV_URI]`
@@ -35,6 +35,10 @@ h|*0..1*
 a|The legal provisions the ground rests on.
 
 h|*0..1*
+|*reason*: `xref:{class_string}[String]`
+a|For a justification or an emergency, the reason the accessor stated, in its own words (HL7 FHIR R4 `AuditEvent.purposeOfEvent.text`).
+
+h|*0..1*
 |*care*: `xref:access_log:access_log_package.adoc#_access_care_ground_class[ACCESS_CARE_GROUND]`
 a|For a treatment relationship, the care relationship the access rested on: where several admitted it, the one the decision procedure chooses (`direct` before `team` before `self_declared` before `attested`, then by the order of the roles in the scope that matched).
 
@@ -43,5 +47,8 @@ h|*Invariants*
 
 h|
 2+a|__Care_valid__: `care /= Void implies kind.defining_code.code_string.is_equal ("treatment relationship")`
+
+h|
+2+a|__Reason_valid__: `reason /= Void implies (not reason.is_empty and (kind.defining_code.code_string.is_equal ("justification") or kind.defining_code.code_string.is_equal ("emergency")))`
 
 |===

@@ -27,7 +27,7 @@ use crate::fixtures::{composition, create_ehr, uv};
 use ferroehr::access_eval::condition::{
     Asking, InForce, RequestAccess, current, with_request_access,
 };
-use ferroehr::access_eval::procedure::{Caller, Emergency};
+use ferroehr::access_eval::procedure::Caller;
 use ferroehr::access_eval::scope::CategoryIndex;
 use ferroehr::db::domain::DomainPools;
 use ferroehr::db::pool::SESSION_SETUP_SPAN;
@@ -70,6 +70,7 @@ fn professional(svc: &FerroEhrService) -> Arc<RequestAccess> {
             party: Some(party.to_string()),
             own_ehrs: Vec::new(),
             patient_grants_only: false,
+            opt_out_override: false,
             acts_for: Vec::new(),
             facts: svc.grants().facts_of(party.0, now),
             administrator: false,
@@ -79,7 +80,7 @@ fn professional(svc: &FerroEhrService) -> Arc<RequestAccess> {
         Asking {
             operation: OperationClass::Read,
             purpose: Some("TREAT".to_owned()),
-            emergency: Emergency::default(),
+            reason: None,
             episodes: None,
         },
         InForce {

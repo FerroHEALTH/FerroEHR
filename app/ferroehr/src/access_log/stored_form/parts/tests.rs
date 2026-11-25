@@ -255,7 +255,9 @@ pub(crate) fn event() -> impl Strategy<Value = AuditEvent> {
                 event.result_count = count;
                 event.roles = roles;
                 event.origins = origins;
-                event.emergency_access = emergency;
+                if emergency {
+                    crate::access_log::projection::tests::justify_in_emergency(&mut event);
+                }
                 event.query = query.map(|text| QueryNaming::of("AQL", &text, None));
                 event
             },

@@ -33,8 +33,7 @@ pub(super) const VERSION: &str = "8849182c-82ad-4088-a07f-48ead4180515::cdr.exam
 pub(super) const TEMPLATE: &str = "Lab Report";
 
 /// The policy the projections are written under: an audit source with its
-/// site and host, a category map that maps one template, and one emergency
-/// purpose.
+/// site and host and a category map that maps one template.
 pub(super) fn policy() -> CompiledPolicy {
     let config: AuditConfig = toml::from_str(
         r#"
@@ -42,7 +41,6 @@ pub(super) fn policy() -> CompiledPolicy {
         role_code_system = "cdr.example.org"
         enterprise_site_id = "site-1"
         server_host = "10.42.23.77"
-        emergency_purpose_codes = ["ETREAT"]
         "#,
     )
     .expect("an audit configuration");
@@ -105,7 +103,7 @@ pub(super) fn classified_read(policy: &CompiledPolicy) -> AuditEvent {
             code: "01.015".to_owned(),
         }],
     });
-    event.emergency_access = true;
+    justify_in_emergency(&mut event);
     event.permit = Some("permit-42".to_owned());
     event.binding = Some(BindingRecord::bound(
         PartyTriple {
@@ -191,14 +189,42 @@ pub(super) fn cared_read(policy: &CompiledPolicy, attested: bool) -> AuditEvent 
         }
     };
     let mut event = classified_read(policy);
-    let policies = ground.version.iter().cloned().collect();
+    if let Some(decided) = event.decided.as_mut() {
+        decided.policies.extend(ground.version.iter().cloned());
+        decided.policies.dedup();
+        decided.grounds.push(ground);
+    }
+    event
+}
+
+/// `event` declaring `ETREAT` and resting on an emergency justification of
+/// the access policy, with the reason its caller stated, as the access
+/// decision stamps it.
+pub(crate) fn justify_in_emergency(event: &mut AuditEvent) {
+    event.purpose = Some("ETREAT".to_owned());
+    use crate::access_eval::justification::{Justification, Reason};
+    use openehr_rm::draft::access_control::terminology::log::Authorisation;
+    let reason = Reason::new("unconscious on arrival").expect("a reason");
+    let version = "policy::cdr.example.org::2".to_owned();
+    let ground =
+        openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation {
+            name: Some("ACCESS_POLICY".to_owned()),
+            version: Some(version.clone()),
+            reason: Some(reason.as_str().to_owned()),
+            ..crate::access_log::entry::authorisation(Authorisation::Emergency)
+        };
+    let justification = Justification {
+        emergency: true,
+        reason,
+    };
+    event.justification = Some(justification.clone());
     event.decided = Some(Box::new(crate::access_eval::record::Decision {
         refused: None,
         grounds: vec![ground],
-        policies,
+        policies: vec![version],
         confidentiality: None,
+        justification: Some(justification),
     }));
-    event
 }
 
 /// The events the parity test projects: the classified read, and the

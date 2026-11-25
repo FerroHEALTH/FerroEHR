@@ -12,7 +12,7 @@ h|*Attributes*
 
 h|*1..1*
 |*binding*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
-a|What the value set codes, in the `access value set binding` group: `care_role`, `representation_basis`, `kinship`, `organisation_type`, `care_purpose` or `emergency_purpose`.
+a|What the value set codes, in the `access value set binding` group: `care_role`, `representation_basis`, `kinship`, `organisation_type` or `care_purpose`.
 
 h|*1..1*
 |*value_set*: `xref:data_types:uri_package.adoc#_dv_uri_class[DV_URI]`

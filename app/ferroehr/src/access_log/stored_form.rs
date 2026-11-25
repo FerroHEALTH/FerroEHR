@@ -40,11 +40,10 @@ use serde_json::Value;
 pub mod parts;
 
 /// The members of an entry the shared part holds.
-pub(crate) const SHARED: [&str; 8] = [
+pub(crate) const SHARED: [&str; 7] = [
     "accessor",
     "action",
     "authorisations",
-    "is_emergency",
     "operation",
     "purposes",
     "retention",

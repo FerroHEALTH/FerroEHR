@@ -11,7 +11,8 @@ use std::sync::{Arc, OnceLock};
 use ferroehr::access_eval::condition::{
     Asking, EhrEntry, InForce, RequestAccess, with_request_access,
 };
-use ferroehr::access_eval::procedure::{Caller, Emergency, Outcome};
+use ferroehr::access_eval::justification::Reason;
+use ferroehr::access_eval::procedure::{Caller, Outcome};
 use ferroehr::access_eval::scope::{CategoryIndex, Item};
 use ferroehr::ids::EhrId;
 use ferroehr::party_binding::grants::caller::facts::CallerFacts;
@@ -40,9 +41,23 @@ fn recorder() -> &'static Telemetry {
     })
 }
 
-/// A professional asking to read, under a server default that requires consent, declaring
-/// `emergency`.
-fn request(emergency: Emergency) -> Arc<RequestAccess> {
+/// A professional asking to read, under a server default that requires consent, invoking
+/// the policy's emergency justification with a reason when `emergency`.
+fn request(emergency: bool) -> Arc<RequestAccess> {
+    let policy = serde_json::json!({
+        "_type": "ACCESS_POLICY",
+        "name": { "_type": "DV_TEXT", "value": "Policy" },
+        "archetype_node_id": "openEHR-EHR-ACCESS_POLICY.controller.v1",
+        "controller": { "_type": "PARTY_REF", "namespace": "local", "type": "ORGANISATION",
+            "id": { "_type": "HIER_OBJECT_ID", "value": "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f92" } },
+        "care_relationship_required": false,
+        "purpose_required": false,
+        "justifications": [{ "_type": "ACCESS_JUSTIFICATION", "emergency": true,
+            "purposes": [{ "_type": "DV_CODED_TEXT", "value": "BTG",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_ActReason" },
+                    "code_string": "BTG" } }] }]
+    });
     let party = "7f8e9d0c-1b2a-4c3d-8e4f-5a6b7c8d9e0f".to_owned();
     Arc::new(RequestAccess::new(
         Caller {
@@ -50,6 +65,7 @@ fn request(emergency: Emergency) -> Arc<RequestAccess> {
             party: Some(party.clone()),
             own_ehrs: Vec::new(),
             patient_grants_only: false,
+            opt_out_override: false,
             acts_for: Vec::new(),
             facts: CallerFacts::default(),
             administrator: false,
@@ -58,12 +74,14 @@ fn request(emergency: Emergency) -> Arc<RequestAccess> {
         },
         Asking {
             operation: OperationClass::Read,
-            purpose: None,
-            emergency,
+            purpose: emergency.then(|| "BTG".to_owned()),
+            reason: emergency.then(|| Reason::new("cardiac arrest").expect("a reason")),
             episodes: None,
         },
         InForce {
-            policy: None,
+            policy: Some(Arc::new(
+                openehr_its::json::from_canonical_value(&policy).expect("the policy reads"),
+            )),
             categories: CategoryIndex::default(),
             server_default: AccessDefault::ConsentRequired,
             now: jiff::Timestamp::now(),
@@ -106,16 +124,11 @@ async fn decisions_are_counted_by_outcome_and_code_and_name_no_ehr() {
     let refused_ehr = EhrId(uuid::Uuid::now_v7());
     let lifted_ehr = EhrId(uuid::Uuid::now_v7());
 
-    let refused = ask(request(Emergency::default()), refused_ehr).await;
+    let refused = ask(request(false), refused_ehr).await;
     let (Outcome::Absent(code) | Outcome::Refused(code)) = refused else {
         panic!("a default that requires consent refuses a caller with no permit: {refused:?}");
     };
-    let glass = Emergency {
-        declared: true,
-        break_glass: true,
-        opt_out_override: false,
-    };
-    assert_eq!(ask(request(glass), lifted_ehr).await, Outcome::Admit);
+    assert_eq!(ask(request(true), lifted_ehr).await, Outcome::Admit);
 
     let rendered = telemetry
         .render_prometheus()

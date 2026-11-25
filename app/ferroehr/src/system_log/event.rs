@@ -190,13 +190,11 @@ pub struct AuditEvent {
     /// The identifier of the data permit the caller declared it acts under
     /// (`[audit] permit_header`), when it declared one.
     pub permit: Option<String>,
-    /// Whether the declared purpose is one of the deployment's emergency
-    /// purpose codes (`[audit] emergency_purpose_codes`): an access declared
-    /// as necessary to protect the vital interests of the data subject
-    /// (`docs/law/eu/ehds/text.html Art. 11(5)`), which the access log shows
-    /// the person. Stamped by the sender at emit, so every emitter carries it.
-    /// The mark records the declaration; it lifts no restriction.
-    pub emergency_access: bool,
+    /// The justification of the controller's policy the access rested on
+    /// outside the care relationships, with the reason the caller stated:
+    /// an emergency one is the access EHDS Art. 11(5) asks to log for the
+    /// person (`docs/law/eu/ehds/text.html`). Set from the access decision.
+    pub justification: Option<crate::access_eval::justification::Justification>,
     /// The level an access is recorded for review at ([`REVIEW_DETAIL`]): a
     /// care relationship written to a record marked above `N` (draft access
     /// control, The Decision Procedure, Writing Relationships, item 2).
@@ -408,17 +406,6 @@ impl AccessDomain {
 }
 
 impl AuditEvent {
-    /// Whether `test` holds for the code of a purpose of use the record names:
-    /// the declared one, or one the access token states.
-    pub fn names_purpose(&self, mut test: impl FnMut(&str) -> bool) -> bool {
-        self.purpose.as_deref().is_some_and(&mut test)
-            || self
-                .token
-                .iter()
-                .flat_map(|token| token.purposes.iter())
-                .any(|purpose| test(&purpose.code))
-    }
-
     /// The purposes of use the record renders: those the access token states,
     /// then the declared one when the token states no purpose of its code.
     #[must_use]
@@ -564,7 +551,7 @@ impl AuditEvent {
             domain: AccessDomain::of(object),
             purpose: None,
             permit: None,
-            emergency_access: false,
+            justification: None,
             review: None,
             legal_basis: None,
             result_count: None,
@@ -665,28 +652,34 @@ pub(crate) fn stored_instant(at: Timestamp) -> Timestamp {
 mod tests {
     use super::{AuditEvent, Coding, EventActionCode, EventOutcome, ObjectClass, TokenAttributes};
 
-    /// A purpose of use the access token states counts as named beside the
-    /// declared one, so the sender's emergency mark reads it too (EHDS
-    /// Art. 11(5), #5323).
+    /// The record renders the purposes the access token states, then the
+    /// declared one when the token states no purpose of its code (#5323).
     #[test]
-    fn a_purpose_the_token_states_is_named_beside_the_declared_one() {
+    fn the_declared_purpose_follows_the_purposes_the_token_states() {
         let mut event = AuditEvent::new(
             EventActionCode::Read,
             ObjectClass::Ehr,
             EventOutcome::Success,
         );
-        assert!(!event.names_purpose(|code| code == "ETREAT"));
+        let system = Some("http://terminology.hl7.org/CodeSystem/v3-ActReason".to_owned());
         event.token = Some(TokenAttributes {
             purposes: vec![Coding {
-                system: Some("http://terminology.hl7.org/CodeSystem/v3-ActReason".to_owned()),
+                system: system.clone(),
                 code: "ETREAT".to_owned(),
             }],
             roles: Vec::new(),
         });
-        assert!(event.names_purpose(|code| code == "ETREAT"));
-        assert!(!event.names_purpose(|code| code == "TREAT"));
+        event.purpose = Some("ETREAT".to_owned());
+        let codes = |event: &AuditEvent| -> Vec<String> {
+            event
+                .purpose_codings()
+                .into_iter()
+                .map(|c| c.code)
+                .collect()
+        };
+        assert_eq!(codes(&event), ["ETREAT"]);
         event.purpose = Some("TREAT".to_owned());
-        assert!(event.names_purpose(|code| code == "TREAT"));
-        assert!(event.names_purpose(|code| code == "ETREAT"));
+        assert_eq!(codes(&event), ["ETREAT", "TREAT"]);
+        assert_eq!(event.purpose_codings()[0].system, system);
     }
 }

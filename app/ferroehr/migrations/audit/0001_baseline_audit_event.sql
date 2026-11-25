@@ -215,7 +215,7 @@ CREATE TRIGGER audit_render_policy_reject_truncate
     BEFORE TRUNCATE ON audit_render_policy
     FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_render_policy_reject_change();
 COMMENT ON TABLE audit_render_policy IS
-    'The configuration the FHIR AuditEvent of a record is rendered under (audit source, store horizon, category map, emergency purposes), one row per distinct configuration, keyed by the SHA-256 of its text; append-only.';
+    'The configuration the FHIR AuditEvent of a record is rendered under (audit source, store horizon, category map), one row per distinct configuration, keyed by the SHA-256 of its text; append-only.';
 COMMENT ON COLUMN audit_render_policy.id IS
     'The number an access-log entry names its render policy by, in place of the digest.';
 
@@ -349,8 +349,9 @@ CREATE TABLE audit_event (
     assurance_level        text,
     assurance_value        text,
     professional_id        text,
-    -- Whether the access was declared an emergency access (EHDS Art. 11(5)).
-    emergency_access       boolean     NOT NULL DEFAULT false,
+    -- The justification an access outside the care relationships rested on,
+    -- with the reason the caller stated (EHDS Art. 11(5), Annex II 3.2).
+    justification          jsonb,
     -- The first date the record may be deleted on (EHDS Annex II 3.4), and
     -- whether the record states it.
     retention_ends         date,
@@ -522,8 +523,8 @@ COMMENT ON COLUMN audit_event.assurance_value IS
     'The raw assurance claim value (usually acr) the credential carried; NULL when absent.';
 COMMENT ON COLUMN audit_event.professional_id IS
     'The identifier of the natural person who accessed the data (EHDS Annex II 3.2(b)): the person''s own claim, or the professional a client token acted for.';
-COMMENT ON COLUMN audit_event.emergency_access IS
-    'Whether the access was declared as an emergency access in the vital interest of the data subject (EHDS Art. 11(5)): the declared purpose of use is one of [audit] emergency_purpose_codes. Records the declaration only; no restriction is lifted by it.';
+COMMENT ON COLUMN audit_event.justification IS
+    'The justification of the controller''s access policy the access rested on outside the care relationships, as {"kind": "justification" | "emergency", "reason": <the reason the caller stated>}; an emergency is the access EHDS Art. 11(5) asks to log for the person. NULL when the access rested on no justification.';
 COMMENT ON COLUMN audit_event.categories IS
     'The EHDS Art. 14(1) categories of the data the access served or wrote (Annex II 3.2(c)), as a sorted JSON array: each category as its <system>|<code> token, none for data of no category, unclassified when the map could not classify all of it; records written before 0012 carry the earlier spellings; NULL when the operation touched no clinical content or the record predates the column.';
 COMMENT ON COLUMN audit_event.category_basis IS

@@ -122,8 +122,8 @@ The entry names who accessed (the bound party, the groups, the provider, the
 binding outcome and the credential by its issuer, subject, client and token
 id), what (the EHR, the version or object, its categories and origins), why
 (the declared purposes), under which authorisation (the agreement, the
-representation, a data permit, the emergency mark, and the grounds of the
-access decision below), the outcome (`granted`, `refused` or `failed`) and
+representation, a data permit, a justification with the clinician's reason,
+and the grounds of the access decision below), the outcome (`granted`, `refused` or `failed`) and
 the request. It carries no data value of the EHR:
 a query is named by its stored name or the SHA-256 of its text, never the
 text, and a read of the access log through ITI-81 is named by the digest of
@@ -140,7 +140,8 @@ whose `name` and `version` name the document the ground is defined in:
 | `consent` | a consent permit admitted the access, or the caller is a gate-keeper of the settings | `EHR_ACCESS` and the uid of its version; the directive by its uid, its first identifier or its position from 1, and its legal grounds |
 | `representation` | a `delegation` permit admitted a representative | as `consent` |
 | `treatment relationship` | the decision read a live care relationship, also when only a controller rule's exception reads it | in `care` the relationship the access rested on, with its `role` and `path`. A stored relationship is an `ACCESS_STORED_CARE_GROUND` under `ACCESS_POLICY` and the uid of its version: its target (`carer`: the professional's `PERSON` or `ROLE`, or the care team or unit), the uid of its version (`relationship`), whether the grace after its end admitted the access (`in_grace`), the carer it covers for (`covers_for`, with the carer's kind as its `type`), its `provider` and the episode of care it is scoped to (`episode`, absent for a relationship that names none). One a verified credential attests is an `ACCESS_ATTESTED_CARE_GROUND` on the `attested` path under the agreement's name and version: the `assertion` (`id`, `issuer`) and the `agreement` (the container uid of its `ROLE`, with the partner's federation issuer); the ground's `reference` names the assertion too. Where several admitted it, `direct` comes before `team` before `self_declared` before `attested`, then the order of the roles in the rule that matched |
-| `emergency` | an emergency lifted a directive, a controller rule or steps 6 to 8 | the directive it lifted, or the `ACCESS_POLICY` version with the rule it lifted by its uid, its first identifier or its position from 1; an entry naming the objects it delivered names only the directives and rules whose data scope covers one of them |
+| `justification` | a [justification](security.md#justified-access-outside-the-care-relationships) of the access policy admitted the caller outside its care relationships | `ACCESS_POLICY` and the uid of its version, the justification by its position from 1 (`reference`, type `justification`), and the clinician's own words in `reason`; an entry naming the objects it delivered names it only when one of them rested on it |
+| `emergency` | an emergency justification admitted the access, or lifted a directive, a controller rule or steps 6 to 8 | for the justification itself, as `justification` with its `reason`; for each directive or rule it lifted, the directive, or the `ACCESS_POLICY` version with the rule by its uid, its first identifier or its position from 1, and no `reason`; an entry naming the objects it delivered names only the directives and rules whose data scope covers one of them |
 
 The entry of each EHR an AQL query served names the same grounds a read of
 that EHR alone names. The query's condition is built from this replica's copy
@@ -170,8 +171,9 @@ terminology, and in `outcome.description` the step that refused and the
 directive or policy of that step, such as `step 2 (restriction): directive 1
 of EHR_ACCESS 5a1c…::cdr.example.org::2`. This holds for the `404` of an
 opt-out or a restriction too: the response says nothing (EHDS Art. 8), and
-the entry says why. An override in an emergency sets `is_emergency`, so the
-person sees it in their access log (EHDS Art. 9 and 11(5)). The EHDS record
+the entry says why. A justified access and an emergency name their
+justification with the reason, so the person sees them in their access log
+(EHDS Art. 9 and 11(5)). The EHDS record
 writes the versions the grounds name after the data permit at
 `agent[user].policy`, "the policy or plan that authorized the activity being
 recorded" (FHIR R4 `AuditEvent.agent.policy`), read from the entry's grounds
@@ -288,7 +290,8 @@ not classify is a BALP exchange without the EHDS entities. Each row is a test
 | `query` | `entity:query` (role `24`), a stored query by its name | the text digest is not written |
 | `purposes` | `purposeOfEvent` and `agent:user` `purposeOfUse` | none |
 | `authorisations` | a permit as a `policy` of `agent:user` after the token id; an agreement in the `ehds-relayed` entity; a representation in `ehds-accessor` | legal grounds have no element; details |
-| `is_emergency` | the `ehds-emergency-access` entity naming the purposes that marked it | the mark becomes an entity |
+| the `emergency` authorisation with a `reason` | the `ehds-emergency-access` entity naming the declared purpose that invoked it | the mark becomes an entity |
+| an authorisation's `reason` | the `text` of `purposeOfEvent` and of `agent:user` `purposeOfUse` | none |
 | `channel.request_id`, `channel.client_address` | the `X-Request-Id` entity; the client agent's `network.address` | none |
 | `system_id` | `source.observer.identifier`; `source.site` from `[audit] enterprise_site_id` | none |
 | `security_labels` | the `securityLabel` of the entity they label | no `meta.security` is written |
@@ -313,7 +316,7 @@ not classify is a BALP exchange without the EHDS entities. Each row is a test
 | `ehr_id` | the patient participant (type `1`, role `1`) names the subject of care | the `ehr_id` itself is not written |
 | `items` | a System Object (type `2`, ID type URI) naming the version | the categories, origins, template and archetype |
 | `query` | the query object of the Query event | the text digest |
-| `purposes`, `authorisations`, `is_emergency` | nothing in the A.5.1 schema | lost |
+| `purposes`, `authorisations` | nothing in the A.5.1 schema | lost |
 | `retention`, `security_labels`, `other_details` | nothing | lost |
 
 **To the EHDS access record (`ehds-logging` `AccessRecord`).**
@@ -328,7 +331,7 @@ not classify is a BALP exchange without the EHDS entities. Each row is a test
 | `categories` | `items.categories`, computed again through the category map that classified the access | none |
 | `delivered`, `origins`, `origin_count` | `outcome.delivered`, `items.origins`, the origin count | none |
 | `request` (id, operation, resource, stored query, client address, correlation) | `channel`, `operation`, `items`, `query` | the query text is never carried |
-| `retention`, `labels`, `emergency` | `retention`, the categories and origins, `is_emergency` | none |
+| `retention`, `labels`, `emergency` | `retention`, the categories and origins, the `emergency` authorisation with a `reason` | none |
 
 ## Reads are logged too, per record
 
@@ -353,7 +356,7 @@ Each record additionally carries:
 | `domain` | The pseudonymisation domain read: `ehr`, `demographic`, `linkage` for a crossing that resolves a party or a subject to its EHRs, or `system` for an operation that touches no domain. |
 | `purpose` | The purpose of use the caller declared in the `x-purpose-of-use` header, when the deployment accepts it. |
 | `token_attributes` | The purposes of use and the professional roles the access token states, each with its code system, for an issuer with an `[auth.issuer.<name>.attributes]` table ([where the purpose comes from](#where-the-purpose-of-use-comes-from)). |
-| `emergency_access` | `true` when the declared purpose, or a purpose the token states, is one of `[audit] emergency_purpose_codes`: an [emergency access](#emergency-access-ehds-art-115) (EHDS Art. 11(5)). |
+| `justification` | `{"kind": "justification" \| "emergency", "reason": …}` when the access rested on a justification of the access policy, with the reason the clinician stated; `NULL` otherwise ([justified and emergency access](#justified-and-emergency-access)). |
 | `legal_basis` | The basis the deployment processes under, from `[audit] legal_basis`. |
 | `result_count` | How many records the operation served. |
 | `request_id` | The `x-request-id` correlation id the response carried. |
@@ -691,54 +694,68 @@ it. FerroBRIDGE's
 [access record](https://ferrobridge.eu/docs/operate/access-record.html) page
 describes its record and its configuration.
 
-### Emergency access (EHDS Art. 11(5))
+### Justified and emergency access
 
-A natural person may restrict health professionals' access to parts of their
-data (EHDS Art. 8). Art. 11(5) lets a professional reach restricted data where
-the person's vital interests require it, and requires such cases to be "logged
-in a clear and understandable format" and "easily accessible for the data
-subject". Art. 9(1) counts these accesses among the ones the person is told
-about.
+A clinician opens a record outside their care relationships on a
+[justification](security.md#justified-access-outside-the-care-relationships)
+of your access policy, with a reason in `x-access-reason`; an emergency is a
+justification that also lifts what EHDS Art. 11(5) lets an emergency lift.
+Art. 11(5) requires such cases to be "logged in a clear and understandable
+format" and "easily accessible for the data subject", and Art. 9(1) and
+Annex II 3.2 count every access among the ones the person is told about.
+FerroEHR records what the access decision rested on, never what the request
+merely declared:
 
-You name the purpose codes your callers declare for an emergency in
-`[audit] emergency_purpose_codes`. Each one must also be on
-`[audit] purpose_codes`; the server refuses to start otherwise. An access
-whose declared purpose is one of them carries the emergency mark:
-
-- **The stored record:** the `emergency_access` column is `true`. It is
-  `false` for every other access and for records written before the column
-  existed.
-- **The FHIR `AuditEvent`:** the `entity` named `ehds-emergency-access` that
+- **The stored record:** the `justification` column holds the kind
+  (`justification` or `emergency`) and the reason as the clinician wrote it.
+  It is `NULL` for an access that rested on a care relationship or anything
+  else, and for a refused justified access, which names its refusal
+  instead; an emergency is recorded even when the access was refused.
+- **The access-log entry:** the `justification` or `emergency` authorisation
+  under `ACCESS_POLICY` and its version, with the `reason`.
+- **The FHIR `AuditEvent`:** the reason is the `text` of the
+  `CodeableConcept` beside the declared code on `purposeOfEvent` and on the
+  requestor's `agent.purposeOfUse` (FHIR R4 `AuditEvent`, IHE BALP). An
+  emergency also carries the `entity` named `ehds-emergency-access` that
   `ehds-logging` writes, whose `description` states the mark in plain words
-  ("Emergency access: the accessor declared that the access was necessary to
-  protect the vital interests of the data subject (Regulation (EU) 2025/327
-  Art 11(5)).") and whose `ehds-emergency-purpose` details name the purposes
-  that marked it. The declared code stays on `agent.purposeOfUse` and on
-  `purposeOfEvent`. An app keys on the entity and shows its
-  description.
-- **The DICOM syslog feed:** no mark. The PS3.15 schema has no purpose
-  element.
+  ("Emergency access: the accessor declared that the access was necessary
+  to protect the vital interests of the data subject (Regulation (EU)
+  2025/327 Art 11(5)).") and whose `ehds-emergency-purpose` detail names the
+  purpose that invoked it. An app keys on the entity and shows its
+  description, and shows the reason for every justified access.
+- **The DICOM syslog feed:** the reason travels as the `originalText` of
+  `EventIdentification.PurposeOfUse`; the PS3.15 schema has no element for
+  the emergency mark.
 
-The person reads their own log, the marked accesses included, through the
-[subject-scoped ITI-81 retrieval](#retrieving-audit-records-iti-81).
-
-```toml
-[audit]
-purpose_codes = ["TREAT", "ETREAT"]
-emergency_purpose_codes = ["ETREAT"]
+```mermaid
+sequenceDiagram
+    participant C as Clinician
+    participant F as FerroEHR
+    participant S as Audit store
+    participant P as Patient (ITI-81)
+    C->>F: read, purpose ETREAT, reason "Unresponsive on arrival"
+    F->>F: emergency justification invoked, restriction lifted
+    F->>S: access record, justification {emergency, reason}
+    F-->>C: 200
+    P->>F: GET AuditEvent?patient=...
+    F->>S: subject-scoped search
+    F-->>P: purposeOfEvent ETREAT with the reason, ehds-emergency-access entity
 ```
 
-The mark records the declaration and lifts no restriction. A composition or
-EHR restricted under GDPR Art. 18 stays refused with an emergency purpose,
-because Art. 18(2) admits processing only with consent, for legal claims, for
-the rights of another person or for an important public interest, and the
-person's own vital interests are not on that list. The refused attempt is
-still logged with the mark. An EHDS Art. 8 restriction of access by health
-professionals is different: a caller holding `authz.rbac.emergency_access_role`
-that declares an emergency purpose reads the restricted data, and its record
-carries the mark
+The person reads their own log, every justified access included, through the
+[subject-scoped ITI-81 retrieval](#retrieving-audit-records-iti-81), and the
+access-log resource filters on `justification=justification` or
+`justification=emergency`.
+
+A justification lifts no restriction of the patient. A composition or EHR
+restricted under GDPR Art. 18 stays refused with any justification, an
+emergency included, because Art. 18(2) admits processing only with consent,
+for legal claims, for the rights of another person or for an important
+public interest, and the person's own vital interests are not on that list.
+An EHDS Art. 8 restriction of access by health professionals yields only to
+an emergency justification, where the directive's `emergency_override`
+holds
 ([restriction of access](security.md#restriction-of-access-by-health-professionals-ehds-art-8)).
-An emergency the caller does not declare is not marked.
 
 ### Retention, and who chooses it
 
@@ -1172,8 +1189,8 @@ and those it parked ([How a record is delivered](#how-a-record-is-delivered)).
 The store keeps a record's facts in columns and renders its FHIR `AuditEvent`
 from them when the record is read (ITI-81) or delivered (the FHIR feed). What
 the rendering takes from the configuration (`source_id`, `enterprise_site_id`,
-`server_host`, `value_if_missing`, the access policy's log retention, the audit category register and
-`emergency_purpose_codes`) is kept once per distinct configuration in
+`server_host`, `value_if_missing`, the access policy's log retention and the
+audit category register) is kept once per distinct configuration in
 `audit.audit_render_policy`, keyed by the SHA-256 of its text, and every record
 names the policy it was written under. A record therefore renders the same
 document after the configuration changes, and the verification below reports a
@@ -1443,8 +1460,9 @@ serves, reads it **scoped to one subject**: one
 is refused with a `403` that names the parameter when it omits
 it. Reading a subject's log is itself recorded as an access naming that
 subject and the record count served. An
-[emergency access](#emergency-access-ehds-art-115) in the subject's log
-carries its mark as the `ehds-emergency-access` entity. The surface answers `404` when the local
+[justified access](#justified-and-emergency-access) in the subject's log carries the clinician's reason
+as the text of its purpose of use, and an emergency its mark as the
+`ehds-emergency-access` entity. The surface answers `404` when the local
 store is disabled.
 
 The subject-scoped ITI-81 read stays beside the [access-log

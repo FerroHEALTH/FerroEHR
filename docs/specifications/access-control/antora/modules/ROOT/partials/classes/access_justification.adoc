@@ -1,0 +1,13 @@
+=== ACCESS_JUSTIFICATION Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_justification.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_justification.adoc[]
+
+====

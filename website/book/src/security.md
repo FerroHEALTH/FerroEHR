@@ -76,7 +76,7 @@ honour **refuses to boot** rather than degrading at the first request:
 | `[authz.professional]` | error: removed; the token's `fhirUser` classifies the caller |
 | two issuers sharing an audience, or no `[authz.party_binding] provider` | error: every person is bound to a party, under the provider the deployment acts for |
 | a Basic user with no `[[authz.party_binding.basic_user]]` mapping | error: a Basic user is a person, bound by its key |
-| an `[authz.rbac] role_issuers` entry that names a `federation` issuer | error: only the deployment's own people hold an administrator or emergency role |
+| an `[authz.rbac] role_issuers` entry that names a `federation` issuer | error: only the deployment's own people hold an administrator role |
 
 Successfully verified Basic credentials are cached for
 `FERROEHR__AUTH__BASIC__CACHE_TTL` (default `5min`; `0s` turns the cache off
@@ -485,16 +485,17 @@ write a directive or a rule refuses changes nothing:
   declares: "no medical examination" refuses that purpose and nothing else,
   and a request with no purpose under a policy that does not require one is
   not refused by a purpose rule.
-- **Emergencies.** An access service that may override an opt-out and
-  declares one of `[audit] emergency_purpose_codes` reads an opted-out EHR
-  where the directive's `emergency_override` holds, unless it acts for the
-  person (Art. 10(2)). The holder of `authz.rbac.emergency_access_role`
-  declaring such a purpose reads data a restriction, a consent deny or a deny
-  rule covers where its `emergency_override` holds, and passes steps 6 to 8
-  (Art. 11(5)).
-  A directive whose `emergency_override` is false binds in every emergency,
-  as an absolute opt-out of the Member State's law does (recital 55). Each
-  such access carries the emergency mark.
+- **Emergencies.** An emergency is a
+  [justification](#justified-access-outside-the-care-relationships) of the
+  access policy whose `emergency` is set. A caller it names that declares
+  its purpose and states a reason reads data a restriction, a consent deny,
+  an exclusion or a deny rule covers where its `emergency_override` holds,
+  and passes steps 6 to 8 (Art. 11(5)); an access service that may override
+  an opt-out reads an opted-out EHR the same way, unless it acts for the
+  person (Art. 10(2)). A directive whose `emergency_override` is false binds
+  in every emergency, as an absolute opt-out of the Member State's law does
+  (recital 55). Each such access is recorded as an emergency with its
+  reason.
 - **Writes.** A write is judged by steps 1 and 2 for the EHR as a whole and
   by steps 3 to 8 for the version it commits: its template, root archetype,
   origins and the sensitivities the policy's classifications give it. A
@@ -586,8 +587,8 @@ confidentiality of a datum is the highest of the three.
   record is read by its subject alone. A typical policy permits `R` to
   callers with a care relationship (`applies_to` with `relationship` `care`)
   for a treatment purpose, and `V` to a named role. The patient still reads
-  their own record, and a declared emergency by the break-glass role lifts
-  the step, marked in the access log.
+  their own record, and an emergency justification invoked with a reason
+  lifts the step, recorded in the access log.
 - **What a refused caller sees.** A named read answers `403
   refused-confidentiality`, which names neither the level nor the reason, so
   `R` and `V` answer alike. A level listed in the access policy's
@@ -624,11 +625,97 @@ controller's rules (step 5, EHDS Art. 11(3)), the catalogue of named
 directives a person accepts by reference, and the restrictions of the
 access log's subject view. An administrator holding the
 `write_access_policy` grant writes it over the admin API, and it decides the
-next request on every replica. The trust and the floor stay in
-`ferroehr.toml`: `authz.rbac.admin_role`, `emergency_access_role`,
-`ehr_access_default` and `[audit] emergency_purpose_codes`. The policy can
-only tighten them. Until you write one, nothing is tightened. The model and
+next request on every replica. Its `justifications` say who may open a
+record outside their care relationships, and in an emergency
+([below](#justified-access-outside-the-care-relationships)). The trust and
+the floor stay in `ferroehr.toml`: `authz.rbac.admin_role` and
+`ehr_access_default`. The policy can only tighten them. Until you write one,
+nothing is tightened and nobody is admitted on a justification. The model and
 the rules are on [The access policy](operational-policy.md#the-access-policy).
+
+### Justified access outside the care relationships
+
+A clinician sometimes needs a record outside their caseload: a consultation,
+a second opinion, a colleague's patient on a shift, or an emergency. Your
+EHR lets them open it when your access policy allows it for the purpose they
+declare, asks them why, and FerroEHR keeps the reason in the access record
+the patient reads (EHDS Art. 9 and Annex II 3.2, Art. 11(5)). The
+justification, the header and the bound of the reason are this CDR's own
+design; the purposes are HL7 v3 `ActReason` codes, and the reason travels
+on as the text of the purpose of use (FHIR R4 `AuditEvent.purposeOfEvent`
+and `agent.purposeOfUse`, IHE BALP).
+
+- **The policy.** Each entry of `ACCESS_POLICY.justifications` names the
+  `purposes` that invoke it, the callers that may (`applies_to`, actor
+  scopes as in a rule: a role they perform, a party, a caller kind; void
+  means every professional), and whether it is an `emergency`. Without
+  `justifications` nobody is admitted on one.
+- **The request.** The clinician declares the purpose in `x-purpose-of-use`
+  and the reason in `x-access-reason` (`[audit] reason_header`): their own
+  words, percent-encoded UTF-8 (RFC 3986 §2.1) so any language travels in an
+  HTTP header, 1 to 1000 characters after decoding, with no control
+  character. A malformed or longer value is a `400` naming the header, and
+  nothing is recorded in part.
+- **The decision.** The first justification whose purposes hold the
+  declared purpose and whose `applies_to` names the caller is invoked. It
+  stands in for a live care relationship at steps 7 and 8 for the data no
+  relationship of the caller covers: with a reason they are admitted, and
+  without one they are refused `403 refused-reason-missing`, which tells
+  your EHR to ask the clinician why. Inside the caller's care relationships
+  no reason is asked. An emergency justification lifts each
+  `emergency_override` and steps 6 to 8, and needs the reason before any
+  directive is read, so its refusal never reveals a restriction.
+- **What it never lifts.** A justification that is no emergency lifts no
+  restriction, opt-out, consent deny, exclusion, controller rule,
+  sensitivity, confidentiality or conflict. The patient's restriction still
+  refuses (EHDS Art. 8), and a GDPR Art. 18 restriction of processing refuses
+  every access, an emergency included.
+- **The record.** The access record stores the purpose and the reason
+  (`audit_event.justification`), the access-log entry names the
+  justification with its `reason` (`justification`, or `emergency`), and the
+  patient's own ITI-81 retrieval shows who looked, why and that it rested on
+  a justification ([Audit](audit.md#justified-and-emergency-access)).
+
+```mermaid
+sequenceDiagram
+    participant C as Clinician (EHR app)
+    participant F as FerroEHR
+    participant E as Access evaluator
+    participant L as Access record
+    participant P as Patient portal
+    C->>F: GET composition, x-purpose-of-use TREAT
+    F->>E: decide (no care relationship)
+    E-->>F: refused-reason-missing
+    F-->>C: 403 refused-reason-missing
+    C->>F: GET composition, x-purpose-of-use TREAT, x-access-reason
+    F->>E: decide (justification 1 invoked, reason stated)
+    E-->>F: admitted on the justification
+    F->>L: purpose TREAT, justification and reason
+    F-->>C: 200 composition
+    P->>F: GET AuditEvent?patient=...
+    F-->>P: purposeOfEvent TREAT, text = the reason
+```
+
+A policy that admits consultations under `TREAT` and emergencies under
+`ETREAT` to every professional, and break the glass only to the emergency
+physicians:
+
+```json
+"justifications": [
+  { "_type": "ACCESS_JUSTIFICATION", "emergency": false,
+    "purposes": [{ "_type": "DV_CODED_TEXT", "value": "treatment",
+      "defining_code": { "terminology_id": { "value": "HL7_ActReason" }, "code_string": "TREAT" } }] },
+  { "_type": "ACCESS_JUSTIFICATION", "emergency": true,
+    "purposes": [{ "_type": "DV_CODED_TEXT", "value": "break the glass",
+      "defining_code": { "terminology_id": { "value": "HL7_ActReason" }, "code_string": "BTG" } }],
+    "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE",
+      "role": { "_type": "DV_CODED_TEXT", "value": "emergency physician",
+        "defining_code": { "terminology_id": { "value": "urn:example:roles" }, "code_string": "EP" } } }] }
+]
+```
+
+Each purpose must also be on `[audit] purpose_codes` when that list is set,
+since a purpose the audit layer does not record is no declared purpose.
 
 ### Restriction of access by health professionals (EHDS Art. 8)
 
@@ -666,21 +753,13 @@ openEHR specification governs this; it is our own design.
   controller's own processing go on: the admin routes (dump, archive, erase,
   the registers) see everything. It is not the GDPR Art. 18 restriction of
   processing, which answers **403** and stops processing itself.
-- **The emergency override.** A caller holding the role
-  `authz.rbac.emergency_access_role` names that declares one of
-  `[audit] emergency_purpose_codes` reads the restricted data where the
-  directive's `emergency_override` holds, and its access record carries the
-  [emergency mark](audit.md#emergency-access-ehds-art-115). Either alone lifts
-  nothing. Unset, nobody may override.
-
-```toml
-[authz.rbac]
-emergency_access_role = "EMERGENCY"
-
-[audit]
-purpose_codes = ["TREAT", "ETREAT"]
-emergency_purpose_codes = ["ETREAT"]
-```
+- **The emergency override.** A caller an emergency
+  [justification](#justified-access-outside-the-care-relationships) of the
+  access policy names, declaring its purpose and stating a reason, reads the
+  restricted data where the directive's `emergency_override` holds, and its
+  access record names the emergency with the reason
+  ([Audit](audit.md#justified-and-emergency-access)). Without the reason, or
+  without a justification that names the caller, nothing is lifted.
 
 The grain is the versioned object, the whole EHR, or both. A finer grain (one
 entry inside a composition) is not built: an object is the unit the version
@@ -733,12 +812,15 @@ opt-out in its own services, leave the mark unused.
   controller's admin routes. Nothing is deleted. It is not the Art. 8
   restriction above, which reaches every professional route and leaves the
   person's own access open.
-- **The vital-interest override.** An access-service caller that declares one
-  of `[audit] emergency_purpose_codes` reads the EHR where the opt-out's
+- **The vital-interest override.** An access-service caller an emergency
+  [justification](#justified-access-outside-the-care-relationships) names
+  (an `applies_to` of caller kind `access_service`), declaring its purpose
+  and stating a reason, reads the EHR where the opt-out's
   `emergency_override` holds, unless it acts for the
   person (a SMART `patient/` grant or the patient claim), because Art. 10(2)
   names a healthcare provider or health professional. Its access record
-  carries the [emergency mark](audit.md#emergency-access-ehds-art-115), and a
+  names the emergency with the reason
+  ([Audit](audit.md#justified-and-emergency-access)), and a
   route that names the opted-out EHR, in its path or in a `POST
   /message/export` manifest, adds an access record
   `access-opt-out-override:ehr-wide` against it.
@@ -752,7 +834,6 @@ allowed = ["commit_composition", "access_service"]
 
 [audit]
 purpose_codes = ["TREAT", "ETREAT"]
-emergency_purpose_codes = ["ETREAT"]
 ```
 
 ### Information a person inserts (EHDS Art. 5)
@@ -891,7 +972,7 @@ Admin operation) and `READONLY` (`readonly_role`, refused on every write).
 | `FERROEHR__AUTHZ__RBAC__ADMIN_ROLE` | `ADMIN` | role required for admin operations |
 | `FERROEHR__AUTHZ__RBAC__READONLY_ROLE` | `READONLY` | role marking a principal read-only: refused on every write |
 | `FERROEHR__AUTH__ISSUER__<NAME>__ROLE_CLAIMS` | `["roles","groups","entitlements"]` | JWT claim paths mined for roles, per issuer; a Keycloak issuer adds `realm_access.roles` |
-| `FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS` | empty | the names of the issuers whose role claims may grant the administrator and emergency roles; a token of any other issuer never holds them |
+| `FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS` | empty | the names of the issuers whose role claims may grant the administrator role; a token of any other issuer never holds it |
 
 Roles come from the JWT claims listed in `ROLE_CLAIMS`, or from a Basic user's
 configured roles. The defaults are the carriers

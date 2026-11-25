@@ -34,6 +34,7 @@ use http::{HeaderValue, StatusCode, header};
 use openehr_its::rest::runtime::ApiError;
 
 use ferroehr::access_eval::condition::RequestAccess;
+use ferroehr::access_eval::justification::Reason;
 use ferroehr::system_log::access_context;
 use ferroehr::system_log::categories::{AccessedContent, ResourceKind};
 use ferroehr::system_log::event::{
@@ -92,12 +93,14 @@ pub struct AuditObject {
 }
 
 /// The access-logging facts every record of one request shares: the request
-/// correlation id, the declared purpose of use and the declared data permit.
+/// correlation id, the declared purpose of use, the declared data permit and
+/// the reason stated for a justified access.
 #[derive(Debug, Clone, Default)]
 pub(super) struct AccessContext {
     request_id: Option<String>,
     purpose: Option<String>,
     permit: Option<String>,
+    reason: Option<Reason>,
 }
 
 /// The facts of one request every operation record of it names: where it
@@ -207,6 +210,33 @@ fn declared_permit(req: &Request, backend: &ferroehr::service::FerroEhrService) 
     access_context::permit_identifier(declared)
 }
 
+/// The reason the caller stated for a justified access (`[audit]
+/// reason_header`); `Ok(None)` when it stated none.
+///
+/// # Errors
+/// The `400` of a value [`Reason::from_header`] refuses: a reason that cannot
+/// be recorded as stated is never recorded in part (#6587).
+fn declared_reason(
+    req: &Request,
+    backend: &ferroehr::service::FerroEhrService,
+) -> Result<Option<Reason>, Response> {
+    let Some(header) = backend.audit_reason_header() else {
+        return Ok(None);
+    };
+    let Some(value) = req.headers().get(header) else {
+        return Ok(None);
+    };
+    Reason::from_header(value.as_bytes())
+        .map(Some)
+        .map_err(|refused| {
+            RestError::from(ApiError::BadRequest(format!(
+                "the {header} header is refused: {refused}; it carries the reason for a \
+                 justified access as percent-encoded UTF-8"
+            )))
+            .into_response()
+        })
+}
+
 /// The ATNA audit middleware, routing emission through the platform's
 /// `SystemLog` component.
 pub async fn middleware(State(state): State<AppState>, req: Request, next: Next) -> Response {
@@ -222,6 +252,10 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     let timestamp = jiff::Timestamp::now();
     let purpose = declared_purpose(&req, state.backend());
     let permit = declared_permit(&req, state.backend());
+    let reason = match declared_reason(&req, state.backend()) {
+        Ok(reason) => reason,
+        Err(refused) => return refused,
+    };
     // The server's own request id, which the family stack mints for every
     // request and the request log names; a client's `X-Request-Id` is echoed
     // to it and never recorded.
@@ -239,6 +273,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
             request_id,
             purpose,
             permit,
+            reason,
         },
     };
     let recorder = WriteRecorder::default();
@@ -397,8 +432,8 @@ async fn run_recorded(
     .await
 }
 
-/// Run the rest of the stack with the request's origin and declared purpose
-/// and permit published for its task scope, so a record the service layer
+/// Run the rest of the stack with the request's origin and its declared
+/// purpose, permit and reason published for its task scope, so a record the service layer
 /// emits by itself (a pseudonymisation boundary crossing, or an act that
 /// writes its own record) names them as this middleware's own records do
 /// (`ferroehr::system_log::access_context`).
@@ -412,8 +447,14 @@ async fn run_published(
         request_id: access.request_id.clone(),
         client_address,
     };
-    let declared =
-        access_context::with_declared(access.purpose.clone(), access.permit.clone(), next.run(req));
+    let declared = access_context::with_declared(
+        access_context::Declared {
+            purpose: access.purpose.clone(),
+            permit: access.permit.clone(),
+            reason: access.reason.clone(),
+        },
+        next.run(req),
+    );
     access_context::with_origin(origin, declared).await
 }
 

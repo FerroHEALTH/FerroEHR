@@ -7,7 +7,7 @@
     "kind": {
       "_type": "P_BMM_SINGLE_PROPERTY",
       "name": "kind",
-      "documentation": "The kind of ground, coded in the draft `openehr_access` terminology's `access authorisation` group: a role, a treatment relationship, an agreement, a consent decision, a permit, an emergency override, the subject's own access, a representation, a legal obligation, or a conflict allowance.",
+      "documentation": "The kind of ground, coded in the draft `openehr_access` terminology's `access authorisation` group: a role, a treatment relationship, an agreement, a consent decision, a permit, a justification, an emergency, the subject's own access, a representation, a legal obligation, or a conflict allowance.",
       "is_mandatory": true,
       "type": "DV_CODED_TEXT"
     },
@@ -48,6 +48,12 @@
         "upper_unbounded": true
       }
     },
+    "reason": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "reason",
+      "documentation": "For a justification or an emergency, the reason the accessor stated, in its own words (HL7 FHIR R4 `AuditEvent.purposeOfEvent.text`).",
+      "type": "String"
+    },
     "care": {
       "_type": "P_BMM_SINGLE_PROPERTY",
       "name": "care",
@@ -57,7 +63,8 @@
   },
   "invariants": {
     "Kind_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_authorisation, kind.defining_code)",
-    "Care_valid": "care /= Void implies kind.defining_code.code_string.is_equal (\"treatment relationship\")"
+    "Care_valid": "care /= Void implies kind.defining_code.code_string.is_equal (\"treatment relationship\")",
+    "Reason_valid": "reason /= Void implies (not reason.is_empty and (kind.defining_code.code_string.is_equal (\"justification\") or kind.defining_code.code_string.is_equal (\"emergency\")))"
   }
 }
 --------

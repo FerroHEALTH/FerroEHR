@@ -733,22 +733,14 @@ fn subsecond_timestamps_keep_their_precision() {
     assert_eq!(json(&e, None)["recorded"], "2026-07-06T12:00:00.5Z");
 }
 
-/// The emergency mark (EHDS Art. 11(5)) renders as the `ehds-logging`
-/// entity that states it in words, beside the declared purpose; an
-/// unmarked access renders no such entity, whatever purpose it declared.
+/// An access that rested on an emergency justification (EHDS Art. 11(5))
+/// renders the `ehds-logging` entity that states it in words, beside the
+/// declared purpose; an access that rested on a non-emergency justification,
+/// or on none, renders no such entity, whatever purpose it declared.
 #[test]
 fn the_emergency_mark_renders_as_its_entity() {
-    let etreat = Purpose {
-        system: None,
-        code: "ETREAT".to_owned(),
-    };
-    let marking = AuditContext {
-        recording: Recording {
-            emergency: EmergencyPurposes::declare(&[etreat]).expect("one purpose"),
-            ..Recording::default()
-        },
-        ..ctx()
-    };
+    use crate::access_eval::justification::{Justification, Reason};
+    let marking = ctx();
     let mut e = event(
         EventActionCode::Read,
         ObjectClass::Composition,
@@ -766,8 +758,18 @@ fn the_emergency_mark_renders_as_its_entity() {
     };
     let unmarked = to_fhir(&e, &marking, None).expect("render");
     assert!(mark(&unmarked).is_none(), "{unmarked}");
+    let reason = Reason::new("unconscious on arrival").expect("a reason");
+    e.justification = Some(Justification {
+        emergency: false,
+        reason: reason.clone(),
+    });
+    let justified = to_fhir(&e, &marking, None).expect("render");
+    assert!(mark(&justified).is_none(), "{justified}");
 
-    e.emergency_access = true;
+    e.justification = Some(Justification {
+        emergency: true,
+        reason,
+    });
     let rendered = to_fhir(&e, &marking, None).expect("render");
     let entity = mark(&rendered).expect("the mark");
     assert_eq!(

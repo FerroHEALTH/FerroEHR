@@ -10,6 +10,7 @@ use crate::draft::access_control::access_control::access_classification::AccessC
 use crate::draft::access_control::access_control::access_conflict_rule::AccessConflictRule;
 use crate::draft::access_control::access_control::access_data_scope::AccessDataScope;
 use crate::draft::access_control::access_control::access_directive::AccessDirective;
+use crate::draft::access_control::access_control::access_justification::AccessJustification;
 use crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction;
 use crate::draft::access_control::access_control::access_log_retention::AccessLogRetention;
 use crate::draft::access_control::access_control::access_relationship_validity::AccessRelationshipValidity;
@@ -85,6 +86,8 @@ pub struct AccessPolicy {
     pub episode_shared: Option<openehr_base::containers::NonEmptyVec<AccessDataScope>>,
     /// The conflicts of interest the controller allows through the professional path. Void allows none: a professional who is the subject, or is related to the subject, is refused.
     pub conflict_rules: Option<openehr_base::containers::NonEmptyVec<AccessConflictRule>>,
+    /// The grounds on which a caller is admitted outside its care relationships, by a declared purpose of use and a stated reason. Void admits nobody on a justification.
+    pub justifications: Option<openehr_base::containers::NonEmptyVec<AccessJustification>>,
     /// The confidentiality levels whose refused records are answered as absent. Void answers every refused named record as forbidden.
     pub concealed_confidentialities: Option<openehr_base::containers::NonEmptyVec<DvCodedText>>,
     /// The value sets the controller binds the coded attributes of care relationships, representations and rules to, held on a terminology server.

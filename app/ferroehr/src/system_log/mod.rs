@@ -146,9 +146,6 @@ pub enum AuditError {
     /// reports the same findings.
     #[error("the audit category map is invalid: {}", .0.iter().map(ToString::to_string).collect::<Vec<_>>().join("; "))]
     CategoryMap(Vec<categories::CategoryMapError>),
-    /// `ehds-logging` refused an `[audit] emergency_purpose_codes` entry.
-    #[error("the audit emergency purposes are invalid")]
-    Emergency(#[source] ehds_logging::emergency::EmergencyError),
     /// `ehds-logging` refused a retention or label policy of the access record.
     #[error("the access record policy is invalid")]
     Policy(#[source] Box<dyn std::error::Error + Send + Sync>),
@@ -320,16 +317,6 @@ impl FerroEhrService {
         self.record_events(vec![event]).await
     }
 
-    /// Whether `purpose` is one of `[audit] emergency_purpose_codes`, the codes
-    /// that declare an emergency access in the vital interest of the person
-    /// (EHDS Art. 11(5)); `false` when no audit sender is wired.
-    #[must_use]
-    pub fn is_emergency_purpose(&self, purpose: Option<&str>) -> bool {
-        self.audit
-            .as_ref()
-            .is_some_and(|sender| sender.is_emergency_purpose(purpose))
-    }
-
     /// Whether ATNA auditing is on (a sender is wired and its master switch set).
     pub fn audit_enabled(&self) -> bool {
         self.audit.as_ref().is_some_and(AuditSender::enabled)
@@ -357,6 +344,14 @@ impl FerroEhrService {
     #[must_use]
     pub fn audit_permit_header(&self) -> Option<&str> {
         self.audit.as_ref().map(AuditSender::permit_header)
+    }
+
+    /// The request header a caller states the reason for a justified access
+    /// in ([`config::AuditConfig::reason_header`]), lowercased; `None` when no
+    /// audit sender is wired.
+    #[must_use]
+    pub fn audit_reason_header(&self) -> Option<&str> {
+        self.audit.as_ref().map(AuditSender::reason_header)
     }
 
     /// Whether `code` is a purpose code this deployment records

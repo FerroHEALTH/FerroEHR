@@ -81,7 +81,11 @@ group! {
         Consent => "consent",
         /// A data permit.
         Permit => "permit",
-        /// An emergency override.
+        /// A justification of the controller's policy that admitted the
+        /// accessor outside its care relationships.
+        Justification => "justification",
+        /// An emergency: a justification of the controller's policy that
+        /// lifts each deny whose emergency override holds.
         Emergency => "emergency",
         /// The accessor is the subject of care.
         SubjectOfCare => "subject of care",

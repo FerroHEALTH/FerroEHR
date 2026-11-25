@@ -7,7 +7,7 @@
     "binding": {
       "_type": "P_BMM_SINGLE_PROPERTY",
       "name": "binding",
-      "documentation": "What the value set codes, in the `access value set binding` group: `care_role`, `representation_basis`, `kinship`, `organisation_type`, `care_purpose` or `emergency_purpose`.",
+      "documentation": "What the value set codes, in the `access value set binding` group: `care_role`, `representation_basis`, `kinship`, `organisation_type` or `care_purpose`.",
       "is_mandatory": true,
       "type": "DV_CODED_TEXT"
     },

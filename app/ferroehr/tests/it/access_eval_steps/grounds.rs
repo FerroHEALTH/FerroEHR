@@ -52,11 +52,11 @@ fn request(caller: Caller, asked: Asked<'_>, policy: Option<AccessPolicy>) -> Re
         Asking {
             operation: asked.operation,
             purpose: asked.purpose.map(str::to_owned),
-            emergency: asked.emergency,
+            reason: reason_of(asked),
             episodes: asked.episodes.map(Arc::from),
         },
         InForce {
-            policy: policy.map(Arc::new),
+            policy: in_force(policy.as_ref(), asked).map(Arc::new),
             categories: categories(),
             server_default: AccessDefault::Open,
             now: now(),
@@ -90,11 +90,11 @@ fn bound(
         Asking {
             operation: asked.operation,
             purpose: asked.purpose.map(str::to_owned),
-            emergency: asked.emergency,
+            reason: reason_of(asked),
             episodes: asked.episodes.map(Arc::from),
         },
         InForce {
-            policy: policy.map(Arc::new),
+            policy: in_force(policy.as_ref(), asked).map(Arc::new),
             categories: categories(),
             server_default: AccessDefault::Open,
             now: now(),
@@ -294,10 +294,10 @@ fn a_delegation_is_a_representation_ground() {
     assert_eq!(represented[0].version.as_deref(), Some(EHR_ACCESS_VERSION));
 }
 
-/// The break-glass role lifting a restriction in an emergency is an
-/// `emergency` ground naming the directive it lifted, and lifting steps 6 to
-/// 8 one naming the `ACCESS_POLICY` version; the entry marks the access as
-/// an emergency, so the patient sees it (EHDS Art. 11(5)).
+/// An emergency justification lifting a restriction is an `emergency`
+/// ground naming the directive it lifted, and the justification itself one
+/// naming the `ACCESS_POLICY` version with the reason; the entry names both,
+/// so the patient sees the access and why (EHDS Art. 11(5)).
 #[test]
 fn an_emergency_override_is_marked_with_what_it_lifted() {
     let restriction = directive(
@@ -326,10 +326,19 @@ fn an_emergency_override_is_marked_with_what_it_lifted() {
     );
     assert_eq!(emergencies[1].name.as_deref(), Some("ACCESS_POLICY"));
     assert_eq!(emergencies[1].version.as_deref(), Some(POLICY_VERSION));
+    assert_eq!(
+        emergencies[1].reason.as_deref(),
+        Some("suspected sepsis, unconscious")
+    );
+    assert_eq!(
+        emergencies[0].reason, None,
+        "a lifted directive states none"
+    );
     assert_eq!(decision.policies, [EHR_ACCESS_VERSION, POLICY_VERSION]);
 
-    let mut event = event_of(&access);
-    event.emergency_access = true;
+    let event = event_of(&access);
+    let justification = event.justification.as_ref().expect("a justified access");
+    assert!(justification.emergency);
     let entry = entry_of(
         &event,
         None,
@@ -337,7 +346,6 @@ fn an_emergency_override_is_marked_with_what_it_lifted() {
         stated(None, &LogRetention::default()),
     )
     .expect("an entry");
-    assert!(entry.is_emergency);
     let kinds: Vec<&str> = entry
         .authorisations
         .as_deref()
@@ -411,8 +419,10 @@ fn the_emergency_grounds_name_only_the_rules_covering_the_data_read() {
         let item = object(OBJECT, Some(template));
         let (outcome, decision) = decide_on(&access, None, &item);
         assert_eq!(outcome, Outcome::Admit, "{template}");
+        // NOTE: the justification's own ground states the reason; the lifted rules state none.
         of_kind(&decision, "emergency")
             .iter()
+            .filter(|ground| ground.reason.is_none())
             .filter_map(|ground| ground.reference.as_ref())
             .map(|reference| (reference.r#type.clone(), reference.id.clone()))
             .collect::<Vec<_>>()
@@ -474,6 +484,9 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
                         "sensitivities": [coded(CONFIDENTIALITY, "HIV")] });
     let care = policy(&json!({ "care_relationship_required": true }));
     let purpose = policy(&json!({ "purpose_required": true }));
+    let justified = policy(&json!({ "care_relationship_required": true,
+        "justifications": [{ "_type": "ACCESS_JUSTIFICATION", "emergency": false,
+            "purposes": [coded(PURPOSE, "TREAT")] }] }));
     let rows: Vec<Row<'_>> = vec![
         (
             Refusal::OptOut,
@@ -543,6 +556,15 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
             professional(DR_B),
             None,
             Some(purpose),
+            settings("open", &[], &[], &[]),
+            Item::Ehr,
+            "ACCESS_POLICY",
+        ),
+        (
+            Refusal::ReasonMissing,
+            professional(DR_B),
+            Some("TREAT"),
+            Some(justified),
             settings("open", &[], &[], &[]),
             Item::Ehr,
             "ACCESS_POLICY",

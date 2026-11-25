@@ -102,7 +102,7 @@ const INSERT_BATCH: &str = "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_c
      event_code, operation, principal, patient_id, resource_class, resource_id, \
      client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, roles, \
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
-     acting_mode, assurance_level, assurance_value, professional_id, emergency_access, \
+     acting_mode, assurance_level, assurance_value, professional_id, justification, \
      retention_ends, retention_stated, permit, issuer, client_id, ehr_id, subject_namespace, \
      subject_lookup_failed, category_content, render_policy, search_tokens, binding, \
      party, party_groups, provider, representation, external_fields, agreement, actor_chain, \
@@ -117,7 +117,7 @@ const INSERT_BATCH: &str = "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_c
      $11::text[], $12::text[], $13::text[], $14::text[], $15::bigint[], $16::text[], \
      $17::jsonb[], $18::jsonb[], $19::bigint[], $20::jsonb[], $21::text[], \
      $22::jsonb[], $23::text[], $24::text[], $25::text[], $26::text[], $27::text[], \
-     $28::boolean[], $29::text[]::date[], $30::boolean[], $31::text[], $32::text[], \
+     $28::jsonb[], $29::text[]::date[], $30::boolean[], $31::text[], $32::text[], \
      $33::text[], $34::text[], $35::text[], $36::boolean[], $37::jsonb[], $39::text[], \
      $40::text[], $41::jsonb[], $42::jsonb[], $43::jsonb[], $44::jsonb[], \
      $45::jsonb[], $46::jsonb[], $47::jsonb[], $48::jsonb[], $49::jsonb[], $50::jsonb[], \
@@ -160,7 +160,7 @@ const RECORD_COLUMNS: [&str; 43] = [
     "assurance_level",
     "assurance_value",
     "professional_id",
-    "emergency_access",
+    "justification",
     "permit",
     "issuer",
     "client_id",
@@ -668,7 +668,7 @@ impl AuditStore {
             .bind(c.levels)
             .bind(c.values)
             .bind(c.professionals)
-            .bind(c.emergency)
+            .bind(c.justifications)
             .bind(c.ends)
             .bind(c.stated)
             .bind(c.permits)
@@ -1115,6 +1115,32 @@ fn token_attributes_json(event: &AuditEvent) -> Option<serde_json::Value> {
         .and_then(|token| serde_json::to_value(token).ok())
 }
 
+/// The `justification` column value: the kind of the justification an
+/// access rested on and the reason the caller stated.
+fn justification_json(event: &AuditEvent) -> Option<serde_json::Value> {
+    event.justification.as_ref().map(|justification| {
+        serde_json::json!({
+            "kind": justification.kind(),
+            "reason": justification.reason.as_str(),
+        })
+    })
+}
+
+/// The justification a stored `justification` column holds; `None` for a
+/// value this build does not write.
+fn justification_of(
+    stored: &serde_json::Value,
+) -> Option<crate::access_eval::justification::Justification> {
+    use crate::access_eval::justification::{Justification, Reason};
+    let emergency = match stored.get("kind").and_then(serde_json::Value::as_str)? {
+        "emergency" => true,
+        "justification" => false,
+        _ => return None,
+    };
+    let reason = Reason::new(stored.get("reason")?.as_str()?).ok()?;
+    Some(Justification { emergency, reason })
+}
+
 /// The `origin_count` column value.
 fn origin_count(event: &AuditEvent) -> Option<i64> {
     event
@@ -1270,7 +1296,12 @@ pub(super) fn stored_record(row: &PgRow) -> Result<(Vec<u8>, StoredRecord), Audi
         .transpose()
         .map_err(|_unreadable| unreadable("its token attributes do not read"))?;
     event.permit = row.try_get("permit")?;
-    event.emergency_access = row.try_get("emergency_access")?;
+    event.justification = row
+        .try_get::<Option<serde_json::Value>, _>("justification")?
+        .map(|stored| {
+            justification_of(&stored).ok_or_else(|| unreadable("its justification does not read"))
+        })
+        .transpose()?;
     event.legal_basis = row.try_get("legal_basis")?;
     event.result_count = count(row, "result_count", chain_seq)?;
     event.origins = strings(row, "origins", chain_seq)?;

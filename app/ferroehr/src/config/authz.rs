@@ -59,20 +59,8 @@ pub struct RbacConfig {
     /// granting roles (a restriction overrides a grant). Supports the
     /// conformance catalogue's authorization-separation cases.
     pub readonly_role: String,
-    /// The role that may reach data under an EHDS Art. 8 access restriction in
-    /// an emergency (`FERROEHR__AUTHZ__RBAC__EMERGENCY_ACCESS_ROLE`, default
-    /// unset).
-    ///
-    /// EHDS Art. 11(5) lets access to restricted data be granted where
-    /// necessary to protect the vital interests of the person
-    /// (`docs/law/eu/ehds/text.html`). A caller holding this role that
-    /// declares one of `[audit] emergency_purpose_codes` reads the restricted
-    /// data, and its access record carries the emergency mark. Unset, nobody
-    /// may. No openEHR spec governs restriction of access — our own
-    /// design/extension.
-    pub emergency_access_role: Option<String>,
-    /// The issuers whose role claims may grant `admin_role` and
-    /// `emergency_access_role`, each the name of an `[auth.issuer.<name>]`
+    /// The issuers whose role claims may grant `admin_role`, each the name of
+    /// an `[auth.issuer.<name>]`
     /// table of an issuer other than a `federation` one; empty, the default,
     /// lets no token grant them.
     pub role_issuers: Vec<String>,
@@ -110,7 +98,6 @@ impl Default for RbacConfig {
             enabled: true,
             admin_role: "ADMIN".to_owned(),
             readonly_role: "READONLY".to_owned(),
-            emergency_access_role: None,
             role_issuers: Vec::new(),
             first_admin: None,
             ehr_access_default: EhrAccessDefault::Open,
@@ -119,15 +106,11 @@ impl Default for RbacConfig {
 }
 
 impl RbacConfig {
-    /// The privileged roles, upper-cased: `admin_role` and
-    /// `emergency_access_role`, which a `hold_roles` grant never gives.
+    /// The privileged roles, upper-cased: `admin_role`, which a
+    /// `hold_roles` grant never gives.
     #[must_use]
     pub fn privileged_roles(&self) -> Vec<String> {
-        [Some(&self.admin_role), self.emergency_access_role.as_ref()]
-            .into_iter()
-            .flatten()
-            .map(|role| role.trim().to_uppercase())
-            .collect()
+        vec![self.admin_role.trim().to_uppercase()]
     }
 }
 
@@ -294,10 +277,6 @@ mod tests {
         // `<field type>::default()` (which would be `false`/`0`/empty).
         assert_eq!(parsed.rbac.enabled, default.rbac.enabled);
         assert_eq!(parsed.rbac.readonly_role, default.rbac.readonly_role);
-        assert_eq!(
-            parsed.rbac.emergency_access_role,
-            default.rbac.emergency_access_role
-        );
         assert_eq!(
             parsed.rbac.ehr_access_default,
             default.rbac.ehr_access_default
