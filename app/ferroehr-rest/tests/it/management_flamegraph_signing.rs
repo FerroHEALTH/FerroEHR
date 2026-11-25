@@ -21,28 +21,22 @@ use ferroehr::versioning::signature::signer::Signer;
 use ferroehr_rest::extensions::management::flamegraph::{
     FlamegraphParams, ProfilerSlot, sample_flamegraph_svg,
 };
-use pgp::composed::{ArmorOptions, KeyType, SecretKeyParamsBuilder, SignedSecretKey};
-use rand::rngs::OsRng;
+use ferrohealth_openpgp_pq::encoding::{self, Encoding};
+use ferrohealth_openpgp_pq::key::Key;
 
 /// The data each signature is taken over, the size of a link digest.
 const DIGEST: &[u8] = b"5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
 
-/// A signer over a freshly generated `OpenPGP` key of `key_type`, written to a
-/// file of the test's own.
-fn signer(key_type: KeyType, name: &str) -> Signer {
-    let mut builder = SecretKeyParamsBuilder::default();
-    builder
-        .key_type(key_type)
-        .can_sign(true)
-        .primary_user_id(format!("flamegraph {name} <test@ferroehr.invalid>"));
-    let key: SignedSecretKey = builder
-        .build()
-        .expect("key parameters")
-        .generate(OsRng)
-        .expect("a key");
-    let armored = key
-        .to_armored_string(ArmorOptions::default())
-        .expect("an armored key");
+/// A signer over a freshly generated ML-DSA-65+Ed25519 `OpenPGP` key, written
+/// to a file of the test's own.
+fn signer(name: &str) -> Signer {
+    let user_id = format!("flamegraph {name} <test@ferroehr.invalid>");
+    let key = Key::generate(&[user_id.as_str()]).expect("a key");
+    let armored = String::from_utf8(
+        encoding::encode(std::slice::from_ref(key.signed()), Encoding::Armored)
+            .expect("an armored key"),
+    )
+    .expect("armor is text");
     let path: PathBuf = std::env::temp_dir().join(format!(
         "ferroehr-flamegraph-{name}-{}.asc",
         std::process::id()
@@ -62,10 +56,7 @@ fn signer(key_type: KeyType, name: &str) -> Signer {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn the_flamegraph_samples_signing_at_its_highest_frequency_and_the_server_lives() {
-    let signers = Arc::new([
-        signer(KeyType::Ed25519Legacy, "ed25519"),
-        signer(KeyType::Rsa(3072), "rsa3072"),
-    ]);
+    let signers = Arc::new([signer("first"), signer("second")]);
     let stop = Arc::new(AtomicBool::new(false));
     let workers: Vec<_> = (0..4_usize)
         .map(|n| {

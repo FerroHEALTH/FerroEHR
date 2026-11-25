@@ -170,6 +170,9 @@ exceptions = [
   # FerroSYS's ferrohealth-usage-report, the FerroHEALTH products' installation
   # report to FerroPULSE, the same Licensor's code (#4087).
   { allow = ["BUSL-1.1"], crate = "ferrohealth-usage-report" },
+  # FerroSYS's ferrohealth-openpgp-pq, the family's ML-DSA-65+Ed25519 OpenPGP
+  # signer (RFC 9980), the same Licensor's BUSL-1.1 code.
+  { allow = ["BUSL-1.1"], crate = "ferrohealth-openpgp-pq" },
   # FerroAUDIT, the FerroHEALTH products' shared audit library, is the same
   # Licensor's code under the same licence: `ihe-atna` sends the ATNA trail and
   # writes the BALP AuditEvent, `ehds-logging` is the EHDS logging component

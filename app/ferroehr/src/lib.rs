@@ -68,6 +68,7 @@ pub mod instance;
 pub mod licence;
 pub mod manufacturer;
 pub mod memory;
+pub mod openpgp;
 pub mod origins;
 pub mod outbound;
 pub mod party_binding;

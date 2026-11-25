@@ -18,7 +18,7 @@ use std::path::PathBuf;
 use ferrohealth_secret::secret::Secret;
 use serde::{Deserialize, Serialize};
 
-/// The signing mode: a data-integrity digest, or an `OpenPGP` (RFC 4880) digital
+/// The signing mode: a data-integrity digest, or an `OpenPGP` (RFC 9580) digital
 /// signature (RM common master06 §Digital Signature).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
@@ -29,8 +29,9 @@ pub enum Mode {
     /// omitted, resulting in a digest only").
     #[default]
     Digest,
-    /// An RFC 4880 detached signature over the canonical form with a
-    /// server-held `OpenPGP` private key — authentication + non-repudiation.
+    /// An RFC 9580 detached signature over the canonical form with a
+    /// server-held ML-DSA-65+Ed25519 `OpenPGP` key (RFC 9980 algorithm ID 30):
+    /// authentication and non-repudiation.
     Pgp,
 }
 
@@ -73,8 +74,10 @@ pub struct SigningConfig {
     pub enabled: bool,
     /// Signing mode: `digest` | `pgp`.
     pub mode: Mode,
-    /// Armored RFC 4880 secret key; **required for `pgp` mode** (validated at
-    /// boot, fail-closed).
+    /// Armored RFC 9580 secret key; **required for `pgp` mode** (validated at
+    /// boot, fail-closed): an ML-DSA-65+Ed25519 key (RFC 9980 algorithm ID 30),
+    /// as `ferrohealth-sop generate-key --signing-only` makes one. A classical
+    /// key is refused at boot.
     pub key_file: Option<PathBuf>,
     /// Key passphrase, kept in [`ferrohealth_secret::secret::Secret`] and redacted from any
     /// config snapshot.
@@ -82,7 +85,7 @@ pub struct SigningConfig {
     /// File-based indirection for [`Self::key_passphrase`] (K8s/Docker secrets).
     /// Exactly one of the pair may be set; the loader reads and trims the file.
     pub key_passphrase_file: Option<PathBuf>,
-    /// Armored RFC 4880 **public** keys retired from signing but retained for
+    /// Armored RFC 9580 **public** keys retired from signing but retained for
     /// verification, so versions signed before a key rotation keep verifying.
     ///
     /// A stored `VERSION.signature` records no key identifier, and a signature

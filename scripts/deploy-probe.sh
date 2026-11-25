@@ -74,6 +74,8 @@ cleanup() {
 trap cleanup EXIT
 
 command -v docker >/dev/null || { red "docker not found on PATH"; exit 1; }
+# The pinned ferrohealth-sop generates the probes' signing keys (scripts/sop.sh install).
+PATH="$(bash "$(dirname "$0")/sop.sh" path):$PATH"
 
 # The image the CDR container runs, read from the container once the stack is
 # up: the reference it started from, the local image id, and the registry

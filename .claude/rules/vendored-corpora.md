@@ -52,6 +52,7 @@ commit the result.
 | RFC 3881 and RFC 8785, cache only (Independent Submissions, outside the IETF Trust's grant) | `scripts/vendor/rfcs-independent.sh` | record `docs/specs/rfc-independent/`, cache `.vendor-cache/rfc-independent/` |
 | Logius Logboek Dataverwerkingen NEN7513 Extensie (the NEN 7513:2024 record fields), at a pinned commit, and Kamerstuk 27529 nr. 228, cache only | `scripts/vendor/nen-7513-sources.sh` | `docs/specs/nen-7513-sources/`, cache `.vendor-cache/nen-7513-sources/` |
 | ISO 27789:2021 and ISO 22600-1, -2, -3:2014, a record only (sold under copyright) | `scripts/vendor/iso-health-informatics.sh` | record `docs/specs/iso-health-informatics/` |
+| ML-DSA-65+Ed25519 (RFC 9980 algorithm ID 30) signature vectors made with software test keys, and the RFC 9980 Appendix A.3 oracle, copied by sha256 from a supplied directory (`DIR` argument) | `scripts/vendor/openpgp-id30-vectors.sh` | `corpus/openpgp-id30/` |
 
 **A document whose terms permit no copy is cache only.** Its script fetches it
 into the git-ignored `.vendor-cache/<corpus>/` (`pinned_cache` in

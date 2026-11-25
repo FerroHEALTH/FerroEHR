@@ -107,8 +107,10 @@ toml.workspace = true
 uuid = { workspace = true, features = ["v7", "fast-rng"] }   # ids are uuidv7 (docs/postgres-features.md pins the DB side)
 
 # `signing` module (RM common §Digital Signature; moved from the former
-# ferroehr-signing crate): OpenPGP (rPGP) detached signatures + SHA-256 digest mode.
+# ferroehr-signing crate): OpenPGP detached signatures, RFC 9980 ML-DSA-65+Ed25519
+# through ferrohealth-openpgp-pq, and the SHA-256 digest mode.
 pgp.workspace = true
+ferrohealth-openpgp-pq.workspace = true
 sha2.workspace = true
 hmac.workspace = true
 base64.workspace = true

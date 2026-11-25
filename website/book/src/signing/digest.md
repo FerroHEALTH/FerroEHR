@@ -85,7 +85,7 @@ flowchart TD
     F --> G["canonical form:<br/>drop signature, RFC 8785 (JCS)"]
     G --> H{"record.signing.mode"}
     H -->|digest| I["sha256: + base64(SHA-256(canonical))"]
-    H -->|pgp| J["RFC 4880 detached signature,<br/>ASCII-armored"]
+    H -->|pgp| J["RFC 9580 detached signature,<br/>ASCII-armored"]
     I --> K[("version row<br/>same transaction")]
     J --> K
     C --> K

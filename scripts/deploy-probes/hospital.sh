@@ -1091,13 +1091,13 @@ h_check_log() {
 
 probes_hospital() {
   bold "A hospital scenario on two instances behind FerroSMART, $HS_UPSTREAM upstream (#5610, #5832)"
-  if ! command -v gpg >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
-    uncovered "the hospital scenario (#5610)" "gpg or jq is not available on this host"
+  if ! command -v ferrohealth-sop >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+    uncovered "the hospital scenario (#5610)" "ferrohealth-sop or jq is not available on this host"
     return 0
   fi
   local dir
   if ! dir="$(pgp_material hospital)" || [[ -z "$dir" ]]; then
-    uncovered "the hospital scenario (#5610)" "this host's gpg would not generate a probe key"
+    uncovered "the hospital scenario (#5610)" "ferrohealth-sop would not generate a probe key"
     return 0
   fi
   HOSPITAL_KEY_OVERLAY="$(replica_key_overlay "$dir" "$PROBE_TMP/hospital-key.yml" ferroehr ferroehr-2)"

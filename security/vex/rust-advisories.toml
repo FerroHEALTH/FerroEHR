@@ -60,8 +60,8 @@
 id = "https://ferroehr.eu/vex/rust-dependency-advisories"
 author = "Cadasto B.V."
 role = "vendor"
-timestamp = "2026-11-17T00:00:00Z"
-version = 14
+timestamp = "2026-11-25T00:00:00Z"
+version = 15
 
 # What the statements are about: the released server binary, the container
 # image built from it, and the viewer image. The server artifacts carry the
@@ -103,13 +103,14 @@ The Marvin timing sidechannel leaks information about an RSA PRIVATE key \
 through the timing of private-key operations, so what matters is whether a \
 FerroEHR process performs one. One path reaches the crate. Through `pgp`, in \
 VERSION signing, an RSA operation would be a \
-private-key one — but only in `[signing] mode = "pgp"`, which is not the \
-default: the shipped default is `digest` mode (SHA-256 over the canonical \
+private-key one — but only in `[record.signing] mode = "pgp"`, which is not \
+the default: the shipped default is `digest` mode (SHA-256 over the canonical \
 form), which uses no asymmetric key at all, so the default artifact performs no \
-RSA private-key operation. A deployment that does enable `pgp` mode chooses its \
-own OpenPGP key, and an ECC/EdDSA signing key keeps `rsa` off the signing path \
-entirely; a deployment that enables `pgp` mode with an RSA key is outside this \
-statement and should rotate to an ECC key. `ferroehr-ext` reaches the crate \
+RSA private-key operation. A deployment that does enable `pgp` mode signs with \
+an ML-DSA-65+Ed25519 key (RFC 9980 algorithm ID 30) whose both halves run in \
+`aws-lc-rs` through `ferrohealth-openpgp-pq`, which keeps `rsa` off the signing \
+path entirely, and an RSA signing key is refused at boot. An RSA certificate \
+kept in `retired_key_files` only verifies, over public values. `ferroehr-ext` reaches the crate \
 through the same two carriers as the platform library it extends, so the same \
 argument covers it. The viewer (`ferroehr-viewer`) ships no RSA code: its OIDC \
 sign-in is `ferrohealth-session` over `ferrohealth-smart`, which verifies ID \

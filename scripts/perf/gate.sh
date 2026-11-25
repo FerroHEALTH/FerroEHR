@@ -65,7 +65,8 @@
 #                 tool's own); the nightly judges over 8 (#6458)
 #   PERF_POPULATION  the EHRs the seed adds for the population query
 #                 (default 2000; the release lane seeds 20000)
-#   PERF_SIGNING_KEY the algorithm of the generated signing key, ed25519
+#   PERF_SIGNING_KEY the algorithm of the classical key a base arm signs with
+#                 when its binary predates ML-DSA-65+Ed25519 keys, ed25519
 #                 (default) or rsa3072
 #   PERF_BIN      a ferrohealth-perf binary (default target/tools/perf/bin/ferrohealth-perf)
 #   PERF_SERVER   with PERF_DATABASE and PERF_TARGET, measure a server already
@@ -144,6 +145,7 @@ binary() {
 
 install() {
   cargo install ferrohealth-perf --version "=$(pin)" --locked --root "$ROOT/target/tools/perf"
+  bash "$ROOT/scripts/sop.sh" install
 }
 
 # Stops the self-test's busy loop and waits for it.
@@ -165,15 +167,25 @@ teardown() {
   docker network rm "$NETWORK" >/dev/null 2>&1 || true
 }
 
-# signing_key: the OpenPGP key the access log seals each append with, generated
-# for this run into $OUT/signing (a committed key would be a defect of its
-# own): PERF_SIGNING_KEY's algorithm, its passphrase in a file beside it.
+# signing_key: the OpenPGP keys the access log seals each append with,
+# generated for this run (a committed key would be a defect of its own), each
+# with its passphrase in a file beside it. The head signs with an
+# ML-DSA-65+Ed25519 key (RFC 9980 algorithm ID 30) from ferrohealth-sop in
+# $OUT/signing; a base whose tree predates that algorithm signs with a
+# classical key of PERF_SIGNING_KEY's algorithm from gpg in $OUT/signing-base.
 signing_key() {
   local algorithm="${PERF_SIGNING_KEY:-ed25519}" home fpr
   [[ "$algorithm" == ed25519 || "$algorithm" == rsa3072 ]] \
     || die "PERF_SIGNING_KEY must be ed25519 or rsa3072, got '$algorithm'"
-  command -v gpg >/dev/null || die "gpg is needed to generate the signing key"
-  mkdir -p "$OUT/signing"
+  PATH="$(bash "$ROOT/scripts/sop.sh" path):$PATH"
+  command -v ferrohealth-sop >/dev/null || die "ferrohealth-sop is needed: run scripts/perf/gate.sh install"
+  mkdir -p "$OUT/signing" "$OUT/signing-base"
+  printf perf >"$OUT/signing/passphrase"
+  ferrohealth-sop generate-key --signing-only --with-key-password="$OUT/signing/passphrase" \
+    "FerroEHR perf gate <perf@ferroehr.invalid>" >"$OUT/signing/signing.asc" \
+    || die "ferrohealth-sop would not generate the signing key"
+  echo ml-dsa-65+ed25519 >"$OUT/signing/algorithm"
+  command -v gpg >/dev/null || die "gpg is needed to generate the base arm's classical key"
   # gpg-agent's socket path is bounded, so its home is short-lived and short.
   home=$(mktemp -d)
   GNUPGHOME="$home" gpg --batch --pinentry-mode loopback --passphrase perf \
@@ -181,13 +193,23 @@ signing_key() {
     >/dev/null 2>&1 || die "gpg would not generate an $algorithm key"
   fpr=$(GNUPGHOME="$home" gpg --batch --list-secret-keys --with-colons | awk -F: '/^fpr:/ { print $10; exit }')
   GNUPGHOME="$home" gpg --batch --pinentry-mode loopback --passphrase perf --armor \
-    --export-secret-keys "$fpr" >"$OUT/signing/signing.asc"
-  printf perf >"$OUT/signing/passphrase"
+    --export-secret-keys "$fpr" >"$OUT/signing-base/signing.asc"
+  printf perf >"$OUT/signing-base/passphrase"
   GNUPGHOME="$home" gpgconf --kill gpg-agent 2>/dev/null || true
   rm -rf "$home"
+  echo "$algorithm" >"$OUT/signing-base/algorithm"
   # The container runs as the distroless nonroot uid.
-  chmod 644 "$OUT/signing/signing.asc" "$OUT/signing/passphrase"
-  echo "$algorithm" >"$OUT/signing/algorithm"
+  chmod 644 "$OUT"/signing*/signing.asc "$OUT"/signing*/passphrase
+}
+
+# signing_dir <suffix>: the directory of the key an arm signs with. The base
+# arm keeps the classical key while its tree predates ML-DSA-65+Ed25519 keys.
+signing_dir() {
+  if [[ "$1" == -base ]] && ! grep -q '^ferrohealth-openpgp-pq' "$BASE_TREE/Cargo.toml"; then
+    echo "$OUT/signing-base"
+  else
+    echo "$OUT/signing"
+  fi
 }
 
 wait_for() { # <what> <seconds> <command...>
@@ -210,7 +232,8 @@ up() {
   CODE_TREE="$ROOT"
   [[ "$suffix" == -base ]] && CODE_TREE="$BASE_TREE"
   local http_port="${5:-$HTTP_PORT}" pg_port="${6:-$PG_PORT}"
-  local pg="$PG$suffix" server="$SERVER$suffix"
+  local pg="$PG$suffix" server="$SERVER$suffix" keys
+  keys=$(signing_dir "$suffix")
   docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create "$NETWORK" >/dev/null
   # The cluster lives in memory (#5866): every request commits before it
   # answers (#5789), and a hosted runner's WAL fsync ranges from 0.08 to
@@ -234,8 +257,8 @@ up() {
     -v "$tree/perf/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro"
     -v "$tree/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro"
     -v "$tree/deploy/definitions/professional:/etc/ferroehr/definitions:ro"
-    -v "$OUT/signing/signing.asc:/etc/ferroehr/signing.asc:ro"
-    -v "$OUT/signing/passphrase:/etc/ferroehr/signing-passphrase:ro")
+    -v "$keys/signing.asc:/etc/ferroehr/signing.asc:ro"
+    -v "$keys/passphrase:/etc/ferroehr/signing-passphrase:ro")
   # A base tree whose configuration still names the professional templates
   # predates the default party mapping, and its server stores no default
   # definitions, so they are stored before serve; a newer server stores them
@@ -710,12 +733,14 @@ base_tree() {
 # credentials, so the gate measures the code alone (#5590); an older base
 # that refuses it runs under its own tree's, as BASE_TREE holds it.
 base_config_tree() {
+  local keys
+  keys=$(signing_dir -base)
   if docker run --rm -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml \
     -e FERROEHR__DATABASE__URL=postgres://check:check@localhost/check \
     -v "$ROOT/perf/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro" \
     -v "$ROOT/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro" \
-    -v "$OUT/signing/signing.asc:/etc/ferroehr/signing.asc:ro" \
-    -v "$OUT/signing/passphrase:/etc/ferroehr/signing-passphrase:ro" \
+    -v "$keys/signing.asc:/etc/ferroehr/signing.asc:ro" \
+    -v "$keys/passphrase:/etc/ferroehr/signing-passphrase:ro" \
     "$1" config check >/dev/null 2>&1; then
     echo "perf gate: the base runs under this tree's configuration" >&2
     echo "$ROOT"

@@ -114,10 +114,11 @@ fn cause() -> std::io::Error {
 fn a_signing_failure_reaches_its_concrete_cause() {
     use std::error::Error;
 
-    let pgp = crate::versioning::signature::key::PgpSignError::from(pgp::errors::Error::Message {
-        message: "no secret key".to_owned(),
-        backtrace: None,
-    });
+    let pgp = crate::versioning::signature::key::PgpSignError::from(
+        ferrohealth_openpgp_pq::error::Error::Missing {
+            expected: "no secret key",
+        },
+    );
     let signing =
         ServiceError::SigningFailed(crate::versioning::signature::signer::SignError::Pgp(pgp));
     assert!(
@@ -132,7 +133,10 @@ fn a_signing_failure_reaches_its_concrete_cause() {
     let mut found = false;
     let mut next = Error::source(&signing);
     while let Some(step) = next {
-        if step.downcast_ref::<pgp::errors::Error>().is_some() {
+        if step
+            .downcast_ref::<ferrohealth_openpgp_pq::error::Error>()
+            .is_some()
+        {
             found = true;
         }
         next = step.source();

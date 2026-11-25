@@ -1587,8 +1587,10 @@ subject_namespaces = []
 #? enabled = true
 # Signing mode: `digest` | `pgp`. Optional (infrastructure).
 #? mode = "digest"
-# Armored RFC 4880 secret key; **required for `pgp` mode** (validated at boot,
-# fail-closed). Optional, unset by default (infrastructure).
+# Armored RFC 9580 secret key; **required for `pgp` mode** (validated at boot,
+# fail-closed): an ML-DSA-65+Ed25519 key (RFC 9980 algorithm ID 30), as
+# `ferrohealth-sop generate-key --signing-only` makes one. A classical key is
+# refused at boot. Optional, unset by default (infrastructure).
 #? key_file = ""
 # Key passphrase, kept in `ferrohealth_secret::secret::Secret` and redacted
 # from any config snapshot. Optional, unset by default (infrastructure).
@@ -1597,7 +1599,7 @@ subject_namespaces = []
 # Exactly one of the pair may be set; the loader reads and trims the file.
 # Optional, unset by default (infrastructure).
 #? key_passphrase_file = ""
-# Armored RFC 4880 **public** keys retired from signing but retained for
+# Armored RFC 9580 **public** keys retired from signing but retained for
 # verification, so versions signed before a key rotation keep verifying.
 # Optional (infrastructure).
 #? retired_key_files = []

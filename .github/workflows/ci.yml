@@ -2040,6 +2040,8 @@ jobs:
           file: docker/postgres/Dockerfile
           load: true
           tags: ferroehr-postgres:deploy-probe
+      - name: Install the pinned ferrohealth-sop, which generates the probes' signing keys
+        run: bash scripts/sop.sh install
       - name: Probe the deployment
         env:
           FERROEHR_IMAGE: ferroehr:deploy-probe
@@ -2115,6 +2117,8 @@ jobs:
           file: docker/postgres/Dockerfile
           load: true
           tags: ferroehr-postgres:deploy-probe
+      - name: Install the pinned ferrohealth-sop, which generates the probes' signing keys
+        run: bash scripts/sop.sh install
       - name: Probe the hospital scenario
         env:
           FERROEHR_IMAGE: ferroehr:deploy-probe

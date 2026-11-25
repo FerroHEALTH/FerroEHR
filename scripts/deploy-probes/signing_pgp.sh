@@ -5,21 +5,20 @@
 #
 # #2163 is explicit that the PGP path must be exercised "with a real key,
 # including the passphrase-file route, since that is the documented production
-# shape". So this generates a real OpenPGP key, mounts it the way the
-# configuration reference instructs — `signing.key_path` for the armored secret
-# key, `signing.key_passphrase_file` for its passphrase — and drives the same
-# assertions the digest family does, including tamper detection.
-#
-# The key is generated into a THROWAWAY keyring under the run's temp directory:
-# a probe must never touch the operator's own GnuPG home.
+# shape". So this generates a real ML-DSA-65+Ed25519 OpenPGP key (RFC 9980
+# algorithm ID 30) with `ferrohealth-sop`, mounts it the way the configuration
+# reference instructs (`record.signing.key_file` for the armored secret key,
+# `record.signing.key_passphrase_file` for its passphrase) and drives the same
+# assertions the digest family does, including tamper detection. The key lives
+# under the run's temp directory only.
 #
 # Sourced by scripts/deploy-probe.sh; never run directly.
 
 PGP_PASS="probe-passphrase-not-a-secret"
 
 # Generate an armored secret key, its PUBLIC half and its passphrase file into a
-# named directory, echoing that directory. Empty output means gpg was
-# unavailable or refused.
+# named directory, echoing that directory. Empty output means ferrohealth-sop
+# was unavailable or refused.
 #
 # The public half is exported because key ROTATION needs it: `retired_key_paths`
 # takes public keys, so a retired key can verify history and can never sign
@@ -27,20 +26,12 @@ PGP_PASS="probe-passphrase-not-a-secret"
 pgp_material() {
   local name="${1:-pgp}"
   local dir="$PROBE_TMP/$name"
-  mkdir -p "$dir" "$dir/gnupg"
-  chmod 700 "$dir/gnupg"
-  local fpr
-  GNUPGHOME="$dir/gnupg" gpg --batch --pinentry-mode loopback \
-    --passphrase "$PGP_PASS" --quick-generate-key \
-    "FerroEHR Probe $name <probe-$name@example.test>" default default never >/dev/null 2>&1 || return 1
-  fpr="$(GNUPGHOME="$dir/gnupg" gpg --batch --list-secret-keys --with-colons 2>/dev/null \
-    | awk -F: '/^fpr:/ {print $10; exit}')"
-  [[ -n "$fpr" ]] || return 1
-  GNUPGHOME="$dir/gnupg" gpg --batch --pinentry-mode loopback \
-    --passphrase "$PGP_PASS" --armor --export-secret-keys "$fpr" > "$dir/signing.asc" 2>/dev/null || return 1
-  GNUPGHOME="$dir/gnupg" gpg --batch --armor --export "$fpr" > "$dir/public.asc" 2>/dev/null || return 1
-  [[ -s "$dir/signing.asc" ]] && [[ -s "$dir/public.asc" ]] || return 1
+  mkdir -p "$dir"
   printf '%s' "$PGP_PASS" > "$dir/passphrase"
+  ferrohealth-sop generate-key --signing-only --with-key-password="$dir/passphrase" \
+    "FerroEHR Probe $name <probe-$name@example.test>" > "$dir/signing.asc" 2>/dev/null || return 1
+  ferrohealth-sop extract-cert < "$dir/signing.asc" > "$dir/public.asc" 2>/dev/null || return 1
+  [[ -s "$dir/signing.asc" ]] && [[ -s "$dir/public.asc" ]] || return 1
   # The container runs as the distroless nonroot uid; these are throwaway probe
   # credentials, so world-readable is the simplest way to guarantee the mount is
   # readable regardless of host uid mapping.
@@ -71,13 +62,13 @@ YAML
 probes_signing_pgp() {
   bold "VERSION signing (PGP mode, key + passphrase from mounted files)"
 
-  if ! command -v gpg >/dev/null 2>&1; then
-    uncovered "signing in PGP mode (#2163)" "gpg is not available on this host"
+  if ! command -v ferrohealth-sop >/dev/null 2>&1; then
+    uncovered "signing in PGP mode (#2163)" "ferrohealth-sop is not available on this host"
     return 0
   fi
   local dir overlay
   if ! dir="$(pgp_material)" || [[ -z "$dir" ]]; then
-    uncovered "signing in PGP mode (#2163)" "this host's gpg would not generate a probe key"
+    uncovered "signing in PGP mode (#2163)" "ferrohealth-sop would not generate a probe key"
     return 0
   fi
   overlay="$(pgp_overlay "$dir")"
@@ -172,14 +163,14 @@ YAML
 probes_signing_rotation() {
   bold "VERSION signing — key rotation (the #2122 keyring)"
 
-  if ! command -v gpg >/dev/null 2>&1; then
-    uncovered "PGP key rotation (#2122)" "gpg is not available on this host"
+  if ! command -v ferrohealth-sop >/dev/null 2>&1; then
+    uncovered "PGP key rotation (#2122)" "ferrohealth-sop is not available on this host"
     return 0
   fi
   local key_a key_b overlay ehr_a
   if ! key_a="$(pgp_material rotate-a)" || [[ -z "$key_a" ]] \
      || ! key_b="$(pgp_material rotate-b)" || [[ -z "$key_b" ]]; then
-    uncovered "PGP key rotation (#2122)" "this host's gpg would not generate the two probe keys"
+    uncovered "PGP key rotation (#2122)" "ferrohealth-sop would not generate the two probe keys"
     return 0
   fi
 

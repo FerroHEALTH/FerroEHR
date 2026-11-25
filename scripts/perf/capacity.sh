@@ -19,8 +19,8 @@
 # sessions). The seed is the perf gate's (scripts/perf/access-seed.sh): an
 # ACCESS_POLICY with a controller rule, a care team with the clinician as
 # member, CAPACITY_POPULATION patients under its care, each EHR with five
-# directives, and an Ed25519 key signing the access log. On top of it the
-# first CAPACITY_SPREAD population EHRs get one composition each, so the
+# directives, and an ML-DSA-65+Ed25519 key signing the access log. On top of
+# it the first CAPACITY_SPREAD population EHRs get one composition each, so the
 # single-EHR groups read and write across that many EHRs, past the 4096
 # EHRs the access settings cache holds. The commits go to the next
 # CAPACITY_SPREAD population EHRs, so the reads' answers do not grow. The
