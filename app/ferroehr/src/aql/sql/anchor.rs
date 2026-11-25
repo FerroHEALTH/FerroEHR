@@ -364,15 +364,20 @@ impl Builder<'_> {
             let search = read(function, column);
             let mut test = match texts {
                 [text] => search.eq(Expr::val(text.as_str())),
-                _ => search.is_in(texts.iter().map(|text| Expr::val(text.as_str()))),
+                _ => in_hidden_set(search, texts.to_vec(), "text"),
             };
             if !numbers.is_empty() {
                 let number = read("node_number", Node::ValueNum);
-                let as_numeric =
-                    |text: &str| Expr::cust_with_exprs("CAST($1 AS numeric)", [Expr::val(text)]);
                 test = test.or(match numbers.as_slice() {
-                    [one] => number.eq(as_numeric(one)),
-                    _ => number.is_in(numbers.iter().map(|text| as_numeric(text))),
+                    [one] => number.eq(Expr::cust_with_exprs(
+                        "CAST($1 AS numeric)",
+                        [Expr::val(*one)],
+                    )),
+                    _ => in_hidden_set(
+                        number,
+                        numbers.iter().map(|text| (*text).to_owned()).collect(),
+                        "numeric",
+                    ),
                 });
             }
             (
@@ -654,6 +659,17 @@ pub(super) fn text_leaf(steps: &[FragmentStep]) -> Option<TextLeaf> {
         ["value", "value"] => Some(TextLeaf::Value),
         _ => None,
     }
+}
+
+/// Whether `value` equals one of `members`, bound as one array of
+/// `element`s and read through an initplan, so a custom plan sees the set no
+/// better than the generic plan does and the statement settles on the
+/// generic one (`PostgreSQL` docs, `PREPARE`, "Notes"; #6544).
+fn in_hidden_set(value: Expr, members: Vec<String>, element: &str) -> Expr {
+    Expr::cust_with_exprs(
+        format!("$1 = ANY(CAST((SELECT CAST($2 AS {element}[])) AS {element}[]))"),
+        [value, Expr::val(members)],
+    )
 }
 
 /// Whether `text` is how a number renders as text, `-?digits[.digits]`: a
