@@ -33,22 +33,13 @@ use crate::storage::version_repo::meta::CurrentMeta;
 
 /// Inserts the `ehr` root row with its promoted `EHR_STATUS` columns.
 ///
-/// The row carries the id and the immutable `system_id`, and the promoted
-/// `EHR_STATUS` columns (`subject_id`, `subject_namespace`, `is_queryable`,
-/// `is_modifiable`) are set in the same statement, the create path knowing them
-/// from the incoming `EHR_STATUS`. Returns `Some(time_created)`, the
-/// server-assigned `EHR.time_created` (arch-overview master06 §The EHR) captured
-/// via `RETURNING`, or `None` when the id already existed (`ON CONFLICT (id) DO
-/// NOTHING`, which the caller maps to a 409). `EHR.system_id` is recorded at
-/// creation and immutable thereafter (arch-overview master06 §System Identity).
-///
-/// The subject columns back the one-EHR-per-subject unique index
-/// (`uq_ehr_subject`, RM ehr master04 §EHR Status), so a second EHR for the same
-/// subject is reported as [`StorageError::SubjectInUse`] distinctly from the id
-/// conflict. `is_queryable` backs the AQL full-population gate and
-/// `is_modifiable` the content-write guard (RM ehr
-/// master04 §EHR Active Status). No openEHR spec governs the promoted columns —
-/// our own storage design.
+/// Returns `Some(time_created)`, the server-assigned `EHR.time_created`
+/// (arch-overview master06 §The EHR), or `None` when the id exists, which the
+/// caller maps to a 409. `system_id` is immutable after creation
+/// (arch-overview master06 §System Identity). The subject columns back
+/// `uq_ehr_subject` (RM ehr master04 §EHR Status), `is_queryable` the
+/// population gate and `is_modifiable` the write guard (§EHR Active Status).
+/// The promoted columns are our own storage design.
 ///
 /// # Errors
 /// Returns [`StorageError::SubjectInUse`] on a subject-uniqueness violation,
@@ -101,24 +92,14 @@ pub async fn insert_ehr(
     }
 }
 
-/// The CURRENT `EHR_STATUS` root node fragment (`num = 0` of the latest trunk
-/// version) of an EHR, read on the CALLER'S connection so a transaction sees
-/// the `EHR_STATUS` it has just written.
+/// The current `EHR_STATUS` root node fragment of an EHR, or `None`, read on
+/// the caller's connection so a transaction sees what it has just written.
 ///
-/// `None` when the EHR has no current `EHR_STATUS`.
-///
-/// This is the read half of the promoted-column refresh the paths that land
-/// `EHR_STATUS` versions WITHOUT the service write hook use — the EHR Extract
-/// import and the admin archive load: they hand this fragment to the single
-/// service-layer extraction (`service::ehr::status::ehr_promoted_columns`), so
-/// every path promotes identical `(subject_id, subject_namespace,
-/// is_queryable, is_modifiable)` values. The fragment carries all four inputs
-/// verbatim — the decomposition splits only *structure* types into their own
-/// `node` rows, and a subject `PARTY_SELF`/`PARTY_IDENTIFIED` is not one, so
-/// `subject.external_ref` stays inline on the root. Semantics: RM ehr master04
-/// §EHR Status (`subject`, `is_queryable`) / §EHR Active Status
-/// (`is_modifiable`). No openEHR spec governs the promoted columns or the node
-/// decomposition — our own storage design.
+/// The EHR Extract import and the admin archive load hand it to
+/// `service::ehr::status::ehr_promoted_columns`, so every path promotes the
+/// same columns (RM ehr master04 §EHR Status, §EHR Active Status). The
+/// fragment holds `subject.external_ref` inline, since a party proxy gets no
+/// `node` row of its own. The promoted columns are our own storage design.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
@@ -466,23 +447,14 @@ pub async fn ehr_is_modifiable_locked(
         .await?)
 }
 
-/// The content-write pre-checks plus the server clock in ONE round trip.
+/// The content-write pre-checks and the server clock in one round trip.
 ///
-/// Whether the EHR exists, whether it is modifiable, whether it is restricted
-/// with the revision of its access settings row, and the database `now()`.
-///
-/// Reads the `ehr` row directly — a present row is the existence signal and
-/// carries the promoted `is_modifiable` column (synced with the current
-/// `EHR_STATUS` by `sync_ehr_subject` and its import/archive-load
-/// re-promotion over [`current_status_root`]). In the [`Writability`] it
-/// returns `is_modifiable` is `None` exactly when the EHR does not exist and
-/// `now` is the database transaction timestamp of this
-/// probe, carried forward as the commit instant of a create that follows it
-/// (the database stays the only clock; the fresh versioned object has no
-/// stored interval the slightly earlier instant could disorder). The concepts
-/// guarded are RM ehr master04 §EHR Creation (existence) and §EHR Active
-/// Status (`EHR_STATUS.is_modifiable`); no openEHR spec governs the promoted
-/// column or the probe shape — our own storage design.
+/// Whether the EHR exists, whether it is modifiable, whether it is
+/// restricted with its access settings revision, and the database `now()`.
+/// The `ehr` row's promoted `is_modifiable` is `None` exactly when the EHR
+/// does not exist (RM ehr master04 §EHR Creation, §EHR Active Status). `now`
+/// becomes the commit instant of a create that follows, so the database stays
+/// the only clock. The probe shape is our own storage design.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.

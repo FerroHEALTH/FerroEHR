@@ -134,22 +134,18 @@ pub(super) async fn bound(
     Ok(Bound::default())
 }
 
-/// What `caller`, bound by the login binding to the representative's
-/// `PERSON` `person`, is admitted as on a request that `reached` names: the
-/// person themself when the subject it reaches is `person`, else a
-/// representative confined to the subject's EHRs, with the representation it
-/// is admitted on.
+/// What `caller`, bound by the login binding to the `PERSON` `person`, is
+/// admitted as on a request that `reached` names: the person themself when
+/// the subject it reaches is `person`, else a representative confined to the
+/// subject's EHRs, with the representation it is admitted on.
 ///
-/// The subject is that of the EHR the token's launch context names (`ehrId`,
-/// master07 §Context Selection), which then holds the caller to that EHR,
-/// else that of the EHR the request names, else the `PERSON` an EHR lookup by
-/// subject names. The caller is admitted only on a live representation of
-/// that subject for a provider it acts for, not written by itself, read in
-/// one exact indexed read (draft access control decision procedure, step 0
-/// Representation). A person who represents others is still the subject of
-/// their own record, which they reach with everything own access carries
-/// (EHDS Art. 3). No openEHR spec governs resolving a login to a party: our
-/// own design (#6147, #6167).
+/// The subject is that of the launch context's `ehrId` (master07 §Context
+/// Selection), else of the EHR the request names, else the `PERSON` an EHR
+/// lookup by subject names. A representative is admitted only on a live
+/// representation of that subject for a provider it acts for, not written by
+/// itself, read in one exact indexed read (draft access control decision
+/// procedure, step 0 Representation). No openEHR spec governs resolving a
+/// login to a party: our own design (#6147, #6167).
 ///
 /// # Errors
 /// [`AuthError::PartyRefused`] (`refused-representation-unrecorded`) when

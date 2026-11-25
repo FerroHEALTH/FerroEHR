@@ -76,23 +76,15 @@ pub struct AuditChainFinding {
 }
 
 impl AuditStore {
-    /// Check the tamper evidence of `chain` over `scope`, and move the
-    /// chain's verification cursor to its newest record when the run finds
-    /// nothing.
+    /// Checks the tamper evidence of `chain` over `scope`, and moves the chain's
+    /// verification cursor to its newest record when the run finds nothing.
     ///
-    /// [`VerifyScope::SinceCheckpoint`] recomputes only the windows sealed
-    /// after the newest window an earlier run found intact, so its cost
-    /// follows the records sealed since rather than the size of the log. The
-    /// log is walked in steps sized to a time budget ([`StepPace`]), each of
-    /// which moves the cursor ([`Self::chain_step`]); a change to a record
-    /// before that window needs [`VerifyScope::Full`]. Both check the seal
-    /// state.
-    ///
-    /// An empty result means the log is intact. The seals are unkeyed, so
-    /// they detect modification, deletion and insertion but cannot stop a
-    /// party with unrestricted write access from recomputing them wholesale;
-    /// the signed seals published outside the database fix them against
-    /// that.
+    /// [`VerifyScope::SinceCheckpoint`] recomputes only the windows sealed after
+    /// the newest intact one, in steps sized to a time budget ([`StepPace`]),
+    /// each moving the cursor ([`Self::chain_step`]); an earlier change needs
+    /// [`VerifyScope::Full`]. An empty result means intact. The seals are
+    /// unkeyed, so the signed seals published outside the database fix them
+    /// against a writer who could recompute them.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the verification query cannot run, which is

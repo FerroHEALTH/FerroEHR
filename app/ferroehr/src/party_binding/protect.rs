@@ -351,19 +351,17 @@ async fn care_writer_roster(
 }
 
 /// Judges the commit `committed` of a standalone `PARTY_RELATIONSHIP`, whose
-/// new head the commit transaction `tx` has just written holding `facts`
-/// (`None` for a logical delete), beside [`check`]; the version before it is
-/// read off `prior`, what the commit's gate read found, when there is one.
+/// new head `tx` has just written holding `facts` (`None` for a logical
+/// delete), beside [`check`]; the version before it is read off `prior` when
+/// there is one.
 ///
 /// A representation, before or after the write, is written by an
-/// administrator, or by a caller holding a [`Operation::WriteRepresentation`]
-/// grant whose [`PROVIDER`] elements name its provider (draft access control
-/// decision procedure, Writing Relationships). The patient whose `PERSON` it
-/// targets, before and after ([`patient`]), writes one on the basis
-/// [`SUBJECT_AUTHORISATION`] alone: the authorisation of a proxy of their
-/// choice (Regulation (EU) 2025/327 Art. 4(2)), which the Regulation ranks
-/// above the draft. No openEHR spec governs who may write a relationship:
-/// our own design over that procedure.
+/// administrator or a caller whose [`Operation::WriteRepresentation`] grant
+/// names its provider in [`PROVIDER`] (draft access control decision
+/// procedure, Writing Relationships), or by the patient it targets
+/// ([`patient`]) on [`SUBJECT_AUTHORISATION`] alone (Regulation (EU) 2025/327
+/// Art. 4(2)). No openEHR spec governs this: our own design over that
+/// procedure.
 ///
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) for a write no rule admits; a storage

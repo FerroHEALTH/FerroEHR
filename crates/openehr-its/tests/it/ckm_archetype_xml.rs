@@ -27,24 +27,15 @@ use std::path::{Path, PathBuf};
 
 use openehr_its::opt14::types::Archetype;
 
-/// Archetype XML documents the codec cannot read, with the reason. A refusal
-/// here is a NEGATIVE test: the gate asserts the read still fails, so a
-/// loosened codec cannot hide behind the entry.
+/// Archetype XML documents the codec cannot read, with the reason. The gate
+/// asserts each read still fails, so a loosened codec cannot hide behind an
+/// entry.
 ///
-/// * no vendored openEHR schema declares that type — it is absent from every
-///   `OpenehrProfile.xsd` we vendor (ITS-XML 1.0.2 `ALL/` and ITS-XML 2.0.0
-///   `AM/Release-1.4/`), both of which DO
-///   declare the sibling constrainers `C_DV_ORDINAL`/`C_DV_QUANTITY`; and
-/// * CKM's own ADL 1.4 export of the same archetype contains no `DV_SCALE` or
-///   `C_DV_SCALE` anywhere, so the constraint is expressed differently in the
-///   text serialization — the XML exporter introduces the type on its own.
-///
-/// The other seven came with the 2026-11-12 re-vendoring: where the ADL 1.4
-/// source constrains a duration to one value (`value matches {PT1M}`), CKM's
-/// XML export now writes that value as a `<value>` child of `C_DURATION`. The
-/// AM 1.4 `C_DURATION` of both vendored `Archetype.xsd` releases declares only
-/// `pattern`, `range` and `assumed_value`, so the document is schema-invalid
-/// and the codec refuses it; the export of 2026-08-01 wrote an open `range`.
+/// - A `C_DV_SCALE` no vendored `OpenehrProfile.xsd` declares (ITS-XML 1.0.2
+///   `ALL/`, ITS-XML 2.0.0 `AM/Release-1.4/`), and which CKM's ADL 1.4 export
+///   of the same archetype does not use.
+/// - A single-value `C_DURATION` written as a `<value>` child, which the AM 1.4
+///   `C_DURATION` of both vendored `Archetype.xsd` releases does not declare.
 pub(crate) const ADJUDICATED: &[(&str, &str)] = &[
     (
         "openEHR-EHR-CLUSTER.lab_microscopy_culture.v0.xml",

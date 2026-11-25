@@ -360,22 +360,15 @@ struct NextVersion {
     now: jiff::Timestamp,
 }
 
-/// Validate an update/delete target (belongs to `ehr_id`, tip is the addressed
-/// open lineage tip) and resolve where the new version sits (RM common master06
-/// §The 'Virtual Version Tree' / §Distributed Versioning):
+/// Validates an update or delete target and resolves where the new version
+/// sits (RM common master06 §The 'Virtual Version Tree', §Distributed
+/// Versioning).
 ///
-/// - the preceding version is the current TRUNK tip when `expected` is absent,
-///   or exactly the version `expected` names (trunk or branch) — which must be
-///   an open lineage tip, else `VersionConflict`;
-/// - a preceding version created by THIS system is continued on its lineage
-///   (trunk `N` → `N+1`; branch `t.b.v` → `t.b.v+1`), superseding it;
-/// - a preceding version created by ANOTHER system (an imported copy) FORKS a
-///   new branch `t.(max_branch+1).1` (master06 §Subsequent Local
-///   Modifications) — the preceding version stays valid.
-///
-/// Same-system detection is case-insensitive on `creating_system_id`
-/// (composite-identifier equality; BASE master05 §Composite Identifiers
-/// and Case).
+/// The preceding version is the TRUNK tip, or the open lineage tip `expected`
+/// names. One this system created is continued on its lineage; one another
+/// system created forks a new branch `t.(max_branch+1).1` (master06
+/// §Subsequent Local Modifications). `creating_system_id` compares
+/// case-insensitively (BASE master05 §Composite Identifiers and Case).
 ///
 /// # Errors
 /// - [`ServiceError::NotFound`] when the object does not exist, or its stored
@@ -810,21 +803,16 @@ async fn apply_change(
     Ok((committed, id, references))
 }
 
-/// Commit a [`ResolvedWrite`] — compute the `VERSION.signature`, then write the
-/// `commit_audit` (+ `contribution` for a standalone write), the `version` row
-/// and the object's head row in ONE data-modifying CTE, then the node rows,
-/// folder membership and accompanying attestations.
+/// Commits a [`ResolvedWrite`]: computes the `VERSION.signature`, writes the
+/// `commit_audit`, the `contribution` of a standalone write, the `version`
+/// row and the head row in one data-modifying CTE, then the node rows, the
+/// folder membership and the attestations.
 ///
-/// The signature is computed over the assembled `ORIGINAL_VERSION` (RM common
-/// master06 §Digital Signature), which embeds `time_committed` and
-/// `contribution_id`. Both are known before any statement, the commit instant
-/// being the transaction timestamp
-/// ([`tx_now`](crate::storage::version_repo::placement::tx_now)) and a
-/// standalone write generating its `contribution_id` here, so audit,
-/// contribution, `version` and the head upsert collapse into one folded CTE.
-/// Nothing is superseded in place: the store is append-only, so there is no
-/// close-out statement to order before the insert. No openEHR spec governs
-/// statement batching — our own design.
+/// The signature covers the `ORIGINAL_VERSION` with its `time_committed` and
+/// `contribution_id` (RM common master06 §Digital Signature), both known
+/// before any statement: the instant is the transaction timestamp
+/// ([`tx_now`](crate::storage::version_repo::placement::tx_now)). No openEHR
+/// spec governs statement batching: our own design.
 ///
 /// # Errors
 /// [`ServiceError::Signing`] when the canonical form cannot be produced or the
@@ -1026,23 +1014,15 @@ pub(crate) fn record_commit(committed: &Committed) {
 }
 
 /// Commits a set of changes atomically under one CONTRIBUTION (RM common
-/// master06 §Committal and Audits — "similar to nested transactions").
+/// master06 §Committal and Audits).
 ///
-/// `contribution_audit` is the CONTRIBUTION's own audit; each change carries
-/// its VERSION `commit_audit`. `attests` are `666|attestation|` items — new
-/// `ATTESTATION`s attached to **existing** versions, committed in the same
-/// transaction but adding no new version.
-///
-/// Every audit of the set is stamped with the one commit instant this
-/// function reads (RM common master06 §Committal and Audits: `time_committed`
-/// "computed on the server"); each version and attestation keeps the
-/// committer its own audit states.
-///
-/// The per-object lock of every existing object the set modifies or deletes
-/// is taken up front, in ascending `vo_id` order — the order an import takes
-/// the same locks in
-/// ([`crate::storage::version_repo::import::lock_containers`]) — so two
-/// writers sharing several objects queue instead of deadlocking.
+/// `contribution_audit` is the CONTRIBUTION's audit, and each change carries
+/// its own; `attests` are `666|attestation|` items on existing versions.
+/// Every audit takes the one commit instant this function reads, and keeps
+/// its own committer. The locks of the existing objects are taken first in
+/// ascending `vo_id` order, as an import takes them
+/// ([`crate::storage::version_repo::import::lock_containers`]), so two
+/// writers queue instead of deadlocking.
 ///
 /// # Errors
 /// The per-change [`apply_change`] errors; the `409` of two `PERSON`s

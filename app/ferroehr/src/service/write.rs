@@ -136,21 +136,16 @@ impl FerroEhrService {
         })
     }
 
-    /// Commit one COMPOSITION write on `pool` as its gate read judged it
-    /// (#6256): acquire the connections, run the attempt `judge` makes on the
-    /// bare connection (the gate read in its own statement and the pre-checks,
-    /// ending in the guarded [`Write`]), then the one guarded commit statement, in a
-    /// transaction when `transaction` holds or the write's records are
-    /// reserved. No lock serializes two writers of one object: the statement
-    /// requires the head its gate read found, and the version's keys refuse a
-    /// second version at the same place.
+    /// Commits one COMPOSITION write on `pool` as its gate read judged it
+    /// (#6256): the attempt `judge` makes on the bare connection, ending in the
+    /// guarded [`Write`], then the one guarded commit statement, in a transaction
+    /// when `transaction` holds or the write's records are reserved.
     ///
-    /// The statement writes nothing when what the gate read judged moved
-    /// before it ran, and a version's key refuses it when a concurrent commit
-    /// took its place first. A moved policy revision refuses the write for the
-    /// copies' refresh, so the request runs once more behind the up-front
-    /// confirm; anything else is judged again from a new gate read, which
-    /// answers as a lock wait would have, at most [`ATTEMPTS`] times.
+    /// No lock serializes two writers: the statement requires the head its gate
+    /// read found, and the version's keys refuse a second version at one place.
+    /// A moved policy revision refuses the write for the copies' refresh; any
+    /// other move is judged again from a new gate read, at most [`ATTEMPTS`]
+    /// times.
     ///
     /// # Errors
     /// The `judge` refusals, the [`commit`] ones, `access-refreshing` for a

@@ -478,20 +478,12 @@ pub async fn current_version_meta_scoped(
     Ok(Some(current_meta_row(&row)?))
 }
 
-/// The current trunk version's metadata for a **demographic** versioned object.
+/// The current trunk version's metadata of a demographic versioned object,
+/// read in one `version` and `audit` statement without node reassembly.
 ///
-/// Read for an ehr-less object addressed by its `vo_id`, in ONE
-/// `version`⋈`audit` statement — `kind` + `lifecycle_state` alongside the
-/// `ETag`/`If-Match` identity parts (`VERSION_TREE_ID` ints + the stored
-/// per-version `creating_system_id`) and the commit instant, **without** the
-/// node reassembly the full
-/// [`crate::storage::version_repo::read::read_one`] pays.
-/// `ehr_id IS NULL` scopes the read to the demographic repository (a party /
-/// `PARTY_RELATIONSHIP` has no owning EHR — our own design; no openEHR spec
-/// governs the SQL). The caller gates the route on `kind` (a wrong-kind or
-/// EHR-scoped id → no match) and the not-deleted precondition on
-/// `lifecycle_state` (RM common master06 §Logical Deletion). `None` when there
-/// is no current trunk demographic version.
+/// `ehr_id IS NULL` scopes the read to the demographic repository (our own
+/// design). The caller gates the route on `kind` and the not-deleted
+/// precondition on `lifecycle_state` (RM common master06 §Logical Deletion).
 #[derive(Debug, Clone)]
 pub struct CurrentDemographicMeta {
     /// The `version.kind` discriminator text.

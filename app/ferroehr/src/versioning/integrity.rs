@@ -36,21 +36,14 @@ use crate::versioning::wire::{
     write_original_version,
 };
 
-/// Compute the server-generated `VERSION.signature` for a version about to be
-/// persisted (RM common master06 §Digital Signature). The caller
-/// ([`crate::versioning::change`]) decides client-vs-server first: a
-/// client-supplied signature is stored verbatim and never reaches here.
+/// Computes the server-generated `VERSION.signature` of a version about to be
+/// persisted (RM common master06 §Digital Signature); a client-supplied
+/// signature never reaches here ([`crate::versioning::change`]).
 ///
-/// The `ORIGINAL_VERSION` is signed over its `canonical_form()` with
-/// `signature` Void, written by the shared [`write_original_version`] so the
-/// commit-time and read-time bytes match.
-///
-/// The `attestations` committed with this version
-/// (`UPDATE_VERSION.attestations`) are signed too: master06 §Digital Signature
-/// serialises "the entire Version object (note that the signature attribute will
-/// be Void at this point)", so `signature` is the only excluded attribute. An
-/// attestation added afterwards post-dates the signature and is appended outside
-/// it at read time.
+/// The `ORIGINAL_VERSION` is signed over its canonical form with `signature`
+/// Void, written by [`write_original_version`] so commit and read bytes match.
+/// The attestations committed with it are inside the signed form; one added
+/// later falls outside it.
 ///
 /// # Errors
 /// [`ServiceError::Signing`] when the canonical form cannot be produced or the

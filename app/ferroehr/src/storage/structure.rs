@@ -26,22 +26,15 @@ use openehr_base::prelude::ArchetypeId;
 /// this list only records which of them the node codec also splits into rows.)
 const DEMOGRAPHIC_PARTY_ROOTS: [&str; 5] = ["PERSON", "ORGANISATION", "GROUP", "AGENT", "ROLE"];
 
-/// The four archetypable demographic **containers** nested inside a party,
+/// The four archetypable demographic containers nested inside a party,
 /// reached through its `identities`, `contacts`, `contacts.addresses` and
-/// `capabilities` attributes.
+/// `capabilities`.
 ///
-/// Each carries a `details`/`credentials` `ITEM_STRUCTURE` and is therefore "a
-/// completely archetypable structure" in its own right (RM demographic
-/// `master02-demographic_package.adoc` §Archetyping), so its content is
-/// decomposed exactly like composition content: the container gets a row, its
-/// `ITEM_TREE` and `ELEMENT` descendants get theirs, and a full archetype HRID
-/// on the container becomes the archetyped ancestor its at-coded leaves are
-/// scoped by. Leaving them inline on the party root put that content out of
-/// reach of every row-level predicate.
-///
-/// `PARTY_RELATIONSHIP` is deliberately absent: it is a versioned object of its
-/// own, and a relationship nested in a party's `relationships` list stays
-/// inline verbatim (see [`is_versioned_root_type`]).
+/// Each is "a completely archetypable structure" (RM demographic
+/// `master02-demographic_package.adoc` §Archetyping), so it is decomposed
+/// like composition content, its archetype id scoping its at-coded leaves.
+/// `PARTY_RELATIONSHIP` is a versioned object of its own and stays inline in
+/// a party's `relationships` ([`is_versioned_root_type`]).
 const DEMOGRAPHIC_CONTAINERS: [&str; 4] = ["CONTACT", "ADDRESS", "PARTY_IDENTITY", "CAPABILITY"];
 
 /// Whether an RM `_type` gets its own `node` row: the BMM-generated

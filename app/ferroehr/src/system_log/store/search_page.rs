@@ -98,21 +98,15 @@ const ACCESS_LOG_BY_KEY: &str = "access_log_by_key";
 /// planned without that order (#6203).
 const SYSTEM_SEARCH: &str = "system_search";
 
-/// Build the ITI-81 retrieval's two statements, the count and the page, from a
-/// filter and the token ids its criteria on the document resolved to, with no
-/// database involved.
+/// Builds the ITI-81 retrieval's two statements, the count and the page,
+/// from a filter and the token ids its criteria resolved to, with no database
+/// involved, so a test reaches the SQL.
 ///
-/// Extracted from [`super::AuditStore::search`] so the SQL is reachable by a
-/// test. This is the server's second runtime dynamic-SQL site after the AQL
-/// engine, and the property that matters is the same one: every IDENTIFIER
-/// here (the schema, the tables, every column, the sort direction) is a
-/// literal in this module, while every caller-supplied value goes through
-/// `Expr::val` and arrives as a bound parameter. `limit`/`offset` are clamped
-/// integers, never text.
-///
-/// The guard `scripts/checks/sql-string-building.sh` catches string-built SQL
-/// but cannot see an `Alias::new` argument, which is why the closed set is
-/// pinned by a test rather than only by the guard.
+/// Every identifier (the schema, the tables, every column, the sort
+/// direction) is a literal of this module, and every caller-supplied value a
+/// bound parameter through `Expr::val`; `limit` and `offset` are clamped
+/// integers. `scripts/checks/sql-string-building.sh` cannot see an
+/// `Alias::new` argument, so a test pins the closed set.
 pub(super) fn build_search_statements(
     filter: &AuditSearchFilter,
     resolved: &[Option<TokenMatch>],

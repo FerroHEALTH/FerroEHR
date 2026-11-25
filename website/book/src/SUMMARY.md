@@ -29,6 +29,7 @@
   - [The logging component's intended performance](compliance/logging-performance.md)
   - [The EHDS logging checklist](compliance/logging-checklist.md)
   - [EEHRxF metadata from the Reference Model](compliance/eehrxf-annex-iii.md)
+  - [PDF/A originals](compliance/eehrxf-pdf-originals.md)
   - [Claims review](compliance/claims-review.md)
 
 # Integrate

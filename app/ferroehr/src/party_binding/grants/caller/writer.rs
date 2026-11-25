@@ -29,23 +29,16 @@ use crate::versioning::Kind;
 use openehr_rm::draft::access_control::terminology::{CareRelationship, Term};
 
 /// Refuses the commit `committed` of a `PERSON`, an `ORGANISATION`, a
-/// `GROUP` or a `PARTY_RELATIONSHIP` when its version changes what the
-/// memberships or the care relationship say, or the record subjects it
-/// declares, and its caller may not ([`check_care_writer`]).
+/// `GROUP` or a `PARTY_RELATIONSHIP` when its version changes the
+/// memberships, care relationships or record subjects and its caller may not
+/// ([`check_care_writer`]), and returns whether the commit changed them.
 ///
-/// The memberships, care relationships and record subjects of `facts`, what
-/// the committed body holds, are compared with those of the last earlier
-/// version that holds a body: a relationship by kind, what it states and
-/// `time_validity`, a subject by namespace and id, never by position
-/// (#5640). A logical deletion of a party holds no body and changes none:
-/// its earlier versions keep them (RM common
-/// `master06-change_control_package.adoc` §Logical Deletion). A logical
-/// deletion of a care relationship removes it from the current set, so it
-/// needs the grant its writing does. A lifecycle state is no relationship
-/// content, so a deactivation that keeps them needs no grant (#5628). Our own
-/// design.
-///
-/// Whether the commit changed them.
+/// `facts` is compared with the last earlier version that holds a body, a
+/// relationship by kind, content and `time_validity`, a subject by namespace
+/// and id (#5640). A logical deletion of a party changes none (RM common
+/// `master06-change_control_package.adoc` §Logical Deletion); one of a care
+/// relationship removes it. A lifecycle state alone needs no grant (#5628).
+/// Our own design.
 ///
 /// # Errors
 /// The `403` of [`check_care_writer`], and a storage failure.
@@ -151,22 +144,16 @@ pub(super) fn same_subjects(
 }
 
 /// Refuses a commit that changed the care relationships, memberships or
-/// record subjects of the party `party` when its caller is no administrator
-/// of `mapping` and no [`Operation::WriteCareRelationship`] grant it holds
-/// covers each of `changed`, what the commit removed and added, on `tx`.
+/// record subjects of `party` when its caller is no administrator of
+/// `mapping` and no [`Operation::WriteCareRelationship`] grant covers each of
+/// `changed`.
 ///
-/// A kinship is covered by any such grant. A care relationship is covered by
-/// a grant whose [`PROVIDER`] elements
-/// name its provider and whose [`TARGET_KIND`] elements name the RM type of
-/// its target. A membership is covered by a grant whose [`PROVIDER`]
-/// elements name a provider of the `ORGANISATION` it targets, or of the
-/// `ORGANISATION` the `GROUP` it targets belongs to
-/// ([`membership_providers`]); a membership of a `GROUP` that belongs to no
-/// provider is written by an administrator alone. A grant with no such
-/// element covers none. A change of the record subjects alone needs the
-/// grant. Draft access control decision procedure, Writing Relationships: a
-/// relationship is written "for the providers and the kinds of target its
-/// authorisation names"; our own design over it.
+/// Any such grant covers a kinship. A care relationship needs a grant whose
+/// [`PROVIDER`] elements name its provider and whose [`TARGET_KIND`] elements
+/// name its target's RM type; a membership one naming a provider of the
+/// `ORGANISATION` it targets, or of the `GROUP`'s ([`membership_providers`]);
+/// a `GROUP` of no provider is an administrator's alone. Draft access control decision procedure, Writing Relationships; our own
+/// design over it.
 ///
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) naming the grant, or the relationship
