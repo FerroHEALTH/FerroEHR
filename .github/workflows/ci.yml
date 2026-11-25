@@ -1666,9 +1666,13 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+      packages: read # the CI PostgreSQL image on GHCR
     services:
       postgres:
         image: ${{ needs.changes.outputs.postgres_image }} # zizmor: ignore[unpinned-images] docker/ci-postgres/image.ref, checked name@sha256 where it is read
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
         env:
           POSTGRES_USER: openehr
           POSTGRES_PASSWORD: openehr
