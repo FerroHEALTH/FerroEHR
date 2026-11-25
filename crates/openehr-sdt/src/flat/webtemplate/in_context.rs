@@ -20,8 +20,9 @@ fn is_event_family(rm_type: &str) -> bool {
 /// Synthesize the in-context RM children the master04 §"Web Template Metadata"
 /// example carries and an OPT commonly leaves unconstrained, so their simplified
 /// path keys resolve: COMPOSITION `context`, `category`, `language`,
-/// `territory`, `composer`; ENTRY `language`, `encoding`, `subject`; EVENT
-/// `time`. An existing child at the same `aqlPath` wins.
+/// `territory`, `composer`; ENTRY `language`, `encoding`, `subject`; ACTION
+/// `time`; OBSERVATION `history_origin`; EVENT `time`. An existing
+/// child at the same `aqlPath` wins.
 ///
 /// NOTE: the master04 example is the shape oracle; its unmarked `context`
 /// wrapper is reproduced.
@@ -33,6 +34,11 @@ pub(super) fn synthesize_in_context(node: &mut WebTemplateNode) {
     if node.rm_type == "COMPOSITION" {
         synth_composition(node);
     } else if is_entry_family(&node.rm_type) {
+        match node.rm_type.as_str() {
+            "ACTION" => synth_action(node),
+            "OBSERVATION" => synth_history_origin(node),
+            _ => {}
+        }
         synth_entry(node);
     } else if is_event_family(&node.rm_type) {
         synth_event(node);
@@ -154,6 +160,44 @@ fn synth_entry(node: &mut WebTemplateNode) {
     );
 }
 
+/// The ACTION's in-context `time` (RM `ehr` §ACTION `time`, `DV_DATE_TIME`
+/// 1..1; ITS-REST `simplified_formats` master05 §ACTION addresses it as
+/// `<action>/time`).
+fn synth_action(node: &mut WebTemplateNode) {
+    let base = node.aql_path.clone();
+    ensure_child(
+        node,
+        &format!("{base}/time"),
+        "DV_DATE_TIME",
+        Some("Time"),
+        datetime_inputs(),
+        false,
+    );
+}
+
+/// The `origin` of the OBSERVATION's `data` HISTORY (RM `data_structures`
+/// §HISTORY `origin`, `DV_DATE_TIME` 1..1), at the collapsed HISTORY's own
+/// `aqlPath`, under master05 §OBSERVATION's flat key `history_origin`.
+fn synth_history_origin(node: &mut WebTemplateNode) {
+    let data = format!("{}/data[", node.aql_path);
+    let histories: Vec<String> = node
+        .slots
+        .iter()
+        .filter(|slot| slot.rm_type == "HISTORY" && slot.path.starts_with(&data))
+        .map(|slot| slot.path.clone())
+        .collect();
+    for history in histories {
+        ensure_child(
+            node,
+            &format!("{history}/origin"),
+            "DV_DATE_TIME",
+            Some("History_origin"),
+            datetime_inputs(),
+            false,
+        );
+    }
+}
+
 /// The EVENT-level in-context `time`.
 // NOTE: master04 §"Web Template Metadata" renders an EVENT with one inContext
 // child; `width` and the rest stay master05 datum paths.
@@ -219,7 +263,8 @@ fn ensure_child(
     parent.children.push(n);
 }
 
-/// The single `DATETIME` input of a synthesized `start_time`/EVENT `time` leaf.
+/// The single `DATETIME` input of a synthesized date-time leaf (`start_time`,
+/// `time`, `origin`).
 fn datetime_inputs() -> Vec<WebTemplateInput> {
     vec![WebTemplateInput::new(WebTemplateInputType::Datetime, None)]
 }

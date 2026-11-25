@@ -674,3 +674,54 @@ fn slot_includes(node: &WebTemplateNode) -> Vec<String> {
     }
     out
 }
+
+// ── ACTION.time and HISTORY.origin ───────────────────────────────────────────
+
+/// The in-context child of `node` at `aql_path`, asserted `DV_DATE_TIME`, 1..1.
+fn in_context_datetime<'a>(node: &'a WebTemplateNode, aql_path: &str) -> &'a WebTemplateNode {
+    let child = node
+        .children
+        .iter()
+        .find(|c| c.aql_path == aql_path)
+        .unwrap_or_else(|| panic!("{} has no child at {aql_path}", node.aql_path));
+    assert_eq!(child.rm_type, "DV_DATE_TIME", "{aql_path}");
+    assert_eq!((child.min, child.max), (Some(1), 1), "{aql_path}");
+    assert_eq!(child.in_context, Some(true), "{aql_path}");
+    child
+}
+
+/// RM `ehr` §ACTION `time` and `data_structures` §HISTORY `origin` (both
+/// `DV_DATE_TIME`, 1..1) are addressable as `<action>/time` and
+/// `<observation>/history_origin` (ITS-REST `simplified_formats` master05
+/// §ACTION, §OBSERVATION).
+#[test]
+fn every_action_carries_time_and_every_observation_its_history_origin() {
+    let wt = build_from_file(&better_fixtures_dir().join("ConformanceTesttemplate.opt"))
+        .expect("build ConformanceTesttemplate");
+    let (mut actions, mut observations) = (0, 0);
+    for_each_node(&wt.tree, &mut |node| match node.rm_type.as_str() {
+        "ACTION" => {
+            actions += 1;
+            let time = in_context_datetime(node, &format!("{}/time", node.aql_path));
+            assert_eq!(time.id, "time");
+        }
+        "OBSERVATION" => {
+            observations += 1;
+            let origin = node
+                .children
+                .iter()
+                .find(|c| c.id == "history_origin")
+                .unwrap_or_else(|| panic!("{} has no history_origin", node.aql_path));
+            let history = origin
+                .aql_path
+                .strip_prefix(&format!("{}/data[", node.aql_path))
+                .and_then(|rest| rest.strip_suffix("]/origin"))
+                .unwrap_or_else(|| panic!("history_origin at {}", origin.aql_path));
+            assert!(history.starts_with("at"), "the HISTORY node id: {history}");
+            in_context_datetime(node, &origin.aql_path);
+        }
+        _ => {}
+    });
+    assert_eq!((actions, observations), (1, 2));
+    assert_unique_sibling_ids(&wt.tree);
+}

@@ -155,9 +155,14 @@ fn walk<'a, I: Instance<'a>>(node: &WebTemplateNode, rm: I, out: &mut SimNode) {
 
     let names = name_fallback(node);
     for (index, child) in node.children.iter().enumerate() {
-        // master05 §ACTIVITY: `/action_archetype_id` is the bare String, which
-        // `emit_activity_paths` writes; its C_STRING template child holds no object.
-        let direct = node.rm_type == "ACTIVITY" && child.id == "action_archetype_id";
+        // master05 §ACTIVITY `/action_archetype_id`, §ACTION `/time` and
+        // §OBSERVATION `/history_origin` are written by `emit_direct_rm_paths`.
+        let direct = matches!(
+            (node.rm_type.as_str(), child.id.as_str(), child.in_context),
+            ("ACTIVITY", "action_archetype_id", _)
+                | ("ACTION", "time", Some(true))
+                | ("OBSERVATION", "history_origin", Some(true))
+        );
         if !covered_by_ctx(node, child) && !direct {
             walk_child(node, index, child, rm, out, &names);
         }

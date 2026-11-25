@@ -412,6 +412,21 @@ expression: wt
                 ]
               },
               {
+                "id": "history_origin",
+                "name": "History_origin",
+                "localizedName": "History_origin",
+                "rmType": "DV_DATE_TIME",
+                "min": 1,
+                "max": 1,
+                "inContext": true,
+                "aqlPath": "/content[openEHR-EHR-SECTION.ispek_dialog.v1,'Vitals']/items[openEHR-EHR-OBSERVATION.lab_test-hba1c.v1]/data[at0001]/origin",
+                "inputs": [
+                  {
+                    "type": "DATETIME"
+                  }
+                ]
+              },
+              {
                 "id": "language",
                 "name": "Language",
                 "localizedName": "Language",
@@ -857,6 +872,21 @@ expression: wt
                 "inputs": [
                   {
                     "type": "TEXT"
+                  }
+                ]
+              },
+              {
+                "id": "history_origin",
+                "name": "History_origin",
+                "localizedName": "History_origin",
+                "rmType": "DV_DATE_TIME",
+                "min": 1,
+                "max": 1,
+                "inContext": true,
+                "aqlPath": "/content[openEHR-EHR-SECTION.ispek_dialog.v1,'Vitals']/items[openEHR-EHR-OBSERVATION.body_temperature-zn.v1]/data[at0002]/origin",
+                "inputs": [
+                  {
+                    "type": "DATETIME"
                   }
                 ]
               },
