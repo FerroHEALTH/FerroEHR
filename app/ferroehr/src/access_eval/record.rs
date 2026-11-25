@@ -17,7 +17,10 @@
 //! relationship`, defined in the `ACCESS_POLICY`); each directive that
 //! admitted it, with its `EHR_ACCESS` version uid (`consent`, or
 //! `representation` for a delegation); the subject's own access (`subject of
-//! care`); and each directive or step an emergency lifted (`emergency`). A
+//! care`); each directive or step an emergency lifted (`emergency`); and
+//! the justification of the policy an access outside the care relationships
+//! rested on, with the reason the caller stated (`justification`, or
+//! `emergency` for an emergency justification; #6587). A
 //! refusal names its `refused-*` code, the step that decided it and the
 //! directive or policy of that step, the absent answers of steps 1 and 2
 //! included, whose response says nothing (EHDS Art. 8), and the exclusion of
@@ -46,7 +49,8 @@ mod care;
 
 use crate::access_eval::care_tie::Tie;
 use crate::access_eval::condition::{Judgement, Noted, RequestAccess};
-use crate::access_eval::procedure::{Lifted, Verdict};
+use crate::access_eval::justification::Justification;
+use crate::access_eval::procedure::Verdict;
 use crate::access_eval::scope::{Item, Pred};
 use crate::access_log::entry::authorisation;
 use crate::ids::EhrId;
@@ -80,7 +84,8 @@ pub enum Step {
     Restriction,
     /// 3, a consent deny.
     ConsentDeny,
-    /// 4, a purpose the policy requires.
+    /// 4, a purpose the policy requires, or the reason a justification
+    /// requires.
     Purpose,
     /// 5, a conflict of interest no conflict rule of the policy allows.
     Conflict,
@@ -108,7 +113,7 @@ impl Step {
             Refusal::Sensitivity => Self::Sensitivity,
             Refusal::Confidentiality => Self::Confidentiality,
             Refusal::NoCareRelationship | Refusal::OutsideEpisode => Self::CareRelationship,
-            Refusal::PurposeMissing => Self::Purpose,
+            Refusal::PurposeMissing | Refusal::ReasonMissing => Self::Purpose,
             Refusal::ConsentRequired => Self::DefaultDisposition,
             Refusal::NotSubject => Self::Subject,
             Refusal::NotRepresented => Self::Representation,
@@ -202,6 +207,8 @@ pub struct Decision {
     /// level, when it is above `N`: the entry's security label (draft access
     /// control, The Decision Procedure, Refusals).
     pub confidentiality: Option<Confidentiality>,
+    /// The justification the access rested on.
+    pub justification: Option<Box<Justification>>,
 }
 
 impl Decision {
@@ -217,11 +224,13 @@ impl Decision {
             .filter(|ground| {
                 matches!(ground.name.as_deref(), Some(EHR_ACCESS | ACCESS_POLICY))
                     || ground.care.is_some()
+                    || ground.reason.is_some()
             })
             .cloned()
             .collect();
         let decision = Self {
             policies: policies_of(&grounds),
+            justification: Justification::of_grounds(&grounds).map(Box::new),
             grounds,
             refused: None,
             confidentiality: None,
@@ -266,9 +275,15 @@ impl RequestAccess {
             );
         }
         let refused = noted.map(|(_, noted)| self.refused(&noted, judged.as_ref()));
+        let mut justification = None;
         if let Some(judged) = &judged {
             let covering = ehr_id.and_then(|ehr_id| self.lifted_covers().of(ehr_id));
-            self.verdict_grounds(judged, refused.is_none(), covering.as_ref(), &mut grounds);
+            let admitted = refused.is_none();
+            self.verdict_grounds(judged, admitted, covering.as_ref(), &mut grounds);
+            justification = self.justification_ground(judged, admitted, covering.as_ref());
+            if let Some((ground, _)) = &justification {
+                grounds.push(ground.clone());
+            }
         }
         let confidentiality = settings_of(judged.as_ref())
             .map(EhrAccessSettings::marking)
@@ -278,7 +293,43 @@ impl RequestAccess {
             policies: policies_of(&grounds),
             grounds,
             confidentiality,
+            justification: justification.map(|(_, justification)| Box::new(justification)),
         }
+    }
+
+    /// The ground of the justification `judged` rests on, with the reason
+    /// the caller stated: an emergency's always, and any other's only where
+    /// the request admitted data it covers.
+    fn justification_ground(
+        &self,
+        judged: &Judgement,
+        admitted: bool,
+        covering: Option<&Covering>,
+    ) -> Option<(AccessAuthorisation, Justification)> {
+        let justified = judged.verdict.grounds.justification.as_ref()?;
+        let relied =
+            justified.emergency || (admitted && covering.is_none_or(|covering| covering.justified));
+        let reason = self.reason().filter(|_| relied)?;
+        let kind = if justified.emergency {
+            Authorisation::Emergency
+        } else {
+            Authorisation::Justification
+        };
+        let ground = AccessAuthorisation {
+            reference: Some(DvIdentifier {
+                issuer: None,
+                assigner: None,
+                id: justified.at.saturating_add(1).to_string(),
+                r#type: Some("justification".to_owned()),
+            }),
+            reason: Some(reason.as_str().to_owned()),
+            ..self.policy_ground(kind)
+        };
+        let justification = Justification {
+            emergency: justified.emergency,
+            reason: reason.clone(),
+        };
+        Some((ground, justification))
     }
 
     /// The legal grounds of the controller rules that refused `ehr_id`; with
@@ -392,9 +443,6 @@ impl RequestAccess {
                 .filter(|at| covering.is_none_or(|covering| covering.rules.contains(at)))
                 .filter_map(|at| self.rule_ground(at, Authorisation::Emergency)),
         );
-        if verdict.lifted.contains(&Lifted::Policy) {
-            grounds.push(self.policy_ground(Authorisation::Emergency));
-        }
     }
 
     /// The treatment relationship ground of a tie `granting` names: for the
@@ -548,6 +596,8 @@ pub(crate) struct Covering {
     directives: BTreeSet<usize>,
     /// Positions in the policy's `rules`.
     rules: BTreeSet<usize>,
+    /// Whether the justification of the verdict covered such an object.
+    justified: bool,
 }
 
 /// For each EHR with a lift where the request admitted an object, the lifted
@@ -566,7 +616,7 @@ impl LiftedCovers {
             return;
         };
         let found = &verdict.grounds;
-        if found.lifted.is_empty() && found.lifted_rules.is_empty()
+        if found.lifted.is_empty() && found.lifted_rules.is_empty() && found.justification.is_none()
             || !matches!(item, Item::Object(_))
         {
             return;
@@ -582,6 +632,10 @@ impl LiftedCovers {
         let covered = covers.entry(ehr_id).or_default();
         covered.directives.extend(covering(&found.lifted));
         covered.rules.extend(covering(&found.lifted_rules));
+        covered.justified |= found
+            .justification
+            .as_ref()
+            .is_some_and(|justified| justified.cover.holds(item));
     }
 
     /// What was noted for `ehr_id`; `None` when the request admitted no
@@ -629,6 +683,7 @@ pub fn stamp(event: &mut AuditEvent, access: &RequestAccess) {
             event.ehr_id = Some(refused_on.to_string());
         }
     }
+    event.justification.clone_from(&decision.justification);
     event.decided = Some(Box::new(decision));
 }
 

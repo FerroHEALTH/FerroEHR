@@ -583,6 +583,9 @@ const fn reason(code: Refusal) -> &'static str {
         // refused-outside-episode carries none of the datum's episodes.
         Refusal::OutsideEpisode => "the data lie outside the episodes of care this access reaches",
         Refusal::PurposeMissing => "the access policy requires a declared purpose of use",
+        Refusal::ReasonMissing => {
+            "the access rests on a justification of the access policy and states no reason"
+        }
         Refusal::ConsentRequired => "the EHR needs consent and no permit directive applies",
         Refusal::NotSubject => "the caller's patient context names another EHR",
         Refusal::NotRepresented => "the caller represents the subject of another EHR",
@@ -652,6 +655,7 @@ mod tests {
             Refusal::Confidentiality,
             Refusal::NoCareRelationship,
             Refusal::PurposeMissing,
+            Refusal::ReasonMissing,
             Refusal::ConsentRequired,
             Refusal::NotSubject,
             Refusal::NotRepresented,

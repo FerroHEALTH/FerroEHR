@@ -50,10 +50,8 @@ pub struct AccessLogEntry {
     pub query: Option<AccessQuery>,
     /// The purposes of use the accessor declared or the system established.
     pub purposes: Option<Vec<DvCodedText>>,
-    /// The grounds on which the access was authorised or refused: roles, agreements, consent decisions, permits, emergency overrides.
+    /// The grounds on which the access was authorised or refused: roles, agreements, consent decisions, permits, justifications and emergencies with the reason the accessor stated.
     pub authorisations: Option<Vec<AccessAuthorisation>>,
-    /// True when the access was made under an emergency override of the access policy, such as an access to protect the vital interests of the subject of care.
-    pub is_emergency: bool,
     /// The interface and the request that carried the access.
     pub channel: Option<AccessChannel>,
     /// Labels that limit who may read this entry, derived from the categories and origins of the data accessed.

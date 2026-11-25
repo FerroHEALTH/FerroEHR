@@ -114,6 +114,18 @@ impl FerroEhrService {
             let path = format!("/conflict_rules/{at}/applies_to");
             wrong.extend(self.organisation_types(facts, &path, scopes).await);
         }
+        for (at, justification) in policy
+            .justifications
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .enumerate()
+        {
+            let scopes = justification.applies_to.as_deref().unwrap_or_default();
+            let path = format!("/justifications/{at}/applies_to");
+            wrong.extend(self.organisation_types(facts, &path, scopes).await);
+            wrong.extend(self.care_roles(facts, &path, scopes).await);
+        }
         for (at, rule) in policy
             .rules
             .as_deref()

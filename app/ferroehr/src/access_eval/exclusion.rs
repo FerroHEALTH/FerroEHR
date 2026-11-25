@@ -25,17 +25,16 @@ use crate::access_eval::procedure::{Judged, Lifted, Outcome, Rule, Verdict};
 use crate::access_eval::scope::Pred;
 
 /// Step 0, exclusion: every exclusion of the controller that binds the
-/// caller, or the mark of an emergency that lifts it. A permit of the
-/// subject or of a representative never lifts one, and an emergency only
-/// where its `emergency_override` holds and the caller is no representative.
+/// caller, or the mark of an emergency justification that lifts it, when
+/// `lifts`. A permit of the subject or of a representative never lifts one,
+/// and an emergency only where its `emergency_override` holds; a
+/// representative invokes no justification.
 pub(super) fn excluded(
     read: &Reader<'_, '_>,
     exclusions: &[AccessDirective],
+    lifts: bool,
     verdict: &mut Verdict,
 ) {
-    let judged = read.judged;
-    let lifts =
-        judged.asked.emergency.break_glass() && judged.caller.kind != CallerKind::Representative;
     for (at, exclusion) in exclusions.iter().enumerate() {
         let placed = read.placed_exclusion(at);
         let binds = read.binds(DirectiveKind::Exclusion, exclusion, placed);

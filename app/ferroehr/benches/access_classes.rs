@@ -33,7 +33,7 @@ use std::time::Instant;
 
 use ferroehr::access_eval::class::{Class, Classes, classify};
 use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess};
-use ferroehr::access_eval::procedure::{Caller, Emergency};
+use ferroehr::access_eval::procedure::Caller;
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
 use ferroehr::service::ehr::access_settings::EhrAccessSettings;
@@ -112,7 +112,8 @@ fn request() -> RequestAccess {
         Asking {
             operation: OperationClass::Query,
             purpose: None,
-            emergency: Emergency::default(),
+            reason: None,
+            opt_out_override: false,
             episodes: None,
         },
         InForce {

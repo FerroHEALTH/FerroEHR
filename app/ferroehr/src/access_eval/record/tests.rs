@@ -41,6 +41,7 @@ fn the_stored_entry_gives_back_the_policies_of_its_grounds() {
         policies: policies_of(&grounds),
         grounds: grounds.to_vec(),
         confidentiality: None,
+        justification: None,
     }));
     let retention = crate::access_log::retention::stated(
         None,
@@ -103,7 +104,7 @@ fn each_refusal_belongs_to_its_step() {
             "refused-opt-out" => 1,
             "refused-restricted" => 2,
             "refused-consent-denied" => 3,
-            "refused-purpose-missing" => 4,
+            "refused-purpose-missing" | "refused-reason-missing" => 4,
             "refused-policy-denied" | "refused-conflict" => 5,
             "refused-sensitivity" | "refused-confidentiality" => 6,
             "refused-no-care-relationship" | "refused-outside-episode" => 7,

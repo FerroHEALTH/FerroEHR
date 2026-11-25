@@ -8,7 +8,8 @@
 //! record of Regulation (EU) 2025/327 Annex II 3.2: FerroEHR builds the
 //! `ehds-logging` [`AccessRecord`] from it and `ehds-logging` writes the BALP
 //! `AuditEvent` (the `RESTful` pattern of its action, the categories, the
-//! retention, the security labels, the origins and the emergency mark). Every
+//! retention, the security labels, the origins and the emergency mark of an
+//! access that rested on an emergency justification). Every
 //! other record (an authentication, a template or party operation, a failed
 //! access, an extract) is an `ihe-atna` BALP [`Exchange`] FerroEHR fills
 //! directly. Both are written by `ihe-atna`.
@@ -51,16 +52,13 @@ pub const BALP_PROFILE_BASE: &str = "https://profiles.ihe.net/ITI/BALP/Structure
 pub const OBJECT_ID_SYSTEM: &str = "urn:openehr:object-id";
 
 /// The policies an access record is written under: how long the store keeps
-/// it, the security labels of its categories and origins, and the purposes of
-/// use that mark an emergency access.
+/// it and the security labels of its categories and origins.
 #[derive(Debug, Clone, Default)]
 pub struct Recording {
     /// The retention every record states (Art. 9(2), Annex II 3.4).
     pub retention: RetentionPolicy,
     /// The labels of each category and origin (Annex II 3.4).
     pub labels: LabelPolicy,
-    /// The purposes of use that mark an emergency access (Art. 11(5)).
-    pub emergency: EmergencyPurposes,
     /// The access log retention of the access policy in force, whose period
     /// a record outside the EHDS access record is kept for.
     pub log: crate::system_log::retention::LogRetention,
@@ -283,13 +281,28 @@ pub(crate) fn access_record(
         },
         retention,
         labels,
-        emergency: event
-            .emergency_access
-            .then(|| ctx.recording.emergency.mark(&purposes))
-            .flatten(),
+        emergency: emergency_mark(event, &purposes),
         inserted: None,
         transformations: Vec::new(),
     }))
+}
+
+/// The emergency mark of an access that rested on an emergency
+/// justification, naming the declared purpose that invoked it (EHDS Art.
+/// 11(5)); `None` for any other access.
+fn emergency_mark(
+    event: &AuditEvent,
+    purposes: &[Purpose],
+) -> Option<ehds_logging::emergency::Emergency> {
+    event.justification.as_ref().filter(|j| j.emergency)?;
+    let declared = event.purpose.as_deref()?;
+    let invoking: Vec<Purpose> = purposes
+        .iter()
+        .filter(|purpose| purpose.code == declared)
+        .cloned()
+        .collect();
+    // NOTE: a declared purpose is a non-empty agreed code, which `declare` refuses only when empty.
+    EmergencyPurposes::declare(&invoking).ok()?.mark(&invoking)
 }
 
 /// The origins of the data an access read, from the systems its `FEEDER_AUDIT`s

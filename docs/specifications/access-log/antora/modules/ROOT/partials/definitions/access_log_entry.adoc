@@ -51,11 +51,7 @@ a|The purposes of use the accessor declared or the system established.
 
 h|*0..1*
 |*authorisations*: `xref:{class_list}[List]<xref:access_log:access_log_package.adoc#_access_authorisation_class[ACCESS_AUTHORISATION]>`
-a|The grounds on which the access was authorised or refused: roles, agreements, consent decisions, permits, emergency overrides.
-
-h|*1..1*
-|*is_emergency*: `xref:{class_boolean}[Boolean]`
-a|True when the access was made under an emergency override of the access policy, such as an access to protect the vital interests of the subject of care.
+a|The grounds on which the access was authorised or refused: roles, agreements, consent decisions, permits, justifications and emergencies with the reason the accessor stated.
 
 h|*0..1*
 |*channel*: `xref:access_log:access_log_package.adoc#_access_channel_class[ACCESS_CHANNEL]`

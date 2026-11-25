@@ -28,6 +28,7 @@ use ferroehr::access_log::search::{LOG_QUERY, LogQuery};
 use ferroehr::access_log::view::{LogReader, LogStanding, Restrictions, view_of};
 use ferroehr::system_log::event::{EntryScope, QueryNaming};
 use fhir_search::token::Token;
+use openehr_rm::draft::access_control::terminology::log::Authorisation;
 use openehr_rm::draft::access_control::terminology::{CallerKind, Term};
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
@@ -47,7 +48,7 @@ pub(crate) const EHR_PARAMETERS: &[&str] = &[
     "action",
     "outcome",
     "accessor_kind",
-    "emergency",
+    "justification",
     "include_self",
     "offset",
     "fetch",
@@ -65,7 +66,7 @@ pub(crate) const REVIEW_PARAMETERS: &[&str] = &[
     "from",
     "to",
     "outcome",
-    "emergency",
+    "justification",
     "offset",
     "fetch",
 ];
@@ -141,7 +142,7 @@ fn set(filter: &mut LogQuery, name: &str, value: String) -> Result<(), RestError
     match name {
         "from" => filter.from = Some(instant(name, &value)?),
         "to" => filter.to = Some(instant(name, &value)?),
-        "emergency" => filter.emergency = Some(boolean(name, &value)?),
+        "justification" => filter.justification = Some(justification(name, &value)?),
         "include_self" => filter.without_own_log_reads = !boolean(name, &value)?,
         "offset" => filter.offset = count(name, &value, 0, i64::MAX)?,
         "fetch" => filter.fetch = count(name, &value, 1, MAX_FETCH)?,
@@ -190,6 +191,18 @@ fn term<T: Term>(name: &str, value: &str) -> Result<T, RestError> {
         Ok(_) | Err(_) => Err(malformed(format!(
             "`{name}` is a token terminology_id|code naming a term of the {} group",
             T::GROUP.rubric()
+        ))),
+    }
+}
+
+/// `value`, `justification` or `emergency`, as the `access authorisation`
+/// term of a justified access.
+fn justification(name: &str, value: &str) -> Result<Authorisation, RestError> {
+    match value {
+        "justification" => Ok(Authorisation::Justification),
+        "emergency" => Ok(Authorisation::Emergency),
+        _ => Err(malformed(format!(
+            "`{name}` is `justification` or `emergency`"
         ))),
     }
 }

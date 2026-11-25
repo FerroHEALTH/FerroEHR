@@ -1,0 +1,1 @@
+- **Breaking:** `[audit] emergency_purpose_codes` and `[authz.rbac] emergency_access_role` (`FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES`, `FERROEHR__AUTHZ__RBAC__EMERGENCY_ACCESS_ROLE`) are removed; a deployment writes an emergency justification in its `ACCESS_POLICY` instead. The draft access-control `emergency_purpose` value-set binding is withdrawn with them.

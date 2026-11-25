@@ -367,9 +367,18 @@ fn create_node(
     let coded_name = archetyped
         .then(|| coded_name_constraint(co, ctx, scope, name_constraint.as_deref()))
         .flatten();
-    node.name_rm_type = inputs::attr_children(co, "name")
-        .next()
-        .map(|c| object_rm_type(c).to_owned());
+    let name_child = inputs::attr_children(co, "name").next();
+    node.name_rm_type = name_child.map(|c| object_rm_type(c).to_owned());
+    node.name_code_input = name_child
+        .filter(|c| object_rm_type(c) == "DV_CODED_TEXT")
+        .and_then(|c| {
+            let labels = ArchetypeLabels { ctx, scope };
+            inputs::build_inputs("DV_CODED_TEXT", c, &labels, None)
+                .0
+                .into_iter()
+                .find(|i| i.suffix.as_deref() == Some("code"))
+        })
+        .map(Box::new);
     apply_node_naming(
         &mut node,
         ctx,

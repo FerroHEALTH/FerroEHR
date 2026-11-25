@@ -511,10 +511,6 @@ mod tests {
                 "FERROEHR__AUTHZ__PARTY_BINDING__PROVISIONAL_REPORT_AFTER",
                 "14d",
             ),
-            (
-                "FERROEHR__AUTHZ__RBAC__EMERGENCY_ACCESS_ROLE",
-                "BREAK_GLASS",
-            ),
             ("FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS", "a,b"),
         ]);
         assert_eq!(c.authz.assurance.claim, "loa");
@@ -533,10 +529,6 @@ mod tests {
                 issuer: "urn:ura".to_owned(),
                 id: "1234".to_owned(),
             })
-        );
-        assert_eq!(
-            c.authz.rbac.emergency_access_role.as_deref(),
-            Some("BREAK_GLASS")
         );
         assert_eq!(c.authz.rbac.role_issuers, ["a", "b"]);
     }

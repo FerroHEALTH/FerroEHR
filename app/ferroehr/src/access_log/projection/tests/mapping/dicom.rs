@@ -166,7 +166,7 @@ fn dicom_object_rows(f: &Dicom) -> Vec<Row> {
             !xml.contains("permit-42"),
         ),
         (
-            "is_emergency, loss: the mark is not written",
+            "an emergency justification, loss: the mark is not written",
             !urgent.message.contains("emergency"),
         ),
         (

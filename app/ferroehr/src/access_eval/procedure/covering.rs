@@ -4,13 +4,18 @@
 //! Steps 7 and 8 over the data a care relationship covers: a caller who
 //! holds a live relationship is admitted on care only to the data it covers,
 //! and refused `refused-outside-episode` the rest (draft access control,
-//! decision procedure, steps 7 and 8; [`crate::access_eval::coverage`]).
+//! decision procedure, steps 7 and 8; [`crate::access_eval::coverage`]). A
+//! justification the caller invokes admits the data no relationship covers
+//! when the request states a reason, and refuses them
+//! `refused-reason-missing` when it does not
+//! ([`crate::access_eval::justification`]).
 
 use openehr_rm::draft::access_control::terminology::{AccessDefault, Refusal};
 
 use super::{Judged, Outcome, Rule, Verdict};
 use crate::access_eval::care_tie::Cared;
 use crate::access_eval::directive::Permit;
+use crate::access_eval::justification::{Invoked, Justified};
 use crate::access_eval::scope::Pred;
 
 /// What steps 7 and 8 read beside the judged access.
@@ -25,11 +30,13 @@ pub(super) struct Held<'a, 'p> {
     pub(super) care_read: bool,
     /// The default disposition.
     pub(super) default: AccessDefault,
+    /// The justification the request invokes.
+    pub(super) justified: Option<Invoked>,
 }
 
 /// Pushes the refusals of step 7, and of step 8 under a `restricted`
 /// default, onto `verdict`, and returns the data the caller's live
-/// relationships cover.
+/// relationships and its justification cover.
 pub(super) fn steps_7_and_8(
     judged: &Judged<'_>,
     held: &Held<'_, '_>,
@@ -46,35 +53,36 @@ pub(super) fn steps_7_and_8(
     if uncovered == Pred::False {
         return covering;
     }
-    let refusal = if held.live {
-        Refusal::OutsideEpisode
-    } else {
-        Refusal::NoCareRelationship
-    };
-    if held.care_read {
-        let naming = held
-            .permits
-            .iter()
-            .filter(|permit| permit.directive.applies_to.is_some())
-            .map(|permit| permit.cover.clone())
-            .collect();
-        verdict.rules.push(Rule {
-            when: Pred::all(vec![uncovered, Pred::negate(Pred::any(naming))]),
-            then: Outcome::Refused(refusal),
-            by: Vec::new(),
-        });
-    } else if held.default == AccessDefault::Restricted && held.live {
-        let permitted = Pred::any(
-            held.permits
-                .iter()
-                .map(|permit| permit.cover.clone())
-                .collect(),
-        );
-        verdict.rules.push(Rule {
-            when: Pred::all(vec![uncovered, Pred::negate(permitted)]),
-            then: Outcome::Refused(refusal),
-            by: Vec::new(),
-        });
+    let restricted = held.default == AccessDefault::Restricted;
+    if !held.care_read && !restricted {
+        return covering;
     }
+    let permitted = Pred::any(
+        held.permits
+            .iter()
+            .filter(|permit| !held.care_read || permit.directive.applies_to.is_some())
+            .map(|permit| permit.cover.clone())
+            .collect(),
+    );
+    let refused = Pred::all(vec![uncovered, Pred::negate(permitted)]);
+    let refusal = match held.justified {
+        Some(invoked) if invoked.reasoned => {
+            verdict.grounds.justification = Some(Justified {
+                at: invoked.at,
+                emergency: false,
+                cover: refused,
+            });
+            return Pred::True;
+        }
+        Some(_) => Refusal::ReasonMissing,
+        None if held.live => Refusal::OutsideEpisode,
+        None if held.care_read => Refusal::NoCareRelationship,
+        None => return covering,
+    };
+    verdict.rules.push(Rule {
+        when: refused,
+        then: Outcome::Refused(refusal),
+        by: Vec::new(),
+    });
     covering
 }

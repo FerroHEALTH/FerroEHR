@@ -812,15 +812,15 @@ mod tests {
             .expect("a well-formed privacy section validates");
     }
 
-    /// Both purpose lists of `[audit]` are reachable from the environment, and
-    /// an emergency code that is an agreed purpose code validates.
+    /// The purpose list and the reason header of `[audit]` are reachable from
+    /// the environment.
     #[test]
-    fn the_audit_purpose_lists_map_from_the_environment() {
+    fn the_audit_purpose_list_and_reason_header_map_from_the_environment() {
         let c = assemble_ok(
             None,
             &env(&[
                 ("FERROEHR__AUDIT__PURPOSE_CODES", "TREAT,ETREAT"),
-                ("FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES", "ETREAT"),
+                ("FERROEHR__AUDIT__REASON_HEADER", "X-Break-Glass-Reason"),
                 ("FERROEHR__RECORD__SUBJECT_INDEX", "local"),
             ]),
             &[],
@@ -829,33 +829,8 @@ mod tests {
             c.audit.purpose_codes,
             vec!["TREAT".to_owned(), "ETREAT".to_owned()]
         );
-        assert_eq!(c.audit.emergency_purpose_codes, vec!["ETREAT".to_owned()]);
-        c.validate()
-            .expect("an emergency code on the purpose list validates");
-    }
-
-    /// An emergency purpose code that is not an agreed purpose code is a boot
-    /// error naming the code, including when no purpose list is configured.
-    #[test]
-    fn an_emergency_code_outside_the_purpose_codes_is_refused() {
-        let mut config = standalone();
-        config.audit.emergency_purpose_codes = vec!["ETREAT".to_owned()];
-        let text = config
-            .validate()
-            .expect_err("no purpose list agrees ETREAT")
-            .to_string();
-        assert!(
-            text.contains("\"ETREAT\"") && text.contains("audit.purpose_codes"),
-            "{text}"
-        );
-
-        config.audit.purpose_codes = vec!["TREAT".to_owned()];
-        config
-            .validate()
-            .expect_err("TREAT alone does not agree ETREAT");
-
-        config.audit.purpose_codes.push("ETREAT".to_owned());
-        config.validate().expect("ETREAT is agreed");
+        assert_eq!(c.audit.reason_header, "X-Break-Glass-Reason");
+        c.validate().expect("the audit section validates");
     }
 
     /// A `restricted` EHR default with authentication off is a boot error, since

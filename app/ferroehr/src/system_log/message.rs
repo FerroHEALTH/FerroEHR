@@ -43,7 +43,7 @@ pub struct AuditContext {
     pub server_ip: String,
     /// Fill for empty mandatory fields (default `UNKNOWN`).
     pub value_if_missing: String,
-    /// The retention, label and emergency policies of the EHDS access record.
+    /// The retention and label policies of the EHDS access record.
     #[cfg(feature = "fhir")]
     pub recording: crate::system_log::fhir::Recording,
 }

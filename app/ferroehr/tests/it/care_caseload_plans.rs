@@ -30,7 +30,7 @@ use sqlx::{Executor as _, PgPool};
 use ferroehr::access_eval::care_tie::Cared;
 use ferroehr::access_eval::condition::care::{Care, ProjectedCare};
 use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess, with_request_access};
-use ferroehr::access_eval::procedure::{Caller, Emergency};
+use ferroehr::access_eval::procedure::Caller;
 use ferroehr::access_eval::scope::CategoryIndex;
 use ferroehr::party_binding::grants::caller::facts::CallerFacts;
 use ferroehr::service::FerroEhrService;
@@ -287,7 +287,8 @@ fn access(team: uuid::Uuid) -> Arc<RequestAccess> {
         Asking {
             operation: OperationClass::Query,
             purpose: Some("TREAT".to_owned()),
-            emergency: Emergency::default(),
+            reason: None,
+            opt_out_override: false,
             episodes: None,
         },
         InForce {

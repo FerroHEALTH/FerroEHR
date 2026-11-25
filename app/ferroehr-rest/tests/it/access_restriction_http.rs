@@ -11,10 +11,10 @@
 //! the restricted data be reached in the vital interest of the person, logged
 //! for them (`docs/law/eu/ehds/text.html`). The tests assert that a restricted
 //! composition and a restricted EHR answer every professional route as an
-//! unknown one does, that a query and an export leave them out, that only the
-//! configured emergency role declaring an emergency purpose reads them, with
-//! the emergency mark on its record, and that a later version without the
-//! directive brings them back. No openEHR spec governs restriction of access:
+//! unknown one does, that a query and an export leave them out, that only a
+//! caller the policy's emergency justification names, stating a reason,
+//! reads them, with the justification and its reason on its record, and that
+//! a later version without the directive brings them back. No openEHR spec governs restriction of access:
 //! our own design/extension.
 
 use std::sync::Arc;
@@ -38,25 +38,30 @@ use crate::common::EXT;
 
 /// The header the default configuration reads the declared purpose from.
 const PURPOSE: &str = "x-purpose-of-use";
+/// The header the default configuration reads the reason for a justified
+/// access from.
+const REASON: &str = "x-access-reason";
+/// The purpose that, with a reason, declares the medic's emergency, and the
+/// reason the medic states.
+const STATED: (&str, &str) = ("ETREAT", "Anaphylaxis%2C%20unresponsive");
 /// A versioned-object id no composition holds.
 const UNKNOWN_VO: &str = "11111111-2222-4333-8444-555555555555";
 /// An EHR id no EHR holds.
 const UNKNOWN_EHR: &str = "66666666-7777-4888-9999-000000000000";
 
-/// The `persons` issuer of the medic, whose role claims may grant the
-/// emergency access role: no policy grant gives a privileged role, so the
-/// break-glass role comes from the identity provider.
+/// The `persons` issuer of the medic, the one caller the policy's emergency
+/// justification names.
 const MEDICS: &str = "https://medics.example";
 
-/// The credential of `name`: the medic's token of [`MEDICS`], holding the
-/// emergency role, or a Basic user's.
+/// The credential of `name`: the medic's token of [`MEDICS`], or a Basic
+/// user's.
 fn basic(name: &str) -> String {
     use base64::Engine;
     if name == "medic" {
         let exp = jiff::Timestamp::now().as_second() + 3600;
         return common::bearer(&json!({
             "sub": "medic", "iss": MEDICS, "aud": "ferroehr", "exp": exp,
-            "roles": ["USER", "EMERGENCY"],
+            "roles": ["USER"],
         }));
     }
     format!(
@@ -65,15 +70,14 @@ fn basic(name: &str) -> String {
     )
 }
 
-/// An audited app with `ETREAT` agreed as an emergency purpose, the
-/// `EMERGENCY` role configured as the emergency access role, Basic users for
-/// an administrator and a clinician, a medic whose token holds the emergency
-/// role, and the IPS template uploaded.
+/// An audited app with `TREAT` and `ETREAT` agreed purposes, Basic users for
+/// an administrator and a clinician, a medic of [`MEDICS`], an access policy
+/// whose emergency justification for `ETREAT` names the medic, and the IPS
+/// template uploaded.
 async fn app() -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
     let audit = AuditConfig {
         purpose_codes: vec!["TREAT".to_owned(), "ETREAT".to_owned()],
-        emergency_purpose_codes: vec!["ETREAT".to_owned()],
         ..common::local_audit()
     };
     let (sender, _handle): (_, AuditHandle) = start(audit, None, pool.clone())
@@ -101,12 +105,19 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     );
     common::bind_issuer(&mut config, MEDICS);
     common::bind_subjects(&pool, &[(MEDICS, "medic")]).await;
-    config.rbac.role_issuers = vec![common::name_of(MEDICS)];
-    config.rbac.emergency_access_role = Some("EMERGENCY".to_owned());
+    common::grant_to(
+        &svc,
+        &pool,
+        "root",
+        ferroehr::party_binding::grants::operation::Operation::WriteAccessPolicy,
+    )
+    .await;
+    let medic = common::issuer_person(&pool, MEDICS, "medic").await;
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
     let authz = AuthzHandle::build(&authz, &config.api.base_path).map(Arc::new);
     let app = common::build_full(config, svc, authz, Observability::default()).await;
+    put_policy(&app, medic).await;
     let (status, body) = send(
         &app,
         "POST",
@@ -120,7 +131,45 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     (db, pool, app)
 }
 
+/// Writes the controller's first policy as the administrator, whose
+/// emergency justification for `ETREAT` names the `PERSON` `medic`.
+async fn put_policy(app: &Router, medic: uuid::Uuid) {
+    let archetype = "openEHR-EHR-ACCESS_POLICY.controller.v1";
+    let policy = json!({
+        "_type": "ACCESS_POLICY",
+        "name": { "_type": "DV_TEXT", "value": "Hospital access policy" },
+        "archetype_node_id": archetype,
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+            "rm_version": "1.2.0" },
+        "controller": { "_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
+            "id": { "_type": "HIER_OBJECT_ID", "value": "2c3d4e5f-6a7b-4c8d-9e0f-a1b2c3d4e5f7" } },
+        "care_relationship_required": false,
+        "purpose_required": false,
+        "justifications": [{ "_type": "ACCESS_JUSTIFICATION", "emergency": true,
+            "purposes": [{ "_type": "DV_CODED_TEXT", "value": "emergency treatment",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_ActReason" },
+                    "code_string": "ETREAT" } }],
+            "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "party": {
+                "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+                "id": { "_type": "HIER_OBJECT_ID", "value": medic.to_string() } } }] }]
+    });
+    let (status, _, body) = common::send(
+        app,
+        Request::put(format!("{EXT}/admin/access_policy"))
+            .header(header::AUTHORIZATION, basic("root"))
+            .header(header::CONTENT_TYPE, "application/json")
+            .header(header::IF_NONE_MATCH, "*")
+            .body(Body::from(policy.to_string()))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "the policy: {body}");
+}
+
 /// Sends `method uri` as `user`, with an optional declared purpose and body.
+/// [`STATED`] declares its purpose with its reason.
 async fn send(
     app: &Router,
     method: &str,
@@ -136,7 +185,12 @@ async fn send(
         .header(header::ACCEPT, "application/json")
         .header("Prefer", "return=representation");
     if let Some(purpose) = purpose {
-        req = req.header(PURPOSE, purpose);
+        match purpose.split_once('|') {
+            Some((code, reason)) => {
+                req = req.header(PURPOSE, code).header(REASON, reason);
+            }
+            None => req = req.header(PURPOSE, purpose),
+        }
     }
     let req = match body {
         Some((content_type, body)) => req
@@ -453,8 +507,11 @@ async fn a_restricted_ehr_reads_as_absent() {
     );
 }
 
-/// Only the emergency role declaring an emergency purpose reads restricted
-/// data, and that access carries the emergency mark; either alone does not.
+/// Only the caller the emergency justification names, declaring its purpose
+/// with a reason, reads restricted data, and that access carries the
+/// justification and the reason; a caller it does not name, no purpose, or
+/// the purpose without a reason reads it as absent, so nothing says the data
+/// are restricted.
 #[tokio::test]
 async fn only_an_emergency_access_reads_restricted_data_and_is_marked() {
     let (_db, pool, app) = Box::pin(app()).await;
@@ -462,9 +519,10 @@ async fn only_an_emergency_access_reads_restricted_data_and_is_marked() {
     let vo = commit(&app, &ehr).await;
     mark(&app, &ehr, Some(&vo), false).await;
     let path = format!("{BASE}/ehr/{ehr}/composition/{vo}");
+    let stated = format!("{}|{}", STATED.0, STATED.1);
 
     for (user, purpose) in [
-        ("clinician", Some("ETREAT")),
+        ("clinician", Some(stated.as_str())),
         ("medic", None),
         ("medic", Some("TREAT")),
     ] {
@@ -472,18 +530,21 @@ async fn only_an_emergency_access_reads_restricted_data_and_is_marked() {
         assert_eq!(status, StatusCode::NOT_FOUND, "{user} {purpose:?}: {body}");
     }
     let (status, body) = send(&app, "GET", &path, "medic", Some("ETREAT"), None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "no reason: {body}");
+    assert!(!body.contains("refused-"), "nothing says why: {body}");
+    let (status, body) = send(&app, "GET", &path, "medic", Some(&stated), None).await;
     assert_eq!(
         status,
         StatusCode::OK,
         "the emergency access reads it: {body}"
     );
-    let uids = composition_uids(&app, "medic", Some("ETREAT")).await;
+    let uids = composition_uids(&app, "medic", Some(&stated)).await;
     assert!(uids.iter().any(|uid| uid.starts_with(&vo)), "{uids:?}");
 
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     loop {
-        let marked: Option<bool> = sqlx::query_scalar(
-            "SELECT emergency_access FROM audit.access_trail \
+        let marked: Option<Option<Value>> = sqlx::query_scalar(
+            "SELECT justification FROM audit.access_trail \
              WHERE operation = 'composition_get' AND outcome = 0 AND principal = 'medic' \
              ORDER BY chain_seq DESC LIMIT 1",
         )
@@ -491,7 +552,11 @@ async fn only_an_emergency_access_reads_restricted_data_and_is_marked() {
         .await
         .expect("read the trail");
         if let Some(marked) = marked {
-            assert!(marked, "the emergency access carries the mark");
+            assert_eq!(
+                marked,
+                Some(json!({ "kind": "emergency", "reason": "Anaphylaxis, unresponsive" })),
+                "the emergency access carries the justification and its reason"
+            );
             break;
         }
         assert!(

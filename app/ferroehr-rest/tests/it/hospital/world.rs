@@ -128,7 +128,7 @@ pub(crate) const STAFF: [Staff; 7] = [
     Staff {
         name: "bakker",
         display: "Dr. Dirk Bakker",
-        roles: &["USER", "EMERGENCY"],
+        roles: &["USER"],
         role: "emergency-physician",
         groups: &[],
         clearances: &[],
@@ -277,8 +277,7 @@ pub(crate) fn capability(operation: &str, items: &[Value]) -> Value {
 
 /// The deployment's configuration: the three issuers, the staff's logins
 /// bound by the keys SCIM provisions, the patient's and her representative's
-/// logins bound to their `PERSON`s, the break-glass role and the emergency purpose, and
-/// `root` the first administrator.
+/// logins bound to their `PERSON`s, and `root` the first administrator.
 pub(crate) fn config() -> AppConfig {
     let machines = IssuerEntry {
         issuer: SecretUrl::new(MACHINES),
@@ -332,7 +331,6 @@ pub(crate) fn config() -> AppConfig {
         ..PartyBindingConfig::default()
     };
     config.rbac.role_issuers = vec![common::name_of(PERSONS)];
-    config.rbac.emergency_access_role = Some("EMERGENCY".to_owned());
     config
 }
 
@@ -497,6 +495,10 @@ pub(crate) async fn ask(
         .prefer_representation();
     if let Some(purpose) = ask.purpose {
         req = req.header(PURPOSE, purpose);
+        // NOTE: the emergency of the policy's justification states its reason (#6587).
+        if purpose == "ETREAT" {
+            req = req.header(common::REASON_HEADER, "Unresponsive%20in%20the%20ward");
+        }
     }
     if let Some(ehr) = ask.scope {
         req = req.header("openehr-ehr-id", ehr);

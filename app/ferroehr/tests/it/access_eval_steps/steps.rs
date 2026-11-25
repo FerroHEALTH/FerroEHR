@@ -8,7 +8,7 @@ use openehr_rm::draft::access_control::terminology::{CallerKind, OperationClass}
 use serde_json::{Value, json};
 
 use super::*;
-use ferroehr::access_eval::procedure::{Emergency, Lifted};
+use ferroehr::access_eval::procedure::{Asked, Lifted};
 
 /// The subject reads their own record whatever the directives say (EHDS Art. 3).
 #[test]
@@ -117,13 +117,10 @@ fn step_1_opt_out() {
         )
     };
     let service = caller(CallerKind::AccessService, DR_B);
-    let emergency = Asked {
-        emergency: Emergency {
-            declared: true,
-            break_glass: false,
-            opt_out_override: true,
-        },
-        ..read(Some("ETREAT"))
+    let emergency = break_glass(read(Some("ETREAT")));
+    let overriding = Asked {
+        opt_out_override: true,
+        ..emergency
     };
     let cases: [(&str, bool, &Caller, Asked<'_>, Outcome); 5] = [
         (
@@ -140,25 +137,19 @@ fn step_1_opt_out() {
             read(None),
             Outcome::Admit,
         ),
-        ("the override", true, &service, emergency, Outcome::Admit),
+        ("the override", true, &service, overriding, Outcome::Admit),
         (
             "an absolute opt-out",
             false,
             &service,
-            emergency,
+            overriding,
             ABSENT_OPT_OUT,
         ),
         (
             "an emergency without the override",
             true,
             &service,
-            Asked {
-                emergency: Emergency {
-                    opt_out_override: false,
-                    ..emergency.emergency
-                },
-                ..emergency
-            },
+            emergency,
             ABSENT_OPT_OUT,
         ),
     ];
@@ -167,8 +158,13 @@ fn step_1_opt_out() {
         let verdict = case.verdict(who, asked);
         assert_outcome(&verdict, &Item::Ehr, expected, name);
         assert_outcome(&verdict, &object(OBJECT, None), expected, name);
+        // NOTE: the emergency justification that lifts the opt-out lifts steps 6 to 8 too (#6587).
         if name == "the override" {
-            assert_eq!(verdict.lifted, vec![Lifted::OptOut], "{name}");
+            assert_eq!(
+                verdict.lifted,
+                vec![Lifted::OptOut, Lifted::Policy],
+                "{name}"
+            );
         }
     }
 }

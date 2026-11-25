@@ -83,8 +83,10 @@ guarded_handler! {
             ("outcome" = Option<String>, Query,
              description = "A term of the `access outcome` group by its coded content, the token \
                             `terminology_id|code`, such as `openehr_access|refused`."),
-            ("emergency" = Option<bool>, Query,
-             description = "Only the entries whose `is_emergency` is this."),
+            ("justification" = Option<String>, Query,
+             description = "`justification` or `emergency`: only the entries an access \
+                            justification of that kind admitted, with the reason the \
+                            accessor stated."),
             ("offset" = Option<i64>, Query, description = "Records skipped; default 0."),
             ("fetch" = Option<i64>, Query,
              description = "The most records answered, 1 to 1000; default 100.")

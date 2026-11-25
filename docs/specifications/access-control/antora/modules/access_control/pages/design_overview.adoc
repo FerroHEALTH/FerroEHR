@@ -48,7 +48,7 @@ The costs the literature names are answered in the procedure. A decision on a re
 
 Two homes were weighed for the controller's facts. The `_details_` of the controller's `ORGANISATION` uses only released classes, but gives a party a meaning the Demographic IM does not give it, and puts every policy change into the organisation's demographic history. A versioned root committed in contributions with `AUDIT_DETAILS`, like any versioned object, keeps the policy's history apart and can be exchanged and proposed on its own. The package takes the second.
 
-`ACCESS_POLICY` holds no emergency rule and no floor for the default disposition. Those belong to the deployment, so that an emergency access works when the policy store does not answer; the policy can only tighten them.
+`ACCESS_POLICY` holds the emergency rule as one of its justifications, beside the justified access outside the care relationships it generalises, so one controller decision says who may open a record outside their care relationships, for which purposes, and whether the access lifts what an emergency lifts. It holds no floor for the default disposition, which belongs to the deployment; the policy can only tighten it.
 
 == Package Structure
 

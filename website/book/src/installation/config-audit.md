@@ -23,9 +23,9 @@ suppress_login_events = true
 resolve_subject = true
 purpose_header = "x-purpose-of-use"
 permit_header = "x-data-permit"
+reason_header = "x-access-reason"
 purpose_codes = []
 purpose_system = "http://terminology.hl7.org/CodeSystem/v3-ActReason"
-emergency_purpose_codes = []
 ```
 
 | Key | Type | Default | Description |
@@ -40,9 +40,9 @@ emergency_purpose_codes = []
 | `server_host` | string | unset ⇒ the `value_if_missing` fill | This node's advertised network address, reported as the destination `NetworkAccessPointID`. |
 | `purpose_header` | string | `x-purpose-of-use` | The request header a caller declares its purpose of use in, recorded on every access record. NEN 7513 asks on whose authority a record was read and EHDS Art. 9 asks why; neither is derivable from the request, so the caller declares it. IHE carries the equivalent in a SAML attribute rather than a header, so the header is FerroEHR's own. An issuer with an `[auth.issuer.<name>.attributes]` table states the purposes in its token, and a header naming another purpose is refused ([where the purpose comes from](../audit.md#where-the-purpose-of-use-comes-from)). |
 | `permit_header` | string | `x-data-permit` | The request header a secondary-use caller declares the data permit it acts under in (EHDS Art. 68), recorded on every access record as `permit`. The value is the permit's identifier, 1 to 128 characters of letters, digits and `.` `_` `:` `/` `#` `-`; any other value is recorded as absent. No specification names a header for it, so the header is FerroEHR's own. See [Secondary use](../compliance/secondary-use.md#the-access-record). |
+| `reason_header` | string | `x-access-reason` | The request header a caller states the reason for a [justified access](../security.md#justified-access-outside-the-care-relationships) in: the clinician's own words, percent-encoded UTF-8, 1 to 1000 characters after decoding, with no control character; any other value is a `400`. The access record keeps the reason, and the FHIR `AuditEvent` carries it as the text of the purpose of use ([justified and emergency access](../audit.md#justified-and-emergency-access)). No specification names a header for it, so the header and its bound are FerroEHR's own. |
 | `purpose_codes` | list of string | `[]` | The purpose codes this deployment accepts. Empty records whatever the caller declares. A non-empty list records a declared code only when it is on the list, so an unagreed string does not sit in the trail reading like an established purpose. |
 | `purpose_system` | string | `http://terminology.hl7.org/CodeSystem/v3-ActReason` | The canonical URL of the FHIR `CodeSystem` the `purpose_codes` belong to, HL7's `ActReason` by default. `GET {extensions}/access/purposes` answers the header, this system and each accepted code with the display text the [terminology server](config-integrations.md#terminology)'s `CodeSystem/$lookup` gives it, so a client such as the viewer offers the codes by name. Any authenticated caller reads that list, one with no role included: it names no personal data. No specification names the system of a purpose header, so the key is FerroEHR's own. |
-| `emergency_purpose_codes` | list of string | `[]` | The purpose codes that mark an access as an [emergency access](../audit.md#emergency-access-ehds-art-115) in the vital interest of the patient (EHDS Art. 11(5)). Each must also be on `purpose_codes`, or the server refuses to start. Empty marks nothing. The mark is recorded on the access record and shown to the patient through the access log; it lifts no restriction. |
 | `legal_basis` | string | unset | The legal basis this deployment processes under, recorded on every access record. A deployment-level fact: the controller establishes the GDPR Art. 6/9 condition once. Unset records nothing rather than a guess. |
 
 Every record of a request is written to the local store before the response

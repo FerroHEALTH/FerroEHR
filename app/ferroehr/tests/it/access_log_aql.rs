@@ -162,7 +162,7 @@ async fn a_reviewer_queries_across_ehrs() {
     let versions = rows(
         &fx.svc,
         "SELECT l/items/version_id/value FROM ACCESS_LOG_ENTRY l \
-         WHERE l/items/rm_type = 'COMPOSITION' AND l/is_emergency = false LIMIT 1",
+         WHERE l/items/rm_type = 'COMPOSITION' AND l/items/was_delivered = true LIMIT 1",
         &reviewer,
     )
     .await;

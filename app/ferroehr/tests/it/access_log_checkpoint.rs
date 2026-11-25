@@ -356,7 +356,7 @@ async fn an_export_verifies_with_a_tombstone_and_fails_with_a_tampered_entry() {
     assert_eq!(log.verify_bundle(&whole).expect("verify"), Vec::new());
 
     let mut tampered: Value = serde_json::to_value(&export).expect("the export writes");
-    tampered["records"][0]["is_emergency"] = json!(true);
+    tampered["records"][0]["system_id"] = json!("tampered.example.org");
     let tampered: LogExport = serde_json::from_value(tampered).expect("the export reads");
     let uid = entries
         .get(2)

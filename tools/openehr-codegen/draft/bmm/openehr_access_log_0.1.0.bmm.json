@@ -153,7 +153,7 @@
         "authorisations": {
           "_type": "P_BMM_CONTAINER_PROPERTY",
           "name": "authorisations",
-          "documentation": "The grounds on which the access was authorised or refused: roles, agreements, consent decisions, permits, emergency overrides.",
+          "documentation": "The grounds on which the access was authorised or refused: roles, agreements, consent decisions, permits, justifications and emergencies with the reason the accessor stated.",
           "type_def": {
             "container_type": "List",
             "type": "ACCESS_AUTHORISATION"
@@ -162,13 +162,6 @@
             "lower": 0,
             "upper_unbounded": true
           }
-        },
-        "is_emergency": {
-          "_type": "P_BMM_SINGLE_PROPERTY",
-          "name": "is_emergency",
-          "documentation": "True when the access was made under an emergency override of the access policy, such as an access to protect the vital interests of the subject of care.",
-          "is_mandatory": true,
-          "type": "Boolean"
         },
         "channel": {
           "_type": "P_BMM_SINGLE_PROPERTY",
@@ -621,7 +614,7 @@
         "kind": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "kind",
-          "documentation": "The kind of ground, coded in the draft `openehr_access` terminology's `access authorisation` group: a role, a treatment relationship, an agreement, a consent decision, a permit, an emergency override, the subject's own access, a representation, a legal obligation, or a conflict allowance.",
+          "documentation": "The kind of ground, coded in the draft `openehr_access` terminology's `access authorisation` group: a role, a treatment relationship, an agreement, a consent decision, a permit, a justification, an emergency, the subject's own access, a representation, a legal obligation, or a conflict allowance.",
           "is_mandatory": true,
           "type": "DV_CODED_TEXT"
         },
@@ -662,6 +655,12 @@
             "upper_unbounded": true
           }
         },
+        "reason": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "reason",
+          "documentation": "For a justification or an emergency, the reason the accessor stated, in its own words (HL7 FHIR R4 `AuditEvent.purposeOfEvent.text`).",
+          "type": "String"
+        },
         "care": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "care",
@@ -671,7 +670,8 @@
       },
       "invariants": {
         "Kind_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_authorisation, kind.defining_code)",
-        "Care_valid": "care /= Void implies kind.defining_code.code_string.is_equal (\"treatment relationship\")"
+        "Care_valid": "care /= Void implies kind.defining_code.code_string.is_equal (\"treatment relationship\")",
+        "Reason_valid": "reason /= Void implies (not reason.is_empty and (kind.defining_code.code_string.is_equal (\"justification\") or kind.defining_code.code_string.is_equal (\"emergency\")))"
       }
     },
     "ACCESS_CARE_GROUND": {

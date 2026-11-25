@@ -66,13 +66,13 @@ guarded_handler! {
                                           committed `EHR_ACCESS` version. Data a \
                                           restriction covers then reads as absent to \
                                           every professional route, query and export, \
-                                          unless a caller holding \
-                                          `authz.rbac.emergency_access_role` declares an \
-                                          emergency purpose (EHDS Art. 11(5)); an EHR \
-                                          an opt-out covers reads as absent to every \
+                                          unless the caller invokes an emergency \
+                                          justification of the access policy with a \
+                                          reason (EHDS Art. 11(5)); an EHR an opt-out \
+                                          covers reads as absent to every \
                                           `access_service` grant holder, unless it \
-                                          declares an emergency purpose and acts for no \
-                                          person (EHDS Art. 10(2)). No status, header or \
+                                          invokes one and acts for no person (EHDS \
+                                          Art. 10(2)). No status, header or \
                                           count says that either exists.",
              body = serde_json::Value),
             (status = 400, description = "The body is not the object above, or the \

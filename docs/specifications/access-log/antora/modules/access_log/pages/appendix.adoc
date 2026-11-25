@@ -32,7 +32,7 @@ include::partial$module_vars.adoc[]
 An entry projects onto the records other standards define. The projection writes what the target can hold and loses the rest:
 
 * *FHIR `AuditEvent` under IHE Basic Audit Log Patterns 1.1.4:* the action, times, outcome, purposes, accessor, provider, credential, client, items, query, request id and system map to `action`, `recorded`, `period`, `outcome`, `purposeOfEvent`, `agent`, `entity` and `source`. The order of the delegation chain, the legal grounds, the origins, the retention and the seals have no element. `_ehr_id_` is carried as an identifier, since BALP expects a `Patient` reference.
-* *DICOM PS3.15 A.5 audit message:* the action, outcome, accessor and items map to `EventIdentification`, `ActiveParticipant`, `AuditSourceIdentification` and `ParticipantObjectIdentification`, with 110101 "Audit Log Used" for a read of the log (A.5.3.2). Purposes, authorisations and the emergency mark have no element in the A.5.1 schema.
+* *DICOM PS3.15 A.5 audit message:* the action, outcome, accessor and items map to `EventIdentification`, `ActiveParticipant`, `AuditSourceIdentification` and `ParticipantObjectIdentification`, with 110101 "Audit Log Used" for a read of the log (A.5.3.2). Purposes, authorisations and the reason of a justified access have no element in the A.5.1 schema.
 * *EHDS Annex II 3.2:* (a) `_accessor.provider_`, (b) `_accessor.party_`, (c) `_items.categories_`, (d) `_time_recorded_`, (e) `_items.origins_`.
 * *NEN 7513:2024 (Netherlands):* the DICOM-derived fields map as above; `participantSegments` maps to `_items.paths_`, `behandelrelatieProtocol` and `toestemmingsProfiel` to `_authorisations_`, and the list of checks the access decision ran (`controles`) goes to `_other_details_` under a national archetype.
 
@@ -71,7 +71,13 @@ An entry projects onto the records other standards define. The projection writes
     "was_delivered": true}],
   "purposes": [{"_type": "DV_CODED_TEXT", "value": "treatment",
     "defining_code": {"terminology_id": {"value": "HL7_ActReason"}, "code_string": "TREAT"}}],
-  "is_emergency": false,
+  "authorisations": [{"_type": "ACCESS_AUTHORISATION",
+    "kind": {"_type": "DV_CODED_TEXT", "value": "justification",
+      "defining_code": {"terminology_id": {"value": "openehr_access"}, "code_string": "justification"}},
+    "name": "ACCESS_POLICY",
+    "version": "5e6f7a8b-9c0d-4e1f-8a2b-c3d4e5f6a7b8::cdr.example.org::2",
+    "reference": {"_type": "DV_IDENTIFIER", "id": "1", "type": "justification"},
+    "reason": "Second opinion requested by the treating cardiologist"}],
   "channel": {"_type": "ACCESS_CHANNEL", "request_id": "01JC2Q7N3X"},
   "retention": {"_type": "ACCESS_RETENTION",
     "retain_until": {"_type": "DV_DATE", "value": "2031-11-07"},
