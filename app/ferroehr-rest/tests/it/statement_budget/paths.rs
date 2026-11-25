@@ -1568,18 +1568,12 @@ fn head_relation(relation: &str) -> bool {
 /// window: `marks` are the WAL positions before the first request and after
 /// each one, taken once the chainer had moved that request's entries.
 ///
-/// The figure is what [`super::wal`] counts for an access-log entry: the
-/// records a statement writes for each row of the test's own database, read
-/// with `pg_walinspect`. Page maintenance and the records of the chain heads
-/// are left out, since both fall on a request by timing (#6035).
-///
-/// A low request is judged, the third smallest of ten, because timing still
-/// moves single requests. An update that finds no room on its row's page
-/// writes the whole row, a lock record and an entry in each index, and
-/// whether it does depends on what pruning could clear, so on the oldest
-/// transaction open on the shared server. An index insert
-/// that splits its page is logged as the split and leaves the count. What a
-/// request itself writes more, every request writes more.
+/// The figure is what [`super::wal`] counts for an access-log entry, without
+/// page maintenance and the chain heads, which fall on a request by timing
+/// (#6035). The third smallest of ten requests is judged, since an update
+/// that finds no room on its page writes the whole row depending on what
+/// pruning could clear; what a request itself writes more, every request
+/// writes more.
 async fn row_records(pool: &PgPool, marks: &[String]) -> (u64, String) {
     let (Some(from), Some(to)) = (marks.first(), marks.last()) else {
         return (0, String::new());
