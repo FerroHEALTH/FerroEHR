@@ -162,7 +162,7 @@ pub(crate) async fn grant(
             "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0010",
                 "name": text("details"),
                 "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0011",
-                    "name": text("client"),
+                    "name": { "_type": "DV_CODED_TEXT", "value": "client_id", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "client_id" } },
                     "value": { "_type": "DV_IDENTIFIER", "issuer": issuer, "id": client_id,
                                "type": "client_id" } }] },
             "identities": identities(client_id)

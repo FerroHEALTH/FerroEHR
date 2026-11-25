@@ -77,8 +77,8 @@ devices, software systems", RM `AGENT`), an organisation is an
 `DV_IDENTIFIER` in `PARTY.details` (RM §Party Identification: identifiers
 given by organisations "are treated as any other attribute of a Party").
 A system's `AGENT` carries its OAuth 2.0 `client_id` under the token
-issuer: the identifier's `issuer` is the issuer URL, its `id` the
-`client_id` and its `type` `client_id`.
+issuer, in an `ELEMENT` whose `name` is `openehr_access::client_id`: the
+identifier's `issuer` is the issuer URL and its `id` the `client_id`.
 
 **What it may do.** The actor performs a `ROLE` (RM `ROLE.performer`), and
 the role's `CAPABILITY` holds the grant in its `credentials`. The openEHR RM
@@ -127,8 +127,10 @@ of it holds:
 - a `PARTY_RELATIONSHIP`, held inline or written on FerroEHR's own
   relationship routes, whose `name` or `details` hold the code
   `openehr_access::acts_for`;
-- a `DV_IDENTIFIER` of type `client_id`, which binds an actor to an OAuth 2.0
-  client.
+- an `ELEMENT` named `openehr_access::client_id` holding a `DV_IDENTIFIER`,
+  which binds an actor to an OAuth 2.0 client. A `DV_IDENTIFIER` whose
+  `type` is the text `client_id`, in an element of your own naming, is your
+  own data: it marks nothing and binds no client.
 
 A deployment that creates an `AGENT` "Legacy migration" with a `ROLE` of its
 own archetype, whose capability's credentials hold `import_ehr`, has written
@@ -278,9 +280,14 @@ capability names its element other than as the table says is refused with
 `400` at its commit.
 
 **Who acts.** A client is any `ACTOR` (`AGENT`, `PERSON`, `ORGANISATION` or
-`GROUP`) that carries, anywhere in its `details` or `identities`, a
-`DV_IDENTIFIER` whose `type` is `client_id`, whose `issuer` is the token
-issuer and whose `id` is the OAuth 2.0 `client_id`. One party names a client:
+`GROUP`), of any archetype, that carries, anywhere in its `details` or
+`identities`, an `ELEMENT` whose `name` is the `DV_CODED_TEXT`
+`openehr_access::client_id` and whose value is a `DV_IDENTIFIER` whose
+`issuer` is the token issuer and whose `id` is the OAuth 2.0 `client_id`.
+That element makes the party a policy party, so only an administrator's
+write binds the client. A `DV_IDENTIFIER` merely typed `client_id` in an
+element of your own naming is plain data: FerroEHR neither marks the party
+nor binds a client from it. One party names a client:
 a second party carrying the same issuer and `client_id` is refused with
 `409`.
 
@@ -348,6 +355,7 @@ design.
 | `representation` | `represents` | The `name` of a `PARTY_RELATIONSHIP` of its own: the source represents the target, the subject ([Representatives](#representatives)) |
 | `representation element` | `basis`, `provider`, `evidence` | The `name` of an `ELEMENT` in the `details` of a `represents` relationship |
 | `kinship`, `kinship element` | `related_to`; `kinship` | The `name` or `details` of a `PARTY_RELATIONSHIP` of its own: its source and target, two `PERSON`s, are kin, and its `kinship` element codes how ([Exclusions and conflicts of interest](#exclusions-and-conflicts-of-interest)) |
+| `client identifier` | `client_id` | The `name` of an `ELEMENT` holding a `DV_IDENTIFIER` in an `ACTOR`'s `details` or `identities`: the identifier is the OAuth 2.0 client the actor is ([Who acts](#how-a-request-reads-its-grants)) |
 | `group kind` | `care_team` | The `name` of a `GROUP`: the `GROUP` is a care team ([Care teams provisioned over SCIM](#care-teams-provisioned-over-scim)) |
 | `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-policy-denied`, `refused-sensitivity`, `refused-confidentiality`, `refused-no-care-relationship`, `refused-outside-episode`, `refused-purpose-missing`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented`, `refused-consent-reference-missing`, `refused-excluded`, `refused-conflict` | The access record of a refusal |
 | `access log withheld` | `accessor_party`, `accessor_provider`, `accessor_roles`, `accessor_groups` | `ACCESS_LOG_RESTRICTION.withheld`: the accessor members the access log's subject view withholds under EHDS Art. 9(3) |
@@ -611,8 +619,8 @@ grants.
 A federation agreement says what a partner's verified external persons, or
 the partner organisation itself, may do here and on which legal ground. It is
 a grant on the partner: the partner's `ACTOR` (usually an `ORGANISATION`)
-carries a `client_id` identifier for each client its `federation` issuer
-issues tokens to, and a `ROLE` it performs holds one capability per accessor.
+carries a client identifier (an element named `openehr_access::client_id`)
+for each client its `federation` issuer issues tokens to, and a `ROLE` it performs holds one capability per accessor.
 A capability coding `federated_person_access` admits the partner's named
 persons; one coding `federated_organisation_access` admits the organisation
 itself, with no named person. The agreement holds while the grant does: its
@@ -645,7 +653,7 @@ A coded value is read by its `code_string` in any terminology, a text by its
 `value`. A `ROLE` whose agreement breaks one of these rules is refused at its
 commit with `422`, and the problem names every rule it breaks:
 
-- the partner carries a `client_id` identifier, and each identifier's issuer
+- the partner carries a client identifier, and each identifier's issuer
   is an `[auth.issuer.<name>]` of kind `federation`;
 - a partner holds one agreement per accessor: a second capability for the same
   accessor, in this `ROLE` or another, is refused;
@@ -772,8 +780,8 @@ and an import or export grant without a `subject_namespace`.
 FerroEHR ships the archetypes below as examples of the model. They carry
 the codes: each `ROLE`'s capability holds an `Operation` element whose value
 is a `openehr_access` code, the acts-for relationship holds
-`openehr_access::acts_for` in its details, and the `AGENT` holds a
-`client_id` identifier. A party of one of them is a policy party because of
+`openehr_access::acts_for` in its details, and the `AGENT` holds its client
+identifier in an element named `openehr_access::client_id`. A party of one of them is a policy party because of
 those codes, as a party of your own archetypes is. No configuration key
 names them.
 
@@ -802,8 +810,8 @@ examples below write among them. Every write of a policy party is validated agai
 and every change from them are in
 `app/ferroehr/assets/definitions/policy/PROVENANCE.md`.
 
-**The contract.** The `openehr_access` codes and the `client_id`
-identifier type make a party a policy party, in any archetype, and FerroEHR
+**The contract.** The `openehr_access` codes, `openehr_access::client_id`
+among them, make a party a policy party, in any archetype, and FerroEHR
 reads the terms of a system client's grant by the codes in its elements'
 names, never by a node id. The archetype ids and the node ids below describe
 the examples, and every template and version built on an archetype keeps
@@ -814,7 +822,7 @@ credentials at `/capabilities[id6]/credentials[id8]`, and its `time_validity` th
 
 | Archetype | Field | Node path | Type |
 |---|---|---|---|
-| `AGENT.system` | Client identifier (`issuer` the token issuer, `id` the `client_id`, `type` `client_id`) | `/details[id2]/items[id3]` | `DV_IDENTIFIER` |
+| `AGENT.system` | Client identifier (the element's `name` `openehr_access::client_id`, `issuer` the token issuer, `id` the `client_id`) | `/details[id2]/items[id3]` | `DV_IDENTIFIER` |
 | `AGENT.system` | Name | `/identities[id4]/details[id5]/items[id6]` | `DV_TEXT` |
 | `PARTY_RELATIONSHIP.acts_for` | Type (its `name`) | `at10` acts for | `DV_CODED_TEXT` |
 | `PARTY_RELATIONSHIP.acts_for` | Agreement reference | `/details[id3]/items[id4]` | `DV_TEXT` |
@@ -878,7 +886,15 @@ First its `AGENT`, `POST /demographic/agent`:
   "details": {
     "_type": "ITEM_TREE", "archetype_node_id": "id2", "name": { "_type": "DV_TEXT", "value": "Identifiers" },
     "items": [{
-      "_type": "ELEMENT", "archetype_node_id": "id3", "name": { "_type": "DV_TEXT", "value": "Identifier" },
+      "_type": "ELEMENT", "archetype_node_id": "id3",
+      "name": {
+        "_type": "DV_CODED_TEXT", "value": "client_id",
+        "defining_code": {
+          "_type": "CODE_PHRASE",
+          "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
+          "code_string": "client_id"
+        }
+      },
       "value": {
         "_type": "DV_IDENTIFIER",
         "issuer": "https://login.example.org/machines",
@@ -1002,7 +1018,15 @@ relationship goes in this second version.
   "details": {
     "_type": "ITEM_TREE", "archetype_node_id": "id2", "name": { "_type": "DV_TEXT", "value": "Identifiers" },
     "items": [{
-      "_type": "ELEMENT", "archetype_node_id": "id3", "name": { "_type": "DV_TEXT", "value": "Identifier" },
+      "_type": "ELEMENT", "archetype_node_id": "id3",
+      "name": {
+        "_type": "DV_CODED_TEXT", "value": "client_id",
+        "defining_code": {
+          "_type": "CODE_PHRASE",
+          "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
+          "code_string": "client_id"
+        }
+      },
       "value": {
         "_type": "DV_IDENTIFIER",
         "issuer": "https://login.example.org/machines",
@@ -1237,11 +1261,11 @@ When the night ends the grant holds no longer, with no change to anything.
 
 A partner organisation's professionals read patient summaries under a
 data-sharing agreement. The partner is an `ORGANISATION` that carries a
-`client_id` identifier for each client its `federation` issuer issues tokens
-to, for example `{ "_type": "DV_IDENTIFIER", "issuer":
-"https://federation.example", "id": "remote-portal", "type": "client_id" }`
-in its `details`; committing it is an administrator's write, because the
-identifier makes it a policy party. The agreement is a `ROLE` of the
+client identifier for each client its `federation` issuer issues tokens to:
+an `ELEMENT` in its `details` named `openehr_access::client_id` whose value
+is, for example, `{ "_type": "DV_IDENTIFIER", "issuer":
+"https://federation.example", "id": "remote-portal" }`. Committing it is an
+administrator's write, because the element makes it a policy party. The agreement is a `ROLE` of the
 federation partner template the partner performs, with one capability per
 accessor, here `person`. Each term is an element whose `name` is its
 `openehr_access` code, which is how FerroEHR reads it in any archetype

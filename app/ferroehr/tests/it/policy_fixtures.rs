@@ -45,6 +45,11 @@ pub(crate) async fn granting(svc: FerroEhrService) -> FerroEhrService {
 
 /// Runs `fut` as an administrator.
 pub(crate) async fn as_admin<F: Future>(fut: F) -> F::Output {
+    as_holding(&[ADMIN], fut).await
+}
+
+/// Runs `fut` as a signed-in caller holding `roles`.
+pub(crate) async fn as_holding<F: Future>(roles: &[&str], fut: F) -> F::Output {
     let caller = CommitterIdentity {
         subject: "admin".to_owned(),
         id_type: "oauth2",
@@ -60,7 +65,7 @@ pub(crate) async fn as_admin<F: Future>(fut: F) -> F::Output {
         external: None,
     };
     ferroehr::system_log::access_context::with_roles(
-        vec![ADMIN.to_owned()],
+        roles.iter().map(|role| (*role).to_owned()).collect(),
         with_committer(Some(caller), Box::pin(fut)),
     )
     .await
@@ -205,7 +210,7 @@ fn agent(client_id: &str) -> Value {
         "_type": "AGENT", "archetype_node_id": archetype,
         "archetype_details": archetyped(archetype), "name": text("Connected system"),
         "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0010", "name": text("details"),
-            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0011", "name": text("client"),
+            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0011", "name": { "_type": "DV_CODED_TEXT", "value": "client_id", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "client_id" } },
                 "value": { "_type": "DV_IDENTIFIER", "issuer": ISSUER, "id": client_id,
                            "type": "client_id" } }] },
         "identities": identities(client_id)
