@@ -1702,7 +1702,16 @@ jobs:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
+          # sccache holds the compiled crates when its bucket exists (#6521).
+          cache-targets: ${{ vars.SCCACHE_BUCKET == '' }}
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: ./.github/actions/sccache # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          bucket: ${{ vars.SCCACHE_BUCKET }}
+          endpoint: ${{ vars.SCCACHE_ENDPOINT }}
+          access-key-id: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_ACCESS_KEY_ID || secrets.SCCACHE_RW_ACCESS_KEY_ID }}
+          secret-access-key: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_SECRET_ACCESS_KEY || secrets.SCCACHE_RW_SECRET_ACCESS_KEY }}
+          read-only: ${{ github.event_name == 'pull_request' }}
       - name: Link the reached packages' bins
         env:
           PACKAGES: ${{ needs.changes.outputs.cargo_args }}

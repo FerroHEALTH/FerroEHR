@@ -105,7 +105,7 @@ Every CI workflow that compiles for tests sets `CARGO_INCREMENTAL=0`,
 CI compiles from a cache, never incrementally, and debug info is link weight
 no cache removes. No workflow limits `CARGO_BUILD_JOBS`.
 
-The build jobs (`build-tests`, `test-viewer`, `codegen-drift`,
+The build jobs (`build`, `build-tests`, `test-viewer`, `codegen-drift`,
 `instructions`, `nesting-release` and the nightly CPU budget) compile through
 sccache on an S3-compatible bucket once one exists
 (<https://github.com/mozilla/sccache/blob/main/docs/S3.md>), through
