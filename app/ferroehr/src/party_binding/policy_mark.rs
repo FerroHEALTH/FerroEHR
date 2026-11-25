@@ -12,7 +12,7 @@
 //!   `details` hold the acts-for code ([`ACTS_FOR`]) of that terminology;
 //! - an `ELEMENT` named by the client identifier code ([`CLIENT_ID`]) of that
 //!   terminology and holding a `DV_IDENTIFIER`, which binds an actor to an
-//!   OAuth 2.0 client ([`client_identifier`]). A `DV_IDENTIFIER` merely typed
+//!   OAuth 2.0 client (`client_identifier`). A `DV_IDENTIFIER` merely typed
 //!   `client_id` is the deployment's own data and marks nothing.
 //!
 //! A party with such a version is marked in `vo_head.policy_party_at`: the

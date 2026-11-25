@@ -183,9 +183,8 @@ fn clients_gone<'q>(head: GrantHead<'_>) -> Step<'q> {
 }
 
 /// The step that inserts the client rows the live `head` holds; `None` when
-/// it holds none. A client binds only from a party carrying the policy mark
-/// ([`crate::party_binding::policy_mark::clients_bind`]), so only an
-/// administrator's write binds one (#6542).
+/// it holds none. A client binds only from a party carrying the policy mark,
+/// so only an administrator's write binds one (#6542).
 fn clients_came(head: GrantHead<'_>) -> Option<Step<'_>> {
     let facts = head
         .live()
