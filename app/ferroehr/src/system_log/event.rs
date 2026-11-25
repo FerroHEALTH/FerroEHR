@@ -691,4 +691,27 @@ mod tests {
         assert_eq!(codes(&event), ["ETREAT", "TREAT"]);
         assert_eq!(event.purpose_codings()[0].system, system);
     }
+
+    /// The reason of a justified access is the text of the declared purpose
+    /// that invoked it, and of no other purpose the record names (#6587).
+    #[test]
+    fn the_reason_is_the_text_of_the_declared_purpose_alone() {
+        use crate::access_eval::justification::{Justification, Reason};
+        let mut event = AuditEvent::new(
+            EventActionCode::Read,
+            ObjectClass::Ehr,
+            EventOutcome::Success,
+        );
+        event.purpose = Some("TREAT".to_owned());
+        assert_eq!(event.purpose_text("TREAT"), None, "no justification");
+        event.justification = Some(Box::new(Justification {
+            emergency: false,
+            reason: Reason::new("Second opinion").expect("a reason"),
+        }));
+        assert_eq!(
+            event.purpose_text("TREAT").as_deref(),
+            Some("Second opinion")
+        );
+        assert_eq!(event.purpose_text("ETREAT"), None, "another purpose");
+    }
 }
