@@ -21,12 +21,13 @@ changes no threshold, corpus or test.
 
 | Tier | Runs on | What | Blocks a merge |
 |---|---|---|---|
-| Gate | `pull_request`, `merge_group` | change detection, fmt, lint and guards, clippy, the test build and its shards, rustdoc, codegen drift, cargo-deny, the exact budgets, conformance, the deployment harness, chart boot | yes, through `conclusion` |
+| Gate | `pull_request` | change detection, fmt, lint and guards, clippy, the test build and its shards, rustdoc, codegen drift, cargo-deny, the exact budgets, conformance, the deployment harness, chart boot | yes, through `conclusion` |
+| Queue | `merge_group` | change detection, fmt, lint and guards, cargo-deny, the bin link, the test archive and its smoke set (every library and bin test target and the server's wiring tests) | yes, through `conclusion` |
 | Pull request | `pull_request` | the guards that read pull-request context (changelog, crate and chart versions, migrations, screenshots, privacy boundary), the browser lanes when the viewer changed, CodeQL when Rust or workflow paths changed | yes for the guards and the browser lanes; CodeQL is advisory |
 | Main | `push` to `main` | the caches pull requests read, the docs deploy, the images | no |
 | Nightly | `schedule` on `main`, `workflow_dispatch`, the `ci:perf` and `ci:heavy` labels | perf A/B, the CPU budget, coverage with SonarQube Cloud, fuzzing, CodeQL's baseline | no |
 
-The merge queue checks the exact tree that lands
+The pull request runs the full gate on its own tree, so a merge group runs the light queue set (owner ruling 2026-11-25): it proves the merged tree builds and passes its smoke set, and the nightly full run checks `main`. The merge queue checks the exact tree that lands
 (<https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue>),
 so a push to `main` whose tree a merge-group run passed re-runs nothing: the
 `changes` job finds that run (`scripts/lib/queue-runs.sh`), and each cache
