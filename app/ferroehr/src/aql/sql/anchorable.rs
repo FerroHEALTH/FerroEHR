@@ -8,7 +8,7 @@
 
 use openehr_query::lexer::CompOp;
 
-use crate::aql::ir::{self, Bind, Coercion, LeafPath, Operand, PathTarget, QueryDomain};
+use crate::aql::ir::{self, Coercion, LeafPath, Operand, PathTarget, QueryDomain, TypedLit};
 
 use super::Builder;
 use super::anchor::{RangeEntry, Ranged, leaf_step, ranged, text_leaf};
@@ -19,7 +19,7 @@ pub(super) enum Anchorable<'q> {
     /// An equality or a `matches` of a text leaf with one of `texts`.
     Equality {
         leaf: &'q LeafPath,
-        texts: Vec<String>,
+        texts: Vec<&'q str>,
     },
     /// The range comparisons of one leaf, each operator with its bound.
     Range {
@@ -29,7 +29,7 @@ pub(super) enum Anchorable<'q> {
     },
 }
 
-impl Builder<'_> {
+impl<'a> Builder<'a> {
     /// Whether the WHERE clause has a conjunct a value index serves, which
     /// [`Builder::value_anchors`] makes an anchor of: the flat FROM then reads
     /// each contained node inside its object (`from::Builder::emit_rm`).
@@ -47,7 +47,10 @@ impl Builder<'_> {
     /// statement takes them, with the comparisons of one leaf's ranges
     /// together: the one walk [`Builder::value_anchors`] builds its anchors
     /// from and [`Builder::takes_anchor`] decides by.
-    pub(super) fn anchorable<'q>(&self, filter: &'q ir::Expr) -> Vec<Anchorable<'q>> {
+    pub(super) fn anchorable<'q>(&self, filter: &'q ir::Expr) -> Vec<Anchorable<'q>>
+    where
+        'a: 'q,
+    {
         let mut found = Vec::new();
         let mut conjuncts = vec![filter];
         while let Some(expr) = conjuncts.pop() {
@@ -70,12 +73,14 @@ impl Builder<'_> {
                     else {
                         continue;
                     };
-                    let bind = match bound {
-                        Operand::Literal(literal) => Bind::Literal(literal.clone()),
-                        Operand::Param(name) => Bind::Param(name.clone()),
-                        Operand::Path(_) | Operand::Function { .. } => continue,
+                    let text = match bound {
+                        Operand::Literal(TypedLit::String(text)) => Some(text.as_str()),
+                        Operand::Param(name) => self.param_text(name),
+                        Operand::Literal(_) | Operand::Path(_) | Operand::Function { .. } => {
+                            continue;
+                        }
                     };
-                    let Some(text) = self.anchor_text(&bind) else {
+                    let Some(text) = text else {
                         continue;
                     };
                     let texts = vec![text];
@@ -142,7 +147,7 @@ impl Builder<'_> {
     /// Whether an equality of `leaf` with one of `texts` has an anchor: the
     /// relationship target's ([`Self::target_anchor`]) or the value's
     /// ([`Self::value_anchor`]).
-    fn equality_anchorable(&self, leaf: &LeafPath, texts: &[String]) -> bool {
+    fn equality_anchorable(&self, leaf: &LeafPath, texts: &[&str]) -> bool {
         let target = self.ir.domain == QueryDomain::Demographic
             && leaf.anchor.is_empty()
             && leaf.fragment.iter().map(|s| s.name.as_str()).eq([
