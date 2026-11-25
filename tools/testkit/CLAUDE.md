@@ -14,7 +14,7 @@ own container or running its own migrations.
   (`fsync=off` etc.) — never copy those flags anywhere near production
   config — with `pg_stat_statements` loaded at `track = all` for the
   statement budget test of `ferroehr-rest` (#5885; CI's server gets the same
-  from `scripts/lib/test-postgres.sh`), and an **explicit `/dev/shm` size** (`with_shm_size`, 1 GiB;
+  from `docker/ci-postgres/Dockerfile`), and an **explicit `/dev/shm` size** (`with_shm_size`, 1 GiB;
   the image default is 64 MB, see the failure mode below). The shm size is
   applied at container CREATION: a container that already exists is adopted
   as-is, so changing the value or the settings needs

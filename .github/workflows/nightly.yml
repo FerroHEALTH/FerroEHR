@@ -60,13 +60,14 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      # The image docker/postgres builds on, the one ci.yml's services run.
+      # The CI PostgreSQL image, pinned by digest in docker/ci-postgres/image.ref
+      # (#6520): non-durable, pg_stat_statements preloaded, 400 connections.
       - id: postgres
         run: |
           set -euo pipefail
-          image="$(bash scripts/lib/base-image.sh ref docker/postgres/Dockerfile)"
-          [[ "$image" =~ ^[^@[:space:]]+@sha256:[0-9a-f]{64}$ ]] || {
-            echo "::error::docker/postgres/Dockerfile resolves to '$image', not name@sha256:<digest>"
+          image="$(tr -d '[:space:]' < docker/ci-postgres/image.ref)"
+          [[ "$image" =~ ^ghcr\.io/ferrohealth/ferroehr-ci-postgres@sha256:[0-9a-f]{64}$ ]] || {
+            echo "::error::docker/ci-postgres/image.ref holds '$image', not ghcr.io/ferrohealth/ferroehr-ci-postgres@sha256:<digest>"
             exit 1
           }
           echo "image=$image" >> "$GITHUB_OUTPUT"
@@ -331,9 +332,13 @@ jobs:
     timeout-minutes: 75
     permissions:
       contents: read
+      packages: read # the CI PostgreSQL image on GHCR
     services:
       postgres:
-        image: ${{ needs.lanes.outputs.postgres_image }} # zizmor: ignore[unpinned-images] the digest-pinned FROM of docker/postgres, checked name@sha256 where it is read
+        image: ${{ needs.lanes.outputs.postgres_image }} # zizmor: ignore[unpinned-images] docker/ci-postgres/image.ref, checked name@sha256 where it is read
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
         env:
           POSTGRES_USER: openehr
           POSTGRES_PASSWORD: openehr
@@ -363,15 +368,18 @@ jobs:
         # Its own entry, written on main: the optimised test binary built cold
         # outlasts the runner (#6388).
         with:
+          # sccache holds the compiled crates when its bucket exists (#6521).
+          cache-targets: ${{ vars.SCCACHE_BUCKET == '' }}
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: ./.github/actions/sccache # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          bucket: ${{ vars.SCCACHE_BUCKET }}
+          endpoint: ${{ vars.SCCACHE_ENDPOINT }}
+          access-key-id: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_ACCESS_KEY_ID || secrets.SCCACHE_RW_ACCESS_KEY_ID }}
+          secret-access-key: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_SECRET_ACCESS_KEY || secrets.SCCACHE_RW_SECRET_ACCESS_KEY }}
+          read-only: ${{ github.event_name == 'pull_request' }}
       - name: Disk after the cache restore
         run: df -h / && du -sh target 2>/dev/null || true
-      - name: Non-durable test tuning
-        env:
-          PG_SERVICE: ${{ job.services.postgres.id }}
-        run: |
-          sudo apt-get update && sudo apt-get install -y postgresql-client
-          PGPASSWORD=openehr bash scripts/lib/test-postgres.sh "$PG_SERVICE"
       - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-nextest

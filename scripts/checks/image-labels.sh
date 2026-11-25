@@ -146,23 +146,28 @@ for entry in $IMAGES; do
   done
 done
 
-# Every PostgreSQL service container runs the base the postgres image is built
-# on, read from docker/postgres/Dockerfile's FROM by the job it needs (#5112),
-# so a Dependabot bump of that FROM moves every service with it. A drifted
-# service pin would test against different bytes than the image ships
-# (#2408/#2410). EVERY workflow is scanned, not a named list (#2775): a literal
-# pin is refused wherever it appears, a derived image must name its producer,
-# and the producer must read the FROM and hold the value to name@sha256, since
-# zizmor cannot see through the expression and each one carries its
-# unpinned-images suppression.
+# Every PostgreSQL service container runs either the CI image pinned in
+# docker/ci-postgres/image.ref (#6520), built on docker/postgres's base, or
+# that base itself, read from docker/postgres/Dockerfile's FROM (#5112), so a
+# drifted pin never tests against bytes the image does not ship (#2408). EVERY
+# workflow is scanned (#2775): a literal pin is refused, a derived image must
+# name its producer, and the producer must read one of those two sources and
+# hold the value to name@sha256, since zizmor cannot see through the
+# expression and each one carries its unpinned-images suppression.
 if ! bash scripts/lib/base-image.sh ref docker/postgres/Dockerfile >/dev/null; then
   report "image-labels: docker/postgres/Dockerfile has no digest-pinned FROM for the services to run"
 fi
+if [[ "$(bash scripts/lib/base-image.sh ref docker/ci-postgres/Dockerfile 2>/dev/null)" \
+  != "$(bash scripts/lib/base-image.sh ref docker/postgres/Dockerfile 2>/dev/null)" ]]; then
+  report "image-labels: docker/ci-postgres/Dockerfile builds on another base than docker/postgres/Dockerfile"
+fi
+[[ "$(tr -d '[:space:]' <docker/ci-postgres/image.ref)" =~ ^ghcr\.io/ferrohealth/ferroehr-ci-postgres@sha256:[0-9a-f]{64}$ ]] \
+  || report "image-labels: docker/ci-postgres/image.ref is not ghcr.io/ferrohealth/ferroehr-ci-postgres@sha256:<digest>"
 found_any=0
 for wf in .github/workflows/*.yml; do
   literal=$(grep -Eo 'image: postgres:[^[:space:]]+' "$wf" | sort -u || true)
   [[ -z "$literal" ]] \
-    || report "image-labels: $wf pins a PostgreSQL service by hand ($literal); take \${{ needs.<job>.outputs.postgres_image }} from the job that reads docker/postgres's FROM"
+    || report "image-labels: $wf pins a PostgreSQL service by hand ($literal); take \${{ needs.<job>.outputs.postgres_image }} from the job that reads its pin"
   derived=$(grep -Ec 'image: \$\{\{ needs\.[a-z_-]+\.outputs\.postgres_image \}\}' "$wf" || true)
   [[ "$derived" -gt 0 ]] || continue
   found_any=1
@@ -173,11 +178,15 @@ for wf in .github/workflows/*.yml; do
   grep -qF 'postgres_image: ${{ steps.postgres.outputs.image }}' "$wf" \
     || report "image-labels: $wf runs a derived PostgreSQL service but no job publishes postgres_image from a step with id postgres"
   # shellcheck disable=SC2016 # the literal workflow text searched for
-  grep -qF 'image="$(bash scripts/lib/base-image.sh ref docker/postgres/Dockerfile)"' "$wf" \
-    || report "image-labels: $wf derives the PostgreSQL service image from something other than docker/postgres's FROM"
-  # shellcheck disable=SC2016 # the literal workflow text searched for
-  grep -qF '[[ "$image" =~ ^[^@[:space:]]+@sha256:[0-9a-f]{64}$ ]]' "$wf" \
-    || report "image-labels: $wf does not hold the derived PostgreSQL service image to name@sha256:<digest>"
+  if grep -qF 'image="$(tr -d '"'"'[:space:]'"'"' < docker/ci-postgres/image.ref)"' "$wf"; then
+    grep -qF '[[ "$image" =~ ^ghcr\.io/ferrohealth/ferroehr-ci-postgres@sha256:[0-9a-f]{64}$ ]]' "$wf" \
+      || report "image-labels: $wf does not hold the CI PostgreSQL image to its name@sha256:<digest>"
+  elif grep -qF 'image="$(bash scripts/lib/base-image.sh ref docker/postgres/Dockerfile)"' "$wf"; then
+    grep -qF '[[ "$image" =~ ^[^@[:space:]]+@sha256:[0-9a-f]{64}$ ]]' "$wf" \
+      || report "image-labels: $wf does not hold the derived PostgreSQL service image to name@sha256:<digest>"
+  else
+    report "image-labels: $wf derives the PostgreSQL service image from neither docker/ci-postgres/image.ref nor docker/postgres's FROM"
+  fi
 done
 # A guard that finds nothing to check is not passing, it is vacuous.
 [[ "$found_any" -eq 1 ]] \

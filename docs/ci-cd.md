@@ -106,3 +106,49 @@ Groups follow GitHub's documented rules
   older one but never cancel a running one, since a container build stopped
   between its digest push and its tags leaves GHCR orphans (#3731);
 - scheduled runs never cancel each other.
+
+## Build settings and the compile cache
+
+Every CI workflow that compiles for tests sets `CARGO_INCREMENTAL=0`,
+`CARGO_PROFILE_DEV_DEBUG=0` and `CARGO_PROFILE_TEST_DEBUG=0`
+(<https://doc.rust-lang.org/cargo/reference/environment-variables.html>):
+CI compiles from a cache, never incrementally, and debug info is link weight
+no cache removes. No workflow limits `CARGO_BUILD_JOBS`.
+
+The build jobs (`build`, `build-tests`, `test-viewer`, `codegen-drift`,
+`instructions`, `nesting-release` and the nightly CPU budget) compile through
+sccache on an S3-compatible bucket once one exists
+(<https://github.com/mozilla/sccache/blob/main/docs/S3.md>), through
+`.github/actions/sccache`. Until then the action does nothing and rust-cache
+keeps the compiled crates as before. To switch it on, an owner sets, at the
+organisation or the repository:
+
+| Kind | Name | Value |
+|---|---|---|
+| variable | `SCCACHE_BUCKET` | the bucket's name |
+| variable | `SCCACHE_ENDPOINT` | `https://<account id>.r2.cloudflarestorage.com` for Cloudflare R2 |
+| secret | `SCCACHE_RW_ACCESS_KEY_ID`, `SCCACHE_RW_SECRET_ACCESS_KEY` | an R2 API token with object read and write on the bucket |
+| secret | `SCCACHE_RO_ACCESS_KEY_ID`, `SCCACHE_RO_SECRET_ACCESS_KEY` | an R2 API token with object read only |
+
+The region is `auto`, as R2 requires, and every entry sits under the key
+prefix `ferroehr/`. A pull request reads with the read-only token and
+`SCCACHE_S3_RW_MODE=READ_ONLY`, so it never writes an entry `main` or the
+merge queue reads; the merge queue, `main` and the nightly write. With the
+bucket set, rust-cache keeps only the registry and the tools of those jobs.
+The release lanes call no cache.
+
+## The CI PostgreSQL image
+
+The database jobs (the test shards, the merge group's smoke set, the CPU
+budget, the coverage run and the stress lane) run
+`ghcr.io/ferrohealth/ferroehr-ci-postgres`, pinned by digest in
+`docker/ci-postgres/image.ref`. Its recipe, `docker/ci-postgres/Dockerfile`,
+builds on `docker/postgres`'s base digest and starts PostgreSQL with the
+non-durable settings (<https://www.postgresql.org/docs/current/non-durability.html>),
+`pg_stat_statements` preloaded and 400 connections, because a service
+container takes no command
+(<https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idservices>).
+`ci-postgres.yml` builds it on a pull request that changes it and pushes it
+on `main`, printing the digest; a change that moves the base updates
+`image.ref` to that digest in the next pull request. It is a test image and
+never ships.

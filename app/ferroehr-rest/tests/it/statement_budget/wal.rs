@@ -109,7 +109,7 @@ impl Kind {
 /// a parallel run then removes a segment between a window's two positions,
 /// and `pg_walinspect` cannot read it (`58P01`, #6035). The testkit container
 /// and CI's server set it (`tools/testkit/src/server_settings.rs`,
-/// `scripts/lib/test-postgres.sh`).
+/// `docker/ci-postgres/Dockerfile`).
 pub(super) async fn kept(pool: &PgPool) {
     let kept: i64 = sqlx::query_scalar(
         "SELECT /* statement_budget_own */ pg_size_bytes(current_setting('wal_keep_size'))",

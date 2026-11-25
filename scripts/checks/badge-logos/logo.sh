@@ -15,6 +15,11 @@
 #   badge_logo_readme FILE   fails for each static badge without a logo
 #   badge_caption_check FILE fails unless the conformance caption sits on its
 #                            own line directly under a bold badge heading
+#   badge_count_color N M    the message colour of N passing out of M
+#   badge_color_check FILE...
+#                            fails for each endpoint badge whose colour does
+#                            not follow its count, or, with no count, is not
+#                            the informational blue
 #
 # Needs jq.
 
@@ -88,4 +93,33 @@ badge_caption_check() {
     echo "badge logo: $1 has no line $badge_caption directly under a bold badge heading" >&2
     return 1
   fi
+}
+
+# NOTE: owner decision 2026-11-25; a counted badge is green when all pass, yellow when some do, red when none do.
+badge_count_color() {
+  if [[ "$1" -eq 0 ]]; then
+    echo red
+  elif [[ "$1" -eq "$2" ]]; then
+    echo brightgreen
+  else
+    echo yellow
+  fi
+}
+
+badge_color_check() {
+  local file message color want failures=0
+  for file in "$@"; do
+    message="$(jq -r .message "$file")"
+    color="$(jq -r .color "$file")"
+    if [[ "$message" =~ ([0-9]+)\ ?/\ ?([0-9]+) ]]; then
+      want="$(badge_count_color "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}")"
+    else
+      want=blue
+    fi
+    if [[ "$color" != "$want" ]]; then
+      echo "badge logo: $file is $color, and its message '$message' asks for $want" >&2
+      failures=$((failures + 1))
+    fi
+  done
+  [[ "$failures" -eq 0 ]]
 }
