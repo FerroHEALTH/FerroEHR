@@ -128,25 +128,15 @@ impl FerroEhrService {
         }
     }
 
-    /// Commit the default [`initial_ehr_access`] for an EHR that has none,
-    /// inside the caller's transaction — the EHR-Extract import bootstrap
+    /// Commits the default [`initial_ehr_access`] for an EHR that has none,
+    /// inside the caller's transaction, for the EHR-Extract import
     /// ([`crate::service::message`]).
     ///
-    /// `EHR.ehr_access` is 1..1 (RM ehr `ehr.adoc` invariant
-    /// `Ehr_access_valid`) and RM ehr master04 §EHR Creation requires that
-    /// creating an EHR yields "a root EHR object, an EHR Status object, and an
-    /// EHR Access object … created and committed in a Contribution". A clone
-    /// whose source extract carried no `EHR_ACCESS` would otherwise violate
-    /// that invariant permanently and serve an `EHR` body without the mandatory
-    /// reference, so the missing object is created locally.
-    ///
-    /// It is server-created content rather than replayed extract content, so it
-    /// commits as a normal first `ORIGINAL_VERSION` (`249|creation|`,
-    /// server-signed when signing is enabled) under its own CONTRIBUTION; the
-    /// import CONTRIBUTION records the local act of committal for received
-    /// originals, which "are never modified" (RM common master06 §Copying). Both
-    /// CONTRIBUTIONs commit in the caller's single transaction, so the created
-    /// EHR is complete atomically.
+    /// `EHR.ehr_access` is 1..1 (RM ehr `ehr.adoc` invariant `Ehr_access_valid`),
+    /// so a clone whose extract carried no `EHR_ACCESS` gets one created
+    /// locally. It commits as a first `ORIGINAL_VERSION` (`249|creation|`) under
+    /// its own CONTRIBUTION, since received originals "are never modified" (RM
+    /// common master06 §Copying), in the caller's one transaction.
     ///
     /// # Errors
     /// The [`crate::versioning::change::commit_contribution`] write errors.

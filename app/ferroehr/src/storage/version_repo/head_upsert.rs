@@ -61,30 +61,17 @@ impl Placement {
 
 /// The head upsert both folded commit statements carry.
 ///
-/// One mutable row per versioned object, written in the same statement as the
-/// version row it describes. A TRUNK commit advances every column; a BRANCH
-/// commit advances only what a branch changes — the any-lineage head ordinal
-/// and the commit instant — leaving the trunk's own head, its content key
-/// (the version insert's `content_key`, #4944), lifecycle state and template
-/// alone, because a branch does not supersede the trunk (RM common
-/// master06 §The 'Virtual Version Tree'). The root archetype and the
-/// episodes go with the template (#5782, #6413).
+/// A TRUNK commit advances every column; a BRANCH commit advances only the
+/// any-lineage head ordinal and the commit instant, since a branch does not
+/// supersede the trunk (RM common master06 §The 'Virtual Version Tree'). A
+/// create inserts the row ([`Self::insert`]); every later version updates it
+/// ([`Self::advance`]). The update applies only when the committing ordinal
+/// is greater than the recorded one, so a replayed statement never walks the
+/// head backwards.
 ///
 /// `{branch}`, `{ordinal}`, `{lifecycle}`, `{template}`, `{archetype}` and
 /// the episodes of [`HeadEpisodes::Placed`] are the caller's parameter
 /// placeholders; `FROM {version}` orders each CTE after the version insert.
-///
-/// A create, the object's first version (ordinal 1, which the placement read
-/// gives only an object with no version), inserts the row with a plain insert
-/// ([`Self::insert`]); every later version updates it ([`Self::advance`]).
-///
-/// The update is MONOTONIC: it applies only when the committing version's
-/// ordinal is greater than the one the head already records, and a trunk commit
-/// additionally only when it is greater than the recorded trunk head. The
-/// ordinal comes from a placement read under the per-object advisory lock, so
-/// under that lock it always is; the guard is what keeps a replayed or
-/// out-of-order statement from walking the head backwards, which would make an
-/// older version read as current.
 pub(crate) struct HeadUpsert<'a> {
     /// The versioned object's id.
     pub(crate) vo: &'a str,

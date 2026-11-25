@@ -84,7 +84,8 @@ fn a_value_list_of_strings_is_anchored() {
         );
         assert_eq!(anchors(&sql), 1, "{filter}: one anchor\n{sql}");
         assert!(
-            sql.contains(&format!("{function}\"va")) && sql.contains(r#""data") IN ("#),
+            sql.contains(&format!("{function}\"va"))
+                && sql.contains(r#""data") = ANY(CAST((SELECT CAST("#),
             "{filter}: the anchor reads the leaf's ELEMENT rows by membership\n{sql}"
         );
     }

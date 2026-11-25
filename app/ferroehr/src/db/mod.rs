@@ -1103,29 +1103,16 @@ async fn close_quietly(conn: PgConnection) {
     }
 }
 
-/// Brings every database the domains reach to the state this build requires, as
-/// [`DbConfig::migrations`] directs, and then proves the pseudonymisation
+/// Brings every database the domains reach to the state this build requires,
+/// as [`DbConfig::migrations`] directs, and then proves the pseudonymisation
 /// boundary holds.
 ///
-/// The boot-path entry point — call it rather than the halves it composes
-/// wherever the operator's configuration should decide. [`MigrationMode::Apply`]
-/// applies the embedded migrations ([`apply_schema`]);
-/// [`MigrationMode::Verify`] issues no DDL and only checks
-/// ([`verify_schema`]).
-///
-/// **Preparation and the boot gate deliberately authenticate as different
-/// credentials, and that is the whole point of the split.** Preparation spans
-/// every schema of a database — the DDL of each resident set under `apply`,
-/// their `_sqlx_migrations` tables under `verify` — so it runs on the
-/// migration DSN ([`DbConfig::migrate_dsn`]) for every domain that reaches the
-/// same database it does.
-/// [`verify_domain_isolation`] runs on the runtime pools instead, because it
-/// exists to measure what THOSE credentials can reach: it reads `pg_catalog`
-/// and the `has_*_privilege` functions, which any role may call
-/// (<https://www.postgresql.org/docs/18/functions-info.html>), so running it
-/// on the migration credential would not fail — it would silently measure a
-/// role that holds every domain by design, and the boot gate would stop
-/// saying anything about the roles that serve requests.
+/// [`MigrationMode::Apply`] applies the embedded migrations
+/// ([`apply_schema`]); [`MigrationMode::Verify`] issues no DDL and only
+/// checks ([`verify_schema`]). Preparation runs on the migration DSN
+/// ([`DbConfig::migrate_dsn`]); [`verify_domain_isolation`] runs on the
+/// runtime pools, since it measures what those credentials can reach, and
+/// the migration role holds every domain by design.
 ///
 /// # Errors
 ///
@@ -1196,44 +1183,15 @@ async fn verify_recorded_state(conn: &mut PgConnection, domains: &[Domain]) -> R
 /// boundaries the deployment claims.
 ///
 /// Four refusals: a runtime role that can read a pseudonymisation domain it
-/// does not own, a runtime role that can write a migration bookkeeping table,
-/// two separately-configured domains that authenticate as one role, and —
-/// under [`DeploymentProfile::Production`] — a domain role that does not exist.
-/// The grant sweep runs once in every DATABASE a domain pool reaches, read from
-/// the server (`pg_control_system()` and `current_database()`), because grants
-/// are per database and a relocated domain's database carries its own.
-///
-/// The separation of the clinical record, the identity of its subject, and the
-/// map between them is a property of the DATABASE's grants, not of the
-/// application's routing: code that reaches for the wrong schema is a bug this
-/// server can fix, while a role that can read two of the three domains defeats
-/// the separation no matter how correct the code is (GDPR Art. 4(5) and
-/// Art. 32(1)(a),
-/// <https://eur-lex.europa.eu/eli/reg/2016/679/oj>; EDPB Guidelines 01/2025
-/// require the separation to hold against internal actors). So the grants are
-/// checked at boot, and a breach is a refusal rather than a warning.
-///
-/// Every object kind a read could go through is covered: tables, partitioned
-/// tables, foreign tables, views and materialized views (`SELECT`), sequences
-/// (`SELECT`/`USAGE`) and functions (`EXECUTE` — which PUBLIC holds by default,
-/// PostgreSQL 18 `GRANT` §Notes,
-/// <https://www.postgresql.org/docs/18/sql-grant.html>).
-///
-/// Two domains on ONE configured DSN are not a breach here — one DSN is one
-/// credential by construction, and that is the co-located posture the
-/// deployment profile reports as `shared_credential`. What is a breach is two
-/// domains the operator configured SEPARATELY that nevertheless authenticate as
-/// the same role: the deployment believes it made a separation it did not, and
-/// a control that cannot decide must never look like a policy outcome.
-///
-/// A role that does not exist is skipped with a warning under
-/// [`DeploymentProfile::Sandbox`] and refused under
-/// [`DeploymentProfile::Production`]: role provisioning is a deployment step,
-/// and the migrations create the roles only when the migrator holds
-/// `CREATEROLE` (dev, compose and the test harness run without it), so a
-/// sandbox proves what it can see — but a production deployment whose domain
-/// roles are absent has no grants to separate anything with, and this check
-/// would otherwise pass by having nothing to measure.
+/// does not own, a runtime role that can write a migration bookkeeping
+/// table, two separately configured domains that authenticate as one role,
+/// and, under [`DeploymentProfile::Production`], a domain role that does not
+/// exist (a sandbox skips it with a warning). The sweep runs in every
+/// database a domain pool reaches, since grants are per database, and covers
+/// every object kind a read can go through, functions included (PUBLIC holds
+/// `EXECUTE` by default, PostgreSQL 18 `GRANT` §Notes). The separation must
+/// hold against the database's own roles (GDPR Art. 4(5) and Art. 32(1)(a),
+/// <https://eur-lex.europa.eu/eli/reg/2016/679/oj>).
 ///
 /// # Errors
 ///

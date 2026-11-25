@@ -77,24 +77,14 @@ pub fn render(body: &str) -> Option<RenderedSection> {
     Some(section(&document, None, String::new()))
 }
 
-/// The leaf attributes surfaced as label/value rows at the head of a section,
-/// per RM type — the facts a reader wants before the content, in RM order.
+/// The leaf attributes shown as label and value rows at the head of a
+/// section, per RM type, in RM order.
 ///
-/// Spec (attribute names, one file per class under
-/// `docs/specs/openehr/RM/docs/UML/classes/`):
-/// `COMPOSITION._composer_` (`org.openehr.rm.composition.composition.adoc`);
-/// `EVENT_CONTEXT._start_time_`/`_end_time_`/`_setting_`/`_location_`/
-/// `_health_care_facility_` (`...composition.event_context.adoc`);
-/// `INSTRUCTION._narrative_`/`_expiry_time_` (`...composition.instruction.adoc`);
-/// `ACTION._time_`/`_ism_transition_` (`...composition.action.adoc`);
-/// `ISM_TRANSITION._current_state_`/`_transition_`/`_careflow_step_`
-/// (`...composition.ism_transition.adoc`);
-/// `ACTIVITY._timing_`/`_action_archetype_id_` (`...composition.activity.adoc`);
-/// `HISTORY._origin_`/`_period_`/`_duration_` (`...data_structures.history.adoc`);
-/// `EVENT._time_` (`...data_structures.event.adoc`), `INTERVAL_EVENT._width_`
-/// (`...data_structures.interval_event.adoc`); `EHR_STATUS._subject_`/
-/// `_is_queryable_`/`_is_modifiable_` (RM ehr `master04-ehr_package.adoc`
-/// §`EHR_STATUS`).
+/// The attribute names are those of the RM class files under
+/// `docs/specs/openehr/RM/docs/UML/classes/`: `COMPOSITION`,
+/// `EVENT_CONTEXT`, `INSTRUCTION`, `ACTION`, `ISM_TRANSITION`, `ACTIVITY`,
+/// `HISTORY`, `EVENT`, `INTERVAL_EVENT`, and `EHR_STATUS` (RM ehr
+/// `master04-ehr_package.adoc` §`EHR_STATUS`).
 fn header_attributes(rm_type: &str) -> &'static [&'static str] {
     match rm_type {
         "COMPOSITION" => &["composer"],
@@ -343,24 +333,15 @@ fn element_row(value: &Value, attribute: &str, key: String) -> RenderedRow {
     }
 }
 
-/// Render one value honestly: each `DV_*` type by its own attributes, with a
-/// compact-JSON fallback so nothing is ever silently dropped.
+/// Renders one value: each `DV_*` type by its own attributes, with a
+/// compact-JSON fallback so nothing is dropped.
 ///
-/// Spec (`docs/specs/openehr/RM/docs/UML/classes/`): `DV_TEXT._value_` and
-/// `DV_CODED_TEXT._defining_code_` (`...data_types.dv_text.adoc`,
-/// `...data_types.dv_coded_text.adoc`); `DV_QUANTITY._magnitude_`/`_units_`
-/// (`...data_types.dv_quantity.adoc`); `DV_COUNT`/`DV_SCALE._magnitude_`;
-/// `DV_ORDINAL._value_`/`_symbol_` (`...data_types.dv_ordinal.adoc`);
-/// `DV_PROPORTION._numerator_`/`_denominator_`
-/// (`...data_types.dv_proportion.adoc`); `DV_IDENTIFIER._id_`/`_type_`/
-/// `_issuer_` (`...data_types.dv_identifier.adoc`);
-/// `DV_MULTIMEDIA._media_type_`/`_size_`/`_uri_`
-/// (`...data_types.dv_multimedia.adoc`); `CODE_PHRASE._terminology_id_`/
-/// `_code_string_` (`...data_types.code_phrase.adoc`);
-/// `PARTY_IDENTIFIED._name_` (`...common.party_identified.adoc`); the
-/// date/time and URI types carry a plain `_value_`
-/// (RM `data_types` `master07-date_time_package.adoc`,
-/// `master10-uri_package.adoc`).
+/// The attributes are those of the data type class files under
+/// `docs/specs/openehr/RM/docs/UML/classes/` (`DV_TEXT`, `DV_CODED_TEXT`,
+/// `DV_QUANTITY`, `DV_COUNT`, `DV_SCALE`, `DV_ORDINAL`, `DV_PROPORTION`,
+/// `DV_IDENTIFIER`, `DV_MULTIMEDIA`, `CODE_PHRASE`, `PARTY_IDENTIFIED`); the
+/// date/time and URI types carry a plain `_value_` (RM `data_types`
+/// `master07-date_time_package.adoc`, `master10-uri_package.adoc`).
 fn format_value(value: &Value) -> (String, Option<String>) {
     match value {
         Value::Object(_) => format_object(value),

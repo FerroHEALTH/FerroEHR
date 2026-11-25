@@ -21,7 +21,8 @@ use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecor
 
 use crate::access_log::view::{LOG_REFUSED, LogReader, LogStanding, Restrictions, withheld};
 use crate::aql::access_log::project::{Shown, cell, literal};
-use crate::aql::access_log::sql::{LogScope, statement};
+use crate::aql::access_log::shapes::shaped_statement;
+use crate::aql::access_log::sql::LogScope;
 use crate::aql::access_log::{LogCell, LogPlan};
 use crate::aql::cell::Cell;
 use crate::aql::exec::{ColumnMeta, QueryResult};
@@ -89,7 +90,7 @@ impl FerroEhrService {
             limit: window.0,
             offset: window.1,
         };
-        let (sql, values) = statement(plan, params, &scope).map_err(Failure::plan)?;
+        let (sql, values) = shaped_statement(aql, plan, params, &scope).map_err(Failure::plan)?;
         let run = log.select(sql, values);
         let records = self
             .within_budget(run)

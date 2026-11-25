@@ -101,32 +101,21 @@ pub(crate) struct RbacGate {
     routes: HashMap<(Method, String), &'static Operation>,
 }
 
-/// Extension routes whose HTTP verb MUTATES NOTHING — the read-only gate's
-/// counterpart to the `Search` verb of [`Operation::is_write`], for the surfaces
-/// outside the generated ITS-REST tables.
+/// Extension routes whose POST mutates nothing, which the read-only gate
+/// admits beside the `Search` verb of [`Operation::is_write`].
 ///
-/// Matched by method and path suffix, so the configured base path is
-/// irrelevant. Each entry is a POST whose handler performs no write:
+/// Matched by method and path suffix, so the base path is irrelevant:
 ///
-/// - `POST /message/export` — `export_ehr_extracts`, a query over held
-///   versions whose selector is an `EXTRACT_SPEC` (RM `ehr_extract`
-///   `extract_spec.adoc`). It commits nothing: the import operations are the
-///   mutating half of the group.
-/// - `POST /admin/integrity/verify` — the storage-parity sweep (#2680): a
-///   whole-store comparison of the two stored content copies that writes
-///   nothing and answers identifiers + defect classes only, strictly less
-///   than the admin read routes already expose. A read-only integrity
-///   auditor is exactly who runs it (adjudicated on #2692).
-/// - `POST /admin/access-log/verify` — the access log's verification against
-///   its checkpoint (#5129): it recomputes the chain and checks signatures,
-///   answers findings only, and moves no record; the verification cursor it
-///   advances is the one the scheduled chain check moves.
-/// - `POST /query/cohort` — the cohort query: AQL execution over a population
-///   selected in the demographic domain. It selects and never commits, exactly
-///   as the released `POST /query/aql` does, and travels as a body because its
-///   selector is a structure (the predicate list) rather than a path segment.
+/// - `POST /message/export`: a query over held versions selected by an
+///   `EXTRACT_SPEC` (RM `ehr_extract` `extract_spec.adoc`).
+/// - `POST /admin/integrity/verify`: the storage-parity sweep, which answers
+///   identifiers and defect classes only.
+/// - `POST /admin/access-log/verify`: the access log's verification against
+///   its checkpoint, which answers findings and moves no record.
+/// - `POST /query/cohort`: AQL over a population the demographic domain
+///   selects.
 ///
-/// No openEHR spec governs role semantics — our own design/extension.
+/// No openEHR spec governs role semantics: our own design.
 const EXTENSION_READ_ROUTES: &[(&str, &str)] = &[
     ("POST", "/message/export"),
     ("POST", "/admin/integrity/verify"),
