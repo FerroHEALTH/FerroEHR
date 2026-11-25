@@ -424,29 +424,14 @@ fn object_block<'a>() -> impl Parser<'a, &'a [Token], OdinValue, Err<'a>> + Clon
 }
 
 /// `rm_type_id : ( package_id '.' )* ALPHA_UC_ID ( '<' rm_type_id ( ','
-/// rm_type_id )* '>' )?`, reconstructed as a flat string (e.g.
+/// rm_type_id )* '>' )?`, reconstructed as a flat string as authored (e.g.
 /// `Interval<Quantity>`, `org.openehr.rm.ehr.content.ENTRY`).
 ///
-/// NOTE: the vendored `odin.g4` writes this rule with no namespace form, but
-/// the docs text is the oracle where a grammar artefact disagrees and allows
-/// the qualified spelling on any type identifier ("Namespaces are included by
-/// prepending package names, separated by the '.' character … as in
-/// `org.openehr.rm.ehr.content.ENTRY`" — `LANG/docs/odin/master05-content`
-/// §Adding Type Information, restated normatively in
-/// `AM/docs/ADL1.4/master04-dadl`'s principle box).
+/// NOTE: `odin.g4` has no namespace form; the docs text admits one on any type
+/// identifier (`LANG/docs/odin/master05-content` §Adding Type Information).
 ///
-/// Two consequences of that wording are honoured here. The package segments
-/// take either case — the chapter's own two examples are a lowercase package
-/// path (`org.openehr.rm.ehr.content`) and an upper-case one
-/// (`Core.Abstractions.Relationships`) — while the TYPE the qualification
-/// names stays `ALPHA_UC_ID`, since a package prefix qualifies the same type
-/// identifier the unqualified form spells. And because a template parameter
-/// is itself a type identifier, a parameter may be qualified too
-/// (`List<org.openehr.rm.ehr.content.ENTRY>`); the recursion gives that for
-/// free.
-///
-/// The qualified name is preserved FLAT, exactly as authored, so no caller
-/// loses the package information the author supplied.
+/// Package segments take either case, as the chapter's examples do; the type
+/// stays `ALPHA_UC_ID`, and a template parameter may be qualified too.
 fn rm_type_id<'a>() -> impl Parser<'a, &'a [Token], String, Err<'a>> + Clone {
     recursive(|t| {
         let package_segment = select! {

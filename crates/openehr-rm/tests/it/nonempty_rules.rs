@@ -6,13 +6,10 @@
     clippy::expect_used,
     reason = "test fixtures/diagnostics — a malformed fixture should fail loudly"
 )]
-//! Pins for the `x /= Void implies not x.is_empty` invariant family: since
-//! #1730 an OPTIONAL container carrying the invariant emits
-//! `Option<NonEmptyVec<T>>`, so a present-but-empty list is UNREPRESENTABLE
-//! and the strict reader refuses `[]` at parse — these pins retarget the
-//! #1623 behaviour pins from the retired `NONEMPTY_LIST_RULES` evaluator onto
-//! the construction door (the issue's "refusal twins retargeted to
-//! construction/parse" criterion).
+//! Pins for the `x /= Void implies not x.is_empty` invariant family: an
+//! OPTIONAL container carrying the invariant is `Option<NonEmptyVec<T>>`
+//! (#1730), so a present-but-empty list is unrepresentable and the strict
+//! reader refuses `[]` at parse.
 
 use serde_json::json;
 

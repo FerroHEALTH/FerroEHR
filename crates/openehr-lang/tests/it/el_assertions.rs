@@ -132,37 +132,14 @@ const PINNED_SCHEMAS: &[&str] = &[
 /// How many of the pinned schemas' assertion strings the EL grammar accepts.
 const PARSING_ASSERTIONS: usize = 327;
 
-/// Every DISTINCT assertion string in the pinned schemas that the EL grammar
-/// refuses, adjudicated.
+/// Every distinct assertion string in the pinned schemas that the EL grammar
+/// (`vendor/grammar/v1_1/{ElLexer.g4, ElParser.g4}`) refuses.
 ///
-/// These are not EL. openEHR's published BMM schemas write their invariants in
-/// an Eiffel-flavoured surface syntax, and the vendored normative EL grammar
-/// (`vendor/grammar/v1_1/{ElLexer.g4, ElParser.g4}`, which
-/// `LANG/docs/EL/masterAppA-syntax.adoc` includes) admits none of the following
-/// forms. Each row falls into exactly one class:
-///
-/// * **`and then` / `or else`** — Eiffel's short-circuit operators.
-///   `ElLexer.g4` declares `SYM_AND`/`SYM_OR` and a bare `SYM_THEN` that no
-///   `ElParser.g4` production uses, so the two-word forms have no production.
-/// * **Typographic quotes** (`“…”`, `‘…’`) — `STRING` and `CHARACTER` are
-///   delimited by `"` and `'` in the base lexical layer; the curly forms are
-///   not lexable.
-/// * **`for_all v in c | …` and `c.for_all (v: T | …)`** — `ElParser.g4`
-///   `elForAllExpr` is `SYM_FOR_ALL elLocalVariableId ':' elValueGenerator
-///   '¦' elBooleanExpr`: the binder is `:` and the body separator is the
-///   BROKEN BAR `¦`, never `in` and never `|`.
-/// * **Chained comparisons** (`Result = a < b`) —
-///   `elArithmeticComparisonExpr` takes exactly one `elComparisonBinop`
-///   between two arithmetic expressions, so a second comparison in the same
-///   expression is trailing input.
-/// * **Assignment and interval forms in an assertion position** (`Result :=
-///   …`, `arity in |1..2|`, `s in {"=", …}`) — `ElParser.g4` `assertion` is
-///   `LC_ID ':' elBooleanExpr`; `:=` belongs to `assignment` and `in` outside
-///   a quantifier has no production.
-/// * **Truncated multi-line values** — two rows are the fragments the
-///   published schemas leave after a line break inside the string.
-///
-/// The register is exhaustive: any other refusal fails the sweep.
+/// The schemas write invariants in an Eiffel-flavoured syntax. Each row is
+/// one of: `and then` or `or else`; typographic quotes; `for_all` with `in`
+/// or `|` where `elForAllExpr` takes `:` and `¦`; a chained comparison; `:=`
+/// or `in` in an assertion position; or a value the schema truncated at a
+/// line break. Any other refusal fails the sweep.
 const UNPARSABLE: &[&str] = &[
     " items.forall (i:ITEM | i.type = \"ELEMENT\")",
     "(current_revision /= Void and not is_controlled) implies current_revision.is_equal (“(uncontrolled)”)",
