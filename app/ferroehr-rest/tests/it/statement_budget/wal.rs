@@ -158,22 +158,13 @@ pub(super) async fn flushed(pool: &PgPool, to: &str) {
 /// test's database outside the system catalogs, by relation: name, record
 /// bytes and records.
 ///
-/// A record counts only when it names a relation the database's own catalog
-/// holds, a table, index or TOAST table of a schema of the server's: the
-/// statistics and catalog rows autovacuum and autoanalyze write when a
-/// parallel run's timing puts them in the window are left out, as are the
-/// records of the shared catalogs and of every other database. A TOAST
-/// table's index belongs to the schema of the table the TOAST table serves,
-/// so the index of `pg_statistic`'s is a catalog relation too: an autoanalyze
-/// in the window wrote 770 bytes through it, the figure a path's budget was
-/// over by on CI (#6035).
-///
-/// Only the records a statement writes for each row count: a heap insert,
-/// update, delete or lock, a B-tree leaf insert and a GIN pending-list insert.
-/// Page maintenance (pruning, splits, deduplication, a new pending-list page,
-/// a hint-bit image, a sequence's prefetch) falls on whichever row first
-/// crosses a page boundary, which the random ids and the chainer's timing
-/// move between runs, so it is left out.
+/// A record counts when it names a table, index or TOAST table of a schema
+/// of the server's in this database, so autovacuum's catalog rows, the shared
+/// catalogs and other databases are left out; the index of `pg_statistic`'s
+/// TOAST table is a catalog relation too (#6035). Only the per-row records
+/// count: a heap insert, update, delete or lock, a B-tree leaf insert and a
+/// GIN pending-list insert. Page maintenance falls on whichever row crosses
+/// a page boundary first, which moves between runs.
 pub(super) async fn by_relation(pool: &PgPool, from: &str, to: &str) -> Vec<(String, u64, u64)> {
     let rows: Vec<(String, i64, i64)> = sqlx::query_as(
         "SELECT /* statement_budget_own */ c.relname, \

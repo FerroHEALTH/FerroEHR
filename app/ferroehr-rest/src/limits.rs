@@ -3,8 +3,8 @@
 
 //! Per-route-family request-body limits.
 //!
-//! The ceiling `server.body_limit` stays outermost at the bulk tier, and this
-//! middleware applies the narrower
+//! The ceiling `server.body_limit` stays outermost at the bulk tier, and the
+//! API's request layer applies the narrower
 //! [`ApiConfig::body_limit`](ferroehr::config::rest::ApiConfig::body_limit)
 //! everywhere else, since an outer, tighter limit would refuse a body before an
 //! inner, wider one saw it. It buffers, so a chunked upload over the limit is a
@@ -17,8 +17,6 @@
 
 use axum::body::Body;
 use axum::extract::Request;
-use axum::extract::State;
-use axum::middleware::Next;
 use axum::response::Response;
 use http::StatusCode;
 use http::header::CONTENT_LENGTH;
@@ -42,12 +40,12 @@ fn limit_for(path: &str, clinical: Option<usize>, ceiling: usize) -> usize {
     }
 }
 
-/// Refuses a request whose body exceeds its route family's limit.
-pub(crate) async fn middleware(
-    State(state): State<AppState>,
-    request: Request,
-    next: Next,
-) -> Response {
+/// `request` with its body buffered under its route family's limit.
+///
+/// # Errors
+/// The `413` of a body over the limit, and the `400` of one that cannot be
+/// read.
+pub(crate) async fn bounded(state: &AppState, request: Request) -> Result<Request, Box<Response>> {
     let config = state.config();
     let limit = limit_for(
         request.uri().path(),
@@ -65,17 +63,12 @@ pub(crate) async fn middleware(
         .and_then(|value| value.to_str().ok())
         .and_then(|text| text.parse::<usize>().ok());
     if declared.is_some_and(|length| length > limit) {
-        return too_large(limit);
+        return Err(Box::new(too_large(limit)));
     }
 
     let (parts, body) = request.into_parts();
-    match buffer(body, limit).await {
-        Ok(bytes) => {
-            next.run(Request::from_parts(parts, Body::from(bytes)))
-                .await
-        }
-        Err(refusal) => *refusal,
-    }
+    let bytes = buffer(body, limit).await?;
+    Ok(Request::from_parts(parts, Body::from(bytes)))
 }
 
 /// Collects `body` under `limit`: over it is the `413`, any other read failure

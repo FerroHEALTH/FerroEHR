@@ -6,8 +6,8 @@
 //! (`ferroehr::access_log::intake::PLAIN`) runs no nested statement and
 //! checks no foreign key per row (#5887), and its time per entry does not
 //! grow with the batch, so a batch of 512 entries costs about 16 batches of
-//! 32. An entry carries no search token since the frontier round renders
-//! them (#6322). The statement is called directly with synthetic indexed
+//! 32. An entry carries no search token: the frontier round renders them
+//! (#6322). The statement is called directly with synthetic indexed
 //! entries. No openEHR spec governs the intake: our own design.
 
 use std::time::{Duration, Instant};

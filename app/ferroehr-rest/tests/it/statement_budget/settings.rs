@@ -8,7 +8,7 @@
 //! before and for one whose class is stored.
 //!
 //! The class is found or stored by one `INSERT ... ON CONFLICT DO SELECT`
-//! (PostgreSQL 19, `INSERT`), where a first write took a read and an insert.
+//! (PostgreSQL 19, `INSERT`).
 //! The WAL figure is what `statement_budget::wal` counts, with the chain heads
 //! left out. No openEHR spec governs the cost of a write: our own design.
 
@@ -36,19 +36,7 @@ struct Budget {
     wal: u64,
 }
 
-/// The ceilings: the figures measured on PostgreSQL 19.0 over two runs, with
-/// 3% on the WAL bytes and none on the counts. A write of a new class sent 16
-/// round trips, two of them for its class, before the class took one
-/// statement; the WAL bytes did not move (12,073 to 12,075 and 9,791 to 9,797
-/// per write before and after). The access-log write taking no row lock on a
-/// shared part (#6241) wrote 108 and 111 bytes fewer per write, measured
-/// beside the merge base, and each WAL ceiling fell by as much. The entry
-/// written once by a plain insert (#6242) wrote 1,121 and 1,118 bytes fewer
-/// and ran 4 and 5 nested statements fewer per write, measured beside the
-/// merge base, and each ceiling fell by as much. The entry's search columns
-/// copied off the request's commit (#6319) wrote 747 and 750 bytes fewer per
-/// write, measured beside the merge base, and each WAL ceiling fell by as
-/// much.
+/// The ceilings (#6222): the measured figures, with 3% on the WAL bytes.
 const BUDGETS: [Budget; 2] = [
     Budget {
         name: "a new class",

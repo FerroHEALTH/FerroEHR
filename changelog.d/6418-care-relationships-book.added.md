@@ -1,0 +1,1 @@
+- The book has a page on care relationships and episodes of care: the caseload defined once, the EHDS wording it rests on, the episode model as built, and the statements and plans of care-gated requests at 100, 1,600 and 50,000 patients per caseload. The `episode_shared` policy attribute and the `episode` of a stored care ground in the access record are documented.

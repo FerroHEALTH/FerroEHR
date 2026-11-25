@@ -21,6 +21,7 @@ use crate::access_eval::stale::STALE_WAIT;
 use crate::error::ServiceError;
 use crate::party_binding::grants::caller::facts::CallerFacts;
 use crate::party_binding::grants::live::LiveGrants;
+use crate::party_binding::grants::live::revisions::{FactsRead, Revisions};
 use crate::service::FerroEhrService;
 use crate::service::ehr::access_rule::SettingsCaller;
 use crate::telemetry::access_path::ACCESS_CARE_STALE;
@@ -128,4 +129,37 @@ async fn a_copy_that_never_catches_up_refuses_the_care_decision() {
     provider.force_flush().expect("flush");
     assert_eq!(counted(&exporter, "refused"), 1, "the refusal is counted");
     assert_eq!(counted(&exporter, "judged_again"), 0);
+}
+
+/// A copy that a later read of the store's revisions finds current decides,
+/// though the read that brought it there began before the store's revisions
+/// the request first read: those can name a facts read the copy never
+/// installs once a later one already covers every stamp (#6527).
+#[tokio::test]
+async fn a_copy_a_later_read_finds_current_decides() {
+    let exporter = InMemoryMetricExporter::default();
+    let provider = SdkMeterProvider::builder()
+        .with_reader(PeriodicReader::builder(exporter.clone()).build())
+        .build();
+    crate::telemetry::access_path::init(&provider.meter("ferroehr"));
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&crate::db::domain::DomainPools::from_shared(&db.pool()));
+    let grants = Arc::clone(svc.grants());
+    grants.refresh().await.expect("the copy reads");
+    let first = Revisions {
+        grants: grants.revision().expect("the copy holds a revision"),
+        facts: FactsRead::Behind {
+            after: Some(u64::MAX),
+        },
+        bindings: 0,
+    };
+    assert!(
+        !grants.holds(&first),
+        "no read the copy installs is past it"
+    );
+    super::catch_up(&grants, first)
+        .await
+        .expect("a later read finds the copy current");
+    provider.force_flush().expect("flush");
+    assert_eq!(counted(&exporter, "refused"), 0, "nothing is refused");
 }
