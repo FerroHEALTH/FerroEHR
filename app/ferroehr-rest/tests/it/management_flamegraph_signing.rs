@@ -23,41 +23,20 @@ use ferroehr_rest::extensions::management::flamegraph::{
 };
 use ferrohealth_openpgp_pq::encoding::{self, Encoding};
 use ferrohealth_openpgp_pq::key::Key;
-use pgp::composed::{ArmorOptions, KeyType, SecretKeyParamsBuilder, SignedSecretKey};
-use rand::rngs::OsRng;
 
 /// The data each signature is taken over, the size of a link digest.
 const DIGEST: &[u8] = b"5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
 
-/// A signer over a freshly generated `OpenPGP` key, ML-DSA-65+Ed25519 when
-/// `key_type` is `None` and that classical type otherwise, written to a file of
-/// the test's own.
-fn signer(key_type: Option<&KeyType>, name: &str) -> Signer {
+/// A signer over a freshly generated ML-DSA-65+Ed25519 `OpenPGP` key, written
+/// to a file of the test's own.
+fn signer(name: &str) -> Signer {
     let user_id = format!("flamegraph {name} <test@ferroehr.invalid>");
-    let armored = match key_type {
-        None => {
-            let key = Key::generate(&[user_id.as_str()]).expect("a key");
-            String::from_utf8(
-                encoding::encode(std::slice::from_ref(key.signed()), Encoding::Armored)
-                    .expect("an armored key"),
-            )
-            .expect("armor is text")
-        }
-        Some(key_type) => {
-            let mut builder = SecretKeyParamsBuilder::default();
-            builder
-                .key_type(key_type.clone())
-                .can_sign(true)
-                .primary_user_id(user_id);
-            let key: SignedSecretKey = builder
-                .build()
-                .expect("key parameters")
-                .generate(OsRng)
-                .expect("a key");
-            key.to_armored_string(ArmorOptions::default())
-                .expect("an armored key")
-        }
-    };
+    let key = Key::generate(&[user_id.as_str()]).expect("a key");
+    let armored = String::from_utf8(
+        encoding::encode(std::slice::from_ref(key.signed()), Encoding::Armored)
+            .expect("an armored key"),
+    )
+    .expect("armor is text");
     let path: PathBuf = std::env::temp_dir().join(format!(
         "ferroehr-flamegraph-{name}-{}.asc",
         std::process::id()
@@ -67,7 +46,6 @@ fn signer(key_type: Option<&KeyType>, name: &str) -> Signer {
         enabled: true,
         mode: Mode::Pgp,
         key_file: Some(path),
-        allow_classical_key: key_type.is_some(),
         key_passphrase: None,
         key_passphrase_file: None,
         retired_key_files: Vec::new(),
@@ -78,10 +56,7 @@ fn signer(key_type: Option<&KeyType>, name: &str) -> Signer {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn the_flamegraph_samples_signing_at_its_highest_frequency_and_the_server_lives() {
-    let signers = Arc::new([
-        signer(None, "ml-dsa-65-ed25519"),
-        signer(Some(&KeyType::Rsa(3072)), "rsa3072"),
-    ]);
+    let signers = Arc::new([signer("first"), signer("second")]);
     let stop = Arc::new(AtomicBool::new(false));
     let workers: Vec<_> = (0..4_usize)
         .map(|n| {

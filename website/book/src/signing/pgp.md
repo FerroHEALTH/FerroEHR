@@ -84,139 +84,49 @@ walkthrough are in the
 
 **Boot is fail-closed.** The server loads the key, then signs a fixed test
 string with it. A missing `key_file`, an unparseable file, a wrong
-passphrase, or a certificate with no usable signing component all stop
-startup with an error rather than leaving a running server that cannot sign.
+passphrase, or a key that fails its checks (version 6, a valid direct-key
+self-signature with the signing flag, not revoked) all stop startup with an
+error rather than leaving a running server that cannot sign.
 
-**A classical key is refused unless you allow it.** An Ed25519, EdDSA or
-RSA key in `key_file` stops startup with an error that names the key, unless
-`allow_classical_key = true`. Classical signatures are quantum-vulnerable,
-and a version signature is kept for the life of the record; the EU
-coordinated implementation roadmap for post-quantum cryptography (NIS
-Cooperation Group, v1.1, §4.2) has high-risk use complete the move by
-31.12.2030. With the setting on, the server signs with the classical key and
-warns at boot, naming that date. Move to an ML-DSA-65+Ed25519 key and list
-the classical certificate in `retired_key_files`: the versions it signed
+**A classical signing key is refused at boot.** An Ed25519, EdDSA, RSA,
+ECDSA or Ed448 key in `key_file` stops startup with an error that names the
+key's fingerprint and points at `ferrohealth-sop generate-key`. Classical
+signatures are quantum-vulnerable, and a version signature is kept for the
+life of the record. Generate an ML-DSA-65+Ed25519 key and list the classical
+certificate's public half in `retired_key_files`: the versions it signed
 keep verifying.
 
-**A classical signing component is chosen at boot.** An ML-DSA-65+Ed25519
-key signs with its primary key. For a classical key, no subkey signs while the
-primary key is revoked
-([RFC 9580 §5.2.1.11](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.1.11):
-"A revoked key is not to be used") or past the Key Expiration Time its
-self-signature states
-([§5.2.3.13](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.3.13)).
-RFC 9580 does not say in so many words that a subkey inherits its primary
-key's revocation or expiry, so applying it is FerroEHR's own choice: the
-primary key's binding is what vouches for the subkey. Otherwise a subkey
-qualifies to sign when all of these hold:
-
-- its newest valid Subkey Binding signature
-  ([RFC 9580 §5.2.3.10](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.3.10))
-  carries the data-signing key flag `0x02`
-  ([§5.2.3.29](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.3.29));
-- neither that binding nor the subkey has expired
-  ([§5.2.3.13](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.3.13));
-- no valid Subkey Revocation signature covers it
-  ([§5.2.1.12](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.1.12):
-  "A revoked subkey is not to be used").
-
-Of the qualifying subkeys, the one created last signs; on equal creation
-times, the later one in the file. RFC 9580 gives no rule for choosing among
-several signing subkeys, so preferring the newest is FerroEHR's own choice.
-It is what makes adding a signing subkey a rotation. An encryption subkey
-never signs.
-
-When no subkey qualifies, the primary key signs, provided the certificate
-lets it:
-
-- its governing self-signature carries the signing flag `0x02`. RFC 9580
-  keeps the primary key's flags in a Direct Key signature or, by version 4
-  convention, in a User ID self-signature
-  ([§5.2.3.10](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.3.10)),
-  so the governing one is the newest valid Direct Key signature when it
-  carries key flags, else the newest valid self-signature on the primary
-  User ID. A Direct Key signature that a valid Certification Revocation
-  created at or after it revokes is cancelled and not chosen
-  ([§5.2.1.13](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.1.13),
-  §5.2.3.10: "Revoking a Direct Key signature cancels that signature"). A
-  version 6 key without a valid Direct Key signature in force is not used
-  at all, as §5.2.3.10 requires. A self-signature with no key flags grants
-  no signing, since §5.2.3.29 counts an unstated flag as zero. RFC 9580
-  gives no precedence between the two places, so preferring the Direct Key
-  signature is FerroEHR's own choice;
-- neither that self-signature nor the primary key has expired
-  ([§5.2.3.13](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.3.13),
-  counted from the primary key's creation);
-- no valid Key Revocation signature covers it
-  ([§5.2.1.11](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.1.11):
-  "A revoked key is not to be used").
-
-**When neither a subkey nor the primary key may sign, the server refuses
-to start** and names the signing flag. It never signs with a key the
-certificate does not authorise. Generate an ML-DSA-65+Ed25519 key, add a
-signing subkey, or re-issue the primary key's self-signature with the
-signing flag.
-
-The choice holds until the next restart, so restart after adding, revoking
-or expiring a subkey, and before the chosen component expires.
-
-**The signing component is unlocked once, at boot.** The passphrase in
-`key_passphrase_file` decrypts the chosen component when the server loads the
-key and runs its boot check. The server then holds that unlocked component in
-memory and drops the passphrase. This is the usual practice for a signing
+**The key is unlocked once, at boot.** The passphrase in
+`key_passphrase_file` decrypts the key when the server loads it and runs its
+boot check. The server then holds the unlocked key in memory and drops the
+passphrase. This is the usual practice for a signing
 service: the string-to-key derivation that protects a key at rest is slow on
 purpose (RFC 9580
 [§3.7](https://www.rfc-editor.org/rfc/rfc9580#section-3.7)), and running it
 for every signature would put it on every write and every access-log entry.
-Holding the unlocked component exposes nothing that holding the passphrase
+Holding the unlocked key exposes nothing that holding the passphrase
 did not. Protect the process memory as you protect the key file: no core
 dumps, no swap to unencrypted disk, no debugger attached in production.
 
-**Sign with ML-DSA-65+Ed25519.** The server signs every committed version,
-every access-log link and every system-log seal, so an access log that
-records an access to each EHR a query serves makes several signatures per
-request. Both halves run in `aws-lc-rs`, and the ML-DSA-65 half is the
-hedged form RFC 9980 §5.1.2 requires. An RSA private-key operation, allowed
-only behind `allow_classical_key`, costs far more per signature and no
-setting removes that cost.
-
-**An ECDSA or Ed448 signing key is refused at boot**, with or without
-`allow_classical_key`. The private-key
-arithmetic of both runs on `crypto-bigint` 0.5, whose operations meant to be
-constant-time can branch on secret values (RUSTSEC-2026-0387), and the 0.5
-line has no fixed release. That covers ECDSA on every curve (P-256, P-384,
-P-521, secp256k1, Brainpool). The server stops before it makes a single
-signature and names the advisory. Only the signing component counts: a
-certificate whose primary key is ECDSA and whose chosen signing subkey is
-Ed25519 is accepted when classical keys are allowed. Such a certificate stays usable for verification as a
-[retired key](#retired-keys-and-rotation), since verifying uses only public
-values.
-
-**An allowed RSA signing key adds a second warning.** Every commit would
-then perform an RSA private-key operation, the operation the Marvin timing
-sidechannel (RUSTSEC-2023-0071 / CVE-2023-49092) concerns, and the
-underlying `rsa` crate has no fixed release. An ML-DSA-65+Ed25519 key keeps
-that code off the signing path, and an RSA certificate in
-`retired_key_files` still verifies the history it signed.
+**Every signature is ML-DSA-65+Ed25519.** The server signs every committed
+version, every access-log link and every system-log seal, so an access log
+that records an access to each EHR a query serves makes several signatures
+per request. Both halves run in `aws-lc-rs`, and the ML-DSA-65 half is the
+hedged form RFC 9980 §5.1.2 requires.
 
 ### Retired keys and rotation
 
 A stored `VERSION.signature` records no key identifier, and it is an
-immutable committed fact that cannot be re-issued. Rotating a key therefore
-has to keep the old one verifiable. Two mechanisms do that:
-
-- **A new signing subkey on the same classical certificate.** After a restart the
-  server signs with the newest qualifying subkey (see above), the
-  certificate retains the previous one, and verification tries the primary
-  key and every subkey. Revoking the old subkey stops it signing and keeps
-  it verifying. Nothing else changes.
-- **`retired_key_files`.** A replaced certificate's **public** half is
-  listed there and consulted during verification. A public key verifies and
-  can never sign again, so a retired entry cannot become an active signer.
+immutable committed fact that cannot be re-issued. Rotating the key
+therefore keeps the old one verifiable: the replaced certificate's
+**public** half is listed in `retired_key_files` and consulted during
+verification. A public key verifies and can never sign again, so a retired
+entry cannot become an active signer.
 
 A retired certificate may use any algorithm the server can verify,
-ML-DSA-65+Ed25519, Ed25519, ECDSA, Ed448 and RSA included, so moving to an
-ML-DSA-65+Ed25519 key keeps every version a classical key signed verifiable.
+ML-DSA-65+Ed25519, Ed25519, RSA, ECDSA and Ed448 included, with its subkeys,
+so the classical signatures that versions before the move to
+ML-DSA-65+Ed25519 stored keep verifying.
 
 ## Server-generated versus client-supplied signatures
 

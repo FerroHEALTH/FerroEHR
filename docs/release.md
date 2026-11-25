@@ -174,7 +174,7 @@ the evaluator judges every one by its care relationship, role and
 directives; an older base sends them as its administrator. Every arm signs
 its access-log links with an OpenPGP key the gate generates for the run: an
 ML-DSA-65+Ed25519 key (RFC 9980 algorithm ID 30) from `ferrohealth-sop`, or,
-for a base whose binary predates that algorithm, a classical key from `gpg`,
+for a base whose tree predates that algorithm, a classical key from `gpg`,
 Ed25519 by default and RSA-3072 with `PERF_SIGNING_KEY=rsa3072`.
 
 A gate measures a change in the code, so it compares like with like: when

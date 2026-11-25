@@ -119,7 +119,6 @@ impl Signer {
                     path,
                     config.key_passphrase.as_ref(),
                     &config.retired_key_files,
-                    config.allow_classical_key,
                 )?))
             }
         };

@@ -18,8 +18,7 @@
 //! - **pgp** — an `OpenPGP` detached signature (RFC 9580), ASCII-armored,
 //!   with a server-held key: authentication + non-repudiation (master06
 //!   §Digital Signature names openPGP). The key is ML-DSA-65+Ed25519 (RFC 9980
-//!   algorithm ID 30); a classical key signs only when
-//!   `record.signing.allow_classical_key` is set.
+//!   algorithm ID 30); a classical signing key is refused at boot.
 //!
 //! The bytes signed are the `VERSION.canonical_form()` produced by `openehr-rm`
 //! (canonical openEHR JSON per RFC 8785, signature attribute Void during
