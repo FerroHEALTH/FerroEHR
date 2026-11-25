@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/distroless-os-packages",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-11-25T00:00:00Z",
-  "version": 11,
+  "timestamp": "2026-11-26T00:00:00Z",
+  "version": 12,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -1896,7 +1896,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer. That program is the only ELF executable in each image (no shell, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, it imports neither dlopen nor dlmopen, and the file names no libzstd shared object, so the Debian libzstd.so.1 that libzstd1 installs is never mapped into either process. The only ZSTD dynamic symbols in the server binary are four weak undefined ZSTD_trace_* hooks, Zstandard's optional tracing callbacks, which stay unresolved because no loaded object defines them. The flaw is in the Zstandard 1.5.7 decoder of libzstd1 1.5.7+dfsg-1, which Debian fixes in 1.5.7+dfsg-1+deb13u1 (DSA-6657-1); the distroless base has not yet been rebuilt with it, and the statement goes when the base carries the fix. The Zstandard copy the server binary links statically is a separate finding, judged in rust-releases.openvex.json.",
+      "impact_statement": "Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer. That program is the only ELF executable in each image (no shell, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, it imports neither dlopen nor dlmopen, and the file names no libzstd shared object, so the Debian libzstd.so.1 that libzstd1 installs is never mapped into either process. The only ZSTD dynamic symbols in the server binary are four weak undefined ZSTD_trace_* hooks, Zstandard's optional tracing callbacks, which stay unresolved because no loaded object defines them. The flaw is in the Zstandard 1.5.7 decoder of libzstd1 1.5.7+dfsg-1, which Debian fixes in 1.5.7+dfsg-1+deb13u1 (DSA-6657-1); the images of 6.0.0 and later carry the fix through the distroless base of 2026-11-26, and the statement covers the earlier images, which keep 1.5.7+dfsg-1. The Zstandard copy the server binary links statically is a separate finding, judged in rust-releases.openvex.json.",
       "ferroehr:linkage": {
         "binaries": [
           "ferroehr",
@@ -1918,6 +1918,734 @@
         ],
         "forbidden_strings": [
           "libzstd.so"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-107493"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image (no shell, no openssl command, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports neither dlopen nor dlmopen (objdump -p and -T on the binaries of the :main images of 2026-11-25, ferroehr sha256:a512e7dc and ferroehr-viewer sha256:b9f8c25b, both architectures). So the Debian libssl.so.3 and libcrypto.so.3 that libssl3t64 installs are never mapped into either process. Both programs speak TLS through rustls, whose cryptography is compiled into the program, and the lock file holds no openssl-sys or native-tls crate. The flaw is in PEM_X509_INFO_read_bio_ex, which frees the entries of a stack its caller passes in after a failed read but leaves them in the stack; OpenSSL's own callers pass no stack (OpenSSL security advisory of 2026-11-17). Only a process that loads libssl.so.3 or libcrypto.so.3 reaches it. https://security-tracker.debian.org/tracker/CVE-2026-107493: Debian has no fix for trixie (openssl 3.5.9-1~deb13u1 is listed vulnerable), and the statement goes when the image carries one.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-107494"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image (no shell, no openssl command, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports neither dlopen nor dlmopen (objdump -p and -T on the binaries of the :main images of 2026-11-25, ferroehr sha256:a512e7dc and ferroehr-viewer sha256:b9f8c25b, both architectures). So the Debian libssl.so.3 and libcrypto.so.3 that libssl3t64 installs are never mapped into either process. Both programs speak TLS through rustls, whose cryptography is compiled into the program, and the lock file holds no openssl-sys or native-tls crate. The flaw is in the QUIC stack, which queues a RETIRE_CONNECTION_ID frame for every retransmitted NEW_CONNECTION_ID frame without limit (OpenSSL security advisory of 2026-11-24). Only a process that loads libssl.so.3 or libcrypto.so.3 reaches it. https://security-tracker.debian.org/tracker/CVE-2026-107494: Debian has no fix for trixie (openssl 3.5.9-1~deb13u1 is listed vulnerable), and the statement goes when the image carries one.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-121481"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image (no shell, no openssl command, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports neither dlopen nor dlmopen (objdump -p and -T on the binaries of the :main images of 2026-11-25, ferroehr sha256:a512e7dc and ferroehr-viewer sha256:b9f8c25b, both architectures). So the Debian libssl.so.3 and libcrypto.so.3 that libssl3t64 installs are never mapped into either process. Both programs speak TLS through rustls, whose cryptography is compiled into the program, and the lock file holds no openssl-sys or native-tls crate. The flaw is in EVP_EncodeBlock, whose output-length arithmetic overflows for an input length near INT_MAX that the calling program itself supplies; OpenSSL has identified no path by which an attacker triggers it. Only a process that loads libssl.so.3 or libcrypto.so.3 reaches it. https://security-tracker.debian.org/tracker/CVE-2026-121481: Debian has no fix for trixie (openssl 3.5.9-1~deb13u1 is listed vulnerable), and the statement goes when the image carries one.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-121482"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image (no shell, no openssl command, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports neither dlopen nor dlmopen (objdump -p and -T on the binaries of the :main images of 2026-11-25, ferroehr sha256:a512e7dc and ferroehr-viewer sha256:b9f8c25b, both architectures). So the Debian libssl.so.3 and libcrypto.so.3 that libssl3t64 installs are never mapped into either process. Both programs speak TLS through rustls, whose cryptography is compiled into the program, and the lock file holds no openssl-sys or native-tls crate. The flaw is in CRL distribution-point matching while a CMS or PKCS#7 SignedData message is verified with CRL checking enabled, which takes CPU time quadratic in the message size (OpenSSL security advisory of 2026-11-24). Only a process that loads libssl.so.3 or libcrypto.so.3 reaches it. https://security-tracker.debian.org/tracker/CVE-2026-121482: Debian has no fix for trixie (openssl 3.5.9-1~deb13u1 is listed vulnerable), and the statement goes when the image carries one.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-124709"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image (no shell, no openssl command, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports neither dlopen nor dlmopen (objdump -p and -T on the binaries of the :main images of 2026-11-25, ferroehr sha256:a512e7dc and ferroehr-viewer sha256:b9f8c25b, both architectures). So the Debian libssl.so.3 and libcrypto.so.3 that libssl3t64 installs are never mapped into either process. Both programs speak TLS through rustls, whose cryptography is compiled into the program, and the lock file holds no openssl-sys or native-tls crate. The flaw is in the QUIC server, which keeps the state of a stream it rejected when the peer resets that stream first (OpenSSL security advisory of 2026-11-17). Only a process that loads libssl.so.3 or libcrypto.so.3 reaches it. https://security-tracker.debian.org/tracker/CVE-2026-124709: Debian has no fix for trixie (openssl 3.5.9-1~deb13u1 is listed vulnerable), and the statement goes when the image carries one.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-35190"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image (no shell, no openssl command, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports neither dlopen nor dlmopen (objdump -p and -T on the binaries of the :main images of 2026-11-25, ferroehr sha256:a512e7dc and ferroehr-viewer sha256:b9f8c25b, both architectures). So the Debian libssl.so.3 and libcrypto.so.3 that libssl3t64 installs are never mapped into either process. Both programs speak TLS through rustls, whose cryptography is compiled into the program, and the lock file holds no openssl-sys or native-tls crate. The flaw is in TLS 1.3 key-share selection on a server whose Suite B certificate flag is set, which reads past a fixed two-element group list (OpenSSL security advisory of 2026-11-17). Only a process that loads libssl.so.3 or libcrypto.so.3 reaches it. https://security-tracker.debian.org/tracker/CVE-2026-35190: Debian has no fix for trixie (openssl 3.5.9-1~deb13u1 is listed vulnerable), and the statement goes when the image carries one.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-84785"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image (no shell, no openssl command, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports neither dlopen nor dlmopen (objdump -p and -T on the binaries of the :main images of 2026-11-25, ferroehr sha256:a512e7dc and ferroehr-viewer sha256:b9f8c25b, both architectures). So the Debian libssl.so.3 and libcrypto.so.3 that libssl3t64 installs are never mapped into either process. Both programs speak TLS through rustls, whose cryptography is compiled into the program, and the lock file holds no openssl-sys or native-tls crate. The flaw is in QUIC stream reassembly, which buffers any number of small out-of-order STREAM fragments (OpenSSL security advisory of 2026-11-24). Only a process that loads libssl.so.3 or libcrypto.so.3 reaches it. https://security-tracker.debian.org/tracker/CVE-2026-84785: Debian has no fix for trixie (openssl 3.5.9-1~deb13u1 is listed vulnerable), and the statement goes when the image carries one.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-84786"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image (no shell, no openssl command, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports neither dlopen nor dlmopen (objdump -p and -T on the binaries of the :main images of 2026-11-25, ferroehr sha256:a512e7dc and ferroehr-viewer sha256:b9f8c25b, both architectures). So the Debian libssl.so.3 and libcrypto.so.3 that libssl3t64 installs are never mapped into either process. Both programs speak TLS through rustls, whose cryptography is compiled into the program, and the lock file holds no openssl-sys or native-tls crate. The flaw is in a DANE-enabled TLS client, which dereferences a NULL pointer for an unusual mix of certificate and TLSA records (OpenSSL security advisory of 2026-11-24). Only a process that loads libssl.so.3 or libcrypto.so.3 reaches it. https://security-tracker.debian.org/tracker/CVE-2026-84786: Debian has no fix for trixie (openssl 3.5.9-1~deb13u1 is listed vulnerable), and the statement goes when the image carries one.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-95690"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image (no shell, no openssl command, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports neither dlopen nor dlmopen (objdump -p and -T on the binaries of the :main images of 2026-11-25, ferroehr sha256:a512e7dc and ferroehr-viewer sha256:b9f8c25b, both architectures). So the Debian libssl.so.3 and libcrypto.so.3 that libssl3t64 installs are never mapped into either process. Both programs speak TLS through rustls, whose cryptography is compiled into the program, and the lock file holds no openssl-sys or native-tls crate. The flaw is in DTLS handshake reassembly, which allocates a buffer of the full declared message length for each out-of-sequence fragment. Only a process that loads libssl.so.3 or libcrypto.so.3 reaches it. https://security-tracker.debian.org/tracker/CVE-2026-95690: Debian has no fix for trixie (openssl 3.5.9-1~deb13u1 is listed vulnerable), and the statement goes when the image carries one.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-121757"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc6"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "https://security-tracker.debian.org/tracker/CVE-2026-121757 and GLIBC-SA-2026-0029: the CP949 decoder reads past the end of its input when the destination of the conversion carries //IGNORE and the input ends in a crafted invalid sequence (trixie: glibc 2.41-12+deb13u5 unfixed, no DSA, minor issue). Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image (no shell, no openssl command, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports neither dlopen nor dlmopen (objdump -p and -T on the binaries of the :main images of 2026-11-25, ferroehr sha256:a512e7dc and ferroehr-viewer sha256:b9f8c25b, both architectures). Every libc function it calls, its statically linked C code included, is an undefined dynamic symbol, so the import table is the complete list of glibc entry points it reaches. Neither binary imports iconv_open, iconv, setlocale or any multibyte conversion function. The UHC (CP949) converter is a gconv module that libc loads only when a program opens a conversion to or from that character set. Both programs run in the C locale and decode text in Rust, so they never open a gconv conversion and the module is never loaded.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "btowc",
+          "dlmopen",
+          "dlopen",
+          "iconv",
+          "iconv_open",
+          "mblen",
+          "mbrlen",
+          "mbrtowc",
+          "mbsnrtowcs",
+          "mbsrtowcs",
+          "mbstowcs",
+          "mbtowc",
+          "newlocale",
+          "setlocale",
+          "uselocale",
+          "wcrtomb",
+          "wcsnrtombs",
+          "wcsrtombs",
+          "wcstombs",
+          "wctob",
+          "wctomb"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-121758"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc6"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "https://security-tracker.debian.org/tracker/CVE-2026-121758 and GLIBC-SA-2026-0030: the ISO-2022-CN-EXT decoder reads past the end of its input when the input ends in a crafted escape byte (trixie: glibc 2.41-12+deb13u5 unfixed, no DSA, minor issue). Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image (no shell, no openssl command, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports neither dlopen nor dlmopen (objdump -p and -T on the binaries of the :main images of 2026-11-25, ferroehr sha256:a512e7dc and ferroehr-viewer sha256:b9f8c25b, both architectures). Every libc function it calls, its statically linked C code included, is an undefined dynamic symbol, so the import table is the complete list of glibc entry points it reaches. Neither binary imports iconv_open, iconv, setlocale or any multibyte conversion function. The ISO-2022-CN-EXT converter is a gconv module that libc loads only when a program opens a conversion to or from that character set. Both programs run in the C locale and decode text in Rust, so they never open a gconv conversion and the module is never loaded.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "btowc",
+          "dlmopen",
+          "dlopen",
+          "iconv",
+          "iconv_open",
+          "mblen",
+          "mbrlen",
+          "mbrtowc",
+          "mbsnrtowcs",
+          "mbsrtowcs",
+          "mbstowcs",
+          "mbtowc",
+          "newlocale",
+          "setlocale",
+          "uselocale",
+          "wcrtomb",
+          "wcsnrtombs",
+          "wcsrtombs",
+          "wcstombs",
+          "wctob",
+          "wctomb"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-124024"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc6"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "https://security-tracker.debian.org/tracker/CVE-2026-124024 and GLIBC-SA-2026-0031: the IBM1390 and IBM1399 encoders read past the end of their UCS-4 input on a combining base near the end of the buffer; glibc converts every source character set to UCS-4 first, so any conversion to IBM1390 or IBM1399 runs them (trixie: glibc 2.41-12+deb13u5 unfixed, no DSA, minor issue). Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image (no shell, no openssl command, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports neither dlopen nor dlmopen (objdump -p and -T on the binaries of the :main images of 2026-11-25, ferroehr sha256:a512e7dc and ferroehr-viewer sha256:b9f8c25b, both architectures). Every libc function it calls, its statically linked C code included, is an undefined dynamic symbol, so the import table is the complete list of glibc entry points it reaches. Neither binary imports iconv_open, iconv, setlocale or any multibyte conversion function. The IBM1390 and IBM1399 converter is a gconv module that libc loads only when a program opens a conversion to or from that character set. Both programs run in the C locale and decode text in Rust, so they never open a gconv conversion and the module is never loaded.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "btowc",
+          "dlmopen",
+          "dlopen",
+          "iconv",
+          "iconv_open",
+          "mblen",
+          "mbrlen",
+          "mbrtowc",
+          "mbsnrtowcs",
+          "mbsrtowcs",
+          "mbstowcs",
+          "mbtowc",
+          "newlocale",
+          "setlocale",
+          "uselocale",
+          "wcrtomb",
+          "wcsnrtombs",
+          "wcsrtombs",
+          "wcstombs",
+          "wctob",
+          "wctomb"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-126765"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc6"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "https://security-tracker.debian.org/tracker/CVE-2026-126765 and GLIBC-SA-2026-0032: glob and glob64 may free a block twice when an allocation fails while glob prepends the directory to the names it matched, which takes a result large enough to exhaust the process's memory (trixie: glibc 2.41-12+deb13u5 unfixed, no DSA, minor issue). Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image (no shell, no openssl command, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports neither dlopen nor dlmopen (objdump -p and -T on the binaries of the :main images of 2026-11-25, ferroehr sha256:a512e7dc and ferroehr-viewer sha256:b9f8c25b, both architectures). Every libc function it calls, its statically linked C code included, is an undefined dynamic symbol, so the import table is the complete list of glibc entry points it reaches. Neither binary imports glob or glob64: they list directories through Rust's standard library. No process in either image reaches glibc's glob.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen",
+          "glob",
+          "glob64"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-125709"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/gcc-14-base"
+            },
+            {
+              "@id": "pkg:deb/debian/libgcc-s1"
+            },
+            {
+              "@id": "pkg:deb/debian/libgomp1"
+            },
+            {
+              "@id": "pkg:deb/debian/libstdc%2B%2B6"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/gcc-14-base"
+            },
+            {
+              "@id": "pkg:deb/debian/libgcc-s1"
+            },
+            {
+              "@id": "pkg:deb/debian/libgomp1"
+            },
+            {
+              "@id": "pkg:deb/debian/libstdc%2B%2B6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "https://security-tracker.debian.org/tracker/CVE-2026-125709: libstdc++'s file stream buffer may still append to its internal buffer after a byte-by-byte write fails, so repeated write failures can overflow it (Red Hat bug 2569390; trixie: gcc-14 14.2.0-19 unfixed, no DSA, minor issue). The code is basic_filebuf, which libstdc++.so.6 exports. Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image (no shell, no openssl command, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports neither dlopen nor dlmopen (objdump -p and -T on the binaries of the :main images of 2026-11-25, ferroehr sha256:a512e7dc and ferroehr-viewer sha256:b9f8c25b, both architectures). That program is Rust: it imports no C++ symbol (no _Z name, no GLIBCXX or CXXABI version), so it never maps libstdc++.so.6. gcc-14-base, libgcc-s1 and libgomp1 are reported only because they come from the same gcc-14 source package; libgcc_s.so.1, the one of them the program loads, holds the unwinder.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen"
+        ],
+        "forbidden_import_prefixes": [
+          "_Z"
+        ],
+        "forbidden_version_prefixes": [
+          "CXXABI_",
+          "GLIBCXX_"
         ]
       }
     }
