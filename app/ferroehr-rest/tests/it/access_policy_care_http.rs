@@ -230,7 +230,7 @@ async fn a_bound_code_no_terminology_server_can_check_is_refused() {
 }
 
 #[tokio::test]
-async fn a_policy_that_breaks_the_draft_model_stays_bad_request() {
+async fn a_policy_that_breaks_the_draft_model_is_unprocessable() {
     let (_db, pool) = common::migrated_pool().await;
     let (_svc, app) = replica(&pool, None).await;
     let first = create(&app, &policy(false)).await;
@@ -240,7 +240,7 @@ async fn a_policy_that_breaks_the_draft_model_stays_bad_request() {
     instant_self_declared["self_declared_care"]["value"] = json!("PT0S");
     for body in [self_with_kinships, instant_self_declared] {
         let (status, answer) = replace(&app, &first, &body).await;
-        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}: {answer}");
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}: {answer}");
     }
 }
 
@@ -564,7 +564,7 @@ async fn a_rules_care_roles_purposes_and_time_zone_are_stored_or_refused() {
         "Europe/Atlantis",
     );
     let (status, answer) = replace(&app, &first, &atlantis).await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "{answer}");
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{answer}");
     let (status, answer) = replace(&app, &first, &bound("RESP")).await;
     assert_eq!(status, StatusCode::OK, "{answer}");
 }

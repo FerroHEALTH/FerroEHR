@@ -377,13 +377,10 @@ CREATE UNIQUE INDEX uq_binding_representation_container
     ON binding_representation (relationship_id) WHERE retired_at IS NULL;
 -- Who ever represented whom.
 --
--- A patient-portal login whose PERSON has ever represented the EHR's subject
--- is judged only as a representative, so ending or deleting the
--- representation never leaves the former representative admitted as the
--- patient. binding_representation keeps its retired rows, and a refill
--- rebuilds them from every version that carried the representation code; this
--- index answers whether a representative has ever represented a subject, live
--- or retired, and is the one read a representative's admission takes. No
+-- binding_representation keeps its retired rows, and a refill rebuilds them
+-- from every version that carried the representation code; this index
+-- answers whether a representative has ever represented a subject, live or
+-- retired, and is the one read a representative's admission takes. No
 -- openEHR spec governs the side table: our own design.
 CREATE INDEX ix_binding_representation_history
     ON binding_representation (representative_id, subject_id)
@@ -407,7 +404,7 @@ COMMENT ON COLUMN binding_representation.basis_code IS 'The code of the represen
 COMMENT ON COLUMN binding_representation.provider_issuer IS 'The issuer of the representation''s provider DV_IDENTIFIER.';
 COMMENT ON COLUMN binding_representation.provider_id IS 'The id of the representation''s provider DV_IDENTIFIER.';
 COMMENT ON COLUMN binding_representation.writer_id IS 'The container the committer of the relationship''s head names in external_ref: the PERSON or client ACTOR that wrote it; NULL when the committer names none.';
-COMMENT ON INDEX ix_binding_representation_history IS 'Whether a representative ever represented a subject, live or retired: the patient-portal check that a former representative is never the patient (#5532), and the read a representative is admitted on (#6079).';
+COMMENT ON INDEX ix_binding_representation_history IS 'Whether a representative ever represented a subject, live or retired: the read a representative is admitted on (#6079).';
 COMMENT ON TABLE binding_representation IS 'The representations each PERSON is the source of: the PARTY_RELATIONSHIP containers of their own named openehr_access::represents, with their basis, provider and writer, live at the head and retired for every earlier one. No openEHR spec governs it, our own design.';
 
 -- ── binding_lease ───────────────────────────────────────────────────────────
@@ -418,15 +415,12 @@ CREATE TABLE binding_lease (
     replica    uuid PRIMARY KEY,
     digest     text NOT NULL,
     renewed_at timestamptz NOT NULL DEFAULT now(),
-    -- The binding-key issuers the replica derives key rows for, and those of
-    -- them whose key is a portal login.
-    issuers    text[] NOT NULL DEFAULT '{}',
-    portal     text[] NOT NULL DEFAULT '{}'
+    -- The binding-key issuers the replica derives key rows for.
+    issuers    text[] NOT NULL DEFAULT '{}'
 );
 COMMENT ON TABLE binding_lease IS 'The replicas running against the binding side table, each with the mapping digest it runs and when it last renewed its lease. Our own design.';
 COMMENT ON COLUMN binding_lease.digest IS 'The digest of the mapping the replica runs, without its key issuers.';
 COMMENT ON COLUMN binding_lease.issuers IS 'The binding-key issuers the replica derives key rows for.';
-COMMENT ON COLUMN binding_lease.portal IS 'The issuers among issuers that are patients issuers, whose key is a portal login.';
 
 -- ── binding_state ───────────────────────────────────────────────────────────
 -- The digest of the mapping the rows were derived under. A SQL migration
@@ -788,7 +782,6 @@ COMMENT ON TABLE binding_patient_identifier IS 'The identifiers each patient PER
 -- ── binding_key_space ───────────────────────────────────────────────────────
 CREATE TABLE binding_key_space (
     issuer     text PRIMARY KEY,
-    portal     boolean NOT NULL,
     state      text NOT NULL,
     fill_after uuid,
     changed_at timestamptz NOT NULL DEFAULT now(),
@@ -811,7 +804,7 @@ CREATE TRIGGER binding_key_space_state_changed
     AFTER UPDATE OF state ON binding_key_space
     FOR EACH ROW WHEN (OLD.state IS DISTINCT FROM NEW.state)
     EXECUTE FUNCTION binding_changed();
-COMMENT ON TABLE binding_key_space IS 'The key space of each binding-key issuer: its portal flag and its state, pending until every live replica names it, filling while its key rows are filled online, active while they bind, retiring once a live replica no longer names it. Our own design.';
+COMMENT ON TABLE binding_key_space IS 'The key space of each binding-key issuer and its state: pending until every live replica names it, filling while its key rows are filled online, active while they bind, retiring once a live replica no longer names it. Our own design.';
 COMMENT ON COLUMN binding_key_space.fill_after IS 'The last PERSON container the online fill of a filling key space has written, so the next page resumes after it.';
 
 -- The end a care relationship written without one takes from the

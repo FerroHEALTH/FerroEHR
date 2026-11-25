@@ -401,7 +401,7 @@ These things about the payload are worth calling out:
   [`[authz.party_binding]`](../installation/config-auth.md#authzparty_binding)),
   every commit, attestation and CONTRIBUTION records a `PARTY_IDENTIFIED` with
   the `PERSON`'s name, your login identifier (`DV_IDENTIFIER{issuer = token
-  iss, id = <the issuer profile's person_key value>, type = "oauth2"}`, or
+  iss, id = <the token's sub>, type = "oauth2"}`, or
   `{issuer = <[api] basic_issuer>, id = <user>, type = "basic"}` for a Basic
   user, the issuer defaulting to `[api] system_id`), the
   provider (`type = "healthcare-provider"`) and an `external_ref` to the

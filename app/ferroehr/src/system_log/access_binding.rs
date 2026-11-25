@@ -193,7 +193,8 @@ fn binding(record: &BindingRecord) -> Result<Binding, BindingError> {
     Ok(match code {
         BindingCode::Bound => Binding::Bound {
             party: bound()?,
-            guest: record.guest,
+            // NOTE: ferrohealth-smart 0.34 reads no guest, so no bound caller is one (#6490).
+            guest: false,
         },
         BindingCode::Provisional => Binding::Provisional { party: bound()? },
         BindingCode::External => Binding::External,
@@ -219,7 +220,6 @@ fn binding(record: &BindingRecord) -> Result<Binding, BindingError> {
                 })?,
         },
         BindingCode::RefusedGroupsUnavailable => Binding::RefusedGroupsUnavailable,
-        BindingCode::RefusedGuest => Binding::RefusedGuest,
         // NOTE: the authentication layer names no field beside this refusal, so its
         // record carries none (no specification governs the outcomes: our own design).
         BindingCode::RefusedExternalIncomplete => Binding::RefusedExternalIncomplete {
@@ -452,7 +452,6 @@ pub(crate) mod tests {
             false,
             vec!["group-1".to_owned()],
             None,
-            false,
         );
         record.representation = Some(crate::system_log::binding::Representation {
             represented: "subject-9".to_owned(),

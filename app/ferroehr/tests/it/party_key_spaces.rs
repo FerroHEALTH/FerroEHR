@@ -5,8 +5,8 @@
 //! 18 (shared testkit harness): a key issuer added while replicas serve is
 //! pending until every live replica names it, then filled online to the rows
 //! the offline refill builds; a key issuer a replica drops retires at once on
-//! every replica and its rows go once no live replica names it; a portal
-//! flag change is a retire followed by an add; a duplicate under a new issuer
+//! every replica and its rows go once no live replica names it; a duplicate
+//! under a new issuer
 //! keeps it pending; and a change to the rest of the mapping is still refused
 //! at boot. Each replica is a service over the one database with its own
 //! mapping and lease. No openEHR spec governs the side table: our own design.
@@ -34,9 +34,8 @@ const SECOND: &str = "https://second.example/tenant";
 const GUID: &str = "guid";
 const NAMESPACE: &str = "demographic";
 
-/// The mapping holding keys under `issuers`, `portal` among them `patients`
-/// issuers.
-fn mapping(issuers: &[&str], portal: &[&str]) -> BindingMapping {
+/// The mapping holding keys under `issuers`.
+fn mapping(issuers: &[&str]) -> BindingMapping {
     let key = IdentifierSelector::new(
         format!("/details[at0001]/items[{CLUSTER}]/items[at0001]"),
         GUID,
@@ -46,7 +45,6 @@ fn mapping(issuers: &[&str], portal: &[&str]) -> BindingMapping {
     BindingMapping::default()
         .with_person(PERSON_TEMPLATE, key)
         .with_professional_role(ROLE_TEMPLATE)
-        .with_portal_issuers(portal.iter().copied())
 }
 
 /// A replica over `db` with `mapping` installed.
@@ -181,10 +179,9 @@ async fn spaces(db: &testkit::TestDb) -> Vec<KeySpace> {
         .expect("the key spaces")
 }
 
-fn space(issuer: &str, portal: bool, state: KeySpaceState) -> KeySpace {
+fn space(issuer: &str, state: KeySpaceState) -> KeySpace {
     KeySpace {
         issuer: issuer.to_owned(),
-        portal,
         state,
     }
 }
@@ -207,7 +204,7 @@ async fn key_rows(db: &testkit::TestDb, issuer: &str) -> Vec<String> {
 #[tokio::test]
 async fn an_added_issuer_is_pending_until_every_replica_names_it_then_fills_online() {
     let (db, _) = crate::fixtures::service().await;
-    let old = replica(&db, mapping(&[LOGIN], &[]));
+    let old = replica(&db, mapping(&[LOGIN]));
     let first = lease(&old).await;
     let (login, second) = (
         "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
@@ -228,13 +225,13 @@ async fn an_added_issuer_is_pending_until_every_replica_names_it_then_fills_onli
     // A replica naming the second issuer boots beside the old one and
     // records it pending: nobody binds under it, the first issuer binds on
     // both.
-    let new = replica(&db, mapping(&[LOGIN, SECOND], &[]));
+    let new = replica(&db, mapping(&[LOGIN, SECOND]));
     let second_lease = lease(&new).await;
     assert_eq!(
         spaces(&db).await,
         [
-            space(LOGIN, false, KeySpaceState::Active),
-            space(SECOND, false, KeySpaceState::Pending)
+            space(LOGIN, KeySpaceState::Active),
+            space(SECOND, KeySpaceState::Pending)
         ]
     );
     assert_eq!(bound(&new, SECOND, second).await, Err("pending".to_owned()));
@@ -251,14 +248,14 @@ async fn an_added_issuer_is_pending_until_every_replica_names_it_then_fills_onli
     // The old replica is replaced by one naming the issuer: the next tend
     // fills it online and it binds on both.
     first.release().await.expect("released");
-    let replaced = replica(&db, mapping(&[LOGIN, SECOND], &[]));
+    let replaced = replica(&db, mapping(&[LOGIN, SECOND]));
     let third = lease(&replaced).await;
     second_lease.tend().await.expect("tended");
     assert_eq!(
         spaces(&db).await,
         [
-            space(LOGIN, false, KeySpaceState::Active),
-            space(SECOND, false, KeySpaceState::Active)
+            space(LOGIN, KeySpaceState::Active),
+            space(SECOND, KeySpaceState::Active)
         ]
     );
     assert_eq!(bound(&new, SECOND, second).await, Ok(vec![vo.to_string()]));
@@ -284,7 +281,7 @@ async fn an_added_issuer_is_pending_until_every_replica_names_it_then_fills_onli
 #[tokio::test]
 async fn a_removed_issuer_retires_at_once_and_goes_once_no_replica_names_it() {
     let (db, _) = crate::fixtures::service().await;
-    let both = mapping(&[LOGIN, SECOND], &[]);
+    let both = mapping(&[LOGIN, SECOND]);
     let one = replica(&db, both.clone());
     let first = lease(&one).await;
     let two = replica(&db, both);
@@ -299,7 +296,7 @@ async fn a_removed_issuer_retires_at_once_and_goes_once_no_replica_names_it() {
     // The first replica restarts without the issuer: it stops binding on the
     // other replica at once, with no restart of it.
     first.release().await.expect("released");
-    let dropped = replica(&db, mapping(&[LOGIN], &[]));
+    let dropped = replica(&db, mapping(&[LOGIN]));
     let third = lease(&dropped).await;
     assert_eq!(bound(&two, SECOND, key).await, Err("retiring".to_owned()));
     assert_eq!(
@@ -317,10 +314,7 @@ async fn a_removed_issuer_retires_at_once_and_goes_once_no_replica_names_it() {
     // Once no live replica names it, the key space and its rows go.
     second.release().await.expect("released");
     third.tend().await.expect("tended");
-    assert_eq!(
-        spaces(&db).await,
-        [space(LOGIN, false, KeySpaceState::Active)]
-    );
+    assert_eq!(spaces(&db).await, [space(LOGIN, KeySpaceState::Active)]);
     assert_eq!(key_rows(&db, SECOND).await, Vec::<String>::new());
     assert_eq!(
         bound(&dropped, SECOND, key).await,
@@ -330,49 +324,16 @@ async fn a_removed_issuer_retires_at_once_and_goes_once_no_replica_names_it() {
 }
 
 #[tokio::test]
-async fn a_portal_flag_change_retires_then_adds_the_issuer() {
-    let (db, _) = crate::fixtures::service().await;
-    let plain = replica(&db, mapping(&[LOGIN, SECOND], &[]));
-    let first = lease(&plain).await;
-    let key = "6f7a8b9c-0d1e-4f2a-9b3c-5d6e7f8091a2";
-    let (vo, ..) = professional(&plain, &[(SECOND, key)]).await;
-    first.release().await.expect("released");
-
-    let portal = replica(&db, mapping(&[LOGIN, SECOND], &[SECOND]));
-    let second = lease(&portal).await;
-    assert_eq!(
-        spaces(&db).await,
-        [
-            space(LOGIN, false, KeySpaceState::Active),
-            space(SECOND, false, KeySpaceState::Retiring)
-        ]
-    );
-    assert_eq!(
-        bound(&portal, SECOND, key).await,
-        Err("retiring".to_owned())
-    );
-    second.tend().await.expect("tended");
-    assert_eq!(
-        spaces(&db).await,
-        [
-            space(LOGIN, false, KeySpaceState::Active),
-            space(SECOND, true, KeySpaceState::Active)
-        ]
-    );
-    assert_eq!(bound(&portal, SECOND, key).await, Ok(vec![vo.to_string()]));
-}
-
-#[tokio::test]
 async fn a_duplicate_under_an_added_issuer_keeps_it_pending_naming_both_parties() {
     let (db, _) = crate::fixtures::service().await;
-    let old = replica(&db, mapping(&[LOGIN], &[]));
+    let old = replica(&db, mapping(&[LOGIN]));
     let first = lease(&old).await;
     let key = "7a8b9c0d-1e2f-4a3b-8c4d-6e7f8091a2b3";
     let (one, ..) = professional(&old, &[(SECOND, key)]).await;
     let (two, ..) = professional(&old, &[(SECOND, key)]).await;
     first.release().await.expect("released");
 
-    let new = replica(&db, mapping(&[LOGIN, SECOND], &[]));
+    let new = replica(&db, mapping(&[LOGIN, SECOND]));
     let second = lease(&new).await;
     let refused = second.tend().await.expect_err("a key carried twice");
     let FillError::Duplicate { duplicates } = &refused else {
@@ -387,8 +348,8 @@ async fn a_duplicate_under_an_added_issuer_keeps_it_pending_naming_both_parties(
     assert_eq!(
         spaces(&db).await,
         [
-            space(LOGIN, false, KeySpaceState::Active),
-            space(SECOND, false, KeySpaceState::Pending)
+            space(LOGIN, KeySpaceState::Active),
+            space(SECOND, KeySpaceState::Pending)
         ]
     );
     assert_eq!(bound(&new, SECOND, key).await, Err("pending".to_owned()));
@@ -397,7 +358,7 @@ async fn a_duplicate_under_an_added_issuer_keeps_it_pending_naming_both_parties(
 #[tokio::test]
 async fn a_rerun_fill_converges_and_a_commit_during_it_keeps_its_head() {
     let (db, _) = crate::fixtures::service().await;
-    let svc = replica(&db, mapping(&[LOGIN, SECOND], &[]));
+    let svc = replica(&db, mapping(&[LOGIN, SECOND]));
     let held = lease(&svc).await;
     let before = "8b9c0d1e-2f3a-4b4c-9d5e-7f8091a2b3c4";
     let (_, uid, _) = professional(&svc, &[(SECOND, before)]).await;
@@ -438,8 +399,8 @@ async fn a_rerun_fill_converges_and_a_commit_during_it_keeps_its_head() {
 #[tokio::test]
 async fn a_change_to_the_rest_of_the_mapping_is_still_refused_at_boot() {
     let (db, _) = crate::fixtures::service().await;
-    let first = lease(&replica(&db, mapping(&[LOGIN], &[]))).await;
-    let changed = mapping(&[LOGIN, SECOND], &[]).with_professional_role("Another role");
+    let first = lease(&replica(&db, mapping(&[LOGIN]))).await;
+    let changed = mapping(&[LOGIN, SECOND]).with_professional_role("Another role");
     let refused = replica(&db, changed)
         .take_binding_lease(uuid::Uuid::now_v7())
         .await
@@ -455,7 +416,7 @@ async fn a_change_to_the_rest_of_the_mapping_is_still_refused_at_boot() {
 #[tokio::test]
 async fn a_retiring_issuer_every_replica_names_again_fills_anew() {
     let (db, _) = crate::fixtures::service().await;
-    let both = mapping(&[LOGIN, SECOND], &[]);
+    let both = mapping(&[LOGIN, SECOND]);
     let stays = replica(&db, both.clone());
     let kept = lease(&stays).await;
     let key = "a0b1c2d3-e4f5-4a6b-9c7d-8e9f0a1b2c3d";
@@ -463,7 +424,7 @@ async fn a_retiring_issuer_every_replica_names_again_fills_anew() {
 
     // A replica runs without the issuer and commits a new key meanwhile, so
     // the rows under the issuer no longer follow the head.
-    let dropped = replica(&db, mapping(&[LOGIN], &[]));
+    let dropped = replica(&db, mapping(&[LOGIN]));
     let without = lease(&dropped).await;
     let moved_key = "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e";
     let mut moved = person(&[(SECOND, moved_key)]);
@@ -480,8 +441,8 @@ async fn a_retiring_issuer_every_replica_names_again_fills_anew() {
     assert_eq!(
         spaces(&db).await,
         [
-            space(LOGIN, false, KeySpaceState::Active),
-            space(SECOND, false, KeySpaceState::Active)
+            space(LOGIN, KeySpaceState::Active),
+            space(SECOND, KeySpaceState::Active)
         ]
     );
     assert_eq!(
