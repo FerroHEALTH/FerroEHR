@@ -8,7 +8,7 @@
 /// connections of as many test processes as a host has cores
 /// (`crate::admission` admits by this setting), and `pg_stat_statements` counting nested statements for the
 /// statement budget test of `ferroehr-rest` (#5885), as CI's server does
-/// (`scripts/lib/test-postgres.sh`), with room for the statements of every
+/// (`docker/ci-postgres/Dockerfile`), with room for the statements of every
 /// clone a parallel run holds at once, so none is evicted while a test counts
 /// it (a dropped clone's statements leave with it, [`crate::TestDb`]). It
 /// keeps 1 GB of past WAL (`PostgreSQL` docs § "Replication", `wal_keep_size`),

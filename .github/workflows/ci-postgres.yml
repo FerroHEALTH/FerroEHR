@@ -74,7 +74,7 @@ jobs:
             docker exec "$id" pg_isready -U postgres -q && break
             sleep 1
           done
-          docker exec "$id" psql -U postgres -Atc "SHOW shared_preload_libraries" | grep -q pg_stat_statements
+          [[ "$(docker exec "$id" psql -U postgres -Atc "SHOW shared_preload_libraries")" == *pg_stat_statements* ]]
           [ "$(docker exec "$id" psql -U postgres -Atc "SHOW max_connections")" = 400 ]
           [ "$(docker exec "$id" psql -U postgres -Atc "SHOW fsync")" = off ]
           docker rm -f -v "$id" >/dev/null
