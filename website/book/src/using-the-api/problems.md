@@ -130,9 +130,9 @@ request is judged by is being refreshed.
 
 An AQL query is judged by this replica's copy of the access settings. When
 the store holds a newer revision than the copy, the server reads it again
-and asks once more, for a short bounded time. If the copy still lags, the
-server withholds the answer instead of serving rows, a count or a page judged
-on the old state. Retry after the `Retry-After` header's delay. The
+and asks once more. If the store keeps moving past each fresh read for a
+short bounded time, or the copy does not catch up, the server withholds the
+answer instead of serving rows, a count or a page judged on the old state. Retry after the `Retry-After` header's delay. The
 `aql_stale_access_total` counter counts these cases.
 
 A read or a query that a care relationship admits is judged by this
