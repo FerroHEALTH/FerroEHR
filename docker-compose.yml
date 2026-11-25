@@ -360,7 +360,7 @@ services:
   # The sealing key of FerroPIX's identifier columns, the base64 of 32 random
   # bytes, written once into its own volume, so this file carries no key.
   ferropix-key:
-    image: postgres:19.0@sha256:bb6e70add742cd868fb62cb3b2f67d1dd2bdd2b65a521e778420748753687c60
+    image: postgres:19.0@sha256:aaa10f7ba7328b4a221a6c3184d83eef885bd16bf1f6de864757863156b0a4d1
     entrypoint: ["sh", "-c", "umask 077; [ -s /key/data-key ] || head -c 32 /dev/urandom | base64 > /key/data-key; chown 65532:65532 /key/data-key"]
     volumes:
       - ferropix-key:/key
@@ -375,7 +375,7 @@ services:
   # boot gate requires. The password is a quickstart default on a database that
   # publishes no port.
   ferropix-postgres:
-    image: postgres:19.0@sha256:bb6e70add742cd868fb62cb3b2f67d1dd2bdd2b65a521e778420748753687c60
+    image: postgres:19.0@sha256:aaa10f7ba7328b4a221a6c3184d83eef885bd16bf1f6de864757863156b0a4d1
     environment:
       POSTGRES_DB: ferropix
       POSTGRES_PASSWORD: ${FERROPIX_POSTGRES_PASSWORD:-postgres}
