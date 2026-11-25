@@ -49,7 +49,7 @@
 //! the Planner with Explicit JOIN Clauses"). No openEHR spec governs access
 //! paths: our own design.
 
-use sea_query::{Alias, Expr, ExprTrait, JoinType, Query, SelectStatement};
+use sea_query::{Alias, ArrayType, Expr, ExprTrait, JoinType, Query, SelectStatement, Value};
 
 use openehr_query::lexer::CompOp;
 
@@ -163,7 +163,7 @@ struct Range<'a> {
     bounds: Vec<(CompOp, Expr)>,
 }
 
-impl Builder<'_> {
+impl<'a> Builder<'a> {
     /// The anchors of the WHERE clause, in the order the statement takes
     /// them: the equalities, then the ranges [`Builder::range_entry`] admits.
     ///
@@ -219,14 +219,23 @@ impl Builder<'_> {
     /// The string a bound value compares as, a string literal or a string
     /// parameter, or `None` for any other value: a `Raw` leaf compares with a
     /// number by its number (`Builder::value_test`), which no index holds.
-    pub(super) fn anchor_text(&self, bind: &Bind) -> Option<String> {
+    pub(super) fn anchor_text<'q>(&self, bind: &'q Bind) -> Option<&'q str>
+    where
+        'a: 'q,
+    {
         match bind {
-            Bind::Literal(TypedLit::String(text)) => Some(text.clone()),
-            Bind::Param(name) => match self.params.get(name) {
-                Some(ParamValue::Str(text)) => Some(text.clone()),
-                _ => None,
-            },
+            Bind::Literal(TypedLit::String(text)) => Some(text),
+            Bind::Param(name) => self.param_text(name),
             Bind::Literal(_) => None,
+        }
+    }
+
+    /// The string the parameter `name` is bound to, or `None` for a
+    /// parameter of any other type.
+    pub(super) fn param_text(&self, name: &str) -> Option<&'a str> {
+        match self.params.get(name) {
+            Some(ParamValue::Str(text)) => Some(text),
+            _ => None,
         }
     }
 
@@ -238,7 +247,7 @@ impl Builder<'_> {
     fn equality_anchor(
         &mut self,
         leaf: &LeafPath,
-        texts: &[String],
+        texts: &[&str],
     ) -> Result<Option<ValueAnchor>, AqlError> {
         match self.target_anchor(leaf, texts) {
             Some(anchor) => Ok(Some(anchor)),
@@ -261,7 +270,7 @@ impl Builder<'_> {
     /// names, so the anchor holds only for a query that reads the trunk head;
     /// under `ALL_VERSIONS` or a version predicate a party's older versions
     /// would be lost, and the comparison has no entry.
-    fn target_anchor(&mut self, leaf: &LeafPath, texts: &[String]) -> Option<ValueAnchor> {
+    fn target_anchor(&mut self, leaf: &LeafPath, texts: &[&str]) -> Option<ValueAnchor> {
         if self.ir.domain != QueryDomain::Demographic || !leaf.anchor.is_empty() {
             return None;
         }
@@ -323,7 +332,7 @@ impl Builder<'_> {
     fn value_anchor(
         &mut self,
         leaf: &LeafPath,
-        texts: &[String],
+        texts: &[&str],
     ) -> Result<Option<ValueAnchor>, AqlError> {
         let kind = text_leaf(&leaf.fragment);
         let (function, column) = match kind {
@@ -336,7 +345,7 @@ impl Builder<'_> {
         let numbers: Vec<&str> = if kind == Some(TextLeaf::Value) {
             texts
                 .iter()
-                .map(String::as_str)
+                .copied()
                 .filter(|text| plain_decimal(text))
                 .collect()
         } else {
@@ -363,8 +372,8 @@ impl Builder<'_> {
             };
             let search = read(function, column);
             let mut test = match texts {
-                [text] => search.eq(Expr::val(text.as_str())),
-                _ => in_hidden_set(search, texts.to_vec(), SetElement::Text),
+                [text] => search.eq(Expr::val(*text)),
+                _ => in_hidden_set(search, texts.iter().copied(), SetElement::Text),
             };
             if !numbers.is_empty() {
                 let number = read("node_number", Node::ValueNum);
@@ -373,11 +382,7 @@ impl Builder<'_> {
                         "CAST($1 AS numeric)",
                         [Expr::val(*one)],
                     )),
-                    _ => in_hidden_set(
-                        number,
-                        numbers.iter().map(|text| (*text).to_owned()).collect(),
-                        SetElement::Numeric,
-                    ),
+                    _ => in_hidden_set(number, numbers.iter().copied(), SetElement::Numeric),
                 });
             }
             (
@@ -665,11 +670,19 @@ pub(super) fn text_leaf(steps: &[FragmentStep]) -> Option<TextLeaf> {
 /// `element`s and read through an initplan, so a custom plan sees the set no
 /// better than the generic plan does and the statement settles on the
 /// generic one (`PostgreSQL` docs, `PREPARE`, "Notes"; #6544).
-fn in_hidden_set(value: Expr, members: Vec<String>, element: SetElement) -> Expr {
+fn in_hidden_set<'a>(
+    value: Expr,
+    members: impl Iterator<Item = &'a str>,
+    element: SetElement,
+) -> Expr {
     let template = match element {
         SetElement::Text => "$1 = ANY(CAST((SELECT CAST($2 AS text[])) AS text[]))",
         SetElement::Numeric => "$1 = ANY(CAST((SELECT CAST($2 AS numeric[])) AS numeric[]))",
     };
+    let members = Value::Array(
+        ArrayType::String,
+        Some(Box::new(members.map(Value::from).collect())),
+    );
     Expr::cust_with_exprs(template, [value, Expr::val(members)])
 }
 
