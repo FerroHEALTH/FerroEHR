@@ -391,7 +391,13 @@ jobs:
       - name: Every hot path within its CPU budget, optimised
         id: budget
         continue-on-error: true
-        run: cargo nextest run --locked --cargo-profile budget -p ferroehr-rest --all-features --no-capture -E 'test(every_hot_path_stays_within_its_cpu_budget)'
+        run: |
+          set -euo pipefail
+          cargo nextest run --locked --cargo-profile budget -p ferroehr-rest --all-features --no-capture \
+            -E 'test(every_hot_path_stays_within_its_cpu_budget)' 2>&1 | tee "$RUNNER_TEMP/cpu-budget.log"
+      # A round is `success`, `unjudged` (the test refused a runner too noisy
+      # to judge, which it checks only once every path passed, #6569), or
+      # `breach` (any other failure).
       - name: The round's outcome
         if: ${{ !cancelled() }}
         env:
@@ -400,7 +406,15 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p cpu-round
-          echo "$OUTCOME" > "cpu-round/round-$ROUND"
+          verdict=breach
+          if [ "$OUTCOME" = success ]; then
+            verdict=success
+          elif grep -Fq 'the runner was too noisy to judge' "$RUNNER_TEMP/cpu-budget.log" 2>/dev/null \
+            && ! grep -Fq 'a hot path exceeds its CPU budget' "$RUNNER_TEMP/cpu-budget.log"; then
+            verdict=unjudged
+          fi
+          echo "round $ROUND: $verdict"
+          echo "$verdict" > "cpu-round/round-$ROUND"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
@@ -411,7 +425,8 @@ jobs:
         if: ${{ !cancelled() }}
         run: df -h / && du -sh target/budget 2>/dev/null || true
   # The CPU budget's verdict over its three rounds (#6477): a breach on one
-  # runner is the host, a breach on two is the code.
+  # runner is the host, a breach on two is the code, and a round too noisy to
+  # judge is no breach (#6569).
   cpu-budget-verdict:
     name: hot-path CPU budget verdict
     needs: cpu-budget
@@ -428,14 +443,18 @@ jobs:
       - name: Two rounds of three breach, or none fails
         run: |
           set -euo pipefail
-          rounds=0; breached=0
+          rounds=0; breached=0; unjudged=0
           for f in cpu-round/round-*; do
             rounds=$((rounds + 1))
             outcome="$(cat "$f")"
             echo "${f##*/}: $outcome"
-            [ "$outcome" = success ] || breached=$((breached + 1))
+            case "$outcome" in
+            success) ;;
+            unjudged) unjudged=$((unjudged + 1)) ;;
+            *) breached=$((breached + 1)) ;;
+            esac
           done
-          echo "$breached of $rounds rounds breached" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "$breached of $rounds rounds breached, $unjudged too noisy to judge" | tee -a "$GITHUB_STEP_SUMMARY"
           [ "$rounds" -eq 3 ] || { echo "::error::$rounds of 3 rounds reported"; exit 1; }
           [ "$breached" -lt 2 ]
 
