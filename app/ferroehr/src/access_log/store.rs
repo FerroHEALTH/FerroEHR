@@ -355,20 +355,16 @@ impl AccessLogStore {
         Ok(replaced.then_some(tombstone))
     }
 
-    /// Replace up to `limit` entries whose retention has ended by their
-    /// tombstones, removed at `time_removed`, and return the tombstones.
+    /// Replaces up to `limit` entries whose retention has ended by their
+    /// tombstones, removed at `time_removed`, and returns the tombstones.
     ///
-    /// An entry has expired once `today` is past its `retain_until`, the last
-    /// day it is kept (`docs/specifications/access-log`, semantics §Retention); an entry that
-    /// states none is kept without end. Entries expire in any order, in the
-    /// middle of the log as at its start, and each tombstone names the grounds
-    /// of the period that ended. An indexed entry a sink has not delivered
-    /// waits one day more
-    /// ([`crate::system_log::store::delivery::DELIVERY_GRACE_DAYS`]), and its
-    /// tombstone parks it for that sink then. The entries come oldest end first and one
-    /// call replaces them in one transaction; a caller repeats it until fewer
-    /// than `limit` come back. Rows another run holds are skipped, so two
-    /// replicas never replace the same entry.
+    /// An entry expires once `today` is past its `retain_until`
+    /// (`docs/specifications/access-log`, semantics §Retention); one without is
+    /// kept. An indexed entry a sink has not delivered waits
+    /// [`crate::system_log::store::delivery::DELIVERY_GRACE_DAYS`] more, and its
+    /// tombstone parks it for that sink. One call replaces its entries in one
+    /// transaction, oldest end first, skipping rows another run holds; a caller
+    /// repeats it until fewer than `limit` come back.
     ///
     /// # Errors
     /// [`AccessLogError::Invalid`] for a tombstone that breaks an invariant,

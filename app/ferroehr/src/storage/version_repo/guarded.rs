@@ -494,16 +494,12 @@ fn audit_cte(name: &str, first: usize, time: &str, from: &str, shared: SharedRef
 ///
 /// The parameters of [`super::commit::Folded::Standalone`] up to `$27`, then
 /// `$28` the expected head ordinal, `$29` the policy revision, `$30` the
-/// definition revision, `$31` the outbox envelope and `$32` the audit
-/// reservation, and the node arrays from `$33`, then for a `status` commit
-/// the columns of [`status_ctes`], for a directory write its
-/// [`DirectorySlot`] (the highest rank, the slot's object and head, and
-/// whether it adds a hierarchy), and
-/// for a party commit the key-space gate flag and the reverse targets of
-/// [`party_ctes`], and last the episodes of a version whose `placement`
-/// writes them; `beside` names what else it writes. The audit insert reads from `g`, and every later insert from the audit's, so
-/// nothing is written unless every requirement holds; the last row names a
-/// flag per requirement.
+/// definition revision, `$31` the outbox envelope, `$32` the audit
+/// reservation and the node arrays from `$33`; then the columns of
+/// [`status_ctes`], a [`DirectorySlot`], or the key-space flag and reverse
+/// targets of [`party_ctes`]; and last the episodes `placement` writes.
+/// Every insert reads from the one before it, so nothing is written unless
+/// every requirement holds; the last row names a flag per requirement.
 pub(super) fn statement(
     beside: Beside,
     placement: super::head_upsert::Placement,

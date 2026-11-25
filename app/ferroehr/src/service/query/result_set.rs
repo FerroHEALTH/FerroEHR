@@ -111,24 +111,17 @@ fn render_param(value: &ParamValue) -> String {
     }
 }
 
-/// Assemble the ITS-REST 1.1.0 `RESULT_SET` document
-/// (`schemas/query/ResultSet`: `meta` + `q` + `columns[]` + `rows[][]`). `q`
-/// is the query as submitted; `executed` is the parameter-substituted text
-/// for `_executed_aql`; `name` (a stored query's qualified name) is emitted
-/// only when present.
+/// Assembles the ITS-REST 1.1.0 `RESULT_SET` document
+/// (`schemas/query/ResultSet`): `q` is the query as submitted, `executed` the
+/// parameter-substituted text for `_executed_aql`, and `name` a stored
+/// query's qualified name, emitted when present.
 ///
-/// The envelope is held as the generated ITS-REST contract types
-/// ([`ResultSetMetadata`] / [`ResultSetColumn`], emitted from the vendored
-/// `query` OAS) and the rows as the cells the executor rendered, so the
-/// document is written once ([`ResultSetDoc::write`]) and the served shape is
-/// the contract's by construction.
+/// The envelope is the generated contract types ([`ResultSetMetadata`],
+/// [`ResultSetColumn`]) and the rows the cells the executor rendered, written
+/// once by [`ResultSetDoc::write`].
 ///
-/// NOTE: no `id` is emitted. The released ITS-REST
-/// `ResultSet` schema (`crates/openehr-its/vendor/rest-oas/query-*.openapi.yaml`
-/// §`components.schemas.ResultSet`) declares exactly
-/// `meta`/`name`/`q`/`columns`/`rows` with `required: [rows]` and **no**
-/// `additionalProperties`, so on this wire an `id` key would be an undeclared
-/// property on a closed object schema.
+/// NOTE: no `id` is emitted: the released `ResultSet` schema
+/// (`crates/openehr-its/vendor/rest-oas/query-*.openapi.yaml`) declares none.
 pub(super) fn result_set_json(
     aql: &str,
     executed: &str,

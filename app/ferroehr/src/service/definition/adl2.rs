@@ -325,20 +325,14 @@ impl FerroEhrService {
         })
     }
 
-    /// The (cached) [`WebTemplate`] for a stored ADL2/OPT2 template on the
-    /// FLAT/STRUCTURED commit path, the ADL2 twin of
-    /// [`web_template`](crate::service::FerroEhrService::web_template)'s
-    /// OPT 1.4 resolution and reached as its fallback when a template id is not
-    /// an ADL 1.4 template. The Web Template carries the AOM2
-    /// archetype-conformance constraints ([`build_web_template_v2_4`]), so such
-    /// a commit is constraint-checked exactly as an OPT 1.4 commit is.
+    /// The cached [`WebTemplate`] of a stored ADL2/OPT2 template for a FLAT or
+    /// STRUCTURED commit, the fallback of
+    /// [`web_template`](crate::service::FerroEhrService::web_template) for an id
+    /// that names no ADL 1.4 template. It carries the AOM2 conformance
+    /// constraints ([`build_web_template_v2_4`]).
     ///
-    /// NOTE: the entry is cached under a dialect-namespaced key
-    /// ([`ADL2_CACHE_NS`]) whose ASCII control separator no grammar-legal id can
-    /// contain (BASE `docs/base_types/master05-identification_package.adoc`
-    /// §Archetype Identifiers), so an OPT 1.4 and an ADL2 template sharing a
-    /// `template_id` cannot collide. No openEHR spec governs the cache — our own
-    /// design/extension.
+    /// NOTE: the cache key is namespaced by [`ADL2_CACHE_NS`], a control character no
+    /// legal id contains (BASE `master05-identification_package.adoc`), so the dialects never collide.
     ///
     /// # Errors
     ///

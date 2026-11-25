@@ -86,20 +86,15 @@ pub(super) fn compose_paging(
     Ok((limit, offset))
 }
 
-/// Apply the configured result-row ceiling to the composed page `limit`.
+/// Applies the configured result-row ceiling to the composed page `limit`.
 ///
-/// A query nothing else bounds takes the ceiling as its `LIMIT`: without it
-/// the SQL would carry no `LIMIT` and materialise every matching row before
-/// the `RESULT_SET` is built, one request an unbounded caller-chosen
-/// allocation. A page asked for explicitly, by AQL `LIMIT` or the `fetch`
-/// parameter, is served as written up to the ceiling and REFUSED above it:
-/// a silent clamp would hand a client paging with its own `fetch` as the
-/// stride a shorter page, and the rows between the clamped page and the next
-/// `offset` would vanish with nothing in the `RESULT_SET` to say so. ITS-REST
-/// leaves both the `fetch` default and its maximum to the implementation
-/// (query `Request.md` §Common Headers and Query Parameters), and a refused
-/// page is the released `400` branch ("invalid input … at least one of the
-/// parameters has an invalid syntax", `400_Query`).
+/// A query nothing else bounds takes the ceiling as its `LIMIT`, so no
+/// request materialises every matching row. A page asked for by AQL `LIMIT`
+/// or `fetch` is served up to the ceiling and refused above it, since a
+/// silent clamp would lose the rows before a client's next `offset`. ITS-REST
+/// leaves the `fetch` default and maximum to the implementation (query
+/// `Request.md` §Common Headers and Query Parameters), and the refusal is the
+/// released `400` branch (`400_Query`).
 pub(super) fn apply_result_ceiling(
     limit: Option<i64>,
     ceiling: Option<i64>,

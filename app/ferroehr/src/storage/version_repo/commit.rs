@@ -90,22 +90,15 @@ pub async fn advisory_lock(tx: &mut PgConnection, vo_id: VoId) -> Result<(), Sto
     Ok(())
 }
 
-/// The `version` columns for a **folded** commit.
+/// The `version` columns of a folded commit: every content column but
+/// `contribution_id` and `commit_audit_id`, which come from the statement's
+/// own CTEs.
 ///
-/// Every content column of a stored version EXCEPT
-/// `contribution_id`/`commit_audit_id`, which come from the same statement's
-/// `contribution`/`commit_audit` CTEs.
-///
-/// `time_committed` is the caller's pre-read commit instant, a database `now()`
-/// fetched earlier on this request and so still server-assigned (master06
-/// §Committal and Audits). Binding it makes the stored audit time, the version row's
-/// own `committed_at` and the instant the `VERSION.signature` was computed over
-/// one value by construction.
-///
-/// Nothing is superseded in place: the store is append-only, so a commit
-/// inserts its version row and updates the object's one mutable head row in the
-/// same statement. Which version is current is the head row's answer
-/// (master06 §The 'Virtual Version Tree'), not a validity interval.
+/// `time_committed` is the commit instant read earlier on this request from
+/// the database (master06 §Committal and Audits), so the stored audit time,
+/// `committed_at` and the instant the signature covers are one value. The
+/// store is append-only; the head row names the current version (master06
+/// §The 'Virtual Version Tree').
 #[derive(Debug)]
 pub struct FoldedVersion<'a> {
     /// The versioned object's id.
@@ -716,24 +709,16 @@ pub fn outbox_envelope(
     })
 }
 
-/// Write the contribution-outbox event row **inside the commit transaction**
-/// it announces — no commit without its event, no event without its commit.
+/// Writes the contribution-outbox event row inside the commit transaction it
+/// announces.
 ///
-/// No openEHR spec governs eventing (our own extension). The PHI-free
-/// per-version entries are built by the versioning layer
-/// (`Committed::envelope_entry`); this function wraps them in the fixed
-/// envelope shape the outbox feed serves (`{contribution_id, ehr_id,
-/// committed_at, versions[]}`). The insert takes the outbox lock shared and
-/// holds it to the commit's end, so a feed read never passes a `seq` this
-/// commit drew ([`crate::extensions::outbox`]).
-///
-/// An EHR carrying a legal mark emits no event. The `INSERT ... SELECT` writes
-/// nothing when the EHR is restricted (GDPR Art. 18(2) leaves only storage) or
-/// carries an unoverridden research objection (Art. 21(6)), so nothing about
-/// that record reaches a downstream consumer; both are read in the same
-/// statement rather than a probe before it, so a mark recorded concurrently
-/// cannot slip between the two. `ehr_id IS NULL` is a demographic commit, which
-/// no EHR mark reaches. `docs/law/eu/gdpr/text.html`.
+/// The PHI-free entries come from `Committed::envelope_entry`, wrapped as
+/// `{contribution_id, ehr_id, committed_at, versions[]}`. The insert holds
+/// the outbox lock shared to the commit's end ([`crate::extensions::outbox`]).
+/// It writes nothing for an EHR that is restricted (GDPR Art. 18(2)) or
+/// carries an unoverridden research objection (Art. 21(6)), read in the same
+/// statement (`docs/law/eu/gdpr/text.html`); `ehr_id IS NULL` is a
+/// demographic commit. No openEHR spec governs eventing: our own extension.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver/insert failure.

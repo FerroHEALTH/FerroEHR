@@ -51,21 +51,13 @@ pub(crate) fn refuse_composing_for_others(kind: Kind, body: &Body) -> Result<(),
 
 /// Refuses a person's change to a version the person did not insert.
 ///
-/// EHDS Art. 5: a natural person or their representative "shall not be able to
-/// directly alter the electronic health data and related information inserted
-/// by health professionals" (`docs/law/eu/ehds/text.html` Art. 5). A version
-/// the person inserted is one whose committer is `PARTY_SELF`, the RM's
-/// "committer is the record subject" (RM common master04 §Audit Details), or
-/// `PARTY_RELATED`, which the server writes for the person's representative
-/// alone; any other committer is held to be someone else, a professional or a
-/// system. A demographic version, which has no record subject, the person
-/// inserted when its committer names their `PERSON`, as the representation that
-/// authorises a proxy does. Which committers count is our own design: no
-/// openEHR spec governs it.
-///
-/// An `EHR_ACCESS` is no health data: it holds the person's own access
-/// choices, and the gate-keeper rule of
-/// [`crate::service::ehr::access_rule`] decides who changes it.
+/// A person or their representative "shall not be able to directly alter the
+/// electronic health data and related information inserted by health
+/// professionals" (EHDS Art. 5, `docs/law/eu/ehds/text.html`). The person
+/// inserted a version whose committer is `PARTY_SELF` (RM common master04
+/// §Audit Details) or `PARTY_RELATED`, or a demographic version whose
+/// committer names their `PERSON`: our own design. An `EHR_ACCESS` is no
+/// health data; [`crate::service::ehr::access_rule`] decides who changes it.
 ///
 /// # Errors
 /// [`ServiceError::Restricted`] (`403`) when a person or their representative

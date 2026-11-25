@@ -395,23 +395,15 @@ fn container_ref(rm_type: &str, vo_id: &str) -> Result<ObjectRef, VersionIdError
     }))
 }
 
-/// Assemble the canonical RM `EHR` wire body from the identities that make it
-/// up — the single builder behind both the create path
-/// ([`FerroEhrService::ehr_object_from_committed`]) and the read path
-/// ([`FerroEhrService::ehr_read`]), so the two cannot drift apart.
+/// Assembles the canonical RM `EHR` wire body, the one builder of the create
+/// path ([`FerroEhrService::ehr_object_from_committed`]) and the read path
+/// ([`FerroEhrService::ehr_read`]).
 ///
-/// Built as the generated [`Ehr`] and serialized through the native canonical
-/// codec, so `_type` comes first and the attribute order is the BMM's own. The
-/// mandatory `EHR_STATUS` / `EHR_ACCESS` references are 1..1 on the RM class
-/// (RM ehr `ehr.adoc` invariants `Ehr_status_valid` / `Ehr_access_valid`), and
-/// the generated type makes that structural: an EHR missing either cannot be
-/// constructed. `contributions` and `compositions` stay empty — the codec omits
-/// an empty list, so the served body carries neither master list (they are
-/// unbounded and the wire has dedicated collection endpoints for both).
-///
-/// `directory` is `folders.item(1)` (RM ehr `ehr.adoc` invariant
-/// `Directory_in_folders`), derived here rather than passed in, so the two can
-/// never disagree.
+/// The generated [`Ehr`] makes the 1..1 `EHR_STATUS` and `EHR_ACCESS`
+/// references structural (RM ehr `ehr.adoc` `Ehr_status_valid`,
+/// `Ehr_access_valid`). `contributions` and `compositions` stay empty, which
+/// the codec omits; `directory` is derived as `folders.item(1)`
+/// (`Directory_in_folders`).
 ///
 /// # Errors
 /// [`ServiceError::Internal`] when `status_vo` or `access_vo` is absent — an

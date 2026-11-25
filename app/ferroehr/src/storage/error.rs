@@ -222,23 +222,16 @@ const CANCELLED_MESSAGE: &str = "the database cancelled the request's statement;
 pub(crate) const CODEC_MESSAGE: &str = "the server encountered an internal storage-codec error";
 
 /// Classifies a raw [`sqlx::Error`] at the storage boundary into the call
-/// status it surfaces, emitting one trace record with the SQLSTATE and the
-/// constraint.
+/// status it surfaces, tracing the SQLSTATE and the constraint; no driver
+/// text reaches a client body.
 ///
-/// No driver text reaches a client body. The split follows the PostgreSQL
-/// error codes (<https://www.postgresql.org/docs/18/errcodes-appendix.html>):
-///
-/// - `23505`, `23503`, `23001`, `23P01`: a conflict (`409`) with data the
-///   repository holds.
-/// - `23514`, `23502` and every other class-23 code: a fault (`500`), a
-///   violated server-side invariant.
-/// - `40001` and `40P01`: a conflict (`409`, retryable).
-/// - [`sqlx::Error::PoolTimedOut`], [`session::is_connect_failure`],
-///   [`session::is_cut_session`] and `57014`: overloaded (`503` with
-///   `Retry-After`, RFC 9110 §15.6.4).
-/// - anything else: a fault (`500`).
-///
-/// No openEHR spec governs the persistence mechanism: our own design.
+/// By PostgreSQL error code (<https://www.postgresql.org/docs/18/errcodes-appendix.html>):
+/// `23505`, `23503`, `23001` and `23P01` are a conflict (`409`); every other
+/// class-23 code a fault (`500`); `40001` and `40P01` a retryable conflict
+/// (`409`); [`sqlx::Error::PoolTimedOut`], [`session::is_connect_failure`],
+/// [`session::is_cut_session`] and `57014` overloaded (`503` with
+/// `Retry-After`, RFC 9110 §15.6.4); anything else a fault (`500`). No
+/// openEHR spec governs the persistence mechanism: our own design.
 pub(crate) fn classify_sqlx(e: sqlx::Error) -> ServiceError {
     match verdict(&e) {
         Verdict::Overloaded(message) => ServiceError::overloaded(message, e),

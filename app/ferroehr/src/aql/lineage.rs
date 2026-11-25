@@ -300,23 +300,17 @@ impl ArchetypeLineage {
         self.children.is_empty()
     }
 
-    /// Every stored identity that descends from `root`, transitively,
-    /// excluding `root` itself, for a query naming `root` in `form`, with the
-    /// releases of each the query admits.
+    /// Every stored identity that descends from `root`, transitively, excluding
+    /// `root`, for a query naming `root` in `form`, with the releases of each the
+    /// query admits.
     ///
-    /// Data of a child release may be queried with "any previous minor or
-    /// patch variant of any of the specialisation parents" of it (BASE
-    /// Artefact Identification, Referencing §Supporting Archetype-based
-    /// Querying), so a child release joins when the parent reference it
-    /// declares names a release the query admits. For a direct child of `root`
-    /// that is [`ReferenceForm::admits_reference`]; below it, the declared
-    /// reference resolves to the latest stored parent release it matches,
-    /// which must be an admitted one.
-    ///
-    /// The walk is breadth-first and re-visits an identity only when its
-    /// admitted set grows, so a cyclic `specialize` chain (which AOM2 forbids
-    /// but a hostile upload could still attempt across two artefacts)
-    /// terminates instead of looping.
+    /// A child release joins when the parent reference it declares names an
+    /// admitted release (BASE Artefact Identification, Referencing §Supporting
+    /// Archetype-based Querying): for a direct child,
+    /// [`ReferenceForm::admits_reference`]; below it, the latest stored parent
+    /// release the reference matches. The breadth-first walk revisits an
+    /// identity only when its admitted set grows, so a cyclic `specialize` chain
+    /// terminates.
     #[must_use]
     pub fn descendants(
         &self,

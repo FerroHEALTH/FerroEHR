@@ -98,20 +98,15 @@ pub(super) fn check_archetype_id(id: &str, rm_type_name: &str) -> Result<(), Rul
     Ok(())
 }
 
-/// Archetype-identifier shape for uploaded artefacts:
-/// `rm_originator-rm_name-rm_entity.domain_concept.v<version>` (BASE `base_types`
-/// master05 §Syntaxes), read here rather than through the BASE parser, whose
-/// grammar is narrower than an uploaded OPT's identifiers on both axes below.
-/// Tolerances beyond that grammar, each adjudicated against real published
-/// templates (never against CNF valid fixtures, which all conform strictly):
+/// The archetype-identifier shape of an uploaded artefact,
+/// `rm_originator-rm_name-rm_entity.domain_concept.v<version>` (BASE
+/// `base_types` master05 §Syntaxes), wider than the BASE parser's grammar on
+/// two axes that published templates use:
 ///
-/// - the version may be multi-part numeric (`v1.0.0`) — the ADL2-era archetype
-///   HRID form appears in deployed OPT 1.4 exports (the vendored
-///   `Request_for_Pancreas_Special_Urgency_Listing` corpus template);
-/// - NOTE: concept segments tolerate `(`/`)` and digit-leading segments —
-///   Ocean/LANIT tooling emits concept names like
-///   `t_neurologist_examination(1-17)_lanit` (vendored Better corpus); the
-///   strict grammar would refuse real-world templates.
+/// - a multi-part numeric version (`v1.0.0`), as in the vendored
+///   `Request_for_Pancreas_Special_Urgency_Listing` template;
+/// - concept segments with `(`, `)` or a leading digit, as Ocean and LANIT
+///   tooling emit (`t_neurologist_examination(1-17)_lanit`).
 fn is_archetype_id_shaped(id: &str) -> bool {
     fn alphanum_str(s: &str) -> bool {
         let mut chars = s.chars();

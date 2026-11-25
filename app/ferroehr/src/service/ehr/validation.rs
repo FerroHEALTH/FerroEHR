@@ -160,23 +160,14 @@ pub(super) fn duplicate_persistent(ehr_id: EhrId, template_id: &str) -> ServiceE
 
 impl FerroEhrService {
     /// Validates an incoming COMPOSITION against its operational template before
-    /// it is persisted, the single choke point for the JSON and FLAT dispatch
-    /// paths.
+    /// it is persisted, for the JSON and FLAT paths.
     ///
-    /// The RM class-invariant and terminology passes run unconditionally; the
-    /// archetype-conformance pass is gated on a declared and resolved template.
-    /// A declared-but-failing template, or any RM or terminology violation, is a
-    /// `422` (ITS-REST `responses/422.yaml`); syntactic parse failures are `400`
-    /// and caught earlier at the REST negotiation edge.
-    ///
-    /// `incomplete` (a `553|incomplete|` commit, RM common master06 §Incomplete
-    /// Content) relaxes the existence and cardinality lower limits to zero on
-    /// both the template-driven and RM-driven layers. Every other check stays at
-    /// full strictness ("data may be missing, but it may not be wrong").
-    ///
-    /// `party_rule` runs the data-minimisation pass's identified-party rule
-    /// on a typed COMPOSITION in the RM pass's walk ([`crate::privacy`]); a
-    /// finding of it refuses the body before every other pass's findings.
+    /// The RM invariant and terminology passes always run; the archetype pass
+    /// runs on a declared, resolved template. Every violation is a `422`
+    /// (ITS-REST `responses/422.yaml`). `incomplete` relaxes the lower limits to
+    /// zero (RM common master06 §Incomplete Content). `party_rule` runs the
+    /// identified-party rule in the RM pass ([`crate::privacy`]), whose findings
+    /// refuse first.
     ///
     /// # Errors
     /// [`ServiceError::ValidationFailed`] carrying every privacy finding, else
@@ -346,23 +337,14 @@ impl FerroEhrService {
     }
 }
 
-/// Runs the template-independent RM class-invariant and openEHR-terminology
-/// passes over a non-COMPOSITION commit body, folding every violation into one
+/// Runs the template-independent RM invariant and openEHR terminology passes
+/// over a non-COMPOSITION commit body, folding every violation into one
 /// `422`.
 ///
-/// The RM class invariants are properties of the instance rather than of the
-/// resource kind: `ARCHETYPED.Rm_version_valid`, `LOCATABLE.Links_valid` and
-/// `Archetype_node_id_valid`, `LINK`'s three 1..1 attributes
-/// `meaning`/`type`/`target`, and `FEEDER_AUDIT_DETAILS.System_id_valid` (the
-/// §Invariants and §Attributes sections of their
-/// `RM/docs/UML/classes/org.openehr.rm.common.*.adoc` classes) bind every node
-/// carrying the shape at any depth, so the pass the COMPOSITION arm runs applies
-/// unchanged to `EHR_STATUS`, `EHR_ACCESS`, FOLDER and demographic bodies.
-///
-/// `declared` is the root node's RM type, used only when the root's wire
-/// `_type` is absent (canonical JSON requires `_type` only on polymorphic
-/// slots); every descendant dispatches from its own tag or its parent
-/// attribute's declared concrete type.
+/// The RM class invariants (`RM/docs/UML/classes/org.openehr.rm.common.*.adoc`
+/// §Invariants) bind every node of their shape at any depth, so the pass
+/// applies to `EHR_STATUS`, `EHR_ACCESS`, FOLDER and demographic bodies alike.
+/// `declared` is the root's RM type, used when the root carries no `_type`.
 ///
 /// # Errors
 /// [`ServiceError::ValidationFailed`] carrying every violation, keyed by its RM

@@ -113,17 +113,12 @@ pub fn plain_text(value: &str) -> DvText {
 /// The caller's side of one direct write: the content and the commit metadata
 /// the service does not generate.
 ///
-/// A direct write on a change-controlled resource implicitly creates a
-/// `CONTRIBUTION` and an `ORIGINAL_VERSION` (`UpdateVersion.yaml`), and its
-/// metadata reaches the server through the `openehr-version` and
-/// `openehr-audit-details` request headers: "None of these headers are
-/// mandatory, but whatever is provided it MUST be merged with the default
-/// VERSION and `VERSION.audit_details` attributes on commit runtime" (ITS-REST
-/// overview `Requests_and_responses.md` §"openehr-version and
-/// openehr-audit-details"). Every member the caller leaves out is the server
-/// default, so [`WriteRequest::new`] is the plain server commit. A delete
-/// carries no content (RM common master06 §Logical Deletion), so its `data` is
-/// `()`.
+/// The metadata arrives through the `openehr-version` and
+/// `openehr-audit-details` headers and "MUST be merged with the default
+/// VERSION and `VERSION.audit_details` attributes" (ITS-REST overview
+/// `Requests_and_responses.md` §"openehr-version and openehr-audit-details"),
+/// so [`WriteRequest::new`] is the plain server commit. A delete carries no
+/// content (RM common master06 §Logical Deletion): its `data` is `()`.
 #[derive(Debug, Clone)]
 pub struct WriteRequest<T = ()> {
     /// The RM content the write commits.

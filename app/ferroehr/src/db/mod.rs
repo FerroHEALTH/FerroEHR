@@ -587,21 +587,15 @@ pub async fn connect_domains(settings: &DbConfig) -> Result<DomainPools, DbError
     })
 }
 
-/// A pool for `domain` over the DSN an existing pool already holds, for a
-/// caller that has a [`PgPool`] and no configuration.
+/// A pool for `domain` over the DSN an existing pool holds, for a caller with
+/// a [`PgPool`] and no configuration.
 ///
-/// This is what lets [`crate::service::FerroEhrService::new`] stay synchronous
-/// and infallible while still routing each chapter at its own schema:
-/// `PgPool::connect_options` hands back the connect options the pool was built
-/// from, and `PgPoolOptions::connect_lazy_with` builds a pool from them with no
-/// I/O at all.
-///
-/// It carries the pool defaults rather than the deployment's `[database]` tuning,
-/// which it cannot see, and it opens no connection until one is asked for
-/// (`min_connections(0)`, so constructing a service costs nothing). A
-/// deployment that tunes the pool or separates the runtime roles supplies its
-/// own pools through [`crate::service::FerroEhrService::with_demographic_pool`]
-/// and its siblings instead.
+/// It is built lazily from the pool's connect options, so
+/// [`crate::service::FerroEhrService::new`] stays synchronous and opens no
+/// connection, with the pool defaults. A deployment that tunes its pools
+/// supplies them through
+/// [`crate::service::FerroEhrService::with_demographic_pool`] and its
+/// siblings.
 #[must_use]
 pub fn domain_pool_from(pool: &PgPool, domain: Domain) -> PgPool {
     let defaults = DbConfig::default();
@@ -1515,18 +1509,11 @@ async fn verify_set(
 /// Runs the bootstrap, the `ext` set and each named set on one dedicated
 /// connection.
 ///
-/// `ext` first, unconditionally: every later set finds its roles, helper
-/// functions and posture table in place, and a database that carries only one
-/// relocated domain still gets the helpers that domain's storage code calls.
-/// Already-applied sets are no-ops, which is what makes "the `ext` set is
-/// applied per database by whichever domain reaches it first" true without any
-/// bookkeeping of our own.
-///
-/// A schema a set only NAMES ([`Domain::names_schemas_of`]) and which this run
-/// had to create is dropped again afterwards, so a relocated database ends
-/// holding `ext` and its own sets' schemas and nothing else. The drop is
-/// `RESTRICT` (<https://www.postgresql.org/docs/18/sql-dropschema.html>): a
-/// schema that came to hold anything stays, and the failure is reported.
+/// `ext` runs first, so every later set finds its roles, helpers and posture
+/// table, and an applied set is a no-op. A schema a set only names
+/// ([`Domain::names_schemas_of`]) that this run created is dropped again with
+/// `RESTRICT` (<https://www.postgresql.org/docs/18/sql-dropschema.html>), so
+/// one that came to hold anything stays and the failure is reported.
 async fn apply_migrations(conn: &mut PgConnection, domains: &[Domain]) -> Result<(), DbError> {
     retired::guard(&mut *conn).await?;
     let named_only: Vec<&'static str> = bootstrap_schemas(domains)
@@ -1758,24 +1745,16 @@ pub async fn erase_inventory(settings: &DbConfig) -> Result<EraseReport, DbError
     Ok(report)
 }
 
-/// Drops every schema this build creates, in every database the domains reach,
-/// and with them every row they hold and the stored instance id.
+/// Drops every schema this build creates, in every database the domains
+/// reach, with every row they hold and the stored instance id.
 ///
-/// Per database, one transaction runs `DROP SCHEMA … CASCADE` for the `ext`
-/// schema and each resident domain's schema (`clinical`, `party`, `audit`),
-/// so a database is either erased whole or left as it was
-/// (<https://www.postgresql.org/docs/18/sql-dropschema.html>). The cascade takes
-/// any extension installed in `ext`, the cold-tier partitions and
-/// the default privileges granted in those schemas. Cluster-wide objects stay:
-/// the `ferroehr_*` roles, and the database itself. Another domain's schema of
-/// this build that a database holds empty, as an earlier release left in a
-/// relocated database, is dropped too. A schema already absent is skipped, so a
-/// second run drops nothing and reports an empty list.
-///
-/// The returned report lists, per database, the schemas this call dropped;
-/// `instance_id` is the id that was stored before the drop. No openEHR spec
-/// governs this — our own design, for the removal of all data and settings
-/// that `docs/law/eu/cra/text.html` Annex I Part I(2)(m) asks for.
+/// Per database, one transaction drops `ext` and each resident domain's
+/// schema `CASCADE` (<https://www.postgresql.org/docs/18/sql-dropschema.html>),
+/// and an empty schema of another domain; the roles and the database stay. A
+/// schema already absent is skipped. The report lists the schemas dropped per
+/// database and the instance id stored before. No openEHR spec governs this:
+/// our own design, for the removal `docs/law/eu/cra/text.html` Annex I Part
+/// I(2)(m) asks for.
 ///
 /// # Errors
 ///

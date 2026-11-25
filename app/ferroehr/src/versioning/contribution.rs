@@ -60,20 +60,14 @@ pub(crate) enum Action {
     Attest,
 }
 
-/// Classify one VERSION of a contribution: resolve (and validate) its
-/// `commit_audit.change_type` to the canonical numeric `audit_change_type`
-/// code, and derive the storage [`Action`], rejecting spec-invalid combinations
-/// (RM common master06 §Contributions):
+/// Classifies one VERSION of a contribution: resolves its
+/// `commit_audit.change_type` to the `audit_change_type` code and derives the
+/// storage [`Action`] (RM common master06 §Contributions).
 ///
-/// - *addition of new item* → a **new** `VERSIONED_OBJECT`, `249|creation|`
-///   (so `249` with a preceding is invalid, and any non-`249` needs an existing
-///   object);
-/// - *deletion* → a new version whose data is Void, `523|deleted|` (so data
-///   alongside `523` is invalid);
-/// - *modification* → `250|amendment|` / `251|modification|` / `252` / `253` /
-///   `816` / `817`, content-carrying commits against an existing object;
-/// - *attestation* → `666|attestation|` attaches to an existing
-///   `ORIGINAL_VERSION` — **not** a new version; requires a preceding and no
+/// - `249|creation|`: a new `VERSIONED_OBJECT`, with no preceding version.
+/// - `523|deleted|`: a new version with no data.
+/// - `250` to `253`, `816` and `817`: content against an existing object.
+/// - `666|attestation|`: attaches to an existing `ORIGINAL_VERSION`, with no
 ///   data.
 ///
 /// # Errors
@@ -362,21 +356,15 @@ fn read_undeclared_members(
 }
 
 /// Decodes a CONTRIBUTION commit body through the generated `NewContribution`
-/// of its API group (`T`), the one door both commit paths, EHR and
-/// demographic, read the wire through.
+/// of its API group (`T`), for both the EHR and the demographic commit
+/// paths.
 ///
-/// The released operation types the body `schemas/ehr/NewContribution.yaml`
-/// (and its demographic twin): `versions[]` of `schemas/ehr/UpdateVersion.yaml`
-/// and an `audit` of `schemas/common/UpdateAudit.yaml`. A body the generated
-/// envelope cannot read is missing a required member or carries one in a shape
-/// the schema does not give it: the "malformed request syntax, syntactically
-/// invalid content" ITS-REST overview `Requests_and_responses.md` answers
-/// `400`, the `responses/400_CONTRIBUTION.yaml` the operation declares (it
-/// declares no `422`). That covers an absent `audit` or `change_type`, a
-/// `lifecycle_state` that is not a `DV_CODED_TEXT` (the `CODE_PHRASE` shape
-/// `{terminology_id, code_string}` and plain strings), a `description` that is not a `DV_TEXT` object
-/// (`schemas/data_types/UDvText.yaml`), and a commit audit `_type` outside the
-/// generated tag set.
+/// A body the generated envelope cannot read (`schemas/ehr/NewContribution.yaml`)
+/// is "syntactically invalid content" (ITS-REST overview
+/// `Requests_and_responses.md`), the `400` of
+/// `responses/400_CONTRIBUTION.yaml`: an absent `audit` or `change_type`, a
+/// `lifecycle_state` that is no `DV_CODED_TEXT`, a `description` that is no
+/// `DV_TEXT`, or an audit `_type` outside the generated set.
 ///
 /// # Errors
 /// [`ServiceError::BadRequest`] naming the JSON path the generated decoder
