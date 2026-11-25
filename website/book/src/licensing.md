@@ -29,6 +29,18 @@ The server behaves identically under either; identifiers it mints carry a
 few bits derived from the licence id in place of random bits, so a record
 states which grant it was written under, and nothing else.
 
+The token is a cleartext-signed licence (RFC 9580 §7) followed by the
+certificate of the key that signed it. The server accepts it when that
+certificate's primary key is one of the licensor's keys it embeds, the
+primary key itself made the one text signature, and the signature verifies.
+The licensor's keys are Ed25519 keys today. The server also verifies a token
+signed by an ML-DSA-65+Ed25519 key (RFC 9980 algorithm ID 30), the
+post-quantum composite: a version 6 key with a valid direct-key
+self-signature (RFC 9580 §5.2.3.10), whose signature must name the key by its
+fingerprint, hash with a digest of at least 256 bits (RFC 9980 §5.3.1) and
+verify in both its Ed25519 and its ML-DSA-65 half (§3.2). A signature over
+MD5, SHA-1 or RIPEMD-160 is refused for any key (RFC 9580 §9.5).
+
 A commercial licence is arranged with Cadasto B.V., the Licensor: write to
 [info@cadasto.com](mailto:info@cadasto.com) or use
 <https://www.cadasto.com/contact/>. Technical questions go to the maintainer
