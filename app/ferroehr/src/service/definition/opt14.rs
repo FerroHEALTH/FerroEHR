@@ -208,6 +208,12 @@ impl FerroEhrService {
             note_cache_event("hit");
             return Ok(wt);
         }
+        // An id the OPT 1.4 store held nothing under at this revision is an ADL2 template or
+        // none; the next definition revision forgets it (#6335).
+        if generation.opt14_absent(&key) {
+            note_cache_event("absent");
+            return self.web_template_adl2_cached(template_id).await;
+        }
         note_cache_event("miss");
 
         // On a miss the stored OPT XML is loaded once, and an id that is not an
@@ -215,6 +221,7 @@ impl FerroEhrService {
         // commit against an ADL2-registered template still resolves. Only after
         // BOTH stores miss is the id unknown (the commit-path 422).
         let Some(xml) = template_repo::template_xml(&self.pool, template_id).await? else {
+            generation.note_opt14_absent(&key);
             return self.web_template_adl2_cached(template_id).await;
         };
         build_cached_web_template(&generation, &key, template_id, &xml).await

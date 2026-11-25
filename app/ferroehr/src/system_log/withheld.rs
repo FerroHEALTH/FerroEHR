@@ -18,7 +18,7 @@
 use ehds_logging::withheld::{Holds, Reader};
 use jiff::Timestamp;
 use sea_query::{Alias, Expr, ExprTrait, PostgresQueryBuilder, Query};
-use sea_query_sqlx::SqlxBinder as _;
+use sea_query_sqlx::{SqlxBinder as _, SqlxValues};
 
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
@@ -27,7 +27,8 @@ use crate::system_log::fhir::{access_record, to_resource};
 use crate::system_log::message::AuditContext;
 use crate::system_log::render::classified;
 use crate::system_log::search::condition::search_condition;
-use crate::system_log::search::resolve_criteria;
+use crate::system_log::search::{TokenMatch, resolve_criteria};
+use crate::system_log::store::page_shapes::Kind;
 use crate::system_log::store::{AuditPage, AuditSearchFilter, AuditStore, newest_first};
 
 impl AuditStore {
@@ -39,17 +40,13 @@ impl AuditStore {
         let Some(resolved) = resolve_criteria(&self.pool, filter).await? else {
             return Ok(Vec::new());
         };
-        let (sql, values) = Query::select()
-            .distinct()
-            .column(Alias::new("ehr_id"))
-            .from((Alias::new("audit"), Alias::new("audit_record")))
-            .cond_where(search_condition(filter, &resolved))
-            .and_where(Expr::col(Alias::new("ehr_id")).is_not_null())
-            .build_sqlx(PostgresQueryBuilder);
-        Ok(sqlx::query_scalar_with(sqlx::AssertSqlSafe(sql), values)
-            .persistent(false)
-            .fetch_all(&mut *acquire(&self.pool).await?)
-            .await?)
+        let (template, values) = self.shaped(Kind::Ehrs, filter, &resolved);
+        Ok(
+            sqlx::query_scalar_with(sqlx::AssertSqlSafe(template.sql(0)), values)
+                .persistent(false)
+                .fetch_all(&mut *acquire(&self.pool).await?)
+                .await?,
+        )
     }
 
     /// The ITI-81 retrieval of the person's own trail: the records `filter`
@@ -75,9 +72,8 @@ impl AuditStore {
         let Some(resolved) = resolve_criteria(&self.pool, filter).await? else {
             return Ok(AuditPage::empty(filter));
         };
-        let (sql, values) =
-            newest_first(search_condition(filter, &resolved)).build_sqlx(PostgresQueryBuilder);
-        let rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
+        let (template, values) = self.shaped(Kind::Trail, filter, &resolved);
+        let rows = sqlx::query_with(sqlx::AssertSqlSafe(template.sql(0)), values)
             .persistent(false)
             .fetch_all(&mut *acquire(&self.pool).await?)
             .await?;
@@ -107,6 +103,30 @@ impl AuditStore {
             more,
         })
     }
+}
+
+/// The read of the EHR ids the records `filter` selects name, each once, its
+/// token criteria resolved to `resolved`.
+pub(crate) fn ehrs_statement(
+    filter: &AuditSearchFilter,
+    resolved: &[Option<TokenMatch>],
+) -> (String, SqlxValues) {
+    Query::select()
+        .distinct()
+        .column(Alias::new("ehr_id"))
+        .from((Alias::new("audit"), Alias::new("audit_record")))
+        .cond_where(search_condition(filter, resolved))
+        .and_where(Expr::col(Alias::new("ehr_id")).is_not_null())
+        .build_sqlx(PostgresQueryBuilder)
+}
+
+/// The read of the records `filter` selects, newest first, its token
+/// criteria resolved to `resolved`.
+pub(crate) fn trail_statement(
+    filter: &AuditSearchFilter,
+    resolved: &[Option<TokenMatch>],
+) -> (String, SqlxValues) {
+    newest_first(search_condition(filter, resolved)).build_sqlx(PostgresQueryBuilder)
 }
 
 /// Whether the person sees the record of `event` at `now`.

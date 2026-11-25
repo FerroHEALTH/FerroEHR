@@ -54,6 +54,16 @@ pub(crate) mod decode;
 pub(crate) mod prefer;
 pub(crate) mod resource;
 
+/// Enters `stage`, the decode of a request body or the encode of an answer,
+/// once the request has given back the connections it keeps: neither runs a
+/// statement, and one that needs the store checks out again (#5774).
+pub(crate) fn off_the_pool(
+    stage: ferroehr::telemetry::stage::Stage,
+) -> ferroehr::telemetry::stage::Entered {
+    ferroehr::db::acquire::release_held();
+    ferroehr::telemetry::stage::enter(stage)
+}
+
 /// A negotiated wire representation of a resource (ITS-REST
 /// `Resources.md §Data representation` + §Simplified Formats).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

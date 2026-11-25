@@ -22,6 +22,7 @@
 
 pub mod path;
 pub mod project;
+pub mod shapes;
 pub mod sql;
 
 use openehr_query::ast::{

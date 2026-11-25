@@ -11,14 +11,16 @@
 //! "nothing recorded". The service then drops the stale copy, judges the
 //! query again from a fresh read, as a direct read judged on an older
 //! revision is judged again (`FerroEhrService::ehr_verdict_at`), and runs
-//! it once more; while the store keeps moving it tries again for at most
-//! [`STALE_WAIT`], and then refuses with `503` and `Retry-After`
-//! ([`ServiceError::access_refreshing`]). Each case is counted on
-//! `aql_stale_access_total{copy, outcome}`. No openEHR spec governs the
-//! copies or the refusal: our own design (#5794).
+//! it once more. It refuses with `503` and `Retry-After`
+//! ([`ServiceError::access_refreshing`]) only while the store keeps moving:
+//! once a copy it already read again is found older once more and
+//! [`STALE_WAIT`] has passed since the first stale statement, or once a
+//! fresh read stays equal to the stale one for [`STALE_WAIT`] of pauses.
+//! Each case is counted on `aql_stale_access_total{copy, outcome}`. No
+//! openEHR spec governs the copies or the refusal: our own design (#5794).
 
 use std::borrow::Cow;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::access_eval::condition::{AccessCondition, current};
 use crate::access_eval::stale::{STALE_POLL, STALE_WAIT};
@@ -28,32 +30,63 @@ use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::service::query::request::QueryAccess;
 
+/// What a query's re-judge loop has seen of the store since its first
+/// statement that found a copy stale.
+#[derive(Debug, Default)]
+pub(super) struct Rejudge {
+    /// When the first statement found a copy stale.
+    since: Option<Instant>,
+    /// The copies this query has read again.
+    read_again: Vec<StaleCopy>,
+}
+
+impl Rejudge {
+    /// Records a statement that found `copy` stale at `at`, and answers
+    /// whether the store moved past this query's own fresh read of `copy`.
+    fn stale(&mut self, copy: StaleCopy, at: Instant) -> bool {
+        self.since.get_or_insert(at);
+        if self.read_again.contains(&copy) {
+            return true;
+        }
+        self.read_again.push(copy);
+        false
+    }
+
+    /// Whether a fresh judgement read at `at` refuses the query: only when
+    /// the store moved and [`STALE_WAIT`] has passed since the first stale
+    /// statement, so a slow read of a store that holds still never does.
+    fn refuses(&self, moved: bool, at: Instant) -> bool {
+        moved
+            && self
+                .since
+                .is_some_and(|since| at.saturating_duration_since(since) >= STALE_WAIT)
+    }
+}
+
 impl FerroEhrService {
     /// The condition of a query whose statement found `copy` stale, judged
     /// again from a fresh read: the running request's condition, or the one
     /// `base` gives outside a request, with its care resolved and its EHR decided for
     /// `pinned`, as [`Self::query_access_condition`] does.
     ///
-    /// A judgement equal to `stale` reads the copy again after a pause; once
-    /// [`STALE_WAIT`] has passed since `since`, the first stale statement,
-    /// the query is refused.
+    /// A judgement equal to `stale` reads the copy again after a pause, for
+    /// at most [`STALE_WAIT`] of pauses; a judgement that differs refuses
+    /// the query when [`Rejudge::refuses`] says the store kept moving.
     ///
     /// # Errors
-    /// [`ServiceError::AccessRefreshing`] (`503`) once the wait has passed,
-    /// and the errors of the reads.
+    /// [`ServiceError::AccessRefreshing`] (`503`) when the store kept moving
+    /// or the copy did not catch up, and the errors of the reads.
     pub(super) async fn judged_again(
         &self,
         copy: StaleCopy,
         base: &QueryAccess,
         pinned: Option<&[EhrId]>,
         stale: &AccessCondition,
-        since: Instant,
+        rejudge: &mut Rejudge,
     ) -> Result<AccessCondition, ServiceError> {
+        let moved = rejudge.stale(copy, Instant::now());
+        let mut paused = Duration::ZERO;
         loop {
-            if since.elapsed() >= STALE_WAIT {
-                count(copy, "refused");
-                return Err(ServiceError::access_refreshing());
-            }
             match copy {
                 StaleCopy::Pinned => {
                     for ehr_id in pinned.unwrap_or_default() {
@@ -68,11 +101,20 @@ impl FerroEhrService {
             };
             let fresh = Box::pin(self.query_access_condition(&unresolved, pinned)).await?;
             if fresh != *stale {
+                if rejudge.refuses(moved, Instant::now()) {
+                    break;
+                }
                 count(copy, "judged_again");
                 return Ok(fresh);
             }
+            if paused >= STALE_WAIT {
+                break;
+            }
             tokio::time::sleep(STALE_POLL).await;
+            paused = paused.saturating_add(STALE_POLL);
         }
+        count(copy, "refused");
+        Err(ServiceError::access_refreshing())
     }
 }
 
@@ -86,3 +128,7 @@ fn count(copy: StaleCopy, outcome: &'static str) {
         ],
     );
 }
+
+#[cfg(test)]
+#[path = "stale_tests.rs"]
+mod tests;
