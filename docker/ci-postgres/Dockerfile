@@ -20,6 +20,10 @@ LABEL org.opencontainers.image.title="FerroEHR CI PostgreSQL" \
       org.opencontainers.image.vendor="Cadasto B.V." \
       org.opencontainers.image.licenses="BUSL-1.1 AND PostgreSQL"
 
+# The upstream image owns its data and socket directories as `postgres`, so
+# a throwaway database initialises and serves without root.
+USER postgres
+
 CMD ["postgres", \
      "-c", "fsync=off", \
      "-c", "synchronous_commit=off", \

@@ -98,6 +98,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # The app and viewer scans apply every OpenVEX document under
+      # security/vex/, the reviewed set the weekly published-image scan
+      # (image-scan.yml) applies, so a finding the documents judge not_affected
+      # or fixed passes and every other fixable HIGH or CRITICAL one fails. The
+      # postgres image is scanned under a local tag no `pkg:oci/` product names.
+      - name: The VEX documents the app and viewer scans apply
+        id: vex
+        run: |
+          set -euo pipefail
+          docs=()
+          for doc in security/vex/*.json; do
+            [ -e "$doc" ] || continue
+            docs+=("$doc")
+          done
+          echo "VEX documents applied: ${#docs[@]}"
+          (IFS=,; echo "docs=${docs[*]}") >> "$GITHUB_OUTPUT"
+
       # The published index is dual-arch and trivy reads ONE variant per
       # invocation (`--platform`, default linux/amd64), so each variant is
       # scanned explicitly (#2412) — the app and viewer images by their pushed
@@ -109,6 +126,7 @@ jobs:
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         env:
           TRIVY_PLATFORM: linux/amd64
+          TRIVY_VEX: ${{ steps.vex.outputs.docs }}
         with:
           skip-setup-trivy: true
           scan-type: image
@@ -122,6 +140,7 @@ jobs:
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         env:
           TRIVY_PLATFORM: linux/arm64
+          TRIVY_VEX: ${{ steps.vex.outputs.docs }}
         with:
           skip-setup-trivy: true
           scan-type: image
@@ -139,6 +158,7 @@ jobs:
         if: inputs.viewer-digest != ''
         env:
           TRIVY_PLATFORM: linux/amd64
+          TRIVY_VEX: ${{ steps.vex.outputs.docs }}
         with:
           skip-setup-trivy: true
           scan-type: image
@@ -153,6 +173,7 @@ jobs:
         if: inputs.viewer-digest != ''
         env:
           TRIVY_PLATFORM: linux/arm64
+          TRIVY_VEX: ${{ steps.vex.outputs.docs }}
         with:
           skip-setup-trivy: true
           scan-type: image

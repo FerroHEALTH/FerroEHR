@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/distroless-os-packages",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-11-13T00:00:00Z",
-  "version": 10,
+  "timestamp": "2026-11-25T00:00:00Z",
+  "version": 11,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -1869,6 +1869,55 @@
           "dlopen",
           "regcomp",
           "regexec"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-124851"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libzstd1"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libzstd1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer. That program is the only ELF executable in each image (no shell, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, it imports neither dlopen nor dlmopen, and the file names no libzstd shared object, so the Debian libzstd.so.1 that libzstd1 installs is never mapped into either process. The only ZSTD dynamic symbols in the server binary are four weak undefined ZSTD_trace_* hooks, Zstandard's optional tracing callbacks, which stay unresolved because no loaded object defines them. The flaw is in the Zstandard 1.5.7 decoder of libzstd1 1.5.7+dfsg-1, which Debian fixes in 1.5.7+dfsg-1+deb13u1 (DSA-6657-1); the distroless base has not yet been rebuilt with it, and the statement goes when the base carries the fix. The Zstandard copy the server binary links statically is a separate finding, judged in rust-releases.openvex.json.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen"
+        ],
+        "forbidden_strings": [
+          "libzstd.so"
         ]
       }
     }
