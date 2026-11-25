@@ -17,15 +17,13 @@
 # Docs: https://docs.github.com/en/code-security/code-scanning
 name: CodeQL
 
-# Pull-request runs are path-filtered to what the two analyzers read, and each
-# matrix leg is then scoped by the in-workflow `changes` gate (#2798): the rust
-# leg runs when Rust inputs changed, the actions leg when workflow or action
-# files changed. The daily run on main analyses both, so main's alert set is at
-# most a day old; a push to main starts nothing, because the pull request was
-# analysed (#6515). CodeQL is not a required check, so a skipped leg blocks no
-# merge.
+# On a push to main and weekly, never on a pull request or a merge group
+# (owner ruling 2026-11-25): CodeQL is advisory (ai-code-review.md) and its
+# runners are better spent on the gate. A push runs the legs its paths reach
+# (the `changes` gate below, #2798); the weekly run and a dispatch analyse
+# both languages. A newer push cancels the older analysis on its ref.
 on:
-  pull_request:
+  push:
     branches: [main]
     paths:
       - "**/*.rs"
@@ -34,12 +32,12 @@ on:
       - ".github/workflows/**"
       - ".github/actions/**"
   schedule:
-    - cron: "23 5 * * *" # daily 05:23 UTC, off the hour
+    - cron: "23 5 * * 1" # Mondays 05:23 UTC, off the hour
   workflow_dispatch:
 
 concurrency:
-  group: codeql-${{ case(github.event_name == 'pull_request', github.ref, github.sha) }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
 
 # No permissions by default — the analyse job grants its own; without this the
 # workflow would inherit the repository default.
@@ -67,14 +65,14 @@ jobs:
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
-          PR_BASE: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          # The pull request's own paths, from its merge base (#4129).
-          if [ "$EVENT_NAME" != "pull_request" ] \
-            || ! git rev-parse --verify --quiet "$PR_BASE" >/dev/null \
-            || ! changed="$(bash scripts/lib/changed-paths.sh "$PR_BASE" "$PR_HEAD")"; then
+          # The push's own paths, from the commit it moved main from (#4129).
+          if [ "$EVENT_NAME" != "push" ] \
+            || ! git rev-parse --verify --quiet "$PUSH_BEFORE" >/dev/null \
+            || ! changed="$(bash scripts/lib/changed-paths.sh "$PUSH_BEFORE" "$PUSH_SHA")"; then
             echo "No diff to scope (schedule, dispatch, or base unavailable): both legs run."
             echo 'languages=["rust","actions"]' >> "$GITHUB_OUTPUT"
             exit 0
