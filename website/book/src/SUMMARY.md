@@ -27,6 +27,8 @@
   - [CRA risk assessment](compliance/cra-risk-assessment.md)
   - [Hazard log: the logging component](compliance/hazard-log.md)
   - [The logging component's intended performance](compliance/logging-performance.md)
+  - [The EHDS logging checklist](compliance/logging-checklist.md)
+  - [EEHRxF metadata from the Reference Model](compliance/eehrxf-annex-iii.md)
   - [Claims review](compliance/claims-review.md)
 
 # Integrate
