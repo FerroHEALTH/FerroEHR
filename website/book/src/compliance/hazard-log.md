@@ -62,7 +62,8 @@ learn that their record was read. Under EHDS Art. 9 a patient has a right to
 that information.
 
 **Control:** every generated ITS-REST operation has an explicit audit
-classification, and an unknown operation falls back to the audited default.
+classification, and an operation without one has no class to be recorded
+under, so every mounted route is held to its own.
 The extension routes that change a record carry one too: the physical delete
 of a demographic party is recorded as a delete of that party, as the physical
 EHR delete is of the EHR. A rejected access (`401`, `403`) is always recorded.
@@ -79,7 +80,7 @@ unless it is accepted by name.
 - `app/ferroehr-rest/src/system_log/classify.rs`:
   `every_generated_operation_is_explicit`,
   `every_read_operation_produces_an_access_record`,
-  `unrecognised_operation_fails_closed_to_default`,
+  `an_operation_without_a_row_has_no_audit_class`,
   `representative_mappings`;
 - `app/ferroehr-rest/tests/it/admin_party_delete_http.rs`:
   `an_admin_deletes_the_party_and_the_access_record_names_it`;
@@ -93,9 +94,8 @@ unless it is accepted by name.
 - `app/ferroehr/tests/it/access_event_fail_closed.rs`:
   `a_subject_lookup_is_withheld_when_its_record_is_rejected`,
   `an_extract_export_is_withheld_when_its_record_is_rejected`;
-- `app/ferroehr/src/config/deployment.rs`:
-  `production_refuses_each_open_gap_and_names_the_remedy`,
-  `the_audit_fail_mode_is_no_gap`;
+- `app/ferroehr/src/config/deployment/tests.rs`:
+  `production_refuses_each_open_gap_and_names_the_remedy`;
 - `app/ferroehr/tests/it/legal_marks.rs`:
   `setting_and_lifting_a_mark_is_recorded_in_the_access_trail`;
 - `app/ferroehr-rest/tests/it/audit_route_coverage.rs`:
@@ -155,20 +155,19 @@ the held composition (`access-delay:<vo>`).
   `nen_7513_the_actor_roles_are_recorded_and_rendered_in_both_formats`;
 - `app/ferroehr/tests/it/audit_store.rs`:
   `access_fields_round_trip_on_both_write_paths`,
-  `the_accessing_organisation_round_trips_on_both_write_paths`,
+  `the_accessing_provider_round_trips_on_both_write_paths`,
   `the_actor_roles_round_trip_on_both_write_paths`,
   `both_inserts_persist_the_authentication_columns`;
 - `app/ferroehr-rest/tests/it/patient_data_assurance.rs`:
   `a_token_below_the_minimum_gets_the_step_up_challenge`,
-  `a_person_token_through_an_unlisted_client_is_refused`,
   `a_delegate_acting_for_a_professional_passes_and_is_recorded`;
-- `app/ferroehr-rest/src/system_log/middleware.rs`:
+- `app/ferroehr-rest/src/system_log/middleware/tests.rs`:
   `ehr_id_from_the_matched_route`, `object_id_from_template_paths`,
   `object_id_from_query_paths`, `object_id_from_demographic_paths`;
 - `app/ferroehr-rest/tests/it/audit_e2e.rs`:
   `unauthenticated_request_emits_401_record`,
   `aql_execute_emits_one_access_record_per_served_ehr`;
-- `app/ferroehr/src/system_log/fhir.rs`:
+- `app/ferroehr/src/system_log/fhir/tests.rs`:
   `dicom_and_fhir_agree_on_the_data_flow_direction`,
   `delete_carries_the_agent_types_balp_delete_fixes`,
   `a_classified_read_names_its_object_by_identifier`;
@@ -257,7 +256,7 @@ data it served.
 `an_unstamped_row_is_assessed_from_the_body_at_read`;
 `app/ferroehr-rest/tests/it/audit_e2e.rs`:
 `composition_get_records_the_origins_of_the_served_data`;
-`app/ferroehr/src/system_log/fhir.rs`:
+`app/ferroehr/src/system_log/fhir/tests.rs`:
 `query_record_carries_the_origins_of_the_served_data`.
 
 **Remains:** the DICOM rendering carries no origins, because PS3.15 defines no
@@ -286,13 +285,10 @@ unless accepted by name.
 
 **Shown by:**
 
-- `app/ferroehr/src/config/audit_tests.rs`:
-  `a_retention_below_the_jurisdiction_floor_is_refused`,
-  `the_ehds_floor_holds_in_every_member_state_and_a_longer_national_floor_wins`,
-  `retention_years_meets_a_floor_in_years_exactly`,
-  `a_ceiling_below_a_floor_is_refused`;
+- `app/ferroehr-rest/tests/it/access_policy_http.rs`:
+  `a_log_retention_that_breaks_a_bound_is_refused_and_one_that_holds_applies`;
 - `app/ferroehr/src/system_log/retention.rs`:
-  `the_ehds_floor_reaches_every_member_state_and_a_longer_national_floor_wins`;
+  `the_floor_is_art_9_2_or_the_longest_declared_floor`;
 - `app/ferroehr/tests/it/audit_store.rs`:
   `reap_deletes_only_rows_past_the_horizon`,
   `reap_years_deletes_only_rows_past_the_calendar_horizon`;
@@ -512,3 +508,4 @@ EHDS-side risk assessment of the component.
 | 21 | 2026-11-10 | Reviewed for release candidate 5.7.0-rc1 (changes since the 5.6.1 review; 5.6.2 and 5.6.3 changed no module of the logging component: every access record of an authenticated request carries the outcome of the party binding with the bound party, its groups, the provider acted for and the representation, and the FHIR `AuditEvent`, the DICOM message and the syslog feed render them (#5043, #5118, audit migration 0023); a delegated access records `acting_mode = "delegated"` where it recorded `client`, and a system caller's `system` (#5118); every refused request is an access record through the gated path, with the `refused-*` code of a binding or caller-kind refusal, its own code per caller kind and the name of a missing key claim, and the refusals of tokens that failed verification are budgeted by source network (#5119, #5139, #5140, audit migrations 0024 and 0025); the recorded client is the one the issuer profile admitted, never another `client_id` claim (#5194); `[audit.syslog]` reads its TLS from `[audit.syslog.tls]` (#5217); the family crates move to `ehds-logging` and `ihe-atna` 0.9.1, and the FHIR feed tries a delivery again as `[audit.fhir_feed.endpoint] retry` states while its outbox still keeps every record until the sink takes it, as H5 states (#5209, #5259, #5331); H5 named its four floor tests in `config/mod.rs`, which #5259 moved to `config/audit_tests.rs`, and its member-state test in `system_log/config.rs`, which moves with the retention bounds to `system_log/retention.rs` (#5331), so it names both files; the audit keys take the 5.7.0 configuration tree (#5259); H2 named two assurance tests #5003 renamed, so it names `a_person_token_through_an_unlisted_client_is_refused` and `a_delegate_acting_for_a_professional_passes_and_is_recorded`); every named test exists; no hazard added |
 | 22 | 2026-11-11 | Reviewed for release candidate 5.7.0-rc3 (changes since the 5.7.0-rc1 review; 5.7.0-rc2 changed no module of the logging component: the access record takes the purposes of use and the professional roles an IHE IUA access token states, in the new `token_attributes` column (audit migration 0026, chain digest version 3), renders them in the EHDS access record and the BALP `AuditEvent`, and refuses and records a request whose `[audit] purpose_header` names a purpose the token does not state (#5323); a purpose the token states marks an emergency access as a declared one does, so H9 names it and its test; a contact point's request message id is recorded (#5011); `[audit.syslog] url` renders with its credentials masked (#5322); the component moves to `ehds-logging` and `ihe-atna` 0.12.0 (#5320)); every named test exists; no hazard added |
 | 23 | 2026-11-13 | Reviewed for release candidate 5.7.1-rc1 (changes since the 5.7.0-rc3 review; 5.7.0-rc4 and 5.7.0 changed no module of the logging component: FerroEHR takes `ehds-logging` and `ihe-atna` 0.16.0 (#5417, #5422, #5465) and then 0.18.0 with `ferrohealth-smart` 0.24.1 (#5437, #5438); the category map is the audit category register, an admin register written by `[authz.rbac] admin_role` with every version kept and every read and write recorded, and a new version classifies the next access on every replica, so H3 states the register and names `production_requires_a_category_map_unless_accepted`, the test that a production deployment refuses a register write leaving the map empty (#5442); a body without `FEEDER_AUDIT` records the origin of the committer's `data_origin` grant in the CDR in place of the `[[authz.origin]]` register, and H4 names the test under its new name, `a_granted_origin_stamps_a_direct_commit` (#5439); the recorded client is the one the policy grants admitted (#5436); the ITI-81 retrieval reads one subject's log for a caller holding a `read_subject_audit` grant in the CDR, and an access-service caller is one holding an `access_service` grant, in place of the removed `[authz.rbac] subject_audit_role` and `access_service_roles`, so H6 states the grant, names `a_subject_audit_grant_reads_one_subjects_log_and_nothing_else` and says the ceiling keeps the log admin-only until the deployment allows the grant (#5521); every access of a representative in the patient portal is recorded bound to the representative's `PERSON`, naming the subject and the relationship, and a former representative is refused and never recorded as the patient (#5446, #5532); the v5.7.0 removal aids of the audit keys are deleted (#5463)); H7 states the shipped `verify_interval` of one hour; every named test exists and asserts its control; no hazard added |
+| 24 | 2026-11-25 | Test names checked against the v6.0.0 tree for [the EHDS logging checklist](logging-checklist.md): H1 names the classification test that replaced the fallback, since an operation without an audit class has none to fall back to, and the deployment tests in their own file; H2 names the provider round trip and the middleware and FHIR tests in their own files, and drops the unlisted-client test the portal removal took; H4 names the FHIR test in its own file; H5 names the access policy test that refuses a retention breaking a bound and the Art. 9(2) floor test, which replaced the configuration tests when the retention moved to the access policy; every named test exists; no hazard added |

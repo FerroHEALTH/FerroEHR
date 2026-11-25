@@ -55,11 +55,15 @@ pub(crate) fn prefers(headers: &HeaderMap, preference: Preference) -> bool {
         .flat_map(|value| value.split(','))
         .filter_map(|item| item.split(';').next())
         .any(|item| {
-            item.split('=')
-                .map(str::trim)
-                .collect::<Vec<_>>()
-                .join("=")
-                .eq_ignore_ascii_case(preference.token())
+            let mut stated = item.split('=').map(str::trim);
+            let mut token = preference.token().split('=');
+            loop {
+                match (stated.next(), token.next()) {
+                    (None, None) => break true,
+                    (Some(part), Some(expected)) if part.eq_ignore_ascii_case(expected) => {}
+                    _ => break false,
+                }
+            }
         })
 }
 

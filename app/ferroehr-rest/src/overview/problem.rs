@@ -507,10 +507,7 @@ pub fn stack_answer(
 /// an `OperationOutcome`.
 pub async fn finish(State(fhir): State<FhirBase>, request: Request, next: Next) -> Response {
     let representation = prefers(request.headers(), Preference::Representation);
-    let request_id = request
-        .extensions()
-        .get::<RequestId>()
-        .map(|id| id.id().to_owned());
+    let request_id = request.extensions().get::<RequestId>().cloned();
     let fhir = fhir.covers(request.uri().path());
     let mut response = next.run(request).await;
     let Some(refused) = response.extensions_mut().remove::<Refused>() else {
@@ -527,7 +524,7 @@ pub async fn finish(State(fhir): State<FhirBase>, request: Request, next: Next) 
         outcome(parts.status, refused.problem.detail().unwrap_or_default())
     } else {
         refused
-            .render(request_id.as_deref(), representation)
+            .render(request_id.as_ref().map(RequestId::id), representation)
             .into_response()
     };
     let (rendered_parts, body) = rendered.into_parts();

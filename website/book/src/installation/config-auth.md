@@ -472,7 +472,7 @@ a `write_representation` holder writes a representation for the providers
 its grant names, and the patient a representation targets writes one on the
 basis `HL7_RoleCode::DELEGATEE`.
 The policy parties (a party holding a capability coded in
-`openehr_access`, an acts-for relationship or a `client_id` identifier)
+`openehr_access`, an acts-for relationship or an `openehr_access::client_id` client identifier)
 are recognised by what they hold and take no key of this mapping; they are an administrator's to write and to read,
 never a SCIM client's: see [Operational policy](../operational-policy.md#who-writes-and-reads-a-policy-party).
 An administrator's version that leaves a protected identifier out is refused

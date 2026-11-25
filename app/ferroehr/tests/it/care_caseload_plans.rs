@@ -355,19 +355,21 @@ async fn counters(pool: &PgPool) -> BTreeMap<String, i64> {
     read
 }
 
-/// The scans `run` made, and the rows it answered.
+/// The scans `run` made, the rows it answered and how long it took.
 async fn scans_of(
     pool: &PgPool,
     run: impl Future<Output = Vec<Value>>,
-) -> (BTreeMap<String, i64>, Vec<Value>) {
+) -> (BTreeMap<String, i64>, Vec<Value>, f64) {
     let before = counters(pool).await;
+    let started = std::time::Instant::now();
     let rows = run.await;
+    let took = started.elapsed().as_secs_f64() * 1000.0;
     let after = counters(pool).await;
     let moved = after
         .iter()
         .map(|(name, value)| (name.clone(), value - before.get(name).copied().unwrap_or(0)))
         .collect();
-    (moved, rows)
+    (moved, rows, took)
 }
 
 /// A query over a caseload of `patients` holds its shape: the projection is
@@ -464,7 +466,12 @@ async fn the_caseload_plans_hold_at_practice_scale() {
     for (team, patients) in SCALES {
         let team = id(team);
         let mut read = Vec::new();
-        reads(&check_plan(&pool, first, team).await[0]["Plan"], &mut read);
+        let check = check_plan(&pool, first, team).await;
+        eprintln!(
+            "the check of one EHR over {patients} patients: {} ms",
+            check[0]["Execution Time"]
+        );
+        reads(&check[0]["Plan"], &mut read);
         assert!(
             read.iter()
                 .any(|node| node.ends_with(" ix_access_care_subject"))
@@ -482,7 +489,8 @@ async fn the_caseload_plans_hold_at_practice_scale() {
         }
         let left = &Cared::Left;
 
-        let (scans, rows) = scans_of(&pool, query(&svc, (team, left), PAGE, Some(50))).await;
+        let (scans, rows, took) = scans_of(&pool, query(&svc, (team, left), PAGE, Some(50))).await;
+        eprintln!("a caseload page over {patients} patients: {took:.2} ms");
         assert_eq!(
             rows.len(),
             usize::try_from(50.min(patients)).expect("a page size"),
@@ -490,7 +498,9 @@ async fn the_caseload_plans_hold_at_practice_scale() {
         );
         assert_shape("a caseload page", patients, &scans);
 
-        let (scans, rows) = scans_of(&pool, query(&svc, (team, left), POPULATION, None)).await;
+        let (scans, rows, took) =
+            scans_of(&pool, query(&svc, (team, left), POPULATION, None)).await;
+        eprintln!("a population query over {patients} patients: {took:.2} ms");
         assert_shape("a population query", patients, &scans);
         assert_eq!(
             rows.first().and_then(|row| row[0].as_i64()),
@@ -502,14 +512,17 @@ async fn the_caseload_plans_hold_at_practice_scale() {
     for (team, patients) in SCALES {
         let team = id(team);
         let left = &Cared::Covering;
-        let (scans, rows) = scans_of(&pool, query(&svc, (team, left), PAGE, Some(50))).await;
+        let (scans, rows, took) = scans_of(&pool, query(&svc, (team, left), PAGE, Some(50))).await;
+        eprintln!("a caseload page under episodes over {patients} patients: {took:.2} ms");
         assert_eq!(
             rows.len(),
             usize::try_from(50.min(patients)).expect("a page size"),
             "a caseload page of {patients} under episode relationships"
         );
         assert_shape("a caseload page under episodes", patients, &scans);
-        let (scans, rows) = scans_of(&pool, query(&svc, (team, left), POPULATION, None)).await;
+        let (scans, rows, took) =
+            scans_of(&pool, query(&svc, (team, left), POPULATION, None)).await;
+        eprintln!("a population query under episodes over {patients} patients: {took:.2} ms");
         assert_shape("a population query under episodes", patients, &scans);
         assert_eq!(
             rows.first().and_then(|row| row[0].as_i64()),

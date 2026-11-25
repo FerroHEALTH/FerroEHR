@@ -574,7 +574,7 @@ async fn only_an_administrator_grants_a_policy_role() {
     );
     identified["details"] = json!({ "_type": "ITEM_TREE", "archetype_node_id": "at0010",
         "name": text("details"), "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0011",
-            "name": text("client"), "value": { "_type": "DV_IDENTIFIER", "issuer": federation,
+            "name": { "_type": "DV_CODED_TEXT", "value": "client_id", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "client_id" } }, "value": { "_type": "DV_IDENTIFIER", "issuer": federation,
                 "id": "remote-portal", "type": "client_id" } }] });
     let (partner, _) = as_admin(create(&svc, PartyKind::Organisation, &identified))
         .await

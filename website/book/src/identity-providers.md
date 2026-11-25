@@ -186,7 +186,8 @@ RFC 9068 §2.2; RFC 8693 §4.1), and the server acts on the kind:
 - **A verified external person or organisation** of a `federation` issuer is
   admitted only under the federation agreement its partner holds in the CDR
   for its accessor kind, the partner being the party that carries the
-  token's issuer and `client_id` as a `client_id` identifier
+  token's issuer and `client_id` as a client identifier (an element named
+  `openehr_access::client_id`)
   ([Operational policy](operational-policy.md#federation-agreements)), and
   refused with `403` without one or under the other accessor's.
   Its rights come from the agreement, never from a role:
