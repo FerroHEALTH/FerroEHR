@@ -62,7 +62,7 @@ env:
   # matrix, the job name and the `--partition` divisor are all derived from it,
   # so they cannot drift apart. When one needs raising, the pipeline-budget
   # watcher says so rather than someone noticing a slow pull request (#3131).
-  TEST_SHARDS: "3"
+  TEST_SHARDS: "6"
   UI_E2E_SHARDS: "3"
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
@@ -1581,8 +1581,8 @@ jobs:
   # has its own job), and writes their nextest archive. Each shard runs its
   # partition of that archive and compiles nothing
   # (https://nexte.st/docs/ci-features/archiving/, #6516), so the shard count
-  # buys wall clock at about a minute of setup a shard; it stays at three
-  # until #6561 lets six pass. A verified push builds alone, for main's cache.
+  # buys wall clock at about a minute of setup a shard. A verified push builds
+  # alone, for main's cache.
   build-tests:
     name: build tests
     needs: changes
