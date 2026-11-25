@@ -539,12 +539,13 @@ pub struct ProjectedCare {
 /// Reads the caller facts copy again until it holds the store's revisions
 /// `store`, or a later read of them it holds: revisions only move forward, so
 /// a copy that holds a later read holds `store` too, even when the read that
-/// brought it there began before `store` was read. The wait follows observed
-/// progress: the request is refused once the store's grant or binding
-/// revision moved past a fresh read and [`STALE_WAIT`] has passed, or once
-/// the copy stayed behind a store that held still for [`STALE_WAIT`] of
+/// brought it there began before `store` was read. Each later read is one of
+/// its own, never the request's first read served again. The wait follows
+/// observed progress: the request is refused once the store's grant or
+/// binding revision moved past a fresh read and [`STALE_WAIT`] has passed, or
+/// once the copy stayed behind a store that held still for [`STALE_WAIT`] of
 /// pauses, never because one read was slow. No openEHR spec governs the
-/// copy: our own design (#5806, #6527).
+/// copy: our own design (#5806, #6527, #6561).
 ///
 /// # Errors
 /// [`CareUnsettled::Unavailable`] when the store does not answer, and
@@ -560,7 +561,7 @@ pub(super) async fn catch_up(
         if grants.holds(&store) {
             return Ok(());
         }
-        let Some(later) = grants.behind().await? else {
+        let Some(later) = grants.behind_now().await? else {
             return Ok(());
         };
         let moved = (later.grants, later.bindings) != (store.grants, store.bindings);
