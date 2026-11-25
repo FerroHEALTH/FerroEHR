@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Builds the hospital world through its public routes: the operator's
-//! grant of the first SCIM client, SCIM for the staff with their role codes,
-//! their care teams and the patient's representative, the Demographic API for
-//! the clients, the providers and the care relationships, ITS-REST for the
+//! grant of the first SCIM client, SCIM for the staff with their role codes
+//! and their care teams, the patient's and her representative's `PERSON`s
+//! their logins bind, the Demographic API for the clients, the providers and
+//! the care relationships, ITS-REST for the
 //! record and Eva's own `EHR_ACCESS`, and the admin API for the controller's
 //! `ACCESS_POLICY` with its rules (#5621).
 
@@ -23,9 +24,9 @@ use ferroehr::service::FerroEhrService;
 
 use crate::hospital::world::{
     CONFIDENTIALITY, DEVICES, Doc, ENCOUNTER, LAB_TEMPLATE, LOGIN, MACHINES, MENTAL_HEALTH,
-    PATIENTS, PORTAL_SCIM, PROVIDERS, Provisioned, ROLES, ROOT, SCIM, SCIM_SCOPE, STAFF, TEAMS,
-    VITALS, World, admit, call, capability, client, coded_in, config, day, named, party_ref,
-    provider, read_party, region, replica, router, scim, term, text, update_party,
+    PATIENTS, PROVIDERS, Provisioned, ROLES, ROOT, SCIM, SCIM_SCOPE, STAFF, TEAMS, VITALS, World,
+    admit, call, capability, client, coded_in, config, day, named, party_ref, provider, read_party,
+    region, replica, router, scim, term, text, update_party,
 };
 
 /// The extension FerroEHR's User attributes sit in.
@@ -76,7 +77,9 @@ pub(crate) async fn world() -> World {
     }
     people.insert(
         "frank",
-        user(&app, PORTAL_SCIM, "frank-login", ("Frank Visser", None)).await,
+        Provisioned {
+            person: common::shipped_patient(&svc, (PATIENTS, "frank-login"), "Frank Visser").await,
+        },
     );
     let mut teams = BTreeMap::new();
     for team in TEAMS {
@@ -92,9 +95,7 @@ pub(crate) async fn world() -> World {
     let outside = provider(&app, "outside-clinic", &[]).await;
     let lab = provider(&app, "lab", &[]).await;
     agents.extend(system_clients(&app, (&member, &outside, &lab)).await);
-    let eva = user(&app, PORTAL_SCIM, "eva-login", ("Eva Visser", None))
-        .await
-        .person;
+    let eva = common::shipped_patient(&svc, (PATIENTS, "eva-login"), "Eva Visser").await;
     let ehr = ehr_of(&app, &eva).await;
     let other_ehr = ehr_of(&app, &people["gina"].person).await;
     let mut world = World {
@@ -245,22 +246,8 @@ async fn grant_policy_writer(svc: &FerroEhrService, person: &str) {
     .expect("the operator grants the policy writer");
 }
 
-/// The grant to provision the Users whose binding keys `binding_issuer`
-/// issues.
-fn scim_grant(binding_issuer: &str) -> Value {
-    capability(
-        "scim_provision",
-        &[
-            named("binding_issuer", &text(binding_issuer)),
-            named("token_scope", &text(SCIM_SCOPE)),
-        ],
-    )
-}
-
-/// The portal's SCIM client and the ADT system, granted by `root`; their
-/// `AGENT`s.
+/// The ADT system, granted by `root`; its `AGENT`.
 async fn clients(app: &axum::Router) -> BTreeMap<&'static str, String> {
-    client(app, ROOT, (PORTAL_SCIM, None), &[scim_grant(PATIENTS)]).await;
     let adt = client(
         app,
         ROOT,

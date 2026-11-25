@@ -1117,14 +1117,14 @@ which is what makes an optional stage safe to disable:
    subject for that EHR's `EHR_ACCESS` settings. A bound person holding no
    role passes the role gate and is confined to those records: it is the
    subject kind, and every other EHR refuses it `refused-not-subject`. A
-   `persons` login whose one `PERSON` carries neither the professional nor
-   the representative marker is that patient, through a first-party client or
-   a SMART app the CDR grants `act_for_persons` (an openEHR launch, #6146):
-   the shared binding answers it
+   user's login whose one `PERSON` carries neither the professional nor the
+   representative marker is that patient, through any client the
+   authorization server registers (an openEHR launch, #6146): the shared
+   binding answers it
    `wrong_marker`, and FerroEHR admits it as the person themself, with no
    role, `PARTY_SELF` as its committer and the binding `self` on its access
-   record, confined in the same way. A `persons` login of the same two kinds
-   whose one `PERSON` carries the representative marker alone is admitted as
+   record, confined in the same way. A user's login whose one `PERSON`
+   carries the representative marker alone, or a `RelatedPerson`'s, is admitted as
    a representative read from the CDR's own facts (#6147): it holds no role,
    and reaches the subject of the EHR its launch context names, else of the
    EHR the request names, else the `PERSON` an EHR lookup by subject names,
@@ -1135,20 +1135,20 @@ which is what makes an optional stage safe to disable:
    openEHR launch token carries no `fhirUser` and no `patient` claim (SMART
    on openEHR `master07` §Context Selection names the `ehrId`), so no
    reading of the token alone can name the person. A token
-   `ferrohealth-smart` 0.31 reads as the patient's own (`Caller::is_the_person`:
-   a `patients` issuer's patient-context token, or, under the `ferrosmart`
-   preset's `fhir_user_patient`, a `persons` token whose `fhirUser` is the
-   `Patient` its `patient` claim names, with `patient/` scopes alone) is a
-   check against the binding and never a grant (#6080). On a `persons` issuer
-   its login is looked up as a person's through the `[auth.issuer.<name>.party]` table,
+   `ferrohealth-smart` reads as the patient's own (`Caller::is_the_person`:
+   its `fhirUser` is the `Patient` its `patient` claim names, with no actor)
+   is a check against the binding and never a grant (#6080): its login is
+   looked up as a user's through the `[auth.issuer.<name>.party]` table,
    which the shared binding never does for a `Patient` caller, and has to bind
    a `PERSON` with neither marker, else `refused-unbound`,
-   `refused-key-claim-missing` or `refused-wrong-marker`. On a `patients`
-   issuer, which may carry no table, the patient-portal binding reads the
-   login as a key of the `PERSON` the launch EHR's subject names, else
-   `refused-unbound`. A caller bound as the person themself whose token names
-   an `ehrId` whose subject is another `PERSON` is refused
-   `refused-representation-unrecorded`, as a portal login is. The refusals
+   `refused-key-claim-missing` or `refused-wrong-marker`. A caller bound as
+   the person themself whose token names an `ehrId` whose subject is another
+   `PERSON` is refused
+   `refused-representation-unrecorded`. A `patient/` grant reaches only the
+   launch context's EHR (`master08` §Resource Scopes), so a caller whose
+   grants are `patient/` grants alone and whose token names no `ehrId`
+   reaches no EHR, and the person's own records by identity alone need
+   `user/` grants (#6432). The refusals
    reuse the binding codes the access record carries. FerroEHR cannot map a
    FHIR `Patient` id to a `PERSON` without the FHIR pairing, so the `patient`
    claim is not compared. A confined caller is refused `403`
@@ -1175,7 +1175,7 @@ which is what makes an optional stage safe to disable:
    steps 1 to 3 and 5, the `delegation` directives of its `EHR_ACCESS` and
    the controller's rules included, and skips steps 4 and 6 to 8. A caller acting for
    someone else is a representative whatever issuer it signed in through, so
-   a `patients` portal login bound to a representative's `PERSON` takes
+   a login bound to a representative's `PERSON` takes
    those steps too; only the person themselves is the subject (#5613). The
    subject and the representative pass the RBAC role gate's Clinical class
    with no role, since their right comes from who they are (EHDS Art. 3 and
@@ -1768,14 +1768,13 @@ is any `ACTOR` carrying a `DV_IDENTIFIER` of type `client_id` in its
 Identification). **Our own design.**
 
 **Key spaces** (#5688). A key row under an issuer depends only on whether
-the mapping lists the issuer and whether it is a `patients` issuer, so each
-key issuer is a key space of its own (`party_binding::key_space`, migration
+the mapping lists the issuer, so each key issuer is a key space of its own (`party_binding::key_space`, migration
 `party/0047`). `binding_state` holds the digest of the rest of the mapping,
 which a boot compares and `party-binding refill` alone changes; each
 `binding_lease` lists the key issuers its replica derives keys for; and
-`binding_key_space` records each issuer with its portal flag and state. A
+`binding_key_space` records each issuer with its state. A
 replica naming a new issuer records it `pending`; once every live lease lists
-it with one flag, a replica's renewal tick wipes its key rows and fills them
+it, a replica's renewal tick wipes its key rows and fills them
 from the party versions in pages under a gate every party commit takes shared,
 and it turns `active`. A live lease that does not list an `active` issuer
 turns it `retiring`; a `retiring` or `pending` one no live lease lists goes
@@ -2242,23 +2241,16 @@ covers, holds `access_demographic`. The middleware resolves the caller's
 grants before the RBAC and SMART gates and reads both from them
 (`authn::grants::client_holds`), so `[auth.smart] backend_clients` and
 `demographic_clients` are gone. A grant counts only for a caller resolved as
-a client, the app-only token of a `machines` issuer; a person signed in
-through that client holds the person's grants. Each issuer's
-`patient_context` profile key stays in the file: it is trust, the issuers whose `ehrId`
-claim names an EHR of this platform (master07 §Context Selection), which the
-server needs before it believes a `patient/` token. It never makes a caller
-the record's person, which the party binding alone decides (#6080). The person-token client
-lists are answered the same way inside `ferrohealth-smart`'s token
-classification, through the crate's `kind::standing::Standing` seam:
-`party_binding::grants::standing::GrantStanding` reads the grants of the
-`ACTOR` carrying the client identifier under the token's issuer from the
-replica's `LiveGrants` copy (no transaction), so a client granted
-`sign_in_persons` is first party, one granted `act_for_persons` a delegate
-(and an RFC 8693 actor by its `sub` the same way), and a system caller granted
-`access_without_scope` meets every SMART on openEHR requirement without a
-resource scope. `[auth]` is read as the crate's `ProductStandingSection`, so
-`first_party_clients`, `delegates` and `scopeless_subjects` are unknown keys.
-A Basic user is a credential alone: its roles and scopes are the `hold_roles`
+a client, a client credentials token whose `sub` is its `client_id` (RFC 9068
+§2.2); a person signed in through that client holds the person's grants.
+Every trusted issuer's `patient` claim is its launch context, and its
+`patient/` grants count, each confined to the EHR the token's `ehrId` names
+(master07 §Context Selection). They never make a caller the record's person,
+which the party binding alone decides (#6080). FerroEHR keeps no client list
+of its own (#6432): the authorization server's registry is the one list of
+clients, so a token whose `aud` names FerroEHR admits its client, and an RFC
+8693 `act` names an actor read as asserted, recorded as the delegated acting
+mode. A Basic user is a credential alone: its roles and scopes are the `hold_roles`
 and `hold_scopes` grants of its `PERSON`, granted onto the caller with
 `Caller::with_granted_scope` and `with_granted_roles`, and `[authz.rbac]
 first_admin` names the one Basic user holding `admin_role` and the product
@@ -2307,10 +2299,12 @@ grant names and whose `token_scope` its token holds; the contact erasure
 reaches the binding issuers of every stored grant, ended ones included, so
 revoking a client stops no GDPR Art. 17 erasure. The `ROLE` commit refuses a
 capability that names `origin`, `reader` or `binding_issuer` other than once
-(`grants::check_role`). Each replica's refresher reads the grant copy on
-every grant notification (`LiveGrants::spawn_refresher`), so a commit of a request
-that resolves no caller still sees the change-feed grants in force, with no
-read on its path. **Our own design:** no openEHR spec defines a change feed,
+(`grants::check_role`). Each replica's refresher confirms the grant copy
+and the caller facts copy on every grant notification and once a minute
+(`LiveGrants::spawn_refresher`), so a commit of a request that resolves no
+caller still sees the change-feed grants in force, with no read on its path,
+and a request after a caller facts stamp, which notifies no replica, reads
+no facts on its path once a round has run. **Our own design:** no openEHR spec defines a change feed,
 SCIM, or an authorization meaning for these.
 
 **The first grant is the operator's.** An administrator is a person bound to
@@ -2342,11 +2336,11 @@ store. The keys `[[auth.basic.users]] roles` and `scopes` belong to
 design.**
 
 **Just-in-time admission** (`party_binding::grants::admission`, #5441). Which
-first logins of a `persons` issuer create a provisional `PERSON` is policy,
+first logins of a bound issuer create a provisional `PERSON` is policy,
 so it is CDR data: a `CAPABILITY` coding `create_at_login` admits the
 logins of each issuer its `login_issuer` elements name that meet every
 condition it declares (`admit_idp`, `admit_group`, `admit_role`,
-`admit_assurance`, and `admit_guests` for a guest), and any grant in force
+and `admit_assurance`), and any grant in force
 admits a login. The grant is read by its credentials, whoever performs its
 `ROLE`, from the same `LiveGrants` copy (`LiveGrants::admissions`), which
 the login binding consults only for an unbound person or delegated caller,
@@ -2427,7 +2421,7 @@ target and that identifier are side-table rows too (`binding_client.provider_id`
 transaction. There is no data migration role: a migration is an `AGENT` whose
 `ROLE` holds the import and export operations. **Our own design.**
 
-**Representatives in the patient portal (#5446).** A representation is a
+**Representatives (#5446).** A representation is a
 `PARTY_RELATIONSHIP` from the representative's `PERSON` (its source) to the
 subject's (its target) whose `name` or `details` carry
 `openehr_access::represents`, in any archetype, recognised by the code
@@ -2440,36 +2434,22 @@ patient's write only of a representation whose target is the subject of
 their launch EHR, before and after, changing only one they inserted
 themself (the EHDS Art. 5 rule, its committer naming their `PERSON`). The
 side table `binding_representation` holds both, the standalone rows keyed by
-their container (party migration `0037`). A `patients` token's representative,
-the RFC 8693 `act` of the patient's token or a login of their own naming the
-patient's EHR, is bound by FerroEHR itself after authentication
-(`service::demographic::portal`): the login under the token's issuer is the
-binding key of a representative's `PERSON`, which must hold a live
-representation of the EHR's subject; the request is then confined to that
-EHR, recorded bound to the representative naming the subject, and committed
-as a `PARTY_RELATED`. `ferrohealth-smart` classifies the `act` path as
-`CallerKind::PatientRepresentative` and binds no party to a `patients` caller,
-so the binding is FerroEHR's. Who may represent whom and until when, the age
-and legal-capacity rules of national law (EHDS Art. 4(2): "in accordance
-with national law"), reach FerroEHR as the representations and the
-`time_validity` the deployment records; FerroEHR holds no rule of its own.
-A login a live `PERSON` carries under a `patients` issuer is held to that
-`PERSON` (#5622): the patient only when it is the EHR's subject, a
-representative only through a live representation, refused
-(`refused-representation-unrecorded`) otherwise, so the CDR's facts decide
-over the issuer's claim of the EHR; a login no `PERSON` carries is the
-patient. The key issuers the server compiles the person mapping from and the
-SCIM gate admits a `binding_issuer` from are one set,
-`config::binding::key_issuers`: the `[auth.issuer.<name>.party]` identifier issuers and
-every `patients` issuer (#5652, `installed_mapping`). A key under a
-`patients` issuer is held in `binding_identifier` with no professional
-`ROLE`. A SCIM client whose `binding_issuer` is a `patients` issuer
-provisions the portal's representatives as `PERSON`s of the patient
-template, a non-default person template of the default mapping, with no
-`ROLE`, and the party protection refuses any version from a SCIM client that
-adds, changes or drops a representation (EHDS Art. 4(2)). **Our own
-design**, as no openEHR spec governs resolving a login to a party, SCIM
-provisioning or who may write a relationship.
+their container (party migration `0037`). A representative, a
+`RelatedPerson` or a user whose `PERSON` carries the representative marker
+alone, is bound by the login binding and admitted by FerroEHR after
+authentication (`service::demographic::representatives`, #6147): its
+`PERSON` must hold a live representation of the subject the request reaches,
+read from the CDR and never from the token; the request is then confined to
+that subject's EHRs, recorded bound to the representative naming the
+subject, and committed as a `PARTY_RELATED`. Who may represent whom and
+until when, the age and legal-capacity rules of national law (EHDS Art.
+4(2): "in accordance with national law"), reach FerroEHR as the
+representations and the `time_validity` the deployment records; FerroEHR
+holds no rule of its own. SCIM provisions a workforce only (#6484), and the
+party protection refuses any version from a SCIM client that adds, changes or
+drops a representation (EHDS Art. 4(2)). **Our own design**, as no openEHR
+spec governs resolving a login to a party, SCIM provisioning or who may
+write a relationship.
 
 **Break-glass stays in the configuration.** Emergency access (EHDS Art.
 11(5)) must work when the party store does not answer, so

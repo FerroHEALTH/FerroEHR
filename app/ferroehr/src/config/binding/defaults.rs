@@ -18,8 +18,8 @@ impl Default for PartyBindingConfig {
             basic_user: Vec::new(),
             // The default mapping names the shipped definitions of
             // `deploy/definitions/`, which every boot stores when absent.
-            // The patient template is a person template too, never the default: a SCIM
-            // client of a patients issuer provisions a portal representative in it (#5622).
+            // The patient template is a person template too, never the default: a patient's
+            // login binds their PERSON in it.
             person: Some(person::PersonSection {
                 template: vec![
                     person_template(shipped::PROFESSIONAL_PERSON, true),

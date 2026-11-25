@@ -227,7 +227,7 @@ impl FerroEhrService {
                 format!("no EHR with id {an_ehr_id}"),
             ));
         }
-        self.reject_second_singleton(an_ehr_id, &containers).await?;
+        reject_second_singleton(&mut tx, an_ehr_id, &containers).await?;
 
         let audit = self.audit(change_type::CREATION, "EHR Extract import");
         let signing = self.signing_ctx();
@@ -264,43 +264,6 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Refuses a singleton container (`EHR_STATUS`, `EHR_ACCESS`) whose object
-    /// id differs from the one the EHR already holds.
-    ///
-    /// `EHR.ehr_status` and `EHR.ehr_access` are 1..1 (RM ehr, EHR class), so a
-    /// matching id is an append (master06 §Copying Case 3, handled in
-    /// `commit_import`) and a different one is a second object. FOLDERs are not
-    /// singletons: each first-received hierarchy joins `EHR.folders` (RM ehr
-    /// master04 §Folders).
-    ///
-    /// The caller holds the EHR row lock. Outside EHR creation only an import
-    /// adds a singleton object, and every import holds that lock to commit, so
-    /// this read sees each one that finished first.
-    ///
-    /// # Errors
-    /// [`ServiceError::Conflict`] on a second singleton; a storage error if
-    /// the current object cannot be read.
-    async fn reject_second_singleton(
-        &self,
-        ehr_id: EhrId,
-        containers: &[ImportContainer],
-    ) -> Result<(), ServiceError> {
-        for container in containers {
-            if matches!(container.kind, Kind::EhrStatus | Kind::EhrAccess)
-                && let Some((existing_vo, _)) = self.current_vo(ehr_id, container.kind).await?
-                && existing_vo != container.vo_id
-            {
-                return Err(ServiceError::conflict(format!(
-                    "EHR {ehr_id} already has a {} ({existing_vo}); cannot import a \
-                     second one ({})",
-                    container.kind.as_str(),
-                    container.vo_id
-                )));
-            }
-        }
-        Ok(())
-    }
-
     /// Replay the extract's demographics chapter into the demographic domain,
     /// in a transaction of its own.
     ///
@@ -327,6 +290,45 @@ impl FerroEhrService {
         self.commit_act_recorded(tx, Vec::new()).await?;
         Ok(())
     }
+}
+
+/// Refuses a singleton container (`EHR_STATUS`, `EHR_ACCESS`) whose object
+/// id differs from the one the EHR already holds, read on `tx`.
+///
+/// `EHR.ehr_status` and `EHR.ehr_access` are 1..1 (RM ehr, EHR class), so a
+/// matching id is an append (master06 §Copying Case 3, handled in
+/// `commit_import`) and a different one is a second object. FOLDERs are not
+/// singletons: each first-received hierarchy joins `EHR.folders` (RM ehr
+/// master04 §Folders).
+///
+/// `tx` holds the EHR row lock. Outside EHR creation only an import adds a
+/// singleton object, and every import holds that lock to commit, so this
+/// read sees each one that finished first.
+///
+/// # Errors
+/// [`ServiceError::Conflict`] on a second singleton; a storage error if
+/// the current object cannot be read.
+async fn reject_second_singleton(
+    tx: &mut sqlx::PgConnection,
+    ehr_id: EhrId,
+    containers: &[ImportContainer],
+) -> Result<(), ServiceError> {
+    for container in containers {
+        if matches!(container.kind, Kind::EhrStatus | Kind::EhrAccess)
+            && let Some(existing) =
+                crate::storage::version_repo::meta::current_vo(tx, ehr_id, container.kind.as_str())
+                    .await?
+            && existing.vo_id != container.vo_id
+        {
+            return Err(ServiceError::conflict(format!(
+                "EHR {ehr_id} already has a {} ({}); cannot import a second one ({})",
+                container.kind.as_str(),
+                existing.vo_id,
+                container.vo_id
+            )));
+        }
+    }
+    Ok(())
 }
 
 /// Reverse of the export `X_VERSIONED_*` mapping: the versioned-object [`Kind`]

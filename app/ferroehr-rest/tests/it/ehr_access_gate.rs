@@ -699,15 +699,16 @@ async fn a_write_of_settings_that_do_not_hold_is_refused() {
         )
     };
     let old = json!({ "_type": "FERROEHR_ACCESS_CONTROL_V1", "default_access": "restricted" });
-    for (scheme, defect) in [
+    for (scheme, defect, status) in [
         (
             common::access_settings("bogus", &[]),
             "Default_access_valid",
+            StatusCode::UNPROCESSABLE_ENTITY,
         ),
-        (old, "FERROEHR_ACCESS_CONTROL_V1"),
+        (old, "FERROEHR_ACCESS_CONTROL_V1", StatusCode::BAD_REQUEST),
     ] {
         let (code, refusal) = common::send_json(&app, commit(&scheme)).await;
-        assert_eq!(code, StatusCode::BAD_REQUEST, "{refusal}");
+        assert_eq!(code, status, "{refusal}");
         assert!(
             refusal.to_string().contains(defect),
             "the refusal names {defect}: {refusal}"

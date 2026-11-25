@@ -119,7 +119,6 @@ pub(super) fn classified_read(policy: &CompiledPolicy) -> AuditEvent {
             issuer: "urn:oid:2.16.528.1.1007.3.3".to_owned(),
             id: "Example Hospital".to_owned(),
         }),
-        true,
     ));
     event.timestamp = "2026-11-13T10:15:30.123456Z".parse().expect("an instant");
     event

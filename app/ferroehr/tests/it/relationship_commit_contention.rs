@@ -47,7 +47,7 @@ const GATE: i64 = 0x5013_b1d1;
 /// when `audited`.
 async fn service(audited: bool) -> (testkit::TestDb, Arc<FerroEhrService>) {
     let db = testkit::db().await.expect("testkit database");
-    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false)]).await;
+    crate::fixtures::open_key_spaces(&db, &[LOGIN]).await;
     let mut svc = FerroEhrService::new(&DomainPools::from_shared(&db.pool()));
     if audited {
         let config = AuditConfig {
