@@ -571,6 +571,18 @@ impl Term {
         live && dated && timed
     }
 
+    /// The first instant after `now` at which its instants may make it start
+    /// or stop holding: its `not_before` still to come, or the instant after
+    /// its `not_after`; `None` when neither lies ahead.
+    pub(crate) fn next_change(&self, now: jiff::Timestamp) -> Option<jiff::Timestamp> {
+        let starts = self.not_before.filter(|before| *before > now);
+        let ends = self
+            .not_after
+            .filter(|after| *after >= now)
+            .and_then(|after| after.checked_add(jiff::SignedDuration::from_nanos(1)).ok());
+        starts.into_iter().chain(ends).min()
+    }
+
     /// The term of the stored row `row`, read from its `lifecycle_state`,
     /// `role_empty`, `role_lower`, `role_upper`, `empty`, `lower`, `upper`,
     /// `not_before` and `not_after` columns.
