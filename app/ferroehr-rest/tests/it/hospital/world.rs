@@ -520,10 +520,71 @@ pub(crate) async fn served(
     app: &Router,
     req: http::Request<axum::body::Body>,
 ) -> (StatusCode, HeaderMap, String) {
+    use tracing::instrument::WithSubscriber as _;
+    use tracing_subscriber::Layer as _;
+    use tracing_subscriber::layer::SubscriberExt as _;
+
     let app = app.clone();
-    tokio::spawn(async move { common::send(&app, req).await })
-        .await
-        .expect("the request's task")
+    let log = RequestLog::default();
+    let subscriber = tracing_subscriber::registry().with(
+        tracing_subscriber::fmt::layer()
+            .with_ansi(false)
+            .with_writer(log.clone())
+            .with_filter(tracing_subscriber::filter::LevelFilter::DEBUG),
+    );
+    let (status, headers, body) =
+        tokio::spawn(async move { common::send(&app, req).await }.with_subscriber(subscriber))
+            .await
+            .expect("the request's task");
+    // An internal error names no cause on the wire, so the answer carries the server's log of it.
+    if status == StatusCode::INTERNAL_SERVER_ERROR {
+        let body = format!(
+            "{body}\n-- the server's log of the request --\n{}",
+            log.text()
+        );
+        return (status, headers, body);
+    }
+    (status, headers, body)
+}
+
+/// The log lines one request writes, kept so a test that meets an internal
+/// error shows what the server said.
+#[derive(Clone, Default)]
+struct RequestLog(Arc<std::sync::Mutex<Vec<u8>>>);
+
+impl RequestLog {
+    /// The lines written so far.
+    fn text(&self) -> String {
+        String::from_utf8_lossy(
+            &self
+                .0
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner),
+        )
+        .into_owned()
+    }
+}
+
+impl std::io::Write for RequestLog {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for RequestLog {
+    type Writer = Self;
+
+    fn make_writer(&'a self) -> Self::Writer {
+        self.clone()
+    }
 }
 
 /// `method uri` as `caller`, declaring `purpose`, with a JSON `body`.
@@ -682,7 +743,7 @@ pub(crate) async fn client(
         "_type": "AGENT", "archetype_node_id": archetype,
         "archetype_details": archetyped(archetype), "name": text(client),
         "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0010", "name": text("details"),
-            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0012", "name": text("client"),
+            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0012", "name": { "_type": "DV_CODED_TEXT", "value": "client_id", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "client_id" } },
                 "value": { "_type": "DV_IDENTIFIER", "issuer": MACHINES, "id": client,
                            "type": "client_id" } }] },
         "identities": identities(client)

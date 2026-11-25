@@ -18,8 +18,15 @@
 #
 # or run `scripts/lib/queue-runs.sh --self-test`. CI_RUNS_STUB names a
 # directory that answers instead of the API: `runs` holds `push <sha> <run>`
-# and `merge_group <tree> <run>` lines, `jobs` holds
-# `<run><TAB><job name><TAB><conclusion>` lines.
+# and `merge_group <tree> <run> [<head sha>]` lines, `jobs` holds
+# `<run><TAB><job name><TAB><conclusion>` lines, and `commits` holds
+# `<sha> <tree> <first parent>` lines.
+#
+# GitHub merges every entry of a group once the group's last entry passes, so
+# an earlier entry lands on main while its own run is cancelled or still
+# running. Such a commit is verified by a passing run whose head commit has,
+# among its last QUEUE_GROUP_DEPTH first parents, a commit of the same tree
+# (the queue builds an entry's commit on the entries ahead of it, #6562).
 
 # Every read rides out GitHub's transient 5xx answers (scripts/lib/gh-retry.sh,
 # #4173): one 502 on the listing failed change detection on every pull request.
@@ -29,6 +36,10 @@
 # How far before a commit its merge-queue runs are listed: a queue entry's run
 # starts before its commit lands on main.
 QUEUE_LEAD_DAYS=7
+# The queue's `max_entries_to_build`, the most entries one group holds.
+QUEUE_GROUP_DEPTH=5
+# How long before a commit lands a group that holds it may have started.
+QUEUE_GROUP_LEAD_SECS=$((6 * 3600))
 
 # queue_since SHA: the day (YYYY-MM-DD) QUEUE_LEAD_DAYS before SHA's commit.
 queue_since() {
@@ -65,6 +76,42 @@ run_jobs() {
 # `conclusion` job passed and returns 0; returns 1 when none did, 2 when the
 # API could not answer. The run's own conclusion is no answer: a job can fail
 # it while the required `conclusion` check passed.
+# group_runs_since ISO FILE: writes `<head sha> <run>` to FILE for every
+# merge-queue CI run that succeeded and was created at or after ISO.
+group_runs_since() {
+  local since="$1" file="$2"
+  if [[ -n "${CI_RUNS_STUB:-}" ]]; then
+    awk '$1 == "merge_group" && NF >= 4 { print $4, $3 }' "$CI_RUNS_STUB/runs" >"$file"
+  else
+    gh_retry gh api --paginate \
+      "repos/$REPO/actions/workflows/ci.yml/runs?event=merge_group&status=success&created=>=$since&per_page=100" \
+      --jq '.workflow_runs[] | "\(.head_sha) \(.id)"' >"$file"
+  fi
+}
+
+# commit_of SHA: prints `<tree> <first parent>` of a commit GitHub holds.
+commit_of() {
+  if [[ -n "${CI_RUNS_STUB:-}" ]]; then
+    awk -v sha="$1" '$1 == sha { print $2, $3; found = 1 } END { exit !found }' "$CI_RUNS_STUB/commits"
+  else
+    gh_retry gh api "repos/$REPO/commits/$1" --jq '"\(.commit.tree.sha) \(.parents[0].sha // "")"'
+  fi
+}
+
+# group_holds HEAD TREE: whether HEAD or one of its first parents within
+# QUEUE_GROUP_DEPTH commits has TREE; 2 when GitHub could not answer.
+group_holds() {
+  local sha="$1" tree="$2" depth info have parent
+  for ((depth = 0; depth < QUEUE_GROUP_DEPTH; depth++)); do
+    [[ -n "$sha" ]] || return 1
+    info="$(commit_of "$sha")" || return 2
+    read -r have parent <<<"$info"
+    [[ "$have" != "$tree" ]] || return 0
+    sha="$parent"
+  done
+  return 1
+}
+
 queue_verified() {
   local sha="$1" tree index run jobs read_failed=no
   tree="$(git rev-parse "$sha^{tree}")" || return 2
@@ -84,7 +131,31 @@ queue_verified() {
       return 0
     fi
   done < <(awk -v tree="$tree" '$1 == tree { print $2 }' "$index")
+  local since head status groups entry
+  local -a entries=()
   rm -f "$index"
+  since="$(($(git log -1 --format=%ct "$sha") - QUEUE_GROUP_LEAD_SECS))"
+  since="$(date -u -d "@$since" +%FT%TZ 2>/dev/null || date -u -r "$since" +%FT%TZ)"
+  groups="$(mktemp)"
+  if ! group_runs_since "$since" "$groups"; then
+    rm -f "$groups"
+    return 2
+  fi
+  mapfile -t entries <"$groups"
+  rm -f "$groups"
+  for entry in "${entries[@]}"; do
+    read -r head run <<<"$entry"
+    status=0
+    group_holds "$head" "$tree" || status=$?
+    case "$status" in
+    0)
+      echo "$run"
+      return 0
+      ;;
+    2) read_failed=yes ;;
+    *) ;;
+    esac
+  done
   [[ "$read_failed" == no ]] || return 2
   return 1
 }
@@ -108,13 +179,13 @@ _queue_runs_self_test() {
   # expect LABEL WANT_STATUS WANT_RUN RUN-LINE...: each RUN-LINE is
   # `<event> <key> <run> <conclusion job's conclusion>`.
   expect() {
-    local label="$1" want_status="$2" want_run="$3" line event key run conclusion
+    local label="$1" want_status="$2" want_run="$3" line event key run conclusion head
     shift 3
     : >"$work/stub/runs"
     : >"$work/stub/jobs"
     for line in "$@"; do
-      read -r event key run conclusion <<<"$line"
-      echo "$event $key $run" >>"$work/stub/runs"
+      read -r event key run conclusion head <<<"$line"
+      echo "$event $key $run${head:+ $head}" >>"$work/stub/runs"
       printf '%s\tconclusion\t%s\n' "$run" "$conclusion" >>"$work/stub/jobs"
     done
     status=0
@@ -134,6 +205,14 @@ _queue_runs_self_test() {
   expect "a later queue run of the same tree that passed verifies it" 0 8 \
     "merge_group $tree2 7 failure" "merge_group $tree2 8 success"
   expect "a push run never verifies it" 1 "" "push $c2 7 success"
+  local tree1
+  tree1="$(stub_git rev-parse "$c1^{tree}")"
+  printf '%s\n' "q2 later q1" "q1 $tree2 q0" "q0 $tree1 q-1" >"$work/stub/commits"
+  expect "a passing group whose head is a later entry verifies the earlier entry's tree" 0 9 \
+    "merge_group other 9 success q2"
+  printf '%s\n' "q3 t3 q4" "q4 t4 q5" "q5 t5 q6" "q6 t6 q7" "q7 t7 q8" "q8 $tree2 q9" >"$work/stub/commits"
+  expect "a group deeper than the queue builds does not verify it" 1 "" \
+    "merge_group other 9 success q3"
   rm -rf "$work"
   return "$fail"
 }

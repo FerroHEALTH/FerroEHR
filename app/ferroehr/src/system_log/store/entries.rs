@@ -221,16 +221,9 @@ impl AuditStore {
         chain: AuditChain,
         chain_seq: i64,
     ) -> Result<Option<PgRow>, AuditError> {
-        use sea_query::{Alias, Expr, ExprTrait, PostgresQueryBuilder};
-        use sea_query_sqlx::SqlxBinder as _;
-
-        let (sql, values) = super::newest_first(
-            sea_query::Cond::all()
-                .add(Expr::col(Alias::new("chain")).eq(chain.as_str()))
-                .add(Expr::col(Alias::new("chain_seq")).eq(chain_seq)),
-        )
-        .build_sqlx(PostgresQueryBuilder);
-        Ok(sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
+        Ok(sqlx::query(ROW_AT.as_str())
+            .bind(chain.as_str())
+            .bind(chain_seq)
             .fetch_optional(&mut *crate::db::acquire::acquire(&self.pool).await?)
             .await?)
     }
@@ -400,5 +393,42 @@ pub(crate) fn index_row(event: &AuditEvent, subject: Option<String>, digest: Vec
         // EHR in the index, as only its EHDS access record names it.
         ehr_id: event.category.as_ref().and(event.ehr_id.clone()),
         render_policy: digest,
+    }
+}
+
+/// The read of the record at one chain position, its text built once (#6467).
+static ROW_AT: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| row_at_statement(AuditChain::System, 0).0);
+
+/// The read of the record at position `chain_seq` of `chain`, with its values.
+fn row_at_statement(chain: AuditChain, chain_seq: i64) -> (String, sea_query_sqlx::SqlxValues) {
+    use sea_query::{Alias, Expr, ExprTrait, PostgresQueryBuilder};
+    use sea_query_sqlx::SqlxBinder as _;
+
+    super::newest_first(
+        sea_query::Cond::all()
+            .add(Expr::col(Alias::new("chain")).eq(chain.as_str()))
+            .add(Expr::col(Alias::new("chain_seq")).eq(chain_seq)),
+    )
+    .build_sqlx(PostgresQueryBuilder)
+}
+
+#[cfg(test)]
+mod row_at_tests {
+    use super::{AuditChain, ROW_AT, row_at_statement};
+
+    #[test]
+    fn the_record_read_keeps_one_text_and_binds_the_position() {
+        for chain in AuditChain::ALL {
+            let (sql, values) = row_at_statement(chain, 42);
+            assert_eq!(sql, *ROW_AT);
+            assert_eq!(
+                values.0.0,
+                vec![
+                    sea_query::Value::from(chain.as_str()),
+                    sea_query::Value::from(42_i64)
+                ]
+            );
+        }
     }
 }

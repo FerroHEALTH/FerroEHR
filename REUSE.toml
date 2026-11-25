@@ -375,6 +375,22 @@ precedence = "override"
 SPDX-FileCopyrightText = "KaTeX contributors"
 SPDX-License-Identifier = "MIT"
 
+# ── The mdbook-mermaid theme files — MIT and MPL-2.0 ────────────────────────
+# `mdbook-mermaid install` writes both into the book theme: the Mermaid 11.6.0
+# bundle (MIT, its own header names the holder) and the plugin's loader
+# (MPL-2.0, the licence of mdbook-mermaid).
+[[annotations]]
+path = "website/book/theme/mermaid.min.js"
+precedence = "override"
+SPDX-FileCopyrightText = "2014 - 2022 Knut Sveidqvist"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "website/book/theme/mermaid-init.js"
+precedence = "override"
+SPDX-FileCopyrightText = "Jan-Erik Rediger"
+SPDX-License-Identifier = "MPL-2.0"
+
 # ── The Citation File Format 1.2.0 JSON Schema — CC-BY-4.0 ──────────────────
 # Vendored by scripts/vendor/cff-schema.sh (#2791) for the citation-guard CI
 # job's no-Python CFF validation; provenance in the tree's PROVENANCE.md. The

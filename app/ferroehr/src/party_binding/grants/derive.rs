@@ -7,8 +7,8 @@
 //! [`crate::party_binding::derive`].
 //!
 //! Nothing is read by archetype or node id: a client identifier is any
-//! `DV_IDENTIFIER` of type [`CLIENT_ID`] in the actor's `details` or
-//! `identities`, an operation any `DV_CODED_TEXT` value of
+//! `ELEMENT` coded `client_id` in the actor's `details` or `identities`
+//! ([`client_identifier`]), an operation any `DV_CODED_TEXT` value of
 //! [`crate::party_binding::policy_mark::TERMINOLOGY`] in a capability's `credentials`, and a bound the
 //! `DV_DATE_TIME` of an element that terminology names
 //! [`NOT_BEFORE`] or [`NOT_AFTER`]. No openEHR spec gives a capability an
@@ -25,7 +25,7 @@ use serde_json::Value;
 use crate::party_binding::derive::container;
 use crate::party_binding::grants::caller::{self, CallerFact, FactKind};
 use crate::party_binding::grants::operation::{NOT_AFTER, NOT_BEFORE, Operation, is_qualifier};
-use crate::party_binding::policy_mark::{ACTS_FOR, CLIENT_ID, TERMINOLOGY, carries, coded};
+use crate::party_binding::policy_mark::{ACTS_FOR, TERMINOLOGY, carries, client_identifier, coded};
 use crate::versioning::Kind;
 use crate::versioning::tree::{Shape, Tree};
 
@@ -98,7 +98,7 @@ impl GrantFacts {
                     .flatten()
                 {
                     walk(root, &mut |value| {
-                        if let Some(client) = client(value)
+                        if let Some(client) = client_identifier(value)
                             && !found.contains(&client)
                         {
                             found.push(client);
@@ -232,24 +232,19 @@ pub(crate) fn walk<'a, T: Tree<'a>>(value: T, visit: &mut impl FnMut(T)) {
     }
 }
 
-/// The `(issuer, id)` of `value` when it is a client identifier.
-fn client<'a, T: Tree<'a>>(value: T) -> Option<(String, String)> {
-    let text = |key: &str| value.get_text(key);
-    (text("_type").as_deref() == Some("DV_IDENTIFIER")
-        && text("type").as_deref() == Some(CLIENT_ID))
-    .then(|| Some((text("issuer")?.into_owned(), text("id")?.into_owned())))
-    .flatten()
-}
-
 /// The `(issuer, id)` of the first identifier in `details` that is no client
-/// identifier.
+/// identifier ([`client_identifier`]).
 fn provider_identifier<'a, T: Tree<'a>>(details: T) -> Option<(String, String)> {
     let mut found = None;
-    walk(details, &mut |value| {
+    walk(details, &mut |element| {
+        let Some(value) = element.get("value") else {
+            return;
+        };
         let text = |key: &str| value.get_text(key);
         if found.is_none()
+            && element.get_text("_type").as_deref() == Some("ELEMENT")
             && text("_type").as_deref() == Some("DV_IDENTIFIER")
-            && text("type").as_deref() != Some(CLIENT_ID)
+            && client_identifier(element).is_none()
             && let (Some(issuer), Some(id)) = (text("issuer"), text("id"))
         {
             found = Some((issuer.into_owned(), id.into_owned()));
@@ -285,6 +280,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+    use crate::party_binding::policy_mark::CLIENT_ID;
     use crate::party_binding::policy_mark::TERMINOLOGY;
 
     fn coded_text(code: &str, terminology: &str) -> Value {
@@ -299,15 +295,25 @@ mod tests {
     #[test]
     fn any_actor_holds_its_client_identifiers_once_each() {
         let identifier = |issuer: &str, id: &str, kind: &str| {
-            json!({"_type": "ELEMENT", "archetype_node_id": "at9",
-                   "value": {"_type": "DV_IDENTIFIER", "issuer": issuer, "id": id, "type": kind}})
+            let name = if kind == CLIENT_ID {
+                coded_text(CLIENT_ID, TERMINOLOGY)
+            } else {
+                json!({"_type": "DV_TEXT", "value": kind})
+            };
+            element(
+                &name,
+                &json!({"_type": "DV_IDENTIFIER", "issuer": issuer, "id": id, "type": kind}),
+            )
         };
+        let bare = json!({"_type": "ELEMENT", "archetype_node_id": "at9",
+            "value": {"_type": "DV_IDENTIFIER", "issuer": "https://idp", "id": "plain", "type": CLIENT_ID}});
         let body = json!({
             "_type": "ORGANISATION", "archetype_node_id": "openEHR-DEMOGRAPHIC-ORGANISATION.mine.v3",
             "details": {"items": [{"items": [
                 identifier("https://idp", "lab", "client_id"),
                 identifier("https://idp", "lab", "client_id"),
-                identifier("https://idp", "LAB-1", "serial")
+                identifier("https://idp", "LAB-1", "serial"),
+                bare
             ]}]},
             "identities": [{"details": {"items": [identifier("https://other", "lab", "client_id")]}}]
         });

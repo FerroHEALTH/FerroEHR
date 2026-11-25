@@ -78,18 +78,16 @@ env:
   # bevy sets exactly these two vars; polars uses `-C debuginfo=0`).
   CARGO_PROFILE_DEV_DEBUG: "0"
   CARGO_PROFILE_TEST_DEBUG: "0"
-  # Every job here is REQUIRED, `conformance` included: a red released-profile
-  # verdict fails the merge queue (#4455).
+  # Every job here gates the merge through `conclusion`.
   #
   # Event gating (#2777), the rule behind every `if:` in this file that names
-  # an event: a job reading `pull_request` OR `merge_group` is a WHOLE-TREE
-  # check, and it must report inside a merge queue too, because a queue runs
-  # the required checks on the merge_group event alone. A job gated on
-  # `pull_request` ALONE reads pull-request context the merge_group payload
-  # does not carry — a `base..head` diff of the pull request, or one of the
-  # escape-hatch labels — and it has already gated that pull request before
-  # the queue ever builds a group. Everything else runs on all three, except
-  # on a push to main the merge queue already passed (#4546).
+  # an event: the pull request runs the full set. A merge group runs the light
+  # set (owner ruling 2026-11-25): change detection, rustfmt, lint, the
+  # guards, cargo-deny, the bin link, the test archive and its smoke set,
+  # release-fragments and conflict-markers. The pull request already ran the
+  # rest on its own tree, and the nightly full run checks main. A job gated
+  # on `pull_request` alone reads pull-request context the merge_group
+  # payload does not carry (a `base..head` diff, an escape-hatch label).
   #
   # The verified push, the rule behind every `queue_verified` in this file
   # (#4546, #6515): the `changes` job sets it when a `merge_group` run of this
@@ -100,11 +98,10 @@ env:
   # caches and main's sccache entries. A push no queue run passed runs every
   # lane.
   #
-  # The merge queue proves the merged tree, never the performance (#5284).
-  # The browser lanes (ui-e2e, ui-docs-shots, viewer-login-smoke) run on the
-  # pull request when the viewer changed, and in full on the schedule. Perf A/B and the CPU budget read a clock, so they run
-  # in nightly.yml and never gate a merge (docs/ci-cd.md, #6517). The deployment harness and chart boot are
-  # functional and stay in the queue.
+  # perf and the browser lanes (ui-e2e, ui-docs-shots, viewer-login-smoke)
+  # run on the pull request when the viewer changed, and in full on the
+  # schedule. Perf A/B and the CPU budget read a clock, so they run in
+  # nightly.yml and never gate a merge (docs/ci-cd.md, #6517).
   # No lane reads anything a queue run cannot: the conformance catalogue runs
   # for a push in containers.yml, against the images it pushes.
   #
@@ -1363,7 +1360,7 @@ jobs:
     needs: changes
     # The lane below is this file's own recipe, so a change to it runs it
     # (#2373).
-    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'clippy'))
+    if: github.event_name != 'merge_group' && ((needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'clippy')))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1400,7 +1397,7 @@ jobs:
     # on every main push is cheap insurance. A push the merge queue verified
     # needs none of it (the queue run is never cancelled, its group is the
     # commit), so there it is skipped.
-    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true' || github.ref == 'refs/heads/main') && needs.changes.outputs.queue_verified != 'true'
+    if: github.event_name != 'merge_group' && ((needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true' || github.ref == 'refs/heads/main') && needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
@@ -1435,7 +1432,7 @@ jobs:
   codegen-drift:
     name: codegen drift
     needs: changes
-    if: needs.changes.outputs.code == 'true' && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'codegen-drift'))
+    if: github.event_name != 'merge_group' && (needs.changes.outputs.code == 'true' && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'codegen-drift')))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1467,7 +1464,7 @@ jobs:
   nesting-release:
     name: nesting limit (release)
     needs: changes
-    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true'
+    if: github.event_name != 'merge_group' && ((needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1543,7 +1540,7 @@ jobs:
       fail-fast: false
       matrix:
         shard: ${{ fromJSON(needs.changes.outputs.test_shards) }}
-    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true'
+    if: github.event_name != 'merge_group' && ((needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -1598,6 +1595,68 @@ jobs:
           SHARD: ${{ matrix.shard }}
           SHARD_COUNT: ${{ needs.changes.outputs.test_shard_count }}
 
+  # ── The merge group's smoke set (owner ruling 2026-11-25, #6516) ──────────────
+  # The pull request ran the whole suite, so a merge group proves only that the
+  # merged tree builds, links and passes its unit tests and the server's wiring
+  # tests: every library and bin test target, and ferroehr-server's, from the
+  # same archive, about a minute of tests. The full shards, perf, the CPU
+  # budget, the browser lanes, conformance and the deployment harness run on
+  # the pull request and nightly (docs/ci-cd.md).
+  smoke:
+    name: smoke (merge group)
+    needs: [changes, build-tests]
+    if: github.event_name == 'merge_group' && (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: ${{ needs.changes.outputs.postgres_image }} # zizmor: ignore[unpinned-images] the digest-pinned FROM of docker/postgres, checked name@sha256 where it is read
+        env:
+          POSTGRES_USER: openehr
+          POSTGRES_PASSWORD: openehr
+          POSTGRES_DB: openehr_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U openehr"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://openehr:openehr@localhost:5432/openehr_test
+      # The shared test-database harness (tools/testkit) uses this server
+      # directly, with no per-test containers in CI.
+      FERROEHR_TEST_PG_URL: postgres://openehr:openehr@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Non-durable test tuning
+        # xmllint (libxml2-utils) is what the C14N XML parity gate shells out
+        # to (serialization.md). scripts/lib/test-postgres.sh applies the
+        # non-durable settings for throwaway data and loads
+        # pg_stat_statements, which the statement budget test reads.
+        env:
+          PG_SERVICE: ${{ job.services.postgres.id }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client libxml2-utils
+          PGPASSWORD=openehr bash scripts/lib/test-postgres.sh "$PG_SERVICE"
+      # The toolchain without a cache: the codegen drift tests run rustfmt.
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          components: rustfmt
+          cache: false
+      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+        with:
+          tool: cargo-nextest
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: nextest-archive
+          path: ${{ runner.temp }}
+      - run: cargo-nextest nextest run --archive-file "$RUNNER_TEMP/tests.tar.zst" --workspace-remap "$GITHUB_WORKSPACE" --extract-to "$GITHUB_WORKSPACE" --extract-overwrite --no-tests=pass --profile ci -E 'kind(lib) | kind(bin) | package(ferroehr-server)'
+
+
+
   # ── Every workspace BIN links here ──────────────────────────────────────────
   # `cargo clippy` type-checks but never links, and nextest compiles test
   # targets only, so without this a broken bin reaches main. Beside
@@ -1627,7 +1686,7 @@ jobs:
   instructions:
     name: codec instructions (callgrind)
     needs: changes
-    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true'
+    if: github.event_name != 'merge_group' && ((needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -1652,7 +1711,7 @@ jobs:
   test-viewer:
     name: build & test (viewer)
     needs: changes
-    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'test-viewer'))
+    if: github.event_name != 'merge_group' && ((needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'test-viewer')))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -1686,7 +1745,7 @@ jobs:
   helm-golden:
     name: helm-golden
     needs: changes
-    if: needs.changes.outputs.helm == 'true' && needs.changes.outputs.queue_verified != 'true'
+    if: github.event_name != 'merge_group' && (needs.changes.outputs.helm == 'true' && needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1757,7 +1816,7 @@ jobs:
   chart-boot:
     name: chart-boot
     needs: [changes, ui-e2e-binary]
-    if: needs.changes.outputs.chart_boot == 'true' && needs.changes.outputs.queue_verified != 'true'
+    if: github.event_name != 'merge_group' && (needs.changes.outputs.chart_boot == 'true' && needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -1809,7 +1868,7 @@ jobs:
   deploy-probe:
     name: deploy-probe
     needs: [changes, ui-e2e-binary]
-    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.deploy == 'true') && needs.changes.outputs.queue_verified != 'true'
+    if: github.event_name != 'merge_group' && ((needs.changes.outputs.code == 'true' || needs.changes.outputs.deploy == 'true') && needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -1939,7 +1998,7 @@ jobs:
   unused-deps:
     name: cargo-machete
     needs: changes
-    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.queue_verified != 'true'
+    if: github.event_name != 'merge_group' && (needs.changes.outputs.code == 'true' && needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1988,11 +2047,12 @@ jobs:
     name: ui-e2e server binary
     needs: changes
     if: >-
+      github.event_name != 'merge_group' && (
       needs.changes.outputs.viewer == 'true' ||
       needs.changes.outputs.chart_boot == 'true' ||
       (needs.changes.outputs.perf == 'true' && github.event_name == 'push') ||
       (needs.changes.outputs.conformance == 'true' && github.event_name != 'push') ||
-      ((needs.changes.outputs.code == 'true' || needs.changes.outputs.deploy == 'true') && needs.changes.outputs.queue_verified != 'true')
+      ((needs.changes.outputs.code == 'true' || needs.changes.outputs.deploy == 'true') && needs.changes.outputs.queue_verified != 'true'))
     runs-on: ubuntu-latest
     # Generous: a binary-cache miss with a cold sccache is a full release
     # build of the first-party graph.
@@ -2376,7 +2436,7 @@ jobs:
   server-image-from-source:
     name: server image (from source)
     needs: changes
-    if: needs.changes.outputs.server_dockerfile == 'true' && needs.changes.outputs.queue_verified != 'true'
+    if: github.event_name != 'merge_group' && (needs.changes.outputs.server_dockerfile == 'true' && needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     # A deliberate full cold in-image compile (no cache backend at all).
     timeout-minutes: 60
@@ -2401,7 +2461,7 @@ jobs:
   viewer-image-from-source:
     name: viewer image (from source)
     needs: changes
-    if: needs.changes.outputs.viewer_dockerfile == 'true' && needs.changes.outputs.queue_verified != 'true'
+    if: github.event_name != 'merge_group' && (needs.changes.outputs.viewer_dockerfile == 'true' && needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -2512,7 +2572,7 @@ jobs:
   crate-semver:
     name: crate-semver (cargo-semver-checks)
     needs: changes
-    if: (github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.changes.outputs.semver == 'true'
+    if: github.event_name != 'merge_group' && ((github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.changes.outputs.semver == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -2775,7 +2835,7 @@ jobs:
   quickstart-config:
     name: quickstart-config
     needs: [changes, ui-e2e-binary]
-    if: needs.changes.outputs.queue_verified != 'true'
+    if: github.event_name != 'merge_group' && (needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -2830,7 +2890,7 @@ jobs:
   shipped-viewer-configs:
     name: shipped-viewer-configs
     needs: changes
-    if: (needs.changes.outputs.viewer == 'true' || needs.changes.outputs.deploy == 'true' || needs.changes.outputs.helm == 'true') && needs.changes.outputs.queue_verified != 'true'
+    if: github.event_name != 'merge_group' && ((needs.changes.outputs.viewer == 'true' || needs.changes.outputs.deploy == 'true' || needs.changes.outputs.helm == 'true') && needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -2856,7 +2916,7 @@ jobs:
   conformance:
     name: conformance
     needs: [changes, ui-e2e-binary]
-    if: needs.changes.outputs.conformance == 'true' && github.event_name != 'push'
+    if: github.event_name != 'merge_group' && (needs.changes.outputs.conformance == 'true' && github.event_name != 'push')
     permissions:
       contents: write # the reusable job's badge push, which never happens off main
       packages: read # the reusable job's GHCR pulls, unused beside an artifact
@@ -2871,7 +2931,7 @@ jobs:
   harnesses:
     name: harnesses
     needs: changes
-    if: needs.changes.outputs.fuzz == 'true' && needs.changes.outputs.queue_verified != 'true'
+    if: github.event_name != 'merge_group' && (needs.changes.outputs.fuzz == 'true' && needs.changes.outputs.queue_verified != 'true')
     permissions:
       contents: read
     uses: ./.github/workflows/fuzz.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
@@ -2974,6 +3034,7 @@ jobs:
       - build-tests
       - instructions
       - test
+      - smoke
       - test-viewer
       - helm-golden
       - unused-deps
@@ -3005,14 +3066,14 @@ jobs:
     timeout-minutes: 5
     permissions: {}
     steps:
-      - name: The long non-functional lanes are not run in a merge group
+      - name: A merge group runs the light set
         if: github.event_name == 'merge_group'
         run: |
           set -euo pipefail
           {
-            echo "### Not run in the merge queue"
+            echo "### The merge group's light set"
             echo
-            echo "ui-e2e, ui-docs-shots, viewer-login-smoke and ui-e2e-viewer are skipped here: the merge queue proves the merged tree, and these lanes ran on the pull request (#5284)."
+            echo "The pull request ran the full suite. A merge group runs change detection, rustfmt, the lint and guard jobs, cargo-deny, the bin link, the test archive and its smoke set (unit tests and the server's wiring tests); every other lane is skipped here and runs on the pull request and nightly (docs/ci-cd.md)."
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Every needed job succeeded or was skipped
         env:

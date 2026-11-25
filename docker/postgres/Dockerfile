@@ -11,13 +11,13 @@
 # superuser. Schema CONTENT is owned by the app's sqlx migrators at boot; this
 # image bakes NO migration state (see README.md).
 #
-# Digest-pinned (resolved 2026-11-21, the first PostgreSQL 19 release): a
+# Digest-pinned (resolved 2026-11-24, a respin of the first PostgreSQL 19 release): a
 # mutable tag can be re-pointed, a digest cannot
 # (docs.docker.com/build/building/best-practices — "pinning to a digest
 # guarantees the same image version"). 19.0 is the latest PG 19 release
 # (docs/VERSIONS.md); bump the tag AND the digest together — the full pin-site
 # checklist is .claude/rules/image-security.md.
-FROM postgres:19.0@sha256:bb6e70add742cd868fb62cb3b2f67d1dd2bdd2b65a521e778420748753687c60
+FROM postgres:19.0@sha256:aaa10f7ba7328b4a221a6c3184d83eef885bd16bf1f6de864757863156b0a4d1
 
 # Debian security updates, applied at OUR build time (issue #2408). The
 # upstream image rebuilds on its own cadence, so a fix already published in

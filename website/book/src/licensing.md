@@ -124,6 +124,8 @@ used as test corpora. Each family keeps its upstream license:
 | Three ISO 13606 / rejected-extract BMM reference models inside the archie corpus | offered by their authors under MPL 1.1 / GPL 2.0 / LGPL 2.1 | taken under [MPL 1.1](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/MPL-1.1.txt) — see the election below |
 | One terminology schema file, `PropertyUnitData.xsd` | ADL Designer / ADL2-tools, via the openEHR TERM assets | [AGPL-3.0-only](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/AGPL-3.0-only.txt) — see the contradiction below |
 | The self-hosted KaTeX stylesheet and fonts this documentation site renders maths with | KaTeX contributors | MIT |
+| The Mermaid bundle this documentation site draws its diagrams with, `website/book/theme/mermaid.min.js` | `mermaid-js/mermaid` 11.6.0, Knut Sveidqvist | [MIT](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/MIT.txt) |
+| The diagram loader of the documentation site, `website/book/theme/mermaid-init.js` | `badboy/mdbook-mermaid`, Jan-Erik Rediger | [MPL 2.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/MPL-2.0.txt) |
 | The Citation File Format 1.2.0 JSON Schema (validates `CITATION.cff` in CI) | `citation-file-format/citation-file-format` | [CC-BY 4.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-4.0.txt) |
 | EU legal acts vendored for the compliance citations (GDPR, ePrivacy Directive, EHDS, NIS2, CRA, MDR), under `docs/law/eu/` | the EU Publications Office (EUR-Lex) | [`LicenseRef-EUR-Lex-Reuse`](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/LicenseRef-EUR-Lex-Reuse.txt) (Commission Decision 2011/833/EU); the consolidated texts additionally [CC-BY 4.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-4.0.txt) |
 | EDPB Guidelines 01/2025 on pseudonymisation and 2/2023 on the technical scope of Art. 5(3) of the ePrivacy Directive | European Data Protection Board | [`LicenseRef-EDPB-Reuse`](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/LicenseRef-EDPB-Reuse.txt) |
@@ -241,7 +243,7 @@ So licensing is **also** published in the machine-readable form the
 - **[`LICENSES/`](https://github.com/FerroHEALTH/FerroEHR/tree/main/LICENSES)**
   holds the full text of every license any file in the tree is offered under,
   named by SPDX identifier: `BUSL-1.1`, `MIT`, `Apache-2.0`, `CC-BY-SA-3.0`,
-  `CC-BY-SA-4.0`, `CC-BY-4.0`, `CC-BY-3.0`, `MPL-1.1`, `AGPL-3.0-only` — plus
+  `CC-BY-SA-4.0`, `CC-BY-4.0`, `CC-BY-3.0`, `MPL-1.1`, `MPL-2.0`, `AGPL-3.0-only` — plus
   `LicenseRef-openEHR-unstated`, which is not a licence but the record that
   one tree carries none.
 - **[`REUSE.toml`](https://github.com/FerroHEALTH/FerroEHR/blob/main/REUSE.toml)**

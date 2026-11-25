@@ -143,24 +143,15 @@ pub(crate) enum Signed<'a> {
     Rendered(&'a crate::storage::render::index::Rendered),
 }
 
-/// Compute the server-generated `VERSION.signature` of the `IMPORTED_VERSION`
-/// an import act is about to persist (RM common master06 §Digital Signature:
-/// "If the object to be serialised is an `IMPORTED_VERSION`, the process is the
-/// same — all attributes of the object are serialised and then used to generate
-/// a signature. The result will be that the `IMPORTED_VERSION` instance will
-/// carry its own signature which signifies the act of importing and making
-/// available locally an `ORIGINAL_VERSION` from another system").
+/// Computes the server-generated `VERSION.signature` of the
+/// `IMPORTED_VERSION` an import is about to persist (RM common master06
+/// §Digital Signature).
 ///
-/// The wrapper is signed exactly like a local commit — an import IS a local act
-/// of committal (§Committal and Audits) — so this server signs it whenever
-/// signing is enabled, and the wrapped original's own foreign signature rides
-/// inside `item` untouched (§Copying: "the `ORIGINAL_VERSION` instance is never
-/// modified"). The value signed is the one [`build_imported_version`] produces
-/// with the wrapper's own `signature` Void — `item` included WHOLE, since "all
-/// attributes of the object are serialised" and the received original's own
-/// `attestations` are part of it. That is exactly what the read path rebuilds
-/// before verifying; attestations added to the imported version AFTER the
-/// import (§Attestation) are appended outside the signed form.
+/// The wrapper is signed like a local commit, over the value
+/// [`build_imported_version`] produces with its own `signature` Void and
+/// `item` whole, the original's foreign signature inside it untouched
+/// (§Copying). Attestations added after the import (§Attestation) fall
+/// outside the signed form.
 ///
 /// # Errors
 /// [`ServiceError::Signing`] when the canonical form cannot be produced or the

@@ -27,38 +27,18 @@ const STORED_PATCH: &str = r"\.v[0-9]+\.[0-9]+\.([0-9]+)(-[^:]*)?$";
 
 /// Builds the `archetype_node_id` predicate condition for a node alias.
 ///
-/// When `value` parses as an archetype id (BASE `base_types` master05
-/// §Archetype Identifiers, or the AOM2 physical form), the predicate implements
-/// query subsumption: "the data created with any specialised archetype will
-/// always be matched by queries based on the parent archetype" (BASE
-/// `architecture_overview` master10 §Design-time Relationships), with AM
-/// master07 §Supporting Archetype-based Querying making the matching set for a
-/// query naming X be X, its older minor and patch variants, its specialisation
-/// parents and their older variants, bounded to one major version.
+/// An archetype id (BASE `base_types` master05 §Archetype Identifiers, or the
+/// AOM2 physical form) matches by subsumption: the data of every specialised
+/// archetype matches a query on its parent (BASE `architecture_overview`
+/// master10 §Design-time Relationships; AM master07 §Supporting
+/// Archetype-based Querying), within one major version and the id's own
+/// namespace ("A namespace is never a wildcard", BASE
+/// `artefact_identification` master07 §Referencing), at or after the release
+/// the query names. Specialisations come from the ADL 1.4 `concept-` naming
+/// convention for an ADL 1.4 id, served by `idx_node_arch_subsume`, and from
+/// `lineage`, the stored specialisation graph ([`ArchetypeLineage`]).
 ///
-/// The queried identity matches data of its own namespace only, an id without
-/// a namespace matching only data without one (BASE `artefact_identification`
-/// master07 §Referencing: "A namespace is never a wildcard"), and only data
-/// whose release is at or after the version the query names: an `ihrid_ref`
-/// (`.v1`) every release of the major, an `sihrid_ref` (`.v1.2`) a minor of 2 or
-/// more, a `phrid_ref` (`.v1.2.3`) a minor and patch of `(2, 3)` or more. A
-/// legacy major-only data id is no abbreviation of a three-part release, so
-/// only an `ihrid_ref` matches it.
-///
-/// Specialisations join the set from two sources. The first is the ADL 1.4
-/// naming convention, for an ADL 1.4 id only (no namespace, a major-only
-/// version): a child extends the parent's `domain_concept` with a
-/// `-`-separated segment, so the parent matches every `arch_concept` that
-/// begins with `concept-`, served by `idx_node_arch_subsume`. The second is
-/// `lineage`, the stored specialisation graph ([`ArchetypeLineage`]), since
-/// "for specialised archetypes, the specialisation lineage can only be obtained
-/// from the operational form of the archetype, found in the template used to
-/// create the data" (BASE Artefact Identification, Referencing). Every stored
-/// descendant joins on its own namespace, entity, major and concept, in the
-/// releases [`ArchetypeLineage::descendants`] admits.
-///
-/// For at- and id-codes, arbitrary strings and params resolving to non-HRIDs the
-/// predicate is the case-folded equality on `archetype`.
+/// Any other value is a case-folded equality on `archetype`.
 //
 // The `-`-prefix rule is exact for an ADL 1.4-form id (lineage encoded in the
 // concept) and is applied ONLY to that form: BASE Artefact Identification

@@ -38,28 +38,15 @@ struct RetiredSet {
 }
 
 /// The retired migration sets, which this build does not migrate and cannot
-/// read: a database that carries one is refused at boot with the way forward
-/// rather than half-adopted.
+/// read: a database that carries one is refused at boot with the way
+/// forward (#6139).
 ///
-/// Neither retired set is upgraded in place (owner decision 2026-11-20, #6139).
-///
-/// Where a schema NAME survives (`ext`, `audit`, `clinical`, `party`), the
-/// signature cannot be the bookkeeping's existence; it is which migration ran
-/// FIRST. Version 1 is the one row a set can never lack, and its description
-/// names the file. The first generation opened `ext` with
-/// `0001_openehr_functions.sql` and `audit` with `0001_baseline.sql`; v5 opened
-/// `ext` and `audit` with `0001_schema_and_roles.sql` and `clinical` and `party`
-/// with `0001_schema_and_grants_baseline.sql`; the v6 baseline opens them with
-/// files of other names. For `ehr`, `demographic` and `linkage`, which this
-/// build owns no set for, any bookkeeping at all is the signature: a bare
-/// schema of the same name is not, because `CREATE SCHEMA` is cheap and someone
-/// may have made one, while the bookkeeping table is written only by a migrator
-/// that ran there. The first generation's `linkage` is listed first, so its
-/// signature picks its own refusal.
-///
-/// Without this, a retired set in a surviving schema would reach this build's
-/// migrator and fail on a checksum mismatch: an error about a hash where the
-/// operator needs the remedy.
+/// Where a schema name survives (`ext`, `audit`, `clinical`, `party`), the
+/// signature is the description of the set's migration version 1, the one
+/// row a set can never lack. For `ehr`, `demographic` and `linkage`, which
+/// this build owns no set for, any bookkeeping table is the signature. The
+/// first generation's `linkage` is listed first, so its signature picks its
+/// own refusal.
 const RETIRED_SETS: &[RetiredSet] = &[
     RetiredSet {
         schema: "ehr",

@@ -15,10 +15,8 @@ use openehr_query::parser::parse_str;
 /// of the test is how long the refusal takes.
 const NESTED_PREDICATE_TIMEOUT: &str = "SELECT uuuucu0uat0ucu0u[uuuat0u[aT0u[uuuat0u[aT0v0valu[uuuat0u[aT0v0[uuuat0ucu0u[uuuat0u[aT0u[uuuat0u[aT0v0vacu0uat0ucu0u[uuuat0u[aT0u[uuuat0u[aT0v0valu[uuuat0u[aT0v0[uuuat0ucu0u[uuuat0u[aT0u[uuuat0u[alu[uuuat0u[aT0v0valu=";
 
-/// A generous bound: measured on the pinned toolchain, the doubling refused
-/// this input in 39.08 s in a debug build (and tripped the fuzz lane's
-/// `-timeout` outright), while the factored grammar refuses in under a
-/// millisecond — so the bound is nowhere near flaky in either direction.
+/// A generous bound: the factored grammar refuses this input in under a
+/// millisecond, and a backtracking grammar takes tens of seconds.
 const BUDGET: std::time::Duration = std::time::Duration::from_secs(2);
 
 #[test]

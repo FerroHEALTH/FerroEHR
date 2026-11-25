@@ -78,3 +78,7 @@ externalization; acceptance is the openEHR conformance suite. See
   test (`COHORT_BENCH_N=100000 cargo nextest run -p ferroehr -E 'test(cohort_bench)'
   --run-ignored all`); the book's AQL page includes the table
   `scripts/render/cohort-bench.sh` renders from it.
+  `benchmarks/care-caseload/record.json` holds the times `care_caseload_plans`
+  prints at 100, 1,600 and 50,000 patients per caseload; the book's care
+  relationships page includes the table `scripts/render/care-caseload-bench.sh`
+  renders from it.

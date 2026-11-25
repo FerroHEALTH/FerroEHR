@@ -338,7 +338,7 @@ fn agent(grant: &ClientGrant) -> Party {
             "details",
             vec![element(
                 "id3",
-                plain_text("client"),
+                DvText::DvCodedText(coded(CLIENT_ID)),
                 DataValue::DvIdentifier(client),
             )],
         )),
@@ -453,10 +453,18 @@ mod tests {
             body.pointer("/capabilities/0/credentials/items/0/value/defining_code/code_string"),
             Some(&serde_json::json!("scim_provision"))
         );
+        let agent = openehr_its::json::to_canonical_value(&agent(&grant));
         assert_eq!(
-            openehr_its::json::to_canonical_value(&agent(&grant))
-                .pointer("/details/items/0/value/type"),
+            agent.pointer("/details/items/0/value/type"),
             Some(&serde_json::json!(CLIENT_ID))
+        );
+        assert_eq!(
+            crate::party_binding::policy_mark::client_identifier(
+                agent
+                    .pointer("/details/items/0")
+                    .expect("the client element")
+            ),
+            Some(("https://as.example".to_owned(), "provisioning".to_owned()))
         );
     }
 

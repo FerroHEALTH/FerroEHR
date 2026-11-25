@@ -171,24 +171,17 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Declare the retention period of one content kind in one jurisdiction,
+    /// Declares the retention period of one content kind in one jurisdiction,
     /// optionally keyed on one EHDS category and one registered origin, with
     /// the legal citation it rests on.
     ///
-    /// GDPR Art. 30(1)(f) asks the record of processing activities for "the
-    /// envisaged time limits for erasure of the different categories of data"
-    /// and DSG Art. 25 Abs. 2 lit. d asks that the subject learn "die
-    /// Aufbewahrungsdauer der Personendaten oder ... die Kriterien zur
-    /// Festlegung dieser Dauer" (`docs/law/eu/gdpr/text.html`,
-    /// `docs/law/ch/fadp/text-de.html`). EHDS Annex II 3.4 asks the storing
-    /// components to support retention periods that "take into account the
-    /// origins and categories of electronic health data"
-    /// (`docs/law/eu/ehds/text.html`); `category` and `origin` are those
-    /// dimensions. A category is named as the audit category register names one and
-    /// stored as its `<system>|<code>` token; an origin is the id a
-    /// `data_origin` grant in force names ([`crate::origins`]). `None` keys the period on every object
-    /// of the kind, or of every origin. The register is where those answers
-    /// come from.
+    /// GDPR Art. 30(1)(f) and DSG Art. 25 Abs. 2 lit. d ask for the retention
+    /// periods (`docs/law/eu/gdpr/text.html`, `docs/law/ch/fadp/text-de.html`),
+    /// and EHDS Annex II 3.4 for periods that "take into account the origins and
+    /// categories of electronic health data" (`docs/law/eu/ehds/text.html`). A
+    /// category is stored as its `<system>|<code>` token; an origin is the id a
+    /// `data_origin` grant in force names ([`crate::origins`]). `None` keys the
+    /// period on every category or origin.
     ///
     /// # Errors
     /// - `precondition_violation` (`400`) — a kind, category, origin, anchor

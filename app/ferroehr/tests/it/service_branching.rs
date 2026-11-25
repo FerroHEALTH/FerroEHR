@@ -225,24 +225,12 @@ async fn modifying_an_imported_foreign_version_forks_a_branch() {
 }
 
 /// The served `IMPORTED_VERSION` is exactly `{_type, contribution,
-/// commit_audit, item}` plus the optional `signature` — and carries NO
-/// top-level `data`.
+/// commit_audit, item}` plus the optional `signature`, with no top-level
+/// `data`.
 ///
-/// The RM gives `IMPORTED_VERSION` exactly one own attribute, `item:
-/// ORIGINAL_VERSION 1..1`, and lists `uid`, `preceding_version_uid`,
-/// `lifecycle_state` and `data` under §Functions as `1..1 (effected)`
-/// computations over it — `data` is "Original content of this Version",
-/// derived as `item.data`
-/// (`UML/classes/org.openehr.rm.common.imported_version.adoc`). ITS-XML agrees
-/// structurally: its abstract `VERSION` declares only `contribution`,
-/// `commit_audit` and an optional `signature`, `data` is declared on
-/// `ORIGINAL_VERSION`, and `IMPORTED_VERSION` extends `VERSION` with the single
-/// `item` element
-/// (`crates/openehr-its/schemas/xml/its-xml-2.0.0-nsv2/RM/Release-1.1.0/Common.xsd`).
-/// Inherited `commit_audit`/`contribution` are the LOCAL act of committal, "distinct from
-/// those of the imported `ORIGINAL_VERSION`" (the class description), and the
-/// wrapper's own `signature` "signifies the act of importing" (RM common
-/// master06 §Digital Signature).
+/// The RM gives `IMPORTED_VERSION` one attribute, `item`, and lists `data` as
+/// a function over it (`UML/classes/org.openehr.rm.common.imported_version.adoc`);
+/// ITS-XML agrees (`crates/openehr-its/schemas/xml/its-xml-2.0.0-nsv2/RM/Release-1.1.0/Common.xsd`).
 #[tokio::test]
 async fn the_served_imported_version_is_the_wrapper_shape_without_data() {
     let (_source_db, source_svc) = crate::fixtures::service().await;

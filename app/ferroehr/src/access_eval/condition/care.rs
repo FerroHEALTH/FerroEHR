@@ -12,7 +12,7 @@
 //! own design.
 
 use std::sync::{Arc, Mutex, PoisonError};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use uuid::Uuid;
 
@@ -25,8 +25,8 @@ use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::party_binding::grants::caller::attestation::Attestation;
 use crate::party_binding::grants::caller::care_of::CareOf;
-use crate::party_binding::grants::live::GrantsUnavailable;
 use crate::party_binding::grants::live::revisions::Revisions;
+use crate::party_binding::grants::live::{GrantsUnavailable, LiveGrants};
 use crate::storage::access_projection::EhrSubject;
 
 /// Why a care decision could not be taken.
@@ -365,18 +365,7 @@ impl RequestAccess {
             self.care.set(Checked::Held);
             return Ok(true);
         };
-        let since = Instant::now();
-        loop {
-            grants.refresh().await?;
-            if grants.holds(&store) {
-                break;
-            }
-            if since.elapsed() >= STALE_WAIT {
-                count("refused");
-                return Err(CareUnsettled::Refreshing);
-            }
-            tokio::time::sleep(STALE_POLL).await;
-        }
+        catch_up(grants, store).await?;
         let held = self.caller.facts.party().map_or_else(Vec::new, |party| {
             grants.facts_of(party, self.now).principals()
         });
@@ -545,6 +534,44 @@ pub struct ProjectedCare {
     /// Whether the policy turns the `self_declared` path on, so a
     /// self-declared relationship admits its writer.
     pub self_declared: bool,
+}
+
+/// Reads the caller facts copy again until it holds the store's revisions
+/// `store`, or a later read of them it holds: revisions only move forward, so
+/// a copy that holds a later read holds `store` too, even when the read that
+/// brought it there began before `store` was read. The wait follows observed
+/// progress: the request is refused once the store's grant or binding
+/// revision moved past a fresh read and [`STALE_WAIT`] has passed, or once
+/// the copy stayed behind a store that held still for [`STALE_WAIT`] of
+/// pauses, never because one read was slow. No openEHR spec governs the
+/// copy: our own design (#5806, #6527).
+///
+/// # Errors
+/// [`CareUnsettled::Unavailable`] when the store does not answer, and
+/// [`CareUnsettled::Refreshing`] once the wait has passed.
+pub(super) async fn catch_up(
+    grants: &LiveGrants,
+    mut store: Revisions,
+) -> Result<(), CareUnsettled> {
+    let since = Instant::now();
+    let mut paused = Duration::ZERO;
+    loop {
+        grants.refresh().await?;
+        if grants.holds(&store) {
+            return Ok(());
+        }
+        let Some(later) = grants.behind().await? else {
+            return Ok(());
+        };
+        let moved = (later.grants, later.bindings) != (store.grants, store.bindings);
+        store = later;
+        if (moved && since.elapsed() >= STALE_WAIT) || paused >= STALE_WAIT {
+            count("refused");
+            return Err(CareUnsettled::Refreshing);
+        }
+        tokio::time::sleep(STALE_POLL).await;
+        paused = paused.saturating_add(STALE_POLL);
+    }
 }
 
 /// Increment `access_care_stale_total{outcome}`.

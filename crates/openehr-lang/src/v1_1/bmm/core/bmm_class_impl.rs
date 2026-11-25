@@ -180,21 +180,12 @@ impl BmmClass {
     /// statically defined types, and inherited suppliers. This list includes
     /// primitive types." (class doc §Functions).
     ///
-    /// Composed of the flattened type list of every property type
-    /// ([`BmmType::flattened_type_list`]), the conformance constraint of every
-    /// formal generic parameter for a generic class
-    /// (`org.openehr.lang.bmm.bmm_generic_class.adoc` §Functions: "Add
-    /// suppliers from generic parameters"), and the same computed recursively
-    /// over the embedded ancestors (the "inherited suppliers" clause). The
-    /// result is deduped and sorted.
-    ///
-    /// NOTE: an unconstrained generic parameter contributes nothing
-    /// (`org.openehr.lang.bmm3.bmm_class.adoc` §Functions: "no class name is
-    /// added, since logically it would be `Any`"), and the v2
-    /// concrete-descendants clause needs the downward edges the persisted
-    /// shape records only as names — that expansion is
-    /// [`Self::all_descendants`] over a [`BmmModel`], kept out so this stays
-    /// a pure function of the class.
+    /// The flattened type list of every property type, the conformance
+    /// constraint of every formal generic parameter
+    /// (`org.openehr.lang.bmm.bmm_generic_class.adoc` §Functions), and the same
+    /// over the ancestors, deduped and sorted. An unconstrained parameter adds
+    /// nothing (`org.openehr.lang.bmm3.bmm_class.adoc` §Functions), and the
+    /// concrete descendants are [`Self::all_descendants`] over a [`BmmModel`].
     #[must_use]
     pub fn suppliers(&self) -> Vec<String> {
         let mut acc = BTreeSet::new();

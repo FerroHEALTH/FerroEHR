@@ -9,7 +9,7 @@
 - [Worker cap](max-five-concurrent-workers.md): up to 10 implementation workers at once since 2026-11-03 (was 5 from 2026-10-19), all on Opus through the Agent tool
 - [One worker per phase, hard fences](one-worker-per-phase-hard-fences.md) — one worker per refactor phase with file fences; reverts orchestrator-only
 - [Concurrent sessions share this tree](concurrent-sessions-shared-tree.md): explicit-pathspec commits, scoped gates, one `./target` for the main checkout, `cargo clean` above ~30 GB
-- [CI under 20 minutes](ci-under-20-minutes.md): owner 2026-11-09, every pull-request and merge-group run under 20 minutes, queue included; a required check is exact, so perf and the CPU budget run nightly or on a label; a verified push to main only writes caches and publishes
+- [CI under 20 minutes](ci-under-20-minutes.md): owner 2026-11-09, every pull-request and merge-group run under 20 minutes, queue included; a merge-group run is light (build, guards, a smoke set) and the full suite runs on the pull request; a verified push to main only writes caches and publishes
 - [Session workflow gotchas](session-workflow-gotchas.md) — CI/PR/background-task/release-leg traps; read before pushing or running long jobs
 - [En-route findings always filed](en-route-findings-always-filed.md) — file out-of-scope findings and fix tractable ones in the same branch
 - [Foundation-first sequencing](foundation-first-sequencing.md) — a systemic defect class gets a full-repo sweep before the next audit unit

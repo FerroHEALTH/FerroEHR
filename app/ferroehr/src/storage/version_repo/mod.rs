@@ -50,29 +50,15 @@ macro_rules! audit_of_version {
     };
 }
 
-/// The `version`⋈`audit` column list every version read selects, as a
-/// compile-time string concatenation so each query stays a static literal
-/// (`sqlx` 0.9 `SqlSafeStr` — no runtime SQL assembly).
+/// The `version` and `audit` column list every version read selects, as a
+/// compile-time concatenation so each query stays a static literal.
 ///
-/// The version's `ATTESTATION`s (RM common master06 §Attestation) are folded in
-/// as aggregated jsonb columns via a `LEFT JOIN LATERAL`, so one statement
-/// carries the whole version read instead of a second round trip per versioned
-/// read (empty in the common case → `[]`). The aggregates order by
-/// `time_committed, id`: attestations committed in one transaction share
-/// `now()`, so the `uuidv7()` `id` breaks ties in insertion order.
-///
-/// They arrive split on `at_committal`, the two halves standing in different
-/// relations to `VERSION.signature`: an attestation present at the act of
-/// committal is inside the version's signed canonical form ("serialising the
-/// entire Version object", master06 §Digital Signature) while one added later is
-/// not (§Attestation). The split uses the standard aggregate `FILTER` clause
-/// (<https://www.postgresql.org/docs/18/sql-expressions.html#SYNTAX-AGGREGATES>).
-///
-/// The version's canonical body is the row's own `v.body` column, materialized
-/// at write time from the same value the node rows decompose from, so a point
-/// read is one statement and one TOAST detoast rather than a node-subtree
-/// re-aggregation. `NULL` is a logically deleted version (RM common master06
-/// §Logical Deletion).
+/// The version's `ATTESTATION`s (RM common master06 §Attestation) come as
+/// jsonb aggregates over a `LEFT JOIN LATERAL`, ordered by
+/// `time_committed, id`, and split by `FILTER` on `at_committal`: one present
+/// at committal is inside the signed form (master06 §Digital Signature), one
+/// added later is not. The body is the row's `v.body`; `NULL` is a logically
+/// deleted version (master06 §Logical Deletion).
 macro_rules! version_select {
     ($tail:literal) => {
         version_select!(""; $tail)
