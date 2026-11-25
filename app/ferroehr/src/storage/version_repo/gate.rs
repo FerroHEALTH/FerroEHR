@@ -597,6 +597,9 @@ pub struct PartyGate {
     pub now: jiff::Timestamp,
     /// The target, `None` for a create.
     pub target: Option<PartyTarget>,
+    /// The policy and definition revisions the statement read through the
+    /// clinical door, `None` when it read none (#6252).
+    pub revisions: Option<(i64, i64)>,
 }
 
 /// The target of a party write as its gate read found it.
@@ -651,11 +654,27 @@ impl PartyGate {
 /// The statement of [`party`] for a create, which reads no target.
 const PARTY_CREATE: &str = "SELECT now() AS ts, NULL::uuid AS target";
 
+/// [`PARTY_CREATE`] reading the policy and definition revisions through the
+/// clinical door (#6252).
+const PARTY_CREATE_DOOR: &str = concat!(
+    "SELECT ",
+    policy_revisions!(),
+    "now() AS ts, NULL::uuid AS target"
+);
+
 /// The statement of [`party`] for an existing target `$1`.
-static PARTY: LazyLock<String> = LazyLock::new(|| {
+static PARTY: LazyLock<String> = LazyLock::new(|| party_statement(""));
+
+/// [`PARTY`] reading the policy and definition revisions through the
+/// clinical door (#6252).
+static PARTY_DOOR: LazyLock<String> = LazyLock::new(|| party_statement(policy_revisions!()));
+
+/// The statement of [`party`] for an existing target `$1`, selecting `door`
+/// first.
+fn party_statement(door: &str) -> String {
     format!(
         concat!(
-            "SELECT now() AS ts, {tip_columns}, ",
+            "SELECT {door}now() AS ts, {tip_columns}, ",
             "(SELECT n.body IS NOT NULL FROM version n WHERE n.vo_id = t.vo_id ",
             " ORDER BY n.sys_version DESC LIMIT 1) AS newest_held, ",
             "(SELECT h.lifecycle_state FROM vo_head h WHERE h.vo_id = t.vo_id) AS head_lifecycle, ",
@@ -670,10 +689,11 @@ static PARTY: LazyLock<String> = LazyLock::new(|| {
             "    ORDER BY b.sys_version DESC LIMIT 1 ",
             ") lb ON true"
         ),
+        door = door,
         tip_columns = TIP_COLUMNS,
         tip_join = tip_join(&ONE_TARGET.replace("{target}", "$1")),
     )
-});
+}
 
 /// Runs the gate read of a party write of `target` on `conn` ([`PartyGate`]).
 ///
@@ -683,14 +703,23 @@ pub async fn party(
     conn: &mut PgConnection,
     target: Option<VoId>,
 ) -> Result<PartyGate, StorageError> {
-    let row = match target {
-        None => sqlx::query(PARTY_CREATE).fetch_one(&mut *conn).await?,
-        Some(vo_id) => {
-            sqlx::query(sqlx::AssertSqlSafe(PARTY.as_str()))
+    let door = crate::policy_register::observed::reads_clinical_door();
+    let row = match (target, door) {
+        (None, false) => sqlx::query(PARTY_CREATE).fetch_one(&mut *conn).await?,
+        (None, true) => sqlx::query(PARTY_CREATE_DOOR).fetch_one(&mut *conn).await?,
+        (Some(vo_id), door) => {
+            let statement = if door { &PARTY_DOOR } else { &PARTY };
+            sqlx::query(sqlx::AssertSqlSafe(statement.as_str()))
                 .bind(vo_id)
                 .fetch_one(&mut *conn)
                 .await?
         }
+    };
+    let revisions = if door {
+        crate::storage::access_projection::observe_revisions(&row)?;
+        row.try_get::<Option<(i64, i64)>, _>("policy_revisions")?
+    } else {
+        None
     };
     let now = row.try_get::<jiff_sqlx::Timestamp, _>("ts")?.to_jiff();
     let target = match row.try_get::<Option<Uuid>, _>("target")? {
@@ -718,5 +747,9 @@ pub async fn party(
             })
         }
     };
-    Ok(PartyGate { now, target })
+    Ok(PartyGate {
+        now,
+        target,
+        revisions,
+    })
 }

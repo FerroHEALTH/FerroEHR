@@ -115,6 +115,7 @@ updates:
     directories:
       - "/docker"
       - "/docker/postgres"
+      - "/docker/ci-postgres"
       - "/docker/viewer"
     # Dependency bumps default to the changelog-guard escape (the triage
     # discipline adds a real entry when a bump is user-visible, which also

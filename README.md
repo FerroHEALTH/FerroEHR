@@ -46,6 +46,12 @@
 **Compliance**<br>
 [![EHDS](https://img.shields.io/badge/EHDS-readiness%20statement-blue?logo=europeanunion)](https://ferrohealth.eu/docs/ehds/readiness.html)
 [![CRA](https://img.shields.io/badge/CRA-risk%20assessment-blue?logo=europeanunion)](https://ferroehr.eu/docs/latest/compliance/cra-risk-assessment.html)
+<br>
+**EHDS**<br>
+<sub>Counted by CI from the book's evidence tables; no conformity assessment has examined them</sub><br>
+[![EHDS logging checklist · Xt-EHR D8.2](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Flogging.json&logo=europeanunion)](https://ferroehr.eu/docs/dev/compliance/logging-checklist.html)
+[![EEHRxF draft · Annex III from the RM](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Fannex-iii.json&logo=europeanunion)](https://ferroehr.eu/docs/dev/compliance/eehrxf-annex-iii.html)
+[![EEHRxF draft · PDF/A originals](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Fpdf-originals.json&logo=europeanunion)](https://ferroehr.eu/docs/dev/compliance/eehrxf-pdf-originals.html)
 
 </div>
 

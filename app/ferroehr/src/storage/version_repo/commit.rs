@@ -471,14 +471,22 @@ fn folded_text(folded: &Folded<'_>, new: bool) -> &'static str {
     static GUARDED: LazyLock<ByPart<[String; 3]>> = LazyLock::new(|| folded_texts(Shape::Guarded));
     static STATUS: LazyLock<ByPart<[String; 3]>> = LazyLock::new(|| guarded_texts(Beside::Status));
     static FOLDER: LazyLock<ByPart<[String; 3]>> = LazyLock::new(|| guarded_texts(Beside::Folder));
-    static PARTY: LazyLock<ByPart<[String; 3]>> = LazyLock::new(|| guarded_texts(Beside::Party));
+    static PARTY: LazyLock<ByPart<[String; 3]>> =
+        LazyLock::new(|| guarded_texts(Beside::Party { door: false }));
+    static PARTY_DOOR: LazyLock<ByPart<[String; 3]>> =
+        LazyLock::new(|| guarded_texts(Beside::Party { door: true }));
     let (texts, version): (&'static LazyLock<ByPart<[String; 3]>>, _) = match folded {
         Folded::Contribution { .. } => return by_part(&CONTRIBUTION, new).as_str(),
         Folded::Standalone { version, .. } => (&STANDALONE, version),
         Folded::Into { version, .. } => (&INTO, version),
         Folded::Guarded { version, guard, .. } if guard.status.is_some() => (&STATUS, version),
         Folded::Guarded { version, guard, .. } if guard.directory.is_some() => (&FOLDER, version),
-        Folded::Guarded { version, guard, .. } if guard.party.is_some() => (&PARTY, version),
+        Folded::Guarded { version, guard, .. } if guard.party.is_some() => {
+            // NOTE: our own design (#6252), a party gate read returns the revisions only through
+            // the clinical door, so only then does its statement require them unchanged.
+            let door = guard.policy.is_some() && guard.definitions.is_some();
+            (if door { &PARTY_DOOR } else { &PARTY }, version)
+        }
         Folded::Guarded { version, .. } => (&GUARDED, version),
     };
     Placement::of(version).pick(by_part(texts, new))

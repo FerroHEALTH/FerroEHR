@@ -88,6 +88,9 @@ six retired ones (`bug`, `enhancement`, `P0`–`P3`) wherever they reappear.
   reports the breach as accepted beside the full report; the release's
   `performance` job honours the same acceptances of the milestone's merged
   pull requests, verified again (`docs/release.md` §The performance gate).
+- **Pull-request lane switches** `nightly.yml` reads: `ci:perf` (the timing
+  lanes) and `ci:heavy` (every nightly lane). Neither changes what
+  `conclusion` needs (`docs/ci-cd.md`).
 
 A new label goes into `labels.sh` in the same change that first uses it.
 

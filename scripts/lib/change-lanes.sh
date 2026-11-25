@@ -40,9 +40,9 @@ readonly ROOT
 # ci viewer_dockerfile (#4222): the viewer Dockerfile and the same ignore list.
 # ci helm (#2110): the chart and the recipe. ci chart_boot (#2159) is a
 # superset: the overlays and the configuration they are written against.
-# ci perf (#5081): what the performance gate measures or runs, the server
-# build (never the viewer), the server and database images, the plan, its
-# configuration and baseline, the gate script, the tool's pin and the recipe.
+# ci perf (#5081): the server build (never the viewer), the server and
+# database images and the perf gate's inputs; on a push it decides whether
+# main writes the server binary cache (the gate itself runs in nightly.yml).
 # ci workflows (#2373): the recipe of the cargo lanes.
 # ci vex (#2370): the OpenVEX documents and the checks the deny job runs.
 # ci cache (#4546): what the rust-cache key hashes, every manifest, the

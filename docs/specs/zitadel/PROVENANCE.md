@@ -1,4 +1,4 @@
-# Provenance: ZITADEL v4.20.3 documentation and sources (excerpt)
+# Provenance: ZITADEL v4.20.5 documentation and sources (excerpt)
 
 - Source: <https://github.com/zitadel/zitadel>, the documentation under
   `apps/docs/content/`, the setup steps `cmd/setup/steps.yaml`, the official
@@ -6,11 +6,11 @@
   OIDC server under `internal/api/oidc/`; and
   <https://github.com/zitadel/oidc>, the OIDC library ZITADEL's `go.mod`
   pins at `v3.47.5`, under `zitadel-oidc/`
-- Version: ZITADEL v4.20.3, the newest stable release when retrieved; tag
-  `v4.20.3` resolves to commit `a8b256c94b6d8615f12c05c54289600a06ca1912` (2026-11-13T11:55:38Z). zitadel/oidc
+- Version: ZITADEL v4.20.5, the newest stable release when retrieved; tag
+  `v4.20.5` resolves to commit `59827a8ec6dd0c23acbba5d0ebdf41fdc857d66c` (2026-11-18T19:17:42Z). zitadel/oidc
   tag `v3.47.5` resolves to commit `fb9fbfe7d0d7c74e2e54ecc7356106dbd741dd7c`. The script
   fetches both commits, each file checked against the sha256 below
-- Retrieved: 2026-11-16
+- Retrieved: 2026-11-24
 - Upstream licences: the repository is AGPL-3.0-only (`LICENSE`, vendored).
   Its `LICENSING.md`, also vendored, reads: "The following files and
   directories, including their subdirectories, are licensed under the Apache
@@ -19,7 +19,7 @@
   `deploy/compose/docker-compose.yml` and the `internal/api/oidc/` files
   are AGPL-3.0-only, copied verbatim for citation and never built, linked or
   modified. zitadel/oidc is Apache-2.0, its `LICENSE` vendored under
-  `zitadel-oidc/`. Read 2026-11-16.
+  `zitadel-oidc/`. Read 2026-11-24.
 - Images run, never vendored: `ghcr.io/zitadel/zitadel` (the server,
   AGPL-3.0-only) and `ghcr.io/zitadel/zitadel-login` (the Login v2 UI from
   `apps/login/`, MIT), both pinned by digest in `docs/VERSIONS.md` and run
@@ -55,7 +55,7 @@
 | `apps/docs/content/guides/integrate/token-introspection/private-key-jwt.mdx` | `926304ae1b9c11b8d8cce9b2cc5808ca9513fda84e9673b50ba007ed03b1de65` |
 | `apps/docs/content/guides/integrate/login-ui/oidc-standard.mdx` | `6fb12712152b8d5f4bd7da5eec4d113e2e567f3cdd0e928d3f6b93fb7f45a8af` |
 | `apps/docs/content/guides/integrate/login-ui/username-password.mdx` | `c315e0dbd896ef5273c4b9ba339976eaaac8070fd9178c5c511b4efb427d811e` |
-| `apps/docs/content/guides/integrate/login-ui/login-app.mdx` | `b06f3b3cb3b8e624f0ee612106e6da5ace49c7aed6e791c0c2c9e12630a0eaf1` |
+| `apps/docs/content/guides/integrate/login-ui/login-app.mdx` | `6d42499886454351c2738b9851b0c45be24971c5a13f98f79bdccd38d83fd18b` |
 | `apps/docs/content/guides/manage/terraform-provider.mdx` | `db504f9cbced179fafd8e674f89cf4d7d5a0d67f35b1f3f89628b7fdb00f67f6` |
 | `apps/docs/content/self-hosting/deploy/compose.mdx` | `0066faeb74227850a2a281e4bf055fc6679c425b90145eb34ef3ffd393b0a915` |
 | `apps/docs/content/self-hosting/manage/configure/configure.mdx` | `522056fc0fb4046e1c908b2328d42f1b17b1d7d737287dc9da51033cda31e467` |

@@ -99,8 +99,13 @@ pub(super) enum Beside {
     /// The directory slot's requirements and the `ehr_folder` membership of
     /// a new FOLDER hierarchy ([`folder_cte`]).
     Folder,
-    /// A party version, in the party domain ([`party_ctes`]).
-    Party,
+    /// A party version, in the party domain ([`party_ctes`]), and with
+    /// `door` the policy and definition revisions read through the clinical
+    /// door (#6252).
+    Party {
+        /// Whether the revisions are read through the clinical door.
+        door: bool,
+    },
 }
 
 /// The promoted `ehr` columns of an `EHR_STATUS` commit, written by its
@@ -205,14 +210,22 @@ enum Lead {
     /// The EHR row, read `FOR UPDATE` by the `EHR_STATUS` commit that flips it,
     /// and the revisions.
     Status,
-    /// Nothing of an EHR or the policy, which the party domain does not hold;
-    /// the commit side of the key-space fill gate when `$gate` holds
-    /// (`party_binding::key_space`).
+    /// Nothing of an EHR, which the party domain does not hold; the commit
+    /// side of the key-space fill gate when `$gate` holds
+    /// (`party_binding::key_space`), and the policy and definition revisions
+    /// through the clinical door when `door` holds (#6252).
     Party {
         /// The parameter that says whether the gate is taken.
         gate: usize,
+        /// Whether the revisions are read through the clinical door.
+        door: bool,
     },
 }
+
+/// The CTE `p` of a party statement's policy and definition revisions, read
+/// through the clinical door (#6252).
+const DOOR_REVISIONS: &str =
+    ", p AS (SELECT cr.policy, cr.definitions FROM clinical_door.policy_revisions() cr)";
 
 /// The leading CTEs of a guarded statement and its gate `g`: per `lead`, the
 /// EHR row `ehr` read `FOR SHARE` (the lock a concurrent `EHR_STATUS` flip
@@ -230,15 +243,16 @@ fn guard_ctes(
 ) -> String {
     use std::fmt::Write as _;
     let (mut sql, writable, revised, gated) = match lead {
-        Lead::Party { gate } => (
+        Lead::Party { gate, door } => (
             format!(
                 "WITH ks AS MATERIALIZED ( \
                      SELECT pg_advisory_xact_lock_shared({}::bigint) AS taken WHERE ${gate}::bool \
-                 )",
-                crate::party_binding::key_space::GATE
+                 ){}",
+                crate::party_binding::key_space::GATE,
+                if door { DOOR_REVISIONS } else { "" }
             ),
             "true",
-            false,
+            door,
             " LEFT JOIN ks ON true",
         ),
         Lead::Content | Lead::Directory { .. } | Lead::Status => {
@@ -509,7 +523,7 @@ pub(super) fn statement(
     let beside_params = match beside {
         Beside::Status => 6,
         Beside::Folder => 4,
-        Beside::Party => 2,
+        Beside::Party { .. } => 2,
         Beside::Nothing => 0,
     };
     let episodes = after_nodes + beside_params;
@@ -519,12 +533,15 @@ pub(super) fn statement(
             ", (SELECT count(*) FROM en) AS notified",
         ),
         Beside::Folder => (folder_cte("$7", "$8", after_nodes), ""),
-        Beside::Party => (party_ctes("$8", "$22", after_nodes + 1, "v"), ""),
+        Beside::Party { .. } => (party_ctes("$8", "$22", after_nodes + 1, "v"), ""),
         Beside::Nothing => (String::new(), ""),
     };
     let lead = match beside {
         Beside::Status => Lead::Status,
-        Beside::Party => Lead::Party { gate: after_nodes },
+        Beside::Party { door } => Lead::Party {
+            gate: after_nodes,
+            door,
+        },
         Beside::Folder => Lead::Directory { first: after_nodes },
         Beside::Nothing => Lead::Content,
     };
@@ -548,7 +565,13 @@ pub(super) fn statement(
             (33, placement, episodes),
         ),
         sync,
-        outbox_cte("$6", "$7", ("$31", "$22"), "v", beside != Beside::Party),
+        outbox_cte(
+            "$6",
+            "$7",
+            ("$31", "$22"),
+            "v",
+            !matches!(beside, Beside::Party { .. })
+        ),
         reservation_cte("$32"),
         flags_row("a", &format!("{notified}{}", plan.learned_column()))
     )

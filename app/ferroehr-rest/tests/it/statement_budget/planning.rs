@@ -7,9 +7,9 @@
 //! executions (`PostgreSQL` docs, `PREPARE`, "Notes").
 //!
 //! The plans are read from `pg_stat_statements` with `track_planning` on for
-//! the test's database, whose tables leave autovacuum and are analyzed before
-//! each path is warmed, so the statistics a window plans with do not move
-//! inside it. No openEHR spec governs the planning of a statement:
+//! the test's database, whose tables leave autovacuum and are analyzed in
+//! full before each path is warmed, so the statistics a window plans with are
+//! exact and do not move inside it. No openEHR spec governs the planning of a statement:
 //! our own design.
 
 use std::fmt::Write as _;
@@ -119,10 +119,13 @@ async fn without_autovacuum(pool: &PgPool) {
     .expect("the test's tables leave autovacuum");
 }
 
-/// Analyzes the test's database, so each path's window plans with the
-/// statistics of the writes before it.
+/// Analyzes the test's database reading every row, so each path's window
+/// plans with exact statistics of the writes before it: a sampled `ANALYZE`
+/// reads 300 rows per point of `default_statistics_target`, and a table past
+/// the sample gets different statistics on every run (`PostgreSQL` docs,
+/// `ANALYZE`, "Notes"; #6544).
 async fn settle_statistics(pool: &PgPool) {
-    sqlx::query("ANALYZE")
+    sqlx::raw_sql("BEGIN; SET LOCAL default_statistics_target = 10000; ANALYZE; COMMIT")
         .execute(pool)
         .await
         .expect("the test's database is analyzed");
