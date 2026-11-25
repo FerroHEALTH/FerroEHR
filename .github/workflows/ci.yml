@@ -157,6 +157,7 @@ jobs:
     outputs:
       postgres_image: ${{ steps.postgres.outputs.image }}
       code: ${{ steps.filter.outputs.code }}
+      code_runs: ${{ steps.filter.outputs.code_runs }}
       viewer: ${{ steps.filter.outputs.viewer }}
       server_dockerfile: ${{ steps.filter.outputs.server_dockerfile }}
       viewer_dockerfile: ${{ steps.filter.outputs.viewer_dockerfile }}
@@ -172,6 +173,7 @@ jobs:
       queue_verified: ${{ steps.push.outputs.queue_verified }}
       rust: ${{ steps.affected.outputs.rust }}
       packages: ${{ steps.affected.outputs.packages }}
+      runs: ${{ steps.affected.outputs.runs }}
       instructions: ${{ steps.filter.outputs.instructions }}
       server: ${{ steps.affected.outputs.server }}
       viewer_crate: ${{ steps.affected.outputs.viewer }}
@@ -245,6 +247,7 @@ jobs:
             echo "Base $base unavailable or unrelated — treating as a change to everything."
             {
               echo "code=true"
+              echo "code_runs=true"
               echo "viewer=true"
               echo "server_dockerfile=true"
               echo "viewer_dockerfile=true"
@@ -267,10 +270,20 @@ jobs:
           # `false` downstream and a skipped job counts as satisfied, so every
           # gate is written deliberately. The lanes and their reasons are in
           # the script, which matches from a here-string (#4208).
-          bash scripts/lib/change-lanes.sh ci <<<"$changed" | tee -a "$GITHUB_OUTPUT"
-          # The conformance lane (#4539): the catalogue runs in this workflow on a
-          # pull request and in the merge queue.
-          bash scripts/lib/change-lanes.sh conformance <<<"$changed" | tee -a "$GITHUB_OUTPUT"
+          # A Rust source whose changed lines are all comments still reaches
+          # `code` (fmt, clippy, rustdoc read comments) and no lane that runs
+          # code (scripts/lib/comment-only.sh, #6519).
+          runs="$(bash scripts/lib/comment-only.sh "$base" "$head" <<<"$changed")"
+          full="$(bash scripts/lib/change-lanes.sh ci <<<"$changed")"
+          ran="$(bash scripts/lib/change-lanes.sh ci <<<"$runs")"
+          {
+            sed -n '/^code=/p' <<<"$full"
+            sed -n 's/^code=/code_runs=/p' <<<"$ran"
+            sed '/^code=/d' <<<"$ran"
+            # The conformance lane (#4539): the catalogue runs in this workflow
+            # on a pull request.
+            bash scripts/lib/change-lanes.sh conformance <<<"$runs"
+          } | tee -a "$GITHUB_OUTPUT"
       # A push to main whose tree the merge queue already passed (#4546). The
       # commit GitHub lands on main carries the tree the `merge_group` run checked
       # and never that run's SHA, so the run is found by tree
@@ -1513,7 +1526,7 @@ jobs:
   nesting-release:
     name: nesting limit (release)
     needs: changes
-    if: github.event_name != 'merge_group' && ((contains(format(' {0} ', needs.changes.outputs.packages), ' openehr-its ') || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true')
+    if: github.event_name != 'merge_group' && ((contains(format(' {0} ', needs.changes.outputs.runs), ' openehr-its ') || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1751,7 +1764,7 @@ jobs:
   instructions:
     name: codec instructions (callgrind)
     needs: changes
-    if: github.event_name != 'merge_group' && ((contains(format(' {0} ', needs.changes.outputs.packages), ' openehr-its ') || needs.changes.outputs.instructions == 'true' || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true')
+    if: github.event_name != 'merge_group' && ((contains(format(' {0} ', needs.changes.outputs.runs), ' openehr-its ') || needs.changes.outputs.instructions == 'true' || needs.changes.outputs.workflows == 'true') && needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -1933,7 +1946,7 @@ jobs:
   deploy-probe:
     name: deploy-probe
     needs: [changes, ui-e2e-binary]
-    if: github.event_name != 'merge_group' && ((needs.changes.outputs.code == 'true' || needs.changes.outputs.deploy == 'true') && needs.changes.outputs.queue_verified != 'true')
+    if: github.event_name != 'merge_group' && ((needs.changes.outputs.code_runs == 'true' || needs.changes.outputs.deploy == 'true') && needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -1995,7 +2008,7 @@ jobs:
     needs: [changes, ui-e2e-binary, ui-e2e-viewer]
     if: >-
       github.event_name != 'merge_group' &&
-      (needs.changes.outputs.code == 'true' || needs.changes.outputs.deploy == 'true') &&
+      (needs.changes.outputs.code_runs == 'true' || needs.changes.outputs.deploy == 'true') &&
       needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -2117,7 +2130,7 @@ jobs:
       needs.changes.outputs.chart_boot == 'true' ||
       (needs.changes.outputs.perf == 'true' && github.event_name == 'push') ||
       (needs.changes.outputs.conformance == 'true' && github.event_name != 'push') ||
-      ((needs.changes.outputs.code == 'true' || needs.changes.outputs.deploy == 'true') && needs.changes.outputs.queue_verified != 'true'))
+      ((needs.changes.outputs.code_runs == 'true' || needs.changes.outputs.deploy == 'true') && needs.changes.outputs.queue_verified != 'true'))
     runs-on: ubuntu-latest
     # Generous: a binary-cache miss with a cold sccache is a full release
     # build of the first-party graph.
@@ -2164,7 +2177,7 @@ jobs:
     # deploy-probe-hospital job packages this binary too.
     if: >-
       github.event_name != 'merge_group' && (needs.changes.outputs.viewer == 'true' ||
-      ((needs.changes.outputs.code == 'true' || needs.changes.outputs.deploy == 'true') && needs.changes.outputs.queue_verified != 'true'))
+      ((needs.changes.outputs.code_runs == 'true' || needs.changes.outputs.deploy == 'true') && needs.changes.outputs.queue_verified != 'true'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
