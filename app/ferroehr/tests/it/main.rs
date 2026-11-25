@@ -130,6 +130,7 @@ mod instances;
 mod item_tag_fixture;
 mod latest_head_fan_out;
 mod legal_marks;
+mod licence_id30_vectors;
 mod licence_stamp;
 mod manufacturer;
 mod multimedia_s3;

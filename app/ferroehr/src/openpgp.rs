@@ -77,13 +77,38 @@ impl Certificate {
         }
     }
 
-    /// Verifies the detached `signature` over `data`.
+    /// Verifies the detached `signature` over `data` by the primary key or,
+    /// for a classical certificate, any of its subkeys.
     ///
     /// # Errors
     /// [`SignatureError::WeakDigest`] before any cryptography, then
     /// [`SignatureError::Composite`] or [`SignatureError::Classical`] for a
     /// signature that does not verify.
     pub fn verify(&self, signature: &Signature, data: &[u8]) -> Result<(), SignatureError> {
+        let Self::Classical(signed) = self else {
+            return self.verify_primary(signature, data);
+        };
+        match self.verify_primary(signature, data) {
+            Err(SignatureError::Classical(error)) => {
+                if signed
+                    .public_subkeys
+                    .iter()
+                    .any(|subkey| signature.verify(subkey, data).is_ok())
+                {
+                    Ok(())
+                } else {
+                    Err(SignatureError::Classical(error))
+                }
+            }
+            primary => primary,
+        }
+    }
+
+    /// Verifies the detached `signature` over `data` by the primary key alone.
+    ///
+    /// # Errors
+    /// As [`Self::verify`].
+    pub fn verify_primary(&self, signature: &Signature, data: &[u8]) -> Result<(), SignatureError> {
         if let Some(hash) = signature.hash_alg()
             && matches!(
                 hash,
@@ -100,23 +125,9 @@ impl Certificate {
                     CompositeError::DigestTooShort { hash } => SignatureError::WeakDigest { hash },
                     other => SignatureError::Composite(other),
                 }),
-            Self::Classical(signed) => {
-                let primary = signature.verify(signed.as_ref(), data);
-                match primary {
-                    Ok(()) => Ok(()),
-                    Err(error) => {
-                        if signed
-                            .public_subkeys
-                            .iter()
-                            .any(|subkey| signature.verify(subkey, data).is_ok())
-                        {
-                            Ok(())
-                        } else {
-                            Err(SignatureError::Classical(error))
-                        }
-                    }
-                }
-            }
+            Self::Classical(signed) => signature
+                .verify(&signed.primary_key, data)
+                .map_err(SignatureError::Classical),
         }
     }
 }

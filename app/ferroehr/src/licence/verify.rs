@@ -3,21 +3,25 @@
 
 //! The chain check: embedded master key → its signature → licence window.
 
+use ferrohealth_openpgp_pq::error::Error as CompositeError;
 use jiff::civil::Date;
 use pgp::composed::SignedPublicKey;
+use pgp::crypto::hash::HashAlgorithm;
 use pgp::packet::{PublicKey, Signature, SignatureType};
-use pgp::types::{Fingerprint, KeyDetails as _};
+use pgp::types::{Fingerprint, KeyDetails as _, KeyVersion};
 
 use crate::licence::document::{Licence, Window};
 use crate::licence::token::Token;
+use crate::openpgp::{Certificate, SignatureError};
 
 /// Why a structurally valid token was refused.
 #[derive(Debug, thiserror::Error)]
 pub enum VerifyError {
     /// A binding or self-signature of the trusted certificate does not
-    /// verify under its own primary key.
+    /// verify under its own primary key, or an ML-DSA-65+Ed25519 certificate
+    /// has no valid direct-key self-signature (RFC 9580 §5.2.3.10).
     #[error("trusted certificate has broken bindings")]
-    BrokenBindings(#[source] pgp::errors::Error),
+    BrokenBindings(#[source] Box<dyn std::error::Error + Send + Sync>),
     /// The certificate's primary key is not one the verifier embeds.
     #[error("certificate primary {0} is not a trusted issuer")]
     UntrustedPrimary(Fingerprint),
@@ -33,7 +37,8 @@ pub enum VerifyError {
     /// the only type a cleartext-signed licence is made with.
     #[error("licence signature is not a text signature")]
     NotTextSignature,
-    /// The signature names no issuer key.
+    /// The signature names no issuer key: no issuer fingerprint, or for a
+    /// version 4 primary no issuer key id either.
     #[error("signature names no issuer")]
     NoIssuer,
     /// The signature was made by a key other than the certificate's primary,
@@ -56,9 +61,17 @@ pub enum VerifyError {
         /// When the licence was signed.
         signed_at: jiff::Timestamp,
     },
+    /// The signature's hash is refused before any cryptography: a digest
+    /// under 256 bits for ML-DSA-65+Ed25519 (RFC 9980 §5.3.1), or MD5, SHA-1
+    /// or RIPEMD-160 for any key (RFC 9580 §9.5).
+    #[error("licence signature hashes with {hash:?}, which is too weak")]
+    WeakDigest {
+        /// The hash algorithm the signature names.
+        hash: HashAlgorithm,
+    },
     /// The signature does not verify over the signed text.
     #[error("licence signature does not verify")]
-    BadSignature(#[source] pgp::errors::Error),
+    BadSignature(#[source] SignatureError),
     /// The signed text is not a licence document.
     #[error("signed text is not a licence document")]
     Payload(#[source] serde_json::Error),
@@ -117,9 +130,18 @@ pub fn verify(
         .find(|a| a.primary_key == *bundled)
         .ok_or_else(|| VerifyError::UntrustedPrimary(fingerprint.clone()))?;
     let primary = &anchor.primary_key;
-    anchor
-        .verify_bindings()
-        .map_err(VerifyError::BrokenBindings)?;
+    // NOTE: RFC 9580 §5.2.3.29; an ML-DSA-65+Ed25519 anchor without the signing flag is `None`, answered at the flag check.
+    let certificate = match Certificate::from_signed(anchor.clone()) {
+        Ok(classical @ Certificate::Classical(_)) => {
+            anchor
+                .verify_bindings()
+                .map_err(|error| VerifyError::BrokenBindings(Box::new(error)))?;
+            Some(classical)
+        }
+        Ok(composite) => Some(composite),
+        Err(CompositeError::CannotSign) => None,
+        Err(error) => return Err(VerifyError::BrokenBindings(Box::new(error))),
+    };
 
     let signature = match token.message().signatures() {
         [] => return Err(VerifyError::NoSignature),
@@ -131,15 +153,23 @@ pub fn verify(
     }
     signed_by(primary, signature)?;
 
-    let self_signature = newest_self_signature(anchor)
-        .ok_or_else(|| VerifyError::NotSigningCapable(fingerprint.clone()))?;
-    if !self_signature.key_flags().sign() {
-        return Err(VerifyError::NotSigningCapable(fingerprint));
-    }
+    let (certificate, expires_at) = match certificate {
+        Some(Certificate::Composite(composite)) => {
+            let expires_at = composite.expires().map(to_jiff).transpose()?;
+            (Certificate::Composite(composite), expires_at)
+        }
+        Some(classical @ Certificate::Classical(_)) => match newest_self_signature(anchor) {
+            Some(self_signature) if self_signature.key_flags().sign() => (
+                classical,
+                expiry(primary.created_at(), self_signature.key_expiration_time())?,
+            ),
+            _ => return Err(VerifyError::NotSigningCapable(fingerprint)),
+        },
+        None => return Err(VerifyError::NotSigningCapable(fingerprint)),
+    };
 
     let signed_at = to_jiff(signature.created().ok_or(VerifyError::NoSigningTime)?)?;
-    let signer_expires_at = expiry(primary.created_at(), self_signature.key_expiration_time())?;
-    if let Some(expired_at) = signer_expires_at
+    if let Some(expired_at) = expires_at
         && signed_at >= expired_at
     {
         return Err(VerifyError::ExpiredAtSigning {
@@ -150,9 +180,12 @@ pub fn verify(
     }
 
     let signed_text = token.signed_text();
-    signature
-        .verify(primary, signed_text.as_bytes())
-        .map_err(VerifyError::BadSignature)?;
+    certificate
+        .verify_primary(signature, signed_text.as_bytes())
+        .map_err(|error| match error {
+            SignatureError::WeakDigest { hash } => VerifyError::WeakDigest { hash },
+            other => VerifyError::BadSignature(other),
+        })?;
 
     let licence = serde_json::from_str::<Licence>(&signed_text).map_err(VerifyError::Payload)?;
     match licence.window(today) {
@@ -166,17 +199,20 @@ pub fn verify(
             licence,
             signer: fingerprint,
             signed_at,
-            signer_expires_at,
+            signer_expires_at: expires_at,
         }),
     }
 }
 
 /// Whether `signature` names `primary` as its issuer, by fingerprint first
-/// and by 64-bit key id as the v4 fallback.
+/// and, for a version 4 primary only, by 64-bit key id.
 fn signed_by(primary: &PublicKey, signature: &Signature) -> Result<(), VerifyError> {
     let named = if let Some(fingerprint) = signature.issuer_fingerprint().first() {
         **fingerprint == primary.fingerprint()
     } else {
+        if primary.version() != KeyVersion::V4 {
+            return Err(VerifyError::NoIssuer);
+        }
         let key_ids = signature.issuer_key_id();
         let key_id = key_ids.first().ok_or(VerifyError::NoIssuer)?;
         **key_id == primary.legacy_key_id()
