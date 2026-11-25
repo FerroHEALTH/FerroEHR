@@ -260,9 +260,10 @@ ferrohealth-health = { version = "=0.1.1", default-features = false }
 # the admission metrics on the stack's meter; 0.12 decodes a gzip or Brotli
 # request body under the body limit (`request_decompression`), and 0.12.1
 # tries the admission slot before the request id and the request log, so a
-# refusal leaves no request line and its `WARN` is at most one a second.
-# Verified on crates.io 2026-11-23.
-ferrohealth-server = { version = "=0.12.2", default-features = false }
+# refusal leaves no request line and its `WARN` is at most one a second;
+# 0.12.4 prefers the hybrid key exchange X25519MLKEM768 (RFC 10024) on the
+# listener and every client it configures. Verified on crates.io 2026-11-25.
+ferrohealth-server = { version = "=0.12.4", default-features = false }
 # The family's telemetry (FerroSYS): the `[telemetry]` section, the console,
 # the one OpenTelemetry provider read by Prometheus and pushed over OTLP, the
 # request log with its `http.server.request.duration` histogram, and the panic

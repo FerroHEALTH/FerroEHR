@@ -163,6 +163,8 @@ openehr-query = { path = "../../crates/openehr-query" }
 # targets with it off.
 ferroehr-ext = { path = "../ferroehr-ext", features = ["multimedia"] }
 testkit = { path = "../../tools/testkit" }
+# The key exchange tests name the groups a peer offers (`testkit::kx`).
+rustls = { workspace = true }
 # The access-record tests read what `ehds-logging` writes by its names.
 ehds-logging = { workspace = true, features = ["balp"] }
 serde_norway.workspace = true

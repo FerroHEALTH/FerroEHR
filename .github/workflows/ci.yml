@@ -1241,6 +1241,17 @@ jobs:
         if: ${{ !cancelled() }}
         run: bash scripts/render/ehds-badges.sh --check
 
+      # ---- post-quantum ------------------------------------------------
+      # The post-quantum inventory (#6602): conformance/post-quantum.tsv in its
+      # five columns with every location it names in the tree, the table of
+      # docs/post-quantum.md and the README badge counted from it.
+      - name: post-quantum / The inventory rules hold on their fixtures
+        if: ${{ !cancelled() }}
+        run: bash scripts/render/post-quantum.sh --self-test
+      - name: post-quantum / The table and the badge match the inventory, and the badge claims no certification
+        if: ${{ !cancelled() }}
+        run: bash scripts/render/post-quantum.sh --check
+
       # ---- control-matrix ----------------------------------------------
       # The published compliance control matrix is GENERATED from the tracker
       # (scripts/render/control-matrix.sh), the same way the conformance pages

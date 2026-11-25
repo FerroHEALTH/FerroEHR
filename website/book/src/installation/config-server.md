@@ -175,6 +175,13 @@ configuration is now refused at load. Set `client_auth = "required"` beside
 `ferroehr healthcheck` speaks TLS to a TLS listener over the loopback and
 accepts exactly the leaf certificate in `certificate_file`.
 
+The TLS 1.3 key exchange offers the post-quantum hybrid group
+X25519MLKEM768 (RFC 10024) first, then X25519, P-256 and P-384, so a client
+that offers the hybrid group agrees on it and a client without it still
+connects. Every client FerroEHR opens takes the same order. The
+[post-quantum inventory](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/post-quantum.md)
+lists every cryptographic use and whether it resists a quantum computer.
+
 > [!NOTE]
 > `min_version` defaults to **1.3 only**, as RFC 9325 §3.1.1 has it supported.
 > Setting `"1.2"` enables 1.2 *alongside* 1.3, with the four forward-secret

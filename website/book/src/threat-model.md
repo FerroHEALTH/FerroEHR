@@ -109,9 +109,10 @@ Each boundary below names the control that holds and the risk that remains.
 
 ### B1 — Network and protocol
 
-**Control.** TLS terminates either at the server (`rustls`, TLS 1.3 by default)
-or in front of it. Connection-level bounds apply before a request even exists (an
-HTTP/1 header-read timeout, an HTTP/2 stream cap with keep-alive PINGs); request
+**Control.** TLS terminates either at the server (`rustls`, TLS 1.3 by default,
+the post-quantum hybrid key exchange X25519MLKEM768 preferred) or in front of
+it. Connection-level bounds apply before a request even exists (an HTTP/1
+header-read timeout, an HTTP/2 stream cap with keep-alive PINGs); request
 bodies are size-limited, requests are timed out, concurrency is capped by an
 admission limit, and a two-tier `tower_governor` rate limit is **on by
 default**. Panics are caught and become a clean `500` rather than a dropped
