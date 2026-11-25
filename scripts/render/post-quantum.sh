@@ -49,7 +49,7 @@ FORBIDDEN='certif|complian|conforman'
 # Prints each defect of inventory $1 under the tree $2; status 1 when any.
 shape_of() {
   local inventory="$1" tree="$2" failed=0 line=0 use algorithm safe standard location extra item path rest
-  if [[ "$(grep -v '^#' "$inventory" | head -n 1)" != "$HEADER" ]]; then
+  if [[ "$(grep -v '^#' "$inventory" | sed -n 1p)" != "$HEADER" ]]; then
     echo "post-quantum: $inventory does not open with the header line" >&2
     failed=1
   fi
