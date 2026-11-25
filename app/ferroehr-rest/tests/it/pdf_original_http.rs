@@ -123,41 +123,47 @@ async fn commit(app: &Router, ehr_id: &str, content_type: &str, body: String) ->
     common::etag_uid(&headers)
 }
 
-async fn get(app: &Router, uri: &str, accept: &str) -> String {
+/// `GET` `uri` as `accept`; `read` names the read in a failure.
+async fn get(app: &Router, uri: &str, accept: &str, read: &str) -> String {
     let (status, headers, body) =
         common::send(app, common::req("GET", uri).accept(accept).build()).await;
-    assert_eq!(status, StatusCode::OK, "{uri} as {accept}: {body}");
-    assert_eq!(headers.get(header::CONTENT_TYPE).unwrap(), accept, "{uri}");
+    assert_eq!(status, StatusCode::OK, "{read}: {body}");
+    assert_eq!(headers.get(header::CONTENT_TYPE).unwrap(), accept, "{read}");
     body
 }
 
 /// The composition and its version, each read in canonical JSON and XML, as
-/// canonical JSON values.
-async fn reads(app: &Router, ehr_id: &str, version_uid: &str) -> Vec<(String, Value)> {
+/// canonical JSON values named by the read.
+async fn reads(app: &Router, ehr_id: &str, version_uid: &str) -> Vec<(&'static str, Value)> {
+    const JSON: &str = "application/json";
+    const XML: &str = "application/xml";
     let vo = version_uid.split("::").next().unwrap();
     let composition = format!("{BASE}/ehr/{ehr_id}/composition/{version_uid}");
     let version = format!("{BASE}/ehr/{ehr_id}/versioned_composition/{vo}/version/{version_uid}");
-    let composition_xml: Composition =
-        openehr_its::xml::from_canonical_xml(&get(app, &composition, "application/xml").await)
-            .expect("the composition XML decodes");
+    let composition_xml: Composition = openehr_its::xml::from_canonical_xml(
+        &get(app, &composition, XML, "the composition as XML").await,
+    )
+    .expect("the composition XML decodes");
     let version_xml: OriginalVersion<Composition> =
-        openehr_its::xml::from_canonical_xml(&get(app, &version, "application/xml").await)
+        openehr_its::xml::from_canonical_xml(&get(app, &version, XML, "the version as XML").await)
             .expect("the version XML decodes");
+    let composition_json = get(app, &composition, JSON, "the composition as JSON").await;
+    let version_json = get(app, &version, JSON, "the version as JSON").await;
     vec![
         (
-            format!("{composition} as JSON"),
-            serde_json::from_str(&get(app, &composition, "application/json").await).unwrap(),
+            "the composition as JSON",
+            serde_json::from_str(&composition_json).unwrap(),
         ),
         (
-            format!("{composition} as XML"),
+            "the composition as XML",
             openehr_its::json::to_canonical_value(&composition_xml),
         ),
         (
-            format!("{version} as JSON"),
-            serde_json::from_str(&get(app, &version, "application/json").await).unwrap(),
+            "the version as JSON",
+            serde_json::from_str(&version_json).unwrap(),
         ),
         (
-            format!("{version} as XML"),
+            "the version as XML",
             openehr_its::json::to_canonical_value(&version_xml),
         ),
     ]
@@ -211,9 +217,9 @@ fn assert_described(media: &Value, read: &str) {
 
 async fn assert_inline_original(app: &Router, ehr_id: &str, version_uid: &str) {
     for (read, value) in reads(app, ehr_id, version_uid).await {
-        for media in all_media(&value, &read) {
-            assert_described(media, &read);
-            let served = octets(media, "data", &read);
+        for media in all_media(&value, read) {
+            assert_described(media, read);
+            let served = octets(media, "data", read);
             assert!(
                 served == PDF,
                 "{read}: the served bytes differ from the committed PDF"
@@ -252,8 +258,8 @@ async fn a_referenced_pdf_a_original_keeps_its_uri_size_and_integrity_check() {
     let body = composition_with(&app, &referenced_pdf()).await;
     let version_uid = commit(&app, &ehr_id, "application/json", body.to_string()).await;
     for (read, value) in reads(&app, &ehr_id, &version_uid).await {
-        for media in all_media(&value, &read) {
-            assert_described(media, &read);
+        for media in all_media(&value, read) {
+            assert_described(media, read);
             assert_eq!(media["uri"]["value"], ORIGINAL_URI, "{read}");
             assert!(
                 media.get("data").is_none(),
