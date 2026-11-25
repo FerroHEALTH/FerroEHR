@@ -1916,9 +1916,9 @@ dependencies = [
 
 [[package]]
 name = "ehds-logging"
-version = "0.25.0"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ed38bd6e9b08fbdb01cef2cb43f3a4615c1df6d4c9c1817d9788e948008e612"
+checksum = "0595ae20c8fae9c1892db05bb3acbee4c9230305e6d705d9c2504c841718b8e5"
 dependencies = [
  "async-trait",
  "ihe-atna",
@@ -2084,9 +2084,9 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "ferrobridge-term"
-version = "0.18.0"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a24a171bf4b6a8b5d8f2a7813853b16590efb17922a5eac892790170e6d2979c"
+checksum = "8e6dc4494be13d088ca66ae23c09a94acb7cd9b60f9e8b7ca2b4cf987701de06"
 dependencies = [
  "async-trait",
  "backon",
@@ -2580,9 +2580,9 @@ dependencies = [
 
 [[package]]
 name = "fhir-types"
-version = "0.1.131"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "295ec4729d0e3595a79b426afc54831a5386648c41b376fe0b7c38af19041d4a"
+checksum = "7dc799c13c2e292fbaae7c6aee40daf46d2e0ba4ead0275f6b51b67eeecdd524"
 dependencies = [
  "quick-xml 0.42.0",
  "regex",
@@ -3444,9 +3444,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-atna"
-version = "0.25.0"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efbb457b86f718a001d493df1e30e827d2e4b5e07307345dee13fea0d6bc67fc"
+checksum = "e80c1964088be423a90645f4c67b62b8b833238e7988f1f5eb4a42010ae003fc"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -3470,9 +3470,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-iti"
-version = "0.21.1"
+version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d63895a062c6039798e4855615f008854dda5fa84a5fe2cf74a282471fee57e3"
+checksum = "f6610e6ad1ae8c9636e4d6f43e82b230b198a43bb79c9bddbe02ac665b54cff4"
 dependencies = [
  "ferrohealth-smart",
  "fhir-search",
@@ -6553,7 +6553,7 @@ version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "287f59010008f0d7cf5e3b03196d666c1acc46c8d3e9cf34c28a1a7157601e72"
 dependencies = [
- "heck 0.4.1",
+ "heck 0.5.0",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
