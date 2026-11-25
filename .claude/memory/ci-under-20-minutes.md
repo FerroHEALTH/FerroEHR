@@ -16,7 +16,10 @@ archive and a smoke set of the unit tests and the server's wiring tests, and
 `conclusion` judges the group on that set. The full test shards, perf, the
 browser lanes, conformance, the deployment harness and chart boot run on the
 pull request; a push to `main` the queue verified writes caches and
-publishes (#6515).
+publishes (#6515). A required check is exact (owner decision D-4,
+2026-11-24, #6517): perf A/B and the CPU budget read a clock, so they run in
+`nightly.yml` on `main` and on a pull request labelled `ci:perf` or
+`ci:heavy`, never in `conclusion`. `docs/ci-cd.md` holds the tiers.
 
 **Why:** hosted runners are shared across the organisation, so every job a
 run starts waits for a runner, and the queue tests one group after another.

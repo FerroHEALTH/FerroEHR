@@ -1,0 +1,415 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# .github/workflows/nightly.yml: the lanes that read a clock or re-prove what
+# the required set proves at a finer grain (owner decision D-4, 2026-11-24,
+# #6517, #6518). None is in ci.yml's `conclusion`, so none blocks a merge: a
+# required check is exact (docs/ci-cd.md). They run nightly on main, on a
+# dispatch, and on a pull request labelled `ci:perf` (the timing lanes) or
+# `ci:heavy` (every lane here). nightly-report.yml files one issue for a red
+# scheduled run.
+name: Nightly
+
+on:
+  schedule:
+    - cron: "7 2 * * *" # daily 02:07 UTC, off the hour
+  workflow_dispatch:
+  # `labeled` starts a run when a label is added; a pull request without
+  # either label skips every job.
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+concurrency:
+  group: nightly-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions: {}
+
+env:
+  # A FerroEHR started by any step of this workflow sends no usage report to
+  # FerroPULSE (scripts/checks/usage-report-off.sh).
+  FERROEHR__USAGE_REPORT__ENABLED: "false"
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
+
+jobs:
+  # Which lanes this run takes. The labels come from the event payload, which
+  # holds the pull request's labels at the time of the event.
+  lanes:
+    name: lanes
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'ci:heavy') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:perf')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read # the previous scheduled run and the CI runs base-rev.sh reads
+    outputs:
+      postgres_image: ${{ steps.postgres.outputs.image }}
+      perf: ${{ steps.lanes.outputs.perf }}
+      heavy: ${{ steps.lanes.outputs.heavy }}
+      perf_base: ${{ steps.perf_base.outputs.rev }}
+      perf_base_reason: ${{ steps.perf_base.outputs.reason }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      # The image docker/postgres builds on, the one ci.yml's services run.
+      - id: postgres
+        run: |
+          set -euo pipefail
+          image="$(bash scripts/lib/base-image.sh ref docker/postgres/Dockerfile)"
+          [[ "$image" =~ ^[^@[:space:]]+@sha256:[0-9a-f]{64}$ ]] || {
+            echo "::error::docker/postgres/Dockerfile resolves to '$image', not name@sha256:<digest>"
+            exit 1
+          }
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+      - id: lanes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HEAVY_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'ci:heavy') }}
+          PERF_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'ci:perf') }}
+        run: |
+          set -euo pipefail
+          heavy=false
+          if [ "$EVENT_NAME" != pull_request ] || [ "$HEAVY_LABEL" = true ]; then
+            heavy=true
+          fi
+          perf="$heavy"
+          [ "$PERF_LABEL" = true ] && perf=true
+          echo "heavy=$heavy perf=$perf"
+          {
+            echo "heavy=$heavy"
+            echo "perf=$perf"
+          } >> "$GITHUB_OUTPUT"
+
+      # The perf A/B base arm (#5741, #5956): on a pull request the base
+      # branch's head, the first parent of the merge under test; on a schedule
+      # or a dispatch the commit the previous scheduled run measured, so a
+      # nightly judges the day's merges together. base-rev.sh passes over a
+      # commit only when CI proved its database suite broken.
+      - id: perf_base
+        if: steps.lanes.outputs.perf == 'true'
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          bash scripts/perf/base-rev.sh --self-test
+          start="$(git rev-parse HEAD^1)"
+          if [ "$EVENT_NAME" != pull_request ]; then
+            head="$(git rev-parse HEAD)"
+            previous="$(gh api "repos/$REPO/actions/workflows/nightly.yml/runs?event=schedule&branch=main&status=completed&per_page=5" \
+              | jq -r --arg head "$head" '[.workflow_runs[] | select(.head_sha != $head)][0].head_sha // ""')"
+            if [ -n "$previous" ] && git merge-base --is-ancestor "$previous" "$head"; then
+              start="$previous"
+            fi
+          fi
+          bash scripts/perf/base-rev.sh "$start" 30 | tee -a "$GITHUB_OUTPUT"
+
+  # The thread-CPU budget of the hot paths (#6321), judged on optimised code:
+  # the `budget` profile is the release profile without LTO. ci.yml's test
+  # lane runs the same test in a debug build, where it judges nothing.
+  cpu-budget:
+    name: hot-path CPU budget (optimised)
+    needs: lanes
+    if: needs.lanes.outputs.perf == 'true'
+    runs-on: ubuntu-latest
+    # Room for the optimised test binary built on a cold cache on a busy runner
+    # (#6321).
+    timeout-minutes: 75
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: ${{ needs.lanes.outputs.postgres_image }} # zizmor: ignore[unpinned-images] the digest-pinned FROM of docker/postgres, checked name@sha256 where it is read
+        env:
+          POSTGRES_USER: openehr
+          POSTGRES_PASSWORD: openehr
+          POSTGRES_DB: openehr_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U openehr"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://openehr:openehr@localhost:5432/openehr_test
+      FERROEHR_TEST_PG_URL: postgres://openehr:openehr@localhost:5432/postgres
+    steps:
+      # The optimised build lost its runner with no log three times (#6497):
+      # free the preinstalled toolchains it never uses, and record the disk
+      # after the restore, the build and the test.
+      - name: Free the runner's disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          sudo docker image prune --all --force > /dev/null
+          df -h /
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        # Its own entry, written on main: the optimised test binary built cold
+        # outlasts the runner (#6388).
+        with:
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Disk after the cache restore
+        run: df -h / && du -sh target 2>/dev/null || true
+      - name: Non-durable test tuning
+        env:
+          PG_SERVICE: ${{ job.services.postgres.id }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          PGPASSWORD=openehr bash scripts/lib/test-postgres.sh "$PG_SERVICE"
+      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+        with:
+          tool: cargo-nextest
+      - name: Build the optimised test binary
+        run: cargo nextest run --locked --cargo-profile budget -p ferroehr-rest --all-features --no-run
+      - name: Disk after the build
+        if: ${{ !cancelled() }}
+        run: df -h / && du -sh target/budget 2>/dev/null || true
+      - name: Every hot path within its CPU budget, optimised
+        run: cargo nextest run --locked --cargo-profile budget -p ferroehr-rest --all-features --no-capture -E 'test(every_hot_path_stays_within_its_cpu_budget)'
+      - name: Disk after the test
+        if: ${{ !cancelled() }}
+        run: df -h / && du -sh target/budget 2>/dev/null || true
+  # The head arm's server binary, through the action ci.yml's ui-e2e-binary
+  # runs: the same container, profile and binary cache key, so a tree CI
+  # already built is restored and not compiled.
+  server-binary:
+    name: perf server binary
+    needs: lanes
+    if: needs.lanes.outputs.perf == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    container: rust:1.99.1-slim-trixie@sha256:00544ccc9431a2fe93e65185d21381b0a039342f5cefcf84fbddac273c9e573d
+    env:
+      SOURCE_DATE_EPOCH: "1700000000"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/server-binary # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          artifact-name: ui-e2e-server-binary
+
+  # The base arm of the performance gate (#5326): the server binary of the
+  # base commit `lanes` chose (#5741, #5956), built exactly as server-binary builds
+  # the head: the same container, toolchain and e2e profile, so the A/B run
+  # compares the change and not two build profiles. The binary cache keys on
+  # the base tree's files the way ui-e2e-binary keys on the head's, so a base
+  # that main already built is restored, not compiled.
+  perf-base-binary:
+    name: perf base server binary
+    needs: lanes
+    if: needs.lanes.outputs.perf == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    container: rust:1.99.1-slim-trixie@sha256:00544ccc9431a2fe93e65185d21381b0a039342f5cefcf84fbddac273c9e573d
+    env:
+      SOURCE_DATE_EPOCH: "1700000000"
+    outputs:
+      rev: ${{ steps.base.outputs.rev }}
+    steps:
+      # The slim image carries no git, and without it the checkout is a
+      # tarball with no history to take the base from.
+      - name: Install git
+        run: apt-get update -qq && apt-get install -y -qq --no-install-recommends git ca-certificates >/dev/null
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The green base can lie behind the base branch's head.
+          fetch-depth: 0
+      - id: base
+        name: The base commit's tree
+        shell: bash
+        env:
+          PERF_BASE: ${{ needs.lanes.outputs.perf_base }}
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          rev="$PERF_BASE"
+          [ -n "$rev" ] || { echo "::error::changes chose no perf base" >&2; exit 1; }
+          echo "rev=$rev" >> "$GITHUB_OUTPUT"
+          mkdir -p perf-base
+          git archive "$rev" | tar -x -C perf-base
+      - uses: ./.github/actions/server-binary # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          root: perf-base
+          write-cache: "false"
+          artifact-name: perf-base-server-binary
+
+  # ── The performance gate (#5081, #5326) ──────────────────────────────────────
+  # FerroPIX #490 shipped an outbox sender that ran about 8,000 PostgreSQL
+  # transactions a second while idle, and no gate saw it. This one starts the
+  # server this tree builds and the server of its base commit side by side,
+  # both built with the e2e profile, each with its own PostgreSQL and under its
+  # own tree's gate configuration, holds the head
+  # to absolute idle limits, and judges the head's load phases against the
+  # base's on the same runner (`ferrohealth-perf ab` through
+  # scripts/perf/gate.sh, pinned in docs/VERSIONS.md): runners of one CPU model
+  # differ by 25 to 45 %, so a stored baseline cannot judge a change. The
+  # self-test runs first: an idle busy-loop must fail it. docs/release.md says
+  # how to read the report.
+  perf:
+    name: perf
+    needs: [lanes, server-binary, perf-base-binary]
+    if: needs.lanes.outputs.perf == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      # 0 the head passed, 1 a breach for perf-verdict to judge.
+      status: ${{ steps.gate.outputs.status }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The base arm runs under its own commit's tree, archived from history.
+          fetch-depth: 0
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          cache: false
+      - name: Install the pinned ferrohealth-perf
+        run: bash scripts/perf/gate.sh install
+      # The artifact download loses the executable bit; the Dockerfile COPYs the
+      # binary with `--chmod=0755`.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ui-e2e-server-binary
+          path: bin/amd64
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Package the app image (COPY-only, seconds)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: runtime-prebuilt
+          load: true
+          tags: ferroehr:perf
+      - name: Build the postgres image (COPY-only, seconds)
+        run: docker buildx build --load -t ferroehr-postgres:perf docker/postgres
+      - name: An idle busy-loop fails the gate
+        run: bash scripts/perf/gate.sh self-test ferroehr:perf ferroehr-postgres:perf
+      # The base is the change's base commit, built by perf-base-binary with the
+      # same profile and toolchain as the head, and packaged from its own tree
+      # with its own Dockerfile and PostgreSQL image, so the two arms differ in
+      # the change alone.
+      - name: The base commit's tree
+        env:
+          BASE_REV: ${{ needs.perf-base-binary.outputs.rev }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/perf-base-context
+          git archive "$BASE_REV" | tar -x -C target/perf-base-context
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: perf-base-server-binary
+          path: target/perf-base-context/bin/amd64
+      - name: Package the base image (COPY-only, seconds)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: target/perf-base-context
+          file: target/perf-base-context/docker/Dockerfile
+          target: runtime-prebuilt
+          load: true
+          tags: ferroehr:perf-base
+      - name: Build the base postgres image (COPY-only, seconds)
+        run: docker buildx build --load -t ferroehr-postgres:perf-base target/perf-base-context/docker/postgres
+      - name: The base the gate measures against, and why
+        env:
+          BASE_REV: ${{ needs.perf-base-binary.outputs.rev }}
+          BASE_REASON: ${{ needs.lanes.outputs.perf_base_reason }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/perf
+          printf '# Perf base\n\n%s\n\n%s\n' "$BASE_REV" "$BASE_REASON" | tee target/perf/base.md >> "$GITHUB_STEP_SUMMARY"
+      # A breach is judged by perf-verdict, which reads the perf-accepted label
+      # and the description; a run that could not be judged fails here.
+      - name: The gate, the head against the base
+        id: gate
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REV: ${{ needs.perf-base-binary.outputs.rev }}
+        run: |
+          set -euo pipefail
+          status=0
+          bash scripts/perf/gate.sh ab ferroehr:perf ferroehr-postgres:perf \
+            ferroehr:perf-base ferroehr-postgres:perf-base "$BASE_REV" || status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" = 1 ] && [ "$EVENT_NAME" = pull_request ]; then
+            echo "::warning::perf gate: the head breached the base; perf-verdict judges whether the owner accepted it"
+          fi
+          # A scheduled breach fails here, and nightly-report.yml files it.
+          [ "$status" = 0 ] || { [ "$status" = 1 ] && [ "$EVENT_NAME" = pull_request ]; }
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: perf-report
+          path: target/perf/
+          if-no-files-found: warn
+
+  # ── The perf verdict (#5924) ─────────────────────────────────────────────────
+  # The gate's breach on a labelled pull request, judged apart from the
+  # 30-minute measurement. A breach passes only when the owner accepted every
+  # breached metric on the issue a `Perf-accepted:` line names, and it is
+  # then reported as accepted beside the full report (docs/release.md).
+  perf-verdict:
+    name: perf-verdict
+    needs: [perf]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read # CODEOWNERS on the base branch
+      issues: read # the acceptance on the named issue
+      pull-requests: read # the label and the description when the job runs
+    outputs:
+      verdict: ${{ steps.verdict.outputs.verdict }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/lib
+            scripts/perf
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: perf-report
+          path: target/perf
+      - name: A breach passes only as a cost the owner accepted
+        run: bash scripts/perf/accepted.sh --self-test
+      # Context reaches the shell through env, never `${{ }}`-inline.
+      - name: The gate's verdict, with the owner's accepted costs
+        id: verdict
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          STATUS: ${{ needs.perf.outputs.status }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          verdict=0
+          bash scripts/perf/accepted.sh judge "$STATUS" target/perf/summary.md || verdict=$?
+          case "$verdict:$STATUS" in
+            0:1) echo "verdict=accepted" >> "$GITHUB_OUTPUT" ;;
+            0:*) echo "verdict=pass" >> "$GITHUB_OUTPUT" ;;
+            *) echo "verdict=fail" >> "$GITHUB_OUTPUT" ;;
+          esac
+          exit "$verdict"

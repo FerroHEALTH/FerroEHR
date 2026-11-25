@@ -245,4 +245,8 @@ label no-chart-bump       bfd4f2 "chart-version-guard: packaged chart diff that 
 label no-ui-visual-change bfdadc "Skip the ui-screenshot-guard: viewer source change with no visual effect"
 label perf-accepted       d93f0b "perf-verdict: a perf breach the owner accepted on the issue a Perf-accepted line names"
 
+echo "== pull-request lane switches (read by nightly.yml) =="
+label ci:perf  d93f0b "Run the nightly timing lanes (perf A/B, the CPU budget) on this pull request"
+label ci:heavy 5319e7 "Run every nightly lane on this pull request"
+
 echo "done."
