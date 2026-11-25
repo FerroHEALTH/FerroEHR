@@ -406,6 +406,15 @@ impl AccessDomain {
 }
 
 impl AuditEvent {
+    /// The text of the purpose of use `code` the record renders: the reason
+    /// the caller stated for the justified access its declared purpose
+    /// invoked (FHIR R4 `CodeableConcept.text`); `None` for any other code.
+    #[must_use]
+    pub fn purpose_text(&self, code: &str) -> Option<String> {
+        let justification = self.justification.as_ref()?;
+        (self.purpose.as_deref() == Some(code)).then(|| justification.reason.as_str().to_owned())
+    }
+
     /// The purposes of use the record renders: those the access token states,
     /// then the declared one when the token states no purpose of its code.
     #[must_use]
