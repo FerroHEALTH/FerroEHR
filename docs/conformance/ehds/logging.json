@@ -2,5 +2,8 @@
   "schemaVersion": 1,
   "label": "EHDS logging checklist · Xt-EHR D8.2 2026-05-19",
   "message": "11/11 evidenced",
-  "color": "blue"
+  "color": "blue",
+  "labelColor": "#003399",
+  "namedLogo": "europeanunion",
+  "logoColor": "#FFCC00"
 }
