@@ -39,34 +39,19 @@ pub struct ApiConfig {
     /// §3.2). Absent, no CORS header is sent, so a browser on another origin
     /// cannot read a response.
     pub cors: Option<CorsConfig>,
-    /// This CDR's own openEHR **system identifier** — the identity the
-    /// deployment stamps into the data it authors
-    /// (`FERROEHR__API__SYSTEM_ID`). Three wire values carry it:
+    /// This CDR's own openEHR system identifier (`FERROEHR__API__SYSTEM_ID`).
     ///
-    /// - `EHR.system_id` at EHR creation — RM ehr
-    ///   `master04-ehr_package.adoc` §EHR Identifier Allocation: "the
-    ///   `EHR._system_id_` value should be set to the value that would normally
-    ///   be used for locally created EHRs";
-    /// - the `AUDIT_DETAILS.system_id` server default when the client supplies
-    ///   none through `openehr-audit-details` — ITS-REST
-    ///   `specifications/docs/overview/Requests_and_responses.md`
-    ///   §"openehr-version and openehr-audit-details": "when `system_id` is
-    ///   not provided by the client, the server MUST set it to its own
-    ///   configured system identifier";
-    /// - every `OBJECT_VERSION_ID.creating_system_id` a commit mints — RM
-    ///   common `master06-change_control_package.adoc` §Distributed
-    ///   Versioning. That value is stored per version, so changing this key
-    ///   never rewrites identifiers already committed.
-    ///
-    /// Distinct from [`SystemOptionsConfig`] (`[api.options]`), which is the
-    /// display identity of the `OPTIONS` System-Options manifest; `system_id`
-    /// names which system authored the data.
+    /// It is stamped into `EHR.system_id` at EHR creation (RM ehr
+    /// `master04-ehr_package.adoc` §EHR Identifier Allocation), the
+    /// `AUDIT_DETAILS.system_id` default when the client supplies none (ITS-REST
+    /// `Requests_and_responses.md` §"openehr-version and openehr-audit-details"),
+    /// and every `OBJECT_VERSION_ID.creating_system_id` a commit mints (RM common
+    /// `master06-change_control_package.adoc` §Distributed Versioning). Stored
+    /// values are never rewritten when this key changes.
     ///
     /// Unset, it is the host of `[server] public_base_url`; with neither, a
     /// `production` deployment refuses to start and a `sandbox` one stamps
-    /// [`crate::service::DEFAULT_SYSTEM_ID`] ([`Self::system_id`]). No
-    /// openEHR spec governs the configuration mechanism: our own design; the
-    /// specs govern only that a system has such an identifier.
+    /// [`crate::service::DEFAULT_SYSTEM_ID`] ([`Self::system_id`]).
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = true)))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub system_id: Option<String>,

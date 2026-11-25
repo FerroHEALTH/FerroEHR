@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The header keys a node repeats, and the columns that hold them instead
-//! (#4525, and the root since #4904).
+//! (#4525, #4904).
 //!
 //! A key moves to its column only when the column rebuilds it byte for byte;
 //! `ext.node_archetype_node_id`, `ext.node_archetype_details` and

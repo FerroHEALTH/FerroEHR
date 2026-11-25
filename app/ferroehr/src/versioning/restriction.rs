@@ -19,26 +19,16 @@ use crate::ids::{EhrId, VoId};
 use crate::storage::access_projection::Revision;
 use crate::storage::ehr_repo::Restriction;
 
-/// Refuse a write that would process an object whose processing is restricted.
+/// Refuses a write that would process an object whose processing is
+/// restricted.
 ///
 /// GDPR Art. 18(2) leaves storage as the only processing a restricted object
-/// admits (`docs/law/eu/gdpr/text.html`), so a new version of it, a logical
-/// delete of it or an attestation appended to it is refused — while the rows
-/// already stored stay exactly where they are. The mark is read inside the
-/// commit transaction, like the `is_modifiable` gate of the commit engine, so a
-/// concurrent lift either commits first and is seen or waits for this commit.
-/// Both grains are checked: a whole-EHR restriction reaches an object that has
-/// no mark of its own yet, because it is created after the restriction was
-/// recorded. No openEHR spec governs restriction of processing — our own
-/// design/extension.
-///
-/// `known` is what the caller already read on the commit's connection
-/// ([`Known`]): the EHR's mark and settings revision (#5775) and the object's
-/// own mark (#6256), each taken instead of reading it again.
-///
-/// The answer carries the access evaluator's verdict of the EHR, which
-/// [`WriteGate::admit_written`] then holds the content the write is about to
-/// store to.
+/// admits (`docs/law/eu/gdpr/text.html`), so a new version, a logical delete
+/// or an attestation is refused. The marks of the EHR and of the object are
+/// read inside the commit transaction, or taken from `known` when the caller
+/// read them on the same connection ([`Known`]). The answer carries the
+/// access evaluator's verdict of the EHR for [`WriteGate::admit_written`].
+/// No openEHR spec governs restriction of processing: our own design.
 ///
 /// # Errors
 /// [`ServiceError::Restricted`] (`403`) when either grain is marked;

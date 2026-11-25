@@ -202,26 +202,16 @@ pub(crate) struct AuditInput {
 }
 
 impl AuditInput {
-    /// Build the commit audit from the caller's `UPDATE_VERSION.audit`
-    /// envelope, merged with the server rules (ITS-REST overview
-    /// §"openehr-version and openehr-audit-details": `change_type` is the
-    /// FIRST attribute the clients "MAY supply values for", and "whatever is
-    /// provided it MUST be merged"; RM common master06 §Committal and Audits
-    /// for the audit attributes):
+    /// Builds the commit audit from the caller's `UPDATE_VERSION.audit`, merged
+    /// with the server rules (ITS-REST overview §"openehr-version and
+    /// openehr-audit-details"; RM common master06 §Committal and Audits).
     ///
-    /// - `change_type` — the caller's when supplied, honoured verbatim after
-    ///   [`merged_change_type`] validates it against the `audit_change_type`
-    ///   group and the operation; absent or empty takes the operation's
-    ///   default;
-    /// - `description` — the caller's when supplied, else the server default;
-    /// - `committer` — the caller's `PARTY_PROXY` (defaulted by the adapter to
-    ///   the principal / system identity), or the server's committer for a
-    ///   caller it knows ([`crate::versioning::committer::resolve`]);
-    /// - `system_id` — the caller's when supplied, else this server's.
-    ///
-    /// The audit is a plain `UPDATE_AUDIT` ([`plain_audit`]), as on the
-    /// CONTRIBUTION path: an attestation travels in
-    /// `UPDATE_VERSION.attestations`.
+    /// `change_type` is the caller's after [`merged_change_type`] validates it,
+    /// else the operation's default; `description` and `system_id` are the
+    /// caller's, else the server's; `committer` is the caller's `PARTY_PROXY` or
+    /// the server's committer for a caller it knows
+    /// ([`crate::versioning::committer::resolve`]). The audit is a plain
+    /// `UPDATE_AUDIT` ([`plain_audit`]).
     ///
     /// # Errors
     /// [`ServiceError::Unprocessable`] for a `change_type` outside the

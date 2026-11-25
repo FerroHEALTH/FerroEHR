@@ -47,26 +47,16 @@ pub(super) fn head_alias(version_alias: &str) -> String {
     format!("{version_alias}_head")
 }
 
-/// Bind the head row of the object `version_alias` belongs to into `q`, and
-/// return its alias.
+/// Binds the head row of the object `version_alias` belongs to into `q`, and
+/// returns its alias.
 ///
-/// One join serves two predicates. The restriction gate: GDPR Art. 18(2) leaves
-/// storage as the
-/// only processing a restricted object admits (`docs/law/eu/gdpr/text.html`),
-/// and answering a query from its content is processing, so the mark is a
-/// predicate on the head join rather than a post-filter — a restricted object
-/// contributes no row to any result set, under `LATEST_VERSION` and
-/// `ALL_VERSIONS` alike (`RESULT_SET` has no per-row diagnostic channel, QUERY
-/// master01 §Result Set; a point read of the same object answers `403`). And,
-/// when the caller asks for it, `LATEST_VERSION`: the version row is the
-/// object's current TRUNK head, `vo_head.trunk_head_sys_version` IS
-/// `latest_trunk_version` (RM common master06 §The 'Virtual Version Tree').
-///
-/// Written as a join on the head's primary key, the version row is reached
-/// through `pk_version` with all three columns bound, never by `vo_id` alone
-/// through the at-time index (#3453). The `branch_number = 0` predicate is
-/// implied by the head and deliberately not written. No openEHR spec governs
-/// restriction of processing or storage access paths: our own design/extension.
+/// The join carries the restriction gate: a restricted object contributes no
+/// row to any result set, since GDPR Art. 18(2) leaves storage as the only
+/// processing it admits (`docs/law/eu/gdpr/text.html`). Under
+/// `LATEST_VERSION` it also pins the version row to the TRUNK head (RM common
+/// master06 §The 'Virtual Version Tree'). The version row is reached through
+/// `pk_version` with all three columns bound (#3453). No openEHR spec governs
+/// restriction of processing or storage access paths: our own design.
 pub(super) fn bind_head(
     q: &mut SelectStatement,
     version_alias: &str,

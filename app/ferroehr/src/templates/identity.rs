@@ -46,28 +46,15 @@ pub(crate) fn canonical_key(id: &str) -> String {
     openehr_base::v1_3::base_types::identification::lexical::composite_id_key(id.trim())
 }
 
-/// The version axis of a `TEMPLATE_ID`, i.e. the numeric-dotted tail of a
-/// trailing `.v<major>[.<minor>[.<patch>]]` segment, or `None` when the id
-/// carries no such suffix.
+/// The version axis of a `TEMPLATE_ID`: the numeric-dotted tail of a trailing
+/// `.v<major>[.<minor>[.<patch>]]` segment, or `None` without one.
 ///
-/// ADL 1.4 has no formal template-version field — the CNF schedule states
-/// "versioning is not applicable for ADL 1.4"
-/// (`docs/specs/openehr/CNF/docs/platform_test_schedule/master04-func_tc_definition_adl.adoc`
-/// §Definition ADL). The ITS-REST DEFINITION API nevertheless carries an
-/// (optional, `deprecated`) `TemplateMetadata.version`. The ITS-REST docs text
-/// is silent on where that value comes from, so the RELEASED OAS grounds it
-/// (the oracle order: docs text first, the released OAS fills docs-text
-/// silence): its `version` query parameter documents the value as **"taken
-/// from `template_id`"**
-/// (`docs/specs/openehr/ITS-REST/specifications/parameters/query/filter_version.yaml`,
-/// bundled as `computable/OAS/definition-codegen.openapi.yaml`
-/// §`components.parameters.filter_version`). We therefore derive the reported
-/// version from the id's version axis, per BASE §Archetype Identifiers
-/// (`docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc`
-/// — the `.vN` version segment). The spec is otherwise silent on the exact
-/// provenance (it also permits `other_details`); this `template_id`-derived
-/// reading is our own spec-permitted design choice, and the field is nullable
-/// because a plain 1.4 `template_id` carries no version.
+/// ADL 1.4 has no template-version field, and the ITS-REST docs text is
+/// silent on the source of `TemplateMetadata.version`; its `version` query
+/// parameter documents the value as "taken from `template_id`"
+/// (`ITS-REST/specifications/parameters/query/filter_version.yaml`), read
+/// here per BASE `base_types/master05-identification_package.adoc`
+/// §Archetype Identifiers.
 #[must_use]
 pub(crate) fn template_version(template_id: &str) -> Option<String> {
     let (_, tail) = template_id.trim().rsplit_once(".v")?;
