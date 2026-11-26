@@ -138,6 +138,7 @@ async fn admin_adds_ends_and_reads_a_care_relationship() {
     fill(&h, "#care-issuer", "urn:example:e2e-providers").await;
     fill(&h, "#care-provider", &provider).await;
     fill(&h, "#care-new-from", "2026-01-01").await;
+    fill(&h, "#care-new-to", "2027-12-31").await;
     h.shot(1, "add").await;
     submit(&h, "button[name='intent'][value='add']").await;
     h.wait_url_contains("/care/").await;
