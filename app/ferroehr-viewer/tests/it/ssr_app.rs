@@ -1008,8 +1008,8 @@ async fn an_access_log_row_opens_its_entry_with_what_it_rested_on() {
     let href: String = main.split(&format!("href=\"{prefix}")).nth(1).map_or_else(
         || panic!("a row links its entry: {main}"),
         |rest| {
-            let uid: String = rest.chars().take_while(|c| *c != '"').collect();
-            format!("{prefix}{uid}")
+            let entry: String = rest.chars().take_while(|c| *c != '"').collect();
+            format!("{prefix}{entry}")
         },
     );
     let entry = viewer.page(&cookie, &href).await;
@@ -1022,7 +1022,7 @@ async fn an_access_log_row_opens_its_entry_with_what_it_rested_on() {
     ] {
         assert!(
             entry.main().contains(words),
-            "{href} says {words:?}: {}",
+            "the entry's page says {words:?}: {}",
             entry.main()
         );
     }
