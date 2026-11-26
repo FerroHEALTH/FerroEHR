@@ -10,6 +10,7 @@
 //! server. The wire
 //! is ITS-REST (`docs/specs/openehr/ITS-REST/`); the pages are our own design.
 
+pub mod access_log;
 pub mod access_policy;
 pub mod audit;
 pub mod cohort;
@@ -19,6 +20,7 @@ pub mod demographics;
 pub mod ehr_detail;
 pub mod ehr_tags;
 pub mod ehrs;
+pub mod grants;
 pub mod item_tags;
 pub mod login;
 pub mod signature;

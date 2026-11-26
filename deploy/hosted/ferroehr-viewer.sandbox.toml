@@ -20,8 +20,8 @@ base_url = "https://sandbox.ferroehr.eu"
 basic_issuer = "sandbox.ferroehr.eu"
 
 [session]
-# The memory store, the one the viewer has: one instance, and a restart
-# signs every visitor out (ferrohealth-session, #6721).
+# The sessions live in the viewer's process, the one store the viewer has:
+# one instance, and a restart signs visitors out (#6721).
 store = "memory"
 # TLS terminates at Caddy on the same box.
 secure_cookie = true

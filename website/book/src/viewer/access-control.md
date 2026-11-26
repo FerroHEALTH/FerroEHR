@@ -69,3 +69,29 @@ A save also needs a `write_access_policy` grant in the CDR, so the admin role
 alone changes no policy ([The policy
 parties](../operational-policy.md#the-policy-parties)). The new version applies
 on every replica from its next request.
+
+## Roles and grants
+
+**Roles and grants**, in the console group, lists what the CDR's policy
+parties grant ([The policy
+parties](../operational-policy.md#the-policy-parties)). It reads them through
+AQL rooted at `ROLE`, `AGENT` and `PARTY_RELATIONSHIP` (`POST
+/query/aql`), so the CDR's policy-party rule decides what you see: an
+administrator reads every policy party, and anyone else gets an empty list.
+
+- **Roles holding a grant:** each `ROLE` whose capability holds an
+  `openehr_access` grant, with the grant codes and their rubrics, the terms
+  that qualify them (such as a `scope` or a `binding_issuer`), the party that
+  performs the role, the role's and the capability's validity, and whether the
+  grant is in force now.
+- **System agents:** each party bound to an OAuth 2.0 client, with its client
+  id, the token issuer and the provider it acts for.
+
+Each row opens its party. A grant is given by a new version of its `ROLE`
+that adds the grant to the role's capability, and ended by a version whose
+validity ends before today. You write either version in the party editor.
+
+A party page marks a policy party under **Policy party**: the client the
+party binds, and the grants its roles carry.
+
+![Roles and grants](img/grants/grants.png)

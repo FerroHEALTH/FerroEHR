@@ -77,6 +77,10 @@ pub enum Page {
     NewContribution,
     /// `/ehrs/:ehr_id/tags`.
     Tags,
+    /// `/ehrs/:ehr_id/access-log`.
+    AccessLog,
+    /// `/ehrs/:ehr_id/access-log/:uid`.
+    AccessLogEntry,
     /// `/ehrs/:ehr_id/compositions/new`.
     NewComposition,
     /// `/ehrs/:ehr_id/compositions/:uid`.
@@ -153,6 +157,8 @@ pub enum Page {
     AccessPolicyVersions,
     /// `/access-policy/edit`.
     EditAccessPolicy,
+    /// `/grants`.
+    Grants,
     /// `/configuration` and its sections.
     Configuration,
     /// `/preferences` and its sections.
@@ -183,6 +189,8 @@ impl Page {
             "/ehrs/:ehr_id/contributions/:uid" => Self::Contribution,
             "/ehrs/:ehr_id/contribution/new" => Self::NewContribution,
             "/ehrs/:ehr_id/tags" => Self::Tags,
+            "/ehrs/:ehr_id/access-log" => Self::AccessLog,
+            "/ehrs/:ehr_id/access-log/:uid" => Self::AccessLogEntry,
             "/ehrs/:ehr_id/compositions/new" => Self::NewComposition,
             "/ehrs/:ehr_id/compositions/:uid" => Self::Composition,
             "/ehrs/:ehr_id/compositions/:uid/edit" => Self::EditComposition,
@@ -223,6 +231,7 @@ impl Page {
             "/access-policy" => Self::AccessPolicy,
             "/access-policy/versions" => Self::AccessPolicyVersions,
             "/access-policy/edit" => Self::EditAccessPolicy,
+            "/grants" => Self::Grants,
             "/configuration" | "/configuration/:section" => Self::Configuration,
             "/preferences" | "/preferences/:section" => Self::Preferences,
             "/access" => Self::Access,
@@ -326,6 +335,8 @@ pub static ROUTES: &[&str] = &[
     "/ehrs/:ehr_id/contributions/:uid",
     "/ehrs/:ehr_id/contribution/new",
     "/ehrs/:ehr_id/tags",
+    "/ehrs/:ehr_id/access-log",
+    "/ehrs/:ehr_id/access-log/:uid",
     "/ehrs/:ehr_id/compositions/new",
     "/ehrs/:ehr_id/compositions/:uid",
     "/ehrs/:ehr_id/compositions/:uid/edit",
@@ -365,6 +376,7 @@ pub static ROUTES: &[&str] = &[
     "/access-policy",
     "/access-policy/versions",
     "/access-policy/edit",
+    "/grants",
     "/configuration",
     "/configuration/:section",
     "/preferences",
@@ -395,10 +407,12 @@ pub async fn draw() -> Drawn {
         Page::Contribution => pages::ehr::contribution::page().await,
         Page::NewContribution => pages::ehr::contribution::new_page().await,
         Page::Tags => pages::ehr::tags::page().await,
+        Page::AccessLog => pages::ehr::access_log::page().await,
+        Page::AccessLogEntry => pages::ehr::access_log::entry_page().await,
         Page::NewComposition => pages::composition::new_page().await,
         Page::Composition => pages::composition::page().await,
         Page::EditComposition => pages::composition::edit_composition_page().await,
-        Page::Parties => pages::parties::list_page().await,
+        Page::Parties => pages::parties::list::list_page().await,
         Page::NewParty => pages::parties::new_party_page().await,
         Page::NewRelationship => pages::parties::new_relationship_page().await,
         Page::Relationship => pages::parties::relationship_page().await,
@@ -433,6 +447,7 @@ pub async fn draw() -> Drawn {
         Page::AccessPolicy => pages::policy::page().await,
         Page::AccessPolicyVersions => pages::policy::versions_page().await,
         Page::EditAccessPolicy => pages::policy::edit::page().await,
+        Page::Grants => pages::policy::grants::page().await,
         Page::Configuration => pages::configuration::page().await,
         Page::Preferences => pages::preferences::page(),
         Page::Access => pages::access::page(),

@@ -103,7 +103,8 @@ need sticky sessions at the proxy. It carries no scale-out machinery.
   drawn at), never the credential or the session cookie in drawn HTML.
 - **Session listings keep their position in a cookie** (`crate::paging`,
   FerroUI `console-ui.md` §0): the EHRs, an EHR's compositions and
-  contributions, the audit log. Filters stay in the URL.
+  contributions, the audit log, the parties. Filters stay in the URL, and a
+  find that names people posts.
 - **Preferences are cookies** (`crate::prefs`, FerroUI's `Preferences`), each
   its own, read when a page is drawn. The theme is set in the user menu and on
   Your preferences, never in the top bar.
