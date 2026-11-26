@@ -118,7 +118,8 @@ What changes against a provider FerroEHR trusts directly, such as the
   provider, into the access token's `roles` claim (RFC 9068 §2.2.3.1) from
   FerroSMART 0.2.0, the release the quickstart pins
   (FerroHEALTH/FerroSMART#649). Name FerroSMART's table in `[authz.rbac]
-  role_issuers` for them to grant `admin_role` or the emergency role.
+  role_issuers` for them to grant `admin_role`. Emergency access is a
+  justification of the access policy, never a role.
 - **The product scope.** A person reaches the ADMIN API only with the
   product scope, which FerroSMART grants through a role that maps to it from
   FerroSMART 0.2.0 (FerroHEALTH/FerroSMART#647).
