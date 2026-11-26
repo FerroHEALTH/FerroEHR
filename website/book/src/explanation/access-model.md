@@ -276,7 +276,7 @@ concept, and each is set and lifted through the admin API by the controller.
 
 The details are in [Retention, restriction and
 objection](../compliance/retention.md) and
-[Security](../security.md#delayed-access-by-the-person-ehds-art-33).
+[Security](../access-control.md#delayed-access-by-the-person-ehds-art-33).
 
 ## How one request is decided
 

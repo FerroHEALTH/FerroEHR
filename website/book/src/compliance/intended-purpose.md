@@ -151,9 +151,9 @@ semi-trusted actor.
   the volume layer, and backups taken per domain. Anyone with a database
   connection is past every API control
   ([B6 the database](../threat-model.md#b6--the-database),
-  [database roles](../operations.md#database-roles-and-least-privilege),
+  [database roles](../database-operations.md#database-roles-and-least-privilege),
   [TLS and database security](../operations.md#tls-and-database-security),
-  [backup and recovery](../operations.md#backup-and-point-in-time-recovery)).
+  [backup and recovery](../database-operations.md#backup-and-point-in-time-recovery)).
 - **The platform.** A hardened cluster or host, operators the organisation
   trusts, and network policy around the instance
   ([cluster hardening](../installation/kubernetes-hardening.md):

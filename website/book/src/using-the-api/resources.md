@@ -126,7 +126,7 @@ The `versioned_ehr_status` sub-resource exposes the full version history:
 ## EHR_ACCESS
 
 **EHR_ACCESS** holds the record's access directives: who may reach which data,
-for what, until when (the [access directives](../security.md#access-directives)
+for what, until when (the [access directives](../access-control.md#access-directives)
 scheme). An EHR holds exactly one, versioned like `EHR_STATUS`. The openEHR
 REST API defines no `EHR_ACCESS` endpoint, so FerroEHR reads it through its own
 extension under the extensions root, with the paths, `version_at_time` and
@@ -398,7 +398,7 @@ These things about the payload are worth calling out:
   own rules (the **422** above) apply on the direct writes as well.
 - **For a caller it knows, the server writes the committer.** When your login
   is bound to a demographic `PERSON` (see
-  [`[authz.party_binding]`](../installation/config-auth.md#authzparty_binding)),
+  [`[authz.party_binding]`](../installation/config-authz.md#authzparty_binding)),
   every commit, attestation and CONTRIBUTION records a `PARTY_IDENTIFIED` with
   the `PERSON`'s name, your login identifier (`DV_IDENTIFIER{issuer = token
   iss, id = <the token's sub>, type = "oauth2"}`, or

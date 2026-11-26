@@ -38,7 +38,7 @@ The server runs the same check at every boot and refuses to serve on a breach,
 so this is the early warning rather than the only one.
 
 The statements that create the roles, and what each one may reach afterwards,
-are [Operations → Database roles](../operations.md#database-roles-and-least-privilege)
+are [Operations → Database roles](../database-operations.md#database-roles-and-least-privilege)
 and [the threat model](../threat-model.md#what-each-database-credential-can-reach).
 
 > [!WARNING]
@@ -196,7 +196,7 @@ floor and ceiling your law sets with its provision, such as the five Dutch
 years of the [Besluit vaststelling bewaartermijn logging](https://wetten.overheid.nl/BWBR0042391)
 or the German three-year ceiling of SGB V § 309 Abs. 1. Until you do, every
 entry is kept without end and the `log_retention` readiness indicator reads
-`degraded`. The [audit trail page](../audit.md#retention-and-who-chooses-it)
+`degraded`. The [audit trail page](../ehds-logging.md#retention-and-who-chooses-it)
 sets out the rules a policy write is refused under.
 
 Verify the seals work before you need it:
