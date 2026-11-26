@@ -1546,6 +1546,25 @@ pub(crate) async fn submit(h: &Harness, css: &str) {
     .await;
 }
 
+/// Open the binder tab `key`: its link where the row shows it, or the phone's
+/// tab select, which FerroUI draws in place of a row of more than five tabs.
+///
+/// # Panics
+/// When neither shows the tab, or no page answers within 15 s.
+pub(crate) async fn open_tab(h: &Harness, key: &str) {
+    let link = format!("a.fui-tab[data-tab='{key}']");
+    if is_visible(h, &link).await {
+        h.wait_css(&link).await.click().await;
+        return;
+    }
+    let href = h.wait_css(&link).await.attr("href").await;
+    h.wait_css("form.fui-tabs-select select")
+        .await
+        .select_by_value(&href)
+        .await;
+    submit(h, "form.fui-tabs-select button[type='submit']").await;
+}
+
 /// [`submit`] for a control found some other way than by CSS, such as by
 /// an `XPath`: click `control` and wait for the page that answers the post
 /// ([`leave_page`]).
