@@ -16,7 +16,7 @@ you have to turn it on, and how to consume it.
 > separate server that maps between FHIR and openEHR with FHIRconnect mappings
 > and reaches FerroEHR over the ITS-REST API. On Kubernetes the FerroEHR chart
 > deploys it beside the CDR with `bridge.enabled=true`
-> ([FerroBRIDGE](../installation/kubernetes.md#ferrobridge-the-fhir-bridge-off-by-default)).
+> ([FerroBRIDGE](../installation/kubernetes-integrations.md#ferrobridge-the-fhir-bridge-off-by-default)).
 > FerroEHR keeps two uses of FHIR:
 > the access log rendered as FHIR `AuditEvent` with the ITI-81 retrieval
 > ([Audit](../audit.md)), and the client for external FHIR terminology servers

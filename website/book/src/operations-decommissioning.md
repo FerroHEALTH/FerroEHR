@@ -34,7 +34,7 @@ command:
   in Switzerland ([Audit](installation/config-audit.md)). The erase deletes the
   `audit` schema. Take a dump of it first and keep that dump for the longest
   period that applies to you
-  ([Backup and point-in-time recovery](operations.md#backup-and-point-in-time-recovery)).
+  ([Backup and point-in-time recovery](database-operations.md#backup-and-point-in-time-recovery)).
   A dump kept for this reason is still personal data and needs the same
   protection as the instance had.
 - **Data subjects and processors.** If the instance served other organisations

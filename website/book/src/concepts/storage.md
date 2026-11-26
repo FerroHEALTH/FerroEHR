@@ -74,7 +74,7 @@ identity of its subject are therefore never in the same schema, the same
 archival tier, or the reach of the same runtime role — GDPR Art. 4(5) and
 Art. 32(1)(a), <https://eur-lex.europa.eu/eli/reg/2016/679/oj>. Which role reads
 which domain, and how a deployment turns the schema split into a credential
-split, is [Operations → Database roles](../operations.md#database-roles-and-least-privilege).
+split, is [Operations → Database roles](../database-operations.md#database-roles-and-least-privilege).
 
 The mechanism inside the server is deliberately small: the two domains' change
 control and node relations are **rendered from one DDL template**, so they carry
