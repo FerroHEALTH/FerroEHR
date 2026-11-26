@@ -257,6 +257,9 @@ services:
       FERROEHR__USAGE_REPORT__ENABLED: "false"
     volumes:
       - ./ferroehr.sandbox.toml:/etc/ferroehr/ferroehr.toml:ro
+    # The loader reads the passphrase file of every configuration it loads.
+    secrets:
+      - ferroehr-signing-passphrase
     command:
       - party-binding
       - grant

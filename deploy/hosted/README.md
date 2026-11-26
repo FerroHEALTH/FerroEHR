@@ -341,8 +341,9 @@ are owned by 65532, the user the CDR image runs as, with mode `0400`, so
 neither `deploy` nor any other account but root reads them. The compose
 file mounts them into the CDR as the secrets `ferroehr-signing-key` and
 `ferroehr-signing-passphrase` (at `/run/secrets/<name>`, the paths the
-configuration names), and the passphrase alone into the `ferroehr-grant`
-and `ferroehr-hold` one-shots, whose configuration loader reads it. `.env`
+configuration names), and the passphrase alone into the `ferroehr-grant`,
+`ferroehr-hold` and `ferroehr-hold-clinician` one-shots, whose configuration
+loader reads it. `.env`
 names the two files:
 
 ```sh
