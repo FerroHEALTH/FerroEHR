@@ -15,6 +15,7 @@ use ferrohealth_ui::i18n::{Arg, Locale, Message};
 use fluent_templates::Loader;
 use serde::Deserialize;
 
+pub mod access;
 pub mod console;
 pub mod definitions;
 pub mod overview;
@@ -542,6 +543,7 @@ mod tests {
     use ferrohealth_ui::i18n::Locale;
     use fluent_templates::fluent_bundle::{FluentResource, FluentValue};
 
+    use super::access::AccessMsg;
     use super::console::ConsoleMsg;
     use super::definitions::DefinitionsMsg;
     use super::overview::OverviewMsg;
@@ -652,6 +654,7 @@ mod tests {
         assert_eq!(
             parts,
             [
+                "access",
                 "console",
                 "definitions",
                 "overview",
@@ -664,6 +667,7 @@ mod tests {
             "each directory under locales/ is the catalog of one part"
         );
         holds_every("shell", Msg::ALL);
+        holds_every("access", AccessMsg::ALL);
         holds_every("overview", OverviewMsg::ALL);
         holds_every("records", RecordsMsg::ALL);
         holds_every("definitions", DefinitionsMsg::ALL);

@@ -93,6 +93,7 @@
   - [Dashboard & queries](viewer/queries.md)
   - [Templates & EHRs](viewer/browsing.md)
   - [Parties](viewer/parties.md)
+  - [Access log](viewer/access-log.md)
   - [Terminology](viewer/terminology.md)
   - [Server & audit log](viewer/server.md)
   - [Preferences & the theme](viewer/preferences.md)
