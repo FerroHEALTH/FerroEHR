@@ -108,21 +108,28 @@ async fn write(path: &str, body: String, put: bool) -> Result<(), ViewerError> {
     clippy::disallowed_types,
     reason = "the viewer reads the admin marks extension's JSON registers"
 )]
-fn text(value: &serde_json::Value, key: &str) -> Option<String> {
+pub(crate) fn text(value: &serde_json::Value, key: &str) -> Option<String> {
     value
         .get(key)
         .and_then(serde_json::Value::as_str)
         .map(str::to_owned)
 }
 
-/// The list at `key` of a JSON body.
+/// The list at `key` of a JSON body, `what` naming the body in a failure.
+///
+/// # Errors
+/// [`ViewerError::Failed`] when the body is not JSON.
 #[expect(
     clippy::disallowed_types,
     reason = "the viewer reads the admin marks extension's JSON registers"
 )]
-fn rows(body: &str, key: &str) -> Result<Vec<serde_json::Value>, ViewerError> {
-    let value: serde_json::Value = serde_json::from_str(body)
-        .map_err(|error| ViewerError::failed(tr(PolicyMsg::MarksJson), error))?;
+pub(crate) fn rows(
+    body: &str,
+    key: &str,
+    what: PolicyMsg,
+) -> Result<Vec<serde_json::Value>, ViewerError> {
+    let value: serde_json::Value =
+        serde_json::from_str(body).map_err(|error| ViewerError::failed(tr(what), error))?;
     Ok(value
         .get(key)
         .and_then(serde_json::Value::as_array)
@@ -146,7 +153,7 @@ pub async fn fetch_restrictions(ehr_id: &str) -> Result<Vec<Restriction>, Viewer
 /// # Errors
 /// [`ViewerError::Failed`] when the body is not JSON.
 pub fn parse_restrictions(body: &str) -> Result<Vec<Restriction>, ViewerError> {
-    Ok(rows(body, "restrictions")?
+    Ok(rows(body, "restrictions", PolicyMsg::MarksJson)?
         .iter()
         .map(|row| Restriction {
             vo_id: text(row, "vo_id"),
@@ -188,7 +195,7 @@ pub async fn fetch_objection(ehr_id: &str) -> Result<Objection, ViewerError> {
 /// when the answer is not JSON.
 pub async fn fetch_delays(ehr_id: &str) -> Result<Vec<DelayHold>, ViewerError> {
     let body = read("admin/access-delay", ehr_id).await?;
-    Ok(rows(&body, "access_delays")?
+    Ok(rows(&body, "access_delays", PolicyMsg::MarksJson)?
         .iter()
         .map(|row| DelayHold {
             vo_id: text(row, "vo_id").unwrap_or_default(),
@@ -233,7 +240,7 @@ pub async fn fetch_anchor(ehr_id: &str) -> Result<Option<Anchor>, ViewerError> {
 /// when the answer is not JSON.
 pub async fn fetch_retention_holds(ehr_id: &str) -> Result<Vec<RetentionHold>, ViewerError> {
     let body = read("admin/retention/hold", ehr_id).await?;
-    Ok(rows(&body, "holds")?
+    Ok(rows(&body, "holds", PolicyMsg::MarksJson)?
         .iter()
         .map(|row| RetentionHold {
             vo_id: text(row, "vo_id").unwrap_or_default(),
