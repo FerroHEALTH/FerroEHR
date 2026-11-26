@@ -1176,7 +1176,7 @@ fn party_tabs(kind: PartyKind, uid: &str, party: &Party, total: usize) -> Vec<Ta
     clippy::too_many_lines,
     reason = "one page: its header, its tabs, the tab shown and its dialog"
 )]
-fn party_view(uid: &str, party: Party) -> (String, Html) {
+fn party_view(uid: &str, party: Party, mark: Option<Html>) -> (String, Html) {
     let kind = party.kind;
     let total = party.versions.as_ref().map_or(0, Vec::len);
     let tabs = party_tabs(kind, uid, &party, total);
@@ -1206,6 +1206,7 @@ fn party_view(uid: &str, party: Party) -> (String, Html) {
     let body = match (body, &current) {
         (PartyBody::Overview(rendered), Some(state)) => {
             overview(kind, uid, state, &rendered, admin)
+            opt(mark.map(panel)).then(overview(kind, uid, state, &rendered))
         }
         (PartyBody::Document(pretty), Some(state)) => panel(document_section(
             tr_with(
@@ -1341,7 +1342,14 @@ pub async fn party_page() -> Drawn {
     let (kind_segment, uid_segment) = party_route();
     match read_party(&kind_segment, uid_segment).await {
         PartyModel::Shown(party) => {
-            let (title, body) = party_view(&uid, *party);
+            let mark = crate::pages::policy::grants::read_mark(
+                party
+                    .current
+                    .as_ref()
+                    .filter(|_| party.tab == PartyTab::Overview),
+            )
+            .await;
+            let (title, body) = party_view(&uid, *party, mark);
             Drawn::page(title, body)
         }
         PartyModel::Missing(refusal) => {
