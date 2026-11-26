@@ -7,8 +7,8 @@
 //!
 //! Every page handler draws the shell around its page, with the page at the
 //! request's path marked (FerroUI `docs/consoles.md`, "How a console
-//! builds", step 2). The session is read from the sealed cookie with no CDR
-//! request; the session guard ([`crate::server::login_guard`]) has already
+//! builds", step 2). The session is read from the viewer's own store with no
+//! CDR request; the session guard ([`crate::server::login_guard`]) has already
 //! sent a request without one to the sign-in page. The status pill reads the
 //! CDR's status document once per page ([`status`]): the viewer polls
 //! nothing in the background, so an open tab's idle window measures what the

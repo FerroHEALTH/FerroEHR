@@ -49,8 +49,12 @@ fn the_sandbox_viewer_posture_starts_the_viewer() {
     assert_eq!(config.server.listen.to_string(), "0.0.0.0:3000");
     assert_eq!(
         config.session.store,
-        StoreKind::Sealed,
-        "the sandbox seals its sessions with the committed demo key (#2949)"
+        StoreKind::Memory,
+        "the one sandbox viewer keeps its sessions in its process (#6721)"
+    );
+    assert!(
+        config.session.key.is_none() && config.session.key_file.is_none(),
+        "the memory store takes no sealing key"
     );
     assert!(
         config.session.secure_cookie,

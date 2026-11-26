@@ -378,16 +378,13 @@ fn finish(mut cfg: ViewerConfig) -> Result<ViewerConfig, ConfigError> {
         }
     }
 
-    // NOTE: ferrohealth-session 0.2.1 `config`: a sealed store with no key, a key beside a
-    // memory store and an absolute lifetime shorter than the idle one refuse the start.
     if cfg.auth.oidc_enabled {
-        cfg.session.check(
-            &cfg.oidc
-                .check_with_tls(&ferrohealth_smart::config::ServerTls)?,
-        )?;
-    } else {
-        cfg.session.check_with(false)?;
+        cfg.oidc
+            .check_with_tls(&ferrohealth_smart::config::ServerTls)?;
     }
+    // NOTE: ferrohealth-session 0.31 `config`: a sealed store, a sealing key and an absolute
+    // lifetime shorter than the idle one refuse the start.
+    cfg.session.check()?;
 
     Ok(cfg)
 }
@@ -418,7 +415,7 @@ mod tests {
 
     use ferrohealth_config::tls::TlsVersion;
 
-    use super::{CdrConfig, ViewerConfig, load_sources};
+    use super::{CdrConfig, ConfigError, ViewerConfig, load_sources};
 
     /// The base path defaults to the CDR's own default, and the product root
     /// derives from it by the CDR's rule: drop the trailing `v1` segment, and
@@ -549,7 +546,7 @@ mod tests {
     /// The session is `ferrohealth-session`'s `[session]`: its lifetimes
     /// default to an hour idle and twelve hours absolute, a lifetime of
     /// zero or an absolute one shorter than the idle one refuses the start, and
-    /// so does a sealed store with no key.
+    /// so do the removed sealed store and its key.
     #[test]
     fn the_session_section_is_checked_when_it_loads() {
         let defaults = load_sources(None, &BTreeMap::new()).unwrap();
@@ -570,13 +567,38 @@ mod tests {
                 "[session]\nidle_timeout = \"90s\"\nabsolute_timeout = \"60s\"\n",
                 "session.absolute_timeout",
             ),
-            ("[session]\nstore = \"sealed\"\n", "session.key"),
         ] {
             let err = load_sources(Some(refused), &BTreeMap::new())
                 .unwrap_err()
                 .to_string();
             assert!(err.contains(key), "{refused}: {err}");
         }
+        let sealed = load_sources(Some("[session]\nstore = \"sealed\"\n"), &BTreeMap::new());
+        assert!(
+            matches!(
+                &sealed,
+                Err(ConfigError::Session(refusal))
+                    if matches!(**refusal, ferrohealth_session::config::ConfigError::SealedRemoved)
+            ),
+            "{sealed:?}"
+        );
+        let keyed = load_sources(
+            Some("[session]\nkey_file = \"/run/key\"\n"),
+            &BTreeMap::new(),
+        );
+        assert!(
+            matches!(
+                &keyed,
+                Err(ConfigError::Session(refusal))
+                    if matches!(
+                        **refusal,
+                        ferrohealth_session::config::ConfigError::SealingKeyRemoved {
+                            key: "session.key_file"
+                        }
+                    )
+            ),
+            "{keyed:?}"
+        );
         let equal = load_sources(
             Some("[session]\nidle_timeout = \"60s\"\nabsolute_timeout = \"60s\"\n"),
             &BTreeMap::new(),

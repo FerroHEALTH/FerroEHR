@@ -283,8 +283,6 @@ struct Own {
     idle_minutes: u64,
     /// `session.absolute_timeout`, in whole minutes.
     absolute_minutes: u64,
-    /// `session.key_file` or `key`.
-    session_secret: OwnSecret,
     /// `ui.locale`.
     locale: String,
 }
@@ -308,10 +306,6 @@ fn read_own() -> Option<Own> {
         ),
         idle_minutes: config.session.idle_timeout.as_secs().div_euclid(60),
         absolute_minutes: config.session.absolute_timeout.as_secs().div_euclid(60),
-        session_secret: OwnSecret::of(
-            config.session.key_file.as_deref(),
-            config.session.key.as_ref(),
-        ),
         locale: config.ui.locale.clone(),
     })
 }
@@ -377,12 +371,6 @@ fn viewer_settings(loaded: Option<Own>) -> Vec<Setting> {
                 ConsoleMsg::ConfigMinutes,
                 &[("count", config.absolute_minutes.into())],
             )),
-        ),
-        own(
-            ConsoleMsg::ConfigSessionKey,
-            ConsoleMsg::ConfigSessionKeyLine,
-            "session.key_file",
-            config.session_secret.view(),
         ),
         own(
             ConsoleMsg::ConfigLanguage,

@@ -1245,10 +1245,6 @@ version = "0.18.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d55f2d6c30eeec7d5c6f98bd4395d4abb1895629eab97ee6522d340623615f8a"
 dependencies = [
- "aes-gcm",
- "base64 0.22.1",
- "rand 0.8.7",
- "subtle",
  "time",
  "version_check",
 ]
@@ -2436,9 +2432,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-session"
-version = "0.30.1"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "289d6401c6884756c041b3904592b2916ecf02151e103bd7b1629d02a8bb7b7a"
+checksum = "4bbc636eb5693ebf9e4a4bb605294a4dfd827ea349d16ccbaeca9153c27fc0bb"
 dependencies = [
  "aws-lc-rs",
  "axum",

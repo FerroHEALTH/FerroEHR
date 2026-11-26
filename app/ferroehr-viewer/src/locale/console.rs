@@ -302,10 +302,6 @@ crate::locale::messages! {
         ConfigSections = "config-sections",
         /// `Server and database`
         ConfigServer = "config-server",
-        /// `Session key`
-        ConfigSessionKey = "config-session-key",
-        /// `Seals the session cookie; every replica holds the same key.`
-        ConfigSessionKeyLine = "config-session-key-line",
         /// `The CDR's settings as it serves them, redacted, and the viewer's own.`
         ConfigSubtitle = "config-subtitle",
         /// `Viewer`
