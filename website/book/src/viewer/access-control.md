@@ -73,7 +73,7 @@ on every replica from its next request.
 ## The admin registers
 
 The Access policy area has a tab for each [admin
-register](../operational-policy.md#the-admin-registers): **Audit categories**,
+register](../access-policy.md#the-admin-registers): **Audit categories**,
 the EHDS category map every access is classified through, and **Access
 delay**, the EHDS Art. 3(3) delay of the person's own access. Each reads
 `GET {ext}/admin/registers/{register}` and shows the version in force, who
