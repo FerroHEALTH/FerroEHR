@@ -456,11 +456,13 @@ async fn party_tags_are_set_indexed_and_deleted() {
     wait_text_contains(&h, "main table", &key).await;
     h.shot(1, "tag-set").await;
 
+    // The tag index is the last card of Parties, below the list of parties.
+    let index = "main .fui-list-page > :last-child table";
     h.goto("/parties").await;
-    wait_text_contains(&h, "main table", &key).await;
+    wait_text_contains(&h, index, &key).await;
     h.shot(2, "tag-index").await;
     h.wait_css(&format!(
-        "main table a[href^='{}']",
+        "{index} a[href^='{}']",
         party_path("person", &person)
     ))
     .await
