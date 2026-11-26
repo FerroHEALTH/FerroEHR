@@ -164,7 +164,7 @@ fn leaves(prefix: &str, value: &serde_json::Value, out: &mut Vec<(String, Leaf)>
 
 /// The words a setting goes by: its last key, its underscores read as
 /// spaces and its first letter raised.
-fn label_of(key: &str) -> String {
+pub(crate) fn label_of(key: &str) -> String {
     let last = key.rsplit('.').next().unwrap_or(key).replace('_', " ");
     let mut chars = last.chars();
     chars.next().map_or_else(String::new, |first| {
