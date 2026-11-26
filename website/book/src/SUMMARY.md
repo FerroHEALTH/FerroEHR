@@ -74,7 +74,6 @@
     - [Every configuration key](installation/config-keys.md)
   - [Default demographic definitions](installation/default-demographic-definitions.md)
   - [Party binding: bootstrap and migration](installation/party-binding-migration.md)
-    - [Breaking changes of party binding](installation/party-binding-breaking-changes.md)
 - [Security](security.md)
   - [Verifying releases](verifying-releases.md)
   - [Threat model](threat-model.md)
