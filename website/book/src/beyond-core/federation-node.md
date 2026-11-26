@@ -114,7 +114,7 @@ their rights come from an agreement, never from a role
   facility types the caller's token attests and the purpose it declares,
   each with the provision it rests on in its `legal_grounds`. The node
   refuses such a caller with `403` as `refused-policy-denied` and records the
-  provision ([Controller rules](../operational-policy.md#controller-rules)).
+  provision ([Controller rules](../access-policy.md#controller-rules)).
 - **Wabvpz Art. 15a consent.** Every NL federation read needs the consent
   decision reference, from Mitz or from the data holder's own registration
   (`consent = "mitz"` or `"local"`), carried in the token.

@@ -11,6 +11,7 @@ pub mod about;
 pub mod access;
 pub mod access_log;
 pub mod access_review;
+pub mod archive;
 pub mod audit;
 pub mod common;
 pub mod composition;

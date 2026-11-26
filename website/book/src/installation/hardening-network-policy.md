@@ -336,4 +336,4 @@ restore the rule        → ready again, with no restart
 So: **verify an egress policy by restarting a pod, not by watching the one that is
 already running.** (The recovery in the last line needing no restart is the
 readiness check re-testing its dependencies on every probe, the same property
-described for [migrations](kubernetes.md#health-probes).)
+described for [migrations](kubernetes-security.md#health-probes).)
