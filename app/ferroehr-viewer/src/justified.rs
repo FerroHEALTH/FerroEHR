@@ -5,7 +5,7 @@
 //!
 //! The purpose and the reason a clinician states when the CDR refuses an
 //! access no care relationship covers (`refused-reason-missing`, book
-//! `security.md` §Justified access outside the care relationships).
+//! `access-control.md` §Justified access outside the care relationships).
 //!
 //! The justification is kept in the server-side session record
 //! (`ferrohealth-session`'s memory store) for one EHR and
@@ -33,7 +33,7 @@ use crate::pages::common::{card_panel, info_note, section, warn_note};
 /// How long a stated justification holds.
 pub const LIFETIME: Duration = Duration::from_mins(15);
 
-/// The longest reason the CDR takes, in characters (book `security.md`,
+/// The longest reason the CDR takes, in characters (book `access-control.md`,
 /// Justified access outside the care relationships).
 const MAX_REASON: usize = 1000;
 

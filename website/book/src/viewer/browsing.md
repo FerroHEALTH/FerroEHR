@@ -190,7 +190,8 @@ purpose of use from the list `GET /ferroehr/rest/extensions/v1/access/purposes`
 answers and give your reason in your own words, 1 to 1000 characters. The
 access policy decides, by the purpose, whether this is a justified or an
 emergency access; the viewer only states it. What a justification lifts and
-what it never lifts is on [Security](../security.md#justified-access-outside-the-care-relationships).
+what it never lifts is on
+[Access control in detail](../access-control.md#justified-access-outside-the-care-relationships).
 
 ![The justification form under a refusal](img/justified/justify-form.png)
 
