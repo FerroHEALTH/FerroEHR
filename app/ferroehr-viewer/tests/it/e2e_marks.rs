@@ -57,6 +57,7 @@ async fn admin_records_and_withdraws_a_research_objection() {
     wait_main_contains(&h, "The objection stands").await;
     h.shot(2, "objected").await;
 
+    h.wait_toasts_cleared().await;
     h.wait_css("button[commandfor='mark-withdraw-confirm']")
         .await
         .click()
