@@ -13,6 +13,7 @@
 //! characters of the id. No openEHR spec governs the viewer's pages: our own
 //! design.
 
+pub mod access_log;
 pub mod care;
 pub mod compositions;
 pub mod contribution;
@@ -36,6 +37,7 @@ use crate::bff::ehr_detail::EhrSummary;
 use crate::bff::ehr_detail::status::EhrStatusState;
 use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
+use crate::locale::access::AccessMsg;
 use crate::locale::records::RecordsMsg;
 use crate::locale::server::ServerMsg;
 use crate::locale::{Msg, current, tr, tr_with};
@@ -60,6 +62,8 @@ pub enum EhrTab {
     Tags,
     /// Its subject's care relationships.
     Care,
+    /// Its access log.
+    AccessLog,
 }
 
 impl EhrTab {
@@ -72,6 +76,7 @@ impl EhrTab {
             Self::Contributions => "contributions",
             Self::Tags => "tags",
             Self::Care => "care",
+            Self::AccessLog => "access-log",
         }
     }
 }
@@ -533,6 +538,11 @@ fn tabs(ehr_id: &str, facts: &EhrHead) -> Vec<Tab> {
             EhrTab::Care.key(),
             tab_href(ehr_id, EhrTab::Care),
             tr(crate::locale::policy::PolicyMsg::CareTab),
+        ),
+        Tab::new(
+            EhrTab::AccessLog.key(),
+            tab_href(ehr_id, EhrTab::AccessLog),
+            tr(AccessMsg::Tab),
         ),
     ]);
     tabs
