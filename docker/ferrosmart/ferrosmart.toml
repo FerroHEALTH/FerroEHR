@@ -31,6 +31,15 @@ max_connections = 8
 [ferrosmart.keys]
 private_key_files = ["/run/secrets/ferrosmart_signing_key"]
 
+# FerroSMART's own SMART Backend Services client, which reads a launch
+# patient for whom no grant exists yet (§13.33). Its P-384 assertion key is
+# its own, never a token key (RFC 8725 §3.12).
+[ferrosmart.backend]
+algorithm = "ES384"
+
+[ferrosmart.backend.keys]
+private_key_file = "/run/secrets/ferrosmart_backend_key"
+
 # FerroEHR's openEHR REST base, the `aud` of every token for it. The patient
 # picker looks an EHR up under `subject_namespace`; the overlay sets it from
 # FERROSMART_SUBJECT_NAMESPACE.

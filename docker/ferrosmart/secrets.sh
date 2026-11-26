@@ -11,6 +11,8 @@
 #   upstream_assertion_key.pem
 #                            the key FerroSMART authenticates to Keycloak with
 #                            (private_key_jwt, OpenID Connect Core 1.0 §9)
+#   backend_key.pem          the P-384 key of FerroSMART's own Backend Services
+#                            client (ES384)
 #   viewer_launch_key.pem    the viewer's EHR client key at FerroSMART (RS384)
 #   viewer_client.json       the viewer's client document with the public half
 #                            of that key, which `ferrosmart client apply` registers
@@ -33,6 +35,8 @@ for key in signing_key upstream_assertion_key viewer_launch_key; do
   keep "$key.pem" || openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 \
     -out "$dir/$key.pem" 2> /dev/null
 done
+keep backend_key.pem || openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-384 \
+  -out "$dir/backend_key.pem" 2> /dev/null
 if ! keep viewer_client.json; then
   modulus="$(openssl rsa -in "$dir/viewer_launch_key.pem" -noout -modulus | cut -d= -f2 | xxd -r -p |
     openssl base64 -A | tr '+/' '-_' | tr -d '=')"

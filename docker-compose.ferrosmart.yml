@@ -35,8 +35,9 @@
 #
 # SECRETS. docker/ferrosmart/secrets.sh makes them under ./secrets/ferrosmart
 # (FERROSMART_SECRETS names another directory): FerroSMART's database
-# password and URL, its token signing key, its assertion key at the
-# provider, and the viewer's launch key with its client document.
+# password and URL, its token signing key, its Backend Services key, its
+# assertion key at the provider, and the viewer's launch key with its client
+# document.
 #
 # FerroSMART's configuration is docker/ferrosmart/ferrosmart.toml
 # (FERROSMART_CONFIG_FILE names another). Its own documentation is
@@ -91,6 +92,7 @@ services:
     secrets:
       - ferrosmart_database_url
       - ferrosmart_signing_key
+      - ferrosmart_backend_key
     volumes:
       - type: bind
         source: ${FERROSMART_CONFIG_FILE:-./docker/ferrosmart/ferrosmart.toml}
@@ -129,6 +131,7 @@ services:
     secrets:
       - ferrosmart_database_url
       - ferrosmart_signing_key
+      - ferrosmart_backend_key
       - ferrosmart_viewer_client
     volumes:
       - type: bind
@@ -192,6 +195,8 @@ secrets:
     file: ${FERROSMART_SECRETS:-./secrets/ferrosmart}/database_url
   ferrosmart_signing_key:
     file: ${FERROSMART_SECRETS:-./secrets/ferrosmart}/signing_key.pem
+  ferrosmart_backend_key:
+    file: ${FERROSMART_SECRETS:-./secrets/ferrosmart}/backend_key.pem
   ferrosmart_viewer_launch_key:
     file: ${FERROSMART_SECRETS:-./secrets/ferrosmart}/viewer_launch_key.pem
   ferrosmart_viewer_client:

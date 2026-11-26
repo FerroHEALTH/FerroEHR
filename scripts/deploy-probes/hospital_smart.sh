@@ -82,6 +82,12 @@ max_connections = 8
 [ferrosmart.keys]
 private_key_files = ["/run/secrets/ferrosmart_signing_key"]
 
+[ferrosmart.backend]
+algorithm = "ES384"
+
+[ferrosmart.backend.keys]
+private_key_file = "/run/secrets/ferrosmart_backend_key"
+
 [[ferrosmart.resource]]
 base = "$HS_BASE"
 kind = "openehr"
