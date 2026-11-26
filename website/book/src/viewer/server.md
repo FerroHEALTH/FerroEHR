@@ -1,7 +1,7 @@
 # Server & audit log
 
 **Server** says what the CDR this viewer reads is, how it runs and what it
-serves, as six tabs, and the **Audit log** browses its security audit trail.
+serves, as up to eight tabs, and the **Audit log** browses its security audit trail.
 Everything on them comes from the CDR's own endpoints over HTTP; the viewer
 has no privileged channel.
 
@@ -105,6 +105,39 @@ The family stays in the address (`?family=query`).
 **SMART** reads the CDR's SMART discovery document: the scopes it supports as
 parsed grants, the grant types and PKCE methods, and the document itself.
 [Your access](index.md#your-access) shows the scopes your session holds.
+
+## Activity and Integrity
+
+These two tabs drive the CDR's admin API and appear only when the CDR
+mounts it (`api.admin`, see [Operations → Admin
+APIs](../operations-admin-apis.md)). Each action is the CDR's decision per
+request: a session without the admin role is refused in the CDR's words.
+
+**Activity** counts the repository's change history for one service over an
+interval ([the activity
+report](../operations-admin-apis.md#the-activity-report)). Pick a service and,
+if you like, a committed date range, then **Count**: the tab shows the
+contributions, the composition containers changed and the composition
+versions committed, and lists the contribution ids a page at a time. A
+demographic contribution opens on its own page. The service and the range
+stay in the address (`/server/activity?a_service=EHR&from=2026-01-01`). An
+interval the CDR refuses, such as one whose start is after its end, is
+reported beside the fields.
+
+![Activity](img/server/activity.png)
+
+**Integrity** checks every stored version against the rows the query engine
+reads ([storage integrity](../operations-admin-apis.md#storage-integrity)).
+Leave the scope empty to check the whole repository, or narrow it to an EHR,
+a versioned object, one of its versions, or what was committed since an
+instant, then **Verify**. The report gives the versions checked and each
+finding with its domain, kind and defect. When there are findings,
+**Rebuild…** asks for confirmation, then has the CDR rewrite the rows of each
+damaged version from its stored document over the same scope, and shows what
+it did to each version. For a repository too large to check within the
+request timeout, use the streamed sweep the operations page describes.
+
+![Integrity](img/server/integrity.png)
 
 ## Configuration
 
