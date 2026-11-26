@@ -236,15 +236,16 @@ struct Budget {
 }
 
 /// The ceilings by path (#6007, #6638): each figure as measured on Linux, the
-/// window average at most 60 above it, the peak 64 KiB and the WAL 16 bytes.
-// NOTE: our own design (#6434), the least request is exact; the window average is a coarse
-// guard, since a pool connection grows its buffers inside a request (#6238).
+/// least request 1 above it, the window average at most 60, the peak 64 KiB
+/// and the WAL 16 bytes.
+// NOTE: our own design (#6434), the least request is the gate; its 1 is the move between
+// runs of one tree (#6664), and the window average is a coarse guard (#6238).
 const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
         // NOTE: our own design (#6074), binding the held facts snapshot adds an allocation.
-        least: 13_932,
+        least: 13_933,
         allocations: 13_992,
         peak_bytes: 1_283_072,
         round_trips: 4,
@@ -256,7 +257,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitXml,
         conversions: 5,
-        least: 34_941,
+        least: 34_942,
         allocations: 35_001,
         peak_bytes: 1_283_072,
         round_trips: 4,
@@ -268,7 +269,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitFlat,
         conversions: 5,
-        least: 26_623,
+        least: 26_624,
         allocations: 26_683,
         peak_bytes: 1_284_096,
         round_trips: 4,
@@ -280,7 +281,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadJson,
         conversions: 0,
-        least: 804,
+        least: 805,
         allocations: 855,
         peak_bytes: 276_480,
         round_trips: 1,
@@ -292,7 +293,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadXml,
         conversions: 2,
-        least: 10_094,
+        least: 10_095,
         allocations: 10_144,
         peak_bytes: 730_112,
         round_trips: 1,
@@ -304,7 +305,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadFlat,
         conversions: 2,
-        least: 14_727,
+        least: 14_728,
         allocations: 14_783,
         peak_bytes: 1_295_360,
         round_trips: 1,
@@ -316,7 +317,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::EhrRead,
         conversions: 1,
-        least: 676,
+        least: 677,
         allocations: 728,
         peak_bytes: 79_269,
         round_trips: 1,
@@ -328,7 +329,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlSingle,
         conversions: 2,
-        least: 1650,
+        least: 1651,
         allocations: 1717,
         peak_bytes: 118_273,
         round_trips: 2,
@@ -340,7 +341,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlPopulation,
         conversions: 2,
-        least: 2237,
+        least: 2238,
         allocations: 2297,
         peak_bytes: 158_823,
         round_trips: 1,
@@ -352,7 +353,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::Iti81,
         conversions: 0,
-        least: 6638,
+        least: 6639,
         allocations: 6744,
         peak_bytes: 577_536,
         round_trips: 1,
@@ -364,7 +365,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyRead,
         conversions: 0,
-        least: 892,
+        least: 893,
         allocations: 960,
         peak_bytes: 78_848,
         round_trips: 6,
@@ -376,7 +377,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitContribution,
         conversions: 6,
-        least: 14_196,
+        least: 14_197,
         allocations: 14_256,
         peak_bytes: 1_411_072,
         round_trips: 4,
@@ -388,7 +389,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadAtTime,
         conversions: 0,
-        least: 817,
+        least: 818,
         allocations: 877,
         peak_bytes: 331_776,
         round_trips: 1,
@@ -400,7 +401,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitStatus,
         conversions: 4,
-        least: 1076,
+        least: 1077,
         allocations: 1136,
         peak_bytes: 147_242,
         round_trips: 4,
@@ -412,7 +413,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadStatus,
         conversions: 0,
-        least: 733,
+        least: 734,
         allocations: 786,
         peak_bytes: 80_973,
         round_trips: 1,
@@ -424,7 +425,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitParty,
         conversions: 8,
-        least: 1458,
+        least: 1459,
         allocations: 1525,
         peak_bytes: 125_972,
         // NOTE: our own design (#6252), every party commit's gate read and commit statement read the
@@ -438,7 +439,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlMatches,
         conversions: 2,
-        least: 3681,
+        least: 3682,
         allocations: 3744,
         peak_bytes: 192_267,
         round_trips: 2,
@@ -450,7 +451,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlParty,
         conversions: 2,
-        // NOTE: our own design (#6434), this least request moved by 2 over 20 Linux runs.
+        // NOTE: our own design (#6434), this least request moves by 2 between Linux runs.
         least: 2458,
         allocations: 2520,
         peak_bytes: 107_199,
@@ -463,7 +464,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitPartyScored,
         conversions: 8,
-        least: 1895,
+        least: 1896,
         allocations: 1959,
         peak_bytes: 140_901,
         round_trips: 9,
@@ -475,7 +476,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadVersion,
         conversions: 0,
-        least: 832,
+        least: 833,
         allocations: 892,
         peak_bytes: 162_800,
         round_trips: 1,
@@ -487,7 +488,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitUpdate,
         conversions: 5,
-        least: 13_964,
+        least: 13_965,
         allocations: 14_024,
         peak_bytes: 1_280_000,
         round_trips: 4,
@@ -499,7 +500,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitDelete,
         conversions: 2,
-        least: 1047,
+        least: 1048,
         allocations: 1103,
         peak_bytes: 135_002,
         round_trips: 4,
@@ -511,7 +512,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::DirectoryCreate,
         conversions: 5,
-        least: 1149,
+        least: 1150,
         allocations: 1204,
         peak_bytes: 150_606,
         round_trips: 4,
@@ -523,7 +524,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::DirectoryUpdate,
         conversions: 4,
-        least: 1102,
+        least: 1103,
         allocations: 1162,
         peak_bytes: 152_696,
         round_trips: 4,
@@ -535,7 +536,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::DirectoryDelete,
         conversions: 2,
-        least: 991,
+        least: 992,
         allocations: 1051,
         peak_bytes: 144_129,
         round_trips: 4,
@@ -547,7 +548,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyUpdate,
         conversions: 8,
-        least: 1759,
+        least: 1760,
         allocations: 1819,
         peak_bytes: 129_641,
         round_trips: 9,
@@ -559,7 +560,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyDelete,
         conversions: 2,
-        least: 1387,
+        least: 1388,
         allocations: 1448,
         peak_bytes: 112_950,
         round_trips: 9,
@@ -571,7 +572,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitOrganisation,
         conversions: 8,
-        least: 1434,
+        least: 1435,
         allocations: 1486,
         peak_bytes: 126_183,
         round_trips: 9,
@@ -583,7 +584,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitGroup,
         conversions: 8,
-        least: 1430,
+        least: 1431,
         allocations: 1481,
         peak_bytes: 125_084,
         round_trips: 9,
@@ -595,7 +596,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitRole,
         conversions: 9,
-        least: 1933,
+        least: 1934,
         allocations: 1989,
         peak_bytes: 126_256,
         round_trips: 16,
@@ -607,7 +608,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitAgent,
         conversions: 8,
-        least: 1420,
+        least: 1421,
         allocations: 1472,
         peak_bytes: 126_026,
         round_trips: 9,
