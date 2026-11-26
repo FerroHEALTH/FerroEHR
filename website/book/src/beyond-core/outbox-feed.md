@@ -7,8 +7,7 @@ serves those events to the readers you name over a cursor feed. The events
 carry identifiers and metadata, never the record content.
 
 FerroEHR publishes to no message broker. FerroBRIDGE, the family's export and
-import server, delivers the events to an AMQP broker such as RabbitMQ from 0.0.15
-on: its `[events]` lane reads this feed and publishes each event with its own
+import server, delivers the events to an AMQP broker such as RabbitMQ: its `[events]` lane reads this feed and publishes each event with its own
 exchange, routing keys and queues, and moves its cursor only after the broker
 confirmed the event
 ([FerroBRIDGE issue 1367](https://github.com/FerroHEALTH/FerroBRIDGE/issues/1367)).
@@ -179,23 +178,3 @@ A row left out is served once the mark is lifted or the directive no longer
 denies it, as long as the reader's cursor has not passed it. A page is never
 cut short by what it leaves out: the read goes on past those rows until it
 holds the page or reaches the tail.
-
-## Moving from FerroEHR's own RabbitMQ publisher
-
-Earlier releases of FerroEHR published to RabbitMQ themselves, under
-`[events]`, with subscription rows under `/admin/event_subscription`. Both are
-gone. To keep the events flowing to the same broker through FerroBRIDGE 0.0.15
-or later:
-
-1. Grant FerroBRIDGE's client a `read_change_feed` grant naming its reader,
-   and give the client the `__ferroehr.outbox` scope.
-2. Configure FerroBRIDGE's events lane with the broker URL, the exchange and
-   the queues your subscriptions used to declare.
-3. Remove `[events]` from FerroEHR's configuration, `secrets.eventsUrl` from the
-   chart values, and `plaintext_broker` from `deployment.accepts`: the server
-   refuses to start on any of them.
-
-A new reader starts at cursor `0`, so FerroBRIDGE delivers every row still in
-the outbox: the ones the publisher had not sent, and the ones it had sent inside
-the retention window, which a consumer that deduplicates on `contribution_id`
-skips.

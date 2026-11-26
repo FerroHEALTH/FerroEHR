@@ -146,5 +146,37 @@ crate::locale::messages! {
         ColumnObject = "access-column-object",
         /// `Categories`
         ColumnCategories = "access-column-categories",
+        /// `Open this record on a justification`
+        JustifyTitle = "access-justify-title",
+        /// `The CDR asks why you open this record: no care relationship of yours covers  …`
+        JustifyIntro = "access-justify-intro",
+        /// `Purpose of use`
+        JustifyPurpose = "access-justify-purpose",
+        /// `Why you open this record`
+        JustifyReason = "access-justify-reason",
+        /// `Your own words, 1 to 1000 characters. The person reads them in their access  …`
+        JustifyReasonHelp = "access-justify-reason-help",
+        /// `Open on this justification`
+        JustifySubmit = "access-justify-submit",
+        /// `It holds for this record for 15 minutes, until you end it, or until you sign …`
+        JustifyHolds = "access-justify-holds",
+        /// `Justification stated`
+        JustifyKept = "access-justify-kept",
+        /// `Justification ended`
+        JustifyEnded = "access-justify-ended",
+        /// `The session store could not keep the justification.`
+        JustifyStoreRefused = "access-justify-store-refused",
+        /// `The CDR asks for a reason but names no header to state it in, so the viewer  …`
+        JustifyUnoffered = "access-justify-unoffered",
+        /// `Choose a purpose of use.`
+        JustifyPurposeMissing = "access-justify-purpose-missing",
+        /// `Give a reason of 1 to 1000 characters.`
+        JustifyReasonLength = "access-justify-reason-length",
+        /// `A reason holds no control characters.`
+        JustifyReasonControl = "access-justify-reason-control",
+        /// `You opened this record on a justification ({ $purpose }) until { $until }. Y …`
+        JustifyBanner = "access-justify-banner",
+        /// `End now`
+        JustifyEnd = "access-justify-end",
     }
 }

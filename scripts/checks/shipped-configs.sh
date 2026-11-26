@@ -127,7 +127,20 @@ check() {
 if [[ -n "${FERROEHR_CONFIG_IMAGE:-}" || -n "${FERROEHR_BIN:-}" ]]; then
   # ── The hosted sandbox ───────────────────────────────────────────────────────
   printf 'DATABASE_URL=%s\n' "$dsn" >"$work/hosted.env"
+  # The box mounts its signing key's passphrase as a compose secret, and the
+  # loader reads that file: a throwaway one stands in for it.
+  passphrase="$(yq -p toml -o yaml '.record.signing.key_passphrase_file // ""' deploy/hosted/ferroehr.sandbox.toml)"
+  if [[ -n "$passphrase" ]]; then
+    printf 'config-check' >"$work/signing-passphrase"
+    chmod 0644 "$work/signing-passphrase"
+    if [[ -n "${FERROEHR_CONFIG_IMAGE:-}" ]]; then
+      mounts=(-v "$work/signing-passphrase:$passphrase:ro")
+    else
+      echo "FERROEHR__RECORD__SIGNING__KEY_PASSPHRASE_FILE=$work/signing-passphrase" >>"$work/hosted.env"
+    fi
+  fi
   check deploy/hosted/ferroehr.sandbox.toml deploy/hosted/ferroehr.sandbox.toml "$work/hosted.env"
+  mounts=()
 
   # ── Every overlay on the quickstart ──────────────────────────────────────────
   for overlay in docker-compose.*.yml; do
@@ -285,6 +298,18 @@ viewer_compose() {
   viewer_check "$label" "$work/viewer.env" "$file"
 }
 
+# ── The hosted sandbox's compose file ────────────────────────────────────────
+# Resolved on every run, whatever program the check is given, with every
+# profile. The box's .env supplies these; a placeholder stands in for each.
+if ! COMPOSE_PROFILES="*" DATABASE_URL="$dsn" FERROPIX_DATABASE_URL="$dsn" FERROPIX_DATA_KEY=placeholder \
+  FERROEHR_SIGNING_KEY_FILE="$work/placeholder" FERROEHR_SIGNING_PASSPHRASE_FILE="$work/placeholder" \
+  "${compose[@]}" -f deploy/hosted/docker-compose.yml config --format json </dev/null >"$work/hosted.json" 2>"$work/hosted.err"; then
+  echo "::error file=deploy/hosted/docker-compose.yml::docker compose cannot resolve the hosted sandbox's compose file:" >&2
+  cat "$work/hosted.err" >&2
+  fail=1
+  : >"$work/hosted.json"
+fi
+
 if [[ -n "${FERROEHR_VIEWER_BIN:-}" ]]; then
   # The viewer sits behind a compose profile; every profile is resolved.
   mounts_in=()
@@ -294,10 +319,9 @@ if [[ -n "${FERROEHR_VIEWER_BIN:-}" ]]; then
   export FERROSMART_SECRETS="$work/ferrosmart-secrets"
   bash docker/ferrosmart/secrets.sh "$FERROSMART_SECRETS" >/dev/null
   # ── The hosted sandbox's viewer ────────────────────────────────────────────
-  # The box's .env supplies these; a placeholder stands in for each.
-  DATABASE_URL="$dsn" FERROPIX_DATABASE_URL="$dsn" FERROPIX_DATA_KEY=placeholder \
-    "${compose[@]}" -f deploy/hosted/docker-compose.yml config --format json </dev/null >"$work/hosted.json"
-  viewer_compose deploy/hosted/docker-compose.yml "$work/hosted.json" "$PWD/deploy/hosted"
+  if [[ -s "$work/hosted.json" ]]; then
+    viewer_compose deploy/hosted/docker-compose.yml "$work/hosted.json" "$PWD/deploy/hosted"
+  fi
 
   # ── The quickstart's viewer, alone and with each overlay ───────────────────
   "${compose[@]}" -f docker-compose.yml config --format json </dev/null >"$work/quickstart.json"

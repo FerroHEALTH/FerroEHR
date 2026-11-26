@@ -108,7 +108,7 @@ The chart deploys no database, so the two halves are separate operations.
    ```
 
    `WITH (FORCE)` terminates the sessions still connected
-   ([DROP DATABASE](https://www.postgresql.org/docs/18/sql-dropdatabase.html)).
+   ([DROP DATABASE](https://www.postgresql.org/docs/19/sql-dropdatabase.html)).
    Use the owner your deployment provisioned the database with. If
    `[database.party]` or `[database.audit]` name databases
    of their own, drop and recreate each of those too. The domain roles are
