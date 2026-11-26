@@ -286,6 +286,8 @@ messages! {
         NavAudit = "nav-audit",
         /// `Roles and grants`
         NavGrants = "nav-grants",
+        /// `Retention`
+        NavRetention = "nav-retention",
         /// `Configuration`
         NavConfiguration = "nav-configuration",
         /// `Dashboard`

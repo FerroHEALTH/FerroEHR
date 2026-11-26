@@ -297,12 +297,15 @@ quiet "${AUTH[@]}" -X PUT "$EXT/admin/registers/access-delay" "${JSON[@]}" -H 'I
   -d '{"enabled": true, "categories": ["Laboratory-Reports"], "max_delay": "72h"}'
 
 # The EHR's legal marks: a restriction requested and lifted, a retention
-# anchor, and the FLAT composition held from the person and from disposal.
+# anchor whose declared period has run, and the FLAT composition held from
+# the person and from disposal.
 quiet "${AUTH[@]}" -X POST "$EXT/admin/restriction" "${JSON[@]}" \
   -d "{\"ehr_id\": \"$EHR\", \"ground\": \"gdpr-18-1-a\", \"note\": \"accuracy contested\"}"
 quiet "${AUTH[@]}" -X POST "$EXT/admin/restriction/lift" "${JSON[@]}" -d "{\"ehr_id\": \"$EHR\"}"
 quiet "${AUTH[@]}" -X PUT "$EXT/admin/retention/anchor" "${JSON[@]}" \
   -d "{\"ehr_id\": \"$EHR\", \"jurisdiction\": \"CH\", \"anchored_at\": \"2026-01-31T00:00:00Z\"}"
+quiet "${AUTH[@]}" -X PUT "$EXT/admin/retention/policy" "${JSON[@]}" \
+  -d '{"kind": "EHR", "jurisdiction": "CH", "period": "6 months", "anchor": "last_commit", "source": "Synthetic period of the recording"}'
 quiet "${AUTH[@]}" -X POST "$EXT/admin/access-delay" "${JSON[@]}" \
   -d "{\"ehr_id\": \"$EHR\", \"vo_id\": \"$COMPOSITION_FLAT\", \"note\": \"to discuss at the visit\"}"
 quiet "${AUTH[@]}" -X POST "$EXT/admin/retention/hold" "${JSON[@]}" \
