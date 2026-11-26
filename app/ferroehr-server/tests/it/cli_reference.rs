@@ -41,6 +41,7 @@ fn section(out: &mut String, path: &str, command: &mut Command) {
     }
 }
 
+// REUSE-IgnoreStart
 /// The page the definition renders.
 fn render() -> String {
     let mut command = Cli::command().term_width(WIDTH).max_term_width(WIDTH);
@@ -59,6 +60,8 @@ fn render() -> String {
     section(&mut out, "ferroehr", &mut command);
     out.trim_end().to_owned() + "\n"
 }
+
+// REUSE-IgnoreEnd
 
 #[test]
 fn the_book_holds_the_current_cli_reference() {
