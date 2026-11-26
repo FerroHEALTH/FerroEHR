@@ -424,6 +424,8 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         review("/server/api", "server/api"),
         review("/server/smart", "server/smart"),
         light("/server/activity?a_service=EHR", "server/activity"),
+        light("/server/repository", "server/repository"),
+        light("/ehrs/import", "ehrs/import"),
         review("/server/integrity", "server/integrity"),
         both("/audit", "audit/audit"),
         review("/audit?patient=no-such-patient", "audit/audit-empty"),

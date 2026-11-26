@@ -46,6 +46,7 @@ use crate::routes::Drawn;
 pub mod activity;
 pub mod integrity;
 pub mod overview;
+pub mod repository;
 
 /// The id of Apply the log filter's confirmation.
 const APPLY_DIALOG: &str = "apply-log-filter";
@@ -72,11 +73,13 @@ enum ServerTab {
     Activity,
     /// Its stored data checked against itself.
     Integrity,
+    /// The whole repository dumped and loaded.
+    Repository,
 }
 
 impl ServerTab {
     /// Every tab, in order.
-    const ALL: [Self; 8] = [
+    const ALL: [Self; 9] = [
         Self::Overview,
         Self::Health,
         Self::Metrics,
@@ -85,6 +88,7 @@ impl ServerTab {
         Self::Smart,
         Self::Activity,
         Self::Integrity,
+        Self::Repository,
     ];
 
     /// The tab's key.
@@ -98,6 +102,7 @@ impl ServerTab {
             Self::Smart => "smart",
             Self::Activity => "activity",
             Self::Integrity => "integrity",
+            Self::Repository => "repository",
         }
     }
 
@@ -120,6 +125,10 @@ impl ServerTab {
             Self::Smart => (ConsoleMsg::ServerSmart, ConsoleMsg::ServerSmartLine),
             Self::Activity => (ConsoleMsg::ServerActivity, ConsoleMsg::ServerActivityLine),
             Self::Integrity => (ConsoleMsg::ServerIntegrity, ConsoleMsg::ServerIntegrityLine),
+            Self::Repository => (
+                ConsoleMsg::ServerRepository,
+                ConsoleMsg::ServerRepositoryLine,
+            ),
         };
         (tr(label), tr(line))
     }
@@ -131,7 +140,7 @@ impl ServerTab {
 
     /// Whether the tab drives the admin group.
     const fn admin(self) -> bool {
-        matches!(self, Self::Activity | Self::Integrity)
+        matches!(self, Self::Activity | Self::Integrity | Self::Repository)
     }
 }
 

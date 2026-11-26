@@ -156,6 +156,21 @@ does not hold, is shown in the CDR's words.
 
 ![Archiving an EHR](img/ehrs/ehr-archive.png)
 
+### EHR Extracts
+
+**Export as EHR Extract** in an EHR's More menu downloads the EHR as the CDR
+exports it (`GET {ext}/message/export/{ehr_id}`): a JSON list holding one
+`EXTRACT` with every versioned object of the EHR, latest versions only, saved
+as `ehr-extract-<ehr_id>.json`. **Import EHR Extract** in the EHRs list's
+More menu takes an extract, JSON or XML, chosen, dropped or pasted, and
+imports it as a new EHR (`POST {ext}/message/import`), under the EHR id you
+give or else under the one the extract carries. A file the viewer exported
+imports as it is. A success opens the imported EHR; a refusal, such as an EHR
+id that exists already, stays on the page in the CDR's words. See [EHR
+Extract & messaging](../beyond-core/messaging.md).
+
+![Import EHR Extract](img/ehrs/import.png)
+
 ### Committing several changes at once
 
 **Commit several changes** builds one contribution: stage a new composition,
