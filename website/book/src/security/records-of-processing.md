@@ -124,7 +124,7 @@ The identity fields Art. 30(1)(a) asks for are yours in every case:
 
 | Art. 30 field | What the software does |
 |---|---|
-| Purpose | Identifying the health professionals and the representatives who act on the record, so each version and each access names the natural person and the provider (EHDS Art. 13(4), Annex II 3.1 and 3.2), when [`[auth.scim]`](../installation/config-auth.md#authscim) or [just-in-time creation](../installation/config-auth.md#just-in-time-creation) is on |
+| Purpose | Identifying the health professionals and the representatives who act on the record, so each version and each access names the natural person and the provider (EHDS Art. 13(4), Annex II 3.1 and 3.2), when [`[auth.scim]`](../installation/config-scim.md#authscim) or [just-in-time creation](../installation/config-authz.md#just-in-time-creation) is on |
 | Categories of data subject | The deployment's own professionals, its Basic users, and registered representatives |
 | Categories of personal data | Per professional: the binding key (the identity provider's immutable user id), the `userName`, the `externalId`, the name, the groups (care teams), the lifecycle state and the professional `ROLE`. Contact attributes only where the operator maps them; none are mapped by default. Just-in-time creation writes only the key, the `userName` and the name |
 | Source (Art. 14(2)(f)) | The identity provider: Microsoft Entra ID, Keycloak or another SCIM client, or the access token at the first login |

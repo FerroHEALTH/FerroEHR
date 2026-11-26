@@ -32,6 +32,7 @@ use ferrohealth_ui::view::subject::{Subject, SubjectLine, subject_line};
 use ferrohealth_ui::view::surface::{Crumb, Header, page_heading};
 use ferrohealth_ui::view::tabs::{Tab, binder};
 
+use crate::admin::Archived;
 use crate::bff::ehr_detail::EhrSummary;
 use crate::bff::ehr_detail::status::EhrStatusState;
 use crate::error::ViewerError;
@@ -298,8 +299,8 @@ where
 }
 
 /// The More menu of an EHR: Commit several changes, Create the directory
-/// when it has none, Copy EHR id, then Delete EHR… last when the admin group
-/// is mounted.
+/// when it has none, Copy EHR id, and while the admin group is mounted
+/// Archive… and Restore…, then Delete EHR… last.
 fn more(ehr_id: &str, facts: &EhrHead) -> Menu {
     let mut items = vec![Item::new(Action::new(
         Some(Glyph::GIT_COMMIT),
@@ -322,6 +323,9 @@ fn more(ehr_id: &str, facts: &EhrHead) -> Menu {
         Act::Copy(ehr_id.to_owned()),
     )));
     items.extend(launch_items(ehr_id));
+    if facts.admin {
+        items.extend(crate::pages::archive::items());
+    }
     let destructive = if facts.admin {
         vec![Item::new(Action::new(
             Some(Glyph::TRASH),
@@ -493,6 +497,9 @@ fn header(ehr_id: &str, facts: &EhrHead) -> Html {
         heading,
         subject(ehr_id, facts.subject.as_ref()),
         opt(facts.admin.then(|| delete_dialog(ehr_id))),
+        opt(facts
+            .admin
+            .then(|| crate::pages::archive::dialogs(Archived::Ehrs, &ehr_href(ehr_id)))),
     ])
 }
 
@@ -540,8 +547,8 @@ fn tabs(ehr_id: &str, facts: &EhrHead) -> Vec<Tab> {
     tabs
 }
 
-/// What a post to an EHR's page asks, done: Create the directory and Delete
-/// EHR. `Some` holds what it did not do, drawn above the tabs.
+/// What a post to an EHR's page asks, done: Create the directory, Archive,
+/// Restore and Delete EHR. `Some` holds what it did not do, drawn above the tabs.
 async fn act(ehr_id: &str) -> Option<Acted> {
     let posted = crate::posted::posted()?;
     match posted.intent().as_str() {
@@ -581,6 +588,12 @@ async fn act(ehr_id: &str) -> Option<Acted> {
                     error,
                 ))),
             }
+        }
+        intent @ ("archive" | "restore") => {
+            crate::pages::archive::act(Archived::Ehrs, ehr_id, intent, &ehr_href(ehr_id))
+                .await
+                .flatten()
+                .map(Acted::Refused)
         }
         "launch" => launch(ehr_id, &posted.text("app")).await,
         "launch-task" => launch_task(ehr_id, &posted.text("task")).await,

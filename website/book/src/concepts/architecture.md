@@ -57,7 +57,7 @@ so a build without them contains none of their code; see
 part of FerroEHR: it is [FerroBRIDGE](https://github.com/FerroHEALTH/FerroBRIDGE),
 a separate server that reaches FerroEHR over ITS-REST. The Helm chart deploys it
 in the same release with `bridge.enabled=true`; see
-[Kubernetes & Helm](../installation/kubernetes.md#ferrobridge-the-fhir-bridge-off-by-default).
+[Kubernetes & Helm](../installation/kubernetes-integrations.md#ferrobridge-the-fhir-bridge-off-by-default).
 
 What you actually deploy is small: **one self-contained server binary** plus
 PostgreSQL. No JVM, no language runtime, and a pure-Rust TLS stack. The
@@ -147,7 +147,7 @@ authenticate as the first, which keeps the schema separation and drops the
 credential separation. Preparing the schema spans every schema at once, so it
 runs on `[database] migrate_url` rather than on any of them. The local Audit Record
 Repository is written on the clinical pool, into its own `audit` schema. See
-[Operations](../operations.md#database-roles-and-least-privilege) for the
+[Operations](../database-operations.md#database-roles-and-least-privilege) for the
 roles and [the threat model](../threat-model.md#what-each-database-credential-can-reach)
 for what each credential can reach.
 
