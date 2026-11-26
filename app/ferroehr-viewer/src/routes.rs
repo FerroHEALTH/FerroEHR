@@ -153,6 +153,12 @@ pub enum Page {
     Audit,
     /// `/audit/:id`.
     AuditRecord,
+    /// `/access-policy`.
+    AccessPolicy,
+    /// `/access-policy/versions`.
+    AccessPolicyVersions,
+    /// `/access-policy/edit`.
+    EditAccessPolicy,
     /// `/configuration` and its sections.
     Configuration,
     /// `/preferences` and its sections.
@@ -223,6 +229,9 @@ impl Page {
             "/server/smart" => Self::Smart,
             "/audit" => Self::Audit,
             "/audit/:id" => Self::AuditRecord,
+            "/access-policy" => Self::AccessPolicy,
+            "/access-policy/versions" => Self::AccessPolicyVersions,
+            "/access-policy/edit" => Self::EditAccessPolicy,
             "/configuration" | "/configuration/:section" => Self::Configuration,
             "/preferences" | "/preferences/:section" => Self::Preferences,
             "/access" => Self::Access,
@@ -365,6 +374,9 @@ pub static ROUTES: &[&str] = &[
     "/server/smart",
     "/audit",
     "/audit/:id",
+    "/access-policy",
+    "/access-policy/versions",
+    "/access-policy/edit",
     "/configuration",
     "/configuration/:section",
     "/preferences",
@@ -433,6 +445,9 @@ pub async fn draw() -> Drawn {
         Page::Smart => pages::server::smart_page().await,
         Page::Audit => pages::audit::page().await,
         Page::AuditRecord => pages::audit::record_page().await,
+        Page::AccessPolicy => pages::policy::page().await,
+        Page::AccessPolicyVersions => pages::policy::versions_page().await,
+        Page::EditAccessPolicy => pages::policy::edit::page().await,
         Page::Configuration => pages::configuration::page().await,
         Page::Preferences => pages::preferences::page(),
         Page::Access => pages::access::page(),
