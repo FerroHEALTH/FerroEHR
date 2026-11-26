@@ -50,10 +50,11 @@ use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, Unsaved, card_panel, discarded, dock_editor, document_section,
-    editor_line, findings_of, info_note, is_status, marks_of, panel, plain_section, reload_words,
-    save_as_words, section, short, shortened, state_mark, when,
+    EditorDock, Refused, card_panel, discarded, dock_editor, document_section, findings_of,
+    info_note, is_status, marks_of, panel, plain_section, section, short, shortened, state_mark,
+    when,
 };
+use crate::pages::editor::{Unsaved, editor_line, reload_words, save_as_words};
 use crate::pages::ehr::{crumbs, ehr_href, ehr_id_param};
 use crate::pages::form::Form;
 use crate::pages::item_tags::{TagAct, TagPanel, tag_act, tag_done, tag_panel};
