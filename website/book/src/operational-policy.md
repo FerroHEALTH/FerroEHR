@@ -1656,8 +1656,9 @@ design:
   changes one, so the request path adds no database read.
 - **A `ROLE`'s `performer` ties a grant to its party**; the performer's
   `roles` list need not name the `ROLE`.
-- **Break-glass stays in the configuration**, so emergency access works when
-  the party store does not answer.
+- **Emergency access is a justification of the access policy**, held in
+  memory on every replica, so it works while the policy store does not
+  answer once the replica has read the policy.
 - **Trust in imported committers is the importer's.** The RM keeps an
   imported version's audit as received (`IMPORTED_VERSION`); which systems'
   committers may name a local party is a scope of the importer's grant.
@@ -2256,8 +2257,10 @@ patient can accept by reference, such as an IHE BPPC policy, and the
 lays down under EHDS Art. 9(3) ([Audit](audit.md#restricting-the-subject-view-ehds-art-93)).
 It is an `ACCESS_POLICY` of FerroEHR's draft access control package, written
 against the default archetype `openEHR-EHR-ACCESS_POLICY.controller.v1`,
-which every boot stores, or against one of your own. Break-glass and the default floor
-stay in `ferroehr.toml`; the policy can only tighten them. Until you write
+which every boot stores, or against one of your own. The default floor
+(`[authz.rbac] ehr_access_default`) stays in `ferroehr.toml`, and the policy
+can only tighten it. Emergency access is one of the policy's
+`justifications`. Until you write
 one, nothing is tightened.
 
 - **Versioned.** Every write is a new version in its own contribution, with
