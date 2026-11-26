@@ -1,0 +1,1 @@
+- The viewer's Query has a Cohort tab: it runs AQL over the EHRs the deployment's bound demographic predicates select, as one cohort request, and draws the rows as any result set with the cohort's size, the EHRs served and the suppression of a small cell; its exports run the same cohort.
