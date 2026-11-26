@@ -1291,3 +1291,59 @@ async fn a_discharge_on_one_replica_is_never_read_stale_from_the_projection_on_a
         .expect("the projection reads");
     assert_eq!(left, 0, "the erasure removes the patient's care with it");
 }
+
+/// The facts check reads the stamps from the snapshot's `xmin` upward through
+/// the stamp index on the generic plan its function settles on, so twenty
+/// thousand stamped parties cost a few index pages a call, never a scan of
+/// every stamp (#6635).
+#[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
+async fn the_facts_check_reads_the_stamp_index_from_xmin_on_its_generic_plan() {
+    // NOTE: our own design (#6635), the measured buffers of a planned call, plus a margin.
+    const BUFFERS: i64 = 8;
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let mut conn = pool.acquire().await.expect("a connection");
+    sqlx::query(
+        "INSERT INTO party.binding_caller_fact_party (party_id, stamped_xid) \
+         SELECT uuidv7(), (pg_current_xact_id()::text::bigint - 30000 + g)::text::xid8 \
+         FROM generate_series(1, 20000) g",
+    )
+    .execute(&mut *conn)
+    .await
+    .expect("the stamps are written");
+    sqlx::query("ANALYZE party.binding_caller_fact_party")
+        .execute(&mut *conn)
+        .await
+        .expect("the stamps are analyzed");
+    sqlx::query("SET plan_cache_mode = force_generic_plan")
+        .execute(&mut *conn)
+        .await
+        .expect("the generic plan is forced");
+    sqlx::query("SELECT party.facts_behind(pg_current_snapshot())")
+        .execute(&mut *conn)
+        .await
+        .expect("the facts check plans once");
+    let plan: Value = sqlx::query_scalar(
+        "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) SELECT party.facts_behind(pg_current_snapshot())",
+    )
+    .fetch_one(&mut *conn)
+    .await
+    .expect("the facts check runs");
+    let top = &plan[0]["Plan"];
+    let buffers = top["Shared Hit Blocks"].as_i64().expect("the hit buffers")
+        + top["Shared Read Blocks"]
+            .as_i64()
+            .expect("the read buffers");
+    eprintln!(
+        "the facts check: {buffers} buffers, {} ms with 20,000 stamped parties",
+        top["Actual Total Time"]
+    );
+    assert!(
+        buffers <= BUFFERS,
+        "the facts check reads {buffers} buffers with 20,000 stamped parties"
+    );
+}
