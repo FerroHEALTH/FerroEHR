@@ -197,7 +197,7 @@ async fn compare_names_the_paths_the_later_release_adds() {
     login_basic(&h).await;
     h.goto(&format!("/templates/{V2}")).await;
     // Below 40 rem a binder of more than five tabs offers them as one select,
-    // which the reader picks Compare from; wider, Compare is its own tab.
+    // which the reader picks Compare from and goes; wider, Compare is its own tab.
     let compare = h.wait_css("a.fui-tab[data-tab='compare']").await;
     h.wait_scripts().await;
     if common::is_visible(&h, "form.fui-tabs-select select").await {
@@ -206,6 +206,7 @@ async fn compare_names_the_paths_the_later_release_adds() {
             .await
             .select_by_value(&route)
             .await;
+        common::submit(&h, "form.fui-tabs-select button[type=submit]").await;
     } else {
         compare.click().await;
     }
