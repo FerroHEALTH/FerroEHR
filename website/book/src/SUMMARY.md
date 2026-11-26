@@ -28,6 +28,7 @@
 
 - [Installation](installation/index.md)
   - [Docker Compose](installation/compose.md)
+    - [Overlays and profiles](installation/compose-overlays.md)
   - [Kubernetes & Helm](installation/kubernetes.md)
     - [Security posture, probes and authentication](installation/kubernetes-security.md)
     - [Integrations](installation/kubernetes-integrations.md)
@@ -85,6 +86,7 @@
 - [Content negotiation & errors](using-the-api/content-negotiation.md)
   - [Problem types](using-the-api/problems.md)
 - [Admin & messaging APIs](operations-admin-apis.md)
+  - [Storage integrity, dump and load](storage-admin-apis.md)
 - [Access path metrics and runbooks](operations-access-path.md)
 - [Usage report](usage-report.md)
 - [Rust crates](crates.md)

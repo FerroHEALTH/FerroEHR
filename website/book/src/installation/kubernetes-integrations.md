@@ -39,7 +39,7 @@ Two things make this safe to rely on:
   configuration strictly and rejects an unknown key with a did-you-mean, so a
   misspelled path fails loudly at startup instead of quietly doing nothing.
   Check before you deploy with the schema and boot gates described under
-  [Check your values before you deploy them](kubernetes.md#check-your-values-before-you-deploy-them).
+  [Check your values before you deploy them](../upgrades.md#check-your-values-before-you-deploy-them).
 - **Credentials do not belong in this tree.** `config` becomes a mounted
   file; secrets have their own routes (`secrets.*`, `existingSecret`, and the
   `*_file` key siblings); see
@@ -177,13 +177,12 @@ its `client_id`, is a machine's. It refuses `kind` (other than
 `federation`), `preset` and the `profile` table, and an audience written on
 the auth section itself. Since 0.0.21 a
 Patient Identity Source is admitted only with a client credentials token,
-and a Basic user holding a `system/` scope refuses the start. Since FerroPIX 0.0.8, `public_base_url` is a
-top-level key and the clients that may act as a Patient Identity Source sit
-in the `[[trust.issuer]]` table, apart from the `[auth.issuer.<name>]` entry that
-names the issuer; FerroPIX refuses the older `server.public_base_url` and `auth.issuer[].clients`, so an
-upgrade from a chart that pinned FerroPIX 0.0.7 moves those two keys in your
-values. Since FerroPIX 0.0.37, `config.auth.issuer` is a map of issuers by name,
-and `trust.issuer[].issuer` names the issuer by that name, never by its URL.
+and a Basic user holding a `system/` scope refuses the start. In FerroPIX's
+configuration, `public_base_url` is a top-level key, the clients that may act
+as a Patient Identity Source sit in the `[[trust.issuer]]` table apart from the
+`[auth.issuer.<name>]` entry that names the issuer, `config.auth.issuer` is a
+map of issuers by name, and `trust.issuer[].issuer` names the issuer by that
+name, never by its URL.
 
 The restricted-profile gate holds FerroPIX's pods to the Pod Security
 Standards `restricted` profile like every other pod in the release. FerroPIX's
@@ -202,7 +201,7 @@ through it. The CDR's own `/terminology/*` extension routes are a separate
 switch: they answer only with `config.api.terminology=true`, which is
 `false` by default, and return `404` otherwise whether or not FerroTERM is
 running. It is the Helm equivalent of the
-[compose terminology overlay](compose.md#the-terminology-overlay-ferroterm).
+[compose terminology overlay](compose-overlays.md#the-terminology-overlay-ferroterm).
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
@@ -220,10 +219,10 @@ Because the chart writes those two, a values file that contradicts either is
 refused at render rather than silently overwritten. Two shapes are refused
 while `terminology.wireCdr` is on:
 
-- **`config.terminology.endpoint.url`** — two answers to "which server resolves a
+- **`config.terminology.endpoint.url`**: two answers to "which server resolves a
   binding" is how resolution ends up pointed somewhere nobody chose.
 - **`config.terminology.on_error`** disagreeing with
-  `terminology.failOnError` — same reason, for the posture that decides whether
+  `terminology.failOnError`: same reason, for the posture that decides whether
   an unresolvable binding is a `422`.
 
 Set `terminology.wireCdr=false` to keep your own server and run FerroTERM
@@ -243,7 +242,7 @@ one in this chart that narrows sources by default: ingress admits the CDR's pods
 on the terminology port and nothing else, egress admits DNS.
 `terminology.networkPolicy.extraIngressFrom` adds a peer you decide to admit.
 **No boolean opens this port** the way `networkPolicy.ingressAllowAll` opens the
-CDR's — and a peer you add is admitted exactly as written, which includes
+CDR's, and a peer you add is admitted exactly as written, which includes
 admitting everything: a `namespaceSelector: {}` selects every namespace in the
 cluster (networking/v1: "if present but empty, it selects all namespaces"). The
 values schema therefore refuses an empty peer, and an empty `podSelector` or
@@ -303,8 +302,8 @@ showing its content carries the notice clause 8.3.1 prescribes plus the release
 version and date.
 
 **More than one replica needs two other keys.** `terminology.replicaCount` is a
-throughput choice — each replica loads its own copy of the index, so watch the
-memory limit — and above 1 the pods spread one per node by default, the same
+throughput choice (each replica loads its own copy of the index, so watch the
+memory limit), and above 1 the pods spread one per node by default, the same
 soft constraint the CDR gets. Turn `terminology.podDisruptionBudget.enabled` on
 with it: without a budget a node drain may take every terminology replica at
 once, and the CDR's own budget does not cover these pods. It is off by default
