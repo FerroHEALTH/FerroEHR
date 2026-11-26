@@ -200,3 +200,20 @@ month-short-9 = Sep
 month-short-10 = Oct
 month-short-11 = Nov
 month-short-12 = Dec
+
+## A version's signature and attestations
+
+version-signature-none = None
+version-signature-digest = A SHA-256 digest
+version-signature-composite = An OpenPGP signature, ML-DSA-65+Ed25519
+version-signature-openpgp = An OpenPGP signature, algorithm { $algorithm }
+version-signature-openpgp-unread = An OpenPGP signature
+version-signature-other = A signature in the client's own form
+version-signature-title = Signature
+version-attestations = Attestations
+version-attester = Attester
+version-attested-at = When
+version-attest-reason = Reason
+version-attest-items = Attests
+version-attest-whole = The whole version
+version-attest-pending = Pending
