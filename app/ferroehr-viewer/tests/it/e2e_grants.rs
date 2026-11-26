@@ -42,15 +42,22 @@ async fn admin_lists_the_grants_and_opens_a_marked_policy_party() {
     common::follow_nav(&h, "/grants").await;
     wait_main_contains(&h, "Roles holding a grant").await;
     let text = main_text(&h).await;
-    for words in ["scim_provision", "hold_scopes", "System agents", "basic-users"] {
+    for words in [
+        "scim_provision",
+        "hold_scopes",
+        "System agents",
+        "basic-users",
+    ] {
         assert!(text.contains(words), "the grants say {words:?}: {text}");
     }
     h.shot(1, "grants").await;
 
-    h.wait_xpath("//main//table//a[contains(@href, '/parties/agent/')][normalize-space()='basic-users']")
-        .await
-        .click()
-        .await;
+    h.wait_xpath(
+        "//main//table//a[contains(@href, '/parties/agent/')][normalize-space()='basic-users']",
+    )
+    .await
+    .click()
+    .await;
     h.wait_url_contains("/parties/agent/").await;
     wait_main_contains(&h, "Policy party").await;
     assert!(
