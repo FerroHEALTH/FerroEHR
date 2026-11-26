@@ -711,16 +711,20 @@ COMMENT ON TABLE binding_caller_fact_party IS 'The transaction that last changed
 COMMENT ON COLUMN binding_caller_fact_party.stamped_xid IS 'pg_current_xact_id() of the transaction that last changed the party''s caller facts.';
 
 -- Whether a stamp exists that the snapshot held did not see: a copy read
--- under held is behind the store. The xmin bound keeps it a range scan of
--- ix_binding_caller_fact_party_stamped (PostgreSQL 19, "Transaction ID and
--- Snapshot Information Functions"). A copy never read (NULL) is behind.
+-- under held is behind the store. The xmin bound and the ordered LIMIT keep it
+-- a backward range scan of ix_binding_caller_fact_party_stamped from the
+-- newest stamp down to xmin, also on the generic plan the function settles on,
+-- which cannot see xmin (#6635; PostgreSQL 19, "Transaction ID and Snapshot
+-- Information Functions"). A copy never read (NULL) is behind.
 CREATE FUNCTION facts_behind(held pg_snapshot) RETURNS boolean
     LANGUAGE sql STABLE PARALLEL SAFE
 BEGIN ATOMIC
-    SELECT held IS NULL OR EXISTS (
-        SELECT 1 FROM binding_caller_fact_party p
+    SELECT held IS NULL OR (
+        SELECT p.stamped_xid FROM binding_caller_fact_party p
          WHERE p.stamped_xid >= pg_snapshot_xmin(held)
-           AND NOT pg_visible_in_snapshot(p.stamped_xid, held));
+           AND NOT pg_visible_in_snapshot(p.stamped_xid, held)
+         ORDER BY p.stamped_xid DESC
+         LIMIT 1) IS NOT NULL;
 END;
 COMMENT ON FUNCTION facts_behind(pg_snapshot) IS 'Whether binding_caller_fact_party holds a stamp the snapshot held did not see, so a copy read under it is behind. Our own design.';
 
