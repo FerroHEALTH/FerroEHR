@@ -4,6 +4,12 @@
 //! Server › Overview and the shell over the CDR's full status document: the
 //! licence, the deployment gaps and the support period (#6654).
 
+#![expect(
+    clippy::disallowed_types,
+    reason = "the stubbed exchanges are raw JSON by the testing rule (.claude/rules/testing.md \
+              §Test-fixture construction)"
+)]
+
 use crate::ssr_app::{Viewer, stub};
 
 /// The full status document of a sandbox whose licence expired and whose
