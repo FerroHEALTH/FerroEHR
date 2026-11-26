@@ -248,6 +248,31 @@ pub async fn replace(
     Ok(())
 }
 
+/// The rows a committed write must reach before [`settle`] analyzes the
+/// table (#6630).
+pub const ANALYZE_AFTER: usize = 1000;
+
+/// Analyze the projection after a committed write of `written` rows, when
+/// they are at least [`ANALYZE_AFTER`]; whether it ran.
+///
+/// The caseload's row estimate decides the join order of every care-gated
+/// query, and a 1-row estimate over a fresh bulk write puts the caseload
+/// inside a loop. PostgreSQL docs, Populating a Database, Run ANALYZE
+/// Afterwards. No openEHR spec governs this: our own design.
+///
+/// # Errors
+/// [`StorageError::Acquire`] when no connection is free, and
+/// [`StorageError::Database`] on a driver failure.
+pub async fn settle(pool: &PgPool, written: usize) -> Result<bool, StorageError> {
+    if written < ANALYZE_AFTER {
+        return Ok(false);
+    }
+    sqlx::query("ANALYZE access_care")
+        .execute(&mut *acquire(pool).await?)
+        .await?;
+    Ok(true)
+}
+
 /// Delete the rows of each of `persons`, the erasure of a `PERSON` removing
 /// its care in the flow that erases it.
 ///
