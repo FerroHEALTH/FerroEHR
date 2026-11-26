@@ -175,7 +175,7 @@ with no code change.
   that looks its words up, embedded by `fluent_templates::static_loader!`:
   `shell` holds the words of the shell and of more than one part
   (`crate::locale::Msg`), each page group has its own (`overview`,
-  `records`, `definitions`, `queries`, `console`, `signin`, each with its
+  `records`, `parties`, `definitions`, `queries`, `console`, `signin`, each with its
   message type in `crate::locale::<part>`), and `server` holds the words of
   the server's own answers. A message goes in the catalog of the one group
   that draws it, else the shell's; a message no code draws is removed. A
