@@ -249,7 +249,7 @@ A body that is no canonical-JSON `ACCESS_POLICY` is **400**, a policy that reads
 
 ## Legal marks: restriction, objection and retention
 
-Eleven routes behind the same switch and role, carrying the four marks the law
+These routes sit behind the same switch and role and carry the marks the law
 asks a repository to hold beside its clinical content. None of them deletes
 anything.
 
@@ -259,10 +259,13 @@ anything.
 | `GET {ext}/admin/restriction` | `?ehr_id=…` | **200**: the register, newest request first, lifts included |
 | `POST {ext}/admin/restriction/lift` | `{"ehr_id": "…", "vo_id": "…"?}` | **204**: every in-force restriction at that grain is lifted |
 | `POST {ext}/admin/research-objection` | `{"ehr_id": "…", "objected": true, "ground": "…"?}` | **204**: the objection, its override, or its withdrawal is recorded |
+| `GET {ext}/admin/research-objection` | `?ehr_id=…` | **200**: `{"objected": …, "objected_at": …, "ground": …}`, whether an objection stands unoverridden, when the subject objected and any override ground; `false` and nulls for an EHR with none |
 | `PUT {ext}/admin/retention/policy` | `{"kind": "…", "jurisdiction": "…", "category": "…"?, "origin": "…"?, "period": "…", "anchor": "…", "source": "…"}` | **204**: the period is declared, keyed on one EHDS priority category when `category` is set and on one origin a `data_origin` grant in force names when `origin` is set |
 | `GET {ext}/admin/retention/policy` | — | **200**: the whole retention register, each period with its `category` and `origin` (`null` for every object of the kind, or every origin) |
 | `PUT {ext}/admin/retention/anchor` | `{"ehr_id": "…", "jurisdiction": "…", "anchored_at": "…"?, "hold_at": "…"?, "hold_ground": "…"?}` | **204**: the EHR's anchor and any whole-record hold |
+| `GET {ext}/admin/retention/anchor` | `?ehr_id=…` | **200**: `{"anchor": {"jurisdiction": …, "anchored_at": …, "hold_at": …, "hold_ground": …}}`, or `{"anchor": null}` while none is recorded |
 | `POST {ext}/admin/retention/hold` | `{"vo_id": "…", "held": true}` | **204**: the per-object exemption is placed or released |
+| `GET {ext}/admin/retention/hold` | `?ehr_id=…` | **200**: `{"holds": [{"vo_id": …, "held_at": …}]}`, the EHR's held objects, newest hold first |
 | `GET {ext}/admin/retention/due` | `?limit=100` | **200**: what has run out, oldest first, per period and category, with the due and held object counts |
 | `POST {ext}/admin/access-delay` | `{"ehr_id": "…", "vo_id": "…", "until": "…"?, "note": "…"?}` | **204**: the composition is withheld from the person under EHDS Art. 3(3) until `until` (an RFC 3339 instant within the access-delay register's `max_delay` of now) or for the access-delay register's `max_delay`; **400** while the [access-delay register](installation/config-auth.md#the-access-delay-register) is off |
 | `GET {ext}/admin/access-delay` | `?ehr_id=…` | **200**: the access-delay register, newest hold first, each with its `basis` (`category` or `professional`), its end and its release |
@@ -279,7 +282,7 @@ anything.
 A body of the wrong shape or a malformed id is **400**, an id that names nothing
 is **404**, and a body without `Content-Type: application/json` is **415**, in
 each case before anything is recorded. Setting or lifting a mark is an access
-record of its own.
+record of its own, and so is each read of one.
 
 A `category` is named as the [audit category register](installation/config-audit.md#the-audit-category-register) names it (a priority category by
 its code, `Patient-Summaries`, `Electronic-Prescriptions`,

@@ -121,6 +121,12 @@ fn groups() -> Vec<Group> {
         entry(SERVER_ROUTE, Msg::NavServer, Glyph::SERVER, false),
         entry("/audit", Msg::NavAudit, Glyph::SHIELD_CHECK, false),
         entry(
+            crate::pages::policy::POLICY_ROUTE,
+            Msg::NavAccessPolicy,
+            Glyph::SHIELD,
+            false,
+        ),
+        entry(
             "/configuration",
             Msg::NavConfiguration,
             Glyph::FILE_TEXT,
@@ -272,10 +278,16 @@ impl ShellReading {
                 } else {
                     tr_with(
                         Msg::SandboxGaps,
-                        &[(
-                            "count",
-                            u64::try_from(notice.gaps.len()).unwrap_or(u64::MAX).into(),
-                        )],
+                        &[
+                            (
+                                "count",
+                                u64::try_from(notice.gaps.len()).unwrap_or(u64::MAX).into(),
+                            ),
+                            (
+                                "gaps",
+                                notice.gaps.join(&tr(Msg::SandboxGapSeparator)).into(),
+                            ),
+                        ],
                     )
                 }
             });

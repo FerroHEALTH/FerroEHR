@@ -104,6 +104,39 @@ pub struct RetentionDueRow {
     pub origin: Option<String>,
 }
 
+/// The research objection one EHR carries.
+#[derive(Debug, Clone, Default)]
+pub struct ResearchObjectionRow {
+    /// When the subject objected, or `None` while no objection is recorded.
+    pub objected_at: Option<jiff::Timestamp>,
+    /// The controller's Art. 21(6) override ground, or `None` while the
+    /// objection stands unoverridden.
+    pub ground: Option<String>,
+}
+
+/// The retention facts of one EHR: its jurisdiction, its anchor and an
+/// EHR-wide hold.
+#[derive(Debug, Clone)]
+pub struct RetentionAnchorRow {
+    /// The ISO 3166-1 alpha-2 jurisdiction whose periods apply.
+    pub jurisdiction: String,
+    /// The anchor event, once known.
+    pub anchored_at: Option<jiff::Timestamp>,
+    /// When an EHR-wide hold was placed, or `None` without one.
+    pub hold_at: Option<jiff::Timestamp>,
+    /// The ground of that hold.
+    pub hold_ground: Option<String>,
+}
+
+/// One versioned object held from disposal.
+#[derive(Debug, Clone)]
+pub struct RetentionHoldRow {
+    /// The held versioned object.
+    pub vo_id: VoId,
+    /// When the hold was placed.
+    pub held_at: jiff::Timestamp,
+}
+
 /// The marks one EHR carries, as one read.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct EhrMarks {
@@ -308,6 +341,34 @@ pub async fn clear_research_objection(
     Ok(updated > 0)
 }
 
+/// The research objection of one EHR; the default when the EHR carries
+/// none.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn research_objection(
+    pool: &PgPool,
+    ehr_id: EhrId,
+) -> Result<ResearchObjectionRow, StorageError> {
+    let row = sqlx::query(
+        "SELECT research_objected_at, research_objection_ground FROM ehr WHERE id = $1",
+    )
+    .bind(ehr_id)
+    .fetch_optional(&mut *acquire(pool).await?)
+    .await?;
+    row.as_ref()
+        .map(|row| {
+            Ok(ResearchObjectionRow {
+                objected_at: row
+                    .try_get::<Option<jiff_sqlx::Timestamp>, _>("research_objected_at")?
+                    .map(jiff_sqlx::Timestamp::to_jiff),
+                ground: row.try_get("research_objection_ground")?,
+            })
+        })
+        .transpose()
+        .map(Option::unwrap_or_default)
+}
+
 /// The marks one EHR carries, or `None` when the EHR does not exist.
 ///
 /// # Errors
@@ -501,6 +562,65 @@ pub async fn put_retention_anchor(
     .execute(&mut *tx)
     .await?;
     Ok(())
+}
+
+/// The retention facts of one EHR, or `None` while none is recorded.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn retention_anchor(
+    pool: &PgPool,
+    ehr_id: EhrId,
+) -> Result<Option<RetentionAnchorRow>, StorageError> {
+    let row = sqlx::query(
+        "SELECT jurisdiction, anchored_at, hold_at, hold_ground FROM retention_anchor \
+         WHERE ehr_id = $1",
+    )
+    .bind(ehr_id)
+    .fetch_optional(&mut *acquire(pool).await?)
+    .await?;
+    row.as_ref()
+        .map(|row| {
+            Ok(RetentionAnchorRow {
+                jurisdiction: row.try_get("jurisdiction")?,
+                anchored_at: row
+                    .try_get::<Option<jiff_sqlx::Timestamp>, _>("anchored_at")?
+                    .map(jiff_sqlx::Timestamp::to_jiff),
+                hold_at: row
+                    .try_get::<Option<jiff_sqlx::Timestamp>, _>("hold_at")?
+                    .map(jiff_sqlx::Timestamp::to_jiff),
+                hold_ground: row.try_get("hold_ground")?,
+            })
+        })
+        .transpose()
+}
+
+/// The versioned objects of one EHR held from disposal, newest hold first.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn retention_holds(
+    pool: &PgPool,
+    ehr_id: EhrId,
+) -> Result<Vec<RetentionHoldRow>, StorageError> {
+    let rows = sqlx::query(
+        "SELECT vo_id, retention_hold_at FROM vo_head \
+         WHERE ehr_id = $1 AND retention_hold_at IS NOT NULL \
+         ORDER BY retention_hold_at DESC, vo_id",
+    )
+    .bind(ehr_id)
+    .fetch_all(&mut *acquire(pool).await?)
+    .await?;
+    rows.iter()
+        .map(|row| {
+            Ok(RetentionHoldRow {
+                vo_id: row.try_get("vo_id")?,
+                held_at: row
+                    .try_get::<jiff_sqlx::Timestamp, _>("retention_hold_at")?
+                    .to_jiff(),
+            })
+        })
+        .collect()
 }
 
 /// Place or release the per-object retention hold that exempts one versioned
