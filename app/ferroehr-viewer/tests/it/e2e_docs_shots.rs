@@ -381,6 +381,7 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         ),
         both(format!("/query?template={TEMPLATE_ID}"), "queries/build"),
         light("/query/aql", "queries/aql"),
+        light("/query/cohort", "queries/cohort"),
         both("/server", "server/overview"),
         light("/server/health", "server/health"),
         light(
