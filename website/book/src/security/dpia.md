@@ -197,7 +197,7 @@ authority.
 
 ## Next
 
-- [Records of processing](records-of-processing.md) — the Art. 30 template.
-- [Go-live checklist](go-live-checklist.md) — the checks to run before a
+- [Records of processing](records-of-processing.md): the Art. 30 template.
+- [Go-live checklist](go-live-checklist.md): the checks to run before a
   deployment holds real patient data.
-- [Threat model](../threat-model.md) — the residual risk at each boundary.
+- [Threat model](../threat-model.md): the residual risk at each boundary.

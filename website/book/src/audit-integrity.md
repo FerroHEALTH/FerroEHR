@@ -124,7 +124,7 @@ Four controls sit on top of it, and they are separate on purpose:
 The records of the openEHR access log (`audit.access_log_record`) hold only
 the accesses to EHR data, apart from the `audit_event` records above, the
 system chain (an authentication, a template, party or application
-operation). Neither carries a chain (#6242). A request writes each entry or
+operation). Neither carries a chain. A request writes each entry or
 system record once, before its response, and every reader, the delivery and
 the sealer read that row. What follows holds for both logs, each with its
 own id sequence, holds, seals and tag, unless it names one.

@@ -157,9 +157,9 @@ the organisation:
 
 ## Next
 
-- [Data protection impact assessment](dpia.md) — the technical description and
+- [Data protection impact assessment](dpia.md): the technical description and
   the risk register.
-- [Go-live checklist](go-live-checklist.md) — what to verify before real data
+- [Go-live checklist](go-live-checklist.md): what to verify before real data
   arrives.
-- [Shared responsibility](../compliance/shared-responsibility.md) — which
+- [Shared responsibility](../compliance/shared-responsibility.md): which
   duties the software can carry.

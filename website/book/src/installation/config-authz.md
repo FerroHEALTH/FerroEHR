@@ -54,8 +54,8 @@ and a Basic user is mapped in `[[authz.party_binding.basic_user]]`, boot logs a
 
 The access record carries the acting mode and the professional the caller
 classification names; see [Audit trail](../ehds-logging.md#the-ehds-logging-elements-mapped).
-`[authz.professional]` is refused at boot: the token's `fhirUser` classifies
-the caller, and its RFC 8693 `act` names who acts for them.
+The token's `fhirUser` classifies the caller, and its RFC 8693 `act` names who
+acts for them.
 
 ### `[authz.party_binding]`
 
@@ -424,8 +424,6 @@ is granted what it may commit, import or export in the CDR, as an `ACTOR`
 carrying its `client_id` that acts for a provider and performs a `ROLE` whose
 capabilities grant the operations; see
 [What a system client may do](../operational-policy.md#what-a-system-client-may-do).
-The former `[[authz.system_client]]` table is an unknown key and refuses the
-start.
 
 ### Federation agreements
 
@@ -437,9 +435,7 @@ keeps what the agreements are judged against: the `federation` issuers, their
 codes before an agreement can be written). The period a `chained` agreement
 is held to is the access log retention of the controller's access policy
 (`ACCESS_POLICY.log_retention`). The model, the codes and the rules are on
-[Operational policy](../operational-policy.md#federation-agreements). The
-`[[authz.federation.agreement]]` table is removed, and a configuration that
-still holds it is refused at boot as an unknown key.
+[Operational policy](../operational-policy.md#federation-agreements).
 
 ### `[authz.grants]`
 
