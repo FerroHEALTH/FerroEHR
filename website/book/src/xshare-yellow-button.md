@@ -73,7 +73,7 @@ login:
 
 - Only the EHR whose subject is the person's `PERSON` answers. Any other EHR
   is refused `403` with `refused-not-subject`.
-- A composition the [access delay](security.md#delayed-access-by-the-person-ehds-art-33)
+- A composition the [access delay](access-control.md#delayed-access-by-the-person-ehds-art-33)
   holds is left out of the summary until a professional releases it or its
   limit passes (EHDS Art. 3(3)).
 - Every read is an access record naming the person, FerroBRIDGE as the

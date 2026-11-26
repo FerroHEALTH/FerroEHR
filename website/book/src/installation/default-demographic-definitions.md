@@ -1,7 +1,7 @@
 # Default demographic definitions
 
 Party binding and SCIM provisioning write demographic parties under the
-templates and archetypes the [party mapping](config-auth.md#the-party-mapping)
+templates and archetypes the [party mapping](config-authz.md#the-party-mapping)
 names, and the server refuses to boot while the definition store lacks one of
 them. FerroEHR ships a default set of seven ADL 2 archetypes. The binary
 carries them, every boot stores each one whose id the definition store does
@@ -126,11 +126,11 @@ the files above; the first boot then keeps them.
 
 With no mapping key set, `[authz.party_binding]` maps all of them but the
 provider `ORGANISATION`, which the acts-for relationship of the policy parties
-targets ([the default mapping](config-auth.md#the-party-mapping)). SCIM serves
+targets ([the default mapping](config-authz.md#the-party-mapping)). SCIM serves
 `/scim/v2/Groups`, and each client's Groups' `externalId`s are written under
 its `[auth.issuer.<name>.party]` table's `group_identifier_issuer`, or under one derived
 from its `binding_issuer` when the table sets none
-([Groups](config-auth.md#groups)). A test boots an empty configuration,
+([Groups](config-scim.md#groups)). A test boots an empty configuration,
 stores the set as boot does, and provisions a SCIM User, a Group with the
 User as its member and a representation through it, so the default mapping
 and the files cannot drift apart.

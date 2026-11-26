@@ -870,6 +870,8 @@ fn envelope(facts: Result<VersionedObjectFacts, Refused>) -> Html {
 
 /// What a post to a party's page asks, done: re-key, archive, restore,
 /// delete, set or remove a tag.
+/// What a post to a party's page asks, done: archive, restore, delete, set
+/// or remove a tag.
 async fn party_act(
     kind: PartyKind,
     uid: &str,
