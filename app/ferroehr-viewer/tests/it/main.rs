@@ -14,10 +14,12 @@ mod launch_tasks;
 mod sandbox_posture;
 mod serving;
 mod ssr_app;
+mod ssr_archetypes;
 mod ssr_assets;
 
 mod e2e_adl2;
 mod e2e_admin_ops;
+mod e2e_archetypes;
 mod e2e_audit;
 mod e2e_browse;
 mod e2e_chart;

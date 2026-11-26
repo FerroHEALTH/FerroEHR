@@ -9,6 +9,7 @@
 
 pub mod about;
 pub mod access;
+pub mod archetypes;
 pub mod audit;
 pub mod common;
 pub mod composition;

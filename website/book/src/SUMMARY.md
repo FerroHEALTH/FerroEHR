@@ -93,6 +93,7 @@
 - [FerroEHR Viewer](viewer/index.md)
   - [Dashboard & queries](viewer/queries.md)
   - [Templates & EHRs](viewer/browsing.md)
+  - [Archetypes](viewer/archetypes.md)
   - [Parties](viewer/parties.md)
   - [Terminology](viewer/terminology.md)
   - [Server & audit log](viewer/server.md)

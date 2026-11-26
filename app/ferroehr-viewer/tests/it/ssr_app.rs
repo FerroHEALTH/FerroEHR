@@ -266,12 +266,12 @@ impl Answer {
 
 impl Viewer {
     /// The viewer over a fresh replayed CDR.
-    async fn start() -> Self {
+    pub(crate) async fn start() -> Self {
         Self::start_with(Vec::new()).await
     }
 
     /// The viewer over a fresh replayed CDR answering `stubs` first.
-    async fn start_with(stubs: Vec<Value>) -> Self {
+    pub(crate) async fn start_with(stubs: Vec<Value>) -> Self {
         let cdr = replayed_cdr_with(stubs).await;
         Self {
             service: ferroehr_viewer::server::router(app_state(&cdr)),
@@ -1230,7 +1230,7 @@ async fn an_unknown_address_answers_404_with_the_way_back() {
 }
 
 /// A stubbed CDR exchange: a `GET` of `path` answered `200` with `content_type`.
-fn stub(path: &str, content_type: &str, response: &str) -> Value {
+pub(crate) fn stub(path: &str, content_type: &str, response: &str) -> Value {
     serde_json::json!({
         "method": "GET",
         "path": path,
