@@ -423,6 +423,8 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         review("/server/logging", "server/logging"),
         review("/server/api", "server/api"),
         review("/server/smart", "server/smart"),
+        light("/server/activity?a_service=EHR", "server/activity"),
+        review("/server/integrity", "server/integrity"),
         both("/audit", "audit/audit"),
         review("/audit?patient=no-such-patient", "audit/audit-empty"),
         review("/configuration", "configuration/configuration"),
@@ -542,6 +544,11 @@ async fn capture_states(h: &Harness, seeded: &Seeded, book: &Path) {
         .await;
     h.wait_css("#audit-record-text").await;
     shot_to(h, book, "audit/audit-record").await;
+
+    h.goto("/server/integrity").await;
+    common::submit(h, "main button[name='intent'][value='verify']").await;
+    common::wait_main_contains(h, "Versions checked").await;
+    shot_to(h, book, "server/integrity").await;
 }
 
 /// Capture the console's screenshots: every route in four layouts for the

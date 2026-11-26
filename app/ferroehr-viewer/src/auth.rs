@@ -128,15 +128,29 @@ pub async fn fetch_login_screen() -> Result<LoginScreen, ViewerError> {
     })
 }
 
-/// The CDR status document (`{rest root}/status`, a public endpoint), raw
-/// JSON: the shell's health pill and the system panel both read it.
+/// The CDR status document, raw JSON, read once per page.
+///
+/// It is the full `GET /management/status` when the session may read it,
+/// else the public `{rest root}/status`. The shell's pill and notice,
+/// Server's Overview and About share it ([`crate::shell::status`]).
+///
+/// A management surface that is off, out of reach or refuses the session
+/// leaves the public document; only a `401` ends the session.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Unauthenticated`] without a session (the shell only polls
-/// when logged in).
+/// when logged in); [`ViewerError::CdrUnauthorized`] when the CDR no longer
+/// accepts the session.
 pub async fn fetch_status() -> Result<String, ViewerError> {
     let cdr = crate::bff::cdr()?;
+    // NOTE: no openEHR spec governs this: our own design; a full document the
+    // session may not read is legitimately absent, and the public one stands in.
+    if let Ok(full) = cdr.get(&cdr.management_url("status")).send().await
+        && (full.status.is_success() || full.is(http::StatusCode::UNAUTHORIZED))
+    {
+        return Ok(full.ok()?.body);
+    }
     let url = cdr.rest_root_url("status");
     Ok(cdr.public(http::Method::GET, &url).ok().await?.body)
 }

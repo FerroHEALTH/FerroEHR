@@ -17,6 +17,8 @@ mod ssr_app;
 mod ssr_archetypes;
 mod ssr_archive;
 mod ssr_assets;
+mod ssr_server_operations;
+mod ssr_server_status;
 
 mod e2e_adl2;
 mod e2e_admin_ops;
@@ -41,6 +43,7 @@ mod e2e_no_script;
 mod e2e_operations;
 mod e2e_paging;
 mod e2e_scopes;
+mod e2e_server_admin;
 mod e2e_session_expiry;
 mod e2e_stored_query_runner;
 mod e2e_system;

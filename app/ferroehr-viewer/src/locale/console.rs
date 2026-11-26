@@ -428,6 +428,52 @@ crate::locale::messages! {
         ServerSafeguard = "server-safeguard",
         /// `Production safeguards that are off`
         ServerSafeguardsOff = "server-safeguards-off",
+        /// `Licence`
+        ServerLicence = "server-licence",
+        /// `Licensed`
+        ServerLicensed = "server-licensed",
+        /// `Expired`
+        ServerExpired = "server-expired",
+        /// `No licence`
+        ServerUnlicensed = "server-unlicensed",
+        /// `Use`
+        ServerLicenceUse = "server-licence-use",
+        /// `Commercial`
+        ServerUseCommercial = "server-use-commercial",
+        /// `Non-commercial`
+        ServerUseNonCommercial = "server-use-non-commercial",
+        /// `Licensee`
+        ServerLicensee = "server-licensee",
+        /// `Valid until`
+        ServerNotAfter = "server-not-after",
+        /// `The licence expired on { $day }.`
+        ServerLicenceExpired = "server-licence-expired",
+        /// `The configured licence file was refused, so the licence built into the release is in force.`
+        ServerLicenceRefused = "server-licence-refused",
+        /// `No licence is in force.`
+        ServerLicenceNone = "server-licence-none",
+        /// `Support period`
+        ServerSupport = "server-support",
+        /// `Fixes until`
+        ServerSupportEnds = "server-support-ends",
+        /// `Released`
+        ServerReleased = "server-released",
+        /// `Supported`
+        ServerSupported = "server-supported",
+        /// `Ended`
+        ServerSupportOver = "server-support-over",
+        /// `Not a release`
+        ServerUnreleased = "server-unreleased",
+        /// `The support period of this release ended in { $month }: it receives no more fixes.`
+        ServerSupportEnded = "server-support-ended",
+        /// `Open`
+        ServerGapOpen = "server-gap-open",
+        /// `Accepted by name`
+        ServerGapAccepted = "server-gap-accepted",
+        /// `The production separations this deployment has not made, each open or accepted by name.`
+        ServerGapsIntro = "server-gaps-intro",
+        /// `Your account may not read the CDR's full status, so its licence, deployment gaps and support period are not shown.`
+        ServerFullStatusWithheld = "server-full-status-withheld",
         /// `Samples of { $metric }`
         ServerSamplesOf = "server-samples-of",
         /// `Sandbox`
@@ -446,6 +492,120 @@ crate::locale::messages! {
         ServerSmart = "server-smart",
         /// `The scopes the CDR supports; Your access shows the ones you hold.`
         ServerSmartLine = "server-smart-line",
+        /// `Activity`
+        ServerActivity = "server-activity",
+        /// `The repository's change history, counted for one service over an interval.`
+        ServerActivityLine = "server-activity-line",
+        /// `Integrity`
+        ServerIntegrity = "server-integrity",
+        /// `Checks every stored version against the rows the query engine reads, and repairs what it finds.`
+        ServerIntegrityLine = "server-integrity-line",
+        /// `The CDR has its admin API turned off, so Activity and Integrity are not offered.`
+        ServerNoAdmin = "server-no-admin",
+        /// `Report`
+        ActivityAsk = "activity-ask",
+        /// `Service`
+        ActivityService = "activity-service",
+        /// `EHR`
+        ActivityServiceEhr = "activity-service-ehr",
+        /// `Demographic`
+        ActivityServiceDemographic = "activity-service-demographic",
+        /// `Definitions`
+        ActivityServiceDefinitions = "activity-service-definitions",
+        /// `Query`
+        ActivityServiceQuery = "activity-service-query",
+        /// `Admin`
+        ActivityServiceAdmin = "activity-service-admin",
+        /// `EHR index`
+        ActivityServiceEhrIndex = "activity-service-ehr-index",
+        /// `Message`
+        ActivityServiceMessage = "activity-service-message",
+        /// `System log`
+        ActivityServiceSystemLog = "activity-service-system-log",
+        /// `Committed`
+        ActivityInterval = "activity-interval",
+        /// `Count`
+        ActivityCount = "activity-count",
+        /// `Pick a service and, if you like, an interval, then Count.`
+        ActivityPick = "activity-pick",
+        /// `The activity report could not be read.`
+        ActivityRefused = "activity-refused",
+        /// `Counts`
+        ActivityCounts = "activity-counts",
+        /// `Contributions`
+        ActivityContributions = "activity-contributions",
+        /// `Contribution ids listed`
+        ActivityListed = "activity-listed",
+        /// `Compositions changed`
+        ActivityCompositions = "activity-compositions",
+        /// `Composition versions`
+        ActivityVersions = "activity-versions",
+        /// `Contribution`
+        ActivityContribution = "activity-contribution",
+        /// `Contribution ids`
+        ActivityContributionIds = "activity-contribution-ids",
+        /// `No contribution was committed to this service in the interval.`
+        ActivityNone = "activity-none",
+        /// `Scope`
+        IntegrityScope = "integrity-scope",
+        /// `Leave every field empty to check the whole repository. The check reads without locking, so it is safe on a live server.`
+        IntegrityScopeIntro = "integrity-scope-intro",
+        /// `EHR id`
+        IntegrityEhr = "integrity-ehr",
+        /// `Versioned object`
+        IntegrityObject = "integrity-object",
+        /// `Version`
+        IntegrityVersion = "integrity-version",
+        /// `Committed since`
+        IntegritySince = "integrity-since",
+        /// `Verify`
+        IntegrityVerify = "integrity-verify",
+        /// `The verification could not run.`
+        IntegrityVerifyRefused = "integrity-verify-refused",
+        /// `The rebuild could not run.`
+        IntegrityRebuildRefused = "integrity-rebuild-refused",
+        /// `Verification`
+        IntegrityReport = "integrity-report",
+        /// `Versions checked`
+        IntegrityChecked = "integrity-checked",
+        /// `Findings`
+        IntegrityFindings = "integrity-findings",
+        /// `Took`
+        IntegrityElapsed = "integrity-elapsed",
+        /// `{ $ms } ms`
+        IntegrityMilliseconds = "integrity-milliseconds",
+        /// `Every stored version agrees with its rows.`
+        IntegrityClean = "integrity-clean",
+        /// `Domain`
+        IntegrityDomain = "integrity-domain",
+        /// `Kind`
+        IntegrityKind = "integrity-kind",
+        /// `Defect`
+        IntegrityDefect = "integrity-defect",
+        /// `The CDR lists only the first findings; the count covers them all, and its log names every one.`
+        IntegrityTruncated = "integrity-truncated",
+        /// `Rebuild…`
+        IntegrityRebuild = "integrity-rebuild",
+        /// `Rebuild the damaged rows?`
+        IntegrityRebuildTitle = "integrity-rebuild-title",
+        /// `The CDR checks the same scope again and rewrites the rows of each damaged version from its stored document. A version whose document is the damaged copy is refused and left as it was.`
+        IntegrityRebuildMessage = "integrity-rebuild-message",
+        /// `Rebuild`
+        IntegrityRebuildConfirm = "integrity-rebuild-confirm",
+        /// `Rebuild`
+        IntegrityRebuildReport = "integrity-rebuild-report",
+        /// `Damaged`
+        IntegrityDamaged = "integrity-damaged",
+        /// `Rebuilt`
+        IntegrityRebuiltCount = "integrity-rebuilt-count",
+        /// `Refused`
+        IntegrityRefusedCount = "integrity-refused-count",
+        /// `Versions`
+        IntegrityRecords = "integrity-records",
+        /// `Outcome`
+        IntegrityOutcome = "integrity-outcome",
+        /// `Reason`
+        IntegrityReason = "integrity-reason",
         /// `The SMART discovery document could not be read.`
         ServerSmartRefused = "server-smart-refused",
         /// `State`

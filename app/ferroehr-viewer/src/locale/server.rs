@@ -70,6 +70,10 @@ crate::locale::messages! {
         ArchetypeListJson = "archetype-list-json",
         /// `ADL 2 conversion JSON`
         ConversionJson = "conversion-json",
+        /// `activity report JSON`
+        ActivityReportJson = "activity-report-json",
+        /// `integrity report JSON`
+        IntegrityReportJson = "integrity-report-json",
         /// `no subject pseudonym namespace is declared, so an EHR subject may carry a real identifier`
         NoSubjectPseudonymNamespaceDeclaredSo = "no-subject-pseudonym-namespace-declared-so",
         /// `an access record the audit queue cannot take is dropped and the request still succeeds`
