@@ -236,10 +236,10 @@ struct Budget {
 }
 
 /// The ceilings by path (#6007, #6638): each figure as measured on Linux, the
-/// least request 1 above it, the window average at most 60, the peak 64 KiB
-/// and the WAL 16 bytes.
-// NOTE: our own design (#6434), the least request is the gate; its 1 is the move between
-// runs of one tree (#6664), and the window average is a coarse guard (#6238).
+/// least request at most 1 above it, the window average at most 60, the peak
+/// 64 KiB and the WAL 16 bytes.
+// NOTE: our own design (#6434), the least request is the gate; its 1 is the move of sqlx's read
+// buffer between runs of one tree (#6706), and the window average is a coarse guard (#6238).
 const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
