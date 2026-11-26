@@ -709,6 +709,10 @@ async fn every_screen_draws_its_heading_and_its_reading() {
             vec!["reviewed", "Tags in this EHR"],
         ),
         (
+            format!("/ehrs/{ehr}/access-log"),
+            vec!["Entries of the access log", "Include the person"],
+        ),
+        (
             format!("/ehrs/{ehr}/compositions/{composition}"),
             vec!["Edit as a new version", "minimal_evaluation.en.v1"],
         ),
@@ -976,6 +980,44 @@ async fn a_run_draws_the_rows_and_the_exports_post_the_query_again() {
         !main.contains(r#"name="shown""#),
         "a result with no numeric column offers no chart: {main}"
     );
+}
+
+#[tokio::test]
+async fn an_access_log_row_opens_its_entry_with_what_it_rested_on() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let ehr = id("ehr");
+    let tab = viewer
+        .page(
+            &cookie,
+            &format!("/ehrs/{ehr}/access-log?outcome=openehr_access%7Cgranted"),
+        )
+        .await;
+    assert_eq!(tab.status, http::StatusCode::OK, "{}", tab.body);
+    let main = tab.main();
+    assert!(main.contains("Outcome: Granted"), "{main}");
+    let prefix = format!("/ehrs/{ehr}/access-log/");
+    let href: String = main.split(&format!("href=\"{prefix}")).nth(1).map_or_else(
+        || panic!("a row links its entry: {main}"),
+        |rest| {
+            let uid: String = rest.chars().take_while(|c| *c != '"').collect();
+            format!("{prefix}{uid}")
+        },
+    );
+    let entry = viewer.page(&cookie, &href).await;
+    assert_eq!(entry.status, http::StatusCode::OK, "{}", entry.body);
+    for words in [
+        "What it rested on",
+        "What it reached",
+        "As the CDR served it",
+        "ACCESS_LOG_ENTRY",
+    ] {
+        assert!(
+            entry.main().contains(words),
+            "{href} says {words:?}: {}",
+            entry.main()
+        );
+    }
 }
 
 #[tokio::test]
