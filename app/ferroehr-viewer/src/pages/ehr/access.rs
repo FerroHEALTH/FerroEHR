@@ -24,18 +24,18 @@ use crate::bff::ehr_access::{
     AccessSettings, commit_settings, fetch_settings, fetch_settings_history, repair_settings,
 };
 use crate::bff::wire::VersionEntry;
-use crate::components::{EditorField, EditorLanguage, EditorSetup, code_editor};
+use crate::components::EditorField;
 use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
 use crate::locale::policy::PolicyMsg;
 use crate::locale::records::RecordsMsg;
-use crate::locale::{Msg, current, message, tr, tr_with};
+use crate::locale::{current, message, tr, tr_with};
 use crate::markup::{flag, h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, card_panel, discarded, dock_editor, document_section, findings_of,
-    info_note, is_status, marks_of, panel, plain_section, section, shortened,
+    Refused, discarded, document_section, info_note, is_status, panel, plain_section, section,
+    shortened,
 };
-use crate::pages::editor::{Unsaved, editor_line, reload_words};
+use crate::pages::editor::{DocumentForm, Unsaved, document_form, reload_words};
 use crate::pages::ehr::{EhrModel, EhrTab, crumbs, ehr_id_param, ehr_view, tab_href};
 use crate::pages::form::Form;
 use crate::pages::policy::shown;
@@ -377,50 +377,24 @@ fn edit_form(ehr_id: &str, editor: Editor) -> Html {
         repair,
         unsaved,
     } = editor;
-    let field = EditorField::Document.name();
-    let findings = unsaved
-        .as_ref()
-        .and_then(|unsaved| findings_of(&unsaved.refusal.error, &text, &field));
-    let conflict = unsaved.as_ref().is_some_and(|unsaved| unsaved.conflict);
-    let (glyph, line) = editor_line(unsaved.is_some());
-    let action = format!("{}/edit", tab_href(ehr_id, EhrTab::Access));
-    let top = unsaved.map(|unsaved| unsaved.view(&action, reload_words(&current)));
-    dock_editor(EditorDock {
-        form: EDIT_FORM.to_owned(),
-        line,
-        glyph,
-        save: tr(PolicyMsg::AccessCommit),
-        blocked: conflict.then(|| tr(RecordsMsg::EditorReloadFirst)),
-    });
-    let editor = code_editor(EditorSetup {
-        field: EditorField::Document,
-        language: EditorLanguage::Json,
-        text,
-        opened: Some(opened_text),
-        marks: marks_of(findings.as_ref()),
-        label: tr(PolicyMsg::AccessEditorLabel),
-        lead: tr(RecordsMsg::EditorJson),
-        facts: vec![tr(Msg::EditorUtf8)],
-        findings,
-    });
     let repair_box = h(format!(
         r#"<label class="fui-check"><input type="checkbox" name="repair" value="on" class="fui-checkbox"{}><span class="fui-check-text">{}</span></label>"#,
         flag("checked", repair),
         t(tr(PolicyMsg::AccessRepair))
     ));
-    opt(top).then(h(format!(
-        r#"<form id="{EDIT_FORM}" method="post" action="{action}"><input type="hidden" name="version" value="{version}">{panel}</form>"#,
-        action = t(&action),
-        version = t(&opened),
-        panel = card_panel(section(
-            Some(tr(PolicyMsg::EditDocument)),
-            None,
-            None,
-            section_intro(tr(PolicyMsg::AccessEditIntro))
-                .then(editor)
-                .then(repair_box),
-        )),
-    )))
+    document_form(DocumentForm {
+        form: EDIT_FORM,
+        action: format!("{}/edit", tab_href(ehr_id, EhrTab::Access)),
+        version: opened,
+        text,
+        opened: opened_text,
+        unsaved,
+        reload: reload_words(&current),
+        save: tr(PolicyMsg::AccessCommit),
+        label: tr(PolicyMsg::AccessEditorLabel),
+        section: (tr(PolicyMsg::EditDocument), tr(PolicyMsg::AccessEditIntro)),
+        after: repair_box,
+    })
 }
 
 /// Commit an EHR's access settings.
