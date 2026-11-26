@@ -284,10 +284,16 @@ impl ShellReading {
                 } else {
                     tr_with(
                         Msg::SandboxGaps,
-                        &[(
-                            "count",
-                            u64::try_from(notice.gaps.len()).unwrap_or(u64::MAX).into(),
-                        )],
+                        &[
+                            (
+                                "count",
+                                u64::try_from(notice.gaps.len()).unwrap_or(u64::MAX).into(),
+                            ),
+                            (
+                                "gaps",
+                                notice.gaps.join(&tr(Msg::SandboxGapSeparator)).into(),
+                            ),
+                        ],
                     )
                 }
             });
