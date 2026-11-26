@@ -8,7 +8,9 @@
 #    the checkout's own `ferroehr` binary over docker/ferroehr.dev.toml, with
 #    the quickstart's posture of no role gate so the one user ferroehr /
 #    ferroehr reads every surface the viewer draws. The professional templates
-#    are loaded before serve, and ferroehr is bound to a PERSON through SCIM.
+#    are loaded before serve, ferroehr is bound to a PERSON through SCIM, and
+#    its PERSON is granted write_access_policy, a grant of this recording's
+#    own that the grant ceiling admits here only.
 # 2. Seeds it over ITS-REST as scripts/ui-e2e.sh does (the template, an EHR,
 #    a composition committed then updated, a FLAT composition) plus what the
 #    in-process screens read: the subject, a tag, a directory, a person, an
@@ -25,7 +27,10 @@
 # Env:
 #   VIEWER_RECORD_CDR       record against this running CDR instead (its
 #                           database must be empty; user ferroehr / ferroehr
-#                           must read the admin API and be bound to a PERSON)
+#                           must read the admin API, be bound to a PERSON and
+#                           hold write_access_policy)
+#   VIEWER_RECORD_PG_NAME   the PostgreSQL container's name (default
+#                           ferroehr-viewer-record-pg)
 #   VIEWER_RECORD_PG_IMAGE  the PostgreSQL image (default: the compose pin)
 #   VIEWER_RECORD_PG_PORT   its host port (default 55432)
 #   VIEWER_RECORD_PORT      the CDR's host port (default 18080)
@@ -40,7 +45,7 @@ cd "$ROOT"
 PG_IMAGE="${VIEWER_RECORD_PG_IMAGE:-$(grep -o -m 1 'ghcr.io/ferrohealth/ferroehr-postgres:[^}]*' docker-compose.yml)}"
 PG_PORT="${VIEWER_RECORD_PG_PORT:-55432}"
 CDR_PORT="${VIEWER_RECORD_PORT:-18080}"
-PG_NAME="ferroehr-viewer-record-pg"
+PG_NAME="${VIEWER_RECORD_PG_NAME:-ferroehr-viewer-record-pg}"
 # The throwaway database's role, which the image's init script creates.
 PG_ROLE="ferroehr"
 PG_SECRET="ferroehr"
@@ -100,6 +105,7 @@ else
     FERROEHR__DATABASE__URL="postgres://$PG_ROLE:$PG_SECRET@127.0.0.1:$PG_PORT/$PG_ROLE"
     FERROEHR__SERVER__LISTEN="127.0.0.1:$CDR_PORT"
     FERROEHR__AUTHZ__RBAC__ENABLED=false
+    "FERROEHR__AUTHZ__GRANTS__ALLOWED=commit_composition,read_change_feed,scim_provision,hold_roles,hold_scopes,write_access_policy"
     FERROEHR__USAGE_REPORT__ENABLED=false
     FERROEHR__TELEMETRY__FORMAT=json
     FERROEHR__AUTH__ISSUER__BASIC_USERS__JWKS_FILE="$ROOT/deploy/hosted/basic-users-jwks.json"
@@ -111,7 +117,11 @@ fi
 wait_for "$CDR_URL/health/readiness" 120
 if [[ -z "${VIEWER_RECORD_CDR:-}" ]]; then
   echo "── binding ferroehr to a PERSON through SCIM"
-  bash scripts/scim-provision.sh "$CDR_URL" basic-users ferroehr
+  GRANT=(env "${SERVER_ENV[@]}" "$ROOT/target/debug/ferroehr")
+  SCIM_GRANT="${GRANT[*]}" bash scripts/scim-provision.sh "$CDR_URL" basic-users \
+    urn:example:basic-user ferroehr
+  "${GRANT[@]}" party-binding grant --basic-user ferroehr \
+    --operation write_access_policy >/dev/null
 fi
 
 V1="$CDR_URL/ferroehr/rest/openehr/v1"
@@ -238,6 +248,28 @@ RELATIONSHIP=$(jq -nc --arg s "$PARTY" --arg t "$ORGANISATION" '{
   | jq -r '.uid.value | split("::")[0]')
 quiet "${AUTH[@]}" -X PUT "$V1/demographic/person/$PARTY/tags" \
   "${JSON[@]}" -d '[{"key": "follow-up", "value": "2026-11-04"}]'
+
+# The access policy, committed twice so its history holds two versions.
+policy() {
+  jq -nc --arg o "$ORGANISATION" --arg grace "$1" '{
+    "_type": "ACCESS_POLICY", "name": {"_type": "DV_TEXT", "value": "Demo access policy"},
+    "archetype_node_id": "openEHR-EHR-ACCESS_POLICY.controller.v1",
+    "archetype_details": {"_type": "ARCHETYPED", "rm_version": "1.2.0",
+      "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-ACCESS_POLICY.controller.v1"}},
+    "controller": {"_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
+      "id": {"_type": "HIER_OBJECT_ID", "value": $o}},
+    "care_relationship_required": false,
+    "relationship_grace": {"_type": "DV_DURATION", "value": $grace},
+    "concealed_confidentialities": [{"_type": "DV_CODED_TEXT", "value": "very restricted",
+      "defining_code": {"_type": "CODE_PHRASE",
+        "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "HL7_Confidentiality"},
+        "code_string": "V"}}],
+    "purpose_required": false}'
+}
+POLICY_VUID=$(policy P14D | curl -sS --fail-with-body -D - -o /dev/null "${AUTH[@]}" -X PUT \
+  "$EXT/admin/access_policy" "${JSON[@]}" -H "If-None-Match: *" --data-binary @- | etag_of)
+policy P7D | quiet "${AUTH[@]}" -X PUT "$EXT/admin/access_policy" "${JSON[@]}" \
+  -H "If-Match: \"$POLICY_VUID\"" --data-binary @-
 
 QUERY="org.example.cardio::latest"
 quiet "${AUTH[@]}" -X PUT "$V1/definition/query/$QUERY" \
