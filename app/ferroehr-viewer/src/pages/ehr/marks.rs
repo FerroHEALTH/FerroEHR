@@ -186,13 +186,32 @@ fn field(id: &str, name: &str, label: PolicyMsg, help: Option<PolicyMsg>) -> Htm
     )))
 }
 
-/// A table of `rows` under `caption`.
-fn table(caption: PolicyMsg, columns: &[Column], rows: Vec<Html>) -> Html {
+/// A table under `caption` of `columns`, each its key, its header and its
+/// role, and `rows`, each row's cells in that order, the first its title.
+fn table(
+    caption: PolicyMsg,
+    columns: &[(&'static str, PolicyMsg, Role)],
+    rows: Vec<Vec<Html>>,
+) -> Html {
+    let columns: Vec<Column> = columns
+        .iter()
+        .map(|(key, words, role)| Column::text(key, tr(*words)).role(*role))
+        .collect();
+    let body = rows.into_iter().map(|cells| {
+        let drawn = cells
+            .into_iter()
+            .enumerate()
+            .map(|(at, value)| match columns.get(at) {
+                Some(column) if at > 0 => cell(column, value),
+                _ => title_cell(None, None, value, None),
+            });
+        h(format!("<tr>{}</tr>", Html::join(drawn)))
+    });
     let caption = tr(caption);
     data_table(DataTable::new(
         &caption,
-        columns,
-        Body::Rows(Html::join(rows)),
+        &columns,
+        Body::Rows(Html::join(body)),
     ))
 }
 
@@ -215,32 +234,31 @@ fn restriction_section(action: &str, read: &Result<Vec<Restriction>, Refused>) -
         if rows.is_empty() {
             return t(tr(PolicyMsg::MarksNoRestriction));
         }
-        let columns = [
-            Column::text("object", tr(PolicyMsg::MarksObject)).role(Role::Title),
-            Column::text("ground", tr(PolicyMsg::MarksGround)).role(Role::Sub),
-            Column::text("placed", tr(PolicyMsg::MarksPlaced)).role(Role::Meta),
-            Column::text("lifted", tr(PolicyMsg::MarksLifted)).role(Role::Meta),
-            Column::text("note", tr(PolicyMsg::MarksNote)).role(Role::Wide),
-        ];
         let body = rows
             .iter()
             .map(|row| {
-                h(format!(
-                    "<tr>{}{}{}{}{}</tr>",
-                    title_cell(None, None, object_words(row.vo_id.as_deref()), None),
-                    cell(&columns[1], h(format!("<code>{}</code>", t(&row.ground)))),
-                    cell(&columns[2], when(&row.requested_at)),
-                    cell(
-                        &columns[3],
-                        row.lifted_at
-                            .as_deref()
-                            .map_or_else(|| t(tr(PolicyMsg::MarksInForce)), when)
-                    ),
-                    cell(&columns[4], t(row.note.clone().unwrap_or_default())),
-                ))
+                vec![
+                    object_words(row.vo_id.as_deref()),
+                    h(format!("<code>{}</code>", t(&row.ground))),
+                    when(&row.requested_at),
+                    row.lifted_at
+                        .as_deref()
+                        .map_or_else(|| t(tr(PolicyMsg::MarksInForce)), when),
+                    t(row.note.clone().unwrap_or_default()),
+                ]
             })
             .collect();
-        table(PolicyMsg::MarksRestrictions, &columns, body)
+        table(
+            PolicyMsg::MarksRestrictions,
+            &[
+                ("object", PolicyMsg::MarksObject, Role::Title),
+                ("ground", PolicyMsg::MarksGround, Role::Sub),
+                ("placed", PolicyMsg::MarksPlaced, Role::Meta),
+                ("lifted", PolicyMsg::MarksLifted, Role::Meta),
+                ("note", PolicyMsg::MarksNote, Role::Wide),
+            ],
+            body,
+        )
     });
     let grounds: String = GROUNDS
         .iter()
@@ -359,32 +377,31 @@ fn delay_section(action: &str, read: &Result<Vec<DelayHold>, Refused>) -> Html {
         if rows.is_empty() {
             return t(tr(PolicyMsg::MarksNoDelay));
         }
-        let columns = [
-            Column::text("object", tr(PolicyMsg::MarksObject)).role(Role::Title),
-            Column::text("basis", tr(PolicyMsg::MarksBasis)).role(Role::Sub),
-            Column::text("until", tr(PolicyMsg::MarksUntil)).role(Role::Meta),
-            Column::text("released", tr(PolicyMsg::MarksReleased)).role(Role::Meta),
-            Column::text("note", tr(PolicyMsg::MarksNote)).role(Role::Wide),
-        ];
         let body = rows
             .iter()
             .map(|row| {
-                h(format!(
-                    "<tr>{}{}{}{}{}</tr>",
-                    title_cell(None, None, short(&row.vo_id), None),
-                    cell(&columns[1], t(&row.basis)),
-                    cell(&columns[2], when(&row.withheld_until)),
-                    cell(
-                        &columns[3],
-                        row.released_at
-                            .as_deref()
-                            .map_or_else(|| t(tr(PolicyMsg::MarksHeld)), when)
-                    ),
-                    cell(&columns[4], t(row.note.clone().unwrap_or_default())),
-                ))
+                vec![
+                    short(&row.vo_id),
+                    t(&row.basis),
+                    when(&row.withheld_until),
+                    row.released_at
+                        .as_deref()
+                        .map_or_else(|| t(tr(PolicyMsg::MarksHeld)), when),
+                    t(row.note.clone().unwrap_or_default()),
+                ]
             })
             .collect();
-        table(PolicyMsg::MarksDelays, &columns, body)
+        table(
+            PolicyMsg::MarksDelays,
+            &[
+                ("object", PolicyMsg::MarksObject, Role::Title),
+                ("basis", PolicyMsg::MarksBasis, Role::Sub),
+                ("until", PolicyMsg::MarksUntil, Role::Meta),
+                ("released", PolicyMsg::MarksReleased, Role::Meta),
+                ("note", PolicyMsg::MarksNote, Role::Wide),
+            ],
+            body,
+        )
     });
     let place = confirmed_form(
         action,
@@ -450,21 +467,18 @@ fn retention_section(
         if rows.is_empty() {
             return t(tr(PolicyMsg::MarksNoHold));
         }
-        let columns = [
-            Column::text("object", tr(PolicyMsg::MarksObject)).role(Role::Title),
-            Column::text("held", tr(PolicyMsg::MarksPlaced)).role(Role::Sub),
-        ];
         let body = rows
             .iter()
-            .map(|row| {
-                h(format!(
-                    "<tr>{}{}</tr>",
-                    title_cell(None, None, short(&row.vo_id), None),
-                    cell(&columns[1], when(&row.held_at)),
-                ))
-            })
+            .map(|row| vec![short(&row.vo_id), when(&row.held_at)])
             .collect();
-        table(PolicyMsg::MarksHolds, &columns, body)
+        table(
+            PolicyMsg::MarksHolds,
+            &[
+                ("object", PolicyMsg::MarksObject, Role::Title),
+                ("held", PolicyMsg::MarksPlaced, Role::Sub),
+            ],
+            body,
+        )
     });
     let set_anchor = confirmed_form(
         action,
