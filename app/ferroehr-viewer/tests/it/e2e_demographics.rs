@@ -313,8 +313,9 @@ async fn the_parties_list_finds_a_party_and_opens_it() {
         create_party_over_rest(&http, &v1, "organisation", "ORGANISATION", &label).await;
 
     login_basic(&h).await;
+    // A phone draws each row as a card with no column heading, so the row's
+    // own label is what both layouts show.
     h.goto("/parties?list=organisation").await;
-    wait_main_contains(&h, "Last committed").await;
     wait_main_contains(&h, &label).await;
 
     fill(&h, "#parties-find", &label).await;
