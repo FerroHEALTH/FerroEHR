@@ -18,7 +18,7 @@ then, two measurements describe FerroEHR's performance:
 - **The capacity test** steps the request rate up until FerroEHR degrades and
   names what saturated first. [Capacity](capacity.md) gives the method and
   `scripts/perf/capacity.sh`; each run's result, with the hardware it ran on,
-  is on its tracker issue, the first being #5722.
+  is on its tracker issue.
 - **The performance gate** judges each change against its base and each
   release against the previous one on one host
   ([The access path at scale](#the-access-path-at-scale)).
@@ -107,7 +107,7 @@ to disk before the server answers, so an acknowledged commit survives a crash.
 That flush (one `fsync` on the WAL device per commit) is a physical lower
 bound on single-client write latency, and no storage design takes a lone
 sequential client below it. On a laptop-class Docker setup the flush alone
-dominates a single write's budget; on server NVMe it is typically an order of
+dominates a single write's budget; on server NVMe it is usually an order of
 magnitude smaller. FerroEHR's optimization target is therefore everything *around* the
 flush: the database's own per-commit work (one folded commit statement, one
 merged placement read) stays far below the flush itself. That is also what
@@ -115,7 +115,7 @@ makes concurrent throughput scale: PostgreSQL group-commits, amortizing one
 flush across every transaction that reaches it in the same window.
 
 The knob behind this boundary is PostgreSQL's
-[`synchronous_commit`](https://www.postgresql.org/docs/18/runtime-config-wal.html#GUC-SYNCHRONOUS-COMMIT).
+[`synchronous_commit`](https://www.postgresql.org/docs/19/runtime-config-wal.html#GUC-SYNCHRONOUS-COMMIT).
 Setting it `off` makes commits return before the WAL flush: single-client
 write latency drops to the statement work alone, and a server crash can lose
 the most recent acknowledged commits (up to three times `wal_writer_delay`,
@@ -243,7 +243,7 @@ against the record committed for its schema generation and class: bytes per
 composition version or per node row that grew more than the size budget (5 %
 by default) fail the run. A generation and class with no committed record fails
 the run, with the error in the job summary, so the change that moves the schema
-generation commits the new generation's records with it (#4291). The run
+generation commits the new generation's records with it. The run
 summary lists every round with its machine factor, and each operation with its
 pages per call and its raw and adjusted change.
 
@@ -252,7 +252,7 @@ class, publishes no number, and writes nothing back to the repository: the
 round records leave as a run artifact, and the committed baseline under
 `docs/benchmarks/storage/<generation>/` moves only in a pull request that says
 which run measured it. `docs/benchmarks/storage/README.md` records the numbers
-behind each bound (#4318).
+behind each bound.
 
 {{#include ../generated/storage-bench.md}}
 

@@ -91,7 +91,14 @@ async fn a_withheld_full_status_keeps_the_public_profile() {
         "headers": {"content-type": "application/json"},
         "response": "{\"error\":\"forbidden\"}",
     });
-    let viewer = Viewer::start_with(vec![refused]).await;
+    // The public status the viewer falls back to, stated here so the test
+    // reads no more than it stubs.
+    let public = stub(
+        "/ferroehr/rest/status",
+        "application/json",
+        r#"{"status":"UP","server_version":"5.7.1","openehr_rest_api_version":"1.1.0","timestamp":"2026-10-01T10:00:00.000000Z","deployment":{"profile":"sandbox"}}"#,
+    );
+    let viewer = Viewer::start_with(vec![refused, public]).await;
     let cookie = viewer.sign_in().await;
     let server = viewer.page(&cookie, "/server").await;
     assert_eq!(server.status, http::StatusCode::OK, "{}", server.body);

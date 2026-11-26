@@ -202,3 +202,29 @@ commits no version.
 **Edit as a new version** opens the document in an editor; the save writes
 the next version. **Delete composition…** marks it deleted with a new version;
 its versions stay readable and it leaves the EHR's list.
+
+## Justified and emergency access
+
+For clinicians opening a record outside their care relationships.
+
+When FerroEHR refuses a read because the access rests on a justification of
+the access policy and states no reason (`refused-reason-missing`), the
+refusal is followed by **Open this record on a justification**. Choose a
+purpose of use from the list `GET /ferroehr/rest/extensions/v1/access/purposes`
+answers and give your reason in your own words, 1 to 1000 characters. The
+access policy decides, by the purpose, whether this is a justified or an
+emergency access; the viewer only states it. What a justification lifts and
+what it never lifts is on
+[Access control in detail](../access-control.md#justified-access-outside-the-care-relationships).
+
+![The justification form under a refusal](img/justified/justify-form.png)
+
+The justification holds for that one record for 15 minutes, until you choose
+**End now** in the notice above the page, or until you sign out. While it
+holds, every call the viewer makes to draw that record's pages carries the
+purpose in the purpose header and the reason, percent-encoded, in the reason
+header the purposes route names. The reason is kept in the viewer's
+server-side session and nowhere else, and the person reads it in their
+[access log](access-log.md).
+
+![A record opened on a justification](img/justified/justified.png)

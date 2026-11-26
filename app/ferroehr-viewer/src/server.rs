@@ -194,6 +194,9 @@ async fn page(
     };
     let scope = Arc::new(Scope::new(state, parts, posted));
     let drawn = crate::scope::run(Arc::clone(&scope), async {
+        if crate::justified::answer_post() {
+            return None;
+        }
         let drawn = crate::routes::draw().await;
         if scope.answer(|answer| {
             answer.redirect.is_some() || answer.away.is_some() || answer.session_over
@@ -203,7 +206,7 @@ async fn page(
         let body = if drawn.bare {
             crate::shell::centred_page(drawn.body)
         } else {
-            crate::shell::framed(drawn.body).await
+            crate::shell::framed(crate::justified::with_banner(drawn.body)).await
         };
         Some(crate::app::page_document(drawn.title, body))
     })
