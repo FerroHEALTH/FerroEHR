@@ -1,0 +1,1 @@
+- The viewer's Server › Overview shows the licence in force, the support period and each deployment gap, open or accepted by name, from the full status document when the session may read it, and warns of an expired or refused licence and an ended support period; the sandbox band names the safeguards that are off.

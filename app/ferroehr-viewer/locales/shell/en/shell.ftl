@@ -120,9 +120,10 @@ pill-unreachable-detail = No answer from { $address }
 unknown-version = an unknown version
 sandbox-title = Sandbox
 sandbox-gaps = { $count ->
-    [one] 1 production safeguard is off
-   *[other] { $count } production safeguards are off
+    [one] 1 production safeguard is off: { $gaps }
+   *[other] { $count } production safeguards are off: { $gaps }
 }
+sandbox-gap-separator = {"; "}
 sandbox-details = Details
 sandbox-no-gaps = This deployment must not hold real patient data.
 signed-in-basic = Signed in with a CDR account
