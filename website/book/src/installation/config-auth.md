@@ -268,8 +268,9 @@ time a refusal takes does not say whether the user exists.
 Role-based (RBAC) authorization, the party binding, the grant ceiling and the
 patient-data assurance gate. Which caller may read which data is the access
 evaluator's, over each EHR's `access_directives` and the controller's access
-policy, and takes no key here. The full evaluation order and design rationale are
-in [Security](../security.md).
+policy, and takes no key here. How the parts fit together and the order a
+request is decided in are on [How FerroEHR decides
+access](../explanation/access-model.md).
 
 ### `[authz.assurance]`: the assurance level patient data requires
 
