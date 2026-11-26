@@ -43,10 +43,10 @@ const ROLE: &str = "e41c7b2a-6d3f-4a9e-8b05-2f7d1c9e3a68";
 /// The administrator role of the tests.
 const ADMIN: &str = "ADMIN";
 
-/// The text of the book's "Operational policy" page.
+/// The text of the book's "Worked policy examples" page.
 fn book_page() -> String {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../website/book/src/operational-policy.md");
+        .join("../../website/book/src/policy-examples.md");
     std::fs::read_to_string(path).expect("the book page is readable")
 }
 
