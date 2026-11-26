@@ -21,7 +21,7 @@
 //!
 //! Layout:
 //! - [`authn`] — authentication: Basic (`argon2`) + OAuth2/OIDC bearer
-//!   (`jsonwebtoken`/`openidconnect`), producing a [`authn::Principal`].
+//!   (`ferrohealth-smart`), producing a [`authn::Principal`].
 //! - [`ehr_access`] — the **spec-grounded** access-decision layer, built on the
 //!   `EHR_ACCESS` gateway clause ("All access decisions to data in the EHR must
 //!   be made in accordance with the policies and rules in this object" — RM

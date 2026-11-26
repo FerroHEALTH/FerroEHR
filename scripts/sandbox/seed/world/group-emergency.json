@@ -1,0 +1,80 @@
+{
+  "_type": "GROUP",
+  "archetype_node_id": "eu.ferroehr.sandbox::openEHR-DEMOGRAPHIC-GROUP.care_team.v1",
+  "archetype_details": {
+    "_type": "ARCHETYPED",
+    "archetype_id": {
+      "_type": "ARCHETYPE_ID",
+      "value": "eu.ferroehr.sandbox::openEHR-DEMOGRAPHIC-GROUP.care_team.v1"
+    },
+    "rm_version": "1.2.0"
+  },
+  "name": {
+    "_type": "DV_CODED_TEXT",
+    "value": "care_team",
+    "defining_code": {
+      "_type": "CODE_PHRASE",
+      "terminology_id": {
+        "_type": "TERMINOLOGY_ID",
+        "value": "openehr_access"
+      },
+      "code_string": "care_team"
+    }
+  },
+  "details": {
+    "_type": "ITEM_TREE",
+    "archetype_node_id": "at0001",
+    "name": {
+      "_type": "DV_TEXT",
+      "value": "details"
+    },
+    "items": [
+      {
+        "_type": "ELEMENT",
+        "archetype_node_id": "at0002",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "provider"
+        },
+        "value": {
+          "_type": "DV_IDENTIFIER",
+          "issuer": "__PROVIDER_ISSUER__",
+          "id": "__PROVIDER_ID__",
+          "type": "ORGANISATION"
+        }
+      }
+    ]
+  },
+  "identities": [
+    {
+      "_type": "PARTY_IDENTITY",
+      "archetype_node_id": "at0001",
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "name"
+      },
+      "details": {
+        "_type": "ITEM_TREE",
+        "archetype_node_id": "at0002",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "details"
+        },
+        "items": [
+          {
+            "_type": "ELEMENT",
+            "archetype_node_id": "at0003",
+            "name": {
+              "_type": "DV_TEXT",
+              "value": "name"
+            },
+            "value": {
+              "_type": "DV_TEXT",
+              "value": "Emergency department"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -637,7 +637,7 @@ pub async fn read_one(
         VersionAt::Directory(ehr_id) => sqlx::query(READ_CURRENT_DIRECTORY.chosen()).bind(ehr_id),
     };
     let query = if ride {
-        query.bind(door.as_deref().map(crate::db::snapshot::Snapshot::text))
+        query.bind(door.as_deref())
     } else {
         query
     };
@@ -782,11 +782,7 @@ pub async fn read_served(
         .bind(&sys_versions)
         .bind(i64::try_from(cap).unwrap_or(i64::MAX));
     let query = if ride {
-        query.bind(
-            crate::party_binding::request::door()
-                .as_deref()
-                .map(crate::db::snapshot::Snapshot::text),
-        )
+        query.bind(crate::party_binding::request::door().as_deref())
     } else {
         query
     };
