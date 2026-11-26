@@ -70,7 +70,11 @@ CDR is untouched.
 > same `session.key` (or `session.key_file`) on every replica: the session is
 > then a sealed cookie any key-holding replica can serve. The default `memory`
 > store keeps sessions in one process, which is right for exactly one
-> replica. A sealed store with no key refuses the start.
+> replica, or for several behind sticky sessions at the ingress. A sealed
+> store with no key refuses the start. A sealed store keeps the session in the
+> browser, so it keeps no [justification](browsing.md#justified-and-emergency-access):
+> a clinician's reason stays on the server, so justified access needs the
+> `memory` store.
 
 ## Signing in
 
