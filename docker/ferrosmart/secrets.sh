@@ -11,8 +11,11 @@
 #   upstream_assertion_key.pem
 #                            the key FerroSMART authenticates to Keycloak with
 #                            (private_key_jwt, OpenID Connect Core 1.0 §9)
+#   backend_key.pem          the P-384 key of FerroSMART's own Backend Services
+#                            client (ES384)
 #   viewer_launch_key.pem    the viewer's EHR client key at FerroSMART (RS384)
-#   viewer.jwks.json         its public half, the JWK Set FerroSMART registers
+#   viewer_client.json       the viewer's client document with the public half
+#                            of that key, which `ferrosmart client apply` registers
 #
 # FerroSMART runs as uid 65532 and the viewer as another non-root user, so
 # the files are readable by every user: a local example, never a deployment.
@@ -32,11 +35,20 @@ for key in signing_key upstream_assertion_key viewer_launch_key; do
   keep "$key.pem" || openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 \
     -out "$dir/$key.pem" 2> /dev/null
 done
-if ! keep viewer.jwks.json; then
+keep backend_key.pem || openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-384 \
+  -out "$dir/backend_key.pem" 2> /dev/null
+if ! keep viewer_client.json; then
   modulus="$(openssl rsa -in "$dir/viewer_launch_key.pem" -noout -modulus | cut -d= -f2 | xxd -r -p |
     openssl base64 -A | tr '+/' '-_' | tr -d '=')"
-  jq -n --arg n "$modulus" '{keys: [{kty: "RSA", kid: "ferroehr-viewer", alg: "RS384", use: "sig", n: $n, e: "AQAB"}]}' \
-    > "$dir/viewer.jwks.json"
+  jq -n --arg n "$modulus" '{
+    client_id: "ferroehr-viewer",
+    client_name: "FerroEHR viewer",
+    token_endpoint_auth_method: "private_key_jwt",
+    jwks: {keys: [{kty: "RSA", kid: "ferroehr-viewer", alg: "RS384", use: "sig", n: $n, e: "AQAB"}]},
+    scope: "system/launch.c",
+    grant_types: ["client_credentials"],
+    resources: ["http://localhost:8080/ferroehr/rest/openehr/v1"]
+  }' > "$dir/viewer_client.json"
 fi
 # Only the files: a directory a caller keeps beside them must stay traversable.
 find "$dir" -maxdepth 1 -type f -exec chmod 0644 {} +

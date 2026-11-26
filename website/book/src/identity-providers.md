@@ -83,10 +83,10 @@ FerroSMART's repository:
 
 | Provider | FerroSMART's setup |
 |---|---|
-| Keycloak | the realm and configuration of [`examples/keycloak/`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/app/ferrosmart/examples/keycloak/), run by [`compose.keycloak.yaml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/compose.keycloak.yaml) (architecture §13.16) |
-| ZITADEL | the bootstrap of [`examples/zitadel/`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/app/ferrosmart/examples/zitadel/), run by [`compose.zitadel.yaml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/compose.zitadel.yaml) (§13.20) |
-| Microsoft Entra ID | [`examples/entra/ferrosmart.toml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/app/ferrosmart/examples/entra/ferrosmart.toml) (§13.18) |
-| Okta | [`examples/okta/ferrosmart.toml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/app/ferrosmart/examples/okta/ferrosmart.toml) (§13.19) |
+| Keycloak | the realm and configuration of [`examples/keycloak/`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.8.0/app/ferrosmart/examples/keycloak/), run by [`compose.keycloak.yaml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.8.0/compose.keycloak.yaml) (architecture §13.16) |
+| ZITADEL | the bootstrap of [`examples/zitadel/`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.8.0/app/ferrosmart/examples/zitadel/), run by [`compose.zitadel.yaml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.8.0/compose.zitadel.yaml) (§13.20) |
+| Microsoft Entra ID | [`examples/entra/ferrosmart.toml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.8.0/app/ferrosmart/examples/entra/ferrosmart.toml) (§13.18) |
+| Okta | [`examples/okta/ferrosmart.toml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.8.0/app/ferrosmart/examples/okta/ferrosmart.toml) (§13.19) |
 
 FerroEHR's quickstart runs the first two upstream of FerroSMART
 ([Docker Compose](installation/compose.md#behind-ferrosmart)).

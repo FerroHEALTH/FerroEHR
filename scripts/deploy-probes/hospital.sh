@@ -75,7 +75,7 @@ services:
         "claims":{"sub":"\$\${clientId}","client_id":"\$\${clientId}",
         "aud":["ferroehr-system"],"scope":"\$\${scope}"}},
         {"requestParam":"grant_type","match":"client_credentials",
-        "claims":{"sub":"\$\${clientId}","client_id":"\$\${clientId}",
+        "typeHeader":"at+jwt","claims":{"sub":"\$\${clientId}","client_id":"\$\${clientId}",
         "aud":["http://localhost:8090/fhir"],"scope":"\$\${scope}"}}]}]}
   ferroehr:
     environment: *hospital-env
@@ -84,12 +84,8 @@ services:
       ferrosmart:
         condition: service_healthy
     environment: *hospital-env
-  ferrosmart:
-    volumes:
-      - type: bind
-        source: $(hs_dir)/clients
-        target: /etc/ferrosmart/clients
-        read_only: true
+  ferrosmart-clients:
+    command: [client, apply, $(hs_document_paths)]
   # The viewer launches the hospital's app from an EHR's page (#5880), and
   # declares treatment as its purpose of use until its reader chooses (#6105).
   ferroehr-viewer:

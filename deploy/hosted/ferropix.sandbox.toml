@@ -26,20 +26,11 @@ url_file = "/etc/ferropix/db-url"
 data_key_file = "/etc/ferropix/data-key"
 
 # The development issuer on the same loopback (the compose file's
-# identity-issuer). It signs only client credentials tokens, of the seed and
-# of the CDR, so it is a `machines` issuer; it signs plain JWTs (`typ` JWT)
-# and names the client in `client_id`, so the issuer takes the claims it
-# carries.
+# identity-issuer). It signs RFC 9068 `at+jwt` client credentials tokens, of
+# the seed and of the CDR, whose `sub` is their `client_id`.
 [auth.issuer.sandbox]
 issuer = "http://localhost:8180/sandbox"
-kind = "machines"
-preset = "rfc9068"
 audience = ["http://localhost:8090/fhir"]
-
-[auth.issuer.sandbox.profile]
-token_types = ["JWT"]
-required_claims = ["iss", "exp", "aud", "sub"]
-client_claims = ["client_id", "azp"]
 
 # The one client that may feed patients, the on-box seed (PIXm ITI-104).
 [[trust.issuer]]
@@ -53,6 +44,7 @@ clients = ["sandbox-source"]
 system = "urn:oid:2.999.1.1"
 name = "Sandbox demo hospital"
 kind = "local"
+identifier_type = "PI"
 source_client_id = "sandbox-source"
 
 # The clinical domain: FerroPIX mints each patient's pseudonym here on the

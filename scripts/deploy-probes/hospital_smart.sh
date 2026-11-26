@@ -64,7 +64,7 @@ hs_password() { printf 'A1!%s-hospital' "$1"; }
 # The FerroSMART configuration of the scenario, with the subject namespace
 # `namespace` its picker looks EHRs up under.
 hs_config() {
-  local namespace="$1" client role platform
+  local namespace="$1" role platform
   {
     cat <<TOML
 # Written by scripts/deploy-probes/hospital_smart.sh for one run.
@@ -73,13 +73,20 @@ listen = "0.0.0.0:8280"
 
 [ferrosmart]
 issuer = "$HS_ISSUER"
+assurance_minimum = "none"
 
 [ferrosmart.database]
 url_file = "/run/secrets/ferrosmart_database_url"
 max_connections = 8
 
 [ferrosmart.keys]
-private_key_file = "/run/secrets/ferrosmart_signing_key"
+private_key_files = ["/run/secrets/ferrosmart_signing_key"]
+
+[ferrosmart.backend]
+algorithm = "ES384"
+
+[ferrosmart.backend.keys]
+private_key_file = "/run/secrets/ferrosmart_backend_key"
 
 [[ferrosmart.resource]]
 base = "$HS_BASE"
@@ -99,32 +106,50 @@ TOML
 [[ferrosmart.role]]
 name = "PATIENT"
 scopes = ["patient/composition-*.crs", "patient/aql-*.rs"]
-
-[[ferrosmart.client]]
-client_id = "ferroehr-viewer"
-name = "FerroEHR viewer"
-kind = "confidential_asymmetric"
-jwks_file = "/run/secrets/ferrosmart_viewer_jwks"
-scopes = ["system/launch.c"]
-grant_types = ["client_credentials"]
-resources = ["$HS_BASE"]
-
-[[ferrosmart.client]]
-client_id = "$HS_APP"
-name = "Hospital app"
-kind = "public"
-redirect_uris = ["$HS_REDIRECT"]
-scopes = ["openid", "launch", "launch/patient", "user/composition-*.cruds", "user/aql-*.cruds", "user/template-*.r", "patient/composition-*.crs", "patient/aql-*.rs", "patient/composition-*.rs", "patient/composition-*.r", "__ferroehr.platform"]
-grant_types = ["authorization_code"]
-resources = ["$HS_BASE"]
 TOML
-    for client in $HS_SYSTEMS; do
-      local scopes='"system/composition-*.cruds", "system/aql-*.cruds", "system/template-*.r"'
-      [[ "$client" == hospital-scim ]] && scopes='"ferroehr/scim"'
-      printf '\n[[ferrosmart.client]]\nclient_id = "%s"\nname = "%s"\nkind = "confidential_asymmetric"\njwks_file = "/etc/ferrosmart/clients/%s.jwks.json"\nscopes = [%s]\ngrant_types = ["client_credentials"]\nresources = ["%s"]\n' \
-        "$client" "$client" "$client" "$scopes" "$HS_BASE"
-    done
   } > "$(hs_dir)/ferrosmart.toml"
+}
+
+# The client documents of the scenario, which the overlay's
+# `ferrosmart-clients` one-shot applies: the viewer's, from the one
+# docker/ferrosmart/secrets.sh writes, names the scenario's base.
+hs_documents() {
+  local dir client scope
+  dir="$(hs_dir)/documents"
+  jq --arg base "$HS_BASE" '.resources = [$base]' "$(hs_dir)/viewer_client.json" > "$dir/ferroehr-viewer.json"
+  jq -n --arg id "$HS_APP" --arg redirect "$HS_REDIRECT" --arg base "$HS_BASE" '{
+    client_id: $id,
+    client_name: "Hospital app",
+    token_endpoint_auth_method: "none",
+    redirect_uris: [$redirect],
+    scope: "openid launch launch/patient user/composition-*.cruds user/aql-*.cruds user/template-*.r patient/composition-*.crs patient/aql-*.rs patient/composition-*.rs patient/composition-*.r __ferroehr.platform",
+    grant_types: ["authorization_code"],
+    resources: [$base]
+  }' > "$dir/$HS_APP.json"
+  for client in $HS_SYSTEMS; do
+    scope="system/composition-*.cruds system/aql-*.cruds system/template-*.r"
+    [[ "$client" == hospital-scim ]] && scope="ferroehr/scim"
+    jq -n --arg id "$client" --arg scope "$scope" --arg base "$HS_BASE" \
+      --slurpfile jwks "$(hs_dir)/clients/$client.jwks.json" '{
+      client_id: $id,
+      client_name: $id,
+      token_endpoint_auth_method: "private_key_jwt",
+      jwks: $jwks[0],
+      scope: $scope,
+      grant_types: ["client_credentials"],
+      resources: [$base]
+    }' > "$dir/$client.json"
+  done
+}
+
+# The `ferrosmart client apply` arguments of the scenario's documents, as the
+# one-shot reads them.
+hs_document_paths() {
+  local client
+  for client in ferroehr-viewer "$HS_APP" $HS_SYSTEMS; do
+    printf '/etc/ferrosmart/clients/%s.json' "$client"
+    [[ "$client" == "${HS_SYSTEMS##* }" ]] || printf ', '
+  done
 }
 
 # The secrets, the system clients' keys and the configuration of a fresh run.
@@ -138,7 +163,7 @@ hs_prepare() {
   # again: it keeps an out/ferrosmart.toml it finds, which would carry the last
   # stack's ZITADEL client and the last run's resource base.
   [[ -d "$dir/zitadel" ]] && find "$dir/zitadel" -mindepth 1 -delete
-  mkdir -p "$dir/clients" "$dir/zitadel" "$dir/tokens"
+  mkdir -p "$dir/clients" "$dir/documents" "$dir/zitadel" "$dir/tokens"
   for client in $HS_SYSTEMS; do
     [[ -s "$dir/clients/$client.pem" ]] && continue
     openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$dir/clients/$client.pem" 2>/dev/null
@@ -146,11 +171,12 @@ hs_prepare() {
     jq -n --arg n "$modulus" --arg k "$client" \
       '{keys: [{kty: "RSA", kid: $k, alg: "RS384", use: "sig", n: $n, e: "AQAB"}]}' > "$dir/clients/$client.jwks.json"
   done
-  chmod 0755 "$dir/clients" "$dir/zitadel"
-  chmod 0644 "$dir"/*.pem "$dir"/*.json "$dir/clients"/* "$dir"/zitadel_* "$dir/database_url" "$dir/postgres_password"
+  hs_config "$namespace"
+  hs_documents
+  chmod 0755 "$dir/clients" "$dir/documents" "$dir/zitadel"
+  chmod 0644 "$dir"/*.pem "$dir"/*.json "$dir/clients"/* "$dir"/zitadel_* "$dir/database_url" "$dir/postgres_password" "$dir/documents"/*
   # A fresh stack forgets every grant, so no token of the last one is kept.
   rm -f "$dir/tokens/"*
-  hs_config "$namespace"
 }
 
 # The compose files of the upstream.
@@ -169,12 +195,13 @@ hs_upstream_services() {
 # Exports what the FerroSMART overlays read for this run.
 hs_export() {
   local namespace="${1:-demographic}"
-  export FERROSMART_SECRETS FERROSMART_CONFIG_FILE FERROSMART_ZITADEL_DIR FERROSMART_ZITADEL_UID
+  export FERROSMART_SECRETS FERROSMART_CONFIG_FILE FERROSMART_CLIENTS_DIR FERROSMART_ZITADEL_DIR FERROSMART_ZITADEL_UID
   # docker-compose.ferrosmart.yml sets the picker's namespace in FerroSMART's
   # environment, which outranks the file, so the scenario's goes there too.
   export FERROSMART_SUBJECT_NAMESPACE="$namespace"
   FERROSMART_SECRETS="$(hs_dir)"
   FERROSMART_CONFIG_FILE="$(hs_dir)/ferrosmart.toml"
+  FERROSMART_CLIENTS_DIR="$(hs_dir)/documents"
   FERROSMART_ZITADEL_DIR="$(hs_dir)/zitadel"
   FERROSMART_ZITADEL_UID="$(id -u):$(id -g)"
 }

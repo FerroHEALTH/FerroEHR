@@ -20,10 +20,10 @@ HP_SOURCE="urn:oid:2.999.1.1"
 # The clinical pseudonymisation domain.
 HP_CLINICAL="urn:oid:2.999.7.1"
 
-# The FerroPIX release of the PMIR leg, pinned by digest: the first to
-# authenticate its ITI-93 sender (FerroPIX #655) and to state every Patient's
+# The FerroPIX release of the PMIR leg, the quickstart's, pinned by digest: it
+# authenticates its ITI-93 sender (FerroPIX #655) and states every Patient's
 # `active` and links (FerroPIX #656).
-HP_FERROPIX_IMAGE="ghcr.io/ferrohealth/ferropix:0.0.31@sha256:6681a8e3f923ecc07ceaa3cc7ede679e2c9fd471c25560dad12c82edaafbd6df"
+HP_FERROPIX_IMAGE="ghcr.io/ferrohealth/ferropix:0.0.43@sha256:94fa0f395de800e51f5dc34fb01c9f4d8443c2c4adaec1c22ce85b3f66dba3d9"
 
 # Writes once per run, under `dir`, a test CA and the certificate both
 # instances serve their listener with (`localhost`, `127.0.0.1`): ITI-93 needs
@@ -99,22 +99,19 @@ configs:
       url_file = "/etc/ferropix/db-url"
       data_key_file = "/var/lib/ferropix-key/data-key"
 
-      [[auth.issuer]]
+      [auth.issuer.quickstart]
       issuer = "http://localhost:8180/quickstart"
-      kind = "machines"
       audience = ["http://localhost:8090/fhir"]
-      token_types = ["JWT"]
-      required_claims = ["iss", "exp", "aud", "sub"]
-      client_claims = ["client_id", "azp"]
 
       [[trust.issuer]]
-      issuer = "http://localhost:8180/quickstart"
+      issuer = "quickstart"
       clients = ["quickstart-source"]
 
       [[domain]]
       system = "urn:oid:2.999.1.1"
       name = "Quickstart hospital"
       kind = "local"
+      identifier_type = "PI"
       source_client_id = "quickstart-source"
 
       [[pseudonym_domain]]

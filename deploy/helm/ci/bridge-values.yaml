@@ -79,14 +79,12 @@ bridge:
       - blood_pressure.context.yml
       - blood_pressure.yml
   # A mapping set turns the FHIRconnect operations on, which FerroBRIDGE starts
-  # only with an `[[auth.issuer]]` table naming an issuer, its kind and an
-  # audience.
+  # only with an `[auth.issuer.<name>]` table naming an issuer and an audience.
   config:
     auth:
       issuer:
         callers:
           issuer: https://idp.example.org
-          kind: machines
           audience: [https://bridge.example.org/fhir]
     operations:
       composition_language: en
