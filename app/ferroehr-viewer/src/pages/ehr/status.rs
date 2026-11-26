@@ -183,7 +183,7 @@ fn fact_rows(version_uid: &str, facts: Option<&VersionedObjectFacts>) -> Vec<(St
         ));
         rows.push((
             tr(RecordsMsg::FactSigned),
-            t(tr(if facts.signed { Msg::Yes } else { Msg::No })),
+            crate::pages::versions::signature_words(facts),
         ));
         rows.push((tr(RecordsMsg::FactLifecycle), t(&facts.lifecycle_state)));
     }
