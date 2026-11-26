@@ -57,7 +57,7 @@ stay readable.
 A `PERSON`'s Overview lists its **binding keys**: each identifier it carries
 with an issuer, by issuer and id. The binding key is the one whose issuer a
 login issuer names (`[auth.issuer.<name>.party] identifier_issuer`, see
-[the party mapping](../installation/config-auth.md#the-party-mapping)); a
+[the party mapping](../installation/config-authz.md#the-party-mapping)); a
 login binds to the `PERSON` that carries it. A binding key never changes on an
 ordinary edit. While the CDR's admin API is on, **Re-key…** on a key's row
 asks for the new id and confirms
