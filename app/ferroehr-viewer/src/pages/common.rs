@@ -72,16 +72,14 @@ pub fn refused(summary: String, error: &ViewerError, request: Option<String>) ->
         Some(text) => issue.text(text),
         None => issue,
     }];
-    refusal(
-        &current(),
-        &Refusal {
-            status,
-            summary,
-            issues,
-            request,
-            evidence: None,
-        },
-    )
+    let drawn = Refusal {
+        status,
+        summary,
+        issues,
+        request,
+        evidence: None,
+    };
+    crate::justified::after_refusal(error, refusal(&current(), &drawn))
 }
 
 /// A status code with its reason phrase, as an issue names it ("412

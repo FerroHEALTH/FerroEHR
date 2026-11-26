@@ -4,7 +4,8 @@
 //! The purposes of use a caller may declare (#6105), **our own extension**.
 //!
 //! `GET {extensions}/access/purposes` answers the `[audit] purpose_header`, the
-//! `[audit] purpose_system` and each `[audit] purpose_codes` entry with the
+//! `[audit] reason_header`, the `[audit] purpose_system` and each
+//! `[audit] purpose_codes` entry with the
 //! display text the terminology server gives it, so a client such as the
 //! viewer offers the codes an access policy that requires a purpose accepts.
 //! The list names no personal data, so any authenticated caller reads it, a
@@ -37,8 +38,9 @@ guarded_handler! {
         path = "/access/purposes",
         tag = "audit",
         responses(
-            (status = 200, description = "The header a purpose is declared in, the code \
-                                          system of the codes, and the accepted codes \
+            (status = 200, description = "The header a purpose is declared in, the header \
+                                          the reason of a justified access is stated in, \
+                                          the code system of the codes, and the accepted codes \
                                           in configured order, each with its display \
                                           text when the terminology server gives one. \
                                           An empty `codes` accepts any code.",
@@ -57,6 +59,8 @@ guarded_handler! {
 struct Listed<'a> {
     /// The request header a purpose is declared in.
     header: &'a str,
+    /// The request header the reason of a justified access is stated in.
+    reason_header: &'a str,
     /// The canonical URL of the code system.
     system: &'a str,
     /// The accepted codes in configured order.
@@ -82,6 +86,7 @@ async fn run(state: &AppState, parts: &RequestParts) -> Result<Response, RestErr
     };
     let listed = Listed {
         header: &purposes.header,
+        reason_header: &purposes.reason_header,
         system: &purposes.system,
         codes: purposes
             .codes
