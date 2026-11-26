@@ -335,6 +335,10 @@ CREATE INDEX ix_access_care_subject ON access_care (subject_digest, carer_id);
 CREATE INDEX ix_access_care_caseload ON access_care (carer_id, role_terminology, role_code)
     INCLUDE (subject_digest, care_from, care_until, provider_issuer, provider_id, writer_id,
              self_declared, episode_digest);
+-- The caseload's row estimate decides the join order of every care-gated
+-- query (#6630), so the table re-analyzes once 2% of its rows changed, where
+-- the server default waits for 10%.
+ALTER TABLE access_care SET (autovacuum_analyze_scale_factor = 0.02, autovacuum_analyze_threshold = 50);
 COMMENT ON TABLE access_care IS 'The care relationships of the party domain, one row per subject reference and relationship, keyed by digest; written only by the care projector. Our own design.';
 COMMENT ON COLUMN access_care.subject_digest IS 'The SHA-256 digest of one subject reference that names the PERSON: its own reference in this CDR''s namespace, or a record subject it declares. Our own design.';
 COMMENT ON COLUMN access_care.carer_id IS 'The carer of the relationship, by its container: a PERSON, a ROLE, a GROUP or an ORGANISATION. Our own design.';

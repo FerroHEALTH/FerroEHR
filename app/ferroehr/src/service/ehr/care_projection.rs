@@ -228,6 +228,8 @@ impl Projector {
             // NOTE: our own design (#5762), the care projector, which runs in the background.
             tx.commit().await?;
             drop(clinical);
+            let written = read.chunks.iter().map(|(_, rows)| rows.len()).sum();
+            access_care::settle(&self.clinical, written).await?;
             self.digest_ehrs(&namespace).await?;
             return Ok(read.snapshot);
         }

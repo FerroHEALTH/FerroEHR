@@ -96,7 +96,8 @@ BEGIN
             ehr,
             version,
             vo_attestation,
-            node
+            node,
+            access_care
             TO ferroehr_clinical;
         GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE
             template_store,
@@ -139,7 +140,6 @@ BEGIN
             access_class,
             access_settings,
             access_projection_state,
-            access_care,
             access_care_state,
             access_revision_of,
             request_revisions

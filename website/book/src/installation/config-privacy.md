@@ -254,6 +254,12 @@ no EHR outside your care, a query also starts from your own rows of that
 second index, so its cost grows with your caseload, whatever the size of the
 store; each EHR it reaches is still checked one by one.
 
+The planner orders such a query by how many rows it expects in your caseload,
+so the projector runs `ANALYZE` on `clinical.access_care` after any write of
+1,000 rows or more, and autovacuum re-analyzes the table once 2% of its rows
+have changed (PostgreSQL docs, Populating a Database). The runtime role holds
+the `MAINTAIN` privilege on the table for this.
+
 A replica reads the projection only while it is as recent as the care facts
 the replica holds. A discharge, a removed membership or an erasure is never
 granted from a stale row: until the projector catches up, the query sends the
