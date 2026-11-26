@@ -45,9 +45,9 @@ fn repo_file(relative: &str) -> String {
     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{} is readable: {e}", path.display()))
 }
 
-/// The TOML block of the book's authentication page that holds `marker`.
+/// The TOML block of the book's authorization keys page that holds `marker`.
 fn documented_block(marker: &str) -> String {
-    let page = repo_file("website/book/src/installation/config-auth.md");
+    let page = repo_file("website/book/src/installation/config-authz.md");
     page.split("```toml\n")
         .skip(1)
         .filter_map(|block| block.split("```").next())
