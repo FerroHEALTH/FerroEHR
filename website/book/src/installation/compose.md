@@ -65,8 +65,8 @@ the schema, in `[database] migrate_url`: preparation reads all four
 least-privilege role can do, `ferroehr_clinical` included. Unset, `migrate_url`
 falls back to `[database] url`, which is what the quickstart runs. See
 [Operations → Which credential prepares the
-schema](../operations.md#which-credential-prepares-the-schema) and
-[Applying migrations](../operations.md#applying-migrations).
+schema](../database-operations.md#which-credential-prepares-the-schema) and
+[Applying migrations](../database-operations.md#applying-migrations).
 
 The PostgreSQL image is **init-scripts only**: it creates roles and schemas,
 and bakes in no migration state. The schema needs no extension, so a plain
@@ -81,7 +81,7 @@ self-provisions and a restart is a no-op.
 > running a plain `postgres` image): either recreate the volume
 > (`docker compose down -v`, which **destroys data**) or create the group roles
 > once by hand as a superuser
-> ([Operations](../operations.md#turning-the-schema-split-into-a-role-split)
+> ([Operations](../database-operations.md#turning-the-schema-split-into-a-role-split)
 > has the statements). The server runs fine either way: the
 > grants are a defense-in-depth layer, not a functional requirement.
 
@@ -635,7 +635,7 @@ you ask for them:
   and whoever reads that file re-identifies every record in it. This stack runs
   one login credential, so it separates the artefacts and not the authority to
   produce them; [Operations → Dump each domain
-  separately](../operations.md#dump-each-domain-separately) is the production
+  separately](../database-operations.md#dump-each-domain-separately) is the production
   procedure, including why a backup credential needs `BYPASSRLS`.
 
 Two things that used to be profiles of this file are not any more. Both have to
