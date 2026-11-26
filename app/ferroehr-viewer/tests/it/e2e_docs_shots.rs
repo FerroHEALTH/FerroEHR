@@ -31,6 +31,7 @@ use reqwest::StatusCode;
 use std::path::{Path, PathBuf};
 
 use common::{Harness, PHONE_WIDTH, env, fill, login_basic_as};
+use futures::FutureExt as _;
 
 /// The ADL 1.4 template every capture uses.
 const TEMPLATE_ID: &str = "minimal_evaluation.en.v1";
@@ -323,6 +324,7 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         review(format!("{ehr}/contribution/new"), "ehrs/contribution-new"),
         review(format!("{ehr}/tags"), "ehrs/tags"),
         review(format!("{ehr}/care"), "ehrs/care"),
+        light(format!("{ehr}/access-log"), "access-log/access-log"),
         review(format!("{ehr}/compositions/new"), "compositions/new"),
         both(composition.clone(), "compositions/reading"),
         review(
@@ -529,6 +531,142 @@ async fn capture_states(h: &Harness, seeded: &Seeded, book: &Path) {
     shot_to(h, book, "audit/audit-record").await;
 }
 
+/// The access policy route of the CDR at `cdr`, or its history.
+fn policy_url(cdr: &str, history: bool) -> String {
+    let base = format!("{cdr}/ferroehr/rest/extensions/v1/admin/access_policy");
+    if history {
+        format!("{base}/history")
+    } else {
+        base
+    }
+}
+
+/// The access policy in force at `cdr` and the version uid its `ETag` names.
+async fn policy_in_force(
+    http: &reqwest::Client,
+    cdr: &str,
+    admin: (&str, &str),
+) -> (serde_json::Value, String) {
+    let response = http
+        .get(policy_url(cdr, false))
+        .basic_auth(admin.0, Some(admin.1))
+        .header("Accept", "application/json")
+        .send()
+        .await
+        .expect("the CDR answers the policy read");
+    assert!(
+        response.status().is_success(),
+        "the seed commits a policy: {}",
+        response.status()
+    );
+    let etag = response
+        .headers()
+        .get("etag")
+        .and_then(|value| value.to_str().ok())
+        .map(|value| value.trim_start_matches("W/").trim_matches('"').to_owned())
+        .expect("the policy names its version in its ETag");
+    (response.json().await.expect("the policy is JSON"), etag)
+}
+
+/// Writes `policy` over the version `over` and answers the new version uid.
+async fn write_policy(
+    http: &reqwest::Client,
+    cdr: &str,
+    admin: (&str, &str),
+    policy: &serde_json::Value,
+    over: &str,
+) -> String {
+    let response = http
+        .put(policy_url(cdr, false))
+        .basic_auth(admin.0, Some(admin.1))
+        .header("Content-Type", "application/json")
+        .header("Accept", "application/json")
+        .header("If-Match", format!("\"{over}\""))
+        .json(policy)
+        .send()
+        .await
+        .expect("the CDR answers the policy write");
+    assert!(
+        response.status().is_success(),
+        "the policy write is taken: {}",
+        response.status()
+    );
+    response
+        .headers()
+        .get("etag")
+        .and_then(|value| value.to_str().ok())
+        .map(|value| value.trim_start_matches("W/").trim_matches('"').to_owned())
+        .expect("the written policy names its version")
+}
+
+/// Capture the justification form and its notice, as the clinician who
+/// reads an EHR outside their care relationships.
+///
+/// The seed's first policy version holds professionals to a care
+/// relationship and its final one lifts that, so the capture writes the
+/// first version again over the final one, captures, and writes the final
+/// one back whatever the captures did. It runs after every other capture,
+/// so the access-policy and access-log captures show the seed's own history.
+async fn capture_justification(h: &Harness, cdr: &str, admin: (&str, &str), book: &Path) {
+    let (Some(ehr), Some(clinician), Some(clinician_pass)) = (
+        env("UI_E2E_JUSTIFIED_EHR_ID"),
+        env("UI_E2E_BASIC_USER"),
+        env("UI_E2E_BASIC_PASS"),
+    ) else {
+        println!("SKIP the justification capture: the seeded clinician env is unset");
+        return;
+    };
+    let http = reqwest::Client::new();
+    let (final_policy, in_force) = policy_in_force(&http, cdr, admin).await;
+    let (_, history) = send(http.get(policy_url(cdr, true)), admin.0, admin.1).await;
+    let first = history
+        .as_array()
+        .and_then(|versions| versions.last())
+        .and_then(|version| version.get("data"))
+        .cloned()
+        .expect("the policy history holds the seed's first version");
+    let applied = write_policy(&http, cdr, admin, &first, &in_force).await;
+    let captured = std::panic::AssertUnwindSafe(async {
+        h.wait_css("button[popovertarget='user-menu']")
+            .await
+            .click()
+            .await;
+        h.wait_css("#user-menu:popover-open").await;
+        h.wait_css("#user-menu form[action='/logout'] button")
+            .await
+            .click()
+            .await;
+        h.wait_url_contains("/sign-in").await;
+        login_basic_as(h, &clinician, &clinician_pass).await;
+        h.goto(&format!("/ehrs/{ehr}/status")).await;
+        h.wait_css("#j-reason").await;
+        shot_to(h, book, "justified/justify-form").await;
+        if common::is_present(h, "select#j-purpose").await {
+            h.wait_css("select#j-purpose")
+                .await
+                .select_by_value("TREAT")
+                .await;
+        } else {
+            fill(h, "#j-purpose", "TREAT").await;
+        }
+        fill(
+            h,
+            "#j-reason",
+            "Second opinion requested by the ward (synthetic)",
+        )
+        .await;
+        common::submit(h, "form:has(#j-reason) button[type=submit]").await;
+        common::wait_main_contains(h, "You opened this record on a justification").await;
+        shot_to(h, book, "justified/justified").await;
+    })
+    .catch_unwind()
+    .await;
+    write_policy(&http, cdr, admin, &final_policy, &applied).await;
+    if let Err(panic) = captured {
+        std::panic::resume_unwind(panic);
+    }
+}
+
 /// Capture the console's screenshots: every route in four layouts for the
 /// review, and the book's set.
 #[tokio::test]
@@ -571,6 +709,7 @@ async fn capture_documentation_screenshots() {
     let all = routes(&seeded);
     capture_routes(&h, &all, &review, &book).await;
     capture_states(&h, &seeded, &book).await;
+    capture_justification(&h, &cdr, (&user, &pass), &book).await;
 
     h.assert_console_clean(&["401", "403", "404", "Failed to load resource"])
         .await;

@@ -42,6 +42,7 @@
 )]
 
 pub mod contribution;
+pub mod listing;
 pub mod party;
 pub mod relationship;
 

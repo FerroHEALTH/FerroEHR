@@ -76,6 +76,7 @@ async fn a_caller_with_no_role_reads_the_accepted_purposes() {
             read,
             json!({
                 "header": "x-purpose-of-use",
+                "reason_header": "x-access-reason",
                 "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason",
                 "codes": [{ "code": "TREAT" }, { "code": "ETREAT" }]
             }),

@@ -306,6 +306,7 @@ impl CdrClient {
             Some(credential.clone()),
         );
         call.purposes = Some(self.purposes.clone());
+        call.justifiable = url.starts_with(&self.rest_root_url(""));
         call
     }
 
@@ -380,6 +381,9 @@ pub struct CdrCall {
     body: Option<(String, String)>,
     /// The purposes of use a credentialed call declares one of.
     purposes: Option<crate::purpose::Purposes>,
+    /// Whether the call reaches the CDR's REST root, where it carries the
+    /// justification of the EHR the page draws.
+    justifiable: bool,
 }
 
 impl CdrCall {
@@ -398,6 +402,7 @@ impl CdrCall {
             headers: Vec::new(),
             body: None,
             purposes: None,
+            justifiable: false,
         }
     }
 
@@ -439,10 +444,18 @@ impl CdrCall {
         for (name, value) in &self.headers {
             request = request.header(name, value);
         }
-        if let (Some(purposes), Some(credential)) = (&self.purposes, &self.credential)
-            && let Some((header, code)) = purposes.declared(credential).await?
-        {
-            request = request.header(header, code);
+        if let (Some(purposes), Some(credential)) = (&self.purposes, &self.credential) {
+            let justified = match self.justifiable.then(crate::justified::of_page).flatten() {
+                Some(justification) => purposes.justified(credential, &justification).await?,
+                None => None,
+            };
+            if let Some(headers) = justified {
+                for (name, value) in headers {
+                    request = request.header(name, value);
+                }
+            } else if let Some((header, code)) = purposes.declared(credential).await? {
+                request = request.header(header, code);
+            }
         }
         if let Some((content_type, body)) = self.body {
             request = request
