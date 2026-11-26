@@ -132,8 +132,7 @@ of the access control groups of the draft openEHR access terminology `openehr_ac
   which another product uses to exchange the directives.
 - **Every write is checked:** a CONTRIBUTION, an EHR Extract import and an
   admin archive load that carry settings are refused whole naming the first
-  defect: with `400` for settings of another scheme (the removed
-  `FERROEHR_ACCESS_CONTROL_V1` among them) or a member the class does not
+  defect: with `400` for settings of another scheme or a member the class does not
   declare, and with `422` for a broken invariant of the draft package, named
   as `CLASS.Invariant`, such as `ACCESS_DIRECTIVE.Restriction_denies`, or a
   `DV_DATE_TIME` or `DV_DURATION` that is no ISO 8601 value
@@ -748,7 +747,7 @@ evaluator decides from who they are (EHDS Art. 3 and 4(2)), confining them
 to their own records. A token's own reading of the patient never counts
 without that binding. The read-only role still refuses their writes.
 Any other `user/` or `patient/` token belongs to a professional and still needs
-a role. The former `user_role` key is refused at boot.
+a role.
 Disabling RBAC restores authentication-only behaviour.
 
 > [!IMPORTANT]
@@ -831,6 +830,4 @@ access record names step 0. A professional whose grants are `patient/` grants
 alone, a clinician app launched for one patient, is held to that patient's
 EHR the same way, and on that EHR takes every step of the procedure. A contact
 point's caller is held to the EHR of its treatment relationship
-confirmation's patient. The `[auth] patient_claim` and
-`[auth] patient_namespace` keys of earlier releases are gone; a configuration
-that sets either is refused as naming unknown keys.
+confirmation's patient.

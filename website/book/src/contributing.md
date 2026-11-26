@@ -25,12 +25,12 @@ measurement from your own hardware all count.
 
 The three governing documents are kept in the repository root:
 
-- [CONTRIBUTING](https://github.com/FerroHEALTH/FerroEHR/blob/main/CONTRIBUTING.md)
-  — the practical rules for setup, the required checks, and pull requests.
-- [Code of conduct](https://github.com/FerroHEALTH/FerroEHR/blob/main/CODE_OF_CONDUCT.md)
-  — the Contributor Covenant (v2.1) the community follows.
-- [Security policy](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md)
-  — how to report a vulnerability privately.
+- [CONTRIBUTING](https://github.com/FerroHEALTH/FerroEHR/blob/main/CONTRIBUTING.md):
+  the practical rules for setup, the required checks, and pull requests.
+- [Code of conduct](https://github.com/FerroHEALTH/FerroEHR/blob/main/CODE_OF_CONDUCT.md):
+  the Contributor Covenant (v2.1) the community follows.
+- [Security policy](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md):
+  how to report a vulnerability privately.
 
 ## Setting up
 

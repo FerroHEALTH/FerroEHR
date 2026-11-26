@@ -48,9 +48,9 @@ services:
       FERROEHR__AUTH__ISSUER__KEYCLOAK__PARTY__GROUP_CLAIM: groups
       FERROEHR__AUTH__ISSUER__KEYCLOAK__PARTY__GROUP_IDENTIFIER_ISSUER: urn:example:keycloak-dev-groups
       FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: keycloak
-      # The test-only grant ceiling: the dev set and write_access_policy, which
-      # scripts/ui-e2e.sh grants the admin user to commit the access policy.
-      FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,read_change_feed,scim_provision,hold_roles,hold_scopes,write_access_policy
+      # The test-only grant ceiling: the dev set of docker/ferroehr.dev.toml,
+      # which admits every operation the demo seed's roles grant.
+      FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,read_change_feed,scim_provision,hold_roles,hold_scopes,write_access_policy,write_care_relationship,write_representation,access_service
       FERROEHR__AUTH__TLS__TRUST_ROOTS_FILE: /run/ferroehr-dev-tls/ca/ca.crt
       # Versions and access-log checkpoints signed with ML-DSA-65+Ed25519, so
       # the viewer draws a real signature: the committed TEST key of

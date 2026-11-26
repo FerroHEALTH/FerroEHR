@@ -135,9 +135,9 @@ code to a system it does not come from would misdescribe it. A purpose the
 access token states keeps the system the token gives it.
 The
 [DICOM Audit Message schema](https://dicom.nema.org/medical/dicom/current/output/chtml/part15/sect_A.5.html)
-of PS3.15 §A.5 defines no purpose element at all — `EventIdentification`,
+of PS3.15 §A.5 defines no purpose element at all (`EventIdentification`,
 `ActiveParticipant`, `AuditSourceIdentification` and
-`ParticipantObjectIdentification`, and none of them carries one — so on that
+`ParticipantObjectIdentification`, and none of them carries one), so on that
 side it is a limit of the format, not something this code withholds.
 
 ### Where the purpose of use comes from
@@ -453,7 +453,7 @@ own grounds. Its tombstone is kept as long again, as a local one is, and
 then folds, leaving its uid, its bundle and its content digest
 (`audit.access_log_imported_folded`), so its bundle still verifies. The
 metrics count both logs, with `chain` = `local` or `imported`. No openEHR
-specification governs this: our own design (#5664, #6242).
+specification governs this: our own design.
 
 Choosing the period is a legal question for the controller. NEN 7513 is the
 Dutch reference for this log and the Besluit vaststelling bewaartermijn
@@ -462,9 +462,8 @@ telematics-infrastructure log at three years; DSV Art. 4 Abs. 5 keeps a Swiss
 log at least one year. A controller bound by one of them declares it as a
 floor or ceiling with its provision. Art. 9 applies from 26 March 2029 for
 patient summaries, prescriptions and dispensations and from 26 March 2031 for
-the other priority categories (Art. 105). FerroEHR holds the Art. 9(2) floor
-from this release on, so a log kept today already meets it when Art. 9
-applies. One instance serves one access policy, so two controllers needing
+the other priority categories (Art. 105). FerroEHR holds the Art. 9(2) floor,
+so a log kept today already meets it when Art. 9 applies. One instance serves one access policy, so two controllers needing
 different periods run two instances.
 The retention in force is the access policy's (`GET {ext}/admin/access_policy`).
 A record takes about 1.2 KB on disk, so the period decides how far the log
@@ -475,23 +474,14 @@ grows ([Storage sizing](storage-sizing.md#audit-retention)).
 With entries written at a rate of `r` a day and kept for `P` days, the log
 levels off once the first tombstones fold, after `2P`:
 
-- the entries of the last `P` days: `r × P × 3.9 kB` (2.5 kB of row and 1.4
-  kB of indexes each, measured when each entry still had its link row);
-- their tombstones, kept another `P` days: `r × P × 1.1 kB`;
-- the seals: one row of about 0.3 kB a minute, and one folded-window row for
-  each window the fold removed, kept without end.
+- the entries of the last `P` days: `r × P ×` the bytes per entry;
+- their tombstones, kept another `P` days: `r × P ×` the bytes per tombstone;
+- the seals: one row a minute, and one folded-window row for each window the
+  fold removed, kept without end.
 
-These figures predate the storage of #5703, which keeps the part an
-entry's caller shares once and compresses each row in place; the
-performance gate's summary states the bytes per entry of the tree it
-measures. The access-path record of #5590 measures 2 518 bytes of row and 3 887 bytes
-stored per entry, 1 079 bytes per tombstone, and 2.08 entries per request at
-20 requests a second, which is 3.59 million entries a day. With the EHDS
-floor of three years (`P` = 1 096 days) that is about 14 GB of entries a day,
-and the log levels off near 15.3 TB of entries and 4.2 TB of tombstones,
-where before it grew by 3.9 GB of tombstones a day for as long as the
-deployment ran. `VACUUM` reuses the space a fold frees for later rows
-(PostgreSQL 18 docs, Routine Vacuuming, Recovering Disk Space).
+The performance gate's run summary states the bytes per entry and per
+tombstone of the release it measures. `VACUUM` reuses the space a fold frees
+for later rows (PostgreSQL 19 docs, Routine Vacuuming, Recovering Disk Space).
 
 ### Getting the log out
 
