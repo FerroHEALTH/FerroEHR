@@ -46,11 +46,18 @@ async fn admin_reads_the_access_delay_its_history_and_saves_it() {
         .await;
     wait_main_contains(&h, "The default, which no one committed").await;
     let before = main_text(&h).await;
-    assert!(before.contains("Enabled"), "the register is drawn by its members: {before}");
+    assert!(
+        before.contains("Enabled"),
+        "the register is drawn by its members: {before}"
+    );
     h.shot(1, "access-delay").await;
 
     h.goto("/access-policy/registers/access-delay/edit").await;
-    let opened = h.wait_css("input[name='version']").await.attr("value").await;
+    let opened = h
+        .wait_css("input[name='version']")
+        .await
+        .attr("value")
+        .await;
     let next = opened.parse::<i64>().expect("a version number") + 1;
     common::submit(&h, "#editor-dock button[value='save']").await;
     wait_main_contains(&h, &format!("{next} (shown)")).await;

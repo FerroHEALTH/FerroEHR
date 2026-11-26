@@ -32,9 +32,10 @@ use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, Unsaved, card_panel, discarded, dock_editor, document_section,
-    editor_line, findings_of, marks_of, panel, plain_section, section, when,
+    EditorDock, Refused, card_panel, discarded, dock_editor, document_section, findings_of,
+    marks_of, panel, plain_section, section, when,
 };
+use crate::pages::editor::{Unsaved, editor_line};
 use crate::pages::form::Form;
 use crate::pages::policy::{PolicyTab, frame, shown};
 use crate::routes::Drawn;
