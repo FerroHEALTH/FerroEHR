@@ -11,6 +11,7 @@
 //! is ITS-REST (`docs/specs/openehr/ITS-REST/`); the pages are our own design.
 
 pub mod archetypes;
+pub mod access_policy;
 pub mod audit;
 pub mod composition;
 pub mod dashboard;

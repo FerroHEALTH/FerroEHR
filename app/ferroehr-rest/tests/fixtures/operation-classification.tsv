@@ -34,13 +34,16 @@ admin_report_contribution_count	false	-	-	Some((Read, ApplicationActivity))	-	fa
 admin_report_contributions	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 admin_report_versioned_composition_count	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 admin_research_objection	false	-	-	Some((Create, ApplicationActivity))	-	false	false
+admin_research_objection_read	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 admin_restore_archived_ehrs	false	-	-	Some((Update, ApplicationActivity))	-	false	false
 admin_restore_archived_parties	false	-	-	Some((Update, ApplicationActivity))	-	false	false
 admin_restrict_processing	false	-	-	Some((Create, ApplicationActivity))	-	false	false
 admin_restriction_register	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 admin_retention_anchor	false	-	-	Some((Update, ApplicationActivity))	-	false	false
+admin_retention_anchor_read	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 admin_retention_due	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 admin_retention_hold	false	-	-	Some((Create, ApplicationActivity))	-	false	false
+admin_retention_hold_register	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 admin_retention_policies	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 admin_retry_parked_audit_record	false	-	-	Some((Update, ApplicationActivity))	-	false	false
 admin_seal_access_log_checkpoint	false	-	-	Some((Create, ApplicationActivity))	-	false	false

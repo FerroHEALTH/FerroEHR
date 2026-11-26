@@ -19,6 +19,7 @@ pub mod console;
 pub mod definitions;
 pub mod operations;
 pub mod overview;
+pub mod policy;
 pub mod queries;
 pub mod records;
 pub mod server;
@@ -280,6 +281,8 @@ messages! {
         InvalidCode = "invalid-code",
         /// `About`
         NavAbout = "nav-about",
+        /// `Access policy`
+        NavAccessPolicy = "nav-access-policy",
         /// `Audit log`
         NavAudit = "nav-audit",
         /// `Configuration`
@@ -551,6 +554,7 @@ mod tests {
     use super::definitions::DefinitionsMsg;
     use super::operations::OperationsMsg;
     use super::overview::OverviewMsg;
+    use super::policy::PolicyMsg;
     use super::queries::QueriesMsg;
     use super::records::RecordsMsg;
     use super::server::ServerMsg;
@@ -662,6 +666,7 @@ mod tests {
                 "definitions",
                 "operations",
                 "overview",
+                "policy",
                 "queries",
                 "records",
                 "server",
@@ -678,6 +683,7 @@ mod tests {
         holds_every("queries", QueriesMsg::ALL);
         holds_every("console", ConsoleMsg::ALL);
         holds_every("signin", SignInMsg::ALL);
+        holds_every("policy", PolicyMsg::ALL);
         holds_every("server", ServerMsg::ALL);
     }
 

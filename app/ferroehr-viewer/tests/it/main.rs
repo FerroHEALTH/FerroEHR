@@ -21,6 +21,7 @@ mod ssr_extract;
 mod ssr_server_operations;
 mod ssr_server_status;
 
+mod e2e_access_policy;
 mod e2e_adl2;
 mod e2e_admin_ops;
 mod e2e_archetypes;
