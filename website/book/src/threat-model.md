@@ -317,7 +317,7 @@ fabricated subject. System records and access-log entries are **sealed** in
 signed windows, so `ferroehr audit-chain verify` and `ferroehr access-log
 verify` name any record that was altered, removed or inserted, and the server runs that verification itself on a
 schedule
-([tamper evidence](audit.md#tamper-evidence)). ITI-81 is the retrieval side; ITI-19 mutual TLS is available for
+([tamper evidence](audit-integrity.md#tamper-evidence)). ITI-81 is the retrieval side; ITI-19 mutual TLS is available for
 node authentication.
 
 **Residual risk.**
