@@ -177,13 +177,12 @@ its `client_id`, is a machine's. It refuses `kind` (other than
 `federation`), `preset` and the `profile` table, and an audience written on
 the auth section itself. Since 0.0.21 a
 Patient Identity Source is admitted only with a client credentials token,
-and a Basic user holding a `system/` scope refuses the start. Since FerroPIX 0.0.8, `public_base_url` is a
-top-level key and the clients that may act as a Patient Identity Source sit
-in the `[[trust.issuer]]` table, apart from the `[auth.issuer.<name>]` entry that
-names the issuer; FerroPIX refuses the older `server.public_base_url` and `auth.issuer[].clients`, so an
-upgrade from a chart that pinned FerroPIX 0.0.7 moves those two keys in your
-values. Since FerroPIX 0.0.37, `config.auth.issuer` is a map of issuers by name,
-and `trust.issuer[].issuer` names the issuer by that name, never by its URL.
+and a Basic user holding a `system/` scope refuses the start. In FerroPIX's
+configuration, `public_base_url` is a top-level key, the clients that may act
+as a Patient Identity Source sit in the `[[trust.issuer]]` table apart from the
+`[auth.issuer.<name>]` entry that names the issuer, `config.auth.issuer` is a
+map of issuers by name, and `trust.issuer[].issuer` names the issuer by that
+name, never by its URL.
 
 The restricted-profile gate holds FerroPIX's pods to the Pod Security
 Standards `restricted` profile like every other pod in the release. FerroPIX's

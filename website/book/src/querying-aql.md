@@ -43,7 +43,7 @@ ORDER BY o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitud
   Data recorded under an ADL 1.4 id (`.v1` alone) is found only by a `.v1`
   query. The namespace must match exactly: `org.example::…` finds only data
   recorded in `org.example`, and an id without a namespace finds only data
-  recorded without one (#4629, #4630).
+  recorded without one.
 - **`CONTAINS`** expresses structural containment: "an EHR that contains a
   composition that contains a blood-pressure observation". Chains can nest
   several deep, and combine with `AND`, `OR`, and `NOT`. Folder containment

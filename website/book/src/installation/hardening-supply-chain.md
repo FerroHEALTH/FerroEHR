@@ -282,11 +282,9 @@ comments on) a tracking issue, **and** it fails the run. A red scheduled run
 nobody looks at is not a control, and an issue with no failing check can be closed
 without the finding being addressed.
 
-The PostgreSQL image is what this lane exists for, and it has already fired: the
-`3.17.5` release moved that image onto a rebuilt PostgreSQL 18.4 base to pull in
-current Debian packages, changing nothing about FerroEHR itself. The distroless
-images carry almost no OS package surface, and when the lane was written none of
-the three published images carried a fixable HIGH or CRITICAL finding.
+The PostgreSQL image is what this lane exists for: it carries a Debian package
+surface, and a fixable finding there is answered by rebuilding the image on a
+current base. The distroless images carry almost no OS package surface.
 
 The remediation side is standing machinery, not a per-incident scramble. The
 PostgreSQL image applies Debian security updates at its own build time, so an

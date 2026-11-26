@@ -115,14 +115,11 @@ What changes against a provider FerroEHR trusts directly, such as the
   table. Moving people to another provider changes every key, and a
   deployment re-provisions their logins.
 - **Roles.** FerroSMART writes the person's roles, as it mapped them from the
-  provider, into the access token's `roles` claim (RFC 9068 §2.2.3.1) from
-  FerroSMART 0.2.0, the release the quickstart pins
-  (FerroHEALTH/FerroSMART#649). Name FerroSMART's table in `[authz.rbac]
+  provider, into the access token's `roles` claim (RFC 9068 §2.2.3.1). Name FerroSMART's table in `[authz.rbac]
   role_issuers` for them to grant `admin_role`. Emergency access is a
   justification of the access policy, never a role.
 - **The product scope.** A person reaches the ADMIN API only with the
-  product scope, which FerroSMART grants through a role that maps to it from
-  FerroSMART 0.2.0 (FerroHEALTH/FerroSMART#647).
+  product scope, which FerroSMART grants through a role that maps to it.
 - **Clients** register at FerroSMART, whose registry is the one list of
   clients. A system client registers for Backend Services, with a JWK Set,
   and FerroEHR grants each its operations in the CDR as for any system

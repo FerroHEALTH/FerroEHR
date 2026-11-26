@@ -149,7 +149,7 @@ DROP DATABASE ferroehr WITH (FORCE);
 ```
 
 Run it as the owner or a superuser, connected to another database
-([DROP DATABASE](https://www.postgresql.org/docs/18/sql-dropdatabase.html)).
+([DROP DATABASE](https://www.postgresql.org/docs/19/sql-dropdatabase.html)).
 Repeat it for every database `[database.party]` or `[database.audit]` names.
 
 The roles are cluster-wide, so neither command removes them: the migrations
@@ -162,7 +162,7 @@ DROP ROLE ferroehr_clinical, ferroehr_clinical_reader, ferroehr_party,
           ferroehr_party_reader, ferroehr_migrator;
 ```
 
-[DROP ROLE](https://www.postgresql.org/docs/18/sql-droprole.html) refuses a
+[DROP ROLE](https://www.postgresql.org/docs/19/sql-droprole.html) refuses a
 role that still owns objects or holds privileges in any database of the
 cluster.
 

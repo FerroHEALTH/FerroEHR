@@ -283,8 +283,7 @@ is a Member State option, and an
 configuration key: you turn it on through
 `{ext}/admin/registers/access-delay` only where your Member State's rule
 provides for the delay, every version is kept with its committer, and a
-change applies on the next request without a restart. `[privacy.access_delay]`
-in `ferroehr.toml` is an unknown key and refuses boot. What the delay does is
+change applies on the next request without a restart. What the delay does is
 on [delayed access by the person](../access-control.md#delayed-access-by-the-person-ehds-art-33).
 
 | Member | Type | Default | Description |

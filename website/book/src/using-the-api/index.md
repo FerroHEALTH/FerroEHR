@@ -94,9 +94,8 @@ Two things to know before you build discovery on it:
   profiles, so these values are FerroEHR's own. No configuration key sets it.
 
 > [!NOTE]
-> The manifest lives at the API base path and nowhere else. A bare `/` alias
-> existed in earlier versions and was removed. Point discovery at the base
-> path.
+> The manifest lives at the API base path and nowhere else. Point discovery
+> at the base path.
 
 ## Authentication
 

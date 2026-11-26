@@ -638,9 +638,8 @@ you ask for them:
   separately](../database-operations.md#dump-each-domain-separately) is the production
   procedure, including why a backup credential needs `BYPASSRLS`.
 
-Two things that used to be profiles of this file are not any more. Both have to
-*change* the server's configuration to be useful, which a profile cannot do, so
-each is a separate file instead:
+Two additions change the server's configuration, which a profile cannot do, so
+each is a separate overlay file:
 
 - **OIDC / Keycloak** is the `docker-compose.keycloak.yml` overlay above (and,
   in a repository checkout, a `keycloak` profile of the development override
@@ -676,9 +675,9 @@ you always choose the port and always know it.
 > `… An attempt was made to access a socket in a way forbidden by its access
 > permissions` when the port sits in a Windows reserved range. The remedy is
 > the same variable; to see the reserved ranges, run
-> `netsh interface ipv4 show excludedportrange protocol=tcp`. (The classic
-> Windows collision — a natively installed PostgreSQL service holding 5432 —
-> no longer affects the quickstart, which publishes no database port.)
+> `netsh interface ipv4 show excludedportrange protocol=tcp`. The quickstart
+> publishes no database port, so a natively installed PostgreSQL on 5432 does
+> not collide with it.
 
 ## Connecting to the database
 

@@ -206,7 +206,7 @@ FerroEHR does not, and it does not carry a validity interval either.
   its predecessor's rows, and a `LATEST_VERSION` query joins the node rows on
   this column, so a tree a long chain of identical versions shares is read
   once. None of the columns a commit changes appears in an index,
-  which is the condition PostgreSQL 18 §"Heap-Only Tuples (HOT)" states for a
+  which is the condition PostgreSQL 19 §"Heap-Only Tuples (HOT)" states for a
   heap-only update.
 - `ALL_VERSIONS` is the unfiltered table; `LATEST_VERSION` is the head row's
   answer.
@@ -462,7 +462,7 @@ The shape follows documented PostgreSQL behaviour rather than habit:
 - An append-only version table replaces current/history pairs, with
   `ALL_VERSIONS` a plain scan of one relation. The reason it is append-only is
   PostgreSQL's own rule for a heap-only update: it applies when "the update does
-  not modify any columns referenced by the table's indexes" (PostgreSQL 18,
+  not modify any columns referenced by the table's indexes" (PostgreSQL 19,
   "Heap-Only Tuples (HOT)"). A validity interval cannot satisfy that, because
   the currency predicates index it; a separate head row whose updated columns
   are in no index can, and does.

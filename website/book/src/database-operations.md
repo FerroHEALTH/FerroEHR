@@ -80,8 +80,8 @@ across the boundary](pseudonymisation.md#resolving-across-the-boundary)).
 A DSN that names another host moves the domain to a **database or cluster of its
 own**, which is the separation a schema cannot make: a base backup, WAL
 archiving and physical replication carry every schema of a database together
-([PostgreSQL 18, Backup and
-Restore](https://www.postgresql.org/docs/18/backup-dump.html)).
+([PostgreSQL 19, Backup and
+Restore](https://www.postgresql.org/docs/19/backup-dump.html)).
 
 Two boot checks make the posture honest. Two domains configured on **different**
 DSNs that authenticate as the **same** database role are refused — a separation
@@ -322,7 +322,7 @@ below.
 `node`, `version` and `vo_attestation` are partitioned by storage tier in both
 stores, and PostgreSQL estimates a join over them from the statistics of the
 partitioned table itself. Autovacuum analyzes the partitions and never the
-partitioned table (PostgreSQL 18, §24.1.3 Updating Planner Statistics), so
+partitioned table (PostgreSQL 19, Updating Planner Statistics), so
 FerroEHR runs `ANALYZE ONLY` on the partitioned tables itself, and on `ehr`
 while autovacuum has never analyzed it:
 

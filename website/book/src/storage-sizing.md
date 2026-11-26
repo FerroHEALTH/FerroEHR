@@ -126,7 +126,7 @@ the database. A period (`ACCESS_POLICY.log_retention.period`, in years or
 days) makes the reaper delete each record on or after its end date, hourly,
 and the `audit_event` table then levels off at roughly the period times the
 request rate. The space of a deleted row is not returned to the operating system:
-`VACUUM` marks it free and later records reuse it (PostgreSQL 18 docs,
+`VACUUM` marks it free and later records reuse it (PostgreSQL 19 docs,
 [Routine Vacuuming, Recovering Disk Space][pg-vacuum]).
 The reaper also deletes the search tokens no remaining record names. The
 period is the controller's legal choice, within the floors and ceilings it
@@ -141,8 +141,8 @@ PostgreSQL keeps the write-ahead log of the last checkpoints in `pg_wal`, up
 to about `max_wal_size` (4 GB in the quickstart), on the same volume as the
 data unless you move it. `max_wal_size` is a soft limit: a failing
 `archive_command`, `wal_keep_size` or a replication slot whose standby falls
-behind holds more (PostgreSQL 18 docs,
-[WAL Configuration](https://www.postgresql.org/docs/18/wal-configuration.html)).
+behind holds more (PostgreSQL 19 docs,
+[WAL Configuration](https://www.postgresql.org/docs/19/wal-configuration.html)).
 Budget it as a fixed amount beside the database, not as growth. A commit
 writes about twice its stored size to the WAL (30 KB for a 15.5 KB vital signs
 version), which is what a WAL archive for point-in-time recovery receives.
@@ -187,7 +187,7 @@ Run it as the database owner or a role holding `MAINTAIN` on
 `clinical.node_hot`. `REINDEX CONCURRENTLY` needs room for a second copy of
 the index while it runs, and it waits for every transaction older than
 itself to finish, so one long-running query or an idle open transaction holds
-it up (PostgreSQL 18 docs,
+it up (PostgreSQL 19 docs,
 [REINDEX, Rebuilding Indexes Concurrently][pg-reindex]).
 The audit indexes on `recorded_at` are ascending and fill their pages without
 a rebuild.
@@ -211,9 +211,9 @@ LIMIT 15;
 Divide the growth of `clinical.node_hot` and `clinical.version_hot` between
 two readings by the versions committed in between
 (`SELECT count(*) FROM clinical.version_hot`) to get your own bytes per
-version. The functions are described in PostgreSQL 18 docs,
+version. The functions are described in PostgreSQL 19 docs,
 [Database Object Management Functions][pg-dbobj].
 
-[pg-vacuum]: https://www.postgresql.org/docs/18/routine-vacuuming.html#VACUUM-FOR-SPACE-RECOVERY
-[pg-reindex]: https://www.postgresql.org/docs/18/sql-reindex.html#SQL-REINDEX-CONCURRENTLY
-[pg-dbobj]: https://www.postgresql.org/docs/18/functions-admin.html#FUNCTIONS-ADMIN-DBOBJECT
+[pg-vacuum]: https://www.postgresql.org/docs/19/routine-vacuuming.html#VACUUM-FOR-SPACE-RECOVERY
+[pg-reindex]: https://www.postgresql.org/docs/19/sql-reindex.html#SQL-REINDEX-CONCURRENTLY
+[pg-dbobj]: https://www.postgresql.org/docs/19/functions-admin.html#FUNCTIONS-ADMIN-DBOBJECT

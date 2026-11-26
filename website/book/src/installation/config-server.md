@@ -497,7 +497,7 @@ url_file = "/run/secrets/db-party-dsn"
 
 Why a schema is not always enough: a base backup, WAL archiving and physical
 replication carry every schema of a database together
-([PostgreSQL 18, Backup and Restore](https://www.postgresql.org/docs/18/backup-dump.html)),
+([PostgreSQL 19, Backup and Restore](https://www.postgresql.org/docs/19/backup-dump.html)),
 so a separation that must survive those is a separation of databases. The Swiss
 EPDV Art. 10 Abs. 1 lit. b asks for storage "von anderen Datenbeständen getrennt"
 and the DSV Art. 4 Abs. 5 for the log to be kept "getrennt vom System, in welchem

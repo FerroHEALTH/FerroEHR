@@ -76,7 +76,7 @@ only. `LICENSES/MIT.txt` reproduces that grant as those versions carry
 it, Ruben Talstra's copyright line included, because a published grant is a
 record of what was handed out and is not rewritten afterwards.
 
-The conformance instrument is no longer part of this repository. It is
+The conformance instrument is
 [Veredictum](https://github.com/Vernum-Projecten/Veredictum), an independent
 project under Apache-2.0, and the conformance pipeline here consumes it at a
 pinned version. The vendored test corpora this repository still carries keep
