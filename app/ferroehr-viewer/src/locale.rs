@@ -17,6 +17,7 @@ use serde::Deserialize;
 
 pub mod console;
 pub mod definitions;
+pub mod operations;
 pub mod overview;
 pub mod policy;
 pub mod queries;
@@ -284,6 +285,36 @@ messages! {
         NavAccessPolicy = "nav-access-policy",
         /// `Audit log`
         NavAudit = "nav-audit",
+        /// `Roles and grants`
+        NavGrants = "nav-grants",
+        /// `None`
+        VersionSignatureNone = "version-signature-none",
+        /// `A SHA-256 digest`
+        VersionSignatureDigest = "version-signature-digest",
+        /// `An OpenPGP signature, ML-DSA-65+Ed25519`
+        VersionSignatureComposite = "version-signature-composite",
+        /// `An OpenPGP signature, algorithm { $algorithm }`
+        VersionSignatureOpenPgp = "version-signature-openpgp",
+        /// `An OpenPGP signature`
+        VersionSignatureOpenPgpUnread = "version-signature-openpgp-unread",
+        /// `A signature in the client's own form`
+        VersionSignatureOther = "version-signature-other",
+        /// `Signature`
+        VersionSignatureTitle = "version-signature-title",
+        /// `Attestations`
+        VersionAttestations = "version-attestations",
+        /// `Attester`
+        VersionAttester = "version-attester",
+        /// `When`
+        VersionAttestedAt = "version-attested-at",
+        /// `Reason`
+        VersionAttestReason = "version-attest-reason",
+        /// `Attests`
+        VersionAttestItems = "version-attest-items",
+        /// `The whole version`
+        VersionAttestWhole = "version-attest-whole",
+        /// `Pending`
+        VersionAttestPending = "version-attest-pending",
         /// `Configuration`
         NavConfiguration = "nav-configuration",
         /// `Dashboard`
@@ -549,6 +580,7 @@ mod tests {
 
     use super::console::ConsoleMsg;
     use super::definitions::DefinitionsMsg;
+    use super::operations::OperationsMsg;
     use super::overview::OverviewMsg;
     use super::policy::PolicyMsg;
     use super::queries::QueriesMsg;
@@ -660,6 +692,7 @@ mod tests {
             [
                 "console",
                 "definitions",
+                "operations",
                 "overview",
                 "policy",
                 "queries",
@@ -671,6 +704,7 @@ mod tests {
             "each directory under locales/ is the catalog of one part"
         );
         holds_every("shell", Msg::ALL);
+        holds_every("operations", OperationsMsg::ALL);
         holds_every("overview", OverviewMsg::ALL);
         holds_every("records", RecordsMsg::ALL);
         holds_every("definitions", DefinitionsMsg::ALL);
