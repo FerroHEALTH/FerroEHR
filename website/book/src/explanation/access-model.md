@@ -338,8 +338,8 @@ Each replica holds the facts in memory and drops a copy when PostgreSQL
 notifies it of a change. Every decision also carries the revision of the facts
 it used, and every read checks that revision against the store in the same
 statement. A decision made on an older copy is thrown away and made again.
-If the copy has not caught up within 100 ms the request is refused `503` with
-the problem type `access-refreshing`. A revoked grant, an ended care
+If the copy does not catch up within a short, fixed wait, the request is
+refused `503` with the problem type `access-refreshing`. A revoked grant, an ended care
 relationship or a new restriction is therefore never honoured late. An added
 permission may wait for the next request. The metrics are on [Access path
 metrics and runbooks](../operations-access-path.md).
