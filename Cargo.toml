@@ -224,13 +224,13 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # them; the viewer reads its scope grammar (`openehr-scopes`). 0.34 reads the
 # caller from the token's standard claims, the authorization server's registry
 # the one list of clients (#6432). Verified on crates.io 2026-11-24.
-ferrohealth-smart = { version = "=0.34.0", default-features = false, features = ["fetch"] }
+ferrohealth-smart = { version = "=0.35.0", default-features = false, features = ["fetch"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroSMART, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
 # ferrohealth-smart's relying party; 0.29 is the release on ferrohealth-smart
 # 0.34 (#6432). Verified on crates.io 2026-11-24.
-ferrohealth-session = { version = "=0.29.0", default-features = false }
+ferrohealth-session = { version = "=0.30.0", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
@@ -286,7 +286,7 @@ ferrohealth-usage-report = { version = "=0.5.0", features = ["telemetry"] }
 # by a caret range (The Cargo Book, "Specifying Dependencies"). `smart` builds
 # its client from ferrohealth-smart's outbound client, and `r4b` the one wire
 # release the terminology client speaks.
-ferrobridge-term = { version = "0.19.0", default-features = false, features = ["r4b", "smart"] }
+ferrobridge-term = { version = "0.22.1", default-features = false, features = ["r4b", "smart"] }
 
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
@@ -297,14 +297,14 @@ ferrobridge-term = { version = "0.19.0", default-features = false, features = ["
 # record, the Art 14(1) categories and their classification map, the Art 9(2)
 # retention floor), and `ihe-atna`'s `retrieve` reads the ITI-81 query and
 # writes its searchset Bundle. Features are chosen per member.
-ihe-atna = { version = "=0.28.0", default-features = false }
-ehds-logging = { version = "=0.28.0", default-features = false }
+ihe-atna = { version = "=0.29.0", default-features = false }
+ehds-logging = { version = "=0.29.0", default-features = false }
 # The generated FHIR R4 model `ihe-atna` builds on, at the version it requires:
 # the CDR's ITI-81 page holds each typed BALP `AuditEvent`, and the viewer reads
 # the searchset, each `AuditEvent` and a refusal's `OperationOutcome` through it. `r4-resources` compiles R4's resources alone;
 # R4B is enabled only by `ferrobridge-term`'s `r4b`, the terminology wire,
 # without its resources. A caret range, as `ferrobridge-term`.
-fhir-types = { version = "0.2.0", default-features = false, features = ["r4-resources"] }
+fhir-types = { version = "0.3.0", default-features = false, features = ["r4-resources"] }
 # FerroBRIDGE's FHIR R4 search value grammar (the same Licensor's BUSL-1.1
 # code), whose token `ihe-atna` hands the ITI-81 route. A caret range, as
 # `ferrobridge-term`, with its floor at the version `ihe-atna` and `ihe-iti`
@@ -319,7 +319,7 @@ fhir-search = { version = "0.1.131", default-features = false }
 # Subscriber and Consumer (ITI-94, ITI-93) of `[pix]`, which reads every
 # Patient's `active` and links and rebuilds a subscription from its stored
 # Location.
-ihe-iti = { version = "=0.23.0", default-features = false }
+ihe-iti = { version = "=0.25.0", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging
