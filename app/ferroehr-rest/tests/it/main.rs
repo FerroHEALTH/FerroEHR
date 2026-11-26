@@ -82,6 +82,7 @@ mod binding_commits_http;
 mod binding_issuers_http;
 mod binding_purposes_http;
 mod binding_refusals_http;
+mod book_examples_http;
 mod caller_kinds_http;
 mod care_writer_review_http;
 mod cohort_http;

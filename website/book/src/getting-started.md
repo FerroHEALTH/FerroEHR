@@ -234,6 +234,9 @@ on that server, with the demo credentials `ferroehr` / `ferroehr`.
 
 ## Next steps
 
+- [Your first integration](tutorials/first-integration.md): the requests an
+  application sends, from a template to an AQL query, with versioning and
+  errors.
 - [Installation](installation/index.md): running it for real (Compose,
   Kubernetes, or from source) and the
   [configuration reference](installation/configuration.md).

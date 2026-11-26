@@ -5,6 +5,7 @@
 # Tutorials
 
 - [Getting started](getting-started.md)
+- [Your first integration](tutorials/first-integration.md)
 - [Try it in Codespaces](installation/codespaces.md)
 
 # How-to guides: integrate
