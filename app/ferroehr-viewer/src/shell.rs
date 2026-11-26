@@ -121,6 +121,12 @@ fn groups() -> Vec<Group> {
         entry(SERVER_ROUTE, Msg::NavServer, Glyph::SERVER, false),
         entry("/audit", Msg::NavAudit, Glyph::SHIELD_CHECK, false),
         entry(
+            crate::pages::policy::POLICY_ROUTE,
+            Msg::NavAccessPolicy,
+            Glyph::SHIELD,
+            false,
+        ),
+        entry(
             "/configuration",
             Msg::NavConfiguration,
             Glyph::FILE_TEXT,

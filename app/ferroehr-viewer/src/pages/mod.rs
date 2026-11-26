@@ -22,6 +22,7 @@ pub mod form;
 pub mod item_tags;
 pub mod login;
 pub mod parties;
+pub mod policy;
 pub mod preferences;
 pub mod queries;
 pub mod query;

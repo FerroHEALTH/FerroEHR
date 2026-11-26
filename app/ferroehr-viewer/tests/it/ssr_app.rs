@@ -27,6 +27,8 @@ use ferrohealth_session::cookies::CookieNames;
 use serde_json::Value;
 use tower::util::ServiceExt;
 
+mod policy;
+
 /// The recorded exchanges, read once.
 fn recording() -> Arc<[Value]> {
     let path =
@@ -266,12 +268,12 @@ impl Answer {
 
 impl Viewer {
     /// The viewer over a fresh replayed CDR.
-    async fn start() -> Self {
+    pub(crate) async fn start() -> Self {
         Self::start_with(Vec::new()).await
     }
 
     /// The viewer over a fresh replayed CDR answering `stubs` first.
-    async fn start_with(stubs: Vec<Value>) -> Self {
+    pub(crate) async fn start_with(stubs: Vec<Value>) -> Self {
         let cdr = replayed_cdr_with(stubs).await;
         Self {
             service: ferroehr_viewer::server::router(app_state(&cdr)),
