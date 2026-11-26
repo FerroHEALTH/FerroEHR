@@ -122,7 +122,7 @@ pub struct Judged {
 pub async fn read_judged(pool: &PgPool, at: JudgedAt) -> Result<Option<Judged>, StorageError> {
     let ride = crate::party_binding::request::reads_door();
     let door = crate::party_binding::request::door();
-    let door = door.as_deref().map(crate::db::snapshot::Snapshot::text);
+    let door = door.as_deref();
     let (vo_id, query) = match at {
         JudgedAt::Current(vo_id) => {
             let query = sqlx::query(JUDGED_CURRENT.chosen()).bind(vo_id);
@@ -211,7 +211,7 @@ pub async fn read_marks(
         sqlx::query(MARKS_RIDE_SQL)
             .bind(vo_id)
             .bind(sys_version)
-            .bind(door.as_deref().map(crate::db::snapshot::Snapshot::text))
+            .bind(door.as_deref())
     } else {
         sqlx::query(MARKS_SQL).bind(vo_id).bind(sys_version)
     };

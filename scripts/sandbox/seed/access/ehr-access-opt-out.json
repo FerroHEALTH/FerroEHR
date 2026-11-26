@@ -1,0 +1,50 @@
+{
+  "_type": "ACCESS_DIRECTIVE_SETTINGS",
+  "default_access": {
+    "_type": "DV_CODED_TEXT",
+    "value": "open",
+    "defining_code": {
+      "_type": "CODE_PHRASE",
+      "terminology_id": {
+        "_type": "TERMINOLOGY_ID",
+        "value": "openehr_access"
+      },
+      "code_string": "open"
+    }
+  },
+  "directives": [
+    {
+      "_type": "ACCESS_DIRECTIVE",
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "Opt-out from the access services (EHDS Art. 10)"
+      },
+      "archetype_node_id": "at0001",
+      "kind": {
+        "_type": "DV_CODED_TEXT",
+        "value": "opt_out",
+        "defining_code": {
+          "_type": "CODE_PHRASE",
+          "terminology_id": {
+            "_type": "TERMINOLOGY_ID",
+            "value": "openehr_access"
+          },
+          "code_string": "opt_out"
+        }
+      },
+      "effect": {
+        "_type": "DV_CODED_TEXT",
+        "value": "deny",
+        "defining_code": {
+          "_type": "CODE_PHRASE",
+          "terminology_id": {
+            "_type": "TERMINOLOGY_ID",
+            "value": "HL7_ConsentProvisionType"
+          },
+          "code_string": "deny"
+        }
+      },
+      "emergency_override": false
+    }
+  ]
+}
