@@ -114,14 +114,7 @@ impl RoleGrant {
     #[must_use]
     pub fn in_force(&self, now: jiff::Timestamp) -> bool {
         let today = now.to_zoned(jiff::tz::TimeZone::UTC).date().to_string();
-        let instant = |text: &str| {
-            text.parse::<jiff::Timestamp>().ok().or_else(|| {
-                text.parse::<jiff::civil::DateTime>()
-                    .ok()
-                    .and_then(|time| time.to_zoned(jiff::tz::TimeZone::UTC).ok())
-                    .map(|zoned| zoned.timestamp())
-            })
-        };
+        let instant = crate::pages::policy::instant;
         let bounds = self
             .qualifiers
             .iter()
