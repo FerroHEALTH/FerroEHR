@@ -14,7 +14,10 @@
 
 use std::fmt;
 
-use sqlx::PgConnection;
+use sqlx::encode::IsNull;
+use sqlx::error::BoxDynError;
+use sqlx::postgres::{PgArgumentBuffer, PgTypeInfo};
+use sqlx::{PgConnection, Postgres};
 
 use crate::storage::error::StorageError;
 
@@ -104,8 +107,41 @@ impl fmt::Display for Snapshot {
     }
 }
 
+/// Bound as its text, which a statement casts with `$n::pg_snapshot`.
+impl sqlx::Type<Postgres> for Snapshot {
+    fn type_info() -> PgTypeInfo {
+        <str as sqlx::Type<Postgres>>::type_info()
+    }
+
+    fn compatible(ty: &PgTypeInfo) -> bool {
+        <str as sqlx::Type<Postgres>>::compatible(ty)
+    }
+}
+
+impl sqlx::Encode<'_, Postgres> for Snapshot {
+    /// Writes the text into a buffer grown by exactly its length, so binding
+    /// a snapshot costs one allocation whatever the length, which depends on
+    /// the transactions running on the server.
+    fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> Result<IsNull, BoxDynError> {
+        let text = self.text.as_bytes();
+        // NOTE: our own design (#6664), asking past the spare capacity grows the buffer every time.
+        let past_spare = buf
+            .spare_capacity_mut()
+            .len()
+            .checked_add(text.len())
+            .ok_or("the bind buffer would overflow")?;
+        buf.reserve_exact(past_spare);
+        buf.extend_from_slice(text);
+        Ok(IsNull::No)
+    }
+
+    fn size_hint(&self) -> usize {
+        self.text.len()
+    }
+}
+
 impl Snapshot {
-    /// The text `pg_snapshot` reads back, bound as `$n::pg_snapshot`.
+    /// The text `pg_snapshot` reads back.
     #[must_use]
     pub fn text(&self) -> &str {
         &self.text
