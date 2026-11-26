@@ -6,9 +6,7 @@ takes a new deployment from an empty database to its first bound login, and
 takes an existing deployment, whose people were attributed by login alone,
 to binding. The configuration it names is in
 [Authentication & access](config-auth.md#the-party-mapping), and the two
-commands are in [CLI & production checklist](config-cli.md). Every
-incompatible change of the release, with its upgrade step, is on
-[Breaking changes of party binding](party-binding-breaking-changes.md).
+commands are in [CLI & production checklist](config-cli.md).
 
 No openEHR specification governs a deployment's migration or its
 credential store: this is FerroEHR's own design.

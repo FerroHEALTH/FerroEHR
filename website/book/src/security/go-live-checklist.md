@@ -171,10 +171,6 @@ dumps, and no network policy of ours selects the dump pods.
 [audit]
 enabled = true
 purpose_header = "x-purpose-of-use"
-
-[audit.store]
-enabled = true
-retention = 0    # or a value at or above your jurisdiction's floor
 ```
 
 Auditing is on by default with the local store as the sink. What a production
@@ -213,8 +209,8 @@ ferroehr access-log verify
 - [ ] `[audit] enabled = true`.
 - [ ] A copy is forwarded off the box, to a sink the server's own identity
       cannot rewrite.
-- [ ] `retention` (or `retention`) is `0` or at or above the floor
-      that applies to you.
+- [ ] `ACCESS_POLICY.log_retention` is written, and the `log_retention`
+      indicator no longer reads `degraded`.
 - [ ] `ferroehr audit-chain verify` and `ferroehr access-log verify` report
       the trail intact on a healthy trail.
 

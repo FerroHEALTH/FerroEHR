@@ -95,8 +95,7 @@ FerroHEALTH products share (FerroAUDIT); the register is the deployment's map.
 A template id, or failing that a root archetype id, maps to a list of
 categories, or to the word `none` for data of no category. An access the map
 in force cannot classify is recorded `unclassified` with its ids, never
-refused. `[audit.categories]` in `ferroehr.toml` is an unknown key and refuses
-boot.
+refused.
 
 **The shipped map.** While the register declares no template and no
 archetype, the map FerroEHR ships applies
