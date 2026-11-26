@@ -2331,6 +2331,7 @@ dependencies = [
  "openehr-base",
  "openehr-its",
  "openehr-query",
+ "openehr-rm",
  "openehr-sdt",
  "rcgen",
  "reqwest",

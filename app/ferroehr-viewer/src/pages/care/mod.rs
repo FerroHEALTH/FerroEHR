@@ -51,7 +51,8 @@ pub const ROLES: [(&str, PolicyMsg); 6] = [
 ];
 
 /// The terminology of [`ROLES`].
-pub const ROLE_TERMINOLOGY: &str = "HL7_ParticipationType";
+pub const ROLE_TERMINOLOGY: &str =
+    openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_PARTICIPATION_TYPE;
 
 /// The care role a form posted as `name`: a code of [`ROLES`], or another as
 /// `terminology|code`.

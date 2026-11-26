@@ -48,6 +48,9 @@ openehr-base = { path = "../../crates/openehr-base" }
 # The AOM2 operational-template type the ADL2 detail screen's path catalog is
 # built from (`OperationalTemplateV2` canonical JSON in, Web Template out).
 openehr-am = { path = "../../crates/openehr-am" }
+# The draft access control package's terminology ids, such as the care role
+# terminology a care relationship form defaults to.
+openehr-rm = { path = "../../crates/openehr-rm", features = ["draft"] }
 
 # The shared FerroHEALTH console components, tokens, stylesheet, script
 # modules, highlighters and table model, with its asset router (`axum`).

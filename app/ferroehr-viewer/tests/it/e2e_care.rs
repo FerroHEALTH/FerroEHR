@@ -59,13 +59,18 @@ async fn party(
                     "name": { "_type": "DV_TEXT", "value": "Name" }, "archetype_node_id": "at0003",
                     "value": { "_type": "DV_TEXT", "value": name } }] } }]
     });
-    if !details.is_empty() {
-        body["details"] = serde_json::json!({ "_type": "ITEM_TREE",
-            "name": { "_type": "DV_TEXT", "value": "details" }, "archetype_node_id": "at0010",
-            "items": details });
+    if let Some(party) = body.as_object_mut().filter(|_| !details.is_empty()) {
+        party.insert(
+            "details".to_owned(),
+            serde_json::json!({ "_type": "ITEM_TREE",
+                "name": { "_type": "DV_TEXT", "value": "details" }, "archetype_node_id": "at0010",
+                "items": details }),
+        );
     }
     let answer: serde_json::Value = reqwest::Client::new()
-        .post(format!("{cdr}/ferroehr/rest/openehr/v1/demographic/{segment}"))
+        .post(format!(
+            "{cdr}/ferroehr/rest/openehr/v1/demographic/{segment}"
+        ))
         .basic_auth(user, Some(pass))
         .header("Accept", "application/json")
         .header("Prefer", "return=representation")
@@ -76,8 +81,9 @@ async fn party(
         .json()
         .await
         .expect("the seed answers a party");
-    answer["uid"]["value"]
-        .as_str()
+    answer
+        .pointer("/uid/value")
+        .and_then(serde_json::Value::as_str)
         .and_then(|uid| uid.split("::").next())
         .expect("the party has a uid")
         .to_owned()
@@ -115,10 +121,12 @@ async fn admin_adds_ends_and_reads_a_care_relationship() {
         "organisation",
         "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v1",
         "Care journey hospital",
-        vec![serde_json::json!({ "_type": "ELEMENT", "archetype_node_id": "at0011",
+        vec![
+            serde_json::json!({ "_type": "ELEMENT", "archetype_node_id": "at0011",
             "name": { "_type": "DV_TEXT", "value": "Identifier" },
             "value": { "_type": "DV_IDENTIFIER", "issuer": "urn:example:e2e-providers",
-                "id": provider, "type": "ORGANISATION" } })],
+                "id": provider, "type": "ORGANISATION" } }),
+        ],
     )
     .await;
     let (user, pass) = admin_credentials();
@@ -136,12 +144,18 @@ async fn admin_adds_ends_and_reads_a_care_relationship() {
     wait_main_contains(&h, "This care relationship").await;
     h.shot(2, "relationship").await;
 
-    h.wait_css("button[commandfor='care-end']").await.click().await;
+    h.wait_css("button[commandfor='care-end']")
+        .await
+        .click()
+        .await;
     common::wait_visible(&h, "#care-end").await;
     submit(&h, "#care-end button[value='end']").await;
     wait_main_contains(&h, "Versions").await;
     let text = main_text(&h).await;
-    assert!(text.contains("attender"), "the relationship keeps its role: {text}");
+    assert!(
+        text.contains("attender"),
+        "the relationship keeps its role: {text}"
+    );
     assert!(
         common::is_present(&h, "main a[href*='%3A%3A1']").await,
         "the ended relationship lists its first version"
