@@ -52,6 +52,7 @@ use crate::pages::common::{
     EditorDock, Refused, card_panel, count, discarded, dock_editor, document_section, findings_of,
     info_note, is_status, marks_of, panel, plain_section, section, short, shortened, state_mark,
 };
+use crate::pages::editor::{Unsaved, editor_line, reload_words, save_as_words};
 use crate::pages::form::Form;
 use crate::pages::item_tags::{TagAct, TagPanel, tag_act, tag_done, tag_panel};
 use crate::pages::versions::{History, history};
@@ -1486,25 +1487,6 @@ fn parts_of(text: &str) -> (String, String) {
     }
 }
 
-/// A save the CDR refused.
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct Unsaved {
-    /// The refusal.
-    refusal: Refused,
-    /// Whether another client changed the object meanwhile (`412`).
-    conflict: bool,
-}
-
-impl Unsaved {
-    /// The refusal `error` of what `summary` says.
-    fn new(summary: String, error: ViewerError) -> Self {
-        Self {
-            conflict: is_status(&error, http::StatusCode::PRECONDITION_FAILED),
-            refusal: Refused::new(summary, error),
-        }
-    }
-}
-
 /// What Edit a party's form holds.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct PartyEditor {
@@ -1592,20 +1574,6 @@ async fn read_edit_party(kind: &str, uid: String) -> Form<PartyEditor, Gone> {
     }))
 }
 
-/// The words of Save for an editor opened at the version `opened`: the
-/// version the save makes.
-fn save_words(opened: &str) -> String {
-    version_number(opened).parse::<u32>().map_or_else(
-        |_| tr(Msg::EditorSave),
-        |number| {
-            tr_with(
-                RecordsMsg::EditorSaveAsVersion,
-                &[("version", number.saturating_add(1).into())],
-            )
-        },
-    )
-}
-
 /// Edit a party's page, its decision bar docked.
 fn edit_party_view(uid: &str, editor: PartyEditor) -> (String, Html) {
     let PartyEditor {
@@ -1622,30 +1590,14 @@ fn edit_party_view(uid: &str, editor: PartyEditor) -> (String, Html) {
         .as_ref()
         .and_then(|unsaved| findings_of(&unsaved.refusal.error, &text, &field));
     let conflict = unsaved.as_ref().is_some_and(|unsaved| unsaved.conflict);
-    let line = if unsaved.is_some() {
-        (Glyph::CIRCLE_X, tr(RecordsMsg::EditorNotSaved))
-    } else {
-        (Glyph::PENCIL, tr(RecordsMsg::EditorOpened))
-    };
+    let line = editor_line(unsaved.is_some());
     let top = unsaved.map(|unsaved| {
-        let reload = unsaved.conflict.then(|| {
-            h(format!(
-                r#"<div class="fui-cluster">{}<span class="fui-small fui-muted">{}</span></div>"#,
-                ferrohealth_ui::view::button::link_button(
-                    format!("{}/edit", party_href(kind, uid)),
-                    ferrohealth_ui::view::button::Variant::Secondary,
-                    Some(Glyph::REFRESH_CW),
-                    tr_with(
-                        RecordsMsg::EditorReloadVersion,
-                        &[("version", version_number(&current_uid).into())],
-                    ),
-                ),
-                t(tr(RecordsMsg::EditorReloadReplaces))
-            ))
-        });
-        unsaved.refusal.view().then(opt(reload))
+        unsaved.view(
+            &format!("{}/edit", party_href(kind, uid)),
+            reload_words(&current_uid),
+        )
     });
-    let save = save_words(&opened);
+    let save = save_as_words(&opened);
     dock_editor(EditorDock {
         form: EDIT_FORM.to_owned(),
         line: line.1,
@@ -2279,10 +2231,6 @@ async fn read_edit_relationship(uid: String) -> Form<RelationshipEditor, Gone> {
 }
 
 /// Edit a relationship's page, its decision bar docked.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one editor: its heading, its refusal, its ends, its type, its details and the dock"
-)]
 fn edit_relationship_view(uid: &str, editor: RelationshipEditor) -> (String, Html) {
     let RelationshipEditor {
         state,
@@ -2304,15 +2252,7 @@ fn edit_relationship_view(uid: &str, editor: RelationshipEditor) -> (String, Htm
         .is_some_and(Unwritten::conflict)
         .then(|| tr(RecordsMsg::EditorReloadFirst));
     let top = unwritten.map(|unwritten| unwritten.view());
-    let save = version_number(&opened).parse::<u32>().map_or_else(
-        |_| tr(Msg::EditorSave),
-        |number| {
-            tr_with(
-                RecordsMsg::EditorSaveAsVersion,
-                &[("version", number.saturating_add(1).into())],
-            )
-        },
-    );
+    let save = save_as_words(&opened);
     dock_editor(EditorDock {
         form: EDIT_FORM.to_owned(),
         line: line.1,
