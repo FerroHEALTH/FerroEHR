@@ -189,9 +189,19 @@ async fn the_lanes_boot_on_the_seeded_default_definitions() {
     for (lane, text) in lane_configs() {
         let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp file");
         file.write_str(&text).expect("write");
-        let config =
-            ferroehr::config::assemble(Some(file.path()), &std::collections::HashMap::new(), &[])
-                .unwrap_or_else(|e| panic!("{lane} assembles: {e:?}"));
+        // A lane that names a signing passphrase file reads the secret its
+        // deployment mounts there, so a throwaway one stands in for it.
+        let passphrase = assert_fs::NamedTempFile::new("signing-passphrase").expect("temp file");
+        passphrase.write_str("lane").expect("write");
+        let mut env = std::collections::HashMap::new();
+        if text.contains("key_passphrase_file") {
+            env.insert(
+                "FERROEHR__RECORD__SIGNING__KEY_PASSPHRASE_FILE".to_owned(),
+                passphrase.path().display().to_string(),
+            );
+        }
+        let config = ferroehr::config::assemble(Some(file.path()), &env, &[])
+            .unwrap_or_else(|e| panic!("{lane} assembles: {e:?}"));
         let binding = &config.authz.party_binding;
         assert_eq!(
             (
