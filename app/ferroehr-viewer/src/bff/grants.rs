@@ -32,14 +32,13 @@ const AGENTS_AQL: &str = "SELECT DISTINCT a FROM AGENT a CONTAINS ELEMENT e \
                           AND e/name/defining_code/code_string = 'client_id'";
 
 /// The acts-for relationships: source, target and the target's type.
-const ACTS_FOR_AQL: &str = "SELECT r/source/id/value, r/target/id/value, r/target/type \
-                            FROM PARTY_RELATIONSHIP r \
+const ACTS_FOR_AQL: &str = "SELECT r/source/id/value, r/target/id/value, r/target/type FROM PARTY_RELATIONSHIP r \
                             WHERE r/name/defining_code/terminology_id/value = 'openehr_access' \
                             AND r/name/defining_code/code_string = 'acts_for'";
 
 /// The roles one performer holds grants by.
-const PERFORMER_AQL: &str = "SELECT DISTINCT r FROM ROLE r CONTAINS CAPABILITY c \
-                             CONTAINS ELEMENT e WHERE r/performer/id/value = $party \
+const PERFORMER_AQL: &str = "SELECT DISTINCT r FROM ROLE r CONTAINS CAPABILITY c CONTAINS ELEMENT e \
+                             WHERE r/performer/id/value = $party \
                              AND e/value/defining_code/terminology_id/value = 'openehr_access'";
 
 /// The most rows one listing reads.
