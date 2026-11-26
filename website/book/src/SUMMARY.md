@@ -85,6 +85,8 @@
   - [Every configuration key](installation/config-keys.md)
   - [Default demographic definitions](installation/default-demographic-definitions.md)
 - [Command-line reference](reference/cli.md)
+- [AQL built-in functions](reference/aql-functions.md)
+- [Access refusal codes](reference/refusal-codes.md)
 - [Content negotiation & errors](using-the-api/content-negotiation.md)
   - [Problem types](using-the-api/problems.md)
 - [Admin & messaging APIs](operations-admin-apis.md)

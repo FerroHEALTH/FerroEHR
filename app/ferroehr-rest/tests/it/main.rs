@@ -153,6 +153,7 @@ mod query_caseload_http;
 mod query_ehr_id_header;
 mod query_refusals_http;
 mod rbac_e2e;
+mod reference_pages;
 mod release_before_render;
 mod repeated_member_names_http;
 mod representation_http;
