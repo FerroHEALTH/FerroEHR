@@ -178,6 +178,8 @@ access policy decides, by the purpose, whether this is a justified or an
 emergency access; the viewer only states it. What a justification lifts and
 what it never lifts is on [Security](../security.md#justified-access-outside-the-care-relationships).
 
+![The justification form under a refusal](img/justified/justify-form.png)
+
 The justification holds for that one record for 15 minutes, until you choose
 **End now** in the notice above the page, or until you sign out. While it
 holds, every call the viewer makes to draw that record's pages carries the
@@ -185,6 +187,8 @@ purpose in the purpose header and the reason, percent-encoded, in the reason
 header the purposes route names. The reason is kept in the viewer's
 server-side session and nowhere else, and the person reads it in their
 [access log](access-log.md).
+
+![A record opened on a justification](img/justified/justified.png)
 
 A viewer whose sessions live in a sealed cookie (`session.store = "sealed"`)
 keeps no reason in the browser, so it offers no justification and says that

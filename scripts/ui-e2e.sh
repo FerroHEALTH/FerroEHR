@@ -246,6 +246,10 @@ SANDBOX_BASE="$CDR_URL" SANDBOX_USER=ferroehr-admin SANDBOX_CLINICIAN=ferroehr \
 # journeys open.
 SEEDED_EHR_ID=$(jq -r '.ehrs[0]' "$SEED_IDS")
 SEEDED_VO_ID=$(jq -r '.tokens["__SERIES:minimal-evaluation__"]' "$SEED_IDS")
+# An EHR the clinician reads outside a care relationship, on a justification,
+# which the docs-shots pass captures the justification form on.
+JUSTIFIED_SLOT=$(jq -r '.world.access_policy.justified[0].ehr' scripts/sandbox/seed/manifest.json)
+JUSTIFIED_EHR_ID=$(jq -r ".ehrs[$JUSTIFIED_SLOT]" "$SEED_IDS")
 echo "   seeded EHR $SEEDED_EHR_ID / composition $SEEDED_VO_ID (2 versions)"
 
 # The access policy, committed twice by the admin user, whom the test-only
@@ -424,6 +428,7 @@ E2E_ENV=(
   UI_E2E_DB_URL="$DB_URL"
   UI_E2E_SEEDED_EHR_ID="$SEEDED_EHR_ID"
   UI_E2E_SEEDED_VO_ID="$SEEDED_VO_ID"
+  UI_E2E_JUSTIFIED_EHR_ID="$JUSTIFIED_EHR_ID"
 )
 if [[ -n "${UI_E2E_SHOTS_ONLY:-}" ]]; then
   echo "── journeys skipped (UI_E2E_SHOTS_ONLY)"
