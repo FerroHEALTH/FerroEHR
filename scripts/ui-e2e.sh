@@ -284,6 +284,56 @@ for magnitude in 36.5 37.8 39.1; do
 done
 echo "   seeded 3 extra FLAT compositions with quantity magnitudes"
 
+# The access policy, committed twice by the admin user, whom the test-only
+# grant ceiling of docker/viewer/e2e-env.yml lets the operator grant
+# write_access_policy; a kept volume that holds one already is left as it is.
+CDR_EXT="$CDR_URL/ferroehr/rest/extensions/v1"
+ADMIN_AUTH=(-u ferroehr-admin:ferroehr)
+policy_status=$(curl -s -o /dev/null -w "%{http_code}" "${ADMIN_AUTH[@]}" \
+  "$CDR_EXT/admin/access_policy" -H "$ACCEPT_JSON")
+if [[ "$policy_status" == 404 ]]; then
+  read -ra GRANT <<<"$SCIM_GRANT"
+  "${GRANT[@]}" party-binding grant --basic-user ferroehr-admin \
+    --operation write_access_policy >/dev/null
+  CONTROLLER=$(jq -nc '{
+      "_type": "ORGANISATION", "name": {"_type": "DV_TEXT", "value": "ORGANISATION"},
+      "archetype_node_id": "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v1",
+      "archetype_details": {"_type": "ARCHETYPED", "rm_version": "1.1.0",
+        "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v1"}},
+      "identities": [{"_type": "PARTY_IDENTITY", "name": {"_type": "DV_TEXT", "value": "legal name"},
+        "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_IDENTITY.organisation_name.v1",
+        "details": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "Details"},
+          "archetype_node_id": "at0001", "items": [{"_type": "ELEMENT",
+            "name": {"_type": "DV_TEXT", "value": "Name"}, "archetype_node_id": "at0002",
+            "value": {"_type": "DV_TEXT", "value": "E2E Clinic"}}]}}]}' \
+    | curl -sf "${ADMIN_AUTH[@]}" -X POST "$CDR_V1/demographic/organisation" \
+      -H "$CT_JSON" -H "$ACCEPT_JSON" -H "Prefer: return=representation" --data-binary @- \
+    | jq -r '.uid.value | split("::")[0]')
+  e2e_policy() {
+    jq -nc --arg o "$CONTROLLER" --arg grace "$1" '{
+      "_type": "ACCESS_POLICY", "name": {"_type": "DV_TEXT", "value": "E2E access policy"},
+      "archetype_node_id": "openEHR-EHR-ACCESS_POLICY.controller.v1",
+      "archetype_details": {"_type": "ARCHETYPED", "rm_version": "1.2.0",
+        "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-ACCESS_POLICY.controller.v1"}},
+      "controller": {"_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
+        "id": {"_type": "HIER_OBJECT_ID", "value": $o}},
+      "care_relationship_required": false,
+      "relationship_grace": {"_type": "DV_DURATION", "value": $grace},
+      "concealed_confidentialities": [{"_type": "DV_CODED_TEXT", "value": "very restricted",
+        "defining_code": {"_type": "CODE_PHRASE",
+          "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "HL7_Confidentiality"},
+          "code_string": "V"}}],
+      "purpose_required": false}'
+  }
+  POLICY_VUID=$(e2e_policy P14D | curl -sf -D - -o /dev/null "${ADMIN_AUTH[@]}" -X PUT \
+    "$CDR_EXT/admin/access_policy" -H "$CT_JSON" -H "If-None-Match: *" --data-binary @- \
+    | tr -d '\r' | sed -n 's/^[Ee][Tt]ag: W\/"\(.*\)"$/\1/p')
+  e2e_policy P7D | curl -sf -o /dev/null "${ADMIN_AUTH[@]}" -X PUT \
+    "$CDR_EXT/admin/access_policy" -H "$CT_JSON" -H "If-Match: \"$POLICY_VUID\"" \
+    --data-binary @-
+  echo "   seeded the access policy (2 versions)"
+fi
+
 # ── 3. The viewer under test ─────────────────────────────────────────────────
 if [[ -n "${UI_E2E_IMAGE:-}" ]]; then
   # Image mode — the TRUE shipped artifact: compose-build the viewer image

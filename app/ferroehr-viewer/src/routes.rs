@@ -153,6 +153,12 @@ pub enum Page {
     AccessReview,
     /// `/access-log/integrity`.
     AccessIntegrity,
+    /// `/access-policy`.
+    AccessPolicy,
+    /// `/access-policy/versions`.
+    AccessPolicyVersions,
+    /// `/access-policy/edit`.
+    EditAccessPolicy,
     /// `/configuration` and its sections.
     Configuration,
     /// `/preferences` and its sections.
@@ -223,6 +229,9 @@ impl Page {
             "/audit/:id" => Self::AuditRecord,
             "/access-log" => Self::AccessReview,
             "/access-log/integrity" => Self::AccessIntegrity,
+            "/access-policy" => Self::AccessPolicy,
+            "/access-policy/versions" => Self::AccessPolicyVersions,
+            "/access-policy/edit" => Self::EditAccessPolicy,
             "/configuration" | "/configuration/:section" => Self::Configuration,
             "/preferences" | "/preferences/:section" => Self::Preferences,
             "/access" => Self::Access,
@@ -365,6 +374,9 @@ pub static ROUTES: &[&str] = &[
     "/audit/:id",
     "/access-log",
     "/access-log/integrity",
+    "/access-policy",
+    "/access-policy/versions",
+    "/access-policy/edit",
     "/configuration",
     "/configuration/:section",
     "/preferences",
@@ -423,7 +435,7 @@ pub async fn draw() -> Drawn {
         Page::StoredQueryRun => pages::queries::run_page().await,
         Page::Build => pages::query::build_page().await,
         Page::Aql => pages::query::aql_page().await,
-        Page::ServerOverview => pages::server::overview_page().await,
+        Page::ServerOverview => pages::server::overview::page().await,
         Page::Health => pages::server::health_page().await,
         Page::Metrics => pages::server::metrics_page().await,
         Page::Logging => pages::server::logging_page().await,
@@ -433,6 +445,9 @@ pub async fn draw() -> Drawn {
         Page::AuditRecord => pages::audit::record_page().await,
         Page::AccessReview => pages::access_review::page().await,
         Page::AccessIntegrity => pages::access_review::integrity_page().await,
+        Page::AccessPolicy => pages::policy::page().await,
+        Page::AccessPolicyVersions => pages::policy::versions_page().await,
+        Page::EditAccessPolicy => pages::policy::edit::page().await,
         Page::Configuration => pages::configuration::page().await,
         Page::Preferences => pages::preferences::page(),
         Page::Access => pages::access::page(),
