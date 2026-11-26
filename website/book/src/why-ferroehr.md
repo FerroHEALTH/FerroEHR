@@ -179,8 +179,8 @@ maintainer documents say so plainly.
 The same honesty covers how the code gets written: substantial parts of
 FerroEHR are built with AI coding tools, directed and reviewed by the
 maintainer, with every change held to the machine-enforced gates described
-above. The full statement — what that means, what bounds it, and what you
-can verify instead of trusting it — is the repository's
+above. The full statement (what that means, what bounds it, and what you
+can verify instead of trusting it) is the repository's
 [AI statement](https://github.com/FerroHEALTH/FerroEHR/blob/main/AI_STATEMENT.md).
 
 ---

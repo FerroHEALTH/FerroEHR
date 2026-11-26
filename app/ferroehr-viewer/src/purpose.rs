@@ -38,6 +38,10 @@ const HELD_FOR: Duration = Duration::from_secs(300);
 pub struct Offered {
     /// The request header a purpose is declared in.
     pub header: String,
+    /// The request header the reason of a justified access is stated in;
+    /// `None` from a CDR that takes no justification.
+    #[serde(default)]
+    pub reason_header: Option<String>,
     /// The code system the codes belong to.
     pub system: String,
     /// The accepted codes; empty when the CDR accepts any code.
@@ -186,6 +190,34 @@ impl Purposes {
     }
 }
 
+impl Purposes {
+    /// The headers a request as `credential` carries under the justification
+    /// `justification`: its purpose in the purpose header and its reason,
+    /// percent-encoded, in the reason header; `None` when the CDR names no
+    /// reason header, so it takes no justification.
+    ///
+    /// # Errors
+    /// The errors of [`Self::offered`].
+    pub async fn justified(
+        &self,
+        credential: &Credential,
+        justification: &ferrohealth_session::justification::Justification,
+    ) -> Result<Option<[(String, String); 2]>, ViewerError> {
+        let Some(offered) = self.offered(credential).await? else {
+            return Ok(None);
+        };
+        Ok(offered.reason_header.map(|reason_header| {
+            [
+                (offered.header, justification.purpose().to_owned()),
+                (
+                    reason_header,
+                    crate::justified::encoded(justification.reason().expose()),
+                ),
+            ]
+        }))
+    }
+}
+
 /// The purpose the reader chose for this session, from [`COOKIE`].
 #[must_use]
 pub fn chosen() -> Option<String> {
@@ -234,6 +266,7 @@ mod tests {
     fn offered(codes: &[&str]) -> Offered {
         Offered {
             header: "x-purpose-of-use".to_owned(),
+            reason_header: Some("x-access-reason".to_owned()),
             system: "http://terminology.hl7.org/CodeSystem/v3-ActReason".to_owned(),
             codes: codes
                 .iter()

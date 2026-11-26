@@ -93,7 +93,7 @@
         "operationId": "access_purposes",
         "responses": {
           "200": {
-            "description": "The header a purpose is declared in, the code system of the codes, and the accepted codes in configured order, each with its display text when the terminology server gives one. An empty `codes` accepts any code.",
+            "description": "The header a purpose is declared in, the header the reason of a justified access is stated in, the code system of the codes, and the accepted codes in configured order, each with its display text when the terminology server gives one. An empty `codes` accepts any code.",
             "content": {
               "application/json": {
                 "schema": {}

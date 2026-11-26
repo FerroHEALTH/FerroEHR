@@ -34,7 +34,7 @@ curl -u ferroehr:ferroehr -X POST -i \
   http://localhost:8080/ferroehr/rest/openehr/v1/ehr
 ```
 
-`POST /ehr` — the body is optional; you may supply an `EHR_STATUS` to set the
+`POST /ehr`: the body is optional; you may supply an `EHR_STATUS` to set the
 subject and flags at creation. Returns **201 Created** with the new EHR id in
 `ETag` and a `Location` header. With `Prefer: return=representation` the body is
 the full `EHR`; otherwise it is empty. Supplying an `EHR_STATUS` whose subject
@@ -121,7 +121,7 @@ The `versioned_ehr_status` sub-resource exposes the full version history:
 - `GET …/versioned_ehr_status`: the `VERSIONED_EHR_STATUS` object,
 - `GET …/versioned_ehr_status/revision_history`: the revision history,
 - `GET …/versioned_ehr_status/version` (optionally `?version_at_time=`) and
-  `…/version/{version_uid}` — a specific version.
+  `…/version/{version_uid}`: a specific version.
 
 ## EHR_ACCESS
 
@@ -546,7 +546,7 @@ curl -u ferroehr:ferroehr -X DELETE \
   case-sensitive, and AND-combined; an omitted filter constrains nothing. An EHR
   with no matching tag answers **200** with `[]`, never 404.
 - `GET|PUT /ehr/{ehr_id}/composition/{uid_based_id}/tags` and the same pair
-  under `…/ehr_status/{uid_based_id}/tags` — read or **replace** the addressed
+  under `…/ehr_status/{uid_based_id}/tags`: read or **replace** the addressed
   collection. The `PUT` body is a bare JSON array of tags (`key` required,
   `value` and `target_path` optional; `target` and `owner_id` come from the
   route, and a body that supplies them, or any other undeclared member, is a

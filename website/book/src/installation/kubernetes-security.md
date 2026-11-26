@@ -176,12 +176,8 @@ receiving traffic) and never liveness (which would restart the container in a
 loop).
 
 > [!NOTE]
-> There is no `exec` probe option. One existed and was removed: it ran the
-> binary's `healthcheck` subcommand, which then asked the openEHR status
-> document rather than a health route, so **readiness never touched the
-> database** and a pod with a dead database reported Ready and took clinical
-> traffic. The subcommand now asks `/health/readiness`, and the `httpGet`
-> probes above remain what the chart runs.
+> The chart offers no `exec` probe: the `httpGet` probes above are what it
+> runs. The binary's `healthcheck` subcommand asks `/health/readiness`.
 
 > [!WARNING]
 > **Migrations run only at boot, so a replaced or wiped database leaves the pods
