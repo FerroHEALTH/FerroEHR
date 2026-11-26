@@ -10,9 +10,9 @@
 //! held. No openEHR specification governs the register: FerroEHR's own
 //! design over GDPR Art. 5(1)(e) and Art. 30(1)(f).
 
+use crate::bff::marks::{rows, text};
 use crate::error::ViewerError;
 use crate::locale::policy::PolicyMsg;
-use crate::locale::tr;
 
 /// The most rows the due list reads.
 pub const DUE_LIMIT: u32 = 100;
@@ -59,39 +59,12 @@ pub struct DueEhr {
     pub objects_held: i64,
 }
 
-/// The rows at `key` of a JSON body.
-#[expect(
-    clippy::disallowed_types,
-    reason = "the viewer reads the admin marks extension's JSON registers"
-)]
-fn rows(body: &str, key: &str) -> Result<Vec<serde_json::Value>, ViewerError> {
-    let value: serde_json::Value = serde_json::from_str(body)
-        .map_err(|error| ViewerError::failed(tr(PolicyMsg::RetentionJson), error))?;
-    Ok(value
-        .get(key)
-        .and_then(serde_json::Value::as_array)
-        .cloned()
-        .unwrap_or_default())
-}
-
-/// The text at `key`, `None` when absent or null.
-#[expect(
-    clippy::disallowed_types,
-    reason = "the viewer reads the admin marks extension's JSON registers"
-)]
-fn text(value: &serde_json::Value, key: &str) -> Option<String> {
-    value
-        .get(key)
-        .and_then(serde_json::Value::as_str)
-        .map(str::to_owned)
-}
-
 /// The periods a register body declares.
 ///
 /// # Errors
 /// [`ViewerError::Failed`] when the body is not JSON.
 pub fn parse_periods(body: &str) -> Result<Vec<RetentionPeriod>, ViewerError> {
-    Ok(rows(body, "policies")?
+    Ok(rows(body, "policies", PolicyMsg::RetentionJson)?
         .iter()
         .map(|row| RetentionPeriod {
             kind: text(row, "kind").unwrap_or_default(),
@@ -119,7 +92,7 @@ pub fn parse_due(body: &str) -> Result<Vec<DueEhr>, ViewerError> {
             .and_then(serde_json::Value::as_i64)
             .unwrap_or_default()
     };
-    Ok(rows(body, "due")?
+    Ok(rows(body, "due", PolicyMsg::RetentionJson)?
         .iter()
         .map(|row| DueEhr {
             ehr_id: text(row, "ehr_id").unwrap_or_default(),
