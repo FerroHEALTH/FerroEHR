@@ -12,6 +12,8 @@
 
 pub mod archetypes;
 pub mod access_policy;
+pub mod access_policy;
+pub mod archetypes;
 pub mod audit;
 pub mod composition;
 pub mod dashboard;
