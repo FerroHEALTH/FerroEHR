@@ -234,6 +234,11 @@ layer on top; see [SMART App Launch](smart-app-launch.md). The access
 evaluator alone confines a patient to their own EHR
 ([a patient's own EHR](#a-patients-own-ehr)).
 
+The model as a whole (parties, roles and grants, the patient's settings, the
+access policy, justification and the legal marks) is explained on [How
+FerroEHR decides access](explanation/access-model.md). This section holds the
+details of each part.
+
 ### Per-EHR access control (`EHR_ACCESS`)
 
 Every EHR carries a versioned `EHR_ACCESS` object, the openEHR
@@ -420,37 +425,10 @@ the rows the caller reads.
 
 ### Access directives
 
-The access evaluator decides every request that reaches an EHR, after
-authentication, the operation grants and the SMART scopes, by a fixed
-procedure over three sets of facts: the person's directives and labels in the
-EHR's `EHR_ACCESS` settings, the caller's facts in the demographic service
-(the operations its capabilities grant, the roles of the `ROLE`s it performs
-and the care teams it is a member of), and the controller's
-[access policy](operational-policy.md#the-access-policy) with its
-[rules](operational-policy.md#controller-rules). The first step that refuses
-decides, and a deny overrides a permit. An EHR id that names no EHR
-answers `404` before any step refuses, for every caller under every
-disposition, so a restricted EHR is never told apart from an unknown one
-(EHDS Art. 8). A write is judged on the content it carries, its template,
-root archetype, origins and commit instant, before anything is stored, so a
-write a directive or a rule refuses changes nothing:
-
-| Step | What refuses | Answer |
-|---|---|---|
-| 0. Subject | a patient (the `subject` caller kind), or a caller whose grants are `patient/` grants alone, on an EHR other than the one its launch context names, or on an operation that names no EHR | `403 refused-not-subject` |
-| 0. Representation | a representative on an EHR other than the one whose subject its recorded representation names, or on an operation that names no EHR | `403 refused-not-represented` |
-| 0. Consent reference | a read, query or export by a caller admitted under a federation agreement whose `consent` condition applies, whose token names no consent decision reference | `403 refused-consent-reference-missing` |
-| 0. Exclusion | an exclusion of the controller in the settings' `exclusions` that names the caller, a representative and a gate-keeper included; never the person | `403 refused-excluded`, naming neither the exclusion nor its reason |
-| 1. Opt-out (EHDS Art. 10) | an `opt_out` directive, for an access service | `404`, as for an unknown EHR |
-| 2. Restriction (EHDS Art. 8) | a `restriction` directive, for a professional, a system or an access service, and for a representative its `applies_to` names by party or by the `representative` relationship, over the data it covers | `404`, as for unknown data |
-| 3. Consent deny | any other deny directive that applies; a representative a `delegation` directive names reads only what it permits | `403 refused-consent-denied` |
-| 4. Purpose | no declared purpose, where the access policy requires one, whatever rules the policy holds; checked before any rule is read | `403 refused-purpose-missing` |
-| 5. Conflict | a professional performing a `ROLE` on their own record, or a professional a `related_to` relationship in force joins to the person, unless a `conflict_rules` entry of the access policy allows it | `403 refused-conflict` |
-| 5. Controller rule (EHDS Art. 11(3)) | a deny rule of the access policy that applies; no permit of the person lifts it; which purposes a caller may declare is such a rule | `403 refused-policy-denied` |
-| 6. Sensitivity | data with a label or classification that no applying permit directive or permit rule names | `403 refused-sensitivity` |
-| 6. Confidentiality | data whose confidentiality is `R` or `V` that no applying permit directive or permit rule clears | `403 refused-confidentiality`, or `404` at a level of `concealed_confidentialities` |
-| 7. Care relationship | no live care relationship to the subject, where the access policy requires one | `403 refused-no-care-relationship` |
-| 8. Default access | the settings' `default_access`, or `authz.rbac.ehr_access_default` for an EHR with none | `403 refused-consent-required` |
+The access evaluator decides every request that reaches an EHR. Its steps,
+refusal codes and answers are on [How FerroEHR decides
+access](explanation/access-model.md#how-one-request-is-decided); the rules
+below say when each step applies.
 
 - **Who is bound.** The record's person skips every step on their own EHR
   (EHDS Art. 3), so no controller rule limits a patient's own access, and is
@@ -520,15 +498,6 @@ write a directive or a rule refuses changes nothing:
 The decision procedure, its order and its codes are FerroEHR's own design:
 RM EHR IM §EHR Access requires every decision to follow `EHR_ACCESS`, and
 publishes no procedure.
-
-Upgrading drops every stored `EHR_ACCESS` of the removed
-`FERROEHR_ACCESS_CONTROL_V1` scheme, with its history, and the next boot
-gives each such EHR the default `EHR_ACCESS` with no settings, which the
-server default governs. Commit new settings in the `access_directives`
-scheme for the EHRs that had them. Upgrading also drops the Art. 8
-restriction and Art. 10 opt-out registers below with their rows and their
-admin routes: record each restriction and opt-out that stood again as a
-directive.
 
 ### Care relationships
 
