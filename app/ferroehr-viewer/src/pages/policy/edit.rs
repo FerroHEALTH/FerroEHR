@@ -22,9 +22,9 @@ use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{h, opt, t};
 use crate::pages::common::{
-    EditorDock, Unsaved, card_panel, discarded, dock_editor, editor_line, findings_of, marks_of,
-    reload_words, save_as_words, section,
+    EditorDock, card_panel, discarded, dock_editor, findings_of, marks_of, section,
 };
+use crate::pages::editor::{Unsaved, editor_line, reload_words, save_as_words};
 use crate::pages::form::Form;
 use crate::pages::policy::{EDIT_ROUTE, POLICY_ROUTE, refusal_of};
 use crate::routes::Drawn;

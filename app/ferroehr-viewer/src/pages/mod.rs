@@ -14,6 +14,7 @@ pub mod common;
 pub mod composition;
 pub mod configuration;
 pub mod dashboard;
+pub mod editor;
 pub mod ehr;
 pub mod ehrs;
 pub mod errors;
