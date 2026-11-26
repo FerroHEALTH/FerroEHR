@@ -27,6 +27,7 @@ use ferrohealth_session::cookies::CookieNames;
 use serde_json::Value;
 use tower::util::ServiceExt;
 
+mod grants;
 mod policy;
 
 /// The recorded exchanges, read once.
@@ -716,7 +717,12 @@ async fn every_screen_draws_its_heading_and_its_reading() {
         ),
         (
             format!("/ehrs/{ehr}/compositions/{composition}?tab=versions"),
-            vec!["The versioned composition", "Version 2"],
+            vec![
+                "The versioned composition",
+                "Version 2",
+                "A SHA-256 digest",
+                "sha256:",
+            ],
         ),
         (
             format!("/ehrs/{ehr}/compositions/{composition}?tab=tags"),

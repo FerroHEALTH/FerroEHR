@@ -131,5 +131,75 @@ crate::locale::messages! {
         EditSubtitle = "edit-subtitle",
         /// `Edit the access policy`
         EditTitle = "edit-title",
+        /// `The CDR's answer about the grants is not a result set`
+        GrantsJson = "grants-json",
+        /// `always`
+        GrantsAlways = "grants-always",
+        /// `$from` to `$to`
+        GrantsBetween = "grants-between",
+        /// `In force`
+        GrantsInForce = "grants-in-force",
+        /// `Not in force`
+        GrantsNotInForce = "grants-not-in-force",
+        /// `Role`
+        GrantsRole = "grants-role",
+        /// `Grants`
+        GrantsCodes = "grants-codes",
+        /// `Terms`
+        GrantsTerms = "grants-terms",
+        /// `Held by`
+        GrantsHeldBy = "grants-held-by",
+        /// `Validity`
+        GrantsValidity = "grants-validity",
+        /// Role: `$role`; capability: `$capability`
+        GrantsValidityWords = "grants-validity-words",
+        /// `State`
+        GrantsState = "grants-state",
+        /// `Open`
+        GrantsOpen = "grants-open",
+        /// `Holder`
+        GrantsOpenPerformer = "grants-open-performer",
+        /// `Provider`
+        GrantsOpenProvider = "grants-open-provider",
+        /// `Roles holding a grant`
+        GrantsRoles = "grants-roles",
+        /// `Each role whose capability holds an openehr_access grant, who performs it, its terms and whether it holds today.`
+        GrantsRolesIntro = "grants-roles-intro",
+        /// `System agent`
+        GrantsAgent = "grants-agent",
+        /// `Client id`
+        GrantsClient = "grants-client",
+        /// `Issuer`
+        GrantsIssuer = "grants-issuer",
+        /// `Acts for`
+        GrantsActsFor = "grants-acts-for",
+        /// `System agents`
+        GrantsAgents = "grants-agents",
+        /// `Each party bound to an OAuth 2.0 client, and the provider it acts for.`
+        GrantsAgentsIntro = "grants-agents-intro",
+        /// `No role holds a grant`
+        GrantsNoRoles = "grants-no-roles",
+        /// `Either none is written, or your account may not read the policy parties.`
+        GrantsNoRolesLine = "grants-no-roles-line",
+        /// `No system agent`
+        GrantsNoAgents = "grants-no-agents",
+        /// `No party binds an OAuth 2.0 client that your account may read.`
+        GrantsNoAgentsLine = "grants-no-agents-line",
+        /// Only the first `$count` of a list are shown.
+        GrantsTruncated = "grants-truncated",
+        /// `A grant is given by a new version of its ROLE that adds the grant to the role's capability, and ended by a version whose validity ends before today. Open the role to change it in the party editor.`
+        GrantsHow = "grants-how",
+        /// `Your account may not read grants.`
+        GrantsForbidden = "grants-forbidden",
+        /// `The grants could not be read.`
+        GrantsRefused = "grants-refused",
+        /// `Who may do what beyond the scopes of a login: the roles that hold an openehr_access grant and the system clients.`
+        GrantsSubtitle = "grants-subtitle",
+        /// This party binds the OAuth 2.0 client `$client` of `$issuer`.
+        MarkClient = "mark-client",
+        /// `Policy party`
+        MarkTitle = "mark-title",
+        /// `Only an administrator reads and writes this party, as it holds a grant or binds a client.`
+        MarkIntro = "mark-intro",
     }
 }
