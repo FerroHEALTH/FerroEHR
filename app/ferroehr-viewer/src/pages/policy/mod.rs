@@ -518,20 +518,23 @@ fn versions_panel(read: Result<Vec<PolicyVersion>, Refused>) -> Html {
     )
 }
 
-/// The newest version committed at or before `at`, an RFC 3339 instant or a
-/// date and time as the At a time field posts it.
+/// An RFC 3339 instant, or a date and time read in UTC as the At a time
+/// field posts it; `None` for text that is neither.
+#[must_use]
+pub fn instant(text: &str) -> Option<jiff::Timestamp> {
+    text.parse::<jiff::Timestamp>().ok().or_else(|| {
+        text.parse::<jiff::civil::DateTime>()
+            .ok()
+            .and_then(|time| time.to_zoned(jiff::tz::TimeZone::UTC).ok())
+            .map(|zoned| zoned.timestamp())
+    })
+}
+
+/// The newest version committed at or before `at`.
 fn committed_at<'a>(
     entries: &'a [crate::bff::wire::VersionEntry],
     at: &str,
 ) -> Option<&'a crate::bff::wire::VersionEntry> {
-    let instant = |text: &str| {
-        text.parse::<jiff::Timestamp>().ok().or_else(|| {
-            text.parse::<jiff::civil::DateTime>()
-                .ok()
-                .and_then(|time| time.to_zoned(jiff::tz::TimeZone::UTC).ok())
-                .map(|zoned| zoned.timestamp())
-        })
-    };
     let at = instant(at)?;
     entries
         .iter()
