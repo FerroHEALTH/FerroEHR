@@ -52,6 +52,15 @@ the opened one as its `If-Match`, so a party someone else changed meanwhile is
 refused with the CDR's `412`. **Delete party…** marks it deleted; its versions
 stay readable.
 
+### Archiving a party
+
+While the CDR's admin API is on, a party's More menu offers **Archive…** and
+**Restore from the archive…** (`POST {ext}/admin/archive/parties` and
+`…/parties/restore`), each behind a confirmation. An archived party stays
+readable by its id but leaves query results until it is restored; its
+relationships are archived on their own and stay where they are. Both need
+the CDR's ADMIN role, and a refusal is shown in the CDR's words.
+
 ## Relationships
 
 A relationship joins a **source** party to a **target**: an employment, an

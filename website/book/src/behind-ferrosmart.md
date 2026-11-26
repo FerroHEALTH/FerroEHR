@@ -182,7 +182,7 @@ treats it as the person, exactly as their own login:
 
 - It reads only the EHR whose subject is the patient's `PERSON`. Any other
   EHR is refused `403` with `refused-not-subject`.
-- A composition the [access delay](security.md#delayed-access-by-the-person-ehds-art-33)
+- A composition the [access delay](access-control.md#delayed-access-by-the-person-ehds-art-33)
   holds reads as absent until a professional releases it (EHDS Art. 3(3)).
 - Below the `[authz.assurance]` floor it is refused `401` with the RFC 9470
   §3 step-up challenge, so FerroBRIDGE sends the person back to FerroSMART
@@ -215,7 +215,7 @@ minimum = "substantial"
 
 The floor holds every patient-data request, a professional's included, and
 a Basic credential carries no level, so it is refused on patient data
-([Authentication & access](installation/config-auth.md#authzassurance-the-assurance-level-patient-data-requires)).
+([Authentication & access](installation/config-authz.md#authzassurance-the-assurance-level-patient-data-requires)).
 
 ## The discovery document describes FerroSMART
 

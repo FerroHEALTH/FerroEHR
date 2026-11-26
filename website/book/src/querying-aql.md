@@ -711,7 +711,7 @@ gets `400` with a message naming the rule.
 
 **Who may run it, and what they see.** The log has its own access control,
 apart from any clinical query right, and the query follows the rules of the
-[access log's own resources](audit.md#reading-the-access-log-over-its-rest):
+[access log's own resources](access-log.md#reading-the-access-log-over-its-rest):
 
 | Caller | Reads |
 |---|---|
