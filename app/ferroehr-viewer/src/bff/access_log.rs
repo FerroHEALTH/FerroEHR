@@ -76,7 +76,7 @@ impl LogFilters {
 
 /// The first instant of `day` in UTC, or its last when `end`; a text that is
 /// no date goes as typed, for the CDR to refuse in its own words.
-fn day_bound(day: &str, end: bool) -> String {
+pub(crate) fn day_bound(day: &str, end: bool) -> String {
     let Ok(date) = day.parse::<jiff::civil::Date>() else {
         return day.to_owned();
     };
@@ -103,7 +103,7 @@ pub struct Coded {
 
 impl Coded {
     /// The `DV_CODED_TEXT` at `node`, `None` when it holds none.
-    fn of(node: Option<&Value>) -> Option<Self> {
+    pub(crate) fn of(node: Option<&Value>) -> Option<Self> {
         let node = node?;
         let text = |pointer: &str| {
             node.pointer(pointer)
@@ -227,7 +227,7 @@ impl Entry {
 }
 
 /// The text at `pointer` under `node`, empty when it holds none.
-fn text_at(node: &Value, pointer: &str) -> String {
+pub(crate) fn text_at(node: &Value, pointer: &str) -> String {
     node.pointer(pointer)
         .and_then(Value::as_str)
         .unwrap_or_default()
@@ -236,7 +236,7 @@ fn text_at(node: &Value, pointer: &str) -> String {
 
 /// The words of a party: its name, else the id its reference names, else
 /// its first identifier.
-fn party_words(party: Option<&Value>) -> String {
+pub(crate) fn party_words(party: Option<&Value>) -> String {
     let Some(party) = party else {
         return String::new();
     };
@@ -254,7 +254,7 @@ fn party_words(party: Option<&Value>) -> String {
 }
 
 /// The elements of the array at `key` of `node`.
-fn each<'a>(node: &'a Value, key: &str) -> impl Iterator<Item = &'a Value> {
+pub(crate) fn each<'a>(node: &'a Value, key: &str) -> impl Iterator<Item = &'a Value> {
     node.get(key)
         .and_then(Value::as_array)
         .into_iter()

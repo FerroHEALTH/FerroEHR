@@ -713,6 +713,14 @@ async fn every_screen_draws_its_heading_and_its_reading() {
             vec!["Entries of the access log", "Include the person"],
         ),
         (
+            "/access-log".to_owned(),
+            vec!["Entries of the access log", "Credential issuer"],
+        ),
+        (
+            "/access-log/integrity".to_owned(),
+            vec!["The newest checkpoint", "Show seals"],
+        ),
+        (
             format!("/ehrs/{ehr}/compositions/{composition}"),
             vec!["Edit as a new version", "minimal_evaluation.en.v1"],
         ),
@@ -1018,6 +1026,28 @@ async fn an_access_log_row_opens_its_entry_with_what_it_rested_on() {
             entry.main()
         );
     }
+}
+
+#[tokio::test]
+async fn a_verification_of_the_access_log_says_what_it_found() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let answer = viewer
+        .send(
+            http::Method::POST,
+            "/access-log/integrity",
+            Some(&cookie),
+            Some(&[("intent", "verify")]),
+        )
+        .await;
+    assert_eq!(answer.status, http::StatusCode::OK, "{}", answer.body);
+    let main = answer.main();
+    assert!(
+        main.contains("No checkpoint was there to verify against")
+            || main.contains("The log is intact")
+            || main.contains("The verification found"),
+        "{main}"
+    );
 }
 
 #[tokio::test]

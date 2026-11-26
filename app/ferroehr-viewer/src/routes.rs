@@ -149,6 +149,10 @@ pub enum Page {
     Audit,
     /// `/audit/:id`.
     AuditRecord,
+    /// `/access-log`.
+    AccessReview,
+    /// `/access-log/integrity`.
+    AccessIntegrity,
     /// `/configuration` and its sections.
     Configuration,
     /// `/preferences` and its sections.
@@ -217,6 +221,8 @@ impl Page {
             "/server/smart" => Self::Smart,
             "/audit" => Self::Audit,
             "/audit/:id" => Self::AuditRecord,
+            "/access-log" => Self::AccessReview,
+            "/access-log/integrity" => Self::AccessIntegrity,
             "/configuration" | "/configuration/:section" => Self::Configuration,
             "/preferences" | "/preferences/:section" => Self::Preferences,
             "/access" => Self::Access,
@@ -357,6 +363,8 @@ pub static ROUTES: &[&str] = &[
     "/server/smart",
     "/audit",
     "/audit/:id",
+    "/access-log",
+    "/access-log/integrity",
     "/configuration",
     "/configuration/:section",
     "/preferences",
@@ -423,6 +431,8 @@ pub async fn draw() -> Drawn {
         Page::Smart => pages::server::smart_page().await,
         Page::Audit => pages::audit::page().await,
         Page::AuditRecord => pages::audit::record_page().await,
+        Page::AccessReview => pages::access_review::page().await,
+        Page::AccessIntegrity => pages::access_review::integrity_page().await,
         Page::Configuration => pages::configuration::page().await,
         Page::Preferences => pages::preferences::page(),
         Page::Access => pages::access::page(),

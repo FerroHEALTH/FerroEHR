@@ -106,6 +106,7 @@ nav-stored-queries = Stored queries
 nav-query = Query
 nav-server = Server
 nav-audit = Audit log
+nav-access-log = Access log
 nav-configuration = Configuration
 nav-about = About
 pill-up = CDR up

@@ -282,6 +282,8 @@ messages! {
         NavAbout = "nav-about",
         /// `Audit log`
         NavAudit = "nav-audit",
+        /// `Access log`
+        NavAccessLog = "nav-access-log",
         /// `Configuration`
         NavConfiguration = "nav-configuration",
         /// `Dashboard`

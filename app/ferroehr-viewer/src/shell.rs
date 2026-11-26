@@ -120,6 +120,7 @@ fn groups() -> Vec<Group> {
     let console = vec![
         entry(SERVER_ROUTE, Msg::NavServer, Glyph::SERVER, false),
         entry("/audit", Msg::NavAudit, Glyph::SHIELD_CHECK, false),
+        entry("/access-log", Msg::NavAccessLog, Glyph::SCROLL_TEXT, false),
         entry(
             "/configuration",
             Msg::NavConfiguration,

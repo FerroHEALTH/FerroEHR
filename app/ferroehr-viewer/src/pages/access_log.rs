@@ -152,6 +152,51 @@ fn select(
     )))
 }
 
+/// The outcome filter, `chosen` selected.
+#[must_use]
+pub fn outcome_select(id: &'static str, chosen: &str) -> Html {
+    select(
+        id,
+        "outcome",
+        tr(AccessMsg::FilterOutcome),
+        &OUTCOMES,
+        chosen,
+    )
+}
+
+/// The ground filter, `chosen` selected.
+#[must_use]
+pub fn grounds_select(id: &'static str, chosen: &str) -> Html {
+    select(
+        id,
+        "justification",
+        tr(AccessMsg::FilterJustified),
+        &GROUNDS,
+        chosen,
+    )
+}
+
+/// The words of an outcome or ground token, the token itself when neither
+/// names it.
+#[must_use]
+pub fn outcome_words(token: &str) -> String {
+    if OUTCOMES.iter().any(|(value, _)| *value == token) {
+        words_of(&OUTCOMES, token)
+    } else {
+        words_of(&GROUNDS, token)
+    }
+}
+
+/// The accessor, action and outcome cells of `entry` in a table row.
+#[must_use]
+pub fn row_parts(entry: &Entry) -> (Html, Html, Html) {
+    (
+        accessor(entry, false),
+        coded(entry.action.as_ref()),
+        outcome(entry),
+    )
+}
+
 /// The filter toolbar, a `GET` form to `action`.
 #[must_use]
 pub fn toolbar(action: &str, filters: &LogFilters) -> Html {
@@ -171,13 +216,7 @@ pub fn toolbar(action: &str, filters: &LogFilters) -> Html {
             &ACTIONS,
             &filters.action,
         ),
-        select(
-            "l-outcome",
-            "outcome",
-            tr(AccessMsg::FilterOutcome),
-            &OUTCOMES,
-            &filters.outcome,
-        ),
+        outcome_select("l-outcome", &filters.outcome),
         select(
             "l-kind",
             "accessor_kind",
@@ -185,13 +224,7 @@ pub fn toolbar(action: &str, filters: &LogFilters) -> Html {
             &KINDS,
             &filters.accessor_kind,
         ),
-        select(
-            "l-ground",
-            "justification",
-            tr(AccessMsg::FilterJustified),
-            &GROUNDS,
-            &filters.justification,
-        ),
+        grounds_select("l-ground", &filters.justification),
         date_range(
             "l-when",
             tr(AccessMsg::FilterWhen),
@@ -369,13 +402,14 @@ pub fn table(entries: &[Entry], href: impl Fn(&Entry) -> String) -> Html {
         .iter()
         .map(|entry| {
             let link = href(entry);
+            let (who, action, result) = row_parts(entry);
             h(format!(
                 "<tr>{}{}{}{}{}</tr>",
                 title_cell(None, Some(&link), ago(&entry.recorded), None),
-                cell(&columns[1], accessor(entry, false)),
-                cell(&columns[2], coded(entry.action.as_ref())),
+                cell(&columns[1], who),
+                cell(&columns[2], action),
                 cell(&columns[3], reached(entry)),
-                cell(&columns[4], outcome(entry))
+                cell(&columns[4], result)
             ))
         })
         .collect();
