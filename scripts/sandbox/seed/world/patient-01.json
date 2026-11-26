@@ -1,0 +1,153 @@
+{
+  "_type": "PERSON",
+  "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.patient.v3",
+  "archetype_details": {
+    "_type": "ARCHETYPED",
+    "archetype_id": {
+      "_type": "ARCHETYPE_ID",
+      "value": "openEHR-DEMOGRAPHIC-PERSON.patient.v3"
+    },
+    "template_id": {
+      "_type": "TEMPLATE_ID",
+      "value": "openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0"
+    },
+    "rm_version": "1.1.0"
+  },
+  "name": {
+    "_type": "DV_TEXT",
+    "value": "Isa de Vries"
+  },
+  "details": {
+    "_type": "ITEM_TREE",
+    "archetype_node_id": "id2",
+    "name": {
+      "_type": "DV_TEXT",
+      "value": "Details"
+    },
+    "items": [
+      {
+        "_type": "ELEMENT",
+        "archetype_node_id": "id3",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "Patient identifier"
+        },
+        "value": {
+          "_type": "DV_IDENTIFIER",
+          "issuer": "urn:oid:2.999.7.3",
+          "id": "DEMO-000001",
+          "type": "MRN"
+        }
+      },
+      {
+        "_type": "ELEMENT",
+        "archetype_node_id": "id4",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "Date of birth"
+        },
+        "value": {
+          "_type": "DV_DATE",
+          "value": "1984-03-12"
+        }
+      },
+      {
+        "_type": "ELEMENT",
+        "archetype_node_id": "id5",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "Sex"
+        },
+        "value": {
+          "_type": "DV_CODED_TEXT",
+          "value": "Female",
+          "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": {
+              "_type": "TERMINOLOGY_ID",
+              "value": "local"
+            },
+            "code_string": "at11"
+          }
+        }
+      },
+      {
+        "_type": "ELEMENT",
+        "archetype_node_id": "id36",
+        "name": {
+          "_type": "DV_CODED_TEXT",
+          "value": "record_subject",
+          "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": {
+              "_type": "TERMINOLOGY_ID",
+              "value": "openehr_access"
+            },
+            "code_string": "record_subject"
+          }
+        },
+        "value": {
+          "_type": "DV_IDENTIFIER",
+          "issuer": "__SUBJECT_NS__",
+          "id": "__SUBJECT_ID:0__"
+        }
+      }
+    ]
+  },
+  "identities": [
+    {
+      "_type": "PARTY_IDENTITY",
+      "archetype_node_id": "id6",
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "Name"
+      },
+      "details": {
+        "_type": "ITEM_TREE",
+        "archetype_node_id": "id7",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "Name structure"
+        },
+        "items": [
+          {
+            "_type": "ELEMENT",
+            "archetype_node_id": "id8",
+            "name": {
+              "_type": "DV_TEXT",
+              "value": "Full name"
+            },
+            "value": {
+              "_type": "DV_TEXT",
+              "value": "Isa de Vries"
+            }
+          },
+          {
+            "_type": "ELEMENT",
+            "archetype_node_id": "id9",
+            "name": {
+              "_type": "DV_TEXT",
+              "value": "Given name"
+            },
+            "value": {
+              "_type": "DV_TEXT",
+              "value": "Isa"
+            }
+          },
+          {
+            "_type": "ELEMENT",
+            "archetype_node_id": "id10",
+            "name": {
+              "_type": "DV_TEXT",
+              "value": "Family name"
+            },
+            "value": {
+              "_type": "DV_TEXT",
+              "value": "de Vries"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

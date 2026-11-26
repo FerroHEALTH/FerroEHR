@@ -12,6 +12,7 @@
 
 pub mod access_policy;
 pub mod audit;
+pub mod cohort;
 pub mod composition;
 pub mod dashboard;
 pub mod demographics;
@@ -22,6 +23,7 @@ pub mod integrity;
 pub mod item_tags;
 pub mod login;
 pub mod report;
+pub mod signature;
 pub mod system;
 pub mod template_adl2;
 pub mod template_detail;

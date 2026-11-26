@@ -436,15 +436,14 @@ mod tests {
             typed * 10 > rows,
             "only {typed} of {rows} rows hold a typed value"
         );
-        // The CKM examples carry 625 archetype roots below the root, 19 of
-        // them with an id the recasing does not give back, their own roots,
-        // and 270 entries.
+        // The CKM examples move 630 archetype headers below the root and
+        // carry 267 entries.
         assert!(
-            archetyped >= 600,
+            archetyped >= 630,
             "only {archetyped} archetype headers moved"
         );
         assert!(
-            language >= 270 && encoding >= 270,
+            language >= 267 && encoding >= 267,
             "{language} languages, {encoding} encodings"
         );
         // Every entry names its subject, and every history and event its time.

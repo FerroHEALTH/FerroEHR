@@ -98,7 +98,6 @@ DB_URL="${UI_E2E_DB_URL:-postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.dev.yml
   -f docker-compose.db-publish.yml -f docker/viewer/e2e-env.yml)
 KEYCLOAK_URL="http://localhost:8081"
-ACCEPT_JSON="Accept: application/json"
 CT_JSON="Content-Type: application/json"
 DRIVER_PORT=9515
 SHOTS_DIR="$ROOT/target/ui-e2e/screenshots"
@@ -231,58 +230,23 @@ curl -sf -X PUT -H "Authorization: Bearer $KC_TOKEN" -H "$CT_JSON" \
   -d @"$E2E_TMP/kc-client.json" \
   "$KC_REALM_ADMIN/clients/$CLIENT_ID"
 
-# ── 2b. Seed clinical data over REST (never the database): one template, one
-#        EHR, one composition committed then updated (two versions) — powers
-#        the composition-viewer journey and the data-bearing doc screenshots.
-#        The composition body is the CDR's OWN generated example (spec-valid
-#        by construction; no hand-built fixture).
-echo "── seeding an EHR + a two-version composition"
-CDR_V1="$CDR_URL/ferroehr/rest/openehr/v1"
-SEED_OPT="app/ferroehr-viewer/tests/fixtures/minimal_evaluation.opt"
-SEED_TEMPLATE="minimal_evaluation.en.v1"
-# Template upload is idempotent for the harness: 201 (created) or 409 (there).
-opt_status=$(curl -s -o /dev/null -w "%{http_code}" -u ferroehr:ferroehr -X POST \
-  "$CDR_V1/definition/template/adl1.4" -H "Content-Type: application/xml" \
-  --data-binary @"$SEED_OPT")
-case "$opt_status" in 201|409) ;; *) echo "FATAL: template upload -> $opt_status" >&2; exit 1;; esac
-SEEDED_EHR_ID=$(curl -sf -u ferroehr:ferroehr -X POST "$CDR_V1/ehr" \
-  -H "Prefer: return=representation" -H "$ACCEPT_JSON" \
-  | jq -r '.ehr_id.value')
-curl -sf -u ferroehr:ferroehr "$CDR_V1/definition/template/adl1.4/$SEED_TEMPLATE/example" \
-  -H "$ACCEPT_JSON" > "$E2E_TMP/example.json"
-SEED_VUID=$(curl -sf -D - -o /dev/null -u ferroehr:ferroehr -X POST \
-  "$CDR_V1/ehr/$SEEDED_EHR_ID/composition" \
-  -H "$CT_JSON" -H "$ACCEPT_JSON" -H "Prefer: return=minimal" \
-  --data-binary @"$E2E_TMP/example.json" \
-  | tr -d '\r' | sed -n 's/^[Ee][Tt]ag: W\/"\(.*\)"$/\1/p')
-SEEDED_VO_ID="${SEED_VUID%%::*}"
-curl -sf -o /dev/null -u ferroehr:ferroehr -X PUT \
-  "$CDR_V1/ehr/$SEEDED_EHR_ID/composition/$SEEDED_VO_ID" \
-  -H "$CT_JSON" -H "$ACCEPT_JSON" \
-  -H "If-Match: \"$SEED_VUID\"" --data-binary @"$E2E_TMP/example.json"
+# ── 2b. The demo dataset, seeded over REST (never the database) by the one
+#        seed the hosted sandbox runs (scripts/sandbox/reseed.sh): the
+#        records, the parties, the access policy, the care relationships,
+#        the legal marks, the signatures and the logs every viewer page draws.
+#        The administrator seeds, the clinician ferroehr reads outside a care
+#        relationship and attests, and ferroehr-proxy reads a patient's log
+#        as their representative. The CDR here serves no LOINC.
+echo "── seeding the demo dataset"
+SEED_IDS="$E2E_TMP/seed-ids.json"
+SANDBOX_BASE="$CDR_URL" SANDBOX_USER=ferroehr-admin SANDBOX_CLINICIAN=ferroehr \
+  SANDBOX_TERMINOLOGY=without-loinc SANDBOX_IDS_OUT="$SEED_IDS" \
+  bash scripts/sandbox/reseed.sh
+# The first demo EHR holds the two-version composition the composition
+# journeys open.
+SEEDED_EHR_ID=$(jq -r '.ehrs[0]' "$SEED_IDS")
+SEEDED_VO_ID=$(jq -r '.tokens["__SERIES:minimal-evaluation__"]' "$SEED_IDS")
 echo "   seeded EHR $SEEDED_EHR_ID / composition $SEEDED_VO_ID (2 versions)"
-# Three more single-composition EHRs committed as FLAT with real quantity
-# magnitudes (the example generator emits only the skeleton — issue #94 —
-# so charts/tables need explicitly valued data points).
-day=14
-for magnitude in 36.5 37.8 39.1; do
-  extra_ehr=$(curl -sf -u ferroehr:ferroehr -X POST "$CDR_V1/ehr" \
-    -H "Prefer: return=representation" -H "$ACCEPT_JSON" \
-    | jq -r '.ehr_id.value')
-  curl -sf -o /dev/null -u ferroehr:ferroehr -X POST \
-    "$CDR_V1/ehr/$extra_ehr/composition" \
-    -H "Content-Type: application/openehr.wt.flat+json" -H "$ACCEPT_JSON" \
-    -H "openehr-template-id: $SEED_TEMPLATE" -H "Prefer: return=minimal" \
-    -d "{
-      \"ctx/language\": \"en\", \"ctx/territory\": \"US\",
-      \"ctx/composer_name\": \"Seed composer\",
-      \"ctx/time\": \"2026-07-${day}T08:00:00Z\",
-      \"minimal/minimal/quantity|magnitude\": $magnitude,
-      \"minimal/minimal/quantity|unit\": \"kg\"
-    }"
-  day=$((day + 1))
-done
-echo "   seeded 3 extra FLAT compositions with quantity magnitudes"
 
 # The access policy, committed twice by the admin user, whom the test-only
 # grant ceiling of docker/viewer/e2e-env.yml lets the operator grant
