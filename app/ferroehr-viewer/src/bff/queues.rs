@@ -91,8 +91,17 @@ impl ParkedRef {
     }
 }
 
-/// Reads one admin queue at `path`: `None` when the CDR serves it not.
-async fn read<T: serde::de::DeserializeOwned>(path: &str) -> Result<Option<T>, ViewerError> {
+/// The delivery view's path under the extensions root.
+pub const DELIVERY: &str = "admin/audit-delivery";
+
+/// Reads the admin queue at `path` ([`DELIVERY`] reads a [`Delivery`]):
+/// `None` when the CDR serves it not.
+///
+/// # Errors
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)), the CDR's words for
+/// a local audit store that is off (`409`) and an admin group that is off
+/// (`405`); [`ViewerError::Failed`] for an answer that does not read.
+pub async fn read<T: serde::de::DeserializeOwned>(path: &str) -> Result<Option<T>, ViewerError> {
     let cdr = crate::bff::cdr()?;
     let url = cdr.extensions_v1(path);
     let response = cdr.get(&url).send().await?;
@@ -111,16 +120,6 @@ async fn post(path: &str, body: String) -> Result<(), ViewerError> {
     let url = cdr.extensions_v1(path);
     cdr.post(&url).body("application/json", body).ok().await?;
     Ok(())
-}
-
-/// The delivery of audit records, `None` when the CDR serves no such queue.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)), the CDR's words for
-/// a local audit store that is off (`409`) and an admin group that is off
-/// (`405`); [`ViewerError::Failed`] for an answer that does not read.
-pub async fn delivery() -> Result<Option<Delivery>, ViewerError> {
-    read("admin/audit-delivery").await
 }
 
 /// Asks the sink to offer the parked record `parked` again.

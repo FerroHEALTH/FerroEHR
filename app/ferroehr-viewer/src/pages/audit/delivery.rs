@@ -16,7 +16,7 @@ use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::surface::{Crumb, Header, page_heading};
 
 use crate::bff::queues::{
-    Delivery, ParkedRef, delivery, dismiss_parked, forget_sink, retry_parked,
+    DELIVERY, Delivery, ParkedRef, dismiss_parked, forget_sink, read as read_queue, retry_parked,
 };
 use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
@@ -128,7 +128,7 @@ async fn read() -> Option<Shown> {
             )
         });
     Some(Shown {
-        queue: delivery().await,
+        queue: read_queue::<Delivery>(DELIVERY).await,
         confirm,
         refused,
     })
