@@ -21,7 +21,7 @@ crate::locale::messages! {
         PolicySections = "policy-sections",
         /// `Your account may not read the access policy.`
         PolicyForbidden = "policy-forbidden",
-        /// `The CDR's admin API is off, so the access policy cannot be read here.`
+        /// `The CDR's admin API is off, so this cannot be read here.`
         AdminOff = "admin-off",
         /// `The access policy could not be read.`
         PolicyRefused = "policy-refused",
@@ -343,5 +343,45 @@ crate::locale::messages! {
         RoleResp = "role-resp",
         /// `secondary performer`
         RoleSprf = "role-sprf",
+        /// `The CDR's register is not JSON`
+        RegisterJson = "register-json",
+        /// `Audit categories`
+        RegisterAuditCategories = "register-audit-categories",
+        /// `Access delay`
+        RegisterAccessDelay = "register-access-delay",
+        /// `The default, which no one committed`
+        RegisterDefault = "register-default",
+        /// `$version` (shown)
+        RegisterVersionShown = "register-version-shown",
+        /// `An older version of the register, read-only.`
+        RegisterOlder = "register-older",
+        /// `The EHDS category map every access is classified through (Annex II 3.2(c)): template and archetype ids, each to its categories or none.`
+        RegisterAuditCategoriesIntro = "register-audit-categories-intro",
+        /// `The delay of the person's own access to newly registered data (EHDS Art. 3(3)), where the Member State provides for it.`
+        RegisterAccessDelayIntro = "register-access-delay-intro",
+        /// `Edit the register`
+        RegisterEdit = "register-edit",
+        /// `Document`
+        RegisterDocument = "register-document",
+        /// `Every version, newest first, ending with version 0, the default. Open one to read it.`
+        RegisterHistoryIntro = "register-history-intro",
+        /// Register document, version `$version`
+        RegisterDocumentTitle = "register-document-title",
+        /// `Register saved`
+        RegisterSaved = "register-saved",
+        /// Version `$version` is in force on every replica from the next request.
+        RegisterSavedVersion = "register-saved-version",
+        /// `The CDR did not save the register.`
+        RegisterSaveRefused = "register-save-refused",
+        /// `The whole register document. The save replaces the version you opened; if another administrator saved first, the CDR refuses it.`
+        RegisterEditIntro = "register-edit-intro",
+        /// `Replaces the register whole`
+        RegisterEditSubtitle = "register-edit-subtitle",
+        /// `Your account may not read this register.`
+        RegisterForbidden = "register-forbidden",
+        /// `Audit categories`
+        TabAuditCategories = "tab-audit-categories",
+        /// `Access delay`
+        TabAccessDelay = "tab-access-delay",
     }
 }

@@ -70,6 +70,29 @@ alone changes no policy ([The policy
 parties](../operational-policy.md#the-policy-parties)). The new version applies
 on every replica from its next request.
 
+## The admin registers
+
+The Access policy area has a tab for each [admin
+register](../operational-policy.md#the-admin-registers): **Audit categories**,
+the EHDS category map every access is classified through, and **Access
+delay**, the EHDS Art. 3(3) delay of the person's own access. Each reads
+`GET {ext}/admin/registers/{register}` and shows the version in force, who
+committed it and when, and its document drawn by its members: the access
+delay's `enabled`, `categories` and `max_delay`, and the category map's
+`shipped_map`, `national`, `templates` and `archetypes`.
+
+The history (`/history`) lists every version, newest first, ending with
+version 0, the default no one committed. Open a version to read it; an older
+version offers no edit.
+
+**Edit the register** replaces its whole document in the code editor. The save
+names the version you opened in `If-Match`; a document the CDR refuses
+(`400`) or a version another administrator replaced first (`412`) is shown in
+the CDR's words, with your document kept. A `403` says your account may not
+read the register, and with the admin API off the tab says so.
+
+![The access delay register](img/access-policy/access-delay.png)
+
 ## Roles and grants
 
 **Roles and grants**, in the console group, lists what the CDR's policy

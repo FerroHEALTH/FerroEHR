@@ -13,6 +13,7 @@
 
 pub mod edit;
 pub mod grants;
+pub mod registers;
 
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
@@ -57,40 +58,51 @@ pub enum PolicyTab {
     Policy,
     /// Its versions.
     Versions,
+    /// An admin register.
+    Register(crate::bff::registers::Register),
 }
 
 impl PolicyTab {
     /// Every tab, in order.
-    const ALL: [Self; 2] = [Self::Policy, Self::Versions];
+    const ALL: [Self; 4] = [
+        Self::Policy,
+        Self::Versions,
+        Self::Register(crate::bff::registers::Register::AuditCategories),
+        Self::Register(crate::bff::registers::Register::AccessDelay),
+    ];
 
     /// The tab's key.
     const fn key(self) -> &'static str {
         match self {
             Self::Policy => "policy",
             Self::Versions => "versions",
+            Self::Register(register) => register.key(),
         }
     }
 
     /// The tab's page.
-    const fn href(self) -> &'static str {
+    fn href(self) -> String {
         match self {
-            Self::Policy => POLICY_ROUTE,
-            Self::Versions => VERSIONS_ROUTE,
+            Self::Policy => POLICY_ROUTE.to_owned(),
+            Self::Versions => VERSIONS_ROUTE.to_owned(),
+            Self::Register(register) => registers::register_href(register),
         }
     }
 
     /// The tab's label.
     fn label(self) -> String {
-        tr(match self {
-            Self::Policy => PolicyMsg::TabPolicy,
-            Self::Versions => PolicyMsg::TabVersions,
-        })
+        match self {
+            Self::Policy => tr(PolicyMsg::TabPolicy),
+            Self::Versions => tr(PolicyMsg::TabVersions),
+            Self::Register(register) => registers::register_words(register),
+        }
     }
 }
 
 /// Access policy's frame: its heading with `actions`, its tabs with `tab`
 /// marked, and `body` in the tab's panel.
-fn frame(tab: PolicyTab, actions: ActionGroup, body: Html) -> Html {
+#[must_use]
+pub fn frame(tab: PolicyTab, actions: ActionGroup, body: Html) -> Html {
     let heading = page_heading(
         &current(),
         Header {
@@ -199,7 +211,8 @@ async fn read_policy_tab() -> Result<Reading, Unread> {
 }
 
 /// A shown value of the policy, drawn.
-fn shown(value: &Shown) -> Html {
+#[must_use]
+pub fn shown(value: &Shown) -> Html {
     match value {
         Shown::Text(text) if text.is_empty() => none(),
         Shown::Text(text) => t(text),

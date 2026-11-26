@@ -291,6 +291,11 @@ POLICY_VUID=$(policy P14D | curl -sS --fail-with-body -D - -o /dev/null "${AUTH[
 policy P7D | quiet "${AUTH[@]}" -X PUT "$EXT/admin/access_policy" "${JSON[@]}" \
   -H "If-Match: \"$POLICY_VUID\"" --data-binary @-
 
+# The access delay, committed over the default so its history holds two
+# versions.
+quiet "${AUTH[@]}" -X PUT "$EXT/admin/registers/access-delay" "${JSON[@]}" -H 'If-Match: "0"' \
+  -d '{"enabled": true, "categories": ["Laboratory-Reports"], "max_delay": "72h"}'
+
 QUERY="org.example.cardio::latest"
 quiet "${AUTH[@]}" -X PUT "$V1/definition/query/$QUERY" \
   -H "Content-Type: text/plain" \
