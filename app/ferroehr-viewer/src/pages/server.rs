@@ -32,18 +32,18 @@ use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
 use crate::locale::console::ConsoleMsg;
 use crate::locale::{Msg, current, tr, tr_with};
+use crate::management::{LoggerView, MetricDetailView, MetricTile, ReadinessView, format_metric};
 use crate::management::{
-    BuildInfoView, LoggerView, MetricDetailView, MetricTile, ReadinessView, format_metric,
-};
-use crate::management::{
-    fetch_build_info, fetch_headline_metrics, fetch_loggers, fetch_metric_detail,
-    fetch_metric_names, fetch_readiness, probe_management_api, reset_log_filter, set_log_filter,
+    fetch_headline_metrics, fetch_loggers, fetch_metric_detail, fetch_metric_names,
+    fetch_readiness, probe_management_api, reset_log_filter, set_log_filter,
 };
 use crate::markup::{attr, flag, h, opt, t};
 use crate::pages::common::{
     Refused, count, document_section, info_note, panel, plain_section, section, state_mark,
 };
 use crate::routes::Drawn;
+
+pub mod overview;
 
 /// The id of Apply the log filter's confirmation.
 const APPLY_DIALOG: &str = "apply-log-filter";
@@ -193,187 +193,6 @@ fn smart_intro() -> Html {
         t(tr(Msg::YourAccess)),
         t(after)
     ))
-}
-
-/// How the CDR's status document says it runs.
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum Running {
-    /// `UP`.
-    Up,
-    /// Any other status word, or none.
-    Degraded(Option<String>),
-    /// A status that is no status document.
-    Unknown,
-    /// No status read.
-    Unreachable,
-}
-
-/// Overview's model.
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct Overview {
-    /// How the CDR runs.
-    running: Running,
-    /// Whether it runs the sandbox deployment profile.
-    sandbox: bool,
-    /// Its version, empty when it names none.
-    version: String,
-    /// The safeguards a sandbox runs without, as sentences.
-    gaps: Vec<String>,
-    /// The management surface's build information, or its refusal.
-    build: Result<Option<BuildInfoView>, Refused>,
-}
-
-/// What the page reads, on the server.
-async fn read_overview() -> Tabbed<Overview> {
-    load_tab(ServerTab::Overview, || async {
-        let status = crate::shell::status().await;
-        let document = status
-            .as_ref()
-            .ok()
-            .and_then(|body| crate::deployment::StatusDocument::parse(body));
-        let running = match (&status, &document) {
-            (Ok(_), Some(document)) if document.status.as_deref() == Some("UP") => Running::Up,
-            (Ok(_), Some(document)) => Running::Degraded(document.status.clone()),
-            (Ok(_), None) => Running::Unknown,
-            (Err(_), _) => Running::Unreachable,
-        };
-        let deployment = document
-            .as_ref()
-            .and_then(|document| document.deployment.clone());
-        let sandbox = deployment
-            .as_ref()
-            .is_some_and(|deployment| deployment.profile == "sandbox");
-        let gaps = deployment
-            .filter(|_| sandbox)
-            .map(|deployment| {
-                deployment
-                    .gaps
-                    .iter()
-                    .map(String::as_str)
-                    .map(crate::deployment::gap_text)
-                    .collect()
-            })
-            .unwrap_or_default();
-        Overview {
-            running,
-            sandbox,
-            version: document
-                .and_then(|document| document.server_version)
-                .unwrap_or_default(),
-            gaps,
-            build: fetch_build_info()
-                .await
-                .map_err(|error| Refused::new(tr(ConsoleMsg::ServerBuildRefused), error)),
-        }
-    })
-    .await
-}
-
-/// Overview, drawn.
-fn overview(model: Overview) -> Html {
-    let Overview {
-        running,
-        sandbox,
-        version,
-        gaps,
-        build,
-    } = model;
-    let state = match running {
-        Running::Up => state_mark(FlowState::Up, &tr(ConsoleMsg::ServerUp)),
-        Running::Degraded(word) => state_mark(
-            FlowState::Degraded,
-            &word.unwrap_or_else(|| tr(ConsoleMsg::ServerUnknown)),
-        ),
-        Running::Unknown => state_mark(FlowState::NotChecked, &tr(ConsoleMsg::ServerUnknown)),
-        Running::Unreachable => {
-            state_mark(FlowState::Unreachable, &tr(ConsoleMsg::ServerUnreachable))
-        }
-    };
-    let facts = definitions(vec![
-        (tr(ConsoleMsg::ServerState), state),
-        (
-            tr(ConsoleMsg::ServerDeployment),
-            t(tr(if sandbox {
-                ConsoleMsg::ServerSandbox
-            } else {
-                ConsoleMsg::ServerProduction
-            })),
-        ),
-        (tr(ConsoleMsg::ServerVersion), t(version)),
-        (
-            tr(ConsoleMsg::ServerConformance),
-            h(format!(r#"<a href="/about">{}</a>"#, t(tr(Msg::NavAbout)))),
-        ),
-    ]);
-    let gaps = (!gaps.is_empty()).then(|| {
-        let columns = [Column::text("gap", tr(ConsoleMsg::ServerSafeguard)).role(Role::Title)];
-        let total = u64::try_from(gaps.len()).ok();
-        let rows = gaps
-            .iter()
-            .map(|gap| {
-                h(format!(
-                    r#"<tr><th scope="row" data-role="title">{}</th></tr>"#,
-                    state_mark(FlowState::Degraded, gap)
-                ))
-            })
-            .collect();
-        let caption = tr(ConsoleMsg::ServerSafeguardsOff);
-        section(
-            Some(tr(ConsoleMsg::ServerSafeguardsOff)),
-            total,
-            None,
-            ferrohealth_ui::view::surface::section_intro(tr(ConsoleMsg::ServerSandboxIntro)).then(
-                data_table(DataTable::new(&caption, &columns, Body::Rows(rows))),
-            ),
-        )
-    });
-    let build = match build {
-        Ok(Some(info)) => {
-            let mut parts = vec![section(
-                Some(tr(ConsoleMsg::ServerBuild)),
-                None,
-                None,
-                definitions(
-                    info.facts
-                        .iter()
-                        .map(|(key, value)| (key.clone(), t(value)))
-                        .collect(),
-                ),
-            )];
-            for group in &info.sections {
-                parts.push(section(
-                    Some(group.key.clone()),
-                    None,
-                    None,
-                    definitions(
-                        group
-                            .rows
-                            .iter()
-                            .map(|(key, value)| (key.clone(), t(value)))
-                            .collect(),
-                    ),
-                ));
-            }
-            Html::join(parts)
-        }
-        Ok(None) => plain_section(info_note(t(tr(ConsoleMsg::ServerNoBuildInfo)))),
-        Err(refusal) => plain_section(refusal.view()),
-    };
-    Html::join([
-        section(Some(tr(ConsoleMsg::ServerStatus)), None, None, facts),
-        opt(gaps),
-        build,
-    ])
-}
-
-/// Server: Overview.
-/// Server › Overview.
-pub async fn overview_page() -> Drawn {
-    let page = {
-        let tabbed = read_overview().await;
-        server_page(ServerTab::Overview, tabbed, overview)
-    };
-    Drawn::page(tr(Msg::NavServer), page)
 }
 
 /// The word the health tab shows for an indicator's `state`.
