@@ -13,7 +13,7 @@ account read.
 
 **Access policy**, in the sidebar's console group, reads the controller's
 `ACCESS_POLICY` in force (`GET {ext}/admin/access_policy`, see
-[The access policy](../access-policy.md#the-access-policy)) and draws it
+[The access policy](../access-policy.md)) and draws it
 by section:
 
 - **Classifications:** which data carry which sensitivities and
@@ -100,7 +100,7 @@ party binds, and the grants its roles carry.
 
 A care relationship says that a professional, a care team or a unit cares
 for a person, for a period ([Caller facts: roles and care
-relationships](../operational-policy.md#caller-facts-roles-and-care-relationships)).
+relationships](../caller-facts.md#caller-facts-roles-and-care-relationships)).
 The viewer reads them from the CDR's care relationship resources under
 `{ext}`, and the CDR decides for each subject what you may see: a relationship
 you may not read is left out, or the page shows the CDR's refusal.
