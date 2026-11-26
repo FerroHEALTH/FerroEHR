@@ -471,6 +471,18 @@ async fn capture_states(h: &Harness, seeded: &Seeded, book: &Path) {
     common::wait_visible(h, "#delete-confirm").await;
     shot_to(h, book, "ehrs/ehr-delete").await;
 
+    h.goto(&format!("/ehrs/{}", seeded.ehr)).await;
+    h.wait_css("summary[aria-controls='ehr-more']")
+        .await
+        .click()
+        .await;
+    h.wait_css("button[command='show-modal'][commandfor='archive-record']")
+        .await
+        .click()
+        .await;
+    common::wait_visible(h, "#archive-record button[type=submit]").await;
+    shot_to(h, book, "ehrs/ehr-archive").await;
+
     h.goto(&format!("/templates/{TEMPLATE_ID}?confirm=delete"))
         .await;
     h.wait_css("main form.fui-cluster").await;
