@@ -159,6 +159,8 @@ CDR checks the signature when it serves the version; see
 sets or removes one; a tag stays on the composition across its versions and
 commits no version.
 
+![A composition's versions](img/compositions/versions.png)
+
 **Edit as a new version** opens the document in an editor; the save writes
 the next version. **Delete composition…** marks it deleted with a new version;
 its versions stay readable and it leaves the EHR's list.
