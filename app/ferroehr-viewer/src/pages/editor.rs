@@ -92,3 +92,93 @@ pub fn reload_words(current: &str) -> String {
         &[("version", crate::uid::version_number(current).into())],
     )
 }
+
+/// A JSON document an editor saves whole over a version.
+#[derive(Debug)]
+pub struct DocumentForm {
+    /// The id of the page's form.
+    pub form: &'static str,
+    /// Where the form posts.
+    pub action: String,
+    /// The version the save replaces, posted as `version`.
+    pub version: String,
+    /// The document as typed.
+    pub text: String,
+    /// The document as opened.
+    pub opened: String,
+    /// The save the CDR refused, when the post was one.
+    pub unsaved: Option<Unsaved>,
+    /// The words of Reload after a conflict.
+    pub reload: String,
+    /// The words of Save.
+    pub save: String,
+    /// The editor's accessible name.
+    pub label: String,
+    /// The section's title and its intro.
+    pub section: (String, String),
+    /// What follows the editor in the form, such as a choice.
+    pub after: Html,
+}
+
+/// The form of `document`, its decision bar docked: the CDR's refusal over
+/// it, the code editor with the findings the refusal names, and the docked
+/// Discard and Save.
+#[must_use]
+pub fn document_form(document: DocumentForm) -> Html {
+    use crate::components::{EditorField, EditorLanguage, EditorSetup, code_editor};
+    use crate::locale::records::RecordsMsg;
+    use crate::pages::common::{EditorDock, card_panel, dock_editor, findings_of, marks_of};
+    let DocumentForm {
+        form,
+        action,
+        version,
+        text,
+        opened,
+        unsaved,
+        reload,
+        save,
+        label,
+        section,
+        after,
+    } = document;
+    let field = EditorField::Document.name();
+    let findings = unsaved
+        .as_ref()
+        .and_then(|unsaved| findings_of(&unsaved.refusal.error, &text, &field));
+    let conflict = unsaved.as_ref().is_some_and(|unsaved| unsaved.conflict);
+    let (glyph, line) = editor_line(unsaved.is_some());
+    let top = unsaved.map(|unsaved| unsaved.view(&action, reload));
+    dock_editor(EditorDock {
+        form: form.to_owned(),
+        line,
+        glyph,
+        save,
+        blocked: conflict.then(|| tr(RecordsMsg::EditorReloadFirst)),
+    });
+    let editor = code_editor(EditorSetup {
+        field: EditorField::Document,
+        language: EditorLanguage::Json,
+        text,
+        opened: Some(opened),
+        marks: marks_of(findings.as_ref()),
+        label,
+        lead: tr(RecordsMsg::EditorJson),
+        facts: vec![tr(Msg::EditorUtf8)],
+        findings,
+    });
+    let (title, intro) = section;
+    let body = crate::pages::common::section(
+        Some(title),
+        None,
+        None,
+        ferrohealth_ui::view::surface::section_intro(intro)
+            .then(editor)
+            .then(after),
+    );
+    crate::markup::opt(top).then(h(format!(
+        r#"<form id="{form}" method="post" action="{action}"><input type="hidden" name="version" value="{version}">{panel}</form>"#,
+        action = t(&action),
+        version = t(&version),
+        panel = card_panel(body),
+    )))
+}

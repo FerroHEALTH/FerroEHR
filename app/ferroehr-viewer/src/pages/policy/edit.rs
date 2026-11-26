@@ -12,19 +12,17 @@
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::view::action::ActionGroup;
-use ferrohealth_ui::view::surface::{Crumb, Header, Mode, editor_heading, section_intro};
+use ferrohealth_ui::view::surface::{Crumb, Header, Mode, editor_heading};
 
 use crate::bff::access_policy::{fetch_policy, put_policy};
-use crate::components::{EditorField, EditorLanguage, EditorSetup, code_editor};
+use crate::components::EditorField;
 use crate::flash::{Done, redirect_with};
 use crate::locale::policy::PolicyMsg;
 use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
-use crate::markup::{h, opt, t};
-use crate::pages::common::{
-    EditorDock, card_panel, discarded, dock_editor, findings_of, marks_of, section,
-};
-use crate::pages::editor::{Unsaved, editor_line, reload_words, save_as_words};
+use crate::markup::h;
+use crate::pages::common::discarded;
+use crate::pages::editor::{DocumentForm, Unsaved, document_form, reload_words, save_as_words};
 use crate::pages::form::Form;
 use crate::pages::policy::{EDIT_ROUTE, POLICY_ROUTE, refusal_of};
 use crate::routes::Drawn;
@@ -134,50 +132,26 @@ fn edit_form(editor: Editor) -> Html {
         opened_text,
         unsaved,
     } = editor;
-    let field = EditorField::Document.name();
-    let findings = unsaved
-        .as_ref()
-        .and_then(|unsaved| findings_of(&unsaved.refusal.error, &text, &field));
-    let conflict = unsaved.as_ref().is_some_and(|unsaved| unsaved.conflict);
-    let (glyph, line) = editor_line(unsaved.is_some());
-    let words = current_uid
-        .as_deref()
-        .map_or_else(|| tr(PolicyMsg::ReloadNone), reload_words);
-    let top = unsaved.map(|unsaved| unsaved.view(EDIT_ROUTE, words));
-    dock_editor(EditorDock {
-        form: EDIT_FORM.to_owned(),
-        line,
-        glyph,
-        save: save_words(opened.as_deref()),
-        blocked: conflict.then(|| tr(RecordsMsg::EditorReloadFirst)),
-    });
-    let editor = code_editor(EditorSetup {
-        field: EditorField::Document,
-        language: EditorLanguage::Json,
-        text,
-        opened: Some(opened_text),
-        marks: marks_of(findings.as_ref()),
-        label: tr(PolicyMsg::EditorLabel),
-        lead: tr(RecordsMsg::EditorJson),
-        facts: vec![tr(Msg::EditorUtf8)],
-        findings,
-    });
     let intro = if opened.is_some() {
         PolicyMsg::EditIntro
     } else {
         PolicyMsg::EditFirstIntro
     };
-    let body = section(
-        Some(tr(PolicyMsg::EditDocument)),
-        None,
-        None,
-        section_intro(tr(intro)).then(editor),
-    );
-    opt(top).then(h(format!(
-        r#"<form id="{EDIT_FORM}" method="post" action="{EDIT_ROUTE}"><input type="hidden" name="version" value="{version}">{panel}</form>"#,
-        version = t(opened.unwrap_or_default()),
-        panel = card_panel(body),
-    )))
+    document_form(DocumentForm {
+        form: EDIT_FORM,
+        action: EDIT_ROUTE.to_owned(),
+        save: save_words(opened.as_deref()),
+        version: opened.unwrap_or_default(),
+        text,
+        opened: opened_text,
+        unsaved,
+        reload: current_uid
+            .as_deref()
+            .map_or_else(|| tr(PolicyMsg::ReloadNone), reload_words),
+        label: tr(PolicyMsg::EditorLabel),
+        section: (tr(PolicyMsg::EditDocument), tr(intro)),
+        after: Html::empty(),
+    })
 }
 
 /// Edit the access policy.
