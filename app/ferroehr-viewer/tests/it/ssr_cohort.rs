@@ -110,14 +110,9 @@ async fn a_cohort_run_draws_its_rows_and_its_facts() {
     ] {
         assert!(main.contains(words), "the run shows {words}:\n{main}");
     }
-    let cohort = main
-        .split(r#"name="cohort" value=""#)
-        .nth(1)
-        .and_then(|rest| rest.split('"').next())
-        .unwrap_or_default();
     assert!(
-        cohort.contains("city") && cohort.contains("Groningen"),
-        "the exports run the same cohort: {cohort}"
+        main.contains(r#"<input type="hidden" name="cohort" value="1">"#),
+        "the exports run the same cohort:\n{main}"
     );
 }
 

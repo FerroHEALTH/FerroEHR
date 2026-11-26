@@ -34,19 +34,6 @@ pub struct Predicate {
     pub value: String,
 }
 
-/// The cohort predicates `predicates` as the JSON array the route takes,
-/// each entry `{name, value}`.
-#[must_use]
-pub fn cohort_json(predicates: &[Predicate]) -> String {
-    serde_json::Value::Array(
-        predicates
-            .iter()
-            .map(|predicate| serde_json::json!({"name": predicate.name, "value": predicate.value}))
-            .collect(),
-    )
-    .to_string()
-}
-
 /// What the CDR says of the cohort a run selected.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 pub struct CohortMeta {
@@ -79,20 +66,19 @@ struct Envelope {
     meta: Meta,
 }
 
-/// The request body of a cohort run of `aql` with `parameters` over the
-/// predicates `cohort` (a JSON array text), the first `fetch` rows or the
-/// CDR's default window.
+/// The request body of a cohort run of `aql` with `parameters` over
+/// `predicates`, the first `fetch` rows or the CDR's default window.
 #[must_use]
 pub fn request_body(
     aql: &str,
     parameters: &serde_json::Value,
-    cohort: &str,
+    predicates: &[Predicate],
     fetch: Option<u32>,
 ) -> String {
-    // NOTE: no openEHR spec governs this: our own design; a cohort text that is no
-    // JSON is sent as no predicate, and the CDR refuses the request in its words.
-    let cohort: serde_json::Value =
-        serde_json::from_str(cohort).unwrap_or_else(|_| serde_json::Value::Array(Vec::new()));
+    let cohort: Vec<serde_json::Value> = predicates
+        .iter()
+        .map(|predicate| serde_json::json!({"name": predicate.name, "value": predicate.value}))
+        .collect();
     let mut body = serde_json::json!({
         "q": aql,
         "query_parameters": parameters,
@@ -102,6 +88,18 @@ pub fn request_body(
         fields.insert("fetch".to_owned(), fetch.into());
     }
     body.to_string()
+}
+
+/// The predicates the cohort form `field` reads: each bindable key whose
+/// field `cohort-<key>` is filled.
+pub fn chosen(field: impl Fn(&str) -> String) -> Vec<Predicate> {
+    KEYS.iter()
+        .map(|key| Predicate {
+            name: (*key).to_owned(),
+            value: field(&format!("cohort-{key}")).trim().to_owned(),
+        })
+        .filter(|predicate| !predicate.value.is_empty())
+        .collect()
 }
 
 /// Runs `aql` with `parameters_json` over the cohort `predicates` select:
@@ -128,12 +126,7 @@ pub async fn run_cohort(
         })?
     };
     let url = cdr.extensions_v1("query/cohort");
-    let body = request_body(
-        aql,
-        &parameters,
-        &cohort_json(predicates),
-        Some(crate::bff::PAGE_SIZE),
-    );
+    let body = request_body(aql, &parameters, predicates, Some(crate::bff::PAGE_SIZE));
     let response = cdr.post(&url).body("application/json", body).send().await?;
     if response.is(http::StatusCode::NOT_FOUND) {
         return Ok(None);
@@ -167,16 +160,23 @@ pub async fn bound_keys() -> Result<Option<Vec<String>>, ViewerError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Envelope, Predicate, cohort_json};
+    use super::{Envelope, chosen, request_body};
 
-    /// The predicates go as the documented `{name, value}` entries.
+    /// The filled fields are the predicates, sent as the documented
+    /// `{name, value}` entries.
     #[test]
-    fn the_cohort_names_each_predicate() {
-        let json = cohort_json(&[Predicate {
-            name: "city".to_owned(),
-            value: "Groningen".to_owned(),
-        }]);
-        assert_eq!(json, r#"[{"name":"city","value":"Groningen"}]"#);
+    fn the_cohort_names_each_filled_predicate() {
+        let predicates = chosen(|field| {
+            if field == "cohort-city" {
+                " Groningen ".to_owned()
+            } else {
+                String::new()
+            }
+        });
+        assert_eq!(
+            request_body("q", &serde_json::json!({}), &predicates, None),
+            r#"{"q":"q","query_parameters":{},"cohort":[{"name":"city","value":"Groningen"}]}"#
+        );
     }
 
     /// The documented meta block reads.

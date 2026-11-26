@@ -22,7 +22,7 @@ use ferrohealth_ui::view::tabs::binder;
 
 use super::aql_input::{grammar, parameters_json, parameters_of, parameters_view};
 use super::{QUERY_FORM, tabs};
-use crate::bff::cohort::{CohortMeta, KEYS, Predicate, bound_keys, cohort_json, run_cohort};
+use crate::bff::cohort::{CohortMeta, KEYS, Predicate, bound_keys, run_cohort};
 use crate::components::{EditorField, EditorLanguage, EditorSetup, code_editor};
 use crate::locale::queries::QueriesMsg;
 use crate::locale::{Msg, current, tr};
@@ -132,12 +132,10 @@ async fn read_cohort() -> Cohort {
         Outcome::Stopped(Answer::NotRun(tr(QueriesMsg::CohortNoPredicate)))
     } else {
         let parameters = parameters_json(&rows);
-        let cohort = cohort_json(&chosen);
         match run_cohort(&aql, &parameters, &chosen).await {
-            Ok(Some((page, meta))) => Outcome::Ran(
-                meta,
-                Answer::of_cohort(Ok(page), &aql, &parameters, &cohort),
-            ),
+            Ok(Some((page, meta))) => {
+                Outcome::Ran(meta, Answer::of_cohort(Ok(page), &aql, &parameters))
+            }
             Ok(None) => Outcome::Unbound,
             Err(error) => Outcome::Stopped(Answer::Refused(Refused::new(
                 tr(QueriesMsg::QueryRunRefused),
