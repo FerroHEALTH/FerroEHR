@@ -104,7 +104,7 @@ The dataset holds:
   Simplified Flat format with measured values. Seven compositions have more
   than one version, so `LATEST_VERSION` and `ALL_VERSIONS` differ on real
   data, and two carry an attestation, one signed and one pending.
-- **233 ADL 2 archetypes and 5 ADL 2 templates**, browsable under
+- **233 ADL 2 archetypes and 3 ADL 2 templates**, browsable under
   `extensions/v1/definition/archetype/adl2` and
   `openehr/v1/definition/template/adl2`. Two of the
   templates are ADL 2 source templates whose slots the server flattens against

@@ -10,7 +10,7 @@
     "",
     "What one run loads: 18 ADL 1.4 operational templates (the curated CKM pack, one",
     "terminology-binding template and the viewer's minimal evaluation template), the vendored",
-    "ADL 2 archetype library as pinned below, 8 ADL 2 artefacts of this repository's own, 5",
+    "ADL 2 archetype library as pinned below, 6 ADL 2 artefacts of this repository's own, 5",
     "ADL 1.4 CKM archetypes, 8 EHRs with their compositions, further COMPOSITION and EHR_STATUS",
     "versions, 3 Simplified Flat compositions with measured values, a directory in every EHR,",
     "the demographic parties (persons, the patients with their record subjects, the provider",
@@ -127,18 +127,6 @@
         "file": "corpus/fixtures/adl2/opt/vitals.adls",
         "id": "openEHR-EHR-COMPOSITION.cnf_vitals.v1.0.0",
         "ehrs": [0, 1, 2, 3, 4, 5, 6, 7],
-        "compositions_per_ehr": 1
-      },
-      {
-        "file": "corpus/fixtures/adl2/opt/versioned.v1_0_0.adls",
-        "id": "openEHR-EHR-COMPOSITION.cnf_adl2_versioned.v1.0.0",
-        "ehrs": [],
-        "compositions_per_ehr": 0
-      },
-      {
-        "file": "corpus/fixtures/adl2/opt/versioned.v1_1_0.adls",
-        "id": "openEHR-EHR-COMPOSITION.cnf_adl2_versioned.v1.1.0",
-        "ehrs": [0, 1, 2, 3],
         "compositions_per_ehr": 1
       },
       {
