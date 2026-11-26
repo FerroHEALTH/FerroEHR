@@ -1,0 +1,1 @@
+- The book has a Command-line reference generated from the `ferroehr` binary's own `clap` definition: every command and option as `--help` prints it. A test fails when the page and the binary disagree.
