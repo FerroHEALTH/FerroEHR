@@ -36,7 +36,7 @@ use utoipa_axum::routes;
 use ferroehr::storage::marks::RetentionPeriod;
 use openehr_its::rest::runtime::ApiError;
 
-use super::body::{optional_str, required_query, required_str};
+use super::body::{AdminRefusal, RegisterReadRefusal, optional_str, required_query, required_str};
 use crate::api::refusals::JsonBodyRequired;
 use crate::api::{RequestParts, guarded_handler};
 use crate::overview::error::RestError;
@@ -53,13 +53,16 @@ pub(crate) fn marks_routes() -> OpenApiRouter<AppState> {
             admin_restriction_register
         ))
         .routes(routes!(admin_lift_restriction))
-        .routes(routes!(admin_research_objection))
+        .routes(routes!(
+            admin_research_objection,
+            admin_research_objection_read
+        ))
         .routes(routes!(
             admin_retention_policies,
             admin_put_retention_policy
         ))
-        .routes(routes!(admin_retention_anchor))
-        .routes(routes!(admin_retention_hold))
+        .routes(routes!(admin_retention_anchor, admin_retention_anchor_read))
+        .routes(routes!(admin_retention_hold, admin_retention_hold_register))
         .routes(routes!(admin_retention_due))
 }
 
@@ -412,6 +415,74 @@ guarded_handler! {
         }
 }
 
+guarded_handler! {
+    /// Read one EHR's research objection (`GET /admin/research-objection`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    #[utoipa::path(
+        get, path = "/admin/research-objection", tag = "admin-marks",
+        params(("ehr_id" = String, Query, description = "The EHR whose objection to read.")),
+        responses(
+            (status = 200, description = "`{ \"objected\": …, \"objected_at\": …, \
+                                          \"ground\": … }`: whether an objection stands \
+                                          unoverridden, when the subject objected, and \
+                                          the controller's Art. 21(6) override ground. \
+                                          An EHR with none answers `objected: false` and \
+                                          nulls.",
+             body = serde_json::Value),
+            RegisterReadRefusal,
+            AdminRefusal
+        )
+    )]
+    admin_research_objection_read => |state, parts| {
+            super::body::gated(state, parts, research_objection_read)
+        }
+}
+
+guarded_handler! {
+    /// Read one EHR's retention anchor and any EHR-wide hold
+    /// (`GET /admin/retention/anchor`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    #[utoipa::path(
+        get, path = "/admin/retention/anchor", tag = "admin-marks",
+        params(("ehr_id" = String, Query, description = "The EHR whose anchor to read.")),
+        responses(
+            (status = 200, description = "`{ \"anchor\": { \"jurisdiction\": …, \
+                                          \"anchored_at\": …, \"hold_at\": …, \
+                                          \"hold_ground\": … } }`, or `{ \"anchor\": \
+                                          null }` while none is recorded.",
+             body = serde_json::Value),
+            RegisterReadRefusal,
+            AdminRefusal
+        )
+    )]
+    admin_retention_anchor_read => |state, parts| {
+            super::body::gated(state, parts, retention_anchor_read)
+        }
+}
+
+guarded_handler! {
+    /// Read the versioned objects of one EHR held from disposal
+    /// (`GET /admin/retention/hold`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module docs).
+    #[utoipa::path(
+        get, path = "/admin/retention/hold", tag = "admin-marks",
+        params(("ehr_id" = String, Query, description = "The EHR whose holds to read.")),
+        responses(
+            (status = 200, description = "`{ \"holds\": [{ \"vo_id\": …, \
+                                          \"held_at\": … }] }`, newest hold first.",
+             body = serde_json::Value),
+            RegisterReadRefusal,
+            AdminRefusal
+        )
+    )]
+    admin_retention_hold_register => |state, parts| {
+            super::body::gated(state, parts, retention_hold_register)
+        }
+}
+
 // ── operations ────────────────────────────────────────────────────────────────
 
 /// The `admin_restrict_processing` operation.
@@ -648,5 +719,78 @@ pub(crate) async fn retention_due(
         h,
         StatusCode::OK,
         &serde_json::json!({ "due": body }),
+    ))
+}
+
+/// The `admin_research_objection_read` operation.
+async fn research_objection_read(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let ehr_id = required_query(&parts, "ehr_id")?;
+    let row = state
+        .backend()
+        .research_objection(parse_ehr_id(&ehr_id)?)
+        .await?;
+    let body = serde_json::json!({
+        "objected": row.objected_at.is_some() && row.ground.is_none(),
+        "objected_at": row.objected_at.map(|at| at.to_string()),
+        "ground": row.ground,
+    });
+    Ok(negotiate::body::respond(
+        &parts.headers,
+        StatusCode::OK,
+        &body,
+    ))
+}
+
+/// The `admin_retention_anchor_read` operation.
+async fn retention_anchor_read(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let ehr_id = required_query(&parts, "ehr_id")?;
+    let row = state
+        .backend()
+        .retention_anchor(parse_ehr_id(&ehr_id)?)
+        .await?;
+    let anchor = row.map(|row| {
+        serde_json::json!({
+            "jurisdiction": row.jurisdiction,
+            "anchored_at": row.anchored_at.map(|at| at.to_string()),
+            "hold_at": row.hold_at.map(|at| at.to_string()),
+            "hold_ground": row.hold_ground,
+        })
+    });
+    Ok(negotiate::body::respond(
+        &parts.headers,
+        StatusCode::OK,
+        &serde_json::json!({ "anchor": anchor }),
+    ))
+}
+
+/// The `admin_retention_hold_register` operation.
+async fn retention_hold_register(
+    state: AppState,
+    parts: RequestParts,
+) -> Result<Response, RestError> {
+    let ehr_id = required_query(&parts, "ehr_id")?;
+    let rows = state
+        .backend()
+        .retention_holds(parse_ehr_id(&ehr_id)?)
+        .await?;
+    let holds: Vec<serde_json::Value> = rows
+        .iter()
+        .map(|row| {
+            serde_json::json!({
+                "vo_id": row.vo_id.to_string(),
+                "held_at": row.held_at.to_string(),
+            })
+        })
+        .collect();
+    Ok(negotiate::body::respond(
+        &parts.headers,
+        StatusCode::OK,
+        &serde_json::json!({ "holds": holds }),
     ))
 }

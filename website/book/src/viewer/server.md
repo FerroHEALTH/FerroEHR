@@ -18,6 +18,28 @@ of the release's support. The conformance manifest the CDR answers at
 `OPTIONS` on its base path (its product, vendor, conformance profile and the
 API groups it mounts) is on About.
 
+When your account may read the CDR's full status document
+(`GET /management/status`, the `status` endpoint of the management surface),
+Overview also shows:
+
+- **Licence:** whether a licence is in force, its use (commercial or
+  non-commercial), the licensee and the last day it is valid.
+- **Support period:** the release date, the last month the release receives
+  fixes (CRA Art. 13(19)) and whether that period is running or has ended.
+- **Production safeguards that are off:** each production separation the
+  deployment has not made, in plain words, marked **Open** or **Accepted by
+  name** (`deployment.accepts`).
+
+A licence that expired, a configured licence file the CDR refused, no licence
+at all, and an ended support period each show a warning at the top of the
+tab. Without the full document, Overview says your account may not read it
+and shows the public profile only.
+
+The sandbox band under the top bar reads the same document: with the full
+status it names each safeguard that is off, and otherwise it states the rule
+that a sandbox must not hold real patient data. The viewer reads the status
+document once per page, so the band, the top bar's pill and Overview agree.
+
 ![Server](img/server/overview.png)
 
 ## Health, Metrics and Logging
