@@ -23,6 +23,8 @@ pub mod ehrs;
 pub mod extract;
 pub mod integrity;
 pub mod grants;
+pub mod grants;
+pub mod integrity;
 pub mod item_tags;
 pub mod login;
 pub mod report;
