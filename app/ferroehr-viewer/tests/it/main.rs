@@ -35,6 +35,7 @@ mod e2e_export;
 mod e2e_grants;
 mod e2e_keyboard;
 mod e2e_login;
+mod e2e_marks;
 mod e2e_navigation;
 mod e2e_no_script;
 mod e2e_operations;

@@ -323,6 +323,7 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         review(format!("{ehr}/contribution/new"), "ehrs/contribution-new"),
         review(format!("{ehr}/tags"), "ehrs/tags"),
         review(format!("{ehr}/care"), "ehrs/care"),
+        light(format!("{ehr}/marks"), "ehrs/marks"),
         review(format!("{ehr}/compositions/new"), "compositions/new"),
         both(composition.clone(), "compositions/reading"),
         review(

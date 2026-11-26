@@ -22,6 +22,7 @@ pub mod ehrs;
 pub mod grants;
 pub mod item_tags;
 pub mod login;
+pub mod marks;
 pub mod registers;
 pub mod system;
 pub mod template_adl2;

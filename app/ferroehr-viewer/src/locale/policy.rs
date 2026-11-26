@@ -383,5 +383,143 @@ crate::locale::messages! {
         TabAuditCategories = "tab-audit-categories",
         /// `Access delay`
         TabAccessDelay = "tab-access-delay",
+        /// `The CDR's legal mark is not JSON`
+        MarksJson = "marks-json",
+        /// `Your account may not read the legal marks.`
+        MarksForbidden = "marks-forbidden",
+        /// `The legal mark could not be read.`
+        MarksRefused = "marks-refused",
+        /// `Legal mark recorded`
+        MarksSaved = "marks-saved",
+        /// `The CDR did not record the legal mark.`
+        MarksSaveRefused = "marks-save-refused",
+        /// `The whole EHR`
+        MarksWholeEhr = "marks-whole-ehr",
+        /// `No restriction of processing was ever requested.`
+        MarksNoRestriction = "marks-no-restriction",
+        /// `Object`
+        MarksObject = "marks-object",
+        /// `Ground`
+        MarksGround = "marks-ground",
+        /// `Placed`
+        MarksPlaced = "marks-placed",
+        /// `Lifted`
+        MarksLifted = "marks-lifted",
+        /// `Note`
+        MarksNote = "marks-note",
+        /// `In force`
+        MarksInForce = "marks-in-force",
+        /// `Restriction of processing`
+        MarksRestrictions = "marks-restrictions",
+        /// `Requests to restrict processing (GDPR Art. 18), newest first; a lift keeps the request. While in force, the restricted data answers 403 to every released read and write.`
+        MarksRestrictionsIntro = "marks-restrictions-intro",
+        /// `Versioned object id`
+        MarksObjectId = "marks-object-id",
+        /// `Leave empty for the whole EHR.`
+        MarksObjectIdHelp = "marks-object-id-help",
+        /// `Restrict processing`
+        MarksRestrict = "marks-restrict",
+        /// `Restrict processing? Every released read and write of the data it covers is refused until it is lifted.`
+        MarksRestrictMessage = "marks-restrict-message",
+        /// `Lift the restriction`
+        MarksLift = "marks-lift",
+        /// `Lift every restriction in force at this grain? The data is processed again.`
+        MarksLiftMessage = "marks-lift-message",
+        /// `The objection stands`
+        MarksObjected = "marks-objected",
+        /// `Objected, overridden on a public-interest ground`
+        MarksOverridden = "marks-overridden",
+        /// `No objection`
+        MarksNoObjection = "marks-no-objection",
+        /// `Standing`
+        MarksStanding = "marks-standing",
+        /// `Record the objection`
+        MarksRecordObjection = "marks-record-objection",
+        /// `Record the person's objection to research processing? Population queries, exports and the change feed leave this EHR out while it stands.`
+        MarksObjectMessage = "marks-object-message",
+        /// `Override ground`
+        MarksOverrideGround = "marks-override-ground",
+        /// `Override on a public-interest ground`
+        MarksOverride = "marks-override",
+        /// `Override the objection on the ground given (GDPR Art. 21(6))? The EHR is back in the research population.`
+        MarksOverrideMessage = "marks-override-message",
+        /// `Withdraw the objection`
+        MarksWithdraw = "marks-withdraw",
+        /// `Withdraw the objection entirely?`
+        MarksWithdrawMessage = "marks-withdraw-message",
+        /// `Objection to research processing`
+        MarksObjection = "marks-objection",
+        /// `The person's objection to processing for research (GDPR Art. 21(6)) and the controller's override of it.`
+        MarksObjectionIntro = "marks-objection-intro",
+        /// `No composition was held from the person.`
+        MarksNoDelay = "marks-no-delay",
+        /// `Basis`
+        MarksBasis = "marks-basis",
+        /// `Until`
+        MarksUntil = "marks-until",
+        /// `Released`
+        MarksReleased = "marks-released",
+        /// `Held`
+        MarksHeld = "marks-held",
+        /// `Access delay`
+        MarksDelays = "marks-delays",
+        /// `Compositions held from the person's own access (EHDS Art. 3(3)), newest first, each until its end or a professional's release.`
+        MarksDelaysIntro = "marks-delays-intro",
+        /// `Composition id`
+        MarksCompositionId = "marks-composition-id",
+        /// `An RFC 3339 instant within the access-delay register's limit; empty for the limit.`
+        MarksUntilHelp = "marks-until-help",
+        /// `Hold from the person`
+        MarksDelay = "marks-delay",
+        /// `Hold this composition from the person until its end or a release?`
+        MarksDelayMessage = "marks-delay-message",
+        /// `Release to the person`
+        MarksRelease = "marks-release",
+        /// `Release this composition to the person? They read it from now on.`
+        MarksReleaseMessage = "marks-release-message",
+        /// `No retention anchor is recorded.`
+        MarksNoAnchor = "marks-no-anchor",
+        /// `Jurisdiction`
+        MarksJurisdiction = "marks-jurisdiction",
+        /// `Anchored at`
+        MarksAnchoredAt = "marks-anchored-at",
+        /// `EHR-wide hold placed`
+        MarksHoldAt = "marks-hold-at",
+        /// `Hold ground`
+        MarksHoldGround = "marks-hold-ground",
+        /// `No object is held from disposal.`
+        MarksNoHold = "marks-no-hold",
+        /// `Held objects`
+        MarksHolds = "marks-holds",
+        /// `An RFC 3339 instant, or empty.`
+        MarksInstantHelp = "marks-instant-help",
+        /// `Record the anchor`
+        MarksSetAnchor = "marks-set-anchor",
+        /// `Record this retention anchor? A hold keeps the EHR off the due list.`
+        MarksAnchorMessage = "marks-anchor-message",
+        /// `Hold from disposal`
+        MarksHold = "marks-hold",
+        /// `Hold this object from disposal (EPDV Art. 10 Abs. 2 lit. b)?`
+        MarksHoldMessage = "marks-hold-message",
+        /// `Release the hold`
+        MarksUnhold = "marks-unhold",
+        /// `Release the hold on this object? It counts as due again when its period runs.`
+        MarksUnholdMessage = "marks-unhold-message",
+        /// `Retention`
+        MarksRetention = "marks-retention",
+        /// `The EHR's retention jurisdiction and anchor, an EHR-wide hold, and the objects held from disposal.`
+        MarksRetentionIntro = "marks-retention-intro",
+        /// Legal marks · EHR `$id`
+        MarksTitle = "marks-title",
+        /// `Legal marks`
+        MarksTab = "marks-tab",
+        /// `This composition may be held from the person (EHDS Art. 3(3)). As the treating professional you release it to them here.`
+        MarksHoldNote = "marks-hold-note",
+        /// Held from the person until `$until`.
+        MarksHoldShown = "marks-hold-shown",
+        /// `Released to the person`
+        MarksReleaseDone = "marks-release-done",
+        /// `The CDR did not release the composition.`
+        MarksReleaseRefused = "marks-release-refused",
     }
 }
