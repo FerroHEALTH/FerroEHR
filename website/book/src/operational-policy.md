@@ -25,7 +25,9 @@ No openEHR specification governs operational policy or where it is kept, and
 none gives a party an authorization meaning. The classes are the openEHR
 Reference Model's (RM Demographic Information Model); the design on this page
 is FerroEHR's own, and the points that are its own for the policy parties are
-under [Own design](#own-design).
+under [Own design](#own-design). How the policy parties, the access policy
+and the patient's settings decide a request together is on [How FerroEHR
+decides access](explanation/access-model.md).
 
 <!-- toc -->
 

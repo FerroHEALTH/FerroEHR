@@ -10,6 +10,7 @@
   - [System architecture](concepts/architecture.md)
   - [Storage architecture](concepts/storage.md)
   - [The AQL engine](concepts/aql-engine.md)
+  - [How FerroEHR decides access](explanation/access-model.md)
 - [Conformance](conformance.md)
 - [Performance](performance.md)
   - [Capacity](capacity.md)
