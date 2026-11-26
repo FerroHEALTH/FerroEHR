@@ -451,7 +451,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlParty,
         conversions: 2,
-        // NOTE: our own design (#6434), this least request moves by 4 between Linux runs (#6664).
+        // NOTE: our own design (#6434), this least request moves by 4 between Linux runs (#6706).
         least: 2461,
         allocations: 2520,
         peak_bytes: 107_199,
