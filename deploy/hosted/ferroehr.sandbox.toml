@@ -145,6 +145,26 @@ scope = "system/Patient.rs"
 [privacy.cohort]
 subjects = true
 
+# The sandbox signs with an ML-DSA-65+Ed25519 key of its own (RFC 9980
+# algorithm ID 30), generated on the box and held there alone: the key and its
+# passphrase are compose secrets beside the box's `.env`, which the compose
+# file mounts at these paths (deploy/hosted/README.md says how they are made
+# and rotated). Every version then carries an OpenPGP signature, and the
+# access log is sealed into signed checkpoints. The committed test key under
+# docker/signing/ never signs here.
+[record.signing]
+mode = "pgp"
+key_file = "/run/secrets/ferroehr-signing-key"
+key_passphrase_file = "/run/secrets/ferroehr-signing-passphrase"
+
+# The newest access-log checkpoint is published outside the database every 30
+# seconds, so the access_log_checkpoints indicator reads UP. The directory is a
+# tmpfs of the CDR container: the nightly wipe empties the database and
+# recreates the container, so the published checkpoints and the chain they
+# seal start again together.
+[audit.access_log]
+publish_directory = "/var/lib/ferroehr/access-log"
+
 # Any origin may read responses: development and the demo only.
 [api.cors]
 allow_origins = ["*"]

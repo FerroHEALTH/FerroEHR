@@ -127,7 +127,20 @@ check() {
 if [[ -n "${FERROEHR_CONFIG_IMAGE:-}" || -n "${FERROEHR_BIN:-}" ]]; then
   # ── The hosted sandbox ───────────────────────────────────────────────────────
   printf 'DATABASE_URL=%s\n' "$dsn" >"$work/hosted.env"
+  # The box mounts its signing key's passphrase as a compose secret, and the
+  # loader reads that file: a throwaway one stands in for it.
+  passphrase="$(yq -p toml -o yaml '.record.signing.key_passphrase_file // ""' deploy/hosted/ferroehr.sandbox.toml)"
+  if [[ -n "$passphrase" ]]; then
+    printf 'config-check' >"$work/signing-passphrase"
+    chmod 0644 "$work/signing-passphrase"
+    if [[ -n "${FERROEHR_CONFIG_IMAGE:-}" ]]; then
+      mounts=(-v "$work/signing-passphrase:$passphrase:ro")
+    else
+      echo "FERROEHR__RECORD__SIGNING__KEY_PASSPHRASE_FILE=$work/signing-passphrase" >>"$work/hosted.env"
+    fi
+  fi
   check deploy/hosted/ferroehr.sandbox.toml deploy/hosted/ferroehr.sandbox.toml "$work/hosted.env"
+  mounts=()
 
   # ── Every overlay on the quickstart ──────────────────────────────────────────
   for overlay in docker-compose.*.yml; do
@@ -296,6 +309,7 @@ if [[ -n "${FERROEHR_VIEWER_BIN:-}" ]]; then
   # ── The hosted sandbox's viewer ────────────────────────────────────────────
   # The box's .env supplies these; a placeholder stands in for each.
   DATABASE_URL="$dsn" FERROPIX_DATABASE_URL="$dsn" FERROPIX_DATA_KEY=placeholder \
+    FERROEHR_SIGNING_KEY_FILE="$work/placeholder" FERROEHR_SIGNING_PASSPHRASE_FILE="$work/placeholder" \
     "${compose[@]}" -f deploy/hosted/docker-compose.yml config --format json </dev/null >"$work/hosted.json"
   viewer_compose deploy/hosted/docker-compose.yml "$work/hosted.json" "$PWD/deploy/hosted"
 
