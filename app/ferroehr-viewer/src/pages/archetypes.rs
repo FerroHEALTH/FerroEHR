@@ -22,7 +22,7 @@ use ferrohealth_ui::view::tabs::{Tab, TabRow, binder};
 use ferrohealth_ui::view::template::list::{ListCard, list_card, list_empty};
 
 use crate::bff::archetypes::{
-    Conversion, convert_archetype, fetch_adl14, list_adl2, list_adl14, upload_adl14,
+    ADL2_LIST, ADL14_LIST, Conversion, convert_archetype, fetch_adl14, list, upload_adl14,
 };
 use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
@@ -122,7 +122,7 @@ fn absent() -> Html {
 /// Archetypes, by family.
 pub async fn list_page() -> Drawn {
     let family = Family::asked();
-    let (adl14, adl2) = futures::join!(list_adl14(), list_adl2());
+    let (adl14, adl2) = futures::join!(list(ADL14_LIST), list(ADL2_LIST));
     let title = tr(DefinitionsMsg::ArchetypesTitle);
     let kept = !matches!((&adl14, &adl2), (Ok(None), Ok(None)));
     let upload = ActionGroup::primary(Action::new(
