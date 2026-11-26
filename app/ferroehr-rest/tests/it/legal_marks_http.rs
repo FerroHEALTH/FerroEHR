@@ -467,7 +467,7 @@ async fn a_restricted_composition_is_refused_while_the_record_stays_in_use() {
 /// The read of one mark, as JSON.
 async fn mark(app: &axum::Router, path: &str) -> serde_json::Value {
     let (status, body) = send_body(app, get(path)).await;
-    assert_eq!(status, StatusCode::OK, "{path}: {body}");
+    assert_eq!(status, StatusCode::OK, "a mark read answers: {body}");
     serde_json::from_str(&body).expect("mark json")
 }
 
