@@ -10,6 +10,7 @@
 //! server. The wire
 //! is ITS-REST (`docs/specs/openehr/ITS-REST/`); the pages are our own design.
 
+pub mod archetypes;
 pub mod audit;
 pub mod composition;
 pub mod dashboard;

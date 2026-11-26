@@ -41,6 +41,9 @@ const ADL2_STEM: &str = "openEHR-EHR-COMPOSITION.cnf_adl2_versioned";
 /// The stored query the capture seeds.
 const QUERY_NAME: &str = "org.example.vitals::latest-weights";
 
+/// The ADL 1.4 archetype the capture seeds.
+const ARCHETYPE_ID: &str = "openEHR-EHR-INSTRUCTION.medication.v1";
+
 /// The REST root of the CDR.
 fn v1(cdr: &str) -> String {
     format!("{cdr}/ferroehr/rest/openehr/v1")
@@ -133,6 +136,27 @@ fn directory(composition: &str) -> serde_json::Value {
             }]
         }]
     })
+}
+
+/// Stores the ADL 1.4 archetype the Archetypes captures show.
+async fn seed_archetype(cdr: &str, user: &str, pass: &str) {
+    let http = reqwest::Client::new();
+    let archetype = std::fs::read_to_string(format!(
+        "{}/../../corpus/fixtures/archetypes/adl14.medication.v1.adl",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .expect("the ADL 1.4 archetype fixture exists");
+    let (status, _) = send(
+        http.post(format!(
+            "{cdr}/ferroehr/rest/extensions/v1/definition/archetype/adl1.4"
+        ))
+        .header("Content-Type", "text/plain")
+        .body(archetype),
+        user,
+        pass,
+    )
+    .await;
+    println!("archetype seed -> {status}");
 }
 
 /// Seed the fixtures the captures show: the OPT and the ADL2 releases, a
@@ -339,6 +363,16 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         both("/templates", "templates/templates"),
         review("/templates?family=adl2", "templates/templates-adl2"),
         light("/templates/upload", "templates/upload"),
+        light("/archetypes", "templates/archetypes"),
+        review(format!("/archetypes/{ARCHETYPE_ID}"), "templates/archetype"),
+        light(
+            format!("/archetypes/{ARCHETYPE_ID}?tab=adl2"),
+            "templates/archetype-adl2",
+        ),
+        light(
+            format!("{template}?tab=adl2"),
+            "templates/template-adl2-conversion",
+        ),
         light(template.clone(), "templates/template"),
         light(format!("{template}?tab=paths"), "templates/template-paths"),
         review(
@@ -534,6 +568,7 @@ async fn capture_documentation_screenshots() {
     let user = env("UI_E2E_ADMIN_USER").unwrap_or_else(|| "ferroehr-admin".to_owned());
     let pass = env("UI_E2E_ADMIN_PASS").unwrap_or_else(|| "ferroehr".to_owned());
     let seeded = seed(&cdr, &user, &pass, ehr, composition).await;
+    seed_archetype(&cdr, &user, &pass).await;
     let book = book_img_dir();
     let review = PathBuf::from(
         env("UI_E2E_SHOTS_DIR").unwrap_or_else(|| "target/ui-e2e/screenshots".to_owned()),

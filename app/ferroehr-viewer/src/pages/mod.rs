@@ -9,7 +9,11 @@
 
 pub mod about;
 pub mod access;
+<<<<<<< HEAD
 pub mod archive;
+=======
+pub mod archetypes;
+>>>>>>> feat/viewer-archetypes
 pub mod audit;
 pub mod common;
 pub mod composition;
