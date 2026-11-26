@@ -329,7 +329,7 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
             format!("{composition}?tab=document"),
             "compositions/document",
         ),
-        review(
+        light(
             format!("{composition}?tab=versions"),
             "compositions/versions",
         ),

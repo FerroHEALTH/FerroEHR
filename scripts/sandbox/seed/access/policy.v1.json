@@ -1,0 +1,69 @@
+{
+  "_type": "ACCESS_POLICY",
+  "name": {
+    "_type": "DV_TEXT",
+    "value": "FerroEHR Demo Hospital access policy"
+  },
+  "archetype_node_id": "openEHR-EHR-ACCESS_POLICY.controller.v1",
+  "archetype_details": {
+    "_type": "ARCHETYPED",
+    "archetype_id": {
+      "_type": "ARCHETYPE_ID",
+      "value": "openEHR-EHR-ACCESS_POLICY.controller.v1"
+    },
+    "rm_version": "1.2.0"
+  },
+  "controller": {
+    "_type": "PARTY_REF",
+    "namespace": "demographic",
+    "type": "ORGANISATION",
+    "id": {
+      "_type": "HIER_OBJECT_ID",
+      "value": "__ID:organisation-hospital__"
+    }
+  },
+  "justifications": [
+    {
+      "_type": "ACCESS_JUSTIFICATION",
+      "emergency": false,
+      "purposes": [
+        {
+          "_type": "DV_CODED_TEXT",
+          "value": "treatment",
+          "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": {
+              "_type": "TERMINOLOGY_ID",
+              "value": "HL7_ActReason"
+            },
+            "code_string": "TREAT"
+          }
+        }
+      ]
+    },
+    {
+      "_type": "ACCESS_JUSTIFICATION",
+      "emergency": true,
+      "purposes": [
+        {
+          "_type": "DV_CODED_TEXT",
+          "value": "emergency treatment",
+          "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": {
+              "_type": "TERMINOLOGY_ID",
+              "value": "HL7_ActReason"
+            },
+            "code_string": "ETREAT"
+          }
+        }
+      ]
+    }
+  ],
+  "care_relationship_required": true,
+  "relationship_grace": {
+    "_type": "DV_DURATION",
+    "value": "P14D"
+  },
+  "purpose_required": false
+}
