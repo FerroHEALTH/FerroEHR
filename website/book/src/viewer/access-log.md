@@ -6,7 +6,7 @@ An EHR's **Access log** tab lists who accessed the record, when, what they
 reached and what the access rested on, as FerroEHR recorded it. It reads
 `GET /ferroehr/rest/extensions/v1/ehr/{ehr_id}/access_log`, and an entry
 reads `GET …/access_log/{uid}`. What the log holds and who may read which
-view is described on [Audit trail](../audit.md#reading-the-access-log-over-its-rest).
+view is described on [The access log](../access-log.md#reading-the-access-log-over-its-rest).
 
 <!-- toc -->
 
