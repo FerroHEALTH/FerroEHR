@@ -13,10 +13,8 @@
 //! (GDPR Art. 5(1)(c) and (f)). While it holds, every CDR call drawing that
 //! EHR's pages declares its purpose and states its reason in the headers the
 //! CDR's purposes route names; the CDR alone decides whether the
-//! justification admits the access, and whether it is an emergency. A
-//! sealed session store keeps the session in the browser, so it keeps no
-//! justification, and the page says so. No openEHR spec governs the viewer:
-//! our own design.
+//! justification admits the access, and whether it is an emergency. No
+//! openEHR spec governs the viewer: our own design.
 
 use std::time::Duration;
 
@@ -57,14 +55,6 @@ pub fn asks_reason(error: &ViewerError) -> bool {
         && error
             .detail()
             .is_some_and(|detail| JUSTIFIABLE.iter().any(|code| detail.contains(code)))
-}
-
-/// Whether the viewer's session store keeps a justification on the server.
-#[must_use]
-pub fn kept_on_server() -> bool {
-    crate::request::state().is_some_and(|state| {
-        state.config.session.store == ferrohealth_session::config::StoreKind::Memory
-    })
 }
 
 /// The EHR the page being drawn is about, from its route.
@@ -154,8 +144,7 @@ pub fn answer_post() -> bool {
             LIFETIME,
         ) {
             Ok(Justified::Kept(_)) => crate::flash::Done::ok(tr(AccessMsg::JustifyKept)),
-            Ok(_) => crate::flash::Done::warn(tr(AccessMsg::JustifySealed)),
-            Err(_) => crate::flash::Done::warn(tr(AccessMsg::JustifyStoreRefused)),
+            Ok(_) | Err(_) => crate::flash::Done::warn(tr(AccessMsg::JustifyStoreRefused)),
         },
     };
     crate::flash::redirect_with(&back, &done);
@@ -175,9 +164,6 @@ pub fn after_refusal(error: &ViewerError, drawn: Html) -> Html {
 
 /// The justification form, or why the viewer offers none.
 fn offer() -> Html {
-    if !kept_on_server() {
-        return warn_note(t(tr(AccessMsg::JustifyNotHere)));
-    }
     let offered = crate::request::state().and_then(|state| state.cdr.purposes().last_offered());
     match offered {
         Some(offered) if offered.reason_header.is_some() => form(&offered),

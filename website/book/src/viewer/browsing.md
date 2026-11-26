@@ -189,7 +189,3 @@ server-side session and nowhere else, and the person reads it in their
 [access log](access-log.md).
 
 ![A record opened on a justification](img/justified/justified.png)
-
-A viewer whose sessions live in a sealed cookie (`session.store = "sealed"`)
-keeps no reason in the browser, so it offers no justification and says that
-justified access needs `session.store = "memory"`.

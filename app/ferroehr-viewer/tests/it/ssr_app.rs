@@ -1682,22 +1682,11 @@ async fn a_refused_record_offers_a_justification_that_holds_until_ended() {
             "application/json",
             listed,
         ),
-        refused.clone(),
+        refused,
     ])
     .await;
     let cookie = viewer.sign_in().await;
     let path = format!("/ehrs/{ehr}/compositions/{composition}");
-    let sealed = Viewer::start_with(vec![refused]).await;
-    let sealed_cookie = sealed.sign_in().await;
-    let refused_here = sealed.page(&sealed_cookie, &path).await;
-    assert!(
-        refused_here
-            .main()
-            .contains("Justified access needs the server-side session store"),
-        "a sealed store says why it offers no justification: {}",
-        refused_here.main()
-    );
-    assert!(!refused_here.main().contains(r#"name="reason""#));
     let page = viewer.page(&cookie, &path).await;
     let main = page.main();
     assert!(

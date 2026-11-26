@@ -97,8 +97,6 @@ access-justify-holds = It holds for this record for 15 minutes, until you end it
 access-justify-kept = Justification stated
 access-justify-ended = Justification ended
 access-justify-store-refused = The session store could not keep the justification.
-access-justify-sealed = This viewer keeps its sessions in the browser, so it keeps no justification.
-access-justify-not-here = The CDR asks for the reason of a justified access, but this viewer keeps its sessions in a sealed cookie in the browser and never keeps a reason there. Justified access needs the server-side session store: set [session] store = "memory".
 access-justify-unoffered = The CDR asks for a reason but names no header to state it in, so the viewer cannot offer a justification.
 access-justify-purpose-missing = Choose a purpose of use.
 access-justify-reason-length = Give a reason of 1 to 1000 characters.

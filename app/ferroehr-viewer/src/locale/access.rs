@@ -166,10 +166,6 @@ crate::locale::messages! {
         JustifyEnded = "access-justify-ended",
         /// `The session store could not keep the justification.`
         JustifyStoreRefused = "access-justify-store-refused",
-        /// `This viewer keeps its sessions in the browser, so it keeps no justification.`
-        JustifySealed = "access-justify-sealed",
-        /// `The CDR asks for the reason of a justified access, but this viewer keeps its …`
-        JustifyNotHere = "access-justify-not-here",
         /// `The CDR asks for a reason but names no header to state it in, so the viewer  …`
         JustifyUnoffered = "access-justify-unoffered",
         /// `Choose a purpose of use.`
