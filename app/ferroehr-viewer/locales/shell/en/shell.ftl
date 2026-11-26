@@ -107,6 +107,7 @@ nav-query = Query
 nav-server = Server
 nav-audit = Audit log
 nav-access-policy = Access policy
+nav-grants = Roles and grants
 nav-configuration = Configuration
 nav-about = About
 pill-up = CDR up

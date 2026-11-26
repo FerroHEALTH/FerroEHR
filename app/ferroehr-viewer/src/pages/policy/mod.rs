@@ -12,6 +12,7 @@
 //! openEHR specification governs the viewer's pages: our own design.
 
 pub mod edit;
+pub mod grants;
 
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;

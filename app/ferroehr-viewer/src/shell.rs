@@ -127,6 +127,12 @@ fn groups() -> Vec<Group> {
             false,
         ),
         entry(
+            crate::pages::policy::grants::GRANTS_ROUTE,
+            Msg::NavGrants,
+            Glyph::KEY_ROUND,
+            false,
+        ),
+        entry(
             "/configuration",
             Msg::NavConfiguration,
             Glyph::FILE_TEXT,
