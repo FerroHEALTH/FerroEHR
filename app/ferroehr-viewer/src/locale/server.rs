@@ -66,6 +66,8 @@ crate::locale::messages! {
         StoredQueryResultJson = "stored-query-result-json",
         /// `conformance manifest JSON`
         ConformanceManifestJson = "conformance-manifest-json",
+        /// `queue JSON`
+        QueueJson = "queue-json",
         /// `activity report JSON`
         ActivityReportJson = "activity-report-json",
         /// `integrity report JSON`

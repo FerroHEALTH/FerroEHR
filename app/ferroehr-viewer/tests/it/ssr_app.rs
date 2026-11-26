@@ -266,7 +266,7 @@ impl Answer {
 
 impl Viewer {
     /// The viewer over a fresh replayed CDR.
-    async fn start() -> Self {
+    pub(crate) async fn start() -> Self {
         Self::start_with(Vec::new()).await
     }
 

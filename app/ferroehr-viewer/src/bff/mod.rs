@@ -20,6 +20,7 @@ pub mod ehrs;
 pub mod integrity;
 pub mod item_tags;
 pub mod login;
+pub mod queues;
 pub mod report;
 pub mod system;
 pub mod template_adl2;

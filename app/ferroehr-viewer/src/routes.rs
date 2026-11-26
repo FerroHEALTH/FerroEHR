@@ -145,8 +145,12 @@ pub enum Page {
     Activity,
     /// `/server/integrity`.
     Integrity,
+    /// `/server/identity`.
+    Identity,
     /// `/audit`.
     Audit,
+    /// `/audit/delivery`.
+    Delivery,
     /// `/audit/:id`.
     AuditRecord,
     /// `/configuration` and its sections.
@@ -215,7 +219,9 @@ impl Page {
             "/server/smart" => Self::Smart,
             "/server/activity" => Self::Activity,
             "/server/integrity" => Self::Integrity,
+            "/server/identity" => Self::Identity,
             "/audit" => Self::Audit,
+            "/audit/delivery" => Self::Delivery,
             "/audit/:id" => Self::AuditRecord,
             "/configuration" | "/configuration/:section" => Self::Configuration,
             "/preferences" | "/preferences/:section" => Self::Preferences,
@@ -355,7 +361,9 @@ pub static ROUTES: &[&str] = &[
     "/server/smart",
     "/server/activity",
     "/server/integrity",
+    "/server/identity",
     "/audit",
+    "/audit/delivery",
     "/audit/:id",
     "/configuration",
     "/configuration/:section",
@@ -421,7 +429,9 @@ pub async fn draw() -> Drawn {
         Page::Smart => pages::server::smart_page().await,
         Page::Activity => pages::server::activity::page().await,
         Page::Integrity => pages::server::integrity::page().await,
+        Page::Identity => pages::server::identity::page().await,
         Page::Audit => pages::audit::page().await,
+        Page::Delivery => pages::audit::delivery::page().await,
         Page::AuditRecord => pages::audit::record_page().await,
         Page::Configuration => pages::configuration::page().await,
         Page::Preferences => pages::preferences::page(),

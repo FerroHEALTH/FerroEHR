@@ -44,6 +44,7 @@ use crate::pages::common::{
 use crate::routes::Drawn;
 
 pub mod activity;
+pub mod identity;
 pub mod integrity;
 pub mod overview;
 
@@ -72,11 +73,13 @@ enum ServerTab {
     Activity,
     /// Its stored data checked against itself.
     Integrity,
+    /// Its patient identity feed's refused messages.
+    Identity,
 }
 
 impl ServerTab {
     /// Every tab, in order.
-    const ALL: [Self; 8] = [
+    const ALL: [Self; 9] = [
         Self::Overview,
         Self::Health,
         Self::Metrics,
@@ -85,6 +88,7 @@ impl ServerTab {
         Self::Smart,
         Self::Activity,
         Self::Integrity,
+        Self::Identity,
     ];
 
     /// The tab's key.
@@ -98,6 +102,7 @@ impl ServerTab {
             Self::Smart => "smart",
             Self::Activity => "activity",
             Self::Integrity => "integrity",
+            Self::Identity => "identity",
         }
     }
 
@@ -120,6 +125,7 @@ impl ServerTab {
             Self::Smart => (ConsoleMsg::ServerSmart, ConsoleMsg::ServerSmartLine),
             Self::Activity => (ConsoleMsg::ServerActivity, ConsoleMsg::ServerActivityLine),
             Self::Integrity => (ConsoleMsg::ServerIntegrity, ConsoleMsg::ServerIntegrityLine),
+            Self::Identity => (ConsoleMsg::ServerIdentity, ConsoleMsg::ServerIdentityLine),
         };
         (tr(label), tr(line))
     }
@@ -131,7 +137,7 @@ impl ServerTab {
 
     /// Whether the tab drives the admin group.
     const fn admin(self) -> bool {
-        matches!(self, Self::Activity | Self::Integrity)
+        matches!(self, Self::Activity | Self::Integrity | Self::Identity)
     }
 }
 

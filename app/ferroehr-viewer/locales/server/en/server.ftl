@@ -36,6 +36,7 @@ stored-query-json = stored query JSON
 parameters-must-json-object-4 = parameters must be a JSON object
 stored-query-result-json = stored-query result JSON
 conformance-manifest-json = conformance manifest JSON
+queue-json = queue JSON
 activity-report-json = activity report JSON
 integrity-report-json = integrity report JSON
 no-subject-pseudonym-namespace-declared-so = no subject pseudonym namespace is declared, so an EHR subject may carry a real identifier
