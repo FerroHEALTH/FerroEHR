@@ -351,18 +351,6 @@
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/demographic/versioned_party/00000000-0000-7000-8000-000000000013/revision_history",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"00000000-0000-7000-8000-000000000013\"",
-   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
-  },
-  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000013::localhost::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"localhost\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:01.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"PARTY creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"localhost\"}}]}]}"
- },
- {
-  "method": "GET",
   "path": "/ferroehr/rest/openehr/v1/demographic/versioned_party/00000000-0000-7000-8000-00000000000a/revision_history",
   "body": "",
   "status": 200,
