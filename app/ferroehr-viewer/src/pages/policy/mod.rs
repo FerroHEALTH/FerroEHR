@@ -36,6 +36,7 @@ use crate::markup::{h, opt, t};
 use crate::pages::common::{
     Refused, document_section, is_status, panel, plain_section, section, when,
 };
+use crate::pages::configuration::label_of;
 use crate::pages::versions::History;
 use crate::routes::Drawn;
 use crate::uid::version_number;
@@ -235,17 +236,6 @@ fn none() -> Html {
         r#"<span class="fui-muted">{}</span>"#,
         t(tr(Msg::RelationshipNone))
     ))
-}
-
-/// The words an attribute goes by: its underscores read as spaces and its
-/// first letter raised.
-#[must_use]
-pub fn label_of(key: &str) -> String {
-    let words = key.replace('_', " ");
-    let mut chars = words.chars();
-    chars.next().map_or_else(String::new, |first| {
-        first.to_uppercase().chain(chars).collect()
-    })
 }
 
 /// The sections of the policy, each its title, its intro and the attributes
@@ -564,7 +554,7 @@ pub async fn versions_page() -> Drawn {
 
 #[cfg(test)]
 mod tests {
-    use super::{committed_at, label_of, policy_view};
+    use super::{committed_at, policy_view};
     use crate::bff::access_policy::read_policy;
     use crate::bff::wire::VersionEntry;
 
@@ -575,15 +565,6 @@ mod tests {
             change_type: "modification".to_owned(),
             committer: "Admin".to_owned(),
         }
-    }
-
-    #[test]
-    fn an_attribute_reads_as_words() {
-        assert_eq!(
-            "Care relationship required",
-            label_of("care_relationship_required")
-        );
-        assert_eq!("", label_of(""));
     }
 
     #[test]

@@ -1,5 +1,7 @@
 # Access control
 
+For operators: the pages that show how this FerroEHR decides each request.
+
 The **Access policy** page shows the rules your FerroEHR decides every request
 by, and lets an administrator change them. Everything on it comes from the
 CDR's admin extension over HTTP, so it shows only what the CDR lets your

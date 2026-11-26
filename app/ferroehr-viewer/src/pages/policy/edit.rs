@@ -11,7 +11,6 @@
 //! specification governs the viewer's pages: our own design.
 
 use ferrohealth_ui::html::Html;
-use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::surface::{Crumb, Header, Mode, editor_heading, section_intro};
 
@@ -23,8 +22,8 @@ use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, card_panel, discarded, dock_editor, findings_of, is_status, marks_of,
-    section,
+    EditorDock, Unsaved, card_panel, discarded, dock_editor, editor_line, findings_of, marks_of,
+    reload_words, save_as_words, section,
 };
 use crate::pages::form::Form;
 use crate::pages::policy::{EDIT_ROUTE, POLICY_ROUTE, refusal_of};
@@ -53,15 +52,6 @@ const STARTER: &str = r#"{
 fn starter() -> String {
     let name = serde_json::to_string(&tr(PolicyMsg::StarterName)).unwrap_or_default();
     STARTER.replace("{name}", &name)
-}
-
-/// A save the CDR refused.
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct Unsaved {
-    /// The refusal.
-    refusal: Refused,
-    /// Whether another administrator changed the policy meanwhile (`412`).
-    conflict: bool,
 }
 
 /// What the editor holds.
@@ -118,12 +108,7 @@ async fn read_edit() -> Form<Editor> {
                 );
                 return Form::Left;
             }
-            Err(error) => {
-                unsaved = Some(Unsaved {
-                    conflict: is_status(&error, http::StatusCode::PRECONDITION_FAILED),
-                    refusal: Refused::new(tr(PolicyMsg::SaveRefused), error),
-                });
-            }
+            Err(error) => unsaved = Some(Unsaved::new(tr(PolicyMsg::SaveRefused), error)),
         }
     }
     Form::Shown(Box::new(Editor {
@@ -137,20 +122,7 @@ async fn read_edit() -> Form<Editor> {
 
 /// The words of Save: the version the save makes.
 fn save_words(opened: Option<&str>) -> String {
-    opened.map_or_else(
-        || tr(PolicyMsg::SaveFirst),
-        |uid| {
-            version_number(uid).parse::<u32>().map_or_else(
-                |_| tr(Msg::EditorSave),
-                |number| {
-                    tr_with(
-                        RecordsMsg::EditorSaveAsVersion,
-                        &[("version", number.saturating_add(1).into())],
-                    )
-                },
-            )
-        },
-    )
+    opened.map_or_else(|| tr(PolicyMsg::SaveFirst), save_as_words)
 }
 
 /// The editor's form, its decision bar docked.
@@ -167,35 +139,11 @@ fn edit_form(editor: Editor) -> Html {
         .as_ref()
         .and_then(|unsaved| findings_of(&unsaved.refusal.error, &text, &field));
     let conflict = unsaved.as_ref().is_some_and(|unsaved| unsaved.conflict);
-    let (glyph, line) = if unsaved.is_some() {
-        (Glyph::CIRCLE_X, tr(RecordsMsg::EditorNotSaved))
-    } else {
-        (Glyph::PENCIL, tr(RecordsMsg::EditorOpened))
-    };
-    let top = unsaved.map(|unsaved| {
-        let reload = unsaved.conflict.then(|| {
-            let words = current_uid.as_deref().map_or_else(
-                || tr(PolicyMsg::ReloadNone),
-                |uid| {
-                    tr_with(
-                        RecordsMsg::EditorReloadVersion,
-                        &[("version", version_number(uid).into())],
-                    )
-                },
-            );
-            h(format!(
-                r#"<div class="fui-cluster">{}<span class="fui-small fui-muted">{}</span></div>"#,
-                ferrohealth_ui::view::button::link_button(
-                    EDIT_ROUTE.to_owned(),
-                    ferrohealth_ui::view::button::Variant::Secondary,
-                    Some(Glyph::REFRESH_CW),
-                    words,
-                ),
-                t(tr(RecordsMsg::EditorReloadReplaces))
-            ))
-        });
-        unsaved.refusal.view().then(opt(reload))
-    });
+    let (glyph, line) = editor_line(unsaved.is_some());
+    let words = current_uid
+        .as_deref()
+        .map_or_else(|| tr(PolicyMsg::ReloadNone), reload_words);
+    let top = unsaved.map(|unsaved| unsaved.view(EDIT_ROUTE, words));
     dock_editor(EditorDock {
         form: EDIT_FORM.to_owned(),
         line,
