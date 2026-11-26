@@ -63,12 +63,7 @@ struct Repository {
 async fn read_repository() -> Tabbed<Repository> {
     load_tab(ServerTab::Repository, || async {
         let posted = crate::posted::posted();
-        let text = |key: &str| {
-            posted
-                .as_ref()
-                .map(|posted| posted.text(key))
-                .unwrap_or_default()
-        };
+        let text = crate::posted::text;
         let ask = DumpAsk {
             location: text("dump_location"),
             logical_format: text("logical_format"),

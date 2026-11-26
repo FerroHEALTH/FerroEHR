@@ -65,11 +65,7 @@ struct Created {
 /// `EHR_STATUS` (`400`), an EHR that exists already (`409`) and an invalid
 /// version (`422`); [`ViewerError::Failed`] for an answer naming no EHR.
 pub async fn import_extract(source: &str, ehr_id: &str) -> Result<String, ViewerError> {
-    if source.trim().is_empty() {
-        return Err(ViewerError::Invalid(tr_served(
-            crate::locale::Msg::SelectedFileWasEmpty,
-        )));
-    }
+    crate::bff::refuse_empty(source)?;
     let cdr = crate::bff::cdr()?;
     let url = if ehr_id.trim().is_empty() {
         cdr.extensions_v1("message/import")

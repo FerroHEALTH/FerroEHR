@@ -505,21 +505,26 @@ fn new_view(model: Form<NewEhr>) -> Html {
     opt(top).then(new_form(&draft, ehr_id_error))
 }
 
-/// New EHR.
-pub async fn new_page() -> Drawn {
-    let body = new_view(read_new().await);
-    let heading = page_heading(
+/// The heading of a page under EHRs: `title`, its line and the crumb back.
+fn under_ehrs(title: String, subtitle: String) -> Html {
+    page_heading(
         &current(),
         Header {
-            title: tr(RecordsMsg::NewEhr).into(),
-            subtitle: Some(tr(RecordsMsg::EhrNewSubtitle).into()),
+            title: title.into(),
+            subtitle: Some(subtitle.into()),
             crumbs: vec![Crumb::new(tr(Msg::NavEhrs), "/ehrs")],
             mono: false,
             badge: None,
             subtitle_view: None,
         },
         ActionGroup::default(),
-    );
+    )
+}
+
+/// New EHR.
+pub async fn new_page() -> Drawn {
+    let body = new_view(read_new().await);
+    let heading = under_ehrs(tr(RecordsMsg::NewEhr), tr(RecordsMsg::EhrNewSubtitle));
     Drawn::page(
         tr(RecordsMsg::NewEhr),
         heading.then(h(format!(r#"<div class="fui-stack">{body}</div>"#))),

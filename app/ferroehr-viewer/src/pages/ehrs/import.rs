@@ -8,14 +8,12 @@
 //! EHR; a refusal stays on the page in the CDR's words, the source as typed. No openEHR spec governs the viewer's pages: our own design.
 
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::form::Field;
-use ferrohealth_ui::view::surface::{Crumb, Header, page_heading};
 
 use crate::bff::extract::import_extract;
 use crate::flash::{Done, redirect_with};
 use crate::locale::operations::OperationsMsg;
-use crate::locale::{Msg, current, tr};
+use crate::locale::tr;
 use crate::markup::{h, opt, t};
 use crate::pages::common::{card_panel, plain_section, refused, shortened};
 use crate::pages::ehr::ehr_href;
@@ -59,18 +57,7 @@ pub async fn page() -> Drawn {
         _ => None,
     };
     let title = tr(OperationsMsg::ImportExtract);
-    let heading = page_heading(
-        &current(),
-        Header {
-            title: title.clone().into(),
-            subtitle: Some(tr(OperationsMsg::ImportExtractSubtitle).into()),
-            crumbs: vec![Crumb::new(tr(Msg::NavEhrs), "/ehrs")],
-            mono: false,
-            badge: None,
-            subtitle_view: None,
-        },
-        ActionGroup::default(),
-    );
+    let heading = super::under_ehrs(title.clone(), tr(OperationsMsg::ImportExtractSubtitle));
     let upload = crate::components::source_upload(
         &source,
         tr(OperationsMsg::ExtractSource),
