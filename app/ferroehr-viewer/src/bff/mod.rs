@@ -103,6 +103,20 @@ impl std::ops::Deref for Cdr {
     }
 }
 
+/// Refuses an uploaded or pasted source that holds nothing, before any
+/// CDR call.
+///
+/// # Errors
+/// [`ViewerError::Invalid`] for an empty source.
+pub fn refuse_empty(source: &str) -> Result<(), ViewerError> {
+    if source.trim().is_empty() {
+        return Err(ViewerError::Invalid(crate::locale::tr_served(
+            crate::locale::Msg::SelectedFileWasEmpty,
+        )));
+    }
+    Ok(())
+}
+
 /// The rows one page of a listing holds: FerroUI's default page size.
 pub const PAGE_SIZE: u32 = ferrohealth_ui::table::model::DEFAULT_SIZE;
 

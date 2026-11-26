@@ -459,6 +459,21 @@ impl CdrCall {
         Ok(CdrResponse::from_parts(status, &headers, body))
     }
 
+    /// Sends the request and returns the body of a `2xx` answer, or `None`
+    /// when the CDR answers `404`: a resource or an extension that is not
+    /// there.
+    ///
+    /// # Errors
+    /// The errors of [`Self::send`], and any other answer normalized by
+    /// [`CdrResponse::ok`].
+    pub async fn body_or_absent(self) -> Result<Option<String>, ViewerError> {
+        let response = self.send().await?;
+        if response.is(http::StatusCode::NOT_FOUND) {
+            return Ok(None);
+        }
+        Ok(Some(response.ok()?.body))
+    }
+
     /// Sends the request and returns a `2xx` answer.
     ///
     /// # Errors
