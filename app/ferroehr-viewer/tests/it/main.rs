@@ -37,6 +37,7 @@ mod e2e_docs_shots;
 mod e2e_ehr_ops;
 mod e2e_ehr_status;
 mod e2e_export;
+mod e2e_grants;
 mod e2e_keyboard;
 mod e2e_login;
 mod e2e_navigation;

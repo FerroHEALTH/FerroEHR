@@ -285,6 +285,8 @@ messages! {
         NavAccessPolicy = "nav-access-policy",
         /// `Audit log`
         NavAudit = "nav-audit",
+        /// `Roles and grants`
+        NavGrants = "nav-grants",
         /// `None`
         VersionSignatureNone = "version-signature-none",
         /// `A SHA-256 digest`
