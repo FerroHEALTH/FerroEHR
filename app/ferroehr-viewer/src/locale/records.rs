@@ -320,7 +320,7 @@ crate::locale::messages! {
         FactContribution = "fact-contribution",
         /// `Lifecycle`
         FactLifecycle = "fact-lifecycle",
-        /// `Committed`
+        /// `Signature`
         FactSigned = "fact-signed",
         /// `Version`
         FactVersion = "fact-version",

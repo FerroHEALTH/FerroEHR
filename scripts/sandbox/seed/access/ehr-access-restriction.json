@@ -1,0 +1,140 @@
+{
+  "_type": "ACCESS_DIRECTIVE_SETTINGS",
+  "default_access": {
+    "_type": "DV_CODED_TEXT",
+    "value": "open",
+    "defining_code": {
+      "_type": "CODE_PHRASE",
+      "terminology_id": {
+        "_type": "TERMINOLOGY_ID",
+        "value": "openehr_access"
+      },
+      "code_string": "open"
+    }
+  },
+  "directives": [
+    {
+      "_type": "ACCESS_DIRECTIVE",
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "No access for a named professional"
+      },
+      "archetype_node_id": "at0001",
+      "kind": {
+        "_type": "DV_CODED_TEXT",
+        "value": "restriction",
+        "defining_code": {
+          "_type": "CODE_PHRASE",
+          "terminology_id": {
+            "_type": "TERMINOLOGY_ID",
+            "value": "openehr_access"
+          },
+          "code_string": "restriction"
+        }
+      },
+      "effect": {
+        "_type": "DV_CODED_TEXT",
+        "value": "deny",
+        "defining_code": {
+          "_type": "CODE_PHRASE",
+          "terminology_id": {
+            "_type": "TERMINOLOGY_ID",
+            "value": "HL7_ConsentProvisionType"
+          },
+          "code_string": "deny"
+        }
+      },
+      "emergency_override": true,
+      "applies_to": [
+        {
+          "_type": "ACCESS_ACTOR_SCOPE",
+          "party": {
+            "_type": "PARTY_REF",
+            "namespace": "demographic",
+            "type": "PERSON",
+            "id": {
+              "_type": "HIER_OBJECT_ID",
+              "value": "__ID:person-02__"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "_type": "ACCESS_DIRECTIVE",
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "Consent for the cardiology ward"
+      },
+      "archetype_node_id": "at0001",
+      "kind": {
+        "_type": "DV_CODED_TEXT",
+        "value": "consent",
+        "defining_code": {
+          "_type": "CODE_PHRASE",
+          "terminology_id": {
+            "_type": "TERMINOLOGY_ID",
+            "value": "openehr_access"
+          },
+          "code_string": "consent"
+        }
+      },
+      "effect": {
+        "_type": "DV_CODED_TEXT",
+        "value": "permit",
+        "defining_code": {
+          "_type": "CODE_PHRASE",
+          "terminology_id": {
+            "_type": "TERMINOLOGY_ID",
+            "value": "HL7_ConsentProvisionType"
+          },
+          "code_string": "permit"
+        }
+      },
+      "emergency_override": false,
+      "applies_to": [
+        {
+          "_type": "ACCESS_ACTOR_SCOPE",
+          "party": {
+            "_type": "PARTY_REF",
+            "namespace": "demographic",
+            "type": "GROUP",
+            "id": {
+              "_type": "HIER_OBJECT_ID",
+              "value": "__ID:group-cardiology__"
+            }
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "_type": "DV_CODED_TEXT",
+          "value": "treatment",
+          "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": {
+              "_type": "TERMINOLOGY_ID",
+              "value": "HL7_ActReason"
+            },
+            "code_string": "TREAT"
+          }
+        }
+      ],
+      "time_validity": {
+        "_type": "DV_INTERVAL",
+        "lower": {
+          "_type": "DV_DATE_TIME",
+          "value": "__DATE:-1__T00:00:00Z"
+        },
+        "upper": {
+          "_type": "DV_DATE_TIME",
+          "value": "__DATE:+365__T00:00:00Z"
+        },
+        "lower_unbounded": false,
+        "upper_unbounded": false,
+        "lower_included": true,
+        "upper_included": true
+      }
+    }
+  ]
+}

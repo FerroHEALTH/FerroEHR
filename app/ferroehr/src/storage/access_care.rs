@@ -156,7 +156,7 @@ pub async fn set_state(
         "UPDATE access_care_state SET snapshot = $1::pg_snapshot, key_check = $2, \
          updated_at = now() WHERE singleton",
     )
-    .bind(snapshot.text())
+    .bind(snapshot)
     .bind(key_check)
     .execute(&mut *tx)
     .await?;

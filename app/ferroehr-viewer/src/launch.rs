@@ -30,7 +30,7 @@ use ferrohealth_smart::client::assertion::{ASSERTION_TYPE, AssertionError, Asser
 use ferrohealth_smart::client::outbound::{OutboundClient, OutboundError};
 use ferrohealth_smart::config::ServerTls;
 use ferrohealth_smart::config::endpoint::EndpointSection;
-use jsonwebtoken::Algorithm;
+use ferrohealth_smart::jws::algorithm::Algorithm;
 use serde::{Deserialize, Serialize};
 
 /// The `typ` of the client assertion the viewer sends: RFC 10070 §4's
@@ -141,7 +141,7 @@ pub enum LaunchConfigError {
     #[error("launch.private_key_file holds no key a client assertion is signed with")]
     Key(#[source] AssertionError),
     /// The key signs with neither RS384 nor ES384.
-    #[error("launch.private_key_file signs with {0:?}; SMART asks RS384 or ES384")]
+    #[error("launch.private_key_file signs with {0}; SMART asks RS384 or ES384")]
     Algorithm(Algorithm),
     /// The connection to FerroSMART could not be built.
     #[error("the connection to FerroSMART could not be built")]
@@ -414,7 +414,7 @@ impl Launcher {
         let key = AssertionKey::from_pem(&pem, None, kid).map_err(LaunchConfigError::Key)?;
         // NOTE: SMART App Launch 2.2.0, Client Authentication: Asymmetric: a server
         // SHALL support RS384 and ES384, so the viewer signs with no other.
-        if !matches!(key.algorithm(), Algorithm::RS384 | Algorithm::ES384) {
+        if !matches!(key.algorithm(), Algorithm::Rs384 | Algorithm::Es384) {
             return Err(LaunchConfigError::Algorithm(key.algorithm()));
         }
         let connection = EndpointSection {
