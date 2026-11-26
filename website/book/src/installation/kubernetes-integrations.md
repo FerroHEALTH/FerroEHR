@@ -24,7 +24,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 43.0.0 -n ferroehr --reuse-values \
+  --version 43.0.1 -n ferroehr --reuse-values \
   --set config.record.query.plan_cache_capacity=512
 ```
 
@@ -168,8 +168,8 @@ Secret you own through `extraEnv` instead. Another PIX Manager:
 `ferropix.enabled: false` and `config.pixm.endpoint.url`. A CDR run on its
 own: `ferropix.enabled: false` and `config.record.subject_index: local`.
 
-The chart pins FerroPIX 0.0.43 by digest (`ferropix.image`) with the
-FerroPIX chart built for it (0.5.5). Since FerroPIX 0.0.40 an
+The chart pins FerroPIX 0.0.44 by digest (`ferropix.image`) with the
+FerroPIX chart built for it (0.5.6). Since FerroPIX 0.0.40 an
 `[auth.issuer.<name>]` entry names its `issuer` and its own `audience`, and
 FerroPIX reads the caller from the standard claims of an RFC
 9068 `at+jwt` access token, and a client credentials token, whose `sub` is
@@ -206,7 +206,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 43.0.0 -n ferroehr --reuse-values \
+  --version 43.0.1 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
