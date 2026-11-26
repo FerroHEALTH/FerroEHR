@@ -33,7 +33,9 @@ use crate::flash::{Done, redirect_with};
 use crate::locale::access::AccessMsg;
 use crate::locale::{Msg, current, tr, tr_with};
 use crate::markup::{h, opt, t};
-use crate::pages::access_log::{grounds_select, outcome_select, outcome_words, row_parts};
+use crate::pages::access_log::{
+    filter_bar, grounds_select, outcome_select, outcome_words, row_parts,
+};
 use crate::pages::common::{
     Refused, ago, date_range, document_section, info_note, is_status, section, short, warn_note,
     when,
@@ -193,15 +195,8 @@ fn toolbar(filters: &ReviewFilters) -> Html {
             &filters.from,
             &filters.to,
         ),
-        h(format!(
-            r#"<button type="submit" class="fui-button fui-button-secondary">{}{}</button>"#,
-            ferrohealth_ui::icon::icon(Glyph::FUNNEL, "16"),
-            t(tr(Msg::FilterApply))
-        )),
     ]);
-    h(format!(
-        r#"<form method="get" action="{REVIEW_ROUTE}" class="fui-list-toolbar"><div class="fui-list-toolbar-start">{tools}</div></form>"#
-    ))
+    filter_bar(REVIEW_ROUTE, &tools)
 }
 
 /// The active filters as chips.

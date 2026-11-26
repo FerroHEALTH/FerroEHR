@@ -109,24 +109,28 @@ pub async fn download_template(
         .accept(accept)
         .ok()
         .await;
+    attachment(answer, accept, &file_name(&template_id, extension))
+}
+
+/// The CDR's `answer` as a file named `name` of the media type
+/// `content_type`; a refusal answers `502` with the CDR's words.
+fn attachment(
+    answer: Result<crate::cdr::CdrResponse, crate::error::ViewerError>,
+    content_type: &'static str,
+    name: &str,
+) -> Response {
     match answer {
-        Ok(response) => {
-            let disposition = format!(
-                "attachment; filename=\"{}\"",
-                file_name(&template_id, extension)
-            );
-            match HeaderValue::from_str(&disposition) {
-                Ok(disposition) => (
-                    [
-                        (header::CONTENT_TYPE, HeaderValue::from_static(accept)),
-                        (header::CONTENT_DISPOSITION, disposition),
-                    ],
-                    response.body,
-                )
-                    .into_response(),
-                Err(_invalid) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-            }
-        }
+        Ok(response) => match HeaderValue::from_str(&format!("attachment; filename=\"{name}\"")) {
+            Ok(disposition) => (
+                [
+                    (header::CONTENT_TYPE, HeaderValue::from_static(content_type)),
+                    (header::CONTENT_DISPOSITION, disposition),
+                ],
+                response.body,
+            )
+                .into_response(),
+            Err(_invalid) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
         Err(error) => (StatusCode::BAD_GATEWAY, crate::error::error_chain(&error)).into_response(),
     }
 }
@@ -163,29 +167,11 @@ pub async fn download_access_log(
         .accept("application/json")
         .ok()
         .await;
-    match answer {
-        Ok(response) => {
-            let disposition = format!(
-                "attachment; filename=\"{}\"",
-                file_name(&format!("access-log-{ehr_id}"), "json")
-            );
-            match HeaderValue::from_str(&disposition) {
-                Ok(disposition) => (
-                    [
-                        (
-                            header::CONTENT_TYPE,
-                            HeaderValue::from_static("application/json"),
-                        ),
-                        (header::CONTENT_DISPOSITION, disposition),
-                    ],
-                    response.body,
-                )
-                    .into_response(),
-                Err(_invalid) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-            }
-        }
-        Err(error) => (StatusCode::BAD_GATEWAY, crate::error::error_chain(&error)).into_response(),
-    }
+    attachment(
+        answer,
+        "application/json",
+        &file_name(&format!("access-log-{ehr_id}"), "json"),
+    )
 }
 
 #[cfg(test)]

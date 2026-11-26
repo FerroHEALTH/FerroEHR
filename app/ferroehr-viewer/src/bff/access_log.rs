@@ -51,27 +51,76 @@ impl LogFilters {
     #[must_use]
     pub fn query_pairs(&self) -> Vec<(&'static str, String)> {
         let mut pairs = Vec::new();
-        if !self.from.is_empty() {
-            pairs.push(("from", day_bound(&self.from, false)));
-        }
-        if !self.to.is_empty() {
-            pairs.push(("to", day_bound(&self.to, true)));
-        }
-        for (name, value) in [
-            ("action", &self.action),
-            ("outcome", &self.outcome),
-            ("accessor_kind", &self.accessor_kind),
-            ("justification", &self.justification),
-        ] {
-            if !value.is_empty() {
-                pairs.push((name, value.clone()));
-            }
-        }
+        push_days(&mut pairs, &self.from, &self.to);
+        push_filled(
+            &mut pairs,
+            [
+                ("action", &self.action),
+                ("outcome", &self.outcome),
+                ("accessor_kind", &self.accessor_kind),
+                ("justification", &self.justification),
+            ],
+        );
         if self.include_self {
             pairs.push(("include_self", "true".to_owned()));
         }
         pairs
     }
+}
+
+/// Pushes the days `from` and `to` onto `pairs`, each widened to the
+/// instant that bounds it, when given.
+pub(crate) fn push_days(pairs: &mut Vec<(&'static str, String)>, from: &str, to: &str) {
+    if !from.is_empty() {
+        pairs.push(("from", day_bound(from, false)));
+    }
+    if !to.is_empty() {
+        pairs.push(("to", day_bound(to, true)));
+    }
+}
+
+/// Pushes each of `named` that is filled onto `pairs`.
+pub(crate) fn push_filled<'a>(
+    pairs: &mut Vec<(&'static str, String)>,
+    named: impl IntoIterator<Item = (&'static str, &'a String)>,
+) {
+    pairs.extend(
+        named
+            .into_iter()
+            .filter(|(_, value)| !value.is_empty())
+            .map(|(name, value)| (name, value.clone())),
+    );
+}
+
+/// The JSON document `body`.
+///
+/// # Errors
+/// [`ViewerError::Failed`] when it is not JSON.
+pub(crate) fn json(body: &str) -> Result<Value, ViewerError> {
+    serde_json::from_str(body).map_err(|error| ViewerError::failed(tr(AccessMsg::LogJson), error))
+}
+
+/// The page at `offset` of `fetch` records of the list at the extensions
+/// `path`, read with the query `pairs`.
+///
+/// # Errors
+/// The errors of a CDR call, and [`ViewerError::Failed`] when the body is
+/// not JSON.
+pub(crate) async fn read_page(
+    path: &str,
+    mut pairs: Vec<(&'static str, String)>,
+    offset: u32,
+    fetch: u32,
+) -> Result<Value, ViewerError> {
+    let cdr = crate::bff::cdr()?;
+    pairs.push(("offset", offset.to_string()));
+    pairs.push(("fetch", fetch.to_string()));
+    let query: Vec<String> = pairs
+        .iter()
+        .map(|(name, value)| format!("{name}={}", urlencoding::encode(value)))
+        .collect();
+    let url = format!("{}?{}", cdr.extensions_v1(path), query.join("&"));
+    json(&cdr.get(&url).ok().await?.body)
 }
 
 /// The first instant of `day` in UTC, or its last when `end`; a text that is
@@ -348,22 +397,13 @@ pub async fn ehr_access_log(
     // How many entries the page holds.
     fetch: u32,
 ) -> Result<Vec<Entry>, ViewerError> {
-    let cdr = crate::bff::cdr()?;
-    let mut pairs = filters.query_pairs();
-    pairs.push(("offset", offset.to_string()));
-    pairs.push(("fetch", fetch.to_string()));
-    let query: Vec<String> = pairs
-        .iter()
-        .map(|(name, value)| format!("{name}={}", urlencoding::encode(value)))
-        .collect();
-    let url = format!(
-        "{}?{}",
-        cdr.extensions_v1(&log_path(ehr_id, None)),
-        query.join("&")
-    );
-    let body = cdr.get(&url).ok().await?.body;
-    let doc: Value = serde_json::from_str(&body)
-        .map_err(|error| ViewerError::failed(tr(AccessMsg::LogJson), error))?;
+    let doc = read_page(
+        &log_path(ehr_id, None),
+        filters.query_pairs(),
+        offset,
+        fetch,
+    )
+    .await?;
     Ok(each(&doc, "entries").filter_map(entry_of).collect())
 }
 
@@ -379,9 +419,7 @@ pub async fn ehr_access_log_entry(
 ) -> Result<Entry, ViewerError> {
     let cdr = crate::bff::cdr()?;
     let url = cdr.extensions_v1(&log_path(ehr_id, Some(uid)));
-    let body = cdr.get(&url).ok().await?.body;
-    let doc: Value = serde_json::from_str(&body)
-        .map_err(|error| ViewerError::failed(tr(AccessMsg::LogJson), error))?;
+    let doc = json(&cdr.get(&url).ok().await?.body)?;
     entry_of(&doc).ok_or_else(|| ViewerError::Internal(tr(AccessMsg::LogJson)))
 }
 

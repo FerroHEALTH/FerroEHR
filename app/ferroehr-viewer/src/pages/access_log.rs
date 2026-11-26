@@ -232,15 +232,18 @@ pub fn toolbar(action: &str, filters: &LogFilters) -> Html {
             &filters.to,
         ),
         include_self,
-        h(format!(
-            r#"<button type="submit" class="fui-button fui-button-secondary">{}{}</button>"#,
-            ferrohealth_ui::icon::icon(Glyph::FUNNEL, "16"),
-            t(tr(Msg::FilterApply))
-        )),
     ]);
+    filter_bar(action, &tools)
+}
+
+/// A `GET` filter form to `action` holding `tools` and Apply.
+#[must_use]
+pub fn filter_bar(action: &str, tools: &Html) -> Html {
     h(format!(
-        r#"<form method="get" action="{}" class="fui-list-toolbar"><div class="fui-list-toolbar-start">{tools}</div></form>"#,
-        t(action)
+        r#"<form method="get" action="{}" class="fui-list-toolbar"><div class="fui-list-toolbar-start">{tools}<button type="submit" class="fui-button fui-button-secondary">{}{}</button></div></form>"#,
+        t(action),
+        ferrohealth_ui::icon::icon(Glyph::FUNNEL, "16"),
+        t(tr(Msg::FilterApply))
     ))
 }
 

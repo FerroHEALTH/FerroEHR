@@ -18,10 +18,10 @@
 
 use serde_json::Value;
 
-use crate::bff::access_log::{Coded, Entry, day_bound, each, entry_of, party_words, text_at};
+use crate::bff::access_log::{
+    Coded, Entry, each, entry_of, json, party_words, push_days, push_filled, read_page, text_at,
+};
 use crate::error::ViewerError;
-use crate::locale::access::AccessMsg;
-use crate::locale::tr;
 
 /// The filters of the review across EHRs, each as the CDR names it.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -51,31 +51,25 @@ impl ReviewFilters {
     /// the instants that bound it.
     #[must_use]
     pub fn query_pairs(&self) -> Vec<(&'static str, String)> {
-        let mut pairs: Vec<(&'static str, String)> = [
-            ("ehr_id", &self.ehr_id),
-            ("party_id", &self.party_id),
-            ("issuer", &self.issuer),
-            ("subject", &self.subject),
-            ("request_id", &self.request_id),
-        ]
-        .into_iter()
-        .filter(|(_, value)| !value.is_empty())
-        .map(|(name, value)| (name, value.clone()))
-        .collect();
-        if !self.from.is_empty() {
-            pairs.push(("from", day_bound(&self.from, false)));
-        }
-        if !self.to.is_empty() {
-            pairs.push(("to", day_bound(&self.to, true)));
-        }
-        for (name, value) in [
-            ("outcome", &self.outcome),
-            ("justification", &self.justification),
-        ] {
-            if !value.is_empty() {
-                pairs.push((name, value.clone()));
-            }
-        }
+        let mut pairs = Vec::new();
+        push_filled(
+            &mut pairs,
+            [
+                ("ehr_id", &self.ehr_id),
+                ("party_id", &self.party_id),
+                ("issuer", &self.issuer),
+                ("subject", &self.subject),
+                ("request_id", &self.request_id),
+            ],
+        );
+        push_days(&mut pairs, &self.from, &self.to);
+        push_filled(
+            &mut pairs,
+            [
+                ("outcome", &self.outcome),
+                ("justification", &self.justification),
+            ],
+        );
         pairs
     }
 }
@@ -123,15 +117,6 @@ fn record_of(node: &Value) -> Option<Record> {
     entry_of(node).map(|entry| Record::Entry(Box::new(entry), (!ehr.is_empty()).then_some(ehr)))
 }
 
-/// `pairs` as a query string.
-fn query_of(pairs: &[(&'static str, String)]) -> String {
-    pairs
-        .iter()
-        .map(|(name, value)| format!("{name}={}", urlencoding::encode(value)))
-        .collect::<Vec<_>>()
-        .join("&")
-}
-
 /// The records across EHRs that `filters` select, newest first, one page at
 /// `offset`, in the full view a reviewer reads.
 ///
@@ -148,18 +133,7 @@ pub async fn review(
     // How many records the page holds.
     fetch: u32,
 ) -> Result<Vec<Record>, ViewerError> {
-    let cdr = crate::bff::cdr()?;
-    let mut pairs = filters.query_pairs();
-    pairs.push(("offset", offset.to_string()));
-    pairs.push(("fetch", fetch.to_string()));
-    let url = format!(
-        "{}?{}",
-        cdr.extensions_v1("admin/access-log"),
-        query_of(&pairs)
-    );
-    let body = cdr.get(&url).ok().await?.body;
-    let doc: Value = serde_json::from_str(&body)
-        .map_err(|error| ViewerError::failed(tr(AccessMsg::LogJson), error))?;
+    let doc = read_page("admin/access-log", filters.query_pairs(), offset, fetch).await?;
     Ok(each(&doc, "entries").filter_map(record_of).collect())
 }
 
@@ -198,8 +172,7 @@ pub async fn erase(
         .ok()
         .await?
         .body;
-    let doc: Value = serde_json::from_str(&answer)
-        .map_err(|error| ViewerError::failed(tr(AccessMsg::LogJson), error))?;
+    let doc = json(&answer)?;
     Ok(tombstone_of(&doc))
 }
 
@@ -238,8 +211,7 @@ pub async fn seals(
         cdr.extensions_v1("admin/access-log/seals")
     );
     let body = cdr.get(&url).ok().await?.body;
-    let doc: Value = serde_json::from_str(&body)
-        .map_err(|error| ViewerError::failed(tr(AccessMsg::LogJson), error))?;
+    let doc = json(&body)?;
     let number =
         |node: &Value, key: &str| node.get(key).and_then(Value::as_i64).unwrap_or_default();
     Ok(each(&doc, "seals")
@@ -302,8 +274,7 @@ pub async fn newest_checkpoint() -> Result<Option<Checkpoint>, ViewerError> {
         return Ok(None);
     }
     let body = response.ok()?.body;
-    let doc: Value = serde_json::from_str(&body)
-        .map_err(|error| ViewerError::failed(tr(AccessMsg::LogJson), error))?;
+    let doc = json(&body)?;
     Ok(Some(checkpoint_of(&doc)))
 }
 
@@ -316,8 +287,7 @@ pub async fn sign_checkpoint() -> Result<Checkpoint, ViewerError> {
     let cdr = crate::bff::cdr()?;
     let url = cdr.extensions_v1("admin/access-log/checkpoint");
     let body = cdr.post(&url).ok().await?.body;
-    let doc: Value = serde_json::from_str(&body)
-        .map_err(|error| ViewerError::failed(tr(AccessMsg::LogJson), error))?;
+    let doc = json(&body)?;
     Ok(checkpoint_of(&doc))
 }
 
@@ -359,8 +329,7 @@ pub async fn verify() -> Result<Verification, ViewerError> {
     let cdr = crate::bff::cdr()?;
     let url = cdr.extensions_v1("admin/access-log/verify");
     let body = cdr.post(&url).ok().await?.body;
-    let doc: Value = serde_json::from_str(&body)
-        .map_err(|error| ViewerError::failed(tr(AccessMsg::LogJson), error))?;
+    let doc = json(&body)?;
     Ok(Verification {
         intact: doc
             .get("intact")
