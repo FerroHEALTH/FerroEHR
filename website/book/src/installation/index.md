@@ -3,8 +3,9 @@
 FerroEHR is one self-contained binary that connects to a PostgreSQL 19
 database. There is no application server to install and no language runtime to
 provision: the binary links a pure-Rust TLS stack and needs no OpenSSL and no
-JVM, so all you choose is how to run it and where the database lives. This part
-covers the three paths and the full configuration surface.
+JVM, so all you choose is how to run it and where the database lives. This
+section covers the three paths; every key is in the
+[configuration reference](configuration.md).
 
 - **[Try it in Codespaces](codespaces.md):** one click boots the published
   images in a GitHub Codespace in your browser, with the Swagger UI and the
