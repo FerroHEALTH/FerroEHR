@@ -17,6 +17,7 @@ use serde::Deserialize;
 
 pub mod console;
 pub mod definitions;
+pub mod operations;
 pub mod overview;
 pub mod parties;
 pub mod policy;
@@ -285,6 +286,8 @@ messages! {
         NavAccessPolicy = "nav-access-policy",
         /// `Audit log`
         NavAudit = "nav-audit",
+        /// `Roles and grants`
+        NavGrants = "nav-grants",
         /// `None`
         VersionSignatureNone = "version-signature-none",
         /// `A SHA-256 digest`
@@ -578,6 +581,7 @@ mod tests {
 
     use super::console::ConsoleMsg;
     use super::definitions::DefinitionsMsg;
+    use super::operations::OperationsMsg;
     use super::overview::OverviewMsg;
     use super::parties::PartiesMsg;
     use super::policy::PolicyMsg;
@@ -690,6 +694,7 @@ mod tests {
             [
                 "console",
                 "definitions",
+                "operations",
                 "overview",
                 "parties",
                 "policy",
@@ -702,6 +707,7 @@ mod tests {
             "each directory under locales/ is the catalog of one part"
         );
         holds_every("shell", Msg::ALL);
+        holds_every("operations", OperationsMsg::ALL);
         holds_every("overview", OverviewMsg::ALL);
         holds_every("records", RecordsMsg::ALL);
         holds_every("parties", PartiesMsg::ALL);

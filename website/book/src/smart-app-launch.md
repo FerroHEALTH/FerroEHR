@@ -114,7 +114,7 @@ restart: a capability of a `ROLE` the client's `AGENT` performs, coded
 `openehr_access::query_system_wide` or
 `openehr_access::access_demographic`, under an `[authz.grants] allowed`
 that admits the code. See
-[Operational policy](operational-policy.md#a-backend-client-and-a-demographic-client)
+[Operational policy](policy-examples.md#a-backend-client-and-a-demographic-client)
 for a worked example. A grant counts for a client's own app-only token; a
 person signed in through that client holds the person's grants.
 
@@ -124,7 +124,7 @@ When an app is launched for a patient, your authorization server puts the
 openEHR EHR id of the launch context in the token's `ehrId` claim
 (master07 §Context Selection). The SMART layer checks a `patient/` grant for
 its resource family and permission, and the
-[access evaluator](security.md#a-patients-own-ehr) holds a caller whose
+[access evaluator](access-control.md#a-patients-own-ehr) holds a caller whose
 grants are `patient/` grants alone to that one EHR:
 
 - the grant reaches only the EHR its token's `ehrId` names, so a token that
@@ -140,7 +140,7 @@ grants are `patient/` grants alone to that one EHR:
 - it reaches EHR data alone, never a template definition;
 - a write under a grant of `patient/` scopes alone is the person's own: it is
   marked as inserted by the person and may not alter a version a professional
-  committed ([EHDS Art. 5](security.md#information-a-person-inserts-ehds-art-5)).
+  committed ([EHDS Art. 5](access-control.md#information-a-person-inserts-ehds-art-5)).
 
 `user/` and `system/` grants carry no such binding, and when a `user/` grant
 covers the same operation the wider grant wins.
