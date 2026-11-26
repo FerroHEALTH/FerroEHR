@@ -17,7 +17,7 @@ use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, Stakes, confirm_di
 
 use crate::admin::Archived;
 use crate::flash::{Done, redirect_with};
-use crate::locale::admin::AdminMsg;
+use crate::locale::operations::OperationsMsg;
 use crate::locale::{current, tr};
 use crate::markup::{h, t};
 use crate::pages::common::Refused;
@@ -34,12 +34,12 @@ pub fn items() -> Vec<Item> {
     vec![
         Item::new(Action::new(
             Some(Glyph::FOLDER_X),
-            tr(AdminMsg::ArchiveItem),
+            tr(OperationsMsg::ArchiveItem),
             Act::Dialog(ARCHIVE_DIALOG.to_owned()),
         )),
         Item::new(Action::new(
             Some(Glyph::FOLDER_OPEN),
-            tr(AdminMsg::RestoreItem),
+            tr(OperationsMsg::RestoreItem),
             Act::Dialog(RESTORE_DIALOG.to_owned()),
         )),
     ]
@@ -49,8 +49,14 @@ pub fn items() -> Vec<Item> {
 #[must_use]
 pub fn dialogs(kind: Archived, action: &str) -> Html {
     let (archive_message, restore_message) = match kind {
-        Archived::Ehrs => (AdminMsg::ArchiveEhrMessage, AdminMsg::RestoreEhrMessage),
-        Archived::Parties => (AdminMsg::ArchivePartyMessage, AdminMsg::RestorePartyMessage),
+        Archived::Ehrs => (
+            OperationsMsg::ArchiveEhrMessage,
+            OperationsMsg::RestoreEhrMessage,
+        ),
+        Archived::Parties => (
+            OperationsMsg::ArchivePartyMessage,
+            OperationsMsg::RestorePartyMessage,
+        ),
     };
     let dialog = |id: &str, intent: &str, title, message, confirm, glyph| {
         confirm_dialog(
@@ -77,17 +83,17 @@ pub fn dialogs(kind: Archived, action: &str) -> Html {
     dialog(
         ARCHIVE_DIALOG,
         "archive",
-        AdminMsg::ArchiveTitle,
+        OperationsMsg::ArchiveTitle,
         archive_message,
-        AdminMsg::ArchiveConfirm,
+        OperationsMsg::ArchiveConfirm,
         Glyph::FOLDER_X,
     )
     .then(dialog(
         RESTORE_DIALOG,
         "restore",
-        AdminMsg::RestoreTitle,
+        OperationsMsg::RestoreTitle,
         restore_message,
-        AdminMsg::RestoreConfirm,
+        OperationsMsg::RestoreConfirm,
         Glyph::FOLDER_OPEN,
     ))
 }
@@ -103,9 +109,9 @@ pub async fn act(kind: Archived, id: &str, intent: &str, back: &str) -> Option<O
         _ => return None,
     };
     let (done, refused) = if restore {
-        (AdminMsg::Restored, AdminMsg::RestoreRefused)
+        (OperationsMsg::Restored, OperationsMsg::RestoreRefused)
     } else {
-        (AdminMsg::Archived, AdminMsg::ArchiveRefused)
+        (OperationsMsg::Archived, OperationsMsg::ArchiveRefused)
     };
     Some(
         match crate::admin::archive(kind, id.to_owned(), restore).await {

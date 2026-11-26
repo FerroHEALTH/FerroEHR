@@ -1,12 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The words of the CDR's admin operations the viewer offers on a record's
-//! page, in the catalogs under `locales/admin/`.
+//! The words of the operations beyond the openEHR API the viewer offers on
+//! records and on the repository (archiving, EHR Extracts, dump and load),
+//! in the catalogs under `locales/operations/`.
 
 crate::locale::messages! {
-    /// A string an admin operation draws, by its message in its catalog.
-    AdminMsg in "./locales/admin" {
+    /// A string an operation draws, by its message in its catalog.
+    OperationsMsg in "./locales/operations" {
         /// `Archive…`
         ArchiveItem = "archive-item",
         /// `Restore from the archive…`
