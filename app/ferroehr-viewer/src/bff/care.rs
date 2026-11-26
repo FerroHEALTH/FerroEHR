@@ -232,6 +232,15 @@ pub async fn create(person: String, document: String) -> Result<String, ViewerEr
     ))
 }
 
+/// The URL of the relationship `uid` and the `If-Match` naming `replaces`.
+fn one(cdr: &crate::bff::Cdr, uid: &str, replaces: &str) -> (String, String) {
+    let url = cdr.extensions_v1(&format!(
+        "care_relationship/{}",
+        urlencoding::encode(&crate::uid::container_uid_of(uid))
+    ));
+    (url, format!("\"{replaces}\""))
+}
+
 /// Commits `document` as the next version of the relationship `uid`, over
 /// the version `replaces` (`PUT care_relationship/{uid}` with `If-Match`).
 ///
@@ -241,11 +250,7 @@ pub async fn create(person: String, document: String) -> Result<String, ViewerEr
 /// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn update(uid: String, replaces: String, document: String) -> Result<(), ViewerError> {
     let cdr = crate::bff::cdr()?;
-    let url = cdr.extensions_v1(&format!(
-        "care_relationship/{}",
-        urlencoding::encode(&crate::uid::container_uid_of(&uid))
-    ));
-    let condition = format!("\"{replaces}\"");
+    let (url, condition) = one(&cdr, &uid, &replaces);
     cdr.put(&url)
         .accept("application/json")
         .body("application/json", document)
@@ -264,11 +269,7 @@ pub async fn update(uid: String, replaces: String, document: String) -> Result<(
 /// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn delete(uid: String, replaces: String) -> Result<(), ViewerError> {
     let cdr = crate::bff::cdr()?;
-    let url = cdr.extensions_v1(&format!(
-        "care_relationship/{}",
-        urlencoding::encode(&crate::uid::container_uid_of(&uid))
-    ));
-    let condition = format!("\"{replaces}\"");
+    let (url, condition) = one(&cdr, &uid, &replaces);
     cdr.delete(&url)
         .headers(&[(http::header::IF_MATCH.as_str(), condition.as_str())])
         .ok()
