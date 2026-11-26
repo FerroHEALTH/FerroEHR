@@ -187,6 +187,24 @@ async fn a_restriction_register_read_is_recorded_against_its_ehr() {
     assert_eq!(requestor(&answered[0]), Value::from(USER));
 }
 
+/// A read of the research objection, the retention anchor or the held
+/// objects is recorded against the EHR it names, with the user (#6690).
+#[tokio::test]
+async fn a_mark_read_is_recorded_against_its_ehr() {
+    let (_db, pool, app, ehr) = app().await;
+    for (path, register) in [
+        ("/admin/research-objection", "research-objection:ehr-wide"),
+        ("/admin/retention/anchor", "retention-anchor:ehr-wide"),
+        ("/admin/retention/hold", "retention-hold:ehr-wide"),
+    ] {
+        let (status, body) = common::send_body(&app, get(&format!("{path}?ehr_id={ehr}"))).await;
+        assert_eq!(status, StatusCode::OK, "{path}: {body}");
+        let read = stored(&pool, 1, |row| row.2.as_deref() == Some(register)).await;
+        assert_eq!(read[0].3.as_deref(), Some(USER), "{path}: {read:?}");
+        assert_eq!(read[0].4.as_deref(), Some(SUBJECT), "{path}: {read:?}");
+    }
+}
+
 /// A record names the subject the store holds for its EHR, also where the
 /// configured resolver would name another: the write that creates the EHR
 /// reads it on its own transaction (#5962) and a read takes it from its own
