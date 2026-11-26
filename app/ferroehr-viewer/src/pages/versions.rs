@@ -7,16 +7,19 @@
 //! first, the version in view marked, with the at-time row under it. No
 //! openEHR spec governs the viewer's pages: our own design.
 
+use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::table::versions::{Standing, Version, VersionHistory, version_history};
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table};
 
 use ferrohealth_ui::view::surface::definitions;
 
+use crate::bff::signature::SignatureKind;
 use crate::bff::wire::{VersionEntry, VersionedObjectFacts};
 use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, tr, tr_with};
-use crate::markup::t;
-use crate::pages::common::{ago, at_time_row, section, short};
+use crate::markup::{h, opt, t};
+use crate::pages::common::{ago, at_time_row, document_section, section, short, state_mark, when};
 use crate::uid::version_number;
 
 /// One object's history, and where each of its versions opens.
@@ -98,10 +101,7 @@ pub fn envelope(
             },
         ),
         (tr(RecordsMsg::FactContribution), contribution),
-        (
-            tr(RecordsMsg::FactSigned),
-            t(tr(if facts.signed { Msg::Yes } else { Msg::No })),
-        ),
+        (tr(RecordsMsg::FactSigned), signature_words(facts)),
     ];
     rows.extend(more);
     section(
@@ -113,4 +113,81 @@ pub fn envelope(
         None,
         definitions(rows),
     )
+    .then(signature_sections(facts))
+}
+
+/// The words of the kind of the signature `facts` carry.
+#[must_use]
+pub fn signature_words(facts: &VersionedObjectFacts) -> Html {
+    let Some(signature) = &facts.signature else {
+        return t(tr(Msg::VersionSignatureNone));
+    };
+    t(match signature.kind {
+        SignatureKind::Digest => tr(Msg::VersionSignatureDigest),
+        SignatureKind::OpenPgp(Some(COMPOSITE_ML_DSA)) => tr(Msg::VersionSignatureComposite),
+        SignatureKind::OpenPgp(Some(id)) => tr_with(
+            Msg::VersionSignatureOpenPgp,
+            &[("algorithm", id.to_string().into())],
+        ),
+        SignatureKind::OpenPgp(None) => tr(Msg::VersionSignatureOpenPgpUnread),
+        SignatureKind::Other => tr(Msg::VersionSignatureOther),
+    })
+}
+
+/// The `OpenPGP` public-key algorithm id of ML-DSA-65+Ed25519 (RFC 9980).
+const COMPOSITE_ML_DSA: u8 = 30;
+
+/// The signature `facts` carry as stored, and their attestations, each
+/// left out when there is none.
+#[must_use]
+pub fn signature_sections(facts: &VersionedObjectFacts) -> Html {
+    let signature = facts.signature.as_ref().map(|signature| {
+        document_section(
+            tr(Msg::VersionSignatureTitle),
+            Language::Plain,
+            signature.text.clone(),
+            "version-signature",
+        )
+    });
+    let attestations = (!facts.attestations.is_empty()).then(|| {
+        let columns = [
+            Column::text("attester", tr(Msg::VersionAttester)).role(Role::Title),
+            Column::text("when", tr(Msg::VersionAttestedAt)).role(Role::Sub),
+            Column::text("reason", tr(Msg::VersionAttestReason)).role(Role::Meta),
+            Column::text("items", tr(Msg::VersionAttestItems)).role(Role::Meta),
+        ];
+        let rows = facts
+            .attestations
+            .iter()
+            .map(|attestation| {
+                let items = if attestation.items.is_empty() {
+                    t(tr(Msg::VersionAttestWhole))
+                } else {
+                    h(format!("<code>{}</code>", t(attestation.items.join(", "))))
+                };
+                let pending = attestation.pending.then(|| {
+                    state_mark(
+                        ferrohealth_ui::view::flow::FlowState::Degraded,
+                        &tr(Msg::VersionAttestPending),
+                    )
+                });
+                h(format!(
+                    r#"<tr><th scope="row" data-role="title">{}{}</th>{}{}{}</tr>"#,
+                    t(&attestation.attester),
+                    opt(pending),
+                    cell(&columns[1], when(&attestation.time)),
+                    cell(&columns[2], t(&attestation.reason)),
+                    cell(&columns[3], items)
+                ))
+            })
+            .collect();
+        let caption = tr(Msg::VersionAttestations);
+        section(
+            Some(caption.clone()),
+            None,
+            None,
+            data_table(DataTable::new(&caption, &columns, Body::Rows(rows))),
+        )
+    });
+    Html::join([opt(signature), opt(attestations)])
 }
