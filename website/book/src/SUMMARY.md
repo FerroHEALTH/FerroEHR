@@ -95,6 +95,7 @@
   - [Parties](viewer/parties.md)
   - [Terminology](viewer/terminology.md)
   - [Server & audit log](viewer/server.md)
+  - [Access control](viewer/access-control.md)
   - [Preferences & the theme](viewer/preferences.md)
 - [Operations](operations.md)
   - [Access path metrics and runbooks](operations-access-path.md)
