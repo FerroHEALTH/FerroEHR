@@ -28,8 +28,6 @@ use ferrohealth_ui::view::surface::{
 use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::view::template::list::{ListCard, list_card, list_empty};
 
-use crate::bff::demographics::contribution::ContributionState;
-use crate::bff::demographics::contribution::fetch_demographic_contribution;
 use crate::bff::demographics::party::PartyState;
 use crate::bff::demographics::party::{create_party, delete_party, fetch_party, update_party};
 use crate::bff::demographics::relationship::{PartyRefView, RelationshipState};
@@ -53,12 +51,13 @@ use crate::markup::{attr, flag, h, opt, t};
 use crate::pages::common::{
     EditorDock, Refused, card_panel, count, discarded, dock_editor, document_section, findings_of,
     info_note, is_status, marks_of, panel, plain_section, section, short, shortened, state_mark,
-    when,
 };
 use crate::pages::form::Form;
 use crate::pages::item_tags::{TagAct, TagPanel, tag_act, tag_done, tag_panel};
 use crate::pages::versions::{History, history};
 use crate::routes::Drawn;
+
+pub mod contribution;
 use crate::uid::{version_number, version_uid_at};
 
 /// The id of Delete party's confirmation dialog.
@@ -854,7 +853,8 @@ fn envelope(facts: Result<VersionedObjectFacts, Refused>) -> Html {
     }
 }
 
-/// What a post to a party's page asks, done: delete, set or remove a tag.
+/// What a post to a party's page asks, done: archive, restore, delete, set
+/// or remove a tag.
 async fn party_act(
     kind: PartyKind,
     uid: &str,
@@ -863,6 +863,16 @@ async fn party_act(
     let Some(posted) = crate::posted::posted() else {
         return (None, None);
     };
+    if let Some(refused) = crate::pages::archive::act(
+        crate::admin::Archived::Parties,
+        uid,
+        &posted.intent(),
+        &party_href(kind, uid),
+    )
+    .await
+    {
+        return (refused, None);
+    }
     if posted.intent() == "delete-party" {
         return match delete_party(kind.segment().to_owned(), posted.text("version")).await {
             Ok(()) => {
@@ -940,8 +950,10 @@ struct Party {
     before_deletion: Option<String>,
     /// The number of the older version read.
     reading_number: Option<String>,
-    /// The delete the CDR refused.
+    /// The delete, archive or restore the CDR refused.
     acted: Option<Refused>,
+    /// Whether the admin group is mounted, so Archive and Restore are offered.
+    admin: bool,
     /// The tab shown.
     tab: PartyTab,
     /// What it shows.
@@ -1081,6 +1093,7 @@ async fn read_party(kind: &str, uid: String) -> PartyModel {
         before_deletion,
         reading_number,
         acted,
+        admin: crate::admin::renders_admin_ops(&crate::admin::probe_admin_api().await),
         tab,
         body,
     }))
@@ -1156,6 +1169,7 @@ fn party_view(uid: &str, party: Party) -> (String, Html) {
         before_deletion,
         reading_number,
         acted,
+        admin,
         tab,
         body,
         ..
@@ -1240,7 +1254,11 @@ fn party_view(uid: &str, party: Party) -> (String, Html) {
         &latest,
         deleted.as_ref(),
         before_deletion.as_deref(),
+        admin,
     );
+    let archive = (admin && current.is_some()).then(|| {
+        crate::pages::archive::dialogs(crate::admin::Archived::Parties, &party_href(kind, uid))
+    });
     let dialog = current.as_ref().map(|state| {
         confirm_dialog(
             &crate::locale::current(),
@@ -1289,6 +1307,7 @@ fn party_view(uid: &str, party: Party) -> (String, Html) {
             opt(acted.map(|refusal| refusal.view()))
         )),
         opt(dialog),
+        opt(archive),
     ]);
     (name, page)
 }
@@ -1321,7 +1340,8 @@ fn copy_party_id(uid: &str) -> Item {
 }
 
 /// The header of a party: its name, kind and version line, and Edit with the
-/// More menu; a deleted party says when it was deleted.
+/// More menu, which offers Archive and Restore while the admin group is
+/// mounted; a deleted party says when it was deleted.
 fn party_header(
     kind: PartyKind,
     uid: &str,
@@ -1329,6 +1349,7 @@ fn party_header(
     latest: &str,
     deleted: Option<&VersionEntry>,
     last: Option<&str>,
+    admin: bool,
 ) -> Html {
     let (actions, subtitle, badge) = if let Some(deletion) = deleted {
         (
@@ -1377,7 +1398,15 @@ fn party_header(
                     )),
                 )),
                 copy_party_id(uid),
-            ],
+            ]
+            .into_iter()
+            .chain(
+                admin
+                    .then(crate::pages::archive::items)
+                    .into_iter()
+                    .flatten(),
+            )
+            .collect(),
         )
         .destructive(vec![Item::new(Action::new(
             Some(Glyph::TRASH),
@@ -2346,108 +2375,4 @@ pub async fn edit_relationship_page() -> Drawn {
     not_editing(read_edit_relationship(uid.clone()).await, |editor| {
         edit_relationship_view(&uid, editor)
     })
-}
-
-/// What the page reads, on the server.
-async fn read_party_contribution(uid: String) -> Result<ContributionState, Refused> {
-    match fetch_demographic_contribution(uid).await {
-        Ok(mut state) => {
-            state.body =
-                crate::bff::pretty_body(&state.body, crate::format::ReprFormat::CanonicalJson);
-            Ok(state)
-        }
-        Err(error) => {
-            if is_status(&error, http::StatusCode::NOT_FOUND) {
-                crate::request::set_status(http::StatusCode::NOT_FOUND);
-            }
-            Err(Refused::new(tr(RecordsMsg::ContributionRefused), error))
-        }
-    }
-}
-
-/// A demographic contribution's audit, the versions it made and its record.
-fn party_contribution_view(state: &ContributionState) -> Html {
-    let mut rows = vec![
-        (tr(RecordsMsg::FactCommitted), when(&state.time_committed)),
-        (tr(RecordsMsg::FactCommitter), t(&state.committer)),
-        (tr(RecordsMsg::FactChange), t(&state.change_type)),
-    ];
-    if !state.description.is_empty() {
-        rows.push((tr(RecordsMsg::FactDescription), t(&state.description)));
-    }
-    let columns = [
-        Column::text("object", tr(RecordsMsg::ColumnObject)).role(Role::Title),
-        Column::text("kind", tr(Msg::ColumnKind)).role(Role::Sub),
-        Column::text("version", tr(Msg::ColumnVersion)).role(Role::Meta),
-    ];
-    let made = state
-        .versions
-        .iter()
-        .map(|version| {
-            let object = crate::uid::container_uid_of(&version.version_uid);
-            let href = PartyKind::from_rm_type(&version.rm_type)
-                .map(|kind| party_href(kind, &object))
-                .or_else(|| {
-                    (version.rm_type == "PARTY_RELATIONSHIP").then(|| relationship_href(&object))
-                });
-            let title = title_cell(None, href.as_deref(), t(shortened(&object)), None);
-            h(format!(
-                "<tr>{title}{}{}</tr>",
-                cell(&columns[1], t(&version.rm_type)),
-                cell(&columns[2], t(version_number(&version.version_uid)))
-            ))
-        })
-        .collect();
-    let caption = tr(RecordsMsg::ContributionVersions);
-    let table = data_table(DataTable::new(&caption, &columns, Body::Rows(made)));
-    card_panel(Html::join([
-        section(
-            Some(tr(RecordsMsg::ContributionAudit)),
-            None,
-            None,
-            definitions(rows),
-        ),
-        section(
-            Some(tr(RecordsMsg::ContributionVersions)),
-            u64::try_from(state.versions.len()).ok(),
-            None,
-            table,
-        ),
-        document_section(
-            tr(RecordsMsg::ContributionRecord),
-            Language::Json,
-            state.body.clone(),
-            "contribution-record",
-        ),
-    ]))
-}
-
-/// A demographic contribution.
-/// One demographic contribution.
-pub async fn party_contribution_page() -> Drawn {
-    let uid = uid_param();
-    let title = tr_with(
-        RecordsMsg::ContributionTitle,
-        &[("id", shortened(&uid).into())],
-    );
-    let heading = page_heading(
-        &current(),
-        Header {
-            title: title.clone().into(),
-            subtitle: Some(tr(RecordsMsg::ContributionSubtitle).into()),
-            crumbs: party_crumbs(),
-            mono: false,
-            badge: None,
-            subtitle_view: None,
-        },
-        ActionGroup::default(),
-    );
-    let body = match read_party_contribution(uid).await {
-        Ok(state) => party_contribution_view(&state),
-        Err(refusal) => refusal.view(),
-    };
-    Drawn::page(
-        title,
-        heading.then(h(format!(r#"<div class="fui-stack">{body}</div>"#))),
-    )
 }

@@ -1,0 +1,1 @@
+- The viewer archives and restores EHRs and parties: while the CDR's admin API is on, an EHR's and a party's More menu offers Archive and Restore, each behind a confirmation saying the record leaves query results, with every refusal in the CDR's words.
