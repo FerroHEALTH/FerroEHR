@@ -144,7 +144,7 @@ directory-create-refused = The CDR refused to create the directory.
 fact-version = Version
 fact-contribution = Contribution
 fact-lifecycle = Lifecycle
-fact-signed = Committed
+fact-signed = Signature
 
 editor-title = Edit
 editor-opened = Opened at the latest version
