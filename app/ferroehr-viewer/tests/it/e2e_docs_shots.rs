@@ -328,7 +328,7 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
             format!("{composition}?tab=document"),
             "compositions/document",
         ),
-        review(
+        light(
             format!("{composition}?tab=versions"),
             "compositions/versions",
         ),
@@ -380,6 +380,7 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         ),
         both(format!("/query?template={TEMPLATE_ID}"), "queries/build"),
         light("/query/aql", "queries/aql"),
+        light("/query/cohort", "queries/cohort"),
         both("/server", "server/overview"),
         light("/server/health", "server/health"),
         light(

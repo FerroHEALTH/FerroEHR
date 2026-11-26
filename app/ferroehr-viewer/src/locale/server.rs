@@ -72,6 +72,8 @@ crate::locale::messages! {
         ActivityReportJson = "activity-report-json",
         /// `integrity report JSON`
         IntegrityReportJson = "integrity-report-json",
+        /// `cohort result JSON`
+        CohortResultJson = "cohort-result-json",
         /// `no subject pseudonym namespace is declared, so an EHR subject may carry a real identifier`
         NoSubjectPseudonymNamespaceDeclaredSo = "no-subject-pseudonym-namespace-declared-so",
         /// `an access record the audit queue cannot take is dropped and the request still succeeds`

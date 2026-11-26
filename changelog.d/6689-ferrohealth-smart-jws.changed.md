@@ -1,0 +1,1 @@
+- Bearer tokens and DPoP proofs are verified by `ferrohealth-smart` 0.35's own JWS module over aws-lc-rs, so `[auth]` and `[auth.dpop]` `algorithms` also admit `ML-DSA-44`, `ML-DSA-65` and `ML-DSA-87` (RFC 9964). An `HS*` algorithm or `none` in `algorithms` now fails to parse the configuration, where it was refused at boot.

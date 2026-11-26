@@ -146,8 +146,11 @@ pub struct VersionedObjectFacts {
     pub preceding_version_uid: String,
     /// `VERSION.contribution.id.value`.
     pub contribution_uid: String,
-    /// Whether the VERSION carries a `signature`.
-    pub signed: bool,
+    /// The VERSION's `signature`, `None` when it carries none.
+    pub signature: Option<crate::bff::signature::Signature>,
+    /// The VERSION's `attestations`, when it is an `ORIGINAL_VERSION` that
+    /// carries any.
+    pub attestations: Vec<crate::bff::signature::Attestation>,
     /// Whether the VERSION carries `data` — a logically deleted version does
     /// not (`docs/specs/openehr/RM/docs/common/master06-change_control_package.adoc`
     /// §Logical Deletion).
@@ -203,10 +206,11 @@ pub fn versioned_facts(
         lifecycle_state: text_at(&version, "/lifecycle_state/value"),
         preceding_version_uid: text_at(&version, "/preceding_version_uid/value"),
         contribution_uid: text_at(&version, "/contribution/id/value"),
-        signed: version
+        signature: version
             .get("signature")
             .and_then(Value::as_str)
-            .is_some_and(|signature| !signature.is_empty()),
+            .and_then(crate::bff::signature::Signature::of),
+        attestations: crate::bff::signature::attestations_of(&version),
         has_data: version.get("data").is_some_and(|data| !data.is_null()),
     })
 }
@@ -239,7 +243,8 @@ mod tests {
             },
             "lifecycle_state": {"_type": "DV_CODED_TEXT", "value": "complete"},
             "preceding_version_uid": {"_type": "OBJECT_VERSION_ID", "value": "7d44aa01::sys::1"},
-            "signature": "-----BEGIN PGP SIGNATURE-----",
+            "signature": "sha256:jtWX/CULavvzX0ehjowv2XZPICTQhN1t0+AXHfbEaNc=",
+            "attestations": [{"_type": "ATTESTATION", "reason": {"value": "Reviewed"}}],
             "data": {"_type": "COMPOSITION"}
         }"#;
         let facts = versioned_facts(VERSIONED_OBJECT, version).expect("valid bodies");
@@ -250,7 +255,11 @@ mod tests {
         assert_eq!(facts.lifecycle_state, "complete");
         assert_eq!(facts.preceding_version_uid, "7d44aa01::sys::1");
         assert_eq!(facts.contribution_uid, "c9");
-        assert!(facts.signed);
+        assert_eq!(
+            facts.signature.map(|signature| signature.kind),
+            Some(crate::bff::signature::SignatureKind::Digest)
+        );
+        assert_eq!(facts.attestations[0].reason, "Reviewed");
         assert!(facts.has_data);
     }
 
@@ -267,7 +276,8 @@ mod tests {
         assert_eq!(facts.lifecycle_state, "deleted");
         assert_eq!(facts.preceding_version_uid, "");
         assert_eq!(facts.contribution_uid, "");
-        assert!(!facts.signed);
+        assert_eq!(facts.signature, None);
+        assert_eq!(facts.attestations, Vec::new());
         assert!(!facts.has_data);
     }
 

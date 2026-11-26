@@ -1,0 +1,217 @@
+{
+  "_type": "ROLE",
+  "archetype_node_id": "eu.ferroehr.sandbox::openEHR-DEMOGRAPHIC-ROLE.privacy_officer.v1",
+  "archetype_details": {
+    "_type": "ARCHETYPED",
+    "archetype_id": {
+      "_type": "ARCHETYPE_ID",
+      "value": "eu.ferroehr.sandbox::openEHR-DEMOGRAPHIC-ROLE.privacy_officer.v1"
+    },
+    "rm_version": "1.2.0"
+  },
+  "name": {
+    "_type": "DV_TEXT",
+    "value": "Privacy officer"
+  },
+  "identities": [
+    {
+      "_type": "PARTY_IDENTITY",
+      "archetype_node_id": "at0001",
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "name"
+      },
+      "details": {
+        "_type": "ITEM_TREE",
+        "archetype_node_id": "at0002",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "details"
+        },
+        "items": [
+          {
+            "_type": "ELEMENT",
+            "archetype_node_id": "at0003",
+            "name": {
+              "_type": "DV_TEXT",
+              "value": "name"
+            },
+            "value": {
+              "_type": "DV_TEXT",
+              "value": "Privacy officer"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "performer": {
+    "_type": "PARTY_REF",
+    "namespace": "demographic",
+    "type": "PERSON",
+    "id": {
+      "_type": "HIER_OBJECT_ID",
+      "value": "__ID:seed-admin__"
+    }
+  },
+  "capabilities": [
+    {
+      "_type": "CAPABILITY",
+      "archetype_node_id": "at0020",
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "grant"
+      },
+      "credentials": {
+        "_type": "ITEM_TREE",
+        "archetype_node_id": "at0022",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "terms"
+        },
+        "items": [
+          {
+            "_type": "ELEMENT",
+            "archetype_node_id": "at0021",
+            "name": {
+              "_type": "DV_TEXT",
+              "value": "operation"
+            },
+            "value": {
+              "_type": "DV_CODED_TEXT",
+              "value": "write_access_policy",
+              "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": {
+                  "_type": "TERMINOLOGY_ID",
+                  "value": "openehr_access"
+                },
+                "code_string": "write_access_policy"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "_type": "CAPABILITY",
+      "archetype_node_id": "at0020",
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "grant"
+      },
+      "credentials": {
+        "_type": "ITEM_TREE",
+        "archetype_node_id": "at0022",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "terms"
+        },
+        "items": [
+          {
+            "_type": "ELEMENT",
+            "archetype_node_id": "at0021",
+            "name": {
+              "_type": "DV_TEXT",
+              "value": "operation"
+            },
+            "value": {
+              "_type": "DV_CODED_TEXT",
+              "value": "write_care_relationship",
+              "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": {
+                  "_type": "TERMINOLOGY_ID",
+                  "value": "openehr_access"
+                },
+                "code_string": "write_care_relationship"
+              }
+            }
+          },
+          {
+            "_type": "ELEMENT",
+            "archetype_node_id": "at0030",
+            "name": {
+              "_type": "DV_CODED_TEXT",
+              "value": "provider",
+              "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": {
+                  "_type": "TERMINOLOGY_ID",
+                  "value": "openehr_access"
+                },
+                "code_string": "provider"
+              }
+            },
+            "value": {
+              "_type": "DV_IDENTIFIER",
+              "issuer": "__PROVIDER_ISSUER__",
+              "id": "__PROVIDER_ID__",
+              "type": "ORGANISATION"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "_type": "CAPABILITY",
+      "archetype_node_id": "at0020",
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "grant"
+      },
+      "credentials": {
+        "_type": "ITEM_TREE",
+        "archetype_node_id": "at0022",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "terms"
+        },
+        "items": [
+          {
+            "_type": "ELEMENT",
+            "archetype_node_id": "at0021",
+            "name": {
+              "_type": "DV_TEXT",
+              "value": "operation"
+            },
+            "value": {
+              "_type": "DV_CODED_TEXT",
+              "value": "write_representation",
+              "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": {
+                  "_type": "TERMINOLOGY_ID",
+                  "value": "openehr_access"
+                },
+                "code_string": "write_representation"
+              }
+            }
+          },
+          {
+            "_type": "ELEMENT",
+            "archetype_node_id": "at0030",
+            "name": {
+              "_type": "DV_CODED_TEXT",
+              "value": "provider",
+              "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": {
+                  "_type": "TERMINOLOGY_ID",
+                  "value": "openehr_access"
+                },
+                "code_string": "provider"
+              }
+            },
+            "value": {
+              "_type": "DV_IDENTIFIER",
+              "issuer": "__PROVIDER_ISSUER__",
+              "id": "__PROVIDER_ID__",
+              "type": "ORGANISATION"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
