@@ -283,7 +283,7 @@ Verify the new release ([verifying releases](../verifying-releases.md)), take
 a backup, then deploy it by digest and let it apply its migrations
 ([upgrades](../upgrades.md)). On Kubernetes that is a
 `helm upgrade` to the chart version that ships the new release
-([Kubernetes & Helm, upgrades](../installation/kubernetes.md#upgrades)).
+([Kubernetes & Helm, upgrades](../upgrades.md#upgrading-the-helm-release)).
 
 ### 8(d) Secure decommissioning, and removing user data
 
