@@ -13,6 +13,7 @@
 pub mod access_policy;
 pub mod audit;
 pub mod care;
+pub mod cohort;
 pub mod composition;
 pub mod dashboard;
 pub mod demographics;
