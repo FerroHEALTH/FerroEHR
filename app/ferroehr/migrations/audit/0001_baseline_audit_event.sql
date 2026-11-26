@@ -387,7 +387,7 @@ CREATE TABLE audit_event (
     binding_detail         jsonb,
     summary                jsonb,
     -- The form of the record's content digest (system_log::content_digest).
-    digest_version         smallint    NOT NULL DEFAULT 7,
+    digest_version         smallint    NOT NULL DEFAULT 8,
     -- The purposes of use and professional roles the access token states.
     token_attributes       jsonb,
     -- The SHA-256 of the record's columns, computed by the writer.
@@ -437,7 +437,7 @@ CREATE TABLE audit_event (
             'refused-trc-patient-mismatch', 'refused-trc-missing',
             'refused-system-personal-scope', 'refused-no-agreement',
             'refused-scope-beyond-agreement', 'refused-correlation-missing')),
-    CONSTRAINT ck_audit_event_digest_version CHECK (digest_version = 7),
+    CONSTRAINT ck_audit_event_digest_version CHECK (digest_version = 8),
     CONSTRAINT ck_audit_event_content_digest CHECK (octet_length(content_digest) = 32)
 );
 CREATE INDEX ix_audit_event_retention_ends ON audit_event (retention_ends)
@@ -556,7 +556,7 @@ COMMENT ON COLUMN audit_event.category_content IS
 COMMENT ON COLUMN audit_event.render_policy IS
     'The digest of the audit_render_policy row the record is rendered under.';
 COMMENT ON COLUMN audit_event.search_tokens IS
-    'The ITI-81 search tokens of the record''s FHIR AuditEvent: the ids of its audit_search_token rows, and its audit_search_set id negated.';
+    'The ITI-81 search tokens of the record''s FHIR AuditEvent: the ids of its audit_search_token rows, and its audit_search_set id negated; a search aid of store-internal ids, outside the content digest.';
 COMMENT ON COLUMN audit_event.acting_mode IS
     'How the credential acts: a natural person (person), a client application for a person (client or delegated), a verified external accessor (external), or a client acting for nobody (system); NULL when the credential says nothing.';
 COMMENT ON COLUMN audit_event.binding IS
@@ -582,7 +582,7 @@ COMMENT ON COLUMN audit_event.binding_detail IS
 COMMENT ON COLUMN audit_event.summary IS
     'For a summary record: the count of the refusals it stands for and the EHR ids they named.';
 COMMENT ON COLUMN audit_event.digest_version IS
-    'The form of the record''s content digest: 7, the RFC 8785 form system_log::content_digest documents.';
+    'The form of the record''s content digest: 8, the RFC 8785 form system_log::content_digest documents, which leaves out search_tokens.';
 COMMENT ON COLUMN audit_event.content_digest IS
     'The SHA-256 of the record''s columns in the form system_log::content_digest documents, computed by the writer; its window''s seal covers it, and audit_event_reaped keeps it once retention removed the record.';
 COMMENT ON COLUMN audit_event.seq IS
@@ -613,17 +613,72 @@ CREATE FUNCTION audit.lock_search_tokens() RETURNS void
     SET search_path = pg_catalog
     AS $$ SELECT pg_advisory_xact_lock(hashtext('audit.audit_search_token'), 0) $$;
 COMMENT ON FUNCTION lock_search_tokens() IS
-    'Holds the search tokens exclusively until the transaction ends: the retention side of audit.hold_search_tokens().';
+    'Holds the search tokens exclusively until the transaction ends: the retention side of audit.search_tokens_of().';
 
--- The shared hold the writers take on the search tokens, inlined into the
--- statement that takes it.
-CREATE FUNCTION audit.hold_search_tokens() RETURNS void
-    LANGUAGE sql VOLATILE
+-- The search_tokens value of each of p_records records, 1-based, from the
+-- tokens each record names (p_record, p_parameter, p_system, p_code; p_shared
+-- marks a token of the record's shared set), storing every token and shared
+-- set the store does not hold yet. It takes the writers' shared hold on the
+-- tokens first; each statement after it runs on a snapshot taken after the
+-- hold, so retention deletes no token the caller is about to name. Only a
+-- token or set the store does not hold reaches an INSERT, so a held one draws
+-- no identity value (PostgreSQL docs, "INSERT", the ON CONFLICT clause).
+CREATE FUNCTION audit.search_tokens_of(p_record integer[], p_parameter text[], p_system text[],
+                                       p_code text[], p_shared boolean[], p_records integer)
+    RETURNS TABLE (record integer, tokens text)
+    LANGUAGE plpgsql VOLATILE
+    SET search_path = audit, pg_catalog
     AS $$
-    SELECT pg_catalog.pg_advisory_xact_lock_shared(pg_catalog.hashtext('audit.audit_search_token'), 0)
+#variable_conflict use_column
+BEGIN
+    PERFORM pg_catalog.pg_advisory_xact_lock_shared(pg_catalog.hashtext('audit.audit_search_token'), 0);
+    RETURN QUERY
+    WITH input AS (
+        SELECT i.rec, i.parameter, i.system, i.code, i.shared,
+               audit.search_token_digest(i.parameter, i.system, i.code) AS digest
+        FROM unnest(p_record, p_parameter, p_system, p_code, p_shared)
+             AS i(rec, parameter, system, code, shared)
+    ), keyed AS (
+        SELECT DISTINCT i.parameter, i.system, i.code, i.digest FROM input i
+    ), stored_tokens AS (
+        INSERT INTO audit.audit_search_token (parameter, system, code, digest)
+        SELECT k.parameter, k.system, k.code, k.digest FROM keyed k
+        WHERE NOT EXISTS (SELECT FROM audit.audit_search_token h WHERE h.digest = k.digest)
+        ON CONFLICT (digest) DO SELECT
+        RETURNING id, digest
+    ), named AS (
+        SELECT i.rec, i.shared, coalesce(n.id, t.id) AS id FROM input i
+        LEFT JOIN stored_tokens n ON n.digest = i.digest
+        LEFT JOIN audit.audit_search_token t ON t.digest = i.digest
+    ), per AS (
+        SELECT n.rec,
+               array_agg(n.id ORDER BY n.id) FILTER (WHERE n.shared) AS shared_ids,
+               array_agg(n.id ORDER BY n.id) FILTER (WHERE NOT n.shared) AS own_ids
+        FROM named n GROUP BY n.rec
+    ), wanted AS (
+        SELECT DISTINCT p.shared_ids AS set_tokens FROM per p WHERE p.shared_ids IS NOT NULL
+    ), stored_sets AS (
+        INSERT INTO audit.audit_search_set (tokens, digest)
+        SELECT w.set_tokens, audit.search_set_digest(w.set_tokens) FROM wanted w
+        WHERE NOT EXISTS (SELECT FROM audit.audit_search_set h WHERE h.tokens = w.set_tokens)
+        ON CONFLICT (tokens) DO SELECT
+        RETURNING id, audit_search_set.tokens AS set_tokens
+    ), sets AS (
+        SELECT w.set_tokens, coalesce(n.id, h.id) AS id FROM wanted w
+        LEFT JOIN stored_sets n ON n.set_tokens = w.set_tokens
+        LEFT JOIN audit.audit_search_set h ON h.tokens = w.set_tokens
+    )
+    SELECT g.rec,
+           (CASE WHEN p.shared_ids IS NULL THEN coalesce(p.own_ids, '{}'::integer[])
+                 ELSE ARRAY[-s.id] || coalesce(p.own_ids, '{}'::integer[]) END)::text
+    FROM generate_series(1, p_records) AS g(rec)
+    LEFT JOIN per p ON p.rec = g.rec
+    LEFT JOIN sets s ON s.set_tokens = p.shared_ids
+    ORDER BY g.rec;
+END;
 $$;
-COMMENT ON FUNCTION hold_search_tokens() IS
-    'Holds the search tokens shared until the transaction ends, so retention deletes none the transaction is about to name.';
+COMMENT ON FUNCTION search_tokens_of(integer[], text[], text[], text[], boolean[], integer) IS
+    'The search_tokens value of each record of a write, storing the tokens and shared sets the store does not hold yet, under the writers'' shared hold on the tokens (#6633).';
 
 -- Deletes the tokens among p_tokens that no record and no search set names.
 -- Called by the reaping bodies with the reaping flag set.

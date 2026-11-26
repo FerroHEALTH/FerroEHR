@@ -32,7 +32,7 @@ use crate::access_log::intake::{IndexRow, IntakeEntry};
 
 use super::chains::AuditChain;
 use super::writers::Pinned;
-use super::{AuditRecord, AuditStore, LearnedSets, RecordEnd, stored_record};
+use super::{AuditRecord, AuditStore, RecordEnd, stored_record};
 use crate::access_log::store::AccessLogStore;
 use crate::system_log::AuditError;
 use crate::system_log::event::{AuditEvent, EntryScope, EventOutcome};
@@ -67,8 +67,7 @@ pub(super) type EntryRows = (Vec<uuid::Uuid>, Vec<IntakeEntry>);
 
 impl AuditStore {
     /// Write the entry of each of `records` into the intake on `conn`, each
-    /// with its index row; returns the entries' uids and the shared token
-    /// sets learned.
+    /// with its index row; returns the entries' uids.
     ///
     /// # Errors
     /// [`AuditError::AccessLog`] when an entry has no stored form, and the
@@ -79,10 +78,10 @@ impl AuditStore {
         writing: &Pinned,
         records: Vec<AuditRecord>,
         reserved_by: Option<uuid::Uuid>,
-    ) -> Result<(Vec<uuid::Uuid>, LearnedSets), AuditError> {
+    ) -> Result<Vec<uuid::Uuid>, AuditError> {
         let (uids, intake) = Self::entry_rows(writing, records)?;
         crate::access_log::intake::take_in(conn, &intake, reserved_by, &BTreeSet::new()).await?;
-        Ok((uids, LearnedSets::default()))
+        Ok(uids)
     }
 
     /// Write the entries `records` carry on `conn`, which holds no
@@ -199,15 +198,13 @@ impl AuditStore {
         if tombstone.is_none() {
             return Ok(None);
         }
-        let (_uids, learned) =
-            Box::pin(self.intake_entries(&mut tx, &writing, recorded, None)).await?;
+        Box::pin(self.intake_entries(&mut tx, &writing, recorded, None)).await?;
         // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's
         // rows.
         tx.commit().await?;
         // NOTE: our own design (#5879), the connection goes back before the chain settles, which
         // would otherwise wait for a second one while every connection is held so.
         drop(conn);
-        self.remember(learned);
         self.settle(super::intake::Chains::BOTH).await?;
         Ok(tombstone)
     }
@@ -360,17 +357,6 @@ pub(super) fn tokens_of(
             BTreeSet::new()
         }
     }
-}
-
-/// Each record's `search_tokens` as the text of the `integer[]` a batched
-/// insert casts.
-pub(super) fn token_texts(ids: &[Vec<i32>]) -> Vec<String> {
-    ids.iter()
-        .map(|ids| {
-            let ids: Vec<String> = ids.iter().map(ToString::to_string).collect();
-            format!("{{{}}}", ids.join(","))
-        })
-        .collect()
 }
 
 /// The index row of the entry whose record is `event`, written under the
