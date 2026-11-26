@@ -67,6 +67,17 @@ services:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set in /opt/ferroehr-sandbox/.env}
     volumes:
       - ./ferroehr.sandbox.toml:/etc/ferroehr/ferroehr.toml:ro
+    # The sandbox's own signing key and its passphrase ([record.signing]),
+    # mounted at /run/secrets/<name> from the files `.env` names (the
+    # `secrets` block at the end says why a deploy refuses without them).
+    secrets:
+      - ferroehr-signing-key
+      - ferroehr-signing-passphrase
+    # [audit.access_log] publish_directory. A tmpfs, so a recreate after the
+    # nightly wipe empties it with the database; 1777 because the server runs
+    # as 65532 and a tmpfs mounts owned by root.
+    tmpfs:
+      - /var/lib/ferroehr/access-log:mode=1777,size=16m
     # The issuer's namespace (the header says why); Caddy and the viewer reach
     # the CDR as ferroehr:8080, the name the issuer answers to.
     network_mode: service:identity-issuer
@@ -163,6 +174,9 @@ services:
       FERROEHR__USAGE_REPORT__ENABLED: "false"
     volumes:
       - ./ferroehr.sandbox.toml:/etc/ferroehr/ferroehr.toml:ro
+    # The loader reads the passphrase file of every configuration it loads.
+    secrets:
+      - ferroehr-signing-passphrase
     command:
       - party-binding
       - grant
@@ -203,6 +217,9 @@ services:
       FERROEHR__USAGE_REPORT__ENABLED: "false"
     volumes:
       - ./ferroehr.sandbox.toml:/etc/ferroehr/ferroehr.toml:ro
+    # The loader reads the passphrase file of every configuration it loads.
+    secrets:
+      - ferroehr-signing-passphrase
     command:
       - party-binding
       - grant
@@ -240,6 +257,9 @@ services:
       FERROEHR__USAGE_REPORT__ENABLED: "false"
     volumes:
       - ./ferroehr.sandbox.toml:/etc/ferroehr/ferroehr.toml:ro
+    # The loader reads the passphrase file of every configuration it loads.
+    secrets:
+      - ferroehr-signing-passphrase
     command:
       - party-binding
       - grant
@@ -499,6 +519,17 @@ configs:
     content: ${FERROPIX_DATABASE_URL:?FERROPIX_DATABASE_URL must be set in /opt/ferroehr-sandbox/.env}
   ferropix-data-key:
     content: ${FERROPIX_DATA_KEY:?FERROPIX_DATA_KEY must be set in /opt/ferroehr-sandbox/.env}
+
+# The sandbox's signing key and its passphrase, generated on the box and kept
+# beside `.env`, never in the repository or the image (deploy/hosted/README.md,
+# "The signing key"). `.env` names the two files. Unset, `docker compose config`
+# fails, so deploy.sh refuses the posture before it installs it or stops the
+# running CDR.
+secrets:
+  ferroehr-signing-key:
+    file: ${FERROEHR_SIGNING_KEY_FILE:?FERROEHR_SIGNING_KEY_FILE must name the signing key in /opt/ferroehr-sandbox/.env}
+  ferroehr-signing-passphrase:
+    file: ${FERROEHR_SIGNING_PASSPHRASE_FILE:?FERROEHR_SIGNING_PASSPHRASE_FILE must name the signing key passphrase in /opt/ferroehr-sandbox/.env}
 
 volumes:
   caddy_data:

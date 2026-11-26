@@ -89,8 +89,8 @@ identity:
 
 | Artifact | Signing workflow | SAN on a release build | SAN on a development build |
 |---|---|---|---|
-| the three images | `build-image.yml` — the reusable builder both callers use | `…/build-image.yml@refs/tags/vX.Y.Z` (the release pipeline) | `…/build-image.yml@refs/heads/main` (via `containers.yml`) |
-| the chart | `build-chart.yml` — the reusable chart lane | `…/build-chart.yml@refs/tags/vX.Y.Z` (the release pipeline's chart leg) | `…/build-chart.yml@refs/heads/main` (a `workflow_dispatch` chart-only publish, or the recovery of a release's chart leg for a tag cut before a re-run could finish it) |
+| the three images | `build-image.yml`: the reusable builder both callers use | `…/build-image.yml@refs/tags/vX.Y.Z` (the release pipeline) | `…/build-image.yml@refs/heads/main` (via `containers.yml`) |
+| the chart | `build-chart.yml`: the reusable chart lane | `…/build-chart.yml@refs/tags/vX.Y.Z` (the release pipeline's chart leg) | `…/build-chart.yml@refs/heads/main` (a `workflow_dispatch` chart-only publish, or the recovery of a release's chart leg for a tag cut before a re-run could finish it) |
 | the release binaries | `release-build.yml` | `…/release-build.yml@refs/tags/vX.Y.Z` | *(none; the lane only runs on a tag)* |
 
 All three prefixed with `https://github.com/FerroHEALTH/FerroEHR/.github/workflows/`,
@@ -282,11 +282,9 @@ comments on) a tracking issue, **and** it fails the run. A red scheduled run
 nobody looks at is not a control, and an issue with no failing check can be closed
 without the finding being addressed.
 
-The PostgreSQL image is what this lane exists for, and it has already fired: the
-`3.17.5` release moved that image onto a rebuilt PostgreSQL 18.4 base to pull in
-current Debian packages, changing nothing about FerroEHR itself. The distroless
-images carry almost no OS package surface, and when the lane was written none of
-the three published images carried a fixable HIGH or CRITICAL finding.
+The PostgreSQL image is what this lane exists for: it carries a Debian package
+surface, and a fixable finding there is answered by rebuilding the image on a
+current base. The distroless images carry almost no OS package surface.
 
 The remediation side is standing machinery, not a per-incident scramble. The
 PostgreSQL image applies Debian security updates at its own build time, so an

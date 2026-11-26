@@ -13,14 +13,27 @@ between them, and their tags.
 
 ## Finding a party
 
-Pick a kind and type a party's uid, then **Open**. There is no list of
-parties: the demographic API publishes no "list all people" endpoint, and AQL
-reads EHRs. A versioned object uid opens the latest version; a version uid
-opens the object it belongs to. Open is a plain form and works with
-JavaScript off.
+**Parties** lists the parties the CDR holds, the most recently committed
+first, with the name each goes by (the text of its first identity), its kind
+and when its latest version was committed. The tabs narrow the list to one
+kind. Each row opens its party. The list is the CDR's AQL over its
+demographic store (see [Querying with AQL](../querying-aql.md)), so it shows
+only the parties your account may read: a policy party, such as a role that
+grants an operation, is listed to an administrator alone. The page position is
+kept in your browser's session, never in the address.
 
-The one demographic collection the API publishes is the **tag index**, under
-Open: every tag on any party, each row opening the party it tags.
+**Find** narrows the list to the parties whose identities hold the text you
+type, matching case. A find names people, so the form posts and the text never
+appears in the address; it shows the first page of matches.
+
+You can also pick a kind and type a party's uid, then **Open**. A versioned
+object uid opens the latest version; a version uid opens the object it
+belongs to. Open is a plain form and works with JavaScript off. Against an
+openEHR server that runs no AQL over parties, the list is replaced by a note
+and Open remains.
+
+The **tag index** below lists every tag on any party, each row opening the
+party it tags.
 
 ![Parties](img/parties/parties.png)
 

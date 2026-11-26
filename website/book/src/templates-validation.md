@@ -725,6 +725,6 @@ each `path: message` pair, separated by `; `.
 
 ## Next
 
-- [Using the API → Resource walkthroughs](using-the-api/resources.md) — the full
+- [Using the API → Resource walkthroughs](using-the-api/resources.md): the full
   composition create/update/delete lifecycle.
-- [Querying with AQL](querying-aql.md) — reading the data back out by path.
+- [Querying with AQL](querying-aql.md): reading the data back out by path.

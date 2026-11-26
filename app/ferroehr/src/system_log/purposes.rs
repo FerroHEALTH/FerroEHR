@@ -16,6 +16,9 @@ use crate::service::terminology::types::TermEntry;
 pub struct Purposes {
     /// The request header a caller declares its purpose in, lowercased.
     pub header: String,
+    /// The request header a caller states the reason of a justified access
+    /// in (`[audit] reason_header`), lowercased.
+    pub reason_header: String,
     /// The canonical URL of the code system the codes belong to.
     pub system: String,
     /// The accepted codes in configured order; empty when the deployment
@@ -68,6 +71,7 @@ impl FerroEhrService {
         }
         Some(Purposes {
             header: sender.purpose_header().to_owned(),
+            reason_header: sender.reason_header().to_owned(),
             system: system.to_owned(),
             codes,
         })
