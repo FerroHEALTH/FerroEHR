@@ -133,6 +133,20 @@ removes the EHR and everything in it; it needs the CDR's ADMIN role.
 
 ![Deleting an EHR](img/ehrs/ehr-delete.png)
 
+### Archiving an EHR
+
+While the CDR's admin API is on, the EHR's More menu offers **Archive…** and
+**Restore from the archive…** (`POST {ext}/admin/archive/ehrs` and
+`…/ehrs/restore`, see [Admin & messaging APIs →
+Archiving](../operations-admin-apis.md#archiving)). Each asks for
+confirmation. An archived EHR moves to the cold tier with all its content: it
+stays readable by its id, here and over the API, but it leaves every AQL
+result, so it disappears from the EHRs list and from queries until it is
+restored. Both need the CDR's ADMIN role; a refusal, such as an EHR the CDR
+does not hold, is shown in the CDR's words.
+
+![Archiving an EHR](img/ehrs/ehr-archive.png)
+
 ### Committing several changes at once
 
 **Commit several changes** builds one contribution: stage a new composition,
@@ -150,9 +164,16 @@ it, label and value, by section.
 **Document** shows it in the format you pick (JSON, XML, FLAT or STRUCTURED),
 as the CDR converts it. **Versions** lists every version and reads the
 `VERSIONED_COMPOSITION` and the chosen version's envelope; **At a time** opens
-the version that was current then. **Tags** lists the composition's tags and
+the version that was current then. The envelope names the kind of the
+version's signature (a SHA-256 digest, or an OpenPGP signature with its
+algorithm, such as ML-DSA-65+Ed25519) and shows the signature as stored, with
+the version's attestations beneath it: who attested, when, why and what. The
+CDR checks the signature when it serves the version; see
+[Version signing](../signing/index.md). **Tags** lists the composition's tags and
 sets or removes one; a tag stays on the composition across its versions and
 commits no version.
+
+![A composition's versions](img/compositions/versions.png)
 
 **Edit as a new version** opens the document in an editor; the save writes
 the next version. **Delete composition…** marks it deleted with a new version;

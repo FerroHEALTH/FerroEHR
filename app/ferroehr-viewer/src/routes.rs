@@ -129,6 +129,8 @@ pub enum Page {
     Build,
     /// `/query/aql`.
     Aql,
+    /// `/query/cohort`.
+    Cohort,
     /// `/server`.
     ServerOverview,
     /// `/server/health`.
@@ -151,6 +153,8 @@ pub enum Page {
     AccessPolicyVersions,
     /// `/access-policy/edit`.
     EditAccessPolicy,
+    /// `/grants`.
+    Grants,
     /// `/configuration` and its sections.
     Configuration,
     /// `/preferences` and its sections.
@@ -209,6 +213,7 @@ impl Page {
             "/queries/:name/:version/run" => Self::StoredQueryRun,
             "/query" => Self::Build,
             "/query/aql" => Self::Aql,
+            "/query/cohort" => Self::Cohort,
             "/server" => Self::ServerOverview,
             "/server/health" => Self::Health,
             "/server/metrics" => Self::Metrics,
@@ -220,6 +225,7 @@ impl Page {
             "/access-policy" => Self::AccessPolicy,
             "/access-policy/versions" => Self::AccessPolicyVersions,
             "/access-policy/edit" => Self::EditAccessPolicy,
+            "/grants" => Self::Grants,
             "/configuration" | "/configuration/:section" => Self::Configuration,
             "/preferences" | "/preferences/:section" => Self::Preferences,
             "/access" => Self::Access,
@@ -350,6 +356,7 @@ pub static ROUTES: &[&str] = &[
     "/queries/:name/:version/run",
     "/query",
     "/query/aql",
+    "/query/cohort",
     "/server",
     "/server/health",
     "/server/metrics",
@@ -361,6 +368,7 @@ pub static ROUTES: &[&str] = &[
     "/access-policy",
     "/access-policy/versions",
     "/access-policy/edit",
+    "/grants",
     "/configuration",
     "/configuration/:section",
     "/preferences",
@@ -399,7 +407,7 @@ pub async fn draw() -> Drawn {
         Page::NewRelationship => pages::parties::new_relationship_page().await,
         Page::Relationship => pages::parties::relationship_page().await,
         Page::EditRelationship => pages::parties::edit_relationship_page().await,
-        Page::PartyContribution => pages::parties::party_contribution_page().await,
+        Page::PartyContribution => pages::parties::contribution::party_contribution_page().await,
         Page::Party => pages::parties::party_page().await,
         Page::EditParty => pages::parties::edit_party_page().await,
         Page::Templates => pages::templates::list_page().await,
@@ -417,6 +425,7 @@ pub async fn draw() -> Drawn {
         Page::StoredQueryRun => pages::queries::run_page().await,
         Page::Build => pages::query::build_page().await,
         Page::Aql => pages::query::aql_page().await,
+        Page::Cohort => pages::query::cohort::page().await,
         Page::ServerOverview => pages::server::overview::page().await,
         Page::Health => pages::server::health_page().await,
         Page::Metrics => pages::server::metrics_page().await,
@@ -428,6 +437,7 @@ pub async fn draw() -> Drawn {
         Page::AccessPolicy => pages::policy::page().await,
         Page::AccessPolicyVersions => pages::policy::versions_page().await,
         Page::EditAccessPolicy => pages::policy::edit::page().await,
+        Page::Grants => pages::policy::grants::page().await,
         Page::Configuration => pages::configuration::page().await,
         Page::Preferences => pages::preferences::page(),
         Page::Access => pages::access::page(),
