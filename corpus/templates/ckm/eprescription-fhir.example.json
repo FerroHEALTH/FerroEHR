@@ -953,7 +953,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0002"
+              "value": "Tree"
             }
           },
           "name": {
@@ -1014,7 +1014,7 @@
         ],
         "name": {
           "_type": "DV_TEXT",
-          "value": "at0005"
+          "value": "Dose amount description"
         }
       },
       "subject": {
@@ -1024,6 +1024,28 @@
   ],
   "context": {
     "_type": "EVENT_CONTEXT",
+    "other_context": {
+      "_type": "ITEM_TREE",
+      "archetype_node_id": "at0001",
+      "items": [
+        {
+          "_type": "ELEMENT",
+          "archetype_node_id": "at0008",
+          "name": {
+            "_type": "DV_TEXT",
+            "value": "Prescription identifier"
+          },
+          "value": {
+            "_type": "DV_IDENTIFIER",
+            "id": "example-id"
+          }
+        }
+      ],
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "Tree"
+      }
+    },
     "setting": {
       "_type": "DV_CODED_TEXT",
       "defining_code": {

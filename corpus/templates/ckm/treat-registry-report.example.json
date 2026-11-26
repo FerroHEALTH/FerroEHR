@@ -84,7 +84,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "structure"
             }
           },
           "encoding": {
@@ -152,7 +152,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0032"
+              "value": "Tree"
             }
           },
           "subject": {
@@ -235,7 +235,7 @@
                 ],
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Tree"
                 }
               },
               "name": {
@@ -320,7 +320,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0031"
+              "value": "Tree"
             }
           },
           "subject": {
@@ -396,7 +396,7 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "blood pressure"
                   }
                 },
                 "name": {
@@ -411,7 +411,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "history"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -492,7 +492,7 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Simple"
                   }
                 },
                 "name": {
@@ -507,7 +507,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "history"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -576,7 +576,7 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0001"
+                    "value": "Simple"
                   }
                 },
                 "name": {
@@ -591,7 +591,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0002"
+              "value": "history"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -659,7 +659,7 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
@@ -674,7 +674,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -754,12 +754,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -769,7 +769,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -837,7 +837,7 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
@@ -852,7 +852,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -920,7 +920,7 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
@@ -935,7 +935,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -1026,7 +1026,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "structure"
             }
           },
           "encoding": {
@@ -1094,7 +1094,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0032"
+              "value": "Tree"
             }
           },
           "subject": {
@@ -1341,12 +1341,12 @@
                       ],
                       "name": {
                         "_type": "DV_TEXT",
-                        "value": "at0003"
+                        "value": "Tree"
                       }
                     },
                     "name": {
                       "_type": "DV_TEXT",
-                      "value": "at0002"
+                      "value": "Any event"
                     },
                     "time": {
                       "_type": "DV_DATE_TIME",
@@ -1356,7 +1356,7 @@
                 ],
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0001"
+                  "value": "Event Series"
                 },
                 "origin": {
                   "_type": "DV_DATE_TIME",
@@ -1611,12 +1611,12 @@
                       ],
                       "name": {
                         "_type": "DV_TEXT",
-                        "value": "at0003"
+                        "value": "Tree"
                       }
                     },
                     "name": {
                       "_type": "DV_TEXT",
-                      "value": "at0002"
+                      "value": "Any event"
                     },
                     "time": {
                       "_type": "DV_DATE_TIME",
@@ -1626,7 +1626,7 @@
                 ],
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0001"
+                  "value": "Event Series"
                 },
                 "origin": {
                   "_type": "DV_DATE_TIME",
@@ -1748,12 +1748,12 @@
                       ],
                       "name": {
                         "_type": "DV_TEXT",
-                        "value": "at0003"
+                        "value": "Tree"
                       }
                     },
                     "name": {
                       "_type": "DV_TEXT",
-                      "value": "at0002"
+                      "value": "Any event"
                     },
                     "time": {
                       "_type": "DV_DATE_TIME",
@@ -1763,7 +1763,7 @@
                 ],
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0001"
+                  "value": "Event Series"
                 },
                 "origin": {
                   "_type": "DV_DATE_TIME",
@@ -1925,12 +1925,12 @@
                       ],
                       "name": {
                         "_type": "DV_TEXT",
-                        "value": "at0003"
+                        "value": "Tree"
                       }
                     },
                     "name": {
                       "_type": "DV_TEXT",
-                      "value": "at0002"
+                      "value": "Any event"
                     },
                     "time": {
                       "_type": "DV_DATE_TIME",
@@ -1940,7 +1940,7 @@
                 ],
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0001"
+                  "value": "Event Series"
                 },
                 "origin": {
                   "_type": "DV_DATE_TIME",
@@ -2219,12 +2219,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -2234,7 +2234,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -2493,12 +2493,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -2508,7 +2508,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -2763,12 +2763,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -2778,7 +2778,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -3037,12 +3037,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -3052,7 +3052,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -3152,12 +3152,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -3167,7 +3167,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -3267,12 +3267,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -3282,7 +3282,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -3407,7 +3407,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Tree"
             }
           },
           "encoding": {
@@ -3553,7 +3553,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0042"
+              "value": "Tree"
             }
           },
           "subject": {
@@ -3590,7 +3590,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "structure"
             }
           },
           "encoding": {
@@ -3632,7 +3632,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0032"
+              "value": "Tree"
             }
           },
           "subject": {
@@ -3669,7 +3669,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Tree"
             }
           },
           "encoding": {
@@ -3711,7 +3711,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0006"
+              "value": "Tree"
             }
           },
           "subject": {
@@ -3748,7 +3748,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Tree"
             }
           },
           "encoding": {
@@ -3790,7 +3790,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0006"
+              "value": "Tree"
             }
           },
           "subject": {
@@ -3864,12 +3864,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -3879,7 +3879,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -4029,6 +4029,66 @@
                       "archetype_node_id": "at0078",
                       "name": {
                         "_type": "DV_TEXT",
+                        "value": "Cat dander"
+                      },
+                      "value": {
+                        "_type": "DV_CODED_TEXT",
+                        "defining_code": {
+                          "_type": "CODE_PHRASE",
+                          "code_string": "at0000",
+                          "terminology_id": {
+                            "_type": "TERMINOLOGY_ID",
+                            "value": "local"
+                          }
+                        },
+                        "value": "Example"
+                      }
+                    },
+                    {
+                      "_type": "ELEMENT",
+                      "archetype_node_id": "at0078",
+                      "name": {
+                        "_type": "DV_TEXT",
+                        "value": "Dog dander"
+                      },
+                      "value": {
+                        "_type": "DV_CODED_TEXT",
+                        "defining_code": {
+                          "_type": "CODE_PHRASE",
+                          "code_string": "at0000",
+                          "terminology_id": {
+                            "_type": "TERMINOLOGY_ID",
+                            "value": "local"
+                          }
+                        },
+                        "value": "Example"
+                      }
+                    },
+                    {
+                      "_type": "ELEMENT",
+                      "archetype_node_id": "at0078",
+                      "name": {
+                        "_type": "DV_TEXT",
+                        "value": "Aspergillus"
+                      },
+                      "value": {
+                        "_type": "DV_CODED_TEXT",
+                        "defining_code": {
+                          "_type": "CODE_PHRASE",
+                          "code_string": "at0000",
+                          "terminology_id": {
+                            "_type": "TERMINOLOGY_ID",
+                            "value": "local"
+                          }
+                        },
+                        "value": "Example"
+                      }
+                    },
+                    {
+                      "_type": "ELEMENT",
+                      "archetype_node_id": "at0078",
+                      "name": {
+                        "_type": "DV_TEXT",
                         "value": "Result"
                       },
                       "value": {
@@ -4039,12 +4099,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -4054,7 +4114,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -4134,12 +4194,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -4149,7 +4209,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -4301,12 +4361,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -4316,7 +4376,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -4516,12 +4576,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -4531,7 +4591,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -4630,12 +4690,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -4645,7 +4705,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -4743,12 +4803,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "List"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -4758,7 +4818,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -4838,12 +4898,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -4853,7 +4913,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -4975,12 +5035,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -4990,7 +5050,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -5354,12 +5414,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -5369,7 +5429,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -5617,12 +5677,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -5632,7 +5692,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -5787,7 +5847,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Tree"
             }
           },
           "encoding": {
@@ -5862,7 +5922,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "List"
             }
           },
           "encoding": {
@@ -5898,6 +5958,348 @@
   ],
   "context": {
     "_type": "EVENT_CONTEXT",
+    "other_context": {
+      "_type": "ITEM_TREE",
+      "archetype_node_id": "at0001",
+      "items": [
+        {
+          "_type": "CLUSTER",
+          "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": {
+              "_type": "ARCHETYPE_ID",
+              "value": "openEHR-EHR-CLUSTER.person_identifiable_parent.v1"
+            },
+            "rm_version": "1.2.0"
+          },
+          "archetype_node_id": "openEHR-EHR-CLUSTER.person_identifiable_parent.v1",
+          "items": [
+            {
+              "_type": "ELEMENT",
+              "archetype_node_id": "at0001",
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "Person Identifier"
+              },
+              "value": {
+                "_type": "DV_IDENTIFIER",
+                "id": "example-id"
+              }
+            },
+            {
+              "_type": "CLUSTER",
+              "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": {
+                  "_type": "ARCHETYPE_ID",
+                  "value": "openEHR-EHR-CLUSTER.person_name_isa.v1"
+                },
+                "rm_version": "1.2.0"
+              },
+              "archetype_node_id": "openEHR-EHR-CLUSTER.person_name_isa.v1",
+              "items": [
+                {
+                  "_type": "ELEMENT",
+                  "archetype_node_id": "at0001",
+                  "name": {
+                    "_type": "DV_TEXT",
+                    "value": "Family Name"
+                  },
+                  "value": {
+                    "_type": "DV_TEXT",
+                    "value": "Family Name"
+                  }
+                },
+                {
+                  "_type": "ELEMENT",
+                  "archetype_node_id": "at0002",
+                  "name": {
+                    "_type": "DV_TEXT",
+                    "value": "Given Name"
+                  },
+                  "value": {
+                    "_type": "DV_TEXT",
+                    "value": "Given Name"
+                  }
+                }
+              ],
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "Person name (ISA)"
+              }
+            },
+            {
+              "_type": "CLUSTER",
+              "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": {
+                  "_type": "ARCHETYPE_ID",
+                  "value": "openEHR-EHR-CLUSTER.person_anonymised_parent.v1"
+                },
+                "rm_version": "1.2.0"
+              },
+              "archetype_node_id": "openEHR-EHR-CLUSTER.person_anonymised_parent.v1",
+              "items": [
+                {
+                  "_type": "ELEMENT",
+                  "archetype_node_id": "at0001",
+                  "name": {
+                    "_type": "DV_TEXT",
+                    "value": "Administrative Gender"
+                  },
+                  "value": {
+                    "_type": "DV_CODED_TEXT",
+                    "defining_code": {
+                      "_type": "CODE_PHRASE",
+                      "code_string": "at0009",
+                      "terminology_id": {
+                        "_type": "TERMINOLOGY_ID",
+                        "value": "local"
+                      }
+                    },
+                    "value": "Male"
+                  }
+                }
+              ],
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "Anonymised person (PARENT)"
+              }
+            },
+            {
+              "_type": "CLUSTER",
+              "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": {
+                  "_type": "ARCHETYPE_ID",
+                  "value": "openEHR-EHR-CLUSTER.death_details_parent.v1"
+                },
+                "rm_version": "1.2.0"
+              },
+              "archetype_node_id": "openEHR-EHR-CLUSTER.death_details_parent.v1",
+              "items": [
+                {
+                  "_type": "ELEMENT",
+                  "archetype_node_id": "at0001",
+                  "name": {
+                    "_type": "DV_TEXT",
+                    "value": "Date of death"
+                  },
+                  "value": {
+                    "_type": "DV_DATE_TIME",
+                    "value": "2022-02-03T04:05:06Z"
+                  }
+                }
+              ],
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "Death details (PARENT)"
+              }
+            },
+            {
+              "_type": "ELEMENT",
+              "archetype_node_id": "at0008",
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "Date of Birth"
+              },
+              "value": {
+                "_type": "DV_DATE_TIME",
+                "value": "2022-02-03T04:05:06Z"
+              }
+            }
+          ],
+          "name": {
+            "_type": "DV_TEXT",
+            "value": "Patient"
+          }
+        },
+        {
+          "_type": "CLUSTER",
+          "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": {
+              "_type": "ARCHETYPE_ID",
+              "value": "openEHR-EHR-CLUSTER.healthcare_professional_parent.v1"
+            },
+            "rm_version": "1.2.0"
+          },
+          "archetype_node_id": "openEHR-EHR-CLUSTER.healthcare_professional_parent.v1",
+          "items": [
+            {
+              "_type": "CLUSTER",
+              "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": {
+                  "_type": "ARCHETYPE_ID",
+                  "value": "openEHR-EHR-CLUSTER.person_name_isa.v1"
+                },
+                "rm_version": "1.2.0"
+              },
+              "archetype_node_id": "openEHR-EHR-CLUSTER.person_name_isa.v1",
+              "items": [
+                {
+                  "_type": "ELEMENT",
+                  "archetype_node_id": "at0004",
+                  "name": {
+                    "_type": "DV_TEXT",
+                    "value": "Full Name"
+                  },
+                  "value": {
+                    "_type": "DV_TEXT",
+                    "value": "Full Name"
+                  }
+                }
+              ],
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "Person name (ISA)"
+              }
+            },
+            {
+              "_type": "ELEMENT",
+              "archetype_node_id": "at0002",
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "Professional Identifier"
+              },
+              "value": {
+                "_type": "DV_IDENTIFIER",
+                "id": "example-id"
+              }
+            },
+            {
+              "_type": "CLUSTER",
+              "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": {
+                  "_type": "ARCHETYPE_ID",
+                  "value": "openEHR-EHR-CLUSTER.healthcare_provider_parent.v1"
+                },
+                "rm_version": "1.2.0"
+              },
+              "archetype_node_id": "openEHR-EHR-CLUSTER.healthcare_provider_parent.v1",
+              "items": [
+                {
+                  "_type": "ELEMENT",
+                  "archetype_node_id": "at0001",
+                  "name": {
+                    "_type": "DV_TEXT",
+                    "value": "Department name"
+                  },
+                  "value": {
+                    "_type": "DV_TEXT",
+                    "value": "Department name"
+                  }
+                },
+                {
+                  "_type": "ELEMENT",
+                  "archetype_node_id": "at0002",
+                  "name": {
+                    "_type": "DV_TEXT",
+                    "value": "Hospital identifier"
+                  },
+                  "value": {
+                    "_type": "DV_IDENTIFIER",
+                    "id": "example-id"
+                  }
+                },
+                {
+                  "_type": "CLUSTER",
+                  "archetype_details": {
+                    "_type": "ARCHETYPED",
+                    "archetype_id": {
+                      "_type": "ARCHETYPE_ID",
+                      "value": "openEHR-EHR-CLUSTER.address_isa.v1"
+                    },
+                    "rm_version": "1.2.0"
+                  },
+                  "archetype_node_id": "openEHR-EHR-CLUSTER.address_isa.v1",
+                  "items": [
+                    {
+                      "_type": "ELEMENT",
+                      "archetype_node_id": "at0006",
+                      "name": {
+                        "_type": "DV_TEXT",
+                        "value": "Post Name (city)"
+                      },
+                      "value": {
+                        "_type": "DV_TEXT",
+                        "value": "Post Name (city)"
+                      }
+                    },
+                    {
+                      "_type": "ELEMENT",
+                      "archetype_node_id": "at0007",
+                      "name": {
+                        "_type": "DV_TEXT",
+                        "value": "Admin Unit 2 (county/region/state)"
+                      },
+                      "value": {
+                        "_type": "DV_TEXT",
+                        "value": "Admin Unit 2 (county/region/state)"
+                      }
+                    },
+                    {
+                      "_type": "ELEMENT",
+                      "archetype_node_id": "at0008",
+                      "name": {
+                        "_type": "DV_TEXT",
+                        "value": "Admin Unit 1 (country)"
+                      },
+                      "value": {
+                        "_type": "DV_TEXT",
+                        "value": "Admin Unit 1 (country)"
+                      }
+                    }
+                  ],
+                  "name": {
+                    "_type": "DV_TEXT",
+                    "value": "Address (ISA)"
+                  }
+                },
+                {
+                  "_type": "ELEMENT",
+                  "archetype_node_id": "at0004",
+                  "name": {
+                    "_type": "DV_TEXT",
+                    "value": "Contact details"
+                  },
+                  "value": {
+                    "_type": "DV_TEXT",
+                    "value": "Contact details"
+                  }
+                }
+              ],
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "Healthcare provider (PARENT)"
+              }
+            },
+            {
+              "_type": "ELEMENT",
+              "archetype_node_id": "at0004",
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "Contact details"
+              },
+              "value": {
+                "_type": "DV_TEXT",
+                "value": "Contact details"
+              }
+            }
+          ],
+          "name": {
+            "_type": "DV_TEXT",
+            "value": "Reporting professional"
+          }
+        }
+      ],
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "Tree"
+      }
+    },
     "setting": {
       "_type": "DV_CODED_TEXT",
       "defining_code": {
