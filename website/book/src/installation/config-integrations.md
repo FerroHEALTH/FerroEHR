@@ -110,7 +110,7 @@ contribution moves the merged patient's pseudonym onto the survivor's
 `PERSON`, and both EHRs inherit the survivor's care relationships and
 representatives from the next request. Writing the element needs the
 `write_care_relationship` grant or an administrator, as a care relationship
-does ([The pseudonymisation boundary](../security.md#the-subject-link-in-the-party-domain)
+does ([The pseudonymisation boundary](../pseudonymisation.md#the-subject-link-in-the-party-domain)
 names what this changes).
 
 ### The patient's EHRs

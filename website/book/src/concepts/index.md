@@ -1,6 +1,6 @@
 # Concepts
 
-This part explains the ideas you need to use FerroEHR effectively. Four
+These chapters explain the ideas you need to use FerroEHR effectively. Four
 chapters; the first two read in either order, the last two go deeper:
 
 - **[openEHR primer](openehr-primer.md):** the standard itself: the Reference

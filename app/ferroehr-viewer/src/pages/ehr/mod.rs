@@ -294,6 +294,8 @@ where
 /// The More menu of an EHR: Commit several changes, Create the directory
 /// when it has none, Copy EHR id, Export as EHR Extract, and while the
 /// admin group is mounted Archive… and Restore…, then Delete EHR… last.
+/// when it has none, Copy EHR id, and while the admin group is mounted
+/// Archive… and Restore…, then Delete EHR… last.
 fn more(ehr_id: &str, facts: &EhrHead) -> Menu {
     let mut items = vec![Item::new(Action::new(
         Some(Glyph::GIT_COMMIT),
