@@ -27,6 +27,7 @@ use ferrohealth_session::cookies::CookieNames;
 use serde_json::Value;
 use tower::util::ServiceExt;
 
+mod grants;
 mod policy;
 
 /// The recorded exchanges, read once.
