@@ -15,9 +15,9 @@ mod sandbox_posture;
 mod serving;
 mod ssr_app;
 mod ssr_assets;
+mod ssr_cohort;
 mod ssr_queues;
 mod ssr_server_operations;
-mod ssr_cohort;
 mod ssr_server_status;
 
 mod e2e_access_policy;
