@@ -92,7 +92,10 @@ impl Key {
     /// An access token of [`ISSUER`] bound to this key (RFC 9449 §6.1).
     fn token(&self) -> String {
         let exp = jiff::Timestamp::now().as_second() + 3600;
-        let jkt = ferrohealth_smart::client::assertion::thumbprint(&self.jwk);
+        let public = serde_json::to_value(&self.jwk).expect("a JWK value");
+        let jkt = ferrohealth_smart::jws::jwk::Jwk::try_from(&public)
+            .expect("a public JWK")
+            .thumbprint();
         let bearer = common::bearer(&json!({
             "iss": ISSUER, "aud": AUDIENCE, "exp": exp, "sub": "someone",
             "cnf": { "jkt": jkt },
