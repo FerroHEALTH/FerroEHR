@@ -105,15 +105,14 @@ fn token_introspection_is_served_and_its_table_needs_the_mode() {
 
 /// RFC 8725 §3.1, §3.2 and RFC 9068 §4: the resource server accepts
 /// asymmetric algorithms only, so an `HS*` algorithm, which an HMAC secret
-/// would have verified, is refused at boot whatever the key source.
+/// would have verified, or `none` is refused at parse whatever the key source.
 #[test]
-fn a_symmetric_algorithm_is_a_boot_error() {
-    let cfg = parse(&format!("{ISSUER}algorithms = [\"HS256\"]\n"))
-        .expect("HS256 is a JOSE algorithm name");
-    assert!(matches!(
-        validate(&cfg),
-        Err(AuthConfigError::Section { .. })
-    ));
+fn a_symmetric_algorithm_is_refused_at_parse() {
+    for name in ["HS256", "none"] {
+        let err = parse(&format!("{ISSUER}algorithms = [\"{name}\"]\n"))
+            .expect_err("a symmetric algorithm or none has no value");
+        assert!(err.to_string().contains("algorithms"), "{name}: {err}");
+    }
     assert!(validate(&valid()).is_ok(), "the asymmetric default boots");
 }
 

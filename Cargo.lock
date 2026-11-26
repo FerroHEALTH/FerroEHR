@@ -2084,9 +2084,9 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "ferrobridge-term"
-version = "0.19.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e6dc4494be13d088ca66ae23c09a94acb7cd9b60f9e8b7ca2b4cf987701de06"
+checksum = "1c4f28366d020a44e46c733c5555920d0f4143a76adfcb9e48850df773c51d14"
 dependencies = [
  "async-trait",
  "backon",
@@ -2436,9 +2436,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-session"
-version = "0.29.0"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f202e4902815a7d02b45e4faea1cd68eed1c4ead02db89dca8f2929c1142cfd"
+checksum = "47fd4ed091afd320036146bea3048691a24bafef58af70f4a2d9d8211772c5cd"
 dependencies = [
  "aws-lc-rs",
  "axum",
@@ -2461,9 +2461,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-smart"
-version = "0.34.0"
+version = "0.35.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b07089669e8f38d9ff0b2ad0fbc192fc1cf62facc4a59687de63cec8e6f7e05"
+checksum = "ef02d962a9ff0f8f9b21d9ba8e6a4dadd252e81eb49248e9ac6c96e68b19f215"
 dependencies = [
  "argon2 0.6.0",
  "aws-lc-rs",
@@ -2474,7 +2474,6 @@ dependencies = [
  "ferrohealth-server",
  "http",
  "jiff",
- "jsonwebtoken",
  "reqwest",
  "rustls",
  "schemars 1.2.3",
@@ -3484,9 +3483,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-iti"
-version = "0.23.0"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6610e6ad1ae8c9636e4d6f43e82b230b198a43bb79c9bddbe02ac665b54cff4"
+checksum = "886980ff59cfe1fa8a30516fe083618ffb9a05119ed045e3485c6b24efbb7a5b"
 dependencies = [
  "ferrohealth-smart",
  "fhir-search",
@@ -6985,7 +6984,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",

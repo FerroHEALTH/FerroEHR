@@ -113,7 +113,7 @@ boot cannot see.
 | `issuer` | string | required | The issuer identifier: an `https` URL with no query, no fragment and no user name or password; plain `http` on a loopback host only. Two tables naming one issuer refuse the start. |
 | `kind` | `federation` | unset | Unset, the issuer is a SMART App Launch 2.2 authorization server, such as [FerroSMART](../behind-ferrosmart.md), signing the tokens of the deployment's own users and clients. `federation` signs another party's professionals or organisation. |
 | `audience` | list of string | the openEHR base | Accepted `aud` values; a token naming none of them is refused (RFC 9068 §4, RFC 8725 §3.9). Unset, the openEHR REST API's `baseUrl` (see [the audience](#the-audience)). |
-| `algorithms` | list of string | `["RS256","RS384","PS256","PS384","ES256","ES384"]` | Accepted signature algorithms. Asymmetric only: an `HS*` algorithm is a boot error, and `none` is no algorithm at all (RFC 8725 §3.1, §3.2). |
+| `algorithms` | list of string | `["RS256","RS384","PS256","PS384","ES256","ES384"]` | Accepted signature algorithms: `RS256` to `RS512`, `PS256` to `PS512`, `ES256`, `ES384`, `EdDSA` (RFC 8037) and `ML-DSA-44`, `ML-DSA-65` and `ML-DSA-87` (RFC 9964). Asymmetric only: an `HS*` algorithm or `none` fails to parse (RFC 8725 §3.1, §3.2). |
 | `clock_skew` | duration | `"60s"` | Leeway on `exp`, `nbf` and `iat`. At most `"5min"`. |
 | `jwks_max_age` | duration | `"10min"` | A key set older than this is read again. |
 | `jwks_refresh_interval` | duration | `"1min"` | A token naming an unknown `kid` reads the key set again at most once per interval. |
