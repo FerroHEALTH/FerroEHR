@@ -17,6 +17,7 @@ mod ssr_app;
 mod ssr_archive;
 mod ssr_assets;
 mod ssr_rekey;
+mod ssr_server_status;
 
 mod e2e_adl2;
 mod e2e_admin_ops;

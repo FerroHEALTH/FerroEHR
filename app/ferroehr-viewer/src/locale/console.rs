@@ -428,6 +428,52 @@ crate::locale::messages! {
         ServerSafeguard = "server-safeguard",
         /// `Production safeguards that are off`
         ServerSafeguardsOff = "server-safeguards-off",
+        /// `Licence`
+        ServerLicence = "server-licence",
+        /// `Licensed`
+        ServerLicensed = "server-licensed",
+        /// `Expired`
+        ServerExpired = "server-expired",
+        /// `No licence`
+        ServerUnlicensed = "server-unlicensed",
+        /// `Use`
+        ServerLicenceUse = "server-licence-use",
+        /// `Commercial`
+        ServerUseCommercial = "server-use-commercial",
+        /// `Non-commercial`
+        ServerUseNonCommercial = "server-use-non-commercial",
+        /// `Licensee`
+        ServerLicensee = "server-licensee",
+        /// `Valid until`
+        ServerNotAfter = "server-not-after",
+        /// `The licence expired on { $day }.`
+        ServerLicenceExpired = "server-licence-expired",
+        /// `The configured licence file was refused, so the licence built into the release is in force.`
+        ServerLicenceRefused = "server-licence-refused",
+        /// `No licence is in force.`
+        ServerLicenceNone = "server-licence-none",
+        /// `Support period`
+        ServerSupport = "server-support",
+        /// `Fixes until`
+        ServerSupportEnds = "server-support-ends",
+        /// `Released`
+        ServerReleased = "server-released",
+        /// `Supported`
+        ServerSupported = "server-supported",
+        /// `Ended`
+        ServerSupportOver = "server-support-over",
+        /// `Not a release`
+        ServerUnreleased = "server-unreleased",
+        /// `The support period of this release ended in { $month }: it receives no more fixes.`
+        ServerSupportEnded = "server-support-ended",
+        /// `Open`
+        ServerGapOpen = "server-gap-open",
+        /// `Accepted by name`
+        ServerGapAccepted = "server-gap-accepted",
+        /// `The production separations this deployment has not made, each open or accepted by name.`
+        ServerGapsIntro = "server-gaps-intro",
+        /// `Your account may not read the CDR's full status, so its licence, deployment gaps and support period are not shown.`
+        ServerFullStatusWithheld = "server-full-status-withheld",
         /// `Samples of { $metric }`
         ServerSamplesOf = "server-samples-of",
         /// `Sandbox`
