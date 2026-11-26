@@ -219,10 +219,10 @@ Because the chart writes those two, a values file that contradicts either is
 refused at render rather than silently overwritten. Two shapes are refused
 while `terminology.wireCdr` is on:
 
-- **`config.terminology.endpoint.url`** — two answers to "which server resolves a
+- **`config.terminology.endpoint.url`**: two answers to "which server resolves a
   binding" is how resolution ends up pointed somewhere nobody chose.
 - **`config.terminology.on_error`** disagreeing with
-  `terminology.failOnError` — same reason, for the posture that decides whether
+  `terminology.failOnError`: same reason, for the posture that decides whether
   an unresolvable binding is a `422`.
 
 Set `terminology.wireCdr=false` to keep your own server and run FerroTERM
@@ -242,7 +242,7 @@ one in this chart that narrows sources by default: ingress admits the CDR's pods
 on the terminology port and nothing else, egress admits DNS.
 `terminology.networkPolicy.extraIngressFrom` adds a peer you decide to admit.
 **No boolean opens this port** the way `networkPolicy.ingressAllowAll` opens the
-CDR's — and a peer you add is admitted exactly as written, which includes
+CDR's, and a peer you add is admitted exactly as written, which includes
 admitting everything: a `namespaceSelector: {}` selects every namespace in the
 cluster (networking/v1: "if present but empty, it selects all namespaces"). The
 values schema therefore refuses an empty peer, and an empty `podSelector` or
@@ -302,8 +302,8 @@ showing its content carries the notice clause 8.3.1 prescribes plus the release
 version and date.
 
 **More than one replica needs two other keys.** `terminology.replicaCount` is a
-throughput choice — each replica loads its own copy of the index, so watch the
-memory limit — and above 1 the pods spread one per node by default, the same
+throughput choice (each replica loads its own copy of the index, so watch the
+memory limit), and above 1 the pods spread one per node by default, the same
 soft constraint the CDR gets. Turn `terminology.podDisruptionBudget.enabled` on
 with it: without a budget a node drain may take every terminology replica at
 once, and the CDR's own budget does not cover these pods. It is off by default

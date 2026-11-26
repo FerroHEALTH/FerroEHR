@@ -346,8 +346,8 @@ transit by state of the art mechanisms, and by using other technical means"
   pseudonymisation domains on separate credentials, checked by `production`;
   secrets that never render; log sanitising.
 - **Evidence:** `[server.tls]` in `ferroehr.default.toml`;
-  [B1](../threat-model.md#b1--network-and-protocol),
-  [B6](../threat-model.md#b6--the-database),
+  [B1](../threat-model.md#b1-network-and-protocol),
+  [B6](../threat-model.md#b6-the-database),
   [national identifiers stay in the master patient index](../threat-model.md#national-identifiers-stay-in-the-master-patient-index),
   [the go-live checklist](../security/go-live-checklist.md#9-the-database-volumes-and-backups-are-encrypted-at-rest),
   [TLS and database security](../operations.md#tls-and-database-security).

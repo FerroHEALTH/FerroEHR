@@ -344,7 +344,7 @@ under `production` with `plaintext_listener` as its only gap, both over
 all three domains on one cluster by naming `shared_cluster`. Against your own databases, `shared_cluster` is first
 judged when the pod starts.
 
-## Database roles — who runs migrations
+## Database roles: who runs migrations
 
 The chart expects a PostgreSQL role model in which the runtime pod is never a
 superuser. Four roles cover the single-domain posture:

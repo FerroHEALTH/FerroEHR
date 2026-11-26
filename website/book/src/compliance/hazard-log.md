@@ -301,7 +301,7 @@ unless accepted by name.
 
 **Remains:** a local store shares the fate of its database, so backups and
 an off-box sink are the deploying organisation's
-([B7](../threat-model.md#b7--the-audit-trail)).
+([B7](../threat-model.md#b7-the-audit-trail)).
 
 ## H6: a patient cannot read their log
 

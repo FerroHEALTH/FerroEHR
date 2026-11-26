@@ -210,7 +210,7 @@ curl -u ferroehr:ferroehr -H 'Content-Type: application/json' -d '{
 }' http://localhost:8080/ferroehr/rest/openehr/v1/query/aql
 ```
 
-[Querying with AQL](querying-aql.md) is the full language guide — parameters,
+[Querying with AQL](querying-aql.md) is the full language guide: parameters,
 stored queries, version scope, terminology, pagination, and the supported
 feature set.
 
@@ -228,18 +228,18 @@ drift from the routes it actually serves. When authentication is enabled the
 "Authorize" dialog shows the one scheme the server is configured for (HTTP
 Bearer/JWT when OIDC is set up, otherwise HTTP Basic). The hosted sandbox runs
 the same UI at <https://sandbox.ferroehr.eu/ferroehr/rest/swagger-ui> if you
-want to try it before running anything locally — and
+want to try it before running anything locally, and
 <https://sandbox.ferroehr.eu> itself opens the [viewer](viewer/index.md)
 on that server, with the demo credentials `ferroehr` / `ferroehr`.
 
 ## Next steps
 
-- [Installation](installation/index.md) — running it for real (Compose,
+- [Installation](installation/index.md): running it for real (Compose,
   Kubernetes, or from source) and the
   [configuration reference](installation/configuration.md).
-- [Using the API](using-the-api/index.md) — the per-resource reference with
+- [Using the API](using-the-api/index.md): the per-resource reference with
   headers, status codes, and versioning.
-- [Operations](operations.md) — migrations, probes, observability and upgrades,
+- [Operations](operations.md): migrations, probes, observability and upgrades,
   plus the [admin & messaging APIs](operations-admin-apis.md).
-- [Concepts](concepts/index.md) — the openEHR model and how FerroEHR is built,
+- [Concepts](concepts/index.md): the openEHR model and how FerroEHR is built,
   if the terms above were unfamiliar.

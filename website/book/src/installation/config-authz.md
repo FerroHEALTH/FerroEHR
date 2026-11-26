@@ -54,8 +54,8 @@ and a Basic user is mapped in `[[authz.party_binding.basic_user]]`, boot logs a
 
 The access record carries the acting mode and the professional the caller
 classification names; see [Audit trail](../ehds-logging.md#the-ehds-logging-elements-mapped).
-`[authz.professional]` is refused at boot: the token's `fhirUser` classifies
-the caller, and its RFC 8693 `act` names who acts for them.
+The token's `fhirUser` classifies the caller, and its RFC 8693 `act` names who
+acts for them.
 
 ### `[authz.party_binding]`
 

@@ -355,7 +355,7 @@ reach), and any read of Secrets in this namespace by a principal that is not the
 kubelet, since that is what reading the DSN looks like from the API side.
 
 **Kubernetes `Events` are a third source**, and distinct from both: they are the
-cluster's account of what happened to your objects, they expire (typically an
+cluster's account of what happened to your objects, they expire (often an
 hour), and they are where this chart's failures show up first:
 `Readiness probe failed: HTTP probe failed with statuscode: 503` when a dependency
 is down, `FailedCreate … violates PodSecurity "restricted:latest"` when a pod spec

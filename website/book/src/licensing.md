@@ -129,12 +129,12 @@ used as test corpora. Each family keeps its upstream license:
 | The normative ADL, cADL, ODIN, BEL and Expression-Language ANTLR grammars | `openEHR/adl-antlr`, `openEHR/openEHR-antlr4` | [Apache-2.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/Apache-2.0.txt) |
 | openEHR specification text (the conformance reference) | the openEHR `specifications-*` repositories | [CC-BY-SA 3.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-SA-3.0.txt) |
 | The AQL grammar and the computable terminology assets (the terminology XML the server embeds, and its schemas) | `specifications-QUERY`, `specifications-TERM` | [CC-BY-SA 3.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-SA-3.0.txt) |
-| Clinical models (archetypes and templates) from the openEHR Clinical Knowledge Manager | ckm.openehr.org | per-file `licence` metadata — a **mix** of [CC-BY-SA 4.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-SA-4.0.txt) and [CC-BY-SA 3.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-SA-3.0.txt) |
-| The ADL 2 archetype library, with its ADL 1.4 twins (the shared corpus) | `openEHR/adl-archetypes` | **no stated licence** — see below |
+| Clinical models (archetypes and templates) from the openEHR Clinical Knowledge Manager | ckm.openehr.org | per-file `licence` metadata: a **mix** of [CC-BY-SA 4.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-SA-4.0.txt) and [CC-BY-SA 3.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-SA-3.0.txt) |
+| The ADL 2 archetype library, with its ADL 1.4 twins (the shared corpus) | `openEHR/adl-archetypes` | **no stated licence**; see below |
 | The ADL 2 validator-regression library (the `openehr-adl` corpus) | `openEHR/adl-archetypes`, a different subtree | mixed: mostly **unstated**, else [CC-BY-SA 3.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-SA-3.0.txt), [CC-BY 4.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-4.0.txt) or [CC-BY 3.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-3.0.txt) |
 | Test corpora (archie fixtures and reference models, Better `web-template-tests`, EHRbase SDK canonical-JSON data) | Nedap, Better Ltd, vitasystems | Apache-2.0 |
-| Three ISO 13606 / rejected-extract BMM reference models inside the archie corpus | offered by their authors under MPL 1.1 / GPL 2.0 / LGPL 2.1 | taken under [MPL 1.1](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/MPL-1.1.txt) — see the election below |
-| One terminology schema file, `PropertyUnitData.xsd` | ADL Designer / ADL2-tools, via the openEHR TERM assets | [AGPL-3.0-only](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/AGPL-3.0-only.txt) — see the contradiction below |
+| Three ISO 13606 / rejected-extract BMM reference models inside the archie corpus | offered by their authors under MPL 1.1 / GPL 2.0 / LGPL 2.1 | taken under [MPL 1.1](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/MPL-1.1.txt); see the election below |
+| One terminology schema file, `PropertyUnitData.xsd` | ADL Designer / ADL2-tools, via the openEHR TERM assets | [AGPL-3.0-only](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/AGPL-3.0-only.txt); see the contradiction below |
 | The self-hosted KaTeX stylesheet and fonts this documentation site renders maths with | KaTeX contributors | MIT |
 | The Mermaid bundle this documentation site draws its diagrams with, `website/book/theme/mermaid.min.js` | `mermaid-js/mermaid` 11.6.0, Knut Sveidqvist | [MIT](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/MIT.txt) |
 | The diagram loader of the documentation site, `website/book/theme/mermaid-init.js` | `badboy/mdbook-mermaid`, Jan-Erik Rediger | [MPL 2.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/MPL-2.0.txt) |
@@ -200,7 +200,7 @@ material already survives being copied out of the repository.
 **The ADL 2 archetype library states no licence at all**, and this is the one
 tree here that carries no grant. Measured on 2026-09-10 over the vendored copy
 (`openEHR/adl-archetypes` at the pinned commit): of 652 archetypes, exactly one
-states a licence — and it states CC-BY 4.0, not CC-BY-SA — while the other 651
+states a licence (and it states CC-BY 4.0, not CC-BY-SA) while the other 651
 carry `copyright = <"© openEHR Foundation">` and nothing more. Upstream states
 nothing either: no `LICENSE` file at that commit, and a four-line `README.md`.
 
@@ -255,7 +255,7 @@ So licensing is **also** published in the machine-readable form the
 - **[`LICENSES/`](https://github.com/FerroHEALTH/FerroEHR/tree/main/LICENSES)**
   holds the full text of every license any file in the tree is offered under,
   named by SPDX identifier: `BUSL-1.1`, `MIT`, `Apache-2.0`, `CC-BY-SA-3.0`,
-  `CC-BY-SA-4.0`, `CC-BY-4.0`, `CC-BY-3.0`, `MPL-1.1`, `MPL-2.0`, `AGPL-3.0-only` — plus
+  `CC-BY-SA-4.0`, `CC-BY-4.0`, `CC-BY-3.0`, `MPL-1.1`, `MPL-2.0`, `AGPL-3.0-only`, plus
   `LicenseRef-openEHR-unstated`, which is not a licence but the record that
   one tree carries none.
 - **[`REUSE.toml`](https://github.com/FerroHEALTH/FerroEHR/blob/main/REUSE.toml)**

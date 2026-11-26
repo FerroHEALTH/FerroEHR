@@ -71,7 +71,7 @@ Parties (PERSON, ORGANISATION, GROUP, AGENT, ROLE, PARTY_RELATIONSHIP) live in
 directions: each domain's `version` relation carries a `CHECK` admitting only
 its own kinds. The clinical record and the
 identity of its subject are therefore never in the same schema, the same
-archival tier, or the reach of the same runtime role — GDPR Art. 4(5) and
+archival tier, or the reach of the same runtime role: GDPR Art. 4(5) and
 Art. 32(1)(a), <https://eur-lex.europa.eu/eli/reg/2016/679/oj>. Which role reads
 which domain, and how a deployment turns the schema split into a credential
 split, is [Operations → Database roles](../database-operations.md#database-roles-and-least-privilege).
@@ -80,8 +80,8 @@ The mechanism inside the server is deliberately small: the two domains' change
 control and node relations are **rendered from one DDL template**, so they carry
 the same names, the same column shape, the same indexes and the same foreign
 keys and cannot drift; and the pool serving each domain sets its own
-`search_path`. One set of storage code — the nested-set node codec, the
-versioning engine, the AQL path machinery — therefore serves both domains
+`search_path`. One set of storage code (the nested-set node codec, the
+versioning engine, the AQL path machinery) therefore serves both domains
 unchanged, and no SQL in the server names a domain schema. A test renders both
 files and refuses any difference beyond the kind `CHECK` and the foreign keys
 into the `ehr` relation, which the party domain has none of.
@@ -95,7 +95,7 @@ cross-reference table; v6 creates none of it.
 
 The wire is unaffected. The ITS-REST Demographic API, the RM change-control
 semantics and every version identifier are exactly what they were; only where
-the rows physically sit has changed. No openEHR spec governs storage layout —
+the rows physically sit has changed. No openEHR spec governs storage layout:
 this is FerroEHR's own design.
 
 ## Core tables and how they relate
@@ -369,7 +369,7 @@ Details that matter:
 - There is no close-out statement: the head row advancing past the previous
   version is what supersedes it, and that update is heap-only because none of
   the columns it changes is indexed.
-- The whole chain above is ONE statement — a data-modifying CTE — so the audit,
+- The whole chain above is ONE statement (a data-modifying CTE) so the audit,
   the contribution, the version row, the head row and every node row commit or
   roll back together and cost one round trip.
 - The body bytes in `version.body` are materialized from the accepted,
@@ -406,7 +406,7 @@ on the same one table.
 
 `version`, `node` and `vo_attestation` are each `PARTITION BY LIST (tier)` with
 a `hot` and a `cold` partition and no default partition. Archiving an EHR is one
-statement — `UPDATE version SET tier = 'cold' WHERE ehr_id = $1` — and
+statement (`UPDATE version SET tier = 'cold' WHERE ehr_id = $1`) and
 PostgreSQL moves the rows between partitions; the `node` and `vo_attestation`
 foreign keys carry their rows across with `ON UPDATE CASCADE`. Restore is the
 reverse statement. Archiving never merges the two pseudonymisation domains: each

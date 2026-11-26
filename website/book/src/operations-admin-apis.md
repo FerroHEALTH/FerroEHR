@@ -663,7 +663,7 @@ Unlike the admin extensions above, these are **not** admin-gated; see
   identifier, which is refused before any lookup; **404** if the EHR does not
   exist; **406** if `Accept` cannot be satisfied (the extract list is JSON
   only).
-- `POST {ext}/message/export` with an `EXTRACT_SPEC` body — export by
+- `POST {ext}/message/export` with an `EXTRACT_SPEC` body: export by
   specification. **200** with one `EXTRACT` per manifest entity, in manifest
   order. The manifest must name at least one entity, and each entity must
   name its record by `ehr_id` or `subject_id`, otherwise **400**; an
@@ -675,14 +675,14 @@ Unlike the admin extensions above, these are **not** admin-gated; see
   criteria, an unsupported commit-time interval). This route is classified as
   a **read**: it selects over held versions and commits nothing, exactly like
   the ad-hoc AQL `POST`.
-- `POST {ext}/message/import` with an `EXTRACT` body — clone a whole EHR. Add
+- `POST {ext}/message/import` with an `EXTRACT` body: clone a whole EHR. Add
   `?ehr_id=<uuid>` to fix the identifier the clone lands under; leave it off
   and the source identifier the extract carries is re-used. **201** with
   `{"uid": "<ehr_id>"}`, so a caller that supplied no id still learns what was
   created. The extract must carry an `EHR_STATUS` (**400**), and the target
   must not already exist: **409**, which also covers an imported `EHR_STATUS`
   naming a subject another EHR already holds.
-- `POST {ext}/message/import/{ehr_id}` with an `EXTRACT` body — add the
+- `POST {ext}/message/import/{ehr_id}` with an `EXTRACT` body: add the
   extract's content to an **existing** EHR as new versions. **204**. **404**
   if the EHR does not exist; **409** if the EHR already holds an `EHR_STATUS`
   or `EHR_ACCESS` under a different object id, or the imported status names

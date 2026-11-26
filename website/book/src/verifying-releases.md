@@ -123,7 +123,7 @@ That workflow is the reusable release-build lane described under
 embeds its own compressed dependency list in a `.dep-v0` linker section
 (built with [`cargo auditable`](https://github.com/rust-secure-code/cargo-auditable);
 the section is allocated, so it survives the release lane's `strip`). A
-scanner that reads binaries — syft, trivy, grype, osv-scanner — recovers the
+scanner that reads binaries (syft, trivy, grype, osv-scanner) recovers the
 crate graph from the artifact itself, even when the release page's SBOM never
 travelled with it:
 
@@ -210,7 +210,7 @@ workflow in this repository.
 
 **Verify by digest where it matters.** A tag is mutable, so anything that
 GATES on verification (admission control, a deploy script) should resolve the
-tag once and verify the digest it resolved — otherwise the bytes verified and
+tag once and verify the digest it resolved; otherwise the bytes verified and
 the bytes pulled can differ:
 
 ```bash
@@ -323,7 +323,7 @@ chart SBOM must resolve to a `sha256` digest before the chart is pushed.
 
 The levels are the [SLSA v1.2 Build track](https://slsa.dev/spec/v1.2/build-requirements)
 (the current spec; v1.0 is marked Retired, and the Build-track requirements
-are unchanged across those versions — GitHub's own documentation still
+are unchanged across those versions; GitHub's own documentation still
 phrases the same construction against "SLSA v1.0"). They differ per artifact,
 so a table is the honest form:
 
@@ -359,7 +359,7 @@ long-lived crates.io token exists anywhere. Be precise about what that does
 and does not give you: it is **authentication, not provenance**. crates.io
 records and displays nothing about how a crate was built, and the Rust RFC
 that introduced Trusted Publishing lists provenance verification as
-explicitly out of scope — there is no registry-side attestation to verify,
+explicitly out of scope: there is no registry-side attestation to verify,
 from this project or any other. `cargo` checks the crate's checksum against
 the registry index, and that is the whole registry-side story. The crates'
 source of truth is this repository: the publishing lane, the tags, and the

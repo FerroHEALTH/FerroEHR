@@ -444,8 +444,8 @@ to the layer that hosts several systems, not inside one of them.
 
 So several organisations are served by several instances: one instance, one
 database, one set of domain roles each. That is a stronger boundary than a row
-predicate — a defect in a query cannot cross it, because there is nothing to
-cross — and it is what the §System Identity rule needs, since `system_id`
+predicate: a defect in a query cannot cross it, because there is nothing to
+cross, and it is what the §System Identity rule needs, since `system_id`
 "becomes embedded in the version identifiers of committed -- and possibly
 signed -- content" and "cannot easily be changed afterwards". One `system_id`
 shared across organisations mints version identifiers that cannot tell the

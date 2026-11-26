@@ -84,7 +84,7 @@ archiving and physical replication carry every schema of a database together
 Restore](https://www.postgresql.org/docs/19/backup-dump.html)).
 
 Two boot checks make the posture honest. Two domains configured on **different**
-DSNs that authenticate as the **same** database role are refused — a separation
+DSNs that authenticate as the **same** database role are refused: a separation
 that exists only in the configuration reads as one that holds, which is worse
 than none. And a domain role that does not exist is a warning under
 `deployment.profile = "sandbox"` and a refusal under `production`: absent roles
@@ -95,7 +95,7 @@ nothing to measure.
 
 **None of the domain credentials.** Preparing a database spans every schema in
 it at once: the DDL of each resident migration set under `[database] migrations = "apply"`,
-and their `_sqlx_migrations` bookkeeping tables under `"verify"` — a read, but a
+and their `_sqlx_migrations` bookkeeping tables under `"verify"`: a read, but a
 read across the whole database. Each runtime role holds exactly one domain, so
 none can do it, and `verify` is not the exception: a role that is a member of
 `ferroehr_clinical` and nothing else is refused on the very first set: it
@@ -119,13 +119,13 @@ domain whose DSN reaches a DIFFERENT database is prepared there on that
 database's own migrator, `[database.<domain>]` migrate_url`, because
 `migrate_url` names one database and a relocated domain is not in it; unset, it
 falls back to the domain's own DSN, which a DML-only role cannot use. Which case a domain is in is read from the server itself
-(`pg_control_system()` and `current_database()`), never from the DSN text — two
+(`pg_control_system()` and `current_database()`), never from the DSN text: two
 DSNs that differ only in their credential reach the same database.
 
 (or `migrate_url_file`, for a mounted secret). The connection is opened for
 preparation and closed again: no pool is held on it, and no request is ever
 served through it. Left unset it falls back to `url`, which is exactly what a
-single-credential deployment has always run — its behaviour is unchanged by
+single-credential deployment has always run; its behaviour is unchanged by
 this key existing.
 
 A credential that cannot read a set is told which schema and which role, so
@@ -145,7 +145,7 @@ domain and fails, naming the role and the object, if either runtime role can
 read across the boundary. `ferroehr db verify` runs the same check. When the
 four roles do not exist at all (the development, compose and test-harness case,
 where the migrator holds no `CREATEROLE`) the check warns rather than inventing
-a failure — under `deployment.profile = "production"` it refuses, because absent
+a failure: under `deployment.profile = "production"` it refuses, because absent
 roles mean absent grants and there is then nothing to measure.
 
 On Kubernetes the same choice is chart values, mounted as files the same way
@@ -166,7 +166,7 @@ schema-only posture.
 
 Provisioning the four roles is yours in both cases. The migrations create them
 only when the migrator holds `CREATEROLE` and skip them with a `NOTICE`
-otherwise, so on a managed database — where the migrator usually does not —
+otherwise, so on a managed database (where the migrator usually does not)
 create them before the first deploy:
 
 ```sql
@@ -251,7 +251,7 @@ of `ferroehr_migrator`, `ferroehr_clinical` and `ferroehr_party`.
   hold no schema rights at all, which is the least-privilege production
   posture: an application-level SQL flaw can reach rows, never the schema. The
   check itself still reads every schema's bookkeeping, so it runs on
-  `[database] migrate_url` — see [which credential prepares the
+  `[database] migrate_url`; see [which credential prepares the
   schema](#which-credential-prepares-the-schema), and set that key whenever
   `database.url` is a role that holds one domain.
 
@@ -281,7 +281,7 @@ FERROEHR__DATABASE__MIGRATE_URL='postgres://ferroehr_migrator:***@pg:5432/ferroe
 
 `db verify` splits the same way the boot sequence does, and for the same
 reason: the schema state is read on `migrate_url`, while the pseudonymisation
-boundary is measured on the runtime DSNs — asking the migrator credential
+boundary is measured on the runtime DSNs; asking the migrator credential
 whether it can reach every domain would answer yes by design and tell you
 nothing about the roles that serve requests.
 
@@ -437,20 +437,20 @@ docker compose --profile backup run --rm ferroehr-backup-party
 
 Set `FERROEHR_BACKUP_CLINICAL_DIR` and `FERROEHR_BACKUP_PARTY_DIR` to the two
 targets; they default to `./backups/clinical` and `./backups/party`.
-Run it as yourself — `FERROEHR_BACKUP_USER="$(id -u):$(id -g)"` — and the dump
+Run it as yourself (`FERROEHR_BACKUP_USER="$(id -u):$(id -g)"`) and the dump
 lands owned by you. Left unset, the job runs as root inside the container and
 keeps one capability, `DAC_OVERRIDE`, because that is what writing a directory
 it does not own actually requires: the container drops every other capability,
 and without this one uid 0 is just another user against your directory's
-permission bits. Everything else stays off — no privilege escalation, read-only
+permission bits. Everything else stays off: no privilege escalation, read-only
 root filesystem.
-Under Kubernetes the chart renders one `CronJob` per domain — see the chart's
+Under Kubernetes the chart renders one `CronJob` per domain; see the chart's
 `backup` values.
 
 > [!WARNING]
 > **A backup credential is not the application role.** Each domain's runtime
 > role is revoked from the other domains, which is the pseudonymisation
-> boundary doing its job — so a dump taken through one of them is silently
+> boundary doing its job, so a dump taken through one of them is silently
 > partial rather than refused. Give each backup job its own role, read-only on
 > its own domain and nothing else.
 
@@ -469,8 +469,8 @@ them.
 ### Restoring
 
 A restore is not finished when `pg_restore` exits. The grants are the
-boundary — a database whose roles came back wrong is a database where the
-clinical role can read the identities — so re-apply the role grants before the
+boundary: a database whose roles came back wrong is a database where the
+clinical role can read the identities, so re-apply the role grants before the
 server starts, then let the server check them:
 
 ```bash
@@ -499,6 +499,6 @@ own output.
 Restoring only one domain is a supported outcome, not a mistake: a demographic
 dump restored on its own gives a database with identities and no clinical
 record, which is what a rehearsal of the identity domain's recovery looks like.
-Such a database is not one the server will serve from — `ferroehr db verify`
+Such a database is not one the server will serve from: `ferroehr db verify`
 refuses it for the domains that are missing, which is the correct answer for a
 rehearsal target.

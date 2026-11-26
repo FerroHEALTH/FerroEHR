@@ -135,9 +135,9 @@ code to a system it does not come from would misdescribe it. A purpose the
 access token states keeps the system the token gives it.
 The
 [DICOM Audit Message schema](https://dicom.nema.org/medical/dicom/current/output/chtml/part15/sect_A.5.html)
-of PS3.15 §A.5 defines no purpose element at all — `EventIdentification`,
+of PS3.15 §A.5 defines no purpose element at all (`EventIdentification`,
 `ActiveParticipant`, `AuditSourceIdentification` and
-`ParticipantObjectIdentification`, and none of them carries one — so on that
+`ParticipantObjectIdentification`, and none of them carries one), so on that
 side it is a limit of the format, not something this code withholds.
 
 ### Where the purpose of use comes from

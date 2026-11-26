@@ -13,8 +13,8 @@ overlays, and the variables that tune them. For a step-by-step first run, see
 > [!NOTE]
 > This chapter applies equally to the **standalone** `docker-compose.yml`
 > downloaded into an empty directory and to a bare `docker compose up` in a
-> repository checkout — both run the published images. Building from source
-> is an explicit opt-in (`-f docker-compose.yml -f docker-compose.dev.yml`) —
+> repository checkout; both run the published images. Building from source
+> is an explicit opt-in (`-f docker-compose.yml -f docker-compose.dev.yml`),
 > see [Repository development](#repository-development) below.
 
 <!-- toc -->
@@ -105,7 +105,7 @@ and the server below, and the patient identity source described in
 - **`ferroehr-postgres`:** the database image, with a named data volume, a
   `pg_isready` healthcheck, `pg_stat_statements` preloaded, and a modest tuning
   floor (shared buffers, WAL size, work memory, lz4-compressed WAL full-page
-  images — which cut per-commit WAL volume roughly in half — and a larger
+  images (which cut per-commit WAL volume roughly in half) and a larger
   `/dev/shm` than Docker's default, which otherwise starves parallel workers).
 - **`ferroehr`:** the server, which waits for the database to report healthy
   (`depends_on: condition: service_healthy`), then boots, migrates, and serves
@@ -123,7 +123,7 @@ for the API credential; `api.openapi_ui` chooses who may read it).
 > the host firewall's own chains, so a `ufw deny 8080` does not stop a port
 > published on `0.0.0.0`. To reach the stack from another machine, name the
 > interface explicitly (`FERROEHR_BIND_HOST=0.0.0.0 docker compose up`, or a
-> single address). The database publishes no host port at all — see
+> single address). The database publishes no host port at all; see
 > [Connecting to the database](#connecting-to-the-database).
 
 > [!NOTE]
@@ -155,7 +155,7 @@ Podman-specific notes:
 - `podman compose` delegates to an external Compose provider. With Docker's
   own Compose CLI installed (the common case on a machine that has ever run
   Docker Desktop) you get identical Compose behaviour; with the Python
-  `podman-compose` package, flag coverage differs — prefer the Docker Compose
+  `podman-compose` package, flag coverage differs; prefer the Docker Compose
   provider.
 - The default `podman machine` on macOS ships with 2048 MiB of memory. That
   is enough for the quickstart and both overlays, but not for building the
@@ -660,12 +660,12 @@ FERROEHR_PORT=8081 docker compose up
 ```
 
 The same works for the other ports (`FERROEHR_VIEWER_PORT`,
-`FERROEHR_PIX_PORT`, `FERROEHR_ISSUER_PORT`, `FERROEHR_S3_PORT`; PostgreSQL publishes no host port — see
+`FERROEHR_PIX_PORT`, `FERROEHR_ISSUER_PORT`, `FERROEHR_S3_PORT`; PostgreSQL publishes no host port; see
 [Connecting to the database](#connecting-to-the-database)). The defaults stay
 fixed on purpose: every URL in this book assumes `localhost:8080`, and
 Docker's automatic ephemeral-port allocation exists only when a mapping
-[omits the host port entirely](https://docs.docker.com/engine/network/port-publishing/)
-— a server that silently moved ports would break every printed URL, so here
+[omits the host port entirely](https://docs.docker.com/engine/network/port-publishing/).
+A server that silently moved ports would break every printed URL, so here
 you always choose the port and always know it.
 
 > [!NOTE]
@@ -699,7 +699,7 @@ docker compose -f docker-compose.yml -f docker-compose.db-publish.yml up
 ```
 
 It publishes `127.0.0.1:5432` (retune with `FERROEHR_DB_PORT`, widen with
-`FERROEHR_BIND_HOST` — the warning above applies).
+`FERROEHR_BIND_HOST`; the warning above applies).
 
 ## Variables the compose files read
 
@@ -775,14 +775,14 @@ that imports the full development realm
 
 Downloaders of the standalone quickstart file never see any of this; it is
 purely a convenience for working on FerroEHR itself, and it only ever
-applies when its `-f` is passed — nothing merges it in silently.
+applies when its `-f` is passed; nothing merges it in silently.
 
 > [!TIP]
 > A cold from-source build compiles at two parallel rustc jobs by default,
 > and a release-optimization compile can hold several gigabytes per job. If
 > the build gets OOM-killed on a memory-constrained host (observed on a
-> 24 GB machine that was also running another stack), rerun it serially —
-> slower, but it completes:
+> 24 GB machine that was also running another stack), rerun it serially,
+> which is slower but completes:
 >
 > ```shell
 > CARGO_BUILD_JOBS=1 docker compose -f docker-compose.yml -f docker-compose.dev.yml build
@@ -842,7 +842,7 @@ exports and how to consume it in production.
 
 ## Next
 
-- [Configuration reference](configuration.md) — every setting you can pass.
-- [Kubernetes & Helm](kubernetes.md) — the production deployment.
+- [Configuration reference](configuration.md): every setting you can pass.
+- [Kubernetes & Helm](kubernetes.md): the production deployment.
 - [Returning to the original state](../operations-reset.md): resetting the stack
   to the configuration and empty database it shipped with.

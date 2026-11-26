@@ -44,7 +44,7 @@ weakening.
 
 Two limits are worth stating plainly. The clinical schema holds a *pseudonym*
 only when `[privacy] subject_namespaces` declares the namespaces a subject
-reference may draw from — left unset, whatever a client sends is what gets
+reference may draw from; left unset, whatever a client sends is what gets
 stored, and no schema split saves you from a national identifier written into
 the clinical side; see
 [Privacy and identifiers](installation/config-privacy.md). And the split is a
