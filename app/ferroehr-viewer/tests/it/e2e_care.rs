@@ -145,6 +145,7 @@ async fn admin_adds_ends_and_reads_a_care_relationship() {
     wait_main_contains(&h, "This care relationship").await;
     h.shot(2, "relationship").await;
 
+    h.wait_toasts_cleared().await;
     h.wait_css("button[commandfor='care-end']")
         .await
         .click()
