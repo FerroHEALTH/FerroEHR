@@ -161,6 +161,10 @@ pub enum Page {
     EhrCare,
     /// `/ehrs/:ehr_id/marks`.
     EhrMarks,
+    /// `/ehrs/:ehr_id/access`.
+    EhrAccess,
+    /// `/ehrs/:ehr_id/access/edit`.
+    EditEhrAccess,
     /// `/parties/:kind/:uid/care`.
     PartyCare,
     /// `/care/:uid`.
@@ -239,6 +243,8 @@ impl Page {
             "/grants" => Self::Grants,
             "/ehrs/:ehr_id/care" => Self::EhrCare,
             "/ehrs/:ehr_id/marks" => Self::EhrMarks,
+            "/ehrs/:ehr_id/access" => Self::EhrAccess,
+            "/ehrs/:ehr_id/access/edit" => Self::EditEhrAccess,
             "/parties/:kind/:uid/care" => Self::PartyCare,
             "/care/:uid" => Self::CareRelationship,
             "/configuration" | "/configuration/:section" => Self::Configuration,
@@ -346,6 +352,8 @@ pub static ROUTES: &[&str] = &[
     "/ehrs/:ehr_id/tags",
     "/ehrs/:ehr_id/care",
     "/ehrs/:ehr_id/marks",
+    "/ehrs/:ehr_id/access",
+    "/ehrs/:ehr_id/access/edit",
     "/ehrs/:ehr_id/compositions/new",
     "/ehrs/:ehr_id/compositions/:uid",
     "/ehrs/:ehr_id/compositions/:uid/edit",
@@ -461,6 +469,8 @@ pub async fn draw() -> Drawn {
         Page::Grants => pages::policy::grants::page().await,
         Page::EhrCare => pages::ehr::care::page().await,
         Page::EhrMarks => pages::ehr::marks::page().await,
+        Page::EhrAccess => pages::ehr::access::page().await,
+        Page::EditEhrAccess => pages::ehr::access::edit_page().await,
         Page::PartyCare => pages::care::party::page().await,
         Page::CareRelationship => pages::care::relationship::page().await,
         Page::Configuration => pages::configuration::page().await,

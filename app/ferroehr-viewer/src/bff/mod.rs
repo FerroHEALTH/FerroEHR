@@ -16,6 +16,7 @@ pub mod care;
 pub mod composition;
 pub mod dashboard;
 pub mod demographics;
+pub mod ehr_access;
 pub mod ehr_detail;
 pub mod ehr_tags;
 pub mod ehrs;

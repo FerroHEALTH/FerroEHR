@@ -13,6 +13,7 @@
 //! characters of the id. No openEHR spec governs the viewer's pages: our own
 //! design.
 
+pub mod access;
 pub mod care;
 pub mod compositions;
 pub mod contribution;
@@ -62,6 +63,8 @@ pub enum EhrTab {
     Care,
     /// Its legal marks.
     Marks,
+    /// Its access settings.
+    Access,
 }
 
 impl EhrTab {
@@ -75,6 +78,7 @@ impl EhrTab {
             Self::Tags => "tags",
             Self::Care => "care",
             Self::Marks => "marks",
+            Self::Access => "access",
         }
     }
 }
@@ -530,6 +534,11 @@ fn tabs(ehr_id: &str, facts: &EhrHead) -> Vec<Tab> {
             EhrTab::Care.key(),
             tab_href(ehr_id, EhrTab::Care),
             tr(crate::locale::policy::PolicyMsg::CareTab),
+        ),
+        Tab::new(
+            EhrTab::Access.key(),
+            tab_href(ehr_id, EhrTab::Access),
+            tr(crate::locale::policy::PolicyMsg::AccessTab),
         ),
         Tab::new(
             EhrTab::Marks.key(),

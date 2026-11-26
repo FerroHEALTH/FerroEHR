@@ -521,5 +521,57 @@ crate::locale::messages! {
         MarksReleaseDone = "marks-release-done",
         /// `The CDR did not release the composition.`
         MarksReleaseRefused = "marks-release-refused",
+        /// `The access settings are not JSON`
+        AccessSettingsJson = "access-settings-json",
+        /// `Your account may not read these access settings.`
+        AccessForbidden = "access-forbidden",
+        /// `The access settings could not be read.`
+        AccessRefused = "access-refused",
+        /// `Directive`
+        DirectiveName = "directive-name",
+        /// `Kind`
+        DirectiveKind = "directive-kind",
+        /// `Effect`
+        DirectiveEffect = "directive-effect",
+        /// `Covers`
+        DirectiveCovers = "directive-covers",
+        /// `Names`
+        DirectiveNames = "directive-names",
+        /// `Emergency override`
+        DirectiveEmergency = "directive-emergency",
+        /// `Directives`
+        AccessDirectives = "access-directives",
+        /// `The person's consents, opt-outs and restrictions of access (EHDS Art. 8 and 10), and the directives they accepted: what each covers, whom it names, its period and whether an emergency overrides it.`
+        AccessDirectivesIntro = "access-directives-intro",
+        /// `No directive.`
+        AccessNoDirectives = "access-no-directives",
+        /// `Commit new settings`
+        AccessCommit = "access-commit",
+        /// `An older version of the settings, read-only.`
+        AccessOlder = "access-older",
+        /// `No settings: the policy's defaults apply.`
+        AccessNone = "access-none",
+        /// `These settings`
+        AccessThis = "access-this",
+        /// `EHR_ACCESS` settings, version `$version`
+        AccessDocument = "access-document",
+        /// Access settings · EHR `$id`
+        AccessTitle = "access-title",
+        /// `Access settings committed`
+        AccessSaved = "access-saved",
+        /// `The CDR did not commit the access settings.`
+        AccessSaveRefused = "access-save-refused",
+        /// The `EHR_ACCESS` settings, canonical JSON
+        AccessEditorLabel = "access-editor-label",
+        /// `Repair: the settings in force do not parse, so replace them without naming their version`
+        AccessRepair = "access-repair",
+        /// The whole `ACCESS_DIRECTIVE_SETTINGS` on the person's instruction, or null for none. The commit names the version you opened; if the settings changed meanwhile, the CDR refuses it.
+        AccessEditIntro = "access-edit-intro",
+        /// `Access settings`
+        AccessTab = "access-tab",
+        /// `On the person's instruction`
+        AccessEditSubtitle = "access-edit-subtitle",
+        /// `Commit access settings`
+        AccessEditTitle = "access-edit-title",
     }
 }

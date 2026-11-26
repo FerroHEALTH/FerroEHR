@@ -289,7 +289,7 @@ behind the menu button.
 - **Dashboard:** record counts, the compositions committed per day, and the
   stored queries by namespace. See [Queries](queries.md).
 - **EHRs:** find, create and delete EHRs; each EHR's compositions, directory,
-  status, contributions, tags, care relationships and legal marks. See [Templates and EHRs](browsing.md).
+  status, contributions, tags, care relationships, access settings and legal marks. See [Templates and EHRs](browsing.md).
 - **Parties:** the demographic parties, their versions, relationships and
   tags. See [Parties](parties.md).
 - **Templates:** upload and read ADL 1.4 and ADL 2 operational templates. See
