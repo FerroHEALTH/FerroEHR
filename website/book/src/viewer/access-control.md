@@ -5,7 +5,8 @@ For operators: the pages that show how this FerroEHR decides each request.
 The **Access policy** page shows the rules your FerroEHR decides every request
 by, and lets an administrator change them. Everything on it comes from the
 CDR's admin extension over HTTP, so it shows only what the CDR lets your
-account read.
+account read. [The access model](../explanation/access-model.md) explains
+the concepts these pages show.
 
 <!-- toc -->
 
@@ -73,7 +74,7 @@ on every replica from its next request.
 ## The admin registers
 
 The Access policy area has a tab for each [admin
-register](../operational-policy.md#the-admin-registers): **Audit categories**,
+register](../access-policy.md#the-admin-registers): **Audit categories**,
 the EHDS category map every access is classified through, and **Access
 delay**, the EHDS Art. 3(3) delay of the person's own access. Each reads
 `GET {ext}/admin/registers/{register}` and shows the version in force, who
@@ -123,7 +124,7 @@ party binds, and the grants its roles carry.
 
 A care relationship says that a professional, a care team or a unit cares
 for a person, for a period ([Caller facts: roles and care
-relationships](../operational-policy.md#caller-facts-roles-and-care-relationships)).
+relationships](../caller-facts.md#caller-facts-roles-and-care-relationships)).
 The viewer reads them from the CDR's care relationship resources under
 `{ext}`, and the CDR decides for each subject what you may see: a relationship
 you may not read is left out, or the page shows the CDR's refusal.
