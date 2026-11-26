@@ -1,0 +1,121 @@
+{
+  "_type": "PARTY_RELATIONSHIP",
+  "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v2",
+  "archetype_details": {
+    "_type": "ARCHETYPED",
+    "archetype_id": {
+      "_type": "ARCHETYPE_ID",
+      "value": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v2"
+    },
+    "rm_version": "1.1.0",
+    "template_id": {
+      "_type": "TEMPLATE_ID",
+      "value": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v2.0.0"
+    }
+  },
+  "name": {
+    "_type": "DV_CODED_TEXT",
+    "value": "under_care_of",
+    "defining_code": {
+      "_type": "CODE_PHRASE",
+      "terminology_id": {
+        "_type": "TERMINOLOGY_ID",
+        "value": "openehr_access"
+      },
+      "code_string": "under_care_of"
+    }
+  },
+  "details": {
+    "_type": "ITEM_TREE",
+    "archetype_node_id": "id2",
+    "name": {
+      "_type": "DV_TEXT",
+      "value": "details"
+    },
+    "items": [
+      {
+        "_type": "ELEMENT",
+        "archetype_node_id": "id3",
+        "name": {
+          "_type": "DV_CODED_TEXT",
+          "value": "care_role",
+          "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": {
+              "_type": "TERMINOLOGY_ID",
+              "value": "openehr_access"
+            },
+            "code_string": "care_role"
+          }
+        },
+        "value": {
+          "_type": "DV_CODED_TEXT",
+          "value": "primary performer",
+          "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": {
+              "_type": "TERMINOLOGY_ID",
+              "value": "HL7_ParticipationType"
+            },
+            "code_string": "PPRF"
+          }
+        }
+      },
+      {
+        "_type": "ELEMENT",
+        "archetype_node_id": "id5",
+        "name": {
+          "_type": "DV_CODED_TEXT",
+          "value": "provider",
+          "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": {
+              "_type": "TERMINOLOGY_ID",
+              "value": "openehr_access"
+            },
+            "code_string": "provider"
+          }
+        },
+        "value": {
+          "_type": "DV_IDENTIFIER",
+          "issuer": "__PROVIDER_ISSUER__",
+          "id": "__PROVIDER_ID__",
+          "type": "ORGANISATION"
+        }
+      }
+    ]
+  },
+  "time_validity": {
+    "_type": "DV_INTERVAL",
+    "lower": {
+      "_type": "DV_DATE",
+      "value": "__DATE:-30__"
+    },
+    "upper": {
+      "_type": "DV_DATE",
+      "value": "__DATE:+150__"
+    },
+    "lower_unbounded": false,
+    "upper_unbounded": false,
+    "lower_included": true,
+    "upper_included": true
+  },
+  "source": {
+    "_type": "PARTY_REF",
+    "namespace": "demographic",
+    "type": "PERSON",
+    "id": {
+      "_type": "HIER_OBJECT_ID",
+      "value": "__ID:patient-01__"
+    }
+  },
+  "target": {
+    "_type": "PARTY_REF",
+    "namespace": "demographic",
+    "type": "GROUP",
+    "id": {
+      "_type": "HIER_OBJECT_ID",
+      "value": "__ID:group-cardiology__"
+    }
+  }
+}

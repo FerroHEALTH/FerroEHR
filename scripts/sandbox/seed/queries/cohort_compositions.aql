@@ -1,0 +1,8 @@
+SELECT
+    c/archetype_details/template_id/value AS template_id,
+    c/name/value AS title,
+    c/context/start_time/value AS start_time
+FROM EHR e
+    CONTAINS COMPOSITION c
+ORDER BY c/archetype_details/template_id/value ASC
+LIMIT 200
