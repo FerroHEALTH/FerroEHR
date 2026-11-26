@@ -16,9 +16,7 @@ pub mod relationship;
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::table::view::{
-    ACTIONS, Body, Column, DataTable, Role, cell, data_table, title_cell,
-};
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table, title_cell};
 use ferrohealth_ui::view::coding::{Coding, Layout, coding};
 use ferrohealth_ui::view::empty::empty_quiet;
 use ferrohealth_ui::view::form::Field;
@@ -30,7 +28,7 @@ use crate::locale::policy::PolicyMsg;
 use crate::locale::{current, tr, tr_with};
 use crate::markup::{flag, h, t};
 use crate::pages::common::{Refused, date_field, short};
-use crate::pages::policy::grants::party_href;
+use crate::pages::policy::grants::party_action;
 
 /// The page of the care relationship `id`, its current version or the
 /// version a version uid names.
@@ -212,20 +210,13 @@ pub fn care_table(rows: &[CareRow], named: Named) -> Html {
                 Named::Carer => &row.carer,
                 Named::Subject => &row.subject,
             };
-            let party_link = party_href(party).map_or_else(Html::empty, |href| {
-                ferrohealth_ui::view::button::link_button(
-                    href,
-                    ferrohealth_ui::view::button::Variant::Ghost,
-                    Some(Glyph::EXTERNAL_LINK),
-                    tr(who),
-                )
-            });
             h(format!(
-                r#"<tr>{}{}{}{}<td class="{ACTIONS}" data-role="wide">{party_link}</td></tr>"#,
+                "<tr>{}{}{}{}{}</tr>",
                 title_cell(None, Some(&care_href(&row.id)), party_words(party), None),
                 cell(&columns[1], role_coding(&row.role)),
                 cell(&columns[2], t(period_words(&row.period))),
                 cell(&columns[3], t(path_words(row.path()))),
+                party_action(Some(party), who),
             ))
         })
         .collect();
