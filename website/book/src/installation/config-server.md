@@ -378,7 +378,7 @@ statement_timeout = "1min"
 |---|---|---|---|
 | `url` | secret URL | `postgres://ferroehr:ferroehr@localhost:5432/ferroehr` | Connection DSN. The default suits a local from-source run against a localhost PostgreSQL, and the server logs a prominent warning at boot while it is in use; **production MUST set it**. Credentials are redacted from every rendering. `DATABASE_URL` is a recognized lower-priority alias. |
 | `url_file` | path | unset | Read the DSN from a file instead of the key above, for a mounted secret. Preferred over the environment form in Kubernetes: an environment value is readable through `/proc/<pid>/environ` and inherited by every child process. At most one of the pair, where the built-in development default does not count as "set". |
-| `migrate_url` | secret URL | unset | DSN that PREPARES the schema, used for that one boot step and then closed. Preparation spans every schema of a database at once, which no domain-scoped runtime credential can do, so a deployment separating the runtime roles names the credential that can here. It prepares every domain whose DSN reaches the SAME DATABASE — which is the whole of the separated-credential posture, where each domain has a login role of its own on one database; a domain whose DSN reaches a different database is prepared on that database's `database.<domain>.migrate_url` (on the domain's own DSN when that is unset). Which it is, is read from the server (`pg_control_system()` plus `current_database()`), never from the DSN text. Unset, it falls back to `url`. See [Operations → Which credential prepares the schema](../database-operations.md#which-credential-prepares-the-schema). |
+| `migrate_url` | secret URL | unset | DSN that PREPARES the schema, used for that one boot step and then closed. Preparation spans every schema of a database at once, which no domain-scoped runtime credential can do, so a deployment separating the runtime roles names the credential that can here. It prepares every domain whose DSN reaches the SAME DATABASE, which is the whole of the separated-credential posture, where each domain has a login role of its own on one database; a domain whose DSN reaches a different database is prepared on that database's `database.<domain>.migrate_url` (on the domain's own DSN when that is unset). Which it is, is read from the server (`pg_control_system()` plus `current_database()`), never from the DSN text. Unset, it falls back to `url`. See [Operations → Which credential prepares the schema](../database-operations.md#which-credential-prepares-the-schema). |
 | `migrate_url_file` | path | unset | Read `migrate_url` from a file instead, for a mounted secret. At most one of the pair. |
 | `migrate` | enum{apply,verify} | `apply` | Whether the server applies its embedded migrations at boot. `apply` is what makes an empty configuration boot against an empty database. `verify` issues **no DDL at all**: it checks that the database already carries exactly this build's migrations and refuses to start otherwise, so the serving DSN can authenticate as a role with no DDL rights. That check still READS every `_sqlx_migrations` table of each database, which no least-privilege role can do, so pair it with `migrate_url` above and with `ferroehr db migrate` run out of band; see [Operations](../database-operations.md#which-credential-prepares-the-schema). |
 | `connection_budget` | int | `40` | The most connections the instance opens to PostgreSQL while it serves: its three pools, the audit runtime's four and its listener connections together. The pools are sized inside it, and a `max_connections` whose pools and listeners exceed it is refused at startup. The default lets two instances share PostgreSQL's default `max_connections` of 100. See [Sizing the pool](#sizing-the-pool). |
@@ -480,7 +480,7 @@ One DSN per storage domain. Every domain always lives in its own schema
 (`clinical`, `party`, `audit`) and every pool carries only its own on
 its `search_path`, so no statement can reach another domain's relations without
 naming a schema it is not granted. Setting a `url` here adds the CREDENTIAL
-separation, and — if the DSN names another host — lets the domain live in a
+separation, and (if the DSN names another host) lets the domain live in a
 database or cluster of its own.
 
 ```toml
@@ -497,20 +497,20 @@ url_file = "/run/secrets/db-party-dsn"
 
 Why a schema is not always enough: a base backup, WAL archiving and physical
 replication carry every schema of a database together
-([PostgreSQL 18, Backup and Restore](https://www.postgresql.org/docs/18/backup-dump.html)),
+([PostgreSQL 19, Backup and Restore](https://www.postgresql.org/docs/19/backup-dump.html)),
 so a separation that must survive those is a separation of databases. The Swiss
 EPDV Art. 10 Abs. 1 lit. b asks for storage "von anderen Datenbeständen getrennt"
 and the DSV Art. 4 Abs. 5 for the log to be kept "getrennt vom System, in welchem
 die Personendaten bearbeitet werden"; openEHR reads the same way for the identity
 cross-reference, which "could be located on different machines" (BASE
 `architecture_overview/master07-security.adoc` §Anonymity). No openEHR spec
-governs pools or database roles — this is our own design.
+governs pools or database roles: this is our own design.
 
 What the server checks at boot:
 
 - a runtime role that can read another domain's relations is refused, always;
 - two domains configured on **different** DSNs that turn out to authenticate as
-  the **same** database role are refused — a separation that exists only in the
+  the **same** database role are refused: a separation that exists only in the
   configuration is worse than none, because it reads as one that holds;
 - a missing domain role is a warning under `deployment.profile = "sandbox"` and a
   refusal under `production`, where there are no grants to separate anything

@@ -140,14 +140,6 @@ environment carries the same strings: `FERROEHR__RECORD__QUERY__TIMEOUT=45s`.
 `[server]` and `[auth]` are family sections that keep their own key shapes
 until the family releases move them.
 
-### Keys a release before v5.7.0 read
-
-v5.7.0 moved the configuration tree to one table per concern. A key an
-earlier release read is an unknown key like any other: the start is refused
-naming it, with the keys its table does read, so
-`ferroehr config check --config <old file>` lists every key an old file still
-sets. The v5.7.0 changelog maps each old key to its replacement.
-
 ## `deployment.spec_profile`
 
 ```toml
