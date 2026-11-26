@@ -74,8 +74,8 @@
         },
         "value": {
           "_type": "DV_IDENTIFIER",
-          "issuer": "urn:oid:2.999.7",
-          "id": "demo-hospital",
+          "issuer": "__PROVIDER_ISSUER__",
+          "id": "__PROVIDER_ID__",
           "type": "ORGANISATION"
         }
       }

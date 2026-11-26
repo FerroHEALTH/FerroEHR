@@ -72,7 +72,18 @@ expect it to slow down under heavy use.
 ### What is already in the sandbox
 
 The nightly reset reloads a fixed demo dataset, so the server always answers
-with something to look at:
+with something to look at. Every record, party, policy and log entry in it is
+synthetic: it was made up for the demo and names no real person. The seed
+writes it through the public API alone (`scripts/sandbox/reseed.sh`), as the
+three demo logins, each with the password `ferroehr`:
+
+| Login | Who it is |
+|---|---|
+| `ferroehr` | the administrator, who reaches every surface, the admin API included |
+| `ferroehr-clinician` | a professional, who reads two records outside a care relationship (a justified and an emergency access, each with its reason) and attests two versions |
+| `ferroehr-proxy` | Ruud de Vries, the representative of the demo patient Isa de Vries, who reads the subject view of her access log |
+
+The dataset holds:
 
 - **8 EHRs**, each with a mixed record and its own patient. The sandbox
   resolves patients through FerroPIX, the FerroHEALTH patient identity
@@ -84,24 +95,50 @@ with something to look at:
   their EHRs through FerroPIX. Two of them carry a second `EHR_STATUS`
   version: patient 07 is not queryable and so never appears in AQL results,
   patient 08 is not modifiable and refuses writes with a `409`.
-- **183 compositions** across **17 ADL 1.4 templates**: sixteen from the
-  openEHR CKM (vital signs, problem and medicines lists, lab results,
-  referrals, an International Patient Summary, several statutory case-report
-  forms) and one terminology-binding template whose coded text resolves
-  against the terminology server running beside the CDR. Six compositions
-  have more than one version, so `LATEST_VERSION` and `ALL_VERSIONS` differ on
-  real data.
+- **Compositions across 18 ADL 1.4 templates**: sixteen from the openEHR CKM
+  (vital signs, problem and medicines lists, lab results, referrals, an
+  International Patient Summary, several statutory case-report forms), one
+  terminology-binding template whose coded text resolves against the
+  terminology server running beside the CDR, and the viewer's minimal
+  evaluation template, three of whose compositions were sent in the
+  Simplified Flat format with measured values. Seven compositions have more
+  than one version, so `LATEST_VERSION` and `ALL_VERSIONS` differ on real
+  data, and two carry an attestation, one signed and one pending.
 - **233 ADL 2 archetypes and 5 ADL 2 templates**, browsable under
   `extensions/v1/definition/archetype/adl2` and
   `openehr/v1/definition/template/adl2`. Two of the
   templates are ADL 2 source templates whose slots the server flattens against
   that archetype library, and the compositions committed from them came out of
   the server's own `…/example` generator.
-- **11 demographic parties** (persons, roles, party relationships) and a
-  **FOLDER directory** in every EHR whose items reference real compositions.
-- **5 stored AQL queries** under `eu.ferroehr.sandbox`, all of which return
+- **Five ADL 1.4 archetypes** from the openEHR CKM under
+  `extensions/v1/definition/archetype/adl1.4`.
+- **Demographic parties**: persons, a patient `PERSON` for six of the EHRs
+  with its identifiers and the record subject it stands for, the healthcare
+  provider `ORGANISATION` the sandbox acts for (in two versions), a second
+  organisation, two care-team `GROUP`s, a system client's `AGENT`, the
+  `ROLE`s that grant (a privacy officer's access-control writes, the lab
+  feed's commits), party relationships and two representations. The parties
+  list and search find them all.
+- **Access control**: the controller's access policy in two versions (the
+  first requires a care relationship and admits a justified and an emergency
+  access, the second lifts that requirement and withholds the accessor's
+  roles from the subject view of the access log), three care relationships
+  (one ended in its second version), and the EHR access settings of two
+  EHRs: a restriction of a named professional with a consent, and an opt-out
+  from the access services.
+- **Legal marks**: a restriction of processing on one composition, a research
+  objection, the access-delay register with one composition held from the
+  person, and retention periods, two of whose EHRs are past their period,
+  with a whole-record hold and an object hold.
+- **Logs**: an access-log entry for every request the seed made, across all
+  eight EHRs, the system records ITI-81 reads, and the access log's sealed
+  windows.
+- A **FOLDER directory** in every EHR whose items reference real compositions.
+- **6 stored AQL queries** under `eu.ferroehr.sandbox`, all of which return
   rows: `composition_index`, `blood_pressure`, `case_reports`,
-  `composition_versions`, and `patient_record` (takes an `$ehr_id` parameter).
+  `composition_versions`, `patient_record` (takes an `$ehr_id` parameter) and
+  `cohort_compositions`, which the seed also runs through
+  `POST /query/cohort` over six patients named by identifier.
   Run one with
   `GET /query/eu.ferroehr.sandbox::composition_index`, or open the viewer's
   query screen.

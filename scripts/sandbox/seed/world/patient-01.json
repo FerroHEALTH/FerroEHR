@@ -41,20 +41,6 @@
       },
       {
         "_type": "ELEMENT",
-        "archetype_node_id": "id3",
-        "name": {
-          "_type": "DV_TEXT",
-          "value": "Patient identifier"
-        },
-        "value": {
-          "_type": "DV_IDENTIFIER",
-          "issuer": "urn:example:basic-user",
-          "id": "__LOGIN:patient__",
-          "type": "login"
-        }
-      },
-      {
-        "_type": "ELEMENT",
         "archetype_node_id": "id4",
         "name": {
           "_type": "DV_TEXT",

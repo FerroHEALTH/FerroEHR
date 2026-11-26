@@ -49,8 +49,16 @@ services:
       FERROEHR__AUTH__ISSUER__KEYCLOAK__PARTY__GROUP_IDENTIFIER_ISSUER: urn:example:keycloak-dev-groups
       FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: keycloak
       FERROEHR__AUTH__TLS__TRUST_ROOTS_FILE: /run/ferroehr-dev-tls/ca/ca.crt
+      # Versions and access-log checkpoints signed with ML-DSA-65+Ed25519, so
+      # the viewer draws a real signature: the committed TEST key of
+      # docker/signing/, never a production key.
+      FERROEHR__RECORD__SIGNING__MODE: pgp
+      FERROEHR__RECORD__SIGNING__KEY_FILE: /etc/ferroehr/version-signing-test.key.asc
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
+    configs:
+      - source: ferroehr-version-signing-test-key
+        target: /etc/ferroehr/version-signing-test.key.asc
 
   ferroehr-viewer:
     environment:
@@ -66,3 +74,7 @@ services:
       FERROEHR_VIEWER__OIDC__TLS__TRUST_ROOTS_FILE: /run/ferroehr-dev-tls/ca/ca.crt
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
+
+configs:
+  ferroehr-version-signing-test-key:
+    file: ./docker/signing/version-signing-test.key.asc

@@ -1,17 +1,27 @@
 {
   "notes": [
-    "The hosted sandbox demo dataset (issue #3045). scripts/sandbox/reseed.sh walks",
-    "this file and drives the PUBLIC REST API only, so a green seed run is itself",
-    "evidence that the deployment serves what it claims. Adding content means",
-    "editing this file plus a body under scripts/sandbox/seed/, never the walker.",
+    "The demo dataset of FerroEHR (#3045, #6663): every record, party, policy and log entry in",
+    "it is synthetic, made up for the demo, and names no real person. scripts/sandbox/reseed.sh",
+    "walks this file and drives the PUBLIC REST API only, as an administrator, a clinician and",
+    "a patient's representative, so every write passes the same authorization and leaves the",
+    "same access record a client's does. It seeds the hosted sandbox every night and the",
+    "browser journeys' stack (scripts/ui-e2e.sh). Adding content means editing this file plus",
+    "a body under scripts/sandbox/seed/, never the walker.",
     "",
-    "What one run loads, in about 592 requests: 17 ADL 1.4 operational templates",
-    "(the curated CKM pack plus one terminology-binding template), 231 artefacts out of the 322-file vendored ADL 2",
-    "archetype corpus, 8 ADL 2 artefacts of this repository's own, 8 EHRs carrying",
-    "167 ADL 1.4 + 16 ADL 2 compositions, 6 further COMPOSITION versions, 2",
-    "further EHR_STATUS versions, 11 demographic parties, a directory in every",
-    "EHR, and 5 stored AQL queries. One marker EHR records completion, so a second",
-    "run exits immediately and the instance data is never doubled.",
+    "What one run loads: 18 ADL 1.4 operational templates (the curated CKM pack, one",
+    "terminology-binding template and the viewer's minimal evaluation template), the vendored",
+    "ADL 2 archetype library as pinned below, 8 ADL 2 artefacts of this repository's own, 5",
+    "ADL 1.4 CKM archetypes, 8 EHRs with their compositions, further COMPOSITION and EHR_STATUS",
+    "versions, 3 Simplified Flat compositions with measured values, a directory in every EHR,",
+    "the demographic parties (persons, the patients with their record subjects, the provider",
+    "organisation, care teams, a system client and the roles that grant), a representation,",
+    "3 care relationships, the controller's access policy in 2 versions with a justified and",
+    "an emergency read between them, 2 EHR access settings, the legal marks (a restriction of",
+    "processing, a research objection, an access delay, retention periods with something due",
+    "and holds), 2 attested versions, 6 stored AQL queries (one run as a cohort), the subject",
+    "view of a patient's access log and, where the server signs with an OpenPGP key, a signed",
+    "access-log checkpoint that verifies. One marker EHR records completion, so a second run",
+    "exits immediately and the instance data is never doubled.",
     "",
     "The archetype-library pin (231 accepted / 91 refused) holds for the sandbox's",
     "terminology posture: FerroTERM beside the CDR serving the SNOMED CT",
@@ -29,17 +39,15 @@
     "local run without LOINC sets SANDBOX_TERMINOLOGY=without-loinc and expects",
     "234 / 88. The same test file checks both splits against this pin.",
     "",
-    "Measured 2026-09-02 against the composed quickstart stack on an 8-CPU/8 GB",
-    "Docker VM: 39-45 s from an empty schema, under a second on a second run. The",
-    "loaded data is ~9 MB of canonical composition JSON and leaves a 24 MB",
-    "database (17 373 node rows, 227 versions).",
-    "",
-    "Placeholders in the body files are substituted by the walker: __SUBJECT_ID__",
-    "(an EHR subject, or under an IHE identity source the pseudonym FerroPIX minted",
-    "for it), __SUBJECT_NS__ (subject_namespace, or the pseudonym domain), __PERFORMER__ / __SOURCE__ / __TARGET__ (a seeded party's",
-    "VERSIONED_OBJECT uid), __COMPOSITION_n__ (the n-th composition committed into",
-    "the EHR the folder is written to), and __EHR_n__ (the n-th seeded EHR id) in",
-    "stored-query verification parameters."
+    "Tokens in the body files are substituted by the walker: __SUBJECT_ID__ (an EHR subject,",
+    "or under an IHE identity source the pseudonym FerroPIX minted for it), __SUBJECT_NS__",
+    "(subject_namespace, or the pseudonym domain), __PERFORMER__ / __SOURCE__ / __TARGET__ (a",
+    "seeded party's VERSIONED_OBJECT uid), __COMPOSITION_n__ (the n-th composition committed",
+    "into the EHR the folder is written to), __EHR_n__ (the n-th seeded EHR id) in stored-query",
+    "verification parameters, and in the world/, access/ and records/ bodies __ID:<key>__ (the",
+    "party, relationship or login PERSON of that key), __SUBJECT_ID:<n>__ (the n-th EHR's",
+    "subject), __LOGIN:<who>__ (a login), __PROVIDER_ISSUER__ / __PROVIDER_ID__ (the provider the",
+    "deployment acts for) and __DATE:<days>__ (the UTC date that many days from the run)."
   ],
 
   "subject_namespace": "ferroehr-sandbox",
@@ -84,7 +92,14 @@
     { "slug": "sars-event-notification", "ehrs": [2, 3, 6, 7], "compositions_per_ehr": 1, "extra_versions": 0 },
     { "slug": "diphtheria-case-investigation", "ehrs": [1, 5], "compositions_per_ehr": 1, "extra_versions": 0 },
     { "slug": "poisoning-case-investigation", "ehrs": [2, 6], "compositions_per_ehr": 1, "extra_versions": 0 },
-    { "slug": "congenital-syphilis-case-investigation", "ehrs": [3, 7], "compositions_per_ehr": 1, "extra_versions": 0 }
+    { "slug": "congenital-syphilis-case-investigation", "ehrs": [3, 7], "compositions_per_ehr": 1, "extra_versions": 0 },
+    { "slug": "minimal-evaluation", "file": "app/ferroehr-viewer/tests/fixtures/minimal_evaluation.opt", "template_id": "minimal_evaluation.en.v1", "example": "generated", "ehrs": [0], "compositions_per_ehr": 1, "extra_versions": 1 }
+  ],
+
+  "flat_compositions": [
+    { "template_id": "minimal_evaluation.en.v1", "ehr": 1, "file": "flat/minimal-14.json" },
+    { "template_id": "minimal_evaluation.en.v1", "ehr": 2, "file": "flat/minimal-15.json" },
+    { "template_id": "minimal_evaluation.en.v1", "ehr": 3, "file": "flat/minimal-16.json" }
   ],
 
   "adl2": {
@@ -175,13 +190,15 @@
       { "key": "patient-03", "kind": "person", "file": "world/patient-03.json" },
       { "key": "patient-04", "kind": "person", "file": "world/patient-04.json" },
       { "key": "patient-05", "kind": "person", "file": "world/patient-05.json" },
-      { "key": "patient-06", "kind": "person", "file": "world/patient-06.json" }
+      { "key": "patient-06", "kind": "person", "file": "world/patient-06.json" },
+      { "key": "proxy-01", "kind": "person", "file": "world/proxy-01.json" }
     ],
     "versions": [
       { "key": "organisation-hospital", "kind": "organisation", "file": "world/organisation-hospital.v2.json" }
     ],
     "relationships": [
-      { "key": "representation-guardian", "file": "world/representation-guardian.json" }
+      { "key": "representation-guardian", "file": "world/representation-guardian.json" },
+      { "key": "representation-proxy", "file": "world/representation-proxy.json" }
     ],
     "care_relationships": [
       { "key": "care-patient-01", "ehr": 0, "file": "world/care-patient-01-cardiology.json" },
@@ -273,6 +290,13 @@
       "file": "queries/patient_record.aql",
       "min_rows": 20,
       "parameters": { "ehr_id": "__EHR_0__" }
+    },
+    {
+      "name": "eu.ferroehr.sandbox::cohort_compositions",
+      "version": "1.0.0",
+      "file": "queries/cohort_compositions.aql",
+      "min_rows": 20,
+      "cohort_subjects": [0, 1, 2, 3, 4, 5]
     }
   ]
 }

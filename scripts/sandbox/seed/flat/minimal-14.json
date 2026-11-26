@@ -1,0 +1,8 @@
+{
+  "ctx/language": "en",
+  "ctx/territory": "US",
+  "ctx/composer_name": "Demo composer (synthetic)",
+  "ctx/time": "2026-07-14T08:00:00Z",
+  "minimal/minimal/quantity|magnitude": 36.5,
+  "minimal/minimal/quantity|unit": "kg"
+}

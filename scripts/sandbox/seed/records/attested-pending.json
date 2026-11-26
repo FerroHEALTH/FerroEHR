@@ -17,13 +17,15 @@
         },
         "committer": {
           "_type": "PARTY_IDENTIFIED",
-          "identifiers": [
-            {
-              "_type": "DV_IDENTIFIER",
-              "issuer": "urn:example:basic-user",
-              "id": "__LOGIN:clinician__"
+          "external_ref": {
+            "_type": "PARTY_REF",
+            "namespace": "demographic",
+            "type": "PERSON",
+            "id": {
+              "_type": "HIER_OBJECT_ID",
+              "value": "__ID:clinician__"
             }
-          ]
+          }
         }
       },
       "lifecycle_state": {
@@ -53,21 +55,23 @@
               "code_string": "666"
             }
           },
-          "committer": {
-            "_type": "PARTY_IDENTIFIED",
-            "identifiers": [
-              {
-                "_type": "DV_IDENTIFIER",
-                "issuer": "urn:example:basic-user",
-                "id": "__LOGIN:clinician__"
-              }
-            ]
-          },
           "reason": {
             "_type": "DV_TEXT",
             "value": "awaiting co-signature"
           },
-          "is_pending": true
+          "is_pending": true,
+          "committer": {
+            "_type": "PARTY_IDENTIFIED",
+            "external_ref": {
+              "_type": "PARTY_REF",
+              "namespace": "demographic",
+              "type": "PERSON",
+              "id": {
+                "_type": "HIER_OBJECT_ID",
+                "value": "__ID:clinician__"
+              }
+            }
+          }
         }
       ],
       "data": {
@@ -115,7 +119,15 @@
         },
         "composer": {
           "_type": "PARTY_IDENTIFIED",
-          "name": "Demo cardiologist (synthetic)"
+          "external_ref": {
+            "_type": "PARTY_REF",
+            "namespace": "demographic",
+            "type": "PERSON",
+            "id": {
+              "_type": "HIER_OBJECT_ID",
+              "value": "__ID:clinician__"
+            }
+          }
         }
       }
     }
@@ -135,13 +147,15 @@
     },
     "committer": {
       "_type": "PARTY_IDENTIFIED",
-      "identifiers": [
-        {
-          "_type": "DV_IDENTIFIER",
-          "issuer": "urn:example:basic-user",
-          "id": "__LOGIN:clinician__"
+      "external_ref": {
+        "_type": "PARTY_REF",
+        "namespace": "demographic",
+        "type": "PERSON",
+        "id": {
+          "_type": "HIER_OBJECT_ID",
+          "value": "__ID:clinician__"
         }
-      ]
+      }
     }
   }
 }

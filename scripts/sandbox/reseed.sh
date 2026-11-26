@@ -2,12 +2,14 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 #
-# Seed the hosted sandbox (#2710, dataset #3045) with demo data through the
-# PUBLIC API — the same surface visitors use, so the seed itself proves the
-# deployment. This file is a WALKER: what gets loaded is
-# scripts/sandbox/seed/manifest.json plus the bodies beside it, so adding
-# content is editing data. The manifest's `notes` describe the dataset, its
-# measured runtime and the placeholder tokens substituted below.
+# The one seed of FerroEHR's synthetic demo dataset (#2710, #3045, #6663): the
+# hosted sandbox every night and the browser journeys' stack
+# (scripts/ui-e2e.sh). It drives the PUBLIC API only, the same surface
+# visitors use, so the seed itself proves the deployment and every write
+# leaves the access record a client's does. This file is a WALKER: what gets
+# loaded is scripts/sandbox/seed/manifest.json plus the bodies beside it, so
+# adding content is editing data. The manifest's `notes` describe the dataset
+# and the tokens substituted below.
 #
 # Every request retries: right after the nightly wipe, instances booted BEFORE
 # the wipe can keep serving until they recycle, and a request landing on one
@@ -20,9 +22,14 @@
 # completion, and a second run sees it and exits without touching anything.
 #
 # Environment: SANDBOX_BASE (default https://sandbox.ferroehr.eu),
-# SANDBOX_USER / SANDBOX_PASS (default the public demo credentials), and
-# SANDBOX_IDENTITIES: the file the box's `identities` verb answered
-# (deploy/hosted/ferropix-seed.sh). Under an IHE patient identity source it maps
+# SANDBOX_USER / SANDBOX_PASS (the administrator that seeds, default the
+# public demo credentials), SANDBOX_CLINICIAN (default ferroehr-clinician, a
+# professional who reads outside a care relationship and attests),
+# SANDBOX_PROXY (default ferroehr-proxy, whose PERSON the seed writes as a
+# patient's representative), each with its `_PASS` (default ferroehr), an
+# empty SANDBOX_CLINICIAN skipping the clinician's steps, SANDBOX_IDS_OUT (a
+# file the seeded EHR ids and tokens are written to), and SANDBOX_IDENTITIES:
+# the file the box's `identities` verb answered (deploy/hosted/ferropix-seed.sh). Under an IHE patient identity source it maps
 # each manifest subject to the pseudonym FerroPIX minted for it, and every
 # EHR_STATUS names that pseudonym in the clinical domain (#4242). Unset, or
 # answering `provider local` (a CDR beside no FerroPIX), the subjects name
@@ -57,11 +64,12 @@ EXT="${SANDBOX_BASE:-https://sandbox.ferroehr.eu}/ferroehr/rest/extensions/v1"
 SEED_LOGIN="${SANDBOX_USER:-ferroehr}"
 AUTH="$SEED_LOGIN:${SANDBOX_PASS:-ferroehr}"
 # The professional who reads outside a care relationship and attests, and the
-# patient who reads their own access log: two more logins of the deployment.
+# representative who reads the subject view of a patient's access log: two
+# more logins of the deployment.
 CLINICIAN="${SANDBOX_CLINICIAN-ferroehr-clinician}"
 CLINICIAN_PASS="${SANDBOX_CLINICIAN_PASS:-ferroehr}"
-PATIENT="${SANDBOX_PATIENT-ferroehr-patient}"
-PATIENT_PASS="${SANDBOX_PATIENT_PASS:-ferroehr}"
+PROXY="${SANDBOX_PROXY:-ferroehr-proxy}"
+PROXY_PASS="${SANDBOX_PROXY_PASS:-ferroehr}"
 IDS_OUT="${SANDBOX_IDS_OUT:-}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SEED_DIR="$ROOT_DIR/scripts/sandbox/seed"
@@ -503,6 +511,7 @@ commit_series() {
     ovid=$(etag_uid)
     printf '%s\n' "${ovid%%::*}" >> "$WORK/comps.$slot"
     [[ -n "$first" ]] || first="$ovid"
+    series_first="${first%%::*}"
     compositions=$((compositions + 1))
   done
   [[ "$versions" -gt 0 ]] || return 0
@@ -524,6 +533,16 @@ while read -r entry; do
   copies=$(printf '%s' "$entry" | jq -r '.compositions_per_ehr')
   versions=$(printf '%s' "$entry" | jq -r '.extra_versions')
   example=$(printf '%s' "$entry" | jq -r --arg d "$TPL_DIR/$slug.example.json" '.example // $d')
+  if [[ "$example" == generated ]]; then
+    # The CDR's own example of the template, as the browser journeys commit it.
+    template=$(printf '%s' "$entry" | jq -r '.template_id')
+    code=$(request "example $template" GET \
+      "$BASE/definition/template/adl1.4/$(jq -rn --arg t "$template" '$t | @uri')/example" \
+      -H 'Accept: application/json')
+    expect "example $template" "$code" 200
+    example="$WORK/$slug.example.json"
+    cp "$BODY" "$example"
+  fi
   [[ "$example" = /* ]] || example="$ROOT_DIR/$example"
   [[ -f "$example" ]] || {
     echo "::error::missing example composition $example" >&2
@@ -534,6 +553,7 @@ while read -r entry; do
     [[ "${created[$slot]}" == yes ]] || continue
     if [[ "$first_slot" == yes ]]; then
       commit_series "$slot" "$example" "$copies" "$versions" "composition $slug"
+      token "__SERIES:${slug}__" "$series_first"
       first_slot=no
     else
       commit_series "$slot" "$example" "$copies" 0 "composition $slug"
@@ -556,6 +576,22 @@ while read -r entry; do
     commit_series "$slot" "$WORK/adl2-example.json" "$copies" 0 "composition $template"
   done < <(printf '%s' "$entry" | jq -r '.ehrs[]')
 done < <(jq -c '.adl2.templates[]' "$MANIFEST")
+
+# Compositions sent in the Simplified Flat format, with the measured values a
+# chart draws: the CDR's generated example carries none.
+while read -r entry; do
+  slot=$(printf '%s' "$entry" | jq -r '.ehr')
+  [[ "${created[$slot]}" == yes ]] || continue
+  template=$(printf '%s' "$entry" | jq -r '.template_id')
+  file="$SEED_DIR/$(printf '%s' "$entry" | jq -r '.file')"
+  code=$(request "flat composition $template" POST "$BASE/ehr/${ehrs[$slot]}/composition" \
+    -H 'Content-Type: application/openehr.wt.flat+json' -H "openehr-template-id: $template" \
+    -H 'Prefer: return=minimal' --data-binary @"$file")
+  expect "flat composition $template" "$code" 201
+  ovid=$(etag_uid)
+  printf '%s\n' "${ovid%%::*}" >> "$WORK/comps.$slot"
+  compositions=$((compositions + 1))
+done < <(jq -c '.flat_compositions[]' "$MANIFEST")
 echo "==> $compositions compositions committed, $extra further versions"
 
 # ── 7. the directory ─────────────────────────────────────────────────────────
@@ -712,10 +748,21 @@ current_version() {
   etag_uid
 }
 
+# The provider the deployment acts for (`[authz.party_binding] provider`): the
+# demo hospital is that provider, so its care relationships and
+# representations are the deployment's own.
+code=$(request "deployment provider" GET "$EXT/admin/config")
+expect "deployment provider" "$code" 200
+token "__PROVIDER_ISSUER__" "$(jq -r '.authz.party_binding.provider.issuer // empty' "$BODY")"
+token "__PROVIDER_ID__" "$(jq -r '.authz.party_binding.provider.id // empty' "$BODY")"
+jq -e '.["__PROVIDER_ID__"] != ""' "$TOKENS" > /dev/null || {
+  echo "::error::the deployment names no [authz.party_binding] provider; the world's care relationships need one" >&2
+  exit 1
+}
 login_person seed-admin "$SEED_LOGIN"
 [[ -n "$CLINICIAN" ]] && login_person clinician "$CLINICIAN"
 token "__LOGIN:clinician__" "$CLINICIAN"
-token "__LOGIN:patient__" "$PATIENT"
+token "__LOGIN:proxy__" "$PROXY"
 
 world_parties=0
 while read -r entry; do
@@ -937,6 +984,16 @@ while read -r entry; do
   fi
   expect "query run $name" "$code" 200
 
+  # A cohort query runs the stored text on the cohort its subjects name
+  # (FerroEHR's cohort extension), after the stored run above.
+  subjects=$(printf '%s' "$entry" | jq -c '.cohort_subjects // empty')
+  if [[ -n "$subjects" ]]; then
+    jq -n --rawfile q "$aql" --argjson slots "$subjects" --slurpfile t "$TOKENS" --arg ns "$SUBJECT_NS" \
+      '{q: $q, purpose: "secondary-use",
+        subjects: [$slots[] | {id: $t[0]["__SUBJECT_ID:\(.)__"], namespace: $ns}]}' > "$WORK/cohort.json"
+    code=$(request "cohort run $name" POST "$EXT/query/cohort" -H "$CT_JSON" --data-binary @"$WORK/cohort.json")
+    expect "cohort run $name" "$code" 200
+  fi
   rows=$(jq '.rows | length' "$BODY")
   if [[ "$rows" -lt "$min_rows" ]]; then
     echo "::error::stored query $name returned $rows rows, below the $min_rows the manifest pins — the seeded data no longer feeds it." >&2
@@ -950,25 +1007,21 @@ echo "==> $queries stored AQL queries, each answering rows"
 # ── 12. the logs ─────────────────────────────────────────────────────────────
 #
 # Every request above wrote its access-log entry and its system record. The
-# patient reads their own record and then their own access log, which answers
-# the subject view; the review across EHRs reads the full view; and, where the
+# patient's representative reads the subject view of the patient's access log; the review across EHRs reads the full view; and, where the
 # server signs with an OpenPGP key, the log is sealed into a signed checkpoint
 # and verified.
 
 patient_slot=$(mf '.world.logs.patient_ehr')
 patient_ehr="${ehrs[$patient_slot]}"
-if [[ -n "$PATIENT" ]]; then
-  code=$(REQ_AUTH="$PATIENT:$PATIENT_PASS" request "the patient reads their record" GET \
-    "$BASE/ehr/$patient_ehr/ehr_status")
-  expect "the patient reads their record" "$code" 200
-  code=$(REQ_AUTH="$PATIENT:$PATIENT_PASS" request "the patient's own access log" GET \
+if [[ -n "$PROXY" ]]; then
+  code=$(REQ_AUTH="$PROXY:$PROXY_PASS" request "the representative's view of the access log" GET \
     "$EXT/ehr/$patient_ehr/access_log")
-  expect "the patient's own access log" "$code" 200
+  expect "the representative's view of the access log" "$code" 200
   [[ "$(jq '.entries | length' "$BODY")" -gt 0 ]] || {
-    echo "::error::the patient's own access log of EHR $patient_ehr lists no entry" >&2
+    echo "::error::the subject view of EHR $patient_ehr's access log lists no entry" >&2
     exit 1
   }
-  echo "==> the patient's own access log lists $(jq '.entries | length' "$BODY") entries"
+  echo "==> the subject view of a patient's access log lists $(jq '.entries | length' "$BODY") entries"
 fi
 
 min_review=$(mf '.world.logs.min_review_ehrs')
@@ -977,6 +1030,15 @@ expect "access-log review" "$code" 200
 reviewed=$(jq '[.entries[].ehr_id.value? // empty] | unique | length' "$BODY")
 [[ "$reviewed" -ge "$min_review" ]] || {
   echo "::error::the access-log review names $reviewed EHRs, below the $min_review the manifest pins" >&2
+  exit 1
+}
+
+# The system records (IHE ATNA, read over ITI-81) of the day the seed ran.
+FHIR="${SANDBOX_BASE:-https://sandbox.ferroehr.eu}/ferroehr/rest/fhir/r4"
+code=$(request "system records" GET "$FHIR/AuditEvent?date=ge$(date -u -r "$TODAY" +%Y-%m-%d 2>/dev/null || date -u -d "@$TODAY" +%Y-%m-%d)&_count=10")
+expect "system records" "$code" 200
+[[ "$(jq '.entry | length' "$BODY")" -gt 0 ]] || {
+  echo "::error::ITI-81 answers no system record for the day the seed ran" >&2
   exit 1
 }
 
@@ -993,6 +1055,12 @@ if jq -e '.signature // "" | startswith("-----BEGIN PGP SIGNATURE-----")' "$BODY
   echo "==> the access log of $reviewed EHRs, sealed into a signed checkpoint that verifies"
 else
   echo "==> the access log of $reviewed EHRs; the server signs versions by digest, so no checkpoint is signed"
+fi
+
+# The ids a harness needs to address the seeded records, when asked for.
+if [[ -n "$IDS_OUT" ]]; then
+  printf '%s\n' "${ehrs[@]}" | jq -R . | jq -s --slurpfile t "$TOKENS" '{ehrs: ., tokens: $t[0]}' > "$IDS_OUT"
+  echo "==> the seeded ids are in $IDS_OUT"
 fi
 
 # ── 13. the completion marker ────────────────────────────────────────────────

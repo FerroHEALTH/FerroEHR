@@ -220,7 +220,45 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # Provisions the demo user `ferroehr` as a professional PERSON through the
+  # Grants the PERSON of the demo clinician `ferroehr-clinician` the clinical
+  # scopes the demo dataset's reads and attestations use, as ferroehr-hold
+  # does for `ferroehr`.
+  ferroehr-hold-clinician:
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:latest}
+    container_name: ferroehr-sandbox-hold-clinician
+    restart: on-failure
+    depends_on:
+      ferroehr-provision:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    environment:
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set in /opt/ferroehr-sandbox/.env}
+      FERROEHR__USAGE_REPORT__ENABLED: "false"
+    volumes:
+      - ./ferroehr.sandbox.toml:/etc/ferroehr/ferroehr.toml:ro
+    command:
+      - party-binding
+      - grant
+      - --basic-user
+      - ferroehr-clinician
+      - --operation
+      - hold_scopes
+      - --element
+      - scope=user/composition-*.cruds
+      - --element
+      - scope=user/template-*.rs
+      - --element
+      - scope=user/aql-*.cruds
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+  # Provisions the demo users `ferroehr` and `ferroehr-clinician` as
+  # professional PERSONs through the
   # CDR's SCIM endpoint (RFC 7644 §3.3), the way an identity provider
   # provisions people, so the Basic login is bound to the PERSON FerroEHR
   # issues for its binding key: the `sandbox-scim` client takes a client
@@ -254,16 +292,18 @@ services:
         -d client_secret=sandbox -d scope=ferroehr/scim
         http://localhost:8180/sandbox/token | sed -n 's/.*"access_token" *: *"\([^"]*\)".*/\1/p');
         if [ -z "$$token" ]; then echo 'the issuer answered no access token' >&2; exit 1; fi;
+        for user in ferroehr ferroehr-clinician; do
         status=$$(curl -sS -o /tmp/answer -w '%{http_code}' -X POST
         -H "Authorization: Bearer $$token" -H 'Content-Type: application/scim+json'
-        --data '{"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User"],"userName":"ferroehr","urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User":{"loginIdentifier":"ferroehr"}}'
+        --data "{\"schemas\":[\"urn:ietf:params:scim:schemas:core:2.0:User\",\"urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User\"],\"userName\":\"$$user\",\"urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User\":{\"loginIdentifier\":\"$$user\"}}"
         http://localhost:8080/scim/v2/Users);
-        if [ "$$status" = 201 ]; then echo 'provisioned ferroehr'; exit 0; fi;
+        if [ "$$status" = 201 ]; then echo "provisioned $$user"; continue; fi;
         if [ "$$status" = 409 ] && grep -q '"uniqueness"' /tmp/answer &&
         curl -fsS -H "Authorization: Bearer $$token"
-        'http://localhost:8080/scim/v2/Users?filter=userName%20eq%20%22ferroehr%22' |
-        grep -q '"totalResults" *: *1[,}]'; then echo 'ferroehr is provisioned already'; exit 0; fi;
-        echo "provisioning ferroehr answered $$status" >&2; cat /tmp/answer >&2; exit 1
+        "http://localhost:8080/scim/v2/Users?filter=userName%20eq%20%22$$user%22" |
+        grep -q '"totalResults" *: *1[,}]'; then echo "$$user is provisioned already"; continue; fi;
+        echo "provisioning $$user answered $$status" >&2; cat /tmp/answer >&2; exit 1;
+        done
     read_only: true
     tmpfs:
       - /tmp
