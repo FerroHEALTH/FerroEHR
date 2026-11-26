@@ -44,7 +44,7 @@ weakening.
 
 Two limits are worth stating plainly. The clinical schema holds a *pseudonym*
 only when `[privacy] subject_namespaces` declares the namespaces a subject
-reference may draw from — left unset, whatever a client sends is what gets
+reference may draw from; left unset, whatever a client sends is what gets
 stored, and no schema split saves you from a national identifier written into
 the clinical side; see
 [Privacy and identifiers](installation/config-privacy.md). And the split is a
@@ -108,9 +108,8 @@ request log and every trace span record the path and the matched route without
 the query string, and the `404` for an unknown subject names only the
 namespace. A reverse proxy or load balancer in front of FerroEHR sees the whole
 URL, so configure it not to log query strings on this route, or not at all.
-FerroPIX as the EHR index provider (IHE PIXm, planned in
-[#3380](https://github.com/FerroHEALTH/FerroEHR/issues/3380)) resolves a
-patient identifier to an EHR without putting it in a FerroEHR URL.
+FerroPIX as the EHR index provider (IHE PIXm, `record.subject_index = "pixm"`)
+resolves a patient identifier to an EHR without putting it in a FerroEHR URL.
 
 ## The subject link in the party domain
 
@@ -127,8 +126,7 @@ projects it into the party table `binding_record_subject` at the commit of the
 so a decision on a held subject adds no database transaction, a miss costs one
 indexed read, and no decision calls the identity source.
 
-**This is an accepted trade-off** (owner decision, 2026-11-14,
-[#5634](https://github.com/FerroHEALTH/FerroEHR/issues/5634)). Without the
+**This is an accepted trade-off.** Without the
 element, mapping a pseudonym back to a person needs a steward action in the
 identity source. With it, the party domain maps the pseudonym to the `PERSON`
 for every patient whose `PERSON` carries the element. The clinical side is

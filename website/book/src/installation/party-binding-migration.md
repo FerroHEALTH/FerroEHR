@@ -175,9 +175,5 @@ committer rule.
 
 | Product | What it needs | Release |
 |---|---|---|
-| FerroBRIDGE | Writes to the CDR under the facade caller's exchanged token (FerroHEALTH/FerroBRIDGE#1582) | FerroBRIDGE v0.0.23 |
-| FerroFED | The gateway reaches the CDR under the caller (FerroHEALTH/FerroFED#1615) | none as of FerroFED v0.0.19; the issue's FerroFED milestone is v0.0.20 |
-
-No FerroFED release up to v0.0.19 reaches the CDR under the caller, so a
-deployment with a FerroFED gateway adds its `persons` issuers only once a
-FerroFED release carries that change (FerroHEALTH/FerroFED#1615).
+| FerroBRIDGE | Writes to the CDR under the facade caller's exchanged token | FerroBRIDGE v0.0.23 or later |
+| FerroFED | The gateway reaches the CDR under the caller | FerroFED v0.0.20 or later |

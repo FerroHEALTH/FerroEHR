@@ -25,7 +25,7 @@ command:
   years after the last treatment or after death. If the records must survive
   the instance, move them first: export each EHR over the API, or take a full
   dump through `/ferroehr/rest/extensions/v1/admin/dump`
-  ([dump and load](operations-admin-apis.md#dump-and-load)), and check the
+  ([dump and load](storage-admin-apis.md#dump-and-load)), and check the
   copy in its new home before you erase. The retention marks and what is
   already due are described in
   [Retention, restriction and objection](compliance/retention.md).
@@ -149,7 +149,7 @@ DROP DATABASE ferroehr WITH (FORCE);
 ```
 
 Run it as the owner or a superuser, connected to another database
-([DROP DATABASE](https://www.postgresql.org/docs/18/sql-dropdatabase.html)).
+([DROP DATABASE](https://www.postgresql.org/docs/19/sql-dropdatabase.html)).
 Repeat it for every database `[database.party]` or `[database.audit]` names.
 
 The roles are cluster-wide, so neither command removes them: the migrations
@@ -162,7 +162,7 @@ DROP ROLE ferroehr_clinical, ferroehr_clinical_reader, ferroehr_party,
           ferroehr_party_reader, ferroehr_migrator;
 ```
 
-[DROP ROLE](https://www.postgresql.org/docs/18/sql-droprole.html) refuses a
+[DROP ROLE](https://www.postgresql.org/docs/19/sql-droprole.html) refuses a
 role that still owns objects or holds privileges in any database of the
 cluster.
 

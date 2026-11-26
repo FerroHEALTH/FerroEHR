@@ -136,7 +136,7 @@ semi-trusted actor.
   available) or by an ingress or proxy in front of it. The shipped default
   leaves `[server.tls]` unset; the hop behind a proxy is the deploying
   organisation's, and the server cannot see whether it is encrypted
-  ([B1 network and protocol](../threat-model.md#b1--network-and-protocol),
+  ([B1 network and protocol](../threat-model.md#b1-network-and-protocol),
   [server configuration](../installation/config-server.md)).
 - **An identity provider.** Users and their credentials live in the deploying
   organisation's OpenID Connect provider, which issues the tokens FerroEHR
@@ -150,7 +150,7 @@ semi-trusted actor.
   restricted to the server, with TLS to the database, encryption at rest at
   the volume layer, and backups taken per domain. Anyone with a database
   connection is past every API control
-  ([B6 the database](../threat-model.md#b6--the-database),
+  ([B6 the database](../threat-model.md#b6-the-database),
   [database roles](../database-operations.md#database-roles-and-least-privilege),
   [TLS and database security](../operations.md#tls-and-database-security),
   [backup and recovery](../database-operations.md#backup-and-point-in-time-recovery)).
@@ -164,7 +164,7 @@ semi-trusted actor.
   [secrets, detection and response](../installation/hardening-detection-response.md)).
 - **Off-box copies.** A forwarding sink for the access log that the server's
   identity cannot rewrite, and a monitored backup
-  ([B7 the audit trail](../threat-model.md#b7--the-audit-trail)).
+  ([B7 the audit trail](../threat-model.md#b7-the-audit-trail)).
 
 ## Reasonably foreseeable use and misuse
 
@@ -189,11 +189,11 @@ Foreseeable misuse, and what FerroEHR does about it:
 | The quickstart Compose file in production, with its development user and RBAC off | the README and the Compose file call these development defaults; `production` refuses RBAC off unless `rbac_off` is accepted by name | nothing refuses it under `sandbox`; the [go-live checklist](../security/go-live-checklist.md) is the control |
 | `auth.enabled = false` on a reachable network | `production` refuses it at boot unless `auth_off` is accepted by name (#3638) | an accepted gap is stated on every boot; the `sandbox` profile does not refuse it |
 | A plaintext listener on a routable address with no TLS ingress in front | `production` refuses it at boot unless `plaintext_listener` is accepted by name; a loopback bind is exempt (#3638); a separate management listener (`management.listen`), which binds every interface in plain HTTP, opens the same gap (#3668) | a deployment behind a TLS-terminating ingress accepts `plaintext_listener`, and nothing checks that the ingress exists or that the management port is unreachable off the host |
-| Several organisations in one instance | no tenant model exists to misconfigure; one instance per organisation is documented | nothing in the software can detect it ([B5](../threat-model.md#b5--instance-separation)) |
+| Several organisations in one instance | no tenant model exists to misconfigure; one instance per organisation is documented | nothing in the software can detect it ([B5](../threat-model.md#b5-instance-separation)) |
 | Real patient data on the public sandbox | the sandbox is labelled as demo data and wiped nightly | nothing refuses it |
 | The access log switched off in production | `production` refuses `audit_off` unless it is accepted by name; with the log on, an access whose record cannot be written is refused | an accepted gap is stated on every boot, and the organisation owns it |
 | The access log shipped over plaintext syslog | the syslog feed sends over RFC 5425 TLS only, through `ihe-atna` (#3887) | none for the feed; the repository's own TLS configuration is the deployment's |
-| Reads and writes straight against the database | the domain roles limit what each credential reaches | such access bypasses authorisation and the access log ([B6](../threat-model.md#b6--the-database)) |
+| Reads and writes straight against the database | the domain roles limit what each credential reaches | such access bypasses authorisation and the access log ([B6](../threat-model.md#b6-the-database)) |
 | Structural validation taken for clinical correctness | validation checks structure, invariants and terminology bindings only | clinical governance is the organisation's ([threat model](../threat-model.md#what-is-explicitly-not-defended-against)) |
 | openEHR conformance results, or these pages, taken for regulatory conformity | the [compliance overview](index.md) says FerroEHR holds no certification or declaration | none |
 | A release run after a newer one is published | only the newest release is supported (`SECURITY.md`), and the release feed and advisories announce each new one; the end month of the five-year commitment is in every release's notes and the running server states it on the boot banner, in `ferroehr --version`, on `GET /management/info` and `GET /management/status`, and logs a warning at boot and daily once it has passed (#3639) | nothing refuses to run; the server does not look for newer releases |

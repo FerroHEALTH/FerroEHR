@@ -167,7 +167,7 @@ are held by the integration test `care_caseload_plans`; its figures are on
 
 A latency from a shared or virtualised host can carry more of the host than
 of FerroEHR. Every step records what it ran on, so a reader can tell, and
-the harness has a way around each distortion measured in #5777.
+the harness has a way around each distortion.
 
 **The path to the server.** The Podman VM on macOS forwards every published
 port, and the forwarder adds about 1.6 milliseconds to each request the
@@ -313,13 +313,13 @@ cores approach what the host gives it while PostgreSQL has room, the server
 saturated; profile it with `capacity.sh profile`, which samples the server
 with `sample` on macOS or `perf record` on Linux. The server's own
 `/management/flamegraph` is not used while its unwinder can stop the server
-inside an Ed25519 signature (#5723). When the pool's
+inside an Ed25519 signature. When the pool's
 acquire time rises and the active backends sit at the pool size, the pool
 saturated. When one statement's total time grows faster than the rate, or
 backends wait on one lock, that statement or lock is the limit.
 
 ## Where the measurements are
 
-The tracker issue of each run holds its result, with the hardware it ran on:
-the first is #5722. A knee is a property of one deployment on one host, so
+The tracker issue of each run holds its result, with the hardware it ran on.
+A knee is a property of one deployment on one host, so
 the book publishes the method and never a figure without its host.
