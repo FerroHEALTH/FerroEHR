@@ -1,18 +1,17 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The deployment profile the connected CDR declares (#3264).
+//! The status document of the connected CDR: its deployment profile, and
+//! for a session that may read the full document, the licence in force, the
+//! deployment gaps and the support period (#3264, #6654).
 //!
 //! `GET {rest root}/status` carries `deployment: {profile}`, the profile the
-//! server was configured with (`sandbox` or `production`); the production
-//! separations it has not made (`gaps`, `accepted`, as `snake_case` codes) are
-//! served only by the authenticated `GET /management/status`, so a public
-//! document lists none and the notice then states the rule alone. A browser
-//! tab is where one deployment gets mistaken for another, so the shell states
-//! the profile it is connected to, and under `sandbox` says plainly what that
-//! means. Plain types here, the component stays thin. No openEHR spec governs
-//! the status document's shape beyond `status` and the versions — our own
-//! design/extension.
+//! server was configured with (`sandbox` or `production`). The authenticated
+//! `GET /management/status` adds the production separations not made
+//! (`gaps`, `accepted`, as `snake_case` codes), the licence and the support
+//! period (CRA Art. 13(19)); a public document lists none of them, and the
+//! notice then states the rule alone. No openEHR spec governs the status
+//! document's shape beyond `status` and the versions: our own extension.
 
 use crate::locale::server::ServerMsg;
 use crate::locale::tr;
@@ -31,6 +30,83 @@ pub struct StatusDocument {
     /// profile, which claims nothing.
     #[serde(default)]
     pub deployment: Option<Deployment>,
+    /// The licence in force; only the full document carries it.
+    #[serde(default)]
+    pub licence: Option<Licence>,
+    /// The support period of the release; only the full document carries it.
+    #[serde(default)]
+    pub support: Option<Support>,
+}
+
+/// The `licence` block of the full status document.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct Licence {
+    /// `licensed` or `none`.
+    pub state: String,
+    /// `commercial` or `non-commercial`, when licensed.
+    #[serde(default, rename = "use")]
+    pub permitted_use: Option<String>,
+    /// The licensee, when licensed.
+    #[serde(default)]
+    pub licensee: Option<String>,
+    /// The last valid day (`YYYY-MM-DD`), when licensed.
+    #[serde(default)]
+    pub not_after: Option<jiff::civil::Date>,
+    /// What the configured licence file contributed: `absent`, `in-force` or
+    /// `refused`.
+    #[serde(default)]
+    pub configured_token: Option<String>,
+}
+
+/// Where the licence stands on a given day.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Standing {
+    /// A licence is in force and its last valid day has not passed.
+    InForce,
+    /// The licence's last valid day has passed.
+    Expired,
+    /// The configured licence file was refused, so it is not the one in force.
+    Refused,
+    /// No licence is in force.
+    Unlicensed,
+}
+
+impl Licence {
+    /// Where the licence stands on `today`.
+    #[must_use]
+    pub fn standing(&self, today: jiff::civil::Date) -> Standing {
+        if self.state != "licensed" {
+            Standing::Unlicensed
+        } else if self.not_after.is_some_and(|last| last < today) {
+            Standing::Expired
+        } else if self.configured_token.as_deref() == Some("refused") {
+            Standing::Refused
+        } else {
+            Standing::InForce
+        }
+    }
+}
+
+/// The `support` block of the full status document.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct Support {
+    /// The release date (`YYYY-MM-DD`); absent for a build that is no release.
+    #[serde(default)]
+    pub release_date: Option<String>,
+    /// The last month of the support period (`YYYY-MM`); absent for a build
+    /// that is no release.
+    #[serde(default, rename = "support_ends")]
+    pub ends: Option<String>,
+    /// `supported`, `ended` or `unreleased`.
+    pub status: String,
+}
+
+impl Support {
+    /// Whether the commitment to publish fixes has ended.
+    #[must_use]
+    pub fn ended(&self) -> bool {
+        self.status == "ended"
+    }
 }
 
 /// The `deployment` block of the status document.
@@ -106,7 +182,7 @@ pub fn gap_text(code: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{StatusDocument, gap_text};
+    use super::{Standing, StatusDocument, gap_text};
     use crate::served_vocabulary::DEPLOYMENT_GAPS;
 
     fn status(profile: &str, gaps: &[&str]) -> StatusDocument {
@@ -180,5 +256,23 @@ mod tests {
             .expect("sandbox");
         assert_eq!(notice.gaps, ["future_gap"]);
         assert_eq!(StatusDocument::parse("not json"), None);
+    }
+
+    /// The full document's licence and support period read as the server
+    /// serializes them, and the licence's standing follows its last day.
+    #[test]
+    fn the_full_document_carries_the_licence_and_the_support_period() {
+        let doc = StatusDocument::parse(
+            r#"{"status":"UP","licence":{"state":"licensed","use":"non-commercial","licensee":"Example","not_after":"2027-06-30","configured_token":"absent"},"deployment":{"profile":"production","gaps":[],"accepted":[]},"support":{"release_date":"2026-11-01","support_ends":"2031-11","status":"supported"}}"#,
+        )
+        .expect("parses");
+        let licence = doc.licence.expect("the licence");
+        assert_eq!(licence.permitted_use.as_deref(), Some("non-commercial"));
+        let day = |text: &str| text.parse::<jiff::civil::Date>().expect("a day");
+        assert_eq!(licence.standing(day("2027-06-30")), Standing::InForce);
+        assert_eq!(licence.standing(day("2027-07-01")), Standing::Expired);
+        let support = doc.support.expect("the support period");
+        assert_eq!(support.ends.as_deref(), Some("2031-11"));
+        assert!(!support.ended());
     }
 }

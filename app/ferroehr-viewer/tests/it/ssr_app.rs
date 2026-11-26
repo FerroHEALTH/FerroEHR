@@ -27,6 +27,8 @@ use ferrohealth_session::cookies::CookieNames;
 use serde_json::Value;
 use tower::util::ServiceExt;
 
+mod policy;
+
 /// The recorded exchanges, read once.
 fn recording() -> Arc<[Value]> {
     let path =
@@ -277,12 +279,12 @@ impl Answer {
 
 impl Viewer {
     /// The viewer over a fresh replayed CDR.
-    async fn start() -> Self {
+    pub(crate) async fn start() -> Self {
         Self::start_with(Vec::new()).await
     }
 
     /// The viewer over a fresh replayed CDR answering `stubs` first.
-    async fn start_with(stubs: Vec<Value>) -> Self {
+    pub(crate) async fn start_with(stubs: Vec<Value>) -> Self {
         let cdr = replayed_cdr_with(stubs).await;
         Self {
             service: ferroehr_viewer::server::router(app_state(&cdr)),
@@ -750,7 +752,17 @@ async fn every_screen_draws_its_heading_and_its_reading() {
         ),
         (
             "/parties".to_owned(),
-            vec!["The demographic tag index", "follow-up"],
+            vec![
+                "Last committed",
+                "Demo Clinic",
+                "Demo Person 0417",
+                "The demographic tag index",
+                "follow-up",
+            ],
+        ),
+        (
+            "/parties?list=organisation".to_owned(),
+            vec!["Demo Clinic", "Organisation"],
         ),
         (
             format!("/parties/person/{party}"),
@@ -1045,6 +1057,33 @@ async fn an_access_log_row_opens_its_entry_with_what_it_rested_on() {
 }
 
 #[tokio::test]
+async fn a_party_find_lists_the_parties_whose_identities_hold_the_text() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let answer = viewer
+        .send(
+            http::Method::POST,
+            "/parties?list=person",
+            Some(&cookie),
+            Some(&[("intent", "find"), ("find", "Person 0417")]),
+        )
+        .await;
+    assert_eq!(answer.status, http::StatusCode::OK, "{}", answer.body);
+    let main = answer.main();
+    assert!(main.contains("Holding “Person 0417”"), "{main}");
+    let party = format!("/parties/person/{}", id("party"));
+    assert!(main.contains(&party), "the row opens its party: {main}");
+    assert!(
+        !main.contains("Demo Clinic"),
+        "an organisation is no person: {main}"
+    );
+    assert!(
+        !answer.headers.contains_key(http::header::LOCATION),
+        "the find stays out of the address: {main}"
+    );
+}
+
+#[tokio::test]
 async fn find_answers_an_ehr_id_with_the_ehr() {
     let viewer = Viewer::start().await;
     let cookie = viewer.sign_in().await;
@@ -1296,7 +1335,7 @@ async fn an_unknown_address_answers_404_with_the_way_back() {
 }
 
 /// A stubbed CDR exchange: a `GET` of `path` answered `200` with `content_type`.
-fn stub(path: &str, content_type: &str, response: &str) -> Value {
+pub(crate) fn stub(path: &str, content_type: &str, response: &str) -> Value {
     serde_json::json!({
         "method": "GET",
         "path": path,

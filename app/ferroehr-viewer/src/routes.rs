@@ -149,6 +149,12 @@ pub enum Page {
     Audit,
     /// `/audit/:id`.
     AuditRecord,
+    /// `/access-policy`.
+    AccessPolicy,
+    /// `/access-policy/versions`.
+    AccessPolicyVersions,
+    /// `/access-policy/edit`.
+    EditAccessPolicy,
     /// `/configuration` and its sections.
     Configuration,
     /// `/preferences` and its sections.
@@ -217,6 +223,9 @@ impl Page {
             "/server/smart" => Self::Smart,
             "/audit" => Self::Audit,
             "/audit/:id" => Self::AuditRecord,
+            "/access-policy" => Self::AccessPolicy,
+            "/access-policy/versions" => Self::AccessPolicyVersions,
+            "/access-policy/edit" => Self::EditAccessPolicy,
             "/configuration" | "/configuration/:section" => Self::Configuration,
             "/preferences" | "/preferences/:section" => Self::Preferences,
             "/access" => Self::Access,
@@ -357,6 +366,9 @@ pub static ROUTES: &[&str] = &[
     "/server/smart",
     "/audit",
     "/audit/:id",
+    "/access-policy",
+    "/access-policy/versions",
+    "/access-policy/edit",
     "/configuration",
     "/configuration/:section",
     "/preferences",
@@ -392,7 +404,7 @@ pub async fn draw() -> Drawn {
         Page::NewComposition => pages::composition::new_page().await,
         Page::Composition => pages::composition::page().await,
         Page::EditComposition => pages::composition::edit_composition_page().await,
-        Page::Parties => pages::parties::list_page().await,
+        Page::Parties => pages::parties::list::list_page().await,
         Page::NewParty => pages::parties::new_party_page().await,
         Page::NewRelationship => pages::parties::new_relationship_page().await,
         Page::Relationship => pages::parties::relationship_page().await,
@@ -415,7 +427,7 @@ pub async fn draw() -> Drawn {
         Page::StoredQueryRun => pages::queries::run_page().await,
         Page::Build => pages::query::build_page().await,
         Page::Aql => pages::query::aql_page().await,
-        Page::ServerOverview => pages::server::overview_page().await,
+        Page::ServerOverview => pages::server::overview::page().await,
         Page::Health => pages::server::health_page().await,
         Page::Metrics => pages::server::metrics_page().await,
         Page::Logging => pages::server::logging_page().await,
@@ -423,6 +435,9 @@ pub async fn draw() -> Drawn {
         Page::Smart => pages::server::smart_page().await,
         Page::Audit => pages::audit::page().await,
         Page::AuditRecord => pages::audit::record_page().await,
+        Page::AccessPolicy => pages::policy::page().await,
+        Page::AccessPolicyVersions => pages::policy::versions_page().await,
+        Page::EditAccessPolicy => pages::policy::edit::page().await,
         Page::Configuration => pages::configuration::page().await,
         Page::Preferences => pages::preferences::page(),
         Page::Access => pages::access::page(),

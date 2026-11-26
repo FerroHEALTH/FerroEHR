@@ -304,6 +304,8 @@ behind the menu button.
   export the rows, save it to the CDR. See [Queries](queries.md).
 - **Server:** what the CDR is, how it runs and what it serves, and the **Audit
   log**. See [Server and audit log](server.md).
+- **Access policy:** the controller's access policy by section, its versions
+  and its editor. See [Access control](access-control.md).
 - **Configuration:** the CDR's redacted running configuration, by section.
 - **About:** the viewer, the CDR and their versions, the manufacturer and
   the CDR's conformance manifest.

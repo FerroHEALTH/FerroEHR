@@ -19,6 +19,8 @@ pub mod access;
 pub mod console;
 pub mod definitions;
 pub mod overview;
+pub mod parties;
+pub mod policy;
 pub mod queries;
 pub mod records;
 pub mod server;
@@ -280,6 +282,8 @@ messages! {
         InvalidCode = "invalid-code",
         /// `About`
         NavAbout = "nav-about",
+        /// `Access policy`
+        NavAccessPolicy = "nav-access-policy",
         /// `Audit log`
         NavAudit = "nav-audit",
         /// `Configuration`
@@ -332,6 +336,8 @@ messages! {
         SandboxDetails = "sandbox-details",
         /// `{ $count ->`
         SandboxGaps = "sandbox-gaps",
+        /// `; `, between two gaps the sandbox band names
+        SandboxGapSeparator = "sandbox-gap-separator",
         /// `This deployment must not hold real patient data.`
         SandboxNoGaps = "sandbox-no-gaps",
         /// `Sandbox`
@@ -547,6 +553,8 @@ mod tests {
     use super::console::ConsoleMsg;
     use super::definitions::DefinitionsMsg;
     use super::overview::OverviewMsg;
+    use super::parties::PartiesMsg;
+    use super::policy::PolicyMsg;
     use super::queries::QueriesMsg;
     use super::records::RecordsMsg;
     use super::server::ServerMsg;
@@ -658,6 +666,8 @@ mod tests {
                 "console",
                 "definitions",
                 "overview",
+                "parties",
+                "policy",
                 "queries",
                 "records",
                 "server",
@@ -670,10 +680,12 @@ mod tests {
         holds_every("access", AccessMsg::ALL);
         holds_every("overview", OverviewMsg::ALL);
         holds_every("records", RecordsMsg::ALL);
+        holds_every("parties", PartiesMsg::ALL);
         holds_every("definitions", DefinitionsMsg::ALL);
         holds_every("queries", QueriesMsg::ALL);
         holds_every("console", ConsoleMsg::ALL);
         holds_every("signin", SignInMsg::ALL);
+        holds_every("policy", PolicyMsg::ALL);
         holds_every("server", ServerMsg::ALL);
     }
 
