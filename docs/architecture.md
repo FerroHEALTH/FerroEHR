@@ -2584,8 +2584,8 @@ by reference (IHE BPPC), and the `log_restrictions` of the access log's
 subject view a Member State law lays down under EHDS Art. 9(3) (#5570).
 BASE Architecture Overview §Security Policy leaves
 privacy levels to "standards or agreements within jurisdictions of use", which
-the classifications carry. Break-glass and the default floor stay in TOML; the
-policy can only tighten them.
+the classifications carry. The default floor stays in TOML and the policy can
+only tighten it; emergency access is one of the policy's `justifications`.
 
 - **One versioned object.** The instance is single-tenant, so it keeps one
   `VERSIONED_ACCESS_POLICY`, outside every EHR and outside the demographic
