@@ -512,7 +512,11 @@ async fn the_objection_the_anchor_and_the_holds_read_back_as_set() {
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT, "override: {body}");
     let overridden = mark(&app, &objection).await;
-    assert_eq!(overridden["objected"], serde_json::json!(false), "{overridden}");
+    assert_eq!(
+        overridden["objected"],
+        serde_json::json!(false),
+        "{overridden}"
+    );
     assert_eq!(overridden["ground"], serde_json::json!("public interest"));
 
     let (status, body) = send_body(
@@ -530,7 +534,10 @@ async fn the_objection_the_anchor_and_the_holds_read_back_as_set() {
     assert_eq!(status, StatusCode::NO_CONTENT, "anchor: {body}");
     let anchored = mark(&app, &anchor).await;
     assert_eq!(anchored["anchor"]["jurisdiction"], serde_json::json!("CH"));
-    assert_eq!(anchored["anchor"]["hold_ground"], serde_json::json!("litigation"));
+    assert_eq!(
+        anchored["anchor"]["hold_ground"],
+        serde_json::json!("litigation")
+    );
     assert!(anchored["anchor"]["anchored_at"].is_string(), "{anchored}");
 
     let (status, body) = send_body(&app, get(&format!("/ehr/{ehr_id}/versioned_ehr_status"))).await;
@@ -547,7 +554,11 @@ async fn the_objection_the_anchor_and_the_holds_read_back_as_set() {
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT, "hold: {body}");
     let held = mark(&app, &holds).await;
-    assert_eq!(held["holds"][0]["vo_id"], serde_json::json!(vo_id), "{held}");
+    assert_eq!(
+        held["holds"][0]["vo_id"],
+        serde_json::json!(vo_id),
+        "{held}"
+    );
     assert!(held["holds"][0]["held_at"].is_string(), "{held}");
 }
 
@@ -562,7 +573,11 @@ async fn the_mark_reads_refuse_a_bad_or_unknown_ehr() {
         "/admin/retention/hold",
     ] {
         let (status, body) = send_body(&app, get(path)).await;
-        assert_eq!(status, StatusCode::BAD_REQUEST, "{path} without ehr_id: {body}");
+        assert_eq!(
+            status,
+            StatusCode::BAD_REQUEST,
+            "{path} without ehr_id: {body}"
+        );
         let (status, body) = send_body(&app, get(&format!("{path}?ehr_id=nonsense"))).await;
         assert_eq!(status, StatusCode::BAD_REQUEST, "{path} malformed: {body}");
         let unknown = format!("{path}?ehr_id=00000000-0000-4000-8000-000000000000");
