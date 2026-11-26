@@ -187,7 +187,7 @@ that gives you both.
 [FerroTERM](https://github.com/FerroHEALTH/FerroTERM) is the terminology server
 FerroEHR ships with: the `docker-compose.terminology.yml` overlay of the
 quickstart starts it beside the CDR and points `[terminology]` at
-`http://ferroterm:8080/r4b`, the [compose page](../installation/compose.md#the-terminology-overlay-ferroterm)
+`http://ferroterm:8080/r4b`, the [compose page](../installation/compose-overlays.md#the-terminology-overlay-ferroterm)
 has the commands. The hosted sandbox at <https://sandbox.ferroehr.eu> runs the
 same pair on one machine, so the coded-text binding you see resolving there is a
 real round trip to a real terminology server.
@@ -268,7 +268,7 @@ sandbox machine, beside the licence-free shaped seed the compose profile ships.
 ## Running one locally (development and CI)
 
 The quickest local terminology server is the quickstart's
-[terminology overlay](../installation/compose.md#the-terminology-overlay-ferroterm):
+[terminology overlay](../installation/compose-overlays.md#the-terminology-overlay-ferroterm):
 FerroTERM beside the CDR, the shaped seed served, the CDR wired, one command
 and no checkout. The conformance lane runs the same server from a checkout of
 the repository, with the shaped seed mounted read-only out of

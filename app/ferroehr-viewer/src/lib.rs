@@ -29,6 +29,7 @@ pub mod deployment;
 pub mod error;
 pub mod example_options;
 pub mod format;
+pub mod justified;
 pub mod launch;
 pub mod launch_tasks;
 pub mod locale;

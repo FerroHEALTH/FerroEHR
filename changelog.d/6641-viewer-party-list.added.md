@@ -1,0 +1,1 @@
+- The viewer lists the parties the CDR holds, by kind and newest first, and finds the parties whose identities hold a text, through the CDR's AQL over parties, so a party no longer has to be opened by its uid.

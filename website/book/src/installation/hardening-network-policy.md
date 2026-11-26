@@ -288,7 +288,7 @@ unless its key is set, so add only the rows you have switched on:
 | OTLP collector | `config.telemetry.otlp.endpoint` | 4317 gRPC / 4318 HTTP | in-cluster |
 | Token issuer (metadata + key set) | each `config.auth.issuer` table, **unless** it sets its own `jwks_file` | 443 | off-cluster |
 | FHIR terminology server | `config.the [terminology] table` plus its `url` | 443 | off-cluster |
-| FerroTERM in the cluster | `terminology.enabled` | 8080 | in-cluster, and the **chart renders this rule itself** — it chose the destination when it wired the CDR at the Service, so you do not add it to `rules`. Omitted, terminology would fail silently: under the shipped fail-open posture an unresolvable binding is accepted, so nothing refuses and nothing logs. |
+| FerroTERM in the cluster | `terminology.enabled` | 8080 | in-cluster, and the **chart renders this rule itself**: it chose the destination when it wired the CDR at the Service, so you do not add it to `rules`. Omitted, terminology would fail silently: under the shipped fail-open posture an unresolvable binding is accepted, so nothing refuses and nothing logs. |
 | Terminology token endpoint | `config.[terminology].oauth.token_endpoint` | 443 | off-cluster |
 | Object store | `config.record.multimedia.enabled` plus `config.record.multimedia.s3.url` (unset means AWS regional resolution) | 443, or the endpoint's | off-cluster |
 | Syslog audit repository | `config.audit.syslog.url` | 6514 TCP (TLS) | off-cluster |
