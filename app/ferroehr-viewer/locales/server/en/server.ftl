@@ -42,6 +42,7 @@ archetype-list-json = archetype list JSON
 conversion-json = ADL 2 conversion JSON
 activity-report-json = activity report JSON
 integrity-report-json = integrity report JSON
+cohort-result-json = cohort result JSON
 no-subject-pseudonym-namespace-declared-so = no subject pseudonym namespace is declared, so an EHR subject may carry a real identifier
 ehr-without-own-access-settings-admits = an EHR without its own access settings admits every caller the role checks let through
 role-checks-off-so-every-signed = role checks are off, so every signed-in caller may use every enabled surface, the admin and management endpoints included

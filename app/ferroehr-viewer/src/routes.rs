@@ -139,6 +139,8 @@ pub enum Page {
     Build,
     /// `/query/aql`.
     Aql,
+    /// `/query/cohort`.
+    Cohort,
     /// `/server`.
     ServerOverview,
     /// `/server/health`.
@@ -230,6 +232,7 @@ impl Page {
             "/queries/:name/:version/run" => Self::StoredQueryRun,
             "/query" => Self::Build,
             "/query/aql" => Self::Aql,
+            "/query/cohort" => Self::Cohort,
             "/server" => Self::ServerOverview,
             "/server/health" => Self::Health,
             "/server/metrics" => Self::Metrics,
@@ -379,6 +382,7 @@ pub static ROUTES: &[&str] = &[
     "/queries/:name/:version/run",
     "/query",
     "/query/aql",
+    "/query/cohort",
     "/server",
     "/server/health",
     "/server/metrics",
@@ -454,6 +458,7 @@ pub async fn draw() -> Drawn {
         Page::StoredQueryRun => pages::queries::run_page().await,
         Page::Build => pages::query::build_page().await,
         Page::Aql => pages::query::aql_page().await,
+        Page::Cohort => pages::query::cohort::page().await,
         Page::ServerOverview => pages::server::overview::page().await,
         Page::Health => pages::server::health_page().await,
         Page::Metrics => pages::server::metrics_page().await,
