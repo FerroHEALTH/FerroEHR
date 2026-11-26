@@ -31,12 +31,9 @@ pub const ADL2_LIST: &str = "definition/archetype/adl2";
 /// [`ViewerError::Failed`] for a list that is not JSON strings.
 pub async fn list(route: &str) -> Result<Option<Vec<String>>, ViewerError> {
     let cdr = crate::bff::cdr()?;
-    let url = cdr.extensions_v1(route);
-    let response = cdr.get(&url).send().await?;
-    if response.is(http::StatusCode::NOT_FOUND) {
+    let Some(body) = cdr.get(&cdr.extensions_v1(route)).body_or_absent().await? else {
         return Ok(None);
-    }
-    let body = response.ok()?.body;
+    };
     serde_json::from_str(&body)
         .map(Some)
         .map_err(|error| ViewerError::failed(tr_served(ServerMsg::ArchetypeListJson), error))
@@ -59,12 +56,10 @@ pub fn adl14_path(archetype_id: &str) -> String {
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 pub async fn fetch_adl14(archetype_id: &str) -> Result<Option<String>, ViewerError> {
     let cdr = crate::bff::cdr()?;
-    let url = cdr.extensions_v1(&adl14_path(archetype_id));
-    let response = cdr.get(&url).accept("text/plain").send().await?;
-    if response.is(http::StatusCode::NOT_FOUND) {
-        return Ok(None);
-    }
-    Ok(Some(response.ok()?.body))
+    cdr.get(&cdr.extensions_v1(&adl14_path(archetype_id)))
+        .accept("text/plain")
+        .body_or_absent()
+        .await
 }
 
 /// Uploads the ADL 1.4 source `source`; the CDR reads the id out of it and
@@ -75,11 +70,7 @@ pub async fn fetch_adl14(archetype_id: &str) -> Result<Option<String>, ViewerErr
 /// ([`cdr`](crate::bff::cdr)), the CDR's words for a source it refuses
 /// (`422`) or a read-only principal (`403`).
 pub async fn upload_adl14(source: String) -> Result<String, ViewerError> {
-    if source.trim().is_empty() {
-        return Err(ViewerError::Invalid(tr_served(
-            crate::locale::Msg::SelectedFileWasEmpty,
-        )));
-    }
+    crate::bff::refuse_empty(&source)?;
     let cdr = crate::bff::cdr()?;
     let url = cdr.extensions_v1("definition/archetype/adl1.4");
     let body = cdr.post(&url).body("text/plain", source).ok().await?.body;

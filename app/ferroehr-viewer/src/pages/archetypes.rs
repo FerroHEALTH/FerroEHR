@@ -301,19 +301,9 @@ pub async fn page() -> Drawn {
     let base = archetype_href(Family::Adl14, &id);
     let download = crate::download::archetype_href(Family::Adl14, &id);
     let body = match tab {
-        ArchetypeTab::Source => match fetch_adl14(&id).await {
-            Ok(Some(source)) => panel(document_section(
-                tr(DefinitionsMsg::ArchetypeSource),
-                Language::Plain,
-                source,
-                "archetype-source",
-            )),
-            Ok(None) => return missing(&id, Family::Adl14),
-            Err(error) => panel(plain_section(refused(
-                tr(DefinitionsMsg::ArchetypeRefused),
-                &error,
-                None,
-            ))),
+        ArchetypeTab::Source => match source_panel(fetch_adl14(&id).await) {
+            Some(panel) => panel,
+            None => return missing(&id, Family::Adl14),
         },
         ArchetypeTab::Adl2 => {
             let converted = convert_archetype(&id).await;
@@ -359,19 +349,9 @@ pub async fn adl2_page() -> Drawn {
     let id = crate::routes::params()
         .get("archetype_id")
         .unwrap_or_default();
-    let body = match crate::bff::template_adl2::fetch_adl2_source(id.clone(), None).await {
-        Ok(Some(source)) => panel(document_section(
-            tr(DefinitionsMsg::ArchetypeSource),
-            Language::Plain,
-            source,
-            "archetype-source",
-        )),
-        Ok(None) => return missing(&id, Family::Adl2),
-        Err(error) => panel(plain_section(refused(
-            tr(DefinitionsMsg::ArchetypeRefused),
-            &error,
-            None,
-        ))),
+    let read = crate::bff::template_adl2::fetch_adl2_source(id.clone(), None).await;
+    let Some(body) = source_panel(read) else {
+        return missing(&id, Family::Adl2);
     };
     let page = heading(
         id.clone(),
@@ -381,6 +361,25 @@ pub async fn adl2_page() -> Drawn {
     )
     .then(card_panel(body));
     Drawn::page(id, page)
+}
+
+/// An archetype's source as read, drawn; `None` when the CDR holds no
+/// archetype under its id.
+fn source_panel(read: Result<Option<String>, ViewerError>) -> Option<Html> {
+    match read {
+        Ok(Some(source)) => Some(panel(document_section(
+            tr(DefinitionsMsg::ArchetypeSource),
+            Language::Plain,
+            source,
+            "archetype-source",
+        ))),
+        Ok(None) => None,
+        Err(error) => Some(panel(plain_section(refused(
+            tr(DefinitionsMsg::ArchetypeRefused),
+            &error,
+            None,
+        )))),
+    }
 }
 
 /// The Download action of an archetype at `href`.
