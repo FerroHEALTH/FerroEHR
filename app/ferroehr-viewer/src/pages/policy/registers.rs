@@ -24,7 +24,7 @@ use ferrohealth_ui::view::surface::{
 use crate::bff::registers::{
     Register, RegisterVersion, fetch_register, fetch_register_history, put_register,
 };
-use crate::components::{EditorField, EditorLanguage, EditorSetup, code_editor};
+use crate::components::EditorField;
 use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
 use crate::locale::policy::PolicyMsg;
@@ -32,10 +32,9 @@ use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, card_panel, discarded, dock_editor, document_section, findings_of,
-    marks_of, panel, plain_section, section, when,
+    Refused, discarded, document_section, panel, plain_section, section, when,
 };
-use crate::pages::editor::{Unsaved, editor_line};
+use crate::pages::editor::{DocumentForm, Unsaved, document_form};
 use crate::pages::form::Form;
 use crate::pages::policy::{PolicyTab, frame, shown};
 use crate::routes::Drawn;
@@ -330,53 +329,28 @@ fn edit_form(register: Register, editor: Editor) -> Html {
         opened_text,
         unsaved,
     } = editor;
-    let field = EditorField::Document.name();
-    let findings = unsaved
-        .as_ref()
-        .and_then(|unsaved| findings_of(&unsaved.refusal.error, &text, &field));
-    let conflict = unsaved.as_ref().is_some_and(|unsaved| unsaved.conflict);
-    let (glyph, line) = editor_line(unsaved.is_some());
-    let action = format!("{}/edit", register_href(register));
-    let top = unsaved.map(|unsaved| {
-        unsaved.view(
-            &action,
-            tr_with(
-                RecordsMsg::EditorReloadVersion,
-                &[("version", current.to_string().into())],
-            ),
-        )
-    });
-    dock_editor(EditorDock {
-        form: EDIT_FORM.to_owned(),
-        line,
-        glyph,
+    document_form(DocumentForm {
+        form: EDIT_FORM,
+        action: format!("{}/edit", register_href(register)),
+        version: opened.to_string(),
+        text,
+        opened: opened_text,
+        unsaved,
+        reload: tr_with(
+            RecordsMsg::EditorReloadVersion,
+            &[("version", current.to_string().into())],
+        ),
         save: tr_with(
             RecordsMsg::EditorSaveAsVersion,
             &[("version", opened.saturating_add(1).to_string().into())],
         ),
-        blocked: conflict.then(|| tr(RecordsMsg::EditorReloadFirst)),
-    });
-    let editor = code_editor(EditorSetup {
-        field: EditorField::Document,
-        language: EditorLanguage::Json,
-        text,
-        opened: Some(opened_text),
-        marks: marks_of(findings.as_ref()),
         label: register_words(register),
-        lead: tr(RecordsMsg::EditorJson),
-        facts: vec![tr(Msg::EditorUtf8)],
-        findings,
-    });
-    opt(top).then(h(format!(
-        r#"<form id="{EDIT_FORM}" method="post" action="{action}"><input type="hidden" name="version" value="{opened}">{panel}</form>"#,
-        action = t(&action),
-        panel = card_panel(section(
-            Some(tr(PolicyMsg::RegisterDocument)),
-            None,
-            None,
-            section_intro(tr(PolicyMsg::RegisterEditIntro)).then(editor),
-        )),
-    )))
+        section: (
+            tr(PolicyMsg::RegisterDocument),
+            tr(PolicyMsg::RegisterEditIntro),
+        ),
+        after: Html::empty(),
+    })
 }
 
 /// Edit a register.
