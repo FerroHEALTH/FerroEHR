@@ -284,6 +284,34 @@ messages! {
         NavAccessPolicy = "nav-access-policy",
         /// `Audit log`
         NavAudit = "nav-audit",
+        /// `None`
+        VersionSignatureNone = "version-signature-none",
+        /// `A SHA-256 digest`
+        VersionSignatureDigest = "version-signature-digest",
+        /// `An OpenPGP signature, ML-DSA-65+Ed25519`
+        VersionSignatureComposite = "version-signature-composite",
+        /// `An OpenPGP signature, algorithm { $algorithm }`
+        VersionSignatureOpenPgp = "version-signature-openpgp",
+        /// `An OpenPGP signature`
+        VersionSignatureOpenPgpUnread = "version-signature-openpgp-unread",
+        /// `A signature in the client's own form`
+        VersionSignatureOther = "version-signature-other",
+        /// `Signature`
+        VersionSignatureTitle = "version-signature-title",
+        /// `Attestations`
+        VersionAttestations = "version-attestations",
+        /// `Attester`
+        VersionAttester = "version-attester",
+        /// `When`
+        VersionAttestedAt = "version-attested-at",
+        /// `Reason`
+        VersionAttestReason = "version-attest-reason",
+        /// `Attests`
+        VersionAttestItems = "version-attest-items",
+        /// `The whole version`
+        VersionAttestWhole = "version-attest-whole",
+        /// `Pending`
+        VersionAttestPending = "version-attest-pending",
         /// `Configuration`
         NavConfiguration = "nav-configuration",
         /// `Dashboard`

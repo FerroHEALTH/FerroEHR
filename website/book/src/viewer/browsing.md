@@ -159,9 +159,16 @@ it, label and value, by section.
 **Document** shows it in the format you pick (JSON, XML, FLAT or STRUCTURED),
 as the CDR converts it. **Versions** lists every version and reads the
 `VERSIONED_COMPOSITION` and the chosen version's envelope; **At a time** opens
-the version that was current then. **Tags** lists the composition's tags and
+the version that was current then. The envelope names the kind of the
+version's signature (a SHA-256 digest, or an OpenPGP signature with its
+algorithm, such as ML-DSA-65+Ed25519) and shows the signature as stored, with
+the version's attestations beneath it: who attested, when, why and what. The
+CDR checks the signature when it serves the version; see
+[Version signing](../signing/index.md). **Tags** lists the composition's tags and
 sets or removes one; a tag stays on the composition across its versions and
 commits no version.
+
+![A composition's versions](img/compositions/versions.png)
 
 **Edit as a new version** opens the document in an editor; the save writes
 the next version. **Delete composition…** marks it deleted with a new version;

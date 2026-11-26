@@ -1,0 +1,1 @@
+- The viewer names the kind of a version's signature (a SHA-256 digest, or an OpenPGP signature with its algorithm, such as ML-DSA-65+Ed25519) and shows the signature as stored and the version's attestations, where it said only whether the version was signed.

@@ -1,0 +1,84 @@
+{
+  "_type": "ORGANISATION",
+  "archetype_node_id": "eu.ferroehr.sandbox::openEHR-DEMOGRAPHIC-ORGANISATION.provider.v1",
+  "archetype_details": {
+    "_type": "ARCHETYPED",
+    "archetype_id": {
+      "_type": "ARCHETYPE_ID",
+      "value": "eu.ferroehr.sandbox::openEHR-DEMOGRAPHIC-ORGANISATION.provider.v1"
+    },
+    "rm_version": "1.2.0"
+  },
+  "name": {
+    "_type": "DV_TEXT",
+    "value": "FerroEHR Demo Hospital"
+  },
+  "details": {
+    "_type": "ITEM_TREE",
+    "archetype_node_id": "at0001",
+    "name": {
+      "_type": "DV_TEXT",
+      "value": "details"
+    },
+    "items": [
+      {
+        "_type": "ELEMENT",
+        "archetype_node_id": "at0002",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "provider identifier"
+        },
+        "value": {
+          "_type": "DV_IDENTIFIER",
+          "issuer": "__PROVIDER_ISSUER__",
+          "id": "__PROVIDER_ID__",
+          "type": "healthcare-provider"
+        }
+      },
+      {
+        "_type": "ELEMENT",
+        "archetype_node_id": "at0004",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "department"
+        },
+        "value": {
+          "_type": "DV_TEXT",
+          "value": "Cardiology, Emergency medicine"
+        }
+      }
+    ]
+  },
+  "identities": [
+    {
+      "_type": "PARTY_IDENTITY",
+      "archetype_node_id": "at0001",
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "name"
+      },
+      "details": {
+        "_type": "ITEM_TREE",
+        "archetype_node_id": "at0002",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "details"
+        },
+        "items": [
+          {
+            "_type": "ELEMENT",
+            "archetype_node_id": "at0003",
+            "name": {
+              "_type": "DV_TEXT",
+              "value": "name"
+            },
+            "value": {
+              "_type": "DV_TEXT",
+              "value": "FerroEHR Demo Hospital"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
