@@ -5,7 +5,7 @@ login with no `PERSON` is refused (`403`, `refused-unbound`). This page
 takes a new deployment from an empty database to its first bound login, and
 takes an existing deployment, whose people were attributed by login alone,
 to binding. The configuration it names is in
-[Authentication & access](config-auth.md#the-party-mapping), and the two
+[Authentication & access](config-authz.md#the-party-mapping), and the two
 commands are in [CLI & production checklist](config-cli.md).
 
 No openEHR specification governs a deployment's migration or its

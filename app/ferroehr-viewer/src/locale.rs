@@ -17,6 +17,7 @@ use serde::Deserialize;
 
 pub mod console;
 pub mod definitions;
+pub mod operations;
 pub mod overview;
 pub mod policy;
 pub mod queries;
@@ -581,6 +582,7 @@ mod tests {
 
     use super::console::ConsoleMsg;
     use super::definitions::DefinitionsMsg;
+    use super::operations::OperationsMsg;
     use super::overview::OverviewMsg;
     use super::policy::PolicyMsg;
     use super::queries::QueriesMsg;
@@ -692,6 +694,7 @@ mod tests {
             [
                 "console",
                 "definitions",
+                "operations",
                 "overview",
                 "policy",
                 "queries",
@@ -703,6 +706,7 @@ mod tests {
             "each directory under locales/ is the catalog of one part"
         );
         holds_every("shell", Msg::ALL);
+        holds_every("operations", OperationsMsg::ALL);
         holds_every("overview", OverviewMsg::ALL);
         holds_every("records", RecordsMsg::ALL);
         holds_every("definitions", DefinitionsMsg::ALL);

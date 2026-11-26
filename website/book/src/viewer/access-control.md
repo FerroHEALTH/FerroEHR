@@ -13,7 +13,7 @@ account read.
 
 **Access policy**, in the sidebar's console group, reads the controller's
 `ACCESS_POLICY` in force (`GET {ext}/admin/access_policy`, see
-[Operational policy](../operational-policy.md#the-access-policy)) and draws it
+[The access policy](../access-policy.md#the-access-policy)) and draws it
 by section:
 
 - **Classifications:** which data carry which sensitivities and

@@ -1,0 +1,142 @@
+# Upgrades
+
+How to move a running deployment to a new release, and how long a release is supported.
+
+<!-- toc -->
+
+- **Upgrade in place within v6; the migrations are append-only.** A released
+  migration is never edited again, so a database created by an earlier v6
+  release takes the new release's migrations on top of the ones it already
+  carries. The server
+  records the checksum of every applied migration and refuses to start against
+  a database whose recorded checksums differ from the files it carries
+  (`migration 1 was previously applied but has been modified`), which is why
+  editing one would lock every existing installation out of its own database
+  rather than revise its history. A correction ships as a new migration, and a
+  CI guard fails any pull request that modifies, renames or deletes one the
+  base branch already has. A rolling upgrade must still stay compatible with
+  the _previous_ schema for the window in which both versions run: additive
+  changes first, destructive changes a release later.
+
+  Releases up to and including 4.0.18 predate this policy and did edit
+  migration files in place. A database created by one of those and never
+  upgraded since is recreated rather than migrated. A v5 database is not
+  upgraded in place either: see [Upgrading from v5 to v6](#upgrading-from-v5-to-v6).
+- **Sweep for stale decomposition after a release that changes how content is
+  decomposed.** The version body is unaffected and every read serves it
+  correctly; what is stale is the decomposed index over it, which a
+  row-level query predicate depends on. `POST /ferroehr/rest/extensions/v1/admin/integrity/verify`
+  reports each such version as `stale_decomposition` and
+  `POST /ferroehr/rest/extensions/v1/admin/integrity/rebuild-nodes`, run once unscoped, rewrites the
+  rows from the stored document. The changelog names the affected object type
+  at each release that needs it; 4.2.0 is one, for demographic parties. Both
+  routes are on
+  [Admin & messaging APIs](operations-admin-apis.md#storage-integrity).
+- **Upgrading a 5.5.0 that sets `[server.tls] client_ca_file`: set
+  `client_auth = "required"` beside it.** Before 5.5.0 the CA alone meant a
+  required client certificate; 5.5.0 read it under the new `client_auth`
+  default `none` and asked for no certificate, and from 5.6.0 such a table is
+  refused at load (GHSA-52mf-qg39-4q4j). See
+  [`[server.tls]`](installation/config-server.md#servertls-native-tls-and-mutual-tls-client-authentication).
+- **Bound the DDL yourself.** Every pooled connection carries the
+  `[database] statement_timeout` value (60 seconds by default), and the migration
+  step runs on that pool, so a runaway statement is cut off, but there is **no
+  `lock_timeout`**, so a migration that waits behind a long transaction waits
+  as long as that transaction lasts. On a busy table use
+  `CREATE INDEX CONCURRENTLY`, add constraints `NOT VALID` and `VALIDATE`
+  later, and set `lock_timeout` in the migration session (or on the migrator
+  role) if you need the wait bounded.
+- **Pin the image.** Deploy an immutable tag or, better, a `@sha256` digest,
+  never `latest`; roll back by re-pinning the prior digest, since the schema's
+  backward compatibility makes that safe.
+- **Stay available.** Keep at least two replicas (or autoscaling) and a pod
+  disruption budget so node drains and upgrades never fully interrupt the
+  API. The default 30-second termination grace period covers the server's
+  shutdown; the audit records are stored before each response, so a
+  replica that stops leaves nothing in memory.
+
+## Upgrading from v5 to v6
+
+**v6 needs a new, empty database.** v6.0.0 replaces the whole migration
+history of every schema (`ext`, `clinical`, `party`, `audit`) with one
+baseline that creates each object once, in its final shape. A database
+prepared by v5 carries the v5 migration bookkeeping, and a v6 server refuses
+to start against it, naming the schema it found and this way forward, rather
+than apply its baseline over the old schema. Nothing is upgraded in place, and
+no compatibility layer reads a v5 database.
+
+Move the records instead:
+
+1. With the v5 server still running, dump the repository with
+   [`POST {ext}/admin/dump`](operations-admin-apis.md) to a location both
+   servers can reach.
+2. Create a new, empty PostgreSQL 19 database (or one per relocated domain,
+   as the v5 deployment had), and start the v6 server against it. With
+   `[database] migrations = "apply"` it applies the baseline at its first
+   boot; with `"verify"`, run `ferroehr db migrate` under the migrator
+   credential first.
+3. Load the archive into the v6 server with
+   [`POST {ext}/admin/load`](operations-admin-apis.md).
+4. Put the controller's access policy in place before you load an archive
+   that holds open care relationships
+   ([operational policy](operational-policy.md)), and check the configuration
+   with `ferroehr config check`, since v6 refuses the keys v5 removed.
+
+The audit trail is not part of the archive. Export what you need of the v5
+audit trail over ITI-81 before you retire the v5 database.
+
+The v6 baseline creates no `linkage` schema and no `ferroehr_linkage` role: a
+cluster that held v5 databases may still carry that role, which v6 never names,
+and you drop it with `DROP ROLE ferroehr_linkage` once no v5 database in the
+cluster grants it anything.
+
+## How long the version you pinned is supported
+
+Plan the upgrade cadence around this:
+
+- **Only the newest release is supported.** When a new release is
+  published, every earlier release stops receiving fixes: there are no
+  maintenance branches, no long-term-support line and no backports. If you are
+  not on the newest release, upgrade; upgrading is free. Under the Cyber
+  Resilience Act, Cadasto B.V. commits to keep publishing security fixes for at
+  least five years after each release (Art 13(8)) and ships them only in the
+  newest release (Art 13(10)), which every user of an earlier release may run
+  under the same licence terms. Staying on an older release means running
+  without the fix.
+- **A fix normally arrives as the next patch** on the current minor, so taking
+  it does not oblige you to take new behaviour, but that is the usual case,
+  not a promise. Where a fix is only correct alongside a behavioural change,
+  the release carrying it carries the change, and the changelog entry says so.
+- **A published release is never repaired in place.** Release immutability
+  means the assets and the tag of a published release cannot be modified at
+  all, so the remedy for any defect is a new version.
+- **The Helm chart and the published crates follow their own version lines**,
+  each supported only in its newest published version, which is where its
+  fixes ship. A chart-only fix ships as a new chart version between server
+  releases.
+
+**The running server states the end month of the commitment.** Cadasto B.V.
+keeps publishing fixed releases for at least five years after each release
+(CRA Art 13(8)), and the server reads its release date from its changelog
+heading at build time. The end month, the date until which fixed releases
+keep coming, does not make the running release supported: a release is
+supported only while it is the newest. The end month is on the boot banner (`Support` line), in the boot log, in
+`ferroehr --version`, under `support` in `GET /management/info`, and under
+`support` in `GET /management/status` as
+`{release_date, support_ends, status}`, where `support_ends` is `YYYY-MM` and
+`status` is `supported` (the commitment is still running), `ended` or
+`unreleased`. Once the end month has passed,
+`status` reads `ended` and the server logs a `warn` line at boot and once a day
+(CRA Art 13(19)). A build of a version whose changelog heading carries no date
+is not a release: it reports `unreleased` and no end month.
+
+The server does not contact anyone to look for newer releases. To hear about
+them, subscribe to the release feed
+(`https://github.com/FerroHEALTH/FerroEHR/releases.atom`) and poll the
+published security advisories
+(`GET https://api.github.com/repos/FerroHEALTH/FerroEHR/security-advisories`).
+
+The consequence for change control: budget for taking every release, or budget
+for maintaining a fork. There is no third option, and the full policy (with
+the reasoning and what to do if you need something stronger) is
+[SECURITY.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions).

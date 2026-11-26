@@ -172,7 +172,7 @@ still act on it, rather than at the first multimedia commit.
 ### On Kubernetes
 
 Every key above is reachable as `config.multimedia.*`
-([Any server setting is reachable](../installation/kubernetes.md#any-server-setting-is-reachable));
+([Any server setting is reachable](../installation/kubernetes-integrations.md#any-server-setting-is-reachable));
 the S3 credentials go through `secrets.*`, which the chart mounts as files:
 
 ```yaml
