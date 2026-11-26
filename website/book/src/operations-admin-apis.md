@@ -215,7 +215,7 @@ Two consequences to plan for:
 Three routes behind the same switch, for `admin_role` only, carry the
 operational policy that is data rather than configuration: the audit category
 map and the EHDS Art. 3(3) access delay. What each
-register holds is on [Operational policy](operational-policy.md#the-admin-registers).
+register holds is on [Operational policy](access-policy.md#the-admin-registers).
 
 | Route | Body or header | Success |
 |---|---|---|
@@ -234,7 +234,7 @@ record of its own.
 
 Four routes behind the same switch, for `admin_role` only, carry the
 controller's access policy. What it holds is on
-[Operational policy](operational-policy.md#the-access-policy).
+[Operational policy](access-policy.md#the-access-policy).
 
 | Route | Body or header | Success |
 |---|---|---|

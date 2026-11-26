@@ -162,7 +162,7 @@ RFC 9068 §2.2; RFC 8693 §4.1), and the server acts on the kind:
 - **A representative** is a user whose `fhirUser` is a `RelatedPerson`, or
   whose `PERSON` is a representative's alone, admitted for a subject the CDR
   stores a live representation of
-  ([Representatives](operational-policy.md#representatives)).
+  ([Representatives](caller-facts.md#representatives)).
 - **A delegated user** is a token whose RFC 8693 `act` names an actor, such
   as a service that exchanged the user's token or an administrator who
   impersonates them. The token's subject is the user, so the request is bound
@@ -213,7 +213,7 @@ RFC 9068 §2.2; RFC 8693 §4.1), and the server acts on the kind:
     `professional.hp_professional_role` and `provider.facility_type`, are
     read as the caller's roles and its organisation's types, each a code of
     the system the value names. The controller's rules name callers by them
-    ([Controller rules](operational-policy.md#controller-rules)), so a
+    ([Controller rules](access-policy.md#controller-rules)), so a
     national rule such as one that keeps insurers or occupational physicians
     out of an exchange is a rule you commit, refused with `403` as
     `refused-policy-denied`. A value that names no system matches no rule;
@@ -468,7 +468,7 @@ the login to it, as
 describes. It is off until an administrator writes a `create_at_login`
 grant for the issuer in the CDR, whose admission conditions read the
 claims below
-([Operational policy](operational-policy.md#just-in-time-admission)). What
+([Operational policy](policy-examples.md#just-in-time-admission)). What
 each identity provider must do for it:
 
 - **Put the name claims in the access token.** FerroEHR reads the person's

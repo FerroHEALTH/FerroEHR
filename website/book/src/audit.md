@@ -463,7 +463,7 @@ plus any category a Member State adds in national law. AQL selects archetypes
 and templates, never categories, and no openEHR specification maps the one
 onto the other, so the deployment declares the mapping in
 [the audit category register](installation/config-audit.md#the-audit-category-register), an
-[admin register](operational-policy.md#the-admin-registers): a
+[admin register](access-policy.md#the-admin-registers): a
 template id, or failing that the root archetype id, maps to a set of categories
 (a priority category by its code in HL7 Europe's
 `EEHRxFDocumentPriorityCategoryCS`, such as `Patient-Summaries` or

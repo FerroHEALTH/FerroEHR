@@ -1,1 +1,2 @@
 - The book is organised by what you came to do: tutorials, how-to guides for integrating and for deploying and operating, reference, explanation, and the compliance record. The introduction is a landing page that sends integrators, clinician-facing app builders, operators and decision makers to their first pages. Every page keeps its address.
+- Operational policy is four pages: the policy parties, roles, care relationships and representatives, the access policy and the admin registers, and the worked policy examples, with every link moved to the section's new page.

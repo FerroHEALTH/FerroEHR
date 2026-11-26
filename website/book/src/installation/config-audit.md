@@ -86,7 +86,7 @@ unknown keys and refused at load. See
 
 The map every access record is classified through by EHDS category (Annex II
 3.2(c); see [the EHDS logging elements](../audit.md#the-ehds-logging-elements-mapped))
-is an [admin register](../operational-policy.md#the-admin-registers), not a
+is an [admin register](../access-policy.md#the-admin-registers), not a
 configuration key: you read and replace it through
 `{ext}/admin/registers/audit-categories`, every version is kept with its
 committer, and a change applies on the next request without a restart. The

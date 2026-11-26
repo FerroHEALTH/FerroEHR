@@ -217,7 +217,7 @@ subject is that `PERSON` (#6106). The identifier gets there in one of four ways:
    contribution.
 2. **Just-in-time creation** at the first login, off until an administrator
    writes a `create_at_login` grant for the issuer in the CDR
-   ([Operational policy](../operational-policy.md#just-in-time-admission)).
+   ([Operational policy](../policy-examples.md#just-in-time-admission)).
 3. **The demographic API**, under the administrator role.
 4. **An existing `PERSON`** that already carries the identifier, adopted as
    [the migration](../installation/party-binding-migration.md) describes.

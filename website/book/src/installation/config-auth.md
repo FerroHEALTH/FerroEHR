@@ -419,7 +419,7 @@ membership archetype is named in the interface form each membership's
 never the default: a patient's login binds their `PERSON` in it. A
 representation needs no section: FerroEHR recognises it by its coded name, in
 any archetype (see
-[Representatives](../operational-policy.md#representatives)). The default
+[Representatives](../caller-facts.md#representatives)). The default
 key is of the type `login`, so an `[auth.issuer.<name>.party]` table whose
 `identifier_type` is `login` needs no mapping key.
 
@@ -576,7 +576,7 @@ any other with `403` `refused-not-represented`; a query must name one with
 Templates stay readable. A professional's token whose only clinical scopes
 are `patient/` is confined to its launch EHR, and its commits record the
 professional, never `PARTY_SELF`. See
-[Representatives](../operational-policy.md#representatives).
+[Representatives](../caller-facts.md#representatives).
 
 #### Just-in-time creation
 
@@ -596,7 +596,7 @@ configuration key: an administrator writes a `ROLE` whose capability grants
 `openehr_access::create_at_login`, naming the issuer and the admission
 conditions, through the Demographic API. The grant is read on each first
 login, so a change applies to the next one without a restart. The
-[Operational policy](../operational-policy.md#just-in-time-admission) page
+[Operational policy](../policy-examples.md#just-in-time-admission) page
 documents the grant and has a worked example. `[authz.grants] allowed`
 must list `create_at_login`, which the default does not, or no such grant
 can be written or honoured.
@@ -909,7 +909,7 @@ fails, the User stays `incomplete` and the same request completes it.
 #### Roles
 
 A User's `roles` (RFC 7643 §4.1.2) are the roles the access policy's
-[controller rules](../operational-policy.md#controller-rules) name. Each
+[controller rules](../access-policy.md#controller-rules) name. Each
 value is one `ROLE` the User's `PERSON` performs, of the professional role
 template, whose `name` is the value coded in the terminology the client's
 `scim_provision` grant names, and whose `time_validity` starts on the day it
@@ -988,7 +988,7 @@ demographic `GROUP` of the group template:
   its members are in the care of the patients under the team's care.
   Creating one and changing its members needs the client's
   `write_care_relationship` grant beside `scim_provision`, and is **403**
-  without it ([Care teams provisioned over SCIM](../operational-policy.md#care-teams-provisioned-over-scim)).
+  without it ([Care teams provisioned over SCIM](../caller-facts.md#care-teams-provisioned-over-scim)).
   The group template and the membership archetype must admit a
   `DV_CODED_TEXT` name, as the default definitions do.
 
@@ -1040,7 +1040,7 @@ inactive `PERSON` binds to nothing. Setting a User's `active` to `false`
 therefore drops its memberships in the same version, and each Group's
 `ETag` changes. A membership of a care-team Group stays, as does every other
 care relationship, since SCIM never changes one ([Deprovisioning a team
-member](../operational-policy.md#deprovisioning-a-team-member)). Microsoft Entra ID often disables a user and then removes it
+member](../caller-facts.md#deprovisioning-a-team-member)). Microsoft Entra ID often disables a user and then removes it
 from its groups; the later `remove` finds nothing to remove and answers
 **204**. An `add` naming an inactive or abandoned User is **400**
 `invalidValue` ("reactivate the User first"). A reactivated User belongs to
@@ -1127,7 +1127,7 @@ replaced or deleted, or an administrator removes it.
 
 The EHDS Art. 3(3) delay of the person's own access to newly registered data
 is a Member State option, and an
-[admin register](../operational-policy.md#the-admin-registers), not a
+[admin register](../access-policy.md#the-admin-registers), not a
 configuration key: you turn it on through
 `{ext}/admin/registers/access-delay` only where your Member State's rule
 provides for the delay, every version is kept with its committer, and a
@@ -1173,7 +1173,7 @@ consume. `discovery` alone turns the document on.
 Which clients count as backend clients and which reach the DEMOGRAPHIC API is
 policy the CDR holds, never a key here: the `query_system_wide` and
 `access_demographic` grants of the client's `AGENT`
-([Operational policy](../operational-policy.md#a-backend-client-and-a-demographic-client)).
+([Operational policy](../policy-examples.md#a-backend-client-and-a-demographic-client)).
 
 No `smart` URL may carry a user name or password, whether or not the document
 is served: the discovery document publishes these URLs to every application,

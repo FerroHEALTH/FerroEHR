@@ -280,7 +280,7 @@ says what it runs:
   API once the server runs ([Audit trail](../audit.md#retention-and-who-chooses-it)).
 - **The category map** is no chart value: it is the
   [audit category register](config-audit.md#the-audit-category-register), an
-  [admin register](../operational-policy.md#the-admin-registers) you write
+  [admin register](../access-policy.md#the-admin-registers) you write
   through the admin API once the server runs. Until then the
   category map FerroEHR ships applies. The access delay is an admin register
   too.
@@ -1160,7 +1160,7 @@ Add the issuer to `config.auth.issuer`, name
 FerroBRIDGE's client in `bridge.cdr.oauth`, and, when it commits what
 `$toopenehr` maps, grant the client in the CDR: an `AGENT` carrying its
 `client_id` and performing a `ROLE` that grants `commit_composition`, as
-[A system client](../operational-policy.md#a-system-client) shows. The
+[A system client](../policy-examples.md#a-system-client) shows. The
 render is refused when `bridge.cdr.oauth.issuer` is not an issuer of
 `config.auth.issuer`. FerroBRIDGE reads the token endpoint from that issuer's
 metadata; when the authorization server serves none there, set

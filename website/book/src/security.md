@@ -518,7 +518,7 @@ replica uses only while it reflects the care facts the replica holds, so a
 discharge or a removed membership never admits from a stale row
 ([The care projection](installation/config-privacy.md#the-care-projection)).
 How the relationships are modelled is on
-[Caller facts: roles and care relationships](operational-policy.md#caller-facts-roles-and-care-relationships).
+[Caller facts: roles and care relationships](caller-facts.md#caller-facts-roles-and-care-relationships).
 
 ### Sensitivity
 
@@ -600,7 +600,7 @@ record outside their care relationships, and in an emergency
 the floor stay in `ferroehr.toml`: `authz.rbac.admin_role` and
 `ehr_access_default`. The policy can only tighten them. Until you write one,
 nothing is tightened and nobody is admitted on a justification. The model and
-the rules are on [The access policy](operational-policy.md#the-access-policy).
+the rules are on [The access policy](access-policy.md#the-access-policy).
 
 ### Justified access outside the care relationships
 
@@ -824,7 +824,7 @@ the marker is the RM's own.
 - **Who counts as the representative.** A person bound to their own `PERSON`
   who acts for the patient through a representation relationship FerroEHR has
   recorded ([how a login is looked up](installation/config-auth.md#how-a-login-is-looked-up)),
-  ([Representatives](operational-policy.md#representatives)).
+  ([Representatives](caller-facts.md#representatives)).
   The rules below hold for the representative exactly as for the person.
 - **The marker.** Every version and CONTRIBUTION the person commits records
   `PARTY_SELF` with no `external_ref` as `AUDIT_DETAILS.committer`, the RM's
@@ -871,7 +871,7 @@ specification governs it; it is our own design.
 FerroEHR ships the software part. Whether the delay applies, to which data and
 for how long is the Member State's rule, and you configure it in
 [the access-delay register](installation/config-auth.md#the-access-delay-register), an
-[admin register](operational-policy.md#the-admin-registers). It is off by
+[admin register](access-policy.md#the-admin-registers). It is off by
 default, so the person's access stays immediate.
 
 - **What is held.** With the register on, every new COMPOSITION whose category
