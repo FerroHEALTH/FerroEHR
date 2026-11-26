@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: BUSL-1.1
 # The storage sizing driver: what one composition version, one node row and
 # one audit record take on disk, measured against a running FerroEHR. It is
-# the measurement behind the book's storage sizing section (operations.md,
+# the measurement behind the book's storage sizing page (storage-sizing.md,
 # "Storage sizing").
 #
 # `run` drives the server over ITS-REST in phases, with a fixed count per
@@ -273,8 +273,8 @@ EOF
     return 1
   fi
   # The book's sizing section names this command, so it reproduces its figures.
-  grep -q 'scripts/perf/storage-sizing.sh run' "$ROOT_DIR/website/book/src/operations.md" || {
-    echo "self-test FAILED: website/book/src/operations.md does not name scripts/perf/storage-sizing.sh run" >&2
+  grep -q 'scripts/perf/storage-sizing.sh run' "$ROOT_DIR/website/book/src/storage-sizing.md" || {
+    echo "self-test FAILED: website/book/src/storage-sizing.md does not name scripts/perf/storage-sizing.sh run" >&2
     return 1
   }
   echo "storage-sizing.sh self-test: the report shape and the book's pointer pass"

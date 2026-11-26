@@ -305,10 +305,10 @@ opt-in that adds FerroTERM to it.
 ## On Kubernetes
 
 `terminology.enabled=true` runs FerroTERM in the cluster and wires the CDR at it
-([FerroTERM on Kubernetes](../installation/kubernetes.md#ferroterm-a-terminology-server-beside-the-cdr-off-by-default)).
+([FerroTERM on Kubernetes](../installation/kubernetes-integrations.md#ferroterm-a-terminology-server-beside-the-cdr-off-by-default)).
 A server outside the cluster goes through the `config` passthrough, which
 renders the keys verbatim into the server's configuration file
-([Any server setting is reachable](../installation/kubernetes.md#any-server-setting-is-reachable)):
+([Any server setting is reachable](../installation/kubernetes-integrations.md#any-server-setting-is-reachable)):
 
 ```yaml
 # values.yaml

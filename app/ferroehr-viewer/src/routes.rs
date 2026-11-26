@@ -419,7 +419,7 @@ pub async fn draw() -> Drawn {
         Page::NewRelationship => pages::parties::new_relationship_page().await,
         Page::Relationship => pages::parties::relationship_page().await,
         Page::EditRelationship => pages::parties::edit_relationship_page().await,
-        Page::PartyContribution => pages::parties::party_contribution_page().await,
+        Page::PartyContribution => pages::parties::contribution::party_contribution_page().await,
         Page::Party => pages::parties::party_page().await,
         Page::EditParty => pages::parties::edit_party_page().await,
         Page::Templates => pages::templates::list_page().await,

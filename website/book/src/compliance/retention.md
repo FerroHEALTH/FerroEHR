@@ -291,7 +291,7 @@ imported with an EHR from another system ends the same way at the
 `retain_until` it states, and its tombstones fold once no imported record
 still kept needs them to verify.
 Retention of the trail itself is described in
-[Audit](../audit.md#retention-and-who-chooses-it).
+[Audit](../ehds-logging.md#retention-and-who-chooses-it).
 
 ## What this page does not claim
 
