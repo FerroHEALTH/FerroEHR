@@ -16,9 +16,20 @@ use crate::error::ViewerError;
 use crate::locale::server::ServerMsg;
 use crate::locale::tr_served;
 
-/// The ids one archetype list holds, `None` when the CDR keeps no archetypes
-/// (`404`, the extension is off).
-async fn list(route: &str) -> Result<Option<Vec<String>>, ViewerError> {
+/// The list of the stored ADL 1.4 archetype ids, ascending.
+pub const ADL14_LIST: &str = "definition/archetype/adl1.4";
+
+/// The list of the stored ADL 2 archetype ids.
+pub const ADL2_LIST: &str = "definition/archetype/adl2";
+
+/// The ids the archetype list `route` ([`ADL14_LIST`] or [`ADL2_LIST`])
+/// holds; `None` when the CDR keeps no archetypes (`404`, the extension is
+/// off).
+///
+/// # Errors
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Failed`] for a list that is not JSON strings.
+pub async fn list(route: &str) -> Result<Option<Vec<String>>, ViewerError> {
     let cdr = crate::bff::cdr()?;
     let url = cdr.extensions_v1(route);
     let response = cdr.get(&url).send().await?;
@@ -29,24 +40,6 @@ async fn list(route: &str) -> Result<Option<Vec<String>>, ViewerError> {
     serde_json::from_str(&body)
         .map(Some)
         .map_err(|error| ViewerError::failed(tr_served(ServerMsg::ArchetypeListJson), error))
-}
-
-/// The stored ADL 1.4 archetype ids, ascending; `None` when the CDR keeps no
-/// archetypes.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
-/// [`ViewerError::Failed`] for a list that is not JSON strings.
-pub async fn list_adl14() -> Result<Option<Vec<String>>, ViewerError> {
-    list("definition/archetype/adl1.4").await
-}
-
-/// The stored ADL 2 archetype ids; `None` when the CDR keeps no archetypes.
-///
-/// # Errors
-/// The errors of [`list_adl14`].
-pub async fn list_adl2() -> Result<Option<Vec<String>>, ViewerError> {
-    list("definition/archetype/adl2").await
 }
 
 /// The path of the stored ADL 1.4 archetype `archetype_id` under the

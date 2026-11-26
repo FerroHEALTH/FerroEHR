@@ -18,7 +18,7 @@ use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::surface::definitions;
 
 use super::{ServerTab, Tabbed, load_tab, server_page};
-use crate::bff::integrity::{Rebuild, Scope, Verification, rebuild, verify};
+use crate::bff::integrity::{REBUILD, Rebuild, Scope, VERIFY, Verification, run};
 use crate::locale::console::ConsoleMsg;
 use crate::locale::{Msg, current, tr, tr_with};
 use crate::markup::{h, opt, t};
@@ -75,12 +75,12 @@ async fn read_integrity() -> Tabbed<Integrity> {
         let intent = posted.as_ref().map(crate::posted::Posted::intent);
         let ran = match intent.as_deref() {
             Some("verify") => Ran::Verified(
-                verify(&scope)
+                run::<Verification>(VERIFY, &scope)
                     .await
                     .map_err(|error| Refused::new(tr(ConsoleMsg::IntegrityVerifyRefused), error)),
             ),
             Some("rebuild") => Ran::Rebuilt(
-                rebuild(&scope)
+                run::<Rebuild>(REBUILD, &scope)
                     .await
                     .map_err(|error| Refused::new(tr(ConsoleMsg::IntegrityRebuildRefused), error)),
             ),
