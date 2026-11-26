@@ -16,6 +16,7 @@ mod serving;
 mod ssr_app;
 mod ssr_archetypes;
 mod ssr_assets;
+mod ssr_server_status;
 
 mod e2e_adl2;
 mod e2e_admin_ops;

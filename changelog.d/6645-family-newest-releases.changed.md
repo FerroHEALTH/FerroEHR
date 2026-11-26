@@ -1,0 +1,1 @@
+- The compose files, the hosted sandbox, the Helm chart and the deployment probes run FerroPIX 0.0.44 (with its chart 0.5.6) and FerroTERM 0.4.9, each pinned by digest; FerroBRIDGE 0.0.29 and FerroSMART 0.8.0 stay, as the newest releases. Neither new release changes a configuration key, and the chart takes the patch version 43.0.1.

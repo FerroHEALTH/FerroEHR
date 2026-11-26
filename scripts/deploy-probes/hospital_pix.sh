@@ -23,7 +23,7 @@ HP_CLINICAL="urn:oid:2.999.7.1"
 # The FerroPIX release of the PMIR leg, the quickstart's, pinned by digest: it
 # authenticates its ITI-93 sender (FerroPIX #655) and states every Patient's
 # `active` and links (FerroPIX #656).
-HP_FERROPIX_IMAGE="ghcr.io/ferrohealth/ferropix:0.0.43@sha256:94fa0f395de800e51f5dc34fb01c9f4d8443c2c4adaec1c22ce85b3f66dba3d9"
+HP_FERROPIX_IMAGE="ghcr.io/ferrohealth/ferropix:0.0.44@sha256:ce5fed1f5e96e9a15923804279c0c0e76fcdb5961961942859b99eb568ef9ba2"
 
 # Writes once per run, under `dir`, a test CA and the certificate both
 # instances serve their listener with (`localhost`, `127.0.0.1`): ITI-93 needs

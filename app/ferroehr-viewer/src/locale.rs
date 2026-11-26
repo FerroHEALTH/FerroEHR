@@ -333,6 +333,8 @@ messages! {
         SandboxDetails = "sandbox-details",
         /// `{ $count ->`
         SandboxGaps = "sandbox-gaps",
+        /// `; `, between two gaps the sandbox band names
+        SandboxGapSeparator = "sandbox-gap-separator",
         /// `This deployment must not hold real patient data.`
         SandboxNoGaps = "sandbox-no-gaps",
         /// `Sandbox`
