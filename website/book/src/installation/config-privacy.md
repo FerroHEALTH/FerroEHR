@@ -30,7 +30,7 @@ Both rules run on the write path, before anything is stored. A refusal is
 `422 Unprocessable Entity` with one `errors[]` entry per finding (sent when
 the request carries `Prefer: return=representation`),
 each naming the RM path and the rule that matched. **A refusal never echoes the
-offending value** — it would otherwise travel into the response body, the
+offending value**: it would otherwise travel into the response body, the
 access log and the traces, which is the leak the rule exists to prevent.
 
 ```toml
@@ -78,7 +78,7 @@ namespace. Every value that arrives from elsewhere, a client writing
 which is why declaring the namespace is the deployment's act.
 
 **Empty is the default, and it leaves the rule out of force.** A pseudonym
-namespace is a deployment fact — which service mints the tokens — and there is
+namespace is a deployment fact (which service mints the tokens) and there is
 no name a server could invent for an operator. Declaring one is the same act as
 turning the rule on. An EHR with no subject reference at all is unaffected
 either way: that is the default `EHR_STATUS` the openEHR REST API describes,
@@ -98,8 +98,8 @@ re-pseudonymising.
 
 ### Identified parties
 
-A party proxy inside clinical content — the composer, participations, the
-health care facility and the feeder-audit party slots — is governed by which
+A party proxy inside clinical content (the composer, participations, the
+health care facility and the feeder-audit party slots) is governed by which
 class it is:
 
 | | `name` | `identifiers` |
@@ -157,7 +157,7 @@ which is announced at boot with a warning naming what it permits.
 
 Cross-domain **cohort queries**: select a population in the demographic domain,
 resolve it to the EHRs whose `EHR_STATUS` subject names it, and run AQL over
-exactly those EHRs. A FerroEHR extension — no openEHR spec governs it. The wire contract and a
+exactly those EHRs. A FerroEHR extension; no openEHR spec governs it. The wire contract and a
 worked example are in [Querying with AQL](../querying-aql.md#cohort-queries-across-the-pseudonymisation-boundary).
 
 **Off until a predicate is bound.** Which demographic leaf may be selected on is
@@ -186,8 +186,8 @@ city = { archetype = "openEHR-DEMOGRAPHIC-ADDRESS.address.v1", node = "at0012", 
 
 ### The allow-list
 
-Exactly five keys are bindable — `city`, `postcode_area`, `sex`, `age_band` and
-`organisation` — and an unknown key is a **boot error**. Each binding carries
+Exactly five keys are bindable (`city`, `postcode_area`, `sex`, `age_band` and
+`organisation`), and an unknown key is a **boot error**. Each binding carries
 three fields:
 
 | Field | Description |
@@ -196,7 +196,7 @@ three fields:
 | `node` | The ELEMENT's `archetype_node_id` at-code, e.g. `at0012`. |
 | `kind` | How a caller's value is matched: `text` (exact, against `value/value`), `text_prefix` (prefix, `LIKE`-escaped), `coded` (exact, against `value/defining_code/code_string`), or `birth_date` (an inclusive age band in whole years, `40-49`). |
 
-`age_band` must be bound `birth_date`, and no other key may be — both halves are
+`age_band` must be bound `birth_date`, and no other key may be: both halves are
 boot errors, because a mismatch would bind a predicate that matches nothing
 while reporting an empty cohort.
 

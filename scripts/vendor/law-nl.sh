@@ -341,7 +341,7 @@ each one and names its 2024 clause (#5136).
 | §5, the content of a logged event | \`website/book/src/audit.md\` (the field-by-field table) | Every item the clause lists is mapped to the field of the access record that carries it, including the two a deployment must supply itself (\`purpose\`, \`legal_basis\`) |
 | Actor role | \`website/book/src/compliance/control-matrix.md\`, \`website/book/src/security/dpia.md\` | The access record carries the roles the caller held at access time, as FHIR \`agent.role\` and as a DICOM \`RoleIDCode\` |
 | Event content | \`website/book/src/compliance/control-matrix.md\`, \`website/book/src/security/dpia.md\`, \`website/book/src/security/records-of-processing.md\` | Per-domain access logging for reads and queries, aligned with this standard and EHDS Annex II 3.2 |
-| Retention | \`website/book/src/audit.md\`, \`website/book/src/compliance/control-matrix.md\`, \`website/book/src/security/dpia.md\` | The retention floor for the NL jurisdiction, which the Besluit vaststelling bewaartermijn logging binds to this standard |
+| Retention | \`website/book/src/ehds-logging.md\`, \`website/book/src/compliance/control-matrix.md\`, \`website/book/src/security/dpia.md\` | The retention floor for the NL jurisdiction, which the Besluit vaststelling bewaartermijn logging binds to this standard |
 
 The retention chain is followable without holding the standard, because the
 legal end of it is vendored: \`docs/law/nl/begz/\` (Art. 5 delegates the
