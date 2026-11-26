@@ -1,0 +1,147 @@
+{
+  "versions": [
+    {
+      "_type": "ORIGINAL_VERSION",
+      "commit_audit": {
+        "change_type": {
+          "_type": "DV_CODED_TEXT",
+          "value": "creation",
+          "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": {
+              "_type": "TERMINOLOGY_ID",
+              "value": "openehr"
+            },
+            "code_string": "249"
+          }
+        },
+        "committer": {
+          "_type": "PARTY_IDENTIFIED",
+          "identifiers": [
+            {
+              "_type": "DV_IDENTIFIER",
+              "issuer": "urn:example:basic-user",
+              "id": "__LOGIN:clinician__"
+            }
+          ]
+        }
+      },
+      "lifecycle_state": {
+        "_type": "DV_CODED_TEXT",
+        "value": "complete",
+        "defining_code": {
+          "_type": "CODE_PHRASE",
+          "terminology_id": {
+            "_type": "TERMINOLOGY_ID",
+            "value": "openehr"
+          },
+          "code_string": "532"
+        }
+      },
+      "attestations": [
+        {
+          "_type": "UPDATE_ATTESTATION",
+          "change_type": {
+            "_type": "DV_CODED_TEXT",
+            "value": "attestation",
+            "defining_code": {
+              "_type": "CODE_PHRASE",
+              "terminology_id": {
+                "_type": "TERMINOLOGY_ID",
+                "value": "openehr"
+              },
+              "code_string": "666"
+            }
+          },
+          "committer": {
+            "_type": "PARTY_IDENTIFIED",
+            "identifiers": [
+              {
+                "_type": "DV_IDENTIFIER",
+                "issuer": "urn:example:basic-user",
+                "id": "__LOGIN:clinician__"
+              }
+            ]
+          },
+          "reason": {
+            "_type": "DV_TEXT",
+            "value": "signed by the treating cardiologist"
+          },
+          "is_pending": false
+        }
+      ],
+      "data": {
+        "_type": "COMPOSITION",
+        "archetype_node_id": "openEHR-EHR-COMPOSITION.encounter.v1",
+        "archetype_details": {
+          "_type": "ARCHETYPED",
+          "archetype_id": {
+            "_type": "ARCHETYPE_ID",
+            "value": "openEHR-EHR-COMPOSITION.encounter.v1"
+          },
+          "rm_version": "1.2.0"
+        },
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "Cardiology outpatient letter"
+        },
+        "language": {
+          "_type": "CODE_PHRASE",
+          "terminology_id": {
+            "_type": "TERMINOLOGY_ID",
+            "value": "ISO_639-1"
+          },
+          "code_string": "en"
+        },
+        "territory": {
+          "_type": "CODE_PHRASE",
+          "terminology_id": {
+            "_type": "TERMINOLOGY_ID",
+            "value": "ISO_3166-1"
+          },
+          "code_string": "NL"
+        },
+        "category": {
+          "_type": "DV_CODED_TEXT",
+          "value": "event",
+          "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": {
+              "_type": "TERMINOLOGY_ID",
+              "value": "openehr"
+            },
+            "code_string": "433"
+          }
+        },
+        "composer": {
+          "_type": "PARTY_IDENTIFIED",
+          "name": "Demo cardiologist (synthetic)"
+        }
+      }
+    }
+  ],
+  "audit": {
+    "change_type": {
+      "_type": "DV_CODED_TEXT",
+      "value": "creation",
+      "defining_code": {
+        "_type": "CODE_PHRASE",
+        "terminology_id": {
+          "_type": "TERMINOLOGY_ID",
+          "value": "openehr"
+        },
+        "code_string": "249"
+      }
+    },
+    "committer": {
+      "_type": "PARTY_IDENTIFIED",
+      "identifiers": [
+        {
+          "_type": "DV_IDENTIFIER",
+          "issuer": "urn:example:basic-user",
+          "id": "__LOGIN:clinician__"
+        }
+      ]
+    }
+  }
+}

@@ -161,6 +161,82 @@
     ]
   },
 
+  "world": {
+    "parties": [
+      { "key": "organisation-hospital", "kind": "organisation", "file": "world/organisation-hospital.json" },
+      { "key": "organisation-lab", "kind": "organisation", "file": "world/organisation-lab.json" },
+      { "key": "group-cardiology", "kind": "group", "file": "world/group-cardiology.json" },
+      { "key": "group-emergency", "kind": "group", "file": "world/group-emergency.json" },
+      { "key": "agent-lab-engine", "kind": "agent", "file": "world/agent-lab-engine.json" },
+      { "key": "role-lab-feed", "kind": "role", "file": "world/role-lab-feed.json" },
+      { "key": "role-privacy-officer", "kind": "role", "file": "world/role-privacy-officer.json" },
+      { "key": "patient-01", "kind": "person", "file": "world/patient-01.json" },
+      { "key": "patient-02", "kind": "person", "file": "world/patient-02.json" },
+      { "key": "patient-03", "kind": "person", "file": "world/patient-03.json" },
+      { "key": "patient-04", "kind": "person", "file": "world/patient-04.json" },
+      { "key": "patient-05", "kind": "person", "file": "world/patient-05.json" },
+      { "key": "patient-06", "kind": "person", "file": "world/patient-06.json" }
+    ],
+    "versions": [
+      { "key": "organisation-hospital", "kind": "organisation", "file": "world/organisation-hospital.v2.json" }
+    ],
+    "relationships": [
+      { "key": "representation-guardian", "file": "world/representation-guardian.json" }
+    ],
+    "care_relationships": [
+      { "key": "care-patient-01", "ehr": 0, "file": "world/care-patient-01-cardiology.json" },
+      { "key": "care-patient-02", "ehr": 1, "file": "world/care-patient-02-cardiology.json", "ended": "world/care-patient-02-cardiology.ended.json" },
+      { "key": "care-patient-03", "ehr": 2, "file": "world/care-patient-03-emergency.json" }
+    ],
+    "access_policy": {
+      "first": "access/policy.v1.json",
+      "justified": [
+        { "ehr": 3, "purpose": "TREAT", "reason": "Second opinion requested by the ward (synthetic)" },
+        { "ehr": 4, "purpose": "ETREAT", "reason": "Unconscious on arrival at the emergency department (synthetic)" }
+      ],
+      "final": "access/policy.v2.json"
+    },
+    "ehr_access": [
+      { "ehr": 4, "file": "access/ehr-access-restriction.json" },
+      { "ehr": 5, "file": "access/ehr-access-opt-out.json" }
+    ],
+    "legal_marks": {
+      "restriction": { "ehr": 7, "composition": 1, "ground": "gdpr-18-1-a", "note": "accuracy contested by the person (synthetic)" },
+      "research_objection": { "ehr": 1, "ground": "GDPR Art. 21(6) (synthetic)" },
+      "access_delay_register": { "enabled": true, "categories": ["Laboratory-Reports"], "max_delay": "72h" },
+      "access_delay": { "ehr": 0, "composition": 1, "note": "held until the cardiologist has discussed the result (synthetic)" },
+      "retention_policies": [
+        { "kind": "EHR", "jurisdiction": "NL", "period": "P20Y", "anchor": "last_commit", "source": "WGBO art. 7:454 lid 3 (synthetic demo period)" },
+        { "kind": "COMPOSITION", "jurisdiction": "NL", "period": "P20Y", "anchor": "last_commit", "source": "WGBO art. 7:454 lid 3 (synthetic demo period)" }
+      ],
+      "retention_anchors": [
+        { "ehr": 2, "jurisdiction": "NL", "anchored_at": "1999-01-01T00:00:00Z" },
+        {
+          "ehr": 3,
+          "jurisdiction": "NL",
+          "anchored_at": "2001-01-01T00:00:00Z",
+          "hold_at": "2026-01-15T00:00:00Z",
+          "hold_ground": "litigation hold (synthetic)"
+        }
+      ],
+      "retention_holds": [
+        { "ehr": 2, "composition": 1}
+      ]
+    },
+    "attestations": [
+      { "ehr": 0, "file": "records/attested-signed.json" },
+      { "ehr": 1, "file": "records/attested-pending.json" }
+    ],
+    "adl14_archetypes": [
+      "corpus/archetypes/ckm/adl14/openEHR-EHR-OBSERVATION.blood_pressure.v2.adl",
+      "corpus/archetypes/ckm/adl14/openEHR-EHR-OBSERVATION.body_temperature.v2.adl",
+      "corpus/archetypes/ckm/adl14/openEHR-EHR-OBSERVATION.pulse.v2.adl",
+      "corpus/archetypes/ckm/adl14/openEHR-EHR-OBSERVATION.respiration.v2.adl",
+      "corpus/archetypes/ckm/adl14/openEHR-EHR-OBSERVATION.body_weight.v2.adl"
+    ],
+    "logs": { "patient_ehr": 0, "min_review_ehrs": 6}
+  },
+
   "directory": {
     "folder": "folders/episodes.json",
     "ehrs": [0, 1, 2, 3, 4, 5, 6, 7]

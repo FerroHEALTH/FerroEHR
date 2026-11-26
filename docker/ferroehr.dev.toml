@@ -132,6 +132,10 @@ password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl
 # cases: authenticated, but every write operation is refused by the RBAC
 # read-only gate.
 [[auth.basic.users]]
+user = "ferroehr-patient"
+password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
+
+[[auth.basic.users]]
 user = "ferroehr-readonly"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
 
@@ -161,6 +165,11 @@ key = "ferroehr"
 user = "ferroehr-admin"
 key_issuer = "urn:example:basic-user"
 key = "ferroehr-admin"
+
+[[authz.party_binding.basic_user]]
+user = "ferroehr-patient"
+key_issuer = "urn:example:basic-user"
+key = "ferroehr-patient"
 
 [[authz.party_binding.basic_user]]
 user = "ferroehr-readonly"
