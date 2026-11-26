@@ -61,7 +61,7 @@ no reviewer, and with the admin API off the page says so.
 ## Integrity
 
 The **Integrity** tab shows the evidence that the log is whole, as described
-on [Audit trail](../audit.md#seals-checkpoints-and-the-transfer-of-a-log):
+on [Tamper evidence, seals and retrieval](../audit-integrity.md#seals-checkpoints-and-the-transfer-of-a-log):
 
 - the newest signed checkpoint, with its digest, algorithm, signer and
   signature (`GET …/admin/access-log/checkpoint`), and **Sign a checkpoint
