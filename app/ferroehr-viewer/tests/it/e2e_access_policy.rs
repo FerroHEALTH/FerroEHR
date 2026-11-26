@@ -15,7 +15,7 @@
     dead_code,
     reason = "the shared `common` harness is compiled into every journey binary; each one drives a different subset of it"
 )]
-//! End-to-end journey over Access policy: the policy scripts/ui-e2e.sh
+//! End-to-end journey over Access policy: the policy the demo seed
 //! commits twice, read by section, its versions, an older version opened
 //! read-only, and a save over a version that is no longer the newest, which
 //! the CDR refuses with `412`.
@@ -42,11 +42,11 @@ async fn admin_reads_the_policy_its_versions_and_a_stale_save_is_refused() {
     login_basic_as(&h, &user, &pass).await;
 
     common::follow_nav(&h, "/access-policy").await;
-    wait_main_contains(&h, "Concealed confidentialities").await;
+    wait_main_contains(&h, "Classifications").await;
     let text = main_text(&h).await;
     for words in [
-        "E2E access policy",
-        "very restricted",
+        "FerroEHR Demo Hospital access policy",
+        "Mental health notes",
         "ACCESS_POLICY, version 2",
     ] {
         assert!(text.contains(words), "the policy says {words:?}: {text}");
