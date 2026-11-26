@@ -83,7 +83,7 @@ may do what with which kinds of data (each an `ACCESS_DIRECTIVE` of kind
 `controller_rule`, EHDS Art. 11(3)), the `catalogue` of named directives a
 patient can accept by reference, such as an IHE BPPC policy, and the
 `log_restrictions` of the access log's subject view your Member State's law
-lays down under EHDS Art. 9(3) ([Audit](audit.md#restricting-the-subject-view-ehds-art-93)).
+lays down under EHDS Art. 9(3) ([Audit](access-log.md#restricting-the-subject-view-ehds-art-93)).
 It is an `ACCESS_POLICY` of FerroEHR's draft access control package, written
 against the default archetype `openEHR-EHR-ACCESS_POLICY.controller.v1`,
 which every boot stores, or against one of your own. The default floor
@@ -109,7 +109,7 @@ one, nothing is tightened.
   step 4, checked before any rule, the rules are step 5, a classification
   gives the data it covers its sensitivities (step 6), and
   `care_relationship_required` is step 7 of the
-  [decision procedure](security.md#access-directives).
+  [decision procedure](access-control.md#access-directives).
   A `relationship_grace` that is no ISO 8601 duration admits nothing after a
   care relationship ends.
 
@@ -460,7 +460,7 @@ Four rules, as you write them in the policy body (a role code of
 
 A rule whose `emergency_override` is true is lifted for a caller that
 invokes an emergency
-[justification](security.md#justified-access-outside-the-care-relationships)
+[justification](access-control.md#justified-access-outside-the-care-relationships)
 with a reason, and the access record names the rule. The access record of a refusal names the
 rule by its uid, its first identifier or its position in `rules`, and a
 `legal obligation` ground carrying the rule's `legal_grounds`. The `403`

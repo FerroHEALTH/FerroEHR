@@ -358,7 +358,7 @@ its own. Configure three things:
 3. **The SCIM client.** Your authorization server issues the provisioning
    client an access token by the client credentials grant (RFC 6749 §4.4), or
    in exchange for a client assertion (RFC 7523 §2.2). Grant the client
-   [`scim_provision`](installation/config-auth.md#authscim) in the CDR with
+   [`scim_provision`](installation/config-scim.md#authscim) in the CDR with
    the `binding_issuer` of step 2. The SCIM client sends the key as
    `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier`
    (RFC 7644).
@@ -464,7 +464,7 @@ Never bind on `email`, `phone_number`, `preferred_username`, `name`, `upn` or
 An issuer can let a professional with no party work at their first login:
 FerroEHR then creates a provisional `PERSON` from the access token and binds
 the login to it, as
-[the configuration reference](installation/config-auth.md#just-in-time-creation)
+[the configuration reference](installation/config-authz.md#just-in-time-creation)
 describes. It is off until an administrator writes a `create_at_login`
 grant for the issuer in the CDR, whose admission conditions read the
 claims below

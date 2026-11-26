@@ -46,10 +46,10 @@ not this build's) which lets the runtime role hold no DDL rights. Something
 else then runs `ferroehr db migrate` under a migrator role first. That check
 still reads every schema's migration state, so a least-privilege deployment
 also sets `database.migrate_url` to the credential that can. Both postures are laid
-out in [Operations → Applying migrations](../operations.md#applying-migrations).
+out in [Operations → Applying migrations](../database-operations.md#applying-migrations).
 v6 needs a new, empty database: it does not upgrade a database a v5 release
 prepared, and you move the records with the archive dump and load
-([Operations → Upgrading from v5 to v6](../operations.md#upgrading-from-v5-to-v6)).
+([Operations → Upgrading from v5 to v6](../upgrades.md#upgrading-from-v5-to-v6)).
 
 **A deployment declares what it may hold.** The top-level
 `deployment.profile` key is `sandbox` by default: the server starts whatever

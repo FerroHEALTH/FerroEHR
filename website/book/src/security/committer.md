@@ -30,7 +30,7 @@ identifier the binding matches.
 No openEHR specification governs how a login is matched to a party, when the
 match is made, or what happens when none matches. That is FerroEHR's own
 design, configured under
-[`[authz.party_binding]`](../installation/config-auth.md#authzparty_binding).
+[`[authz.party_binding]`](../installation/config-authz.md#authzparty_binding).
 
 ## The committer for each kind of caller
 
@@ -162,7 +162,7 @@ governs who may name whom as composer.
 | An import of a version whose committer names a local party, from a system no `creating_system` element of the importer's import grant names | `403` |
 
 A login the binding cannot use is refused before any commit; the codes are
-under [How a login is looked up](../installation/config-auth.md#how-a-login-is-looked-up).
+under [How a login is looked up](../installation/config-authz.md#how-a-login-is-looked-up).
 
 ### The deviation from ITS-REST
 
@@ -196,7 +196,7 @@ how the caller was bound: `binding` (`bound`, `provisional`, `external`,
 `organisation`, `system`, `self` or a `refused-*` code), the party, its
 groups, the provider, the actor chain of a delegated token and the client. The
 values and their renderings are under
-[The binding outcome](../audit.md#the-binding-outcome).
+[The binding outcome](../ehds-logging.md#the-binding-outcome).
 
 ## How a party gets its login identifier
 
@@ -210,7 +210,7 @@ themself: no role, `PARTY_SELF` as the committer, and only the EHRs whose
 subject is that `PERSON` (#6106). The identifier gets there in one of four ways:
 
 1. **SCIM.** Your identity provider provisions the person through
-   [FerroEHR's SCIM 2.0 endpoint](../installation/config-auth.md#authscim) at
+   [FerroEHR's SCIM 2.0 endpoint](../installation/config-scim.md#authscim) at
    `/scim/v2/`, sending the key in
    `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier`.
    FerroEHR creates the `PERSON` and its professional `ROLE` in one

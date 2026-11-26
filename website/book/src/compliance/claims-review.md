@@ -189,7 +189,7 @@ the deployment posture too; it names `GET /management/status` now.
 - **FOSSA**: no text in scope names FOSSA, a FOSSA badge or a FOSSA lane after
   its removal in this release.
 - **The patient scope and `patient_namespace`**: the
-  [`[authz.abac]`](../security.md#a-patients-own-ehr) table and its
+  [`[authz.abac]`](../access-control.md#a-patients-own-ehr) table and its
   patient-scope list state the EHR-only queries, the direct-route refusals and
   the namespace rule as they ship; the [security](../security.md) page's
   fail-closed box is unchanged by them.
@@ -201,7 +201,7 @@ the deployment posture too; it names `GET /management/status` now.
   sealed-identifier section, the operations guide and the admin API page state
   the per-version rows, the sealed write response, the plaintext refusal on
   import and load, and the erasure of sealed rows.
-- **The audit chain**: the [audit trail](../audit.md#tamper-evidence) page
+- **The audit chain**: the [audit trail](../audit-integrity.md#tamper-evidence) page
   states both digest versions and the downgrade finding.
 - **AQL**: [querying with AQL](../querying-aql.md) and the AQL engine concept
   page state the row rules and say AQL 1.1.0 does not define them.
@@ -402,7 +402,7 @@ accepted by name.
   indefinite number of natural persons". The settings take role entries
   (`role:nurse`), so one entry covers a whole role, and the admin role can
   always reach the record to write them
-  ([per-EHR access control](../security.md#per-ehr-access-control-ehr_access)).
+  ([per-EHR access control](../access-control.md#per-ehr-access-control-ehr_access)).
 - **Restriction of processing.** A record under restriction is refused on every
   read path. The controller sets the mark under GDPR Art. 18; it is a
   restriction the organisation decides on, not one the software imposes

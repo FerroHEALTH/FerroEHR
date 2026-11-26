@@ -202,7 +202,7 @@ to be handled and to receive security updates;"
   notes, and the running server states it on its boot banner, in
   `ferroehr --version`, under `support` in `GET /management/info` and as
   `support.status` in `GET /management/status`
-  ([how long the version you pinned is supported](../operations.md#how-long-the-version-you-pinned-is-supported)).
+  ([how long the version you pinned is supported](../upgrades.md#how-long-the-version-you-pinned-is-supported)).
   A release itself is supported only while it is the newest.
 - **The type of support:** Cadasto B.V. handles vulnerabilities in FerroEHR,
   and the security update ships in the newest release, as a security-only
@@ -264,7 +264,7 @@ data;"
 - **Upgrades.** A release can carry database migrations. They are append-only,
   and a rolling upgrade stays compatible with the previous schema for the
   window in which both versions run; take a backup first
-  ([upgrades](../operations.md#upgrades)).
+  ([upgrades](../upgrades.md)).
 - **Changes to the source.** A binary or image built from modified source is
   not a Cadasto B.V. release: its build provenance and signatures do not
   verify, and the risk assessment of the release does not describe it.
@@ -281,7 +281,7 @@ Subscribe to the release feed
 security advisories; the server does not look for newer releases itself.
 Verify the new release ([verifying releases](../verifying-releases.md)), take
 a backup, then deploy it by digest and let it apply its migrations
-([upgrades](../operations.md#upgrades)). On Kubernetes that is a
+([upgrades](../upgrades.md)). On Kubernetes that is a
 `helm upgrade` to the chart version that ships the new release
 ([Kubernetes & Helm, upgrades](../installation/kubernetes.md#upgrades)).
 

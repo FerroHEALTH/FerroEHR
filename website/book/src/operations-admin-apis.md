@@ -268,11 +268,11 @@ anything.
 | `GET {ext}/admin/access-delay` | `?ehr_id=…` | **200**: the access-delay register, newest hold first, each with its `basis` (`category` or `professional`), its end and its release |
 | `POST {ext}/admin/access-delay/release` | `{"ehr_id": "…", "vo_id": "…"}` | **204**: every hold of the composition still in force is released, and the person reads it |
 | `POST {ext}/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/access-delay/release` | none | **204**: the treating professional's release from the clinical surface, with the checks of a write to that EHR; **403** to a request that may be the person's |
-| `POST {ext}/admin/access-log/erase` | `{"uid": "…", "grounds": [DV_CODED_TEXT, …]}` | **200**: the `ACCESS_LOG_TOMBSTONE` that replaced the access-log entry, for an erasure a law orders before the entry's retention ends; it keeps the entry's uid, `system_id`, `time_recorded` and chain link and names these grounds ([Retention, and who chooses it](audit.md#retention-and-who-chooses-it)); **409** for a tombstone or while the local audit store is off |
-| `GET {ext}/admin/access-log` | `?ehr_id=…&from=…&to=…&outcome=…&offset=…&fetch=…` and the other filters | **200**: the access log's records across EHRs, newest first, in the full view ([Reading the access log over ITS-REST](audit.md#reading-the-access-log-over-its-rest)); the read writes its own access-log entry |
+| `POST {ext}/admin/access-log/erase` | `{"uid": "…", "grounds": [DV_CODED_TEXT, …]}` | **200**: the `ACCESS_LOG_TOMBSTONE` that replaced the access-log entry, for an erasure a law orders before the entry's retention ends; it keeps the entry's uid, `system_id`, `time_recorded` and chain link and names these grounds ([Retention, and who chooses it](ehds-logging.md#retention-and-who-chooses-it)); **409** for a tombstone or while the local audit store is off |
+| `GET {ext}/admin/access-log` | `?ehr_id=…&from=…&to=…&outcome=…&offset=…&fetch=…` and the other filters | **200**: the access log's records across EHRs, newest first, in the full view ([Reading the access log over ITS-REST](access-log.md#reading-the-access-log-over-its-rest)); the read writes its own access-log entry |
 | `GET {ext}/admin/access-log/seals` | `?from_id=…&to_id=…` | **200**: `seals`, each window that covers an entry id of the span, less than 10000 apart, with its `window_no`, `first_id`, `last_id`, `entries`, `previous_digest`, `digest` and `folded`; **400** for a span of 10000 or longer |
 | `GET {ext}/admin/access-log/checkpoint` | `?sequence=…`? | **200**: the newest stored `ACCESS_LOG_CHECKPOINT`, or the one at `sequence`; **404** when none is stored there |
-| `POST {ext}/admin/ehr-access` | `{"ehr_id": "…", "preceding_version_uid": "…", "settings": {…} or null}` | **200** `{"ehr_id", "version_uid"}`: the `EHR_ACCESS` settings are committed on the person's instruction as a new version over `preceding_version_uid`; they hold the EHDS Art. 8 restriction and the Art. 10 opt-out as `restriction` and `opt_out` directives ([Security](security.md#restriction-of-access-by-health-professionals-ehds-art-8)); **400** for settings that do not parse; **422** for settings that break an invariant of the draft model, a restricted object id that names no versioned object, or an `opt_out` directive while `[authz.grants] allowed` does not allow `access_service`; **412** when `preceding_version_uid` is not the current version |
+| `POST {ext}/admin/ehr-access` | `{"ehr_id": "…", "preceding_version_uid": "…", "settings": {…} or null}` | **200** `{"ehr_id", "version_uid"}`: the `EHR_ACCESS` settings are committed on the person's instruction as a new version over `preceding_version_uid`; they hold the EHDS Art. 8 restriction and the Art. 10 opt-out as `restriction` and `opt_out` directives ([Security](access-control.md#restriction-of-access-by-health-professionals-ehds-art-8)); **400** for settings that do not parse; **422** for settings that break an invariant of the draft model, a restricted object id that names no versioned object, or an `opt_out` directive while `[authz.grants] allowed` does not allow `access_service`; **412** when `preceding_version_uid` is not the current version |
 | `GET {ext}/admin/ehr-access` | `?ehr_id=…` | **200** `{"ehr_id", "versions": [{"version_uid", "settings"}]}`: every `EHR_ACCESS` version, newest first, so the person's lifted restrictions and reversed opt-outs stay readable |
 | `POST {ext}/admin/ehr-access/repair` | `{"ehr_id": "…", "settings": {…}}` | **200** `{"ehr_id", "version_uid"}`: the `EHR_ACCESS` of an EHR held closed by settings that do not parse is committed again with these settings, which must parse; **409** for an EHR that is not held |
 
@@ -311,11 +311,11 @@ objection](compliance/retention.md).
 An access restriction is not a restriction of processing: it limits what a
 health professional reaches and nothing else, and it is invisible to them. What
 it changes is on [restriction of access by health
-professionals](security.md#restriction-of-access-by-health-professionals-ehds-art-8).
+professionals](access-control.md#restriction-of-access-by-health-professionals-ehds-art-8).
 
 An access delay is the opposite direction: it withholds a composition from
 the person, never from a professional. What it changes is on [delayed access
-by the person](security.md#delayed-access-by-the-person-ehds-art-33).
+by the person](access-control.md#delayed-access-by-the-person-ehds-art-33).
 
 ## Re-keying a professional's binding key
 
@@ -335,7 +335,7 @@ binding in the same commit, and one access record carries both keys. The
 route answers **403** when the new key is the requesting administrator's own
 login, **409** when the `PERSON` carries no key of that issuer or the new
 key is already bound to another party, and **404** for an unknown or
-deleted `PERSON`. The [party mapping](installation/config-auth.md#the-party-mapping)
+deleted `PERSON`. The [party mapping](installation/config-authz.md#the-party-mapping)
 says which parties are protected.
 
 ## Storage integrity

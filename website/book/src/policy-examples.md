@@ -19,7 +19,7 @@ on [Default demographic definitions](installation/default-demographic-definition
 records both, identified by their provider identifier. Neither is a policy
 party, so any demographic writer may create them.
 
-### A system client
+## A system client
 
 A laboratory relay commits laboratory results into EHRs at one facility.
 First its `AGENT`, `POST /demographic/agent`:
@@ -231,7 +231,7 @@ relationship goes in this second version.
 }
 ```
 
-### A backend client and a demographic client
+## A backend client and a demographic client
 
 A reporting job queries every EHR with a `system/aql-*` scope, and a master
 patient index reads and writes persons through the DEMOGRAPHIC API. Neither
@@ -314,7 +314,7 @@ through the same client holds the person's own grants, never the client's.
 To withdraw it, end the `ROLE`'s `time_validity` or delete the `ROLE`
 ([Ending a grant](#ending-a-grant)).
 
-### A migration
+## A migration
 
 A migration is a system client like any other: its `AGENT` is written as
 above, and its `ROLE` holds the import and export operations. Here a job
@@ -410,7 +410,7 @@ system's `creating_system_id`; otherwise an extract naming a local party is
 refused.
 When the night ends the grant holds no longer, with no change to anything.
 
-### A federation partner
+## A federation partner
 
 A partner organisation's professionals read patient summaries under a
 data-sharing agreement. The partner is an `ORGANISATION` that carries a
@@ -541,7 +541,7 @@ accessor, here `person`. Each term is an element whose `name` is its
 }
 ```
 
-### A privileged role
+## A privileged role
 
 A professional covers a colleague's access-log reviews for one week. The
 grant is a `ROLE` of the privileged template performed by the professional's
@@ -608,7 +608,7 @@ configuration grant those.
 }
 ```
 
-### A scribe composing for physicians
+## A scribe composing for physicians
 
 A scribe records the notes the physicians of the same provider dictate. The
 grant is a `ROLE` of the privileged template, version `1.0.1`, whose kind
@@ -664,7 +664,7 @@ commits names the physician as its composer, and the committer is the scribe.
 
 Allow the operation by name: `[authz.grants] allowed = ["commit_composition", "compose_for"]`.
 
-### Just-in-time admission
+## Just-in-time admission
 
 A first login of a person no party carries creates a provisional `PERSON`
 only when a `create_at_login` grant admits it. The grant is a `ROLE` like
@@ -774,9 +774,9 @@ The next first login of that tenant that meets both conditions creates its
 `PERSON`, on every replica and with no restart. To stop creating, end the
 `ROLE` as below; a `PERSON` already created stays. The configuration keeps
 only how the issuer's tokens are read
-([Just-in-time creation](installation/config-auth.md#just-in-time-creation)).
+([Just-in-time creation](installation/config-authz.md#just-in-time-creation)).
 
-### Ending a grant
+## Ending a grant
 
 To end a grant, an administrator commits a new version of the `ROLE` whose
 `time_validity` ends before today (an upper bound of yesterday, or of today

@@ -37,7 +37,7 @@ describes a partner's professional. Which sensitivities a caller may read
 and which purposes it may declare are rules of the access policy too, never
 elements of a capability. A SCIM client writes these `ROLE`s from a User's
 `roles`, within the roles its grant admits
-([SCIM roles](installation/config-auth.md#roles)), so your identity
+([SCIM roles](installation/config-scim.md#roles)), so your identity
 provider assigns roles and the access policy says what each may do.
 
 **Organisation types.** An `ORGANISATION` whose `name` is a `DV_CODED_TEXT`
@@ -300,7 +300,7 @@ what the care relationships say.
 - **Deactivation** (`active = false`, RFC 7643 §4.1.1) writes an `inactive`
   version of the `PERSON` that keeps every care relationship, whoever wrote
   it: the ADT system's rosters and the memberships of care-team Groups. Plain
-  Group memberships are dropped ([Groups](installation/config-auth.md#groups)).
+  Group memberships are dropped ([Groups](installation/config-scim.md#groups)).
   **Reactivation** (`active = true`) restores the login, and the care
   relationships are as they were.
 - **Deletion** writes a logical `deleted` version of the `PERSON` and its

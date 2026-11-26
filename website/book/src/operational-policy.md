@@ -258,7 +258,7 @@ in the element's `name`:
 | `target_kind` | On `write_care_relationship`: `PERSON`, `ROLE`, `GROUP` or `ORGANISATION`, a kind of care relationship target the grant writes; none named means none written |
 | `acts_for` | On a `PARTY_RELATIONSHIP`: the source acts for the target |
 | `represents` | On a `PARTY_RELATIONSHIP`: the source represents the target, the subject, on the subject's own record ([Representatives](caller-facts.md#representatives)); it makes no policy party |
-| `role` | A `DV_TEXT`: a role a `hold_roles` grant gives, or a role code a `scim_provision` grant lets its client assign its Users ([SCIM roles](installation/config-auth.md#roles)) |
+| `role` | A `DV_TEXT`: a role a `hold_roles` grant gives, or a role code a `scim_provision` grant lets its client assign its Users ([SCIM roles](installation/config-scim.md#roles)) |
 | `scope` | A `DV_TEXT`: a SMART scope a `hold_scopes` grant gives |
 | `login_issuer` | A text or `DV_URI`: a token issuer whose first logins a `create_at_login` grant admits |
 | `admit_idp` | A text: an identity provider an admitted login comes from |
@@ -374,7 +374,7 @@ restriction or an opt-out is not visible to the caller (EHDS Art. 8). Every
 other refusal answers `403` and names its code. The access record of every
 refusal names its code, the step that refused and the directive or policy of
 that step, and the record of an admitted access names the grounds it rested
-on ([The openEHR access-log entry](audit.md#the-openehr-access-log-entry)).
+on ([The openEHR access-log entry](access-log.md#the-openehr-access-log-entry)).
 
 ### What the grants decide
 
@@ -461,7 +461,7 @@ under its `commit_composition` grants and exports under its
 caller outside the administrator role that holds a `read_subject_audit`
 grant, for one subject at a time: the `patient` parameter names exactly one
 subject, and without it the call is `403`
-([Audit trail](audit.md#retrieving-audit-records-iti-81)).
+([Audit trail](audit-integrity.md#retrieving-audit-records-iti-81)).
 
 **Acting as an access service.** A caller with an `access_service` grant is
 an EHDS Art. 10 access service: an EHR whose person opted out reads as
@@ -470,7 +470,7 @@ emergency justification of the access policy with a reason and acts for no
 person (Art. 10(2)).
 While `[authz.grants] allowed` does not allow `access_service`, recording an
 opt-out is refused with `422`, since it would hold for nobody
-([Opt-out from the access services](security.md#opt-out-from-the-access-services-ehds-art-10)).
+([Opt-out from the access services](access-control.md#opt-out-from-the-access-services-ehds-art-10)).
 
 A role a token names never grants any of these four: each comes from its
 grant alone, under the grant ceiling. The privileged role of
