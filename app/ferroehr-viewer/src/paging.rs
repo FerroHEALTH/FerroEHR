@@ -35,15 +35,18 @@ pub enum Listing {
     Contributions,
     /// The audit log.
     Audit,
+    /// The subjects in a carer's care.
+    CareOfCarer,
 }
 
 impl Listing {
     /// Every listing.
-    pub const ALL: [Self; 4] = [
+    pub const ALL: [Self; 5] = [
         Self::Ehrs,
         Self::Compositions,
         Self::Contributions,
         Self::Audit,
+        Self::CareOfCarer,
     ];
 
     /// The listing's key in its cookie's name and in the pager's post.
@@ -54,6 +57,7 @@ impl Listing {
             Self::Compositions => "compositions",
             Self::Contributions => "contributions",
             Self::Audit => "audit",
+            Self::CareOfCarer => "care-of-carer",
         }
     }
 

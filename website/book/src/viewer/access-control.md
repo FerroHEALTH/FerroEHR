@@ -95,3 +95,36 @@ A party page marks a policy party under **Policy party**: the client the
 party binds, and the grants its roles carry.
 
 ![Roles and grants](img/grants/grants.png)
+
+## Care relationships
+
+A care relationship says that a professional, a care team or a unit cares
+for a person, for a period ([Caller facts: roles and care
+relationships](../operational-policy.md#caller-facts-roles-and-care-relationships)).
+The viewer reads them from the CDR's care relationship resources under
+`{ext}`, and the CDR decides for each subject what you may see: a relationship
+you may not read is left out, or the page shows the CDR's refusal.
+
+- **An EHR's Care tab** lists the care relationships of the EHR's subject
+  (`GET {ext}/care_relationship?subject_id=&subject_namespace=`): the carer,
+  the care role with its code and terminology, the period and the path
+  (direct, or through a team). It shows the live ones today; **Ended ones
+  too** and **Live on** ask for more.
+- **A party's Care page** (from **Care relationships** on its Overview) shows,
+  for a `PERSON`, the same list for the subject it is
+  (`GET {ext}/demographic/person/{id}/care_relationship`) and the form that
+  adds one. For every party it lists the subjects in its care
+  (`GET {ext}/care_relationship?carer=`), a page at a time.
+- **A relationship's page** shows its facts and every version with who
+  committed it and when. With a `write_care_relationship` grant, or as an
+  administrator, you change its role or period, **End today** (its period
+  closes today), or **Delete** one written in error. Each write names the
+  version you read in `If-Match`, and a refusal is shown in the CDR's words.
+
+To add one, give the carer's party id and kind, the care role (the
+`HL7_ParticipationType` codes are offered; another terminology is written as
+`terminology|code`), an identifier the provider's `ORGANISATION` carries, and
+the period. The CDR checks the role against the value set the access policy
+binds.
+
+![A party's care relationships](img/parties/party-care.png)

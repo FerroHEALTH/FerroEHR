@@ -20,6 +20,7 @@ mod e2e_access_policy;
 mod e2e_adl2;
 mod e2e_admin_ops;
 mod e2e_audit;
+mod e2e_care;
 mod e2e_browse;
 mod e2e_chart;
 mod e2e_composition;

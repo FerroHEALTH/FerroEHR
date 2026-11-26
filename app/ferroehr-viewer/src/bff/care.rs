@@ -12,14 +12,11 @@
 //! these resources: FerroEHR's own design over its draft access control
 //! package.
 
-use crate::bff::grants::{Code, PartyRef, Validity};
+use crate::bff::grants::{PartyRef, Validity};
 use crate::bff::wire::VersionEntry;
 use crate::error::ViewerError;
 use crate::locale::policy::PolicyMsg;
 use crate::locale::tr;
-
-/// The most relationships of a carer one page reads by default.
-pub const CARER_PAGE: u32 = crate::bff::PAGE_SIZE;
 
 /// A care role: its rubric, its code and its terminology.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -151,19 +148,23 @@ pub async fn fetch_of_person(person: String, span: Span) -> Result<Vec<CareRow>,
 }
 
 /// One page of the relationships that reach a carer
-/// (`GET care_relationship?carer=`), at `offset`.
+/// (`GET care_relationship?carer=`), `fetch` of them from `offset`.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)); [`ViewerError::Failed`]
 /// when the answer is not a JSON list.
-pub async fn fetch_of_carer(carer: String, offset: u32) -> Result<Vec<CareRow>, ViewerError> {
+pub async fn fetch_of_carer(
+    carer: String,
+    offset: u32,
+    fetch: u32,
+) -> Result<Vec<CareRow>, ViewerError> {
     let cdr = crate::bff::cdr()?;
     let url = with_query(
         cdr.extensions_v1("care_relationship"),
         &[
             ("carer", carer),
             ("offset", offset.to_string()),
-            ("fetch", CARER_PAGE.to_string()),
+            ("fetch", fetch.to_string()),
         ],
     );
     parse_list(&cdr.get(&url).accept("application/json").ok().await?.body)
@@ -321,14 +322,19 @@ fn coded(rubric: &str, code: &str, terminology: &str) -> serde_json::Value {
               draft access control package"
 )]
 fn interval(period: &Validity) -> serde_json::Value {
-    let mut value = serde_json::json!({ "_type": "DV_INTERVAL",
-        "lower_unbounded": period.lower.is_none(), "upper_unbounded": period.upper.is_none() });
+    let mut object = serde_json::Map::new();
+    object.insert("_type".to_owned(), "DV_INTERVAL".into());
     for (key, bound) in [("lower", &period.lower), ("upper", &period.upper)] {
         if let Some(bound) = bound {
-            value[key] = serde_json::json!({ "_type": "DV_DATE", "value": bound });
+            object.insert(
+                key.to_owned(),
+                serde_json::json!({ "_type": "DV_DATE", "value": bound }),
+            );
         }
     }
-    value
+    object.insert("lower_unbounded".to_owned(), period.lower.is_none().into());
+    object.insert("upper_unbounded".to_owned(), period.upper.is_none().into());
+    serde_json::Value::Object(object)
 }
 
 /// The `under_care_of` `PARTY_RELATIONSHIP` a new care relationship is.
@@ -376,10 +382,11 @@ pub fn new_document(care: &NewCare) -> String {
 pub fn changed_document(body: &str, role: &Role, period: &Validity) -> Result<String, ViewerError> {
     let mut value: serde_json::Value = serde_json::from_str(body)
         .map_err(|error| ViewerError::failed(tr(PolicyMsg::CareJson), error))?;
-    value
+    let object = value
         .as_object_mut()
-        .ok_or_else(|| ViewerError::Internal(tr(PolicyMsg::CareJson)))?
-        .remove("uid");
+        .ok_or_else(|| ViewerError::Internal(tr(PolicyMsg::CareJson)))?;
+    object.remove("uid");
+    object.insert("time_validity".to_owned(), interval(period));
     if let Some(items) = value
         .pointer_mut("/details/items")
         .and_then(serde_json::Value::as_array_mut)
@@ -389,12 +396,14 @@ pub fn changed_document(body: &str, role: &Role, period: &Validity) -> Result<St
                 .pointer("/name/defining_code/code_string")
                 .and_then(serde_json::Value::as_str)
                 == Some("care_role");
-            if named_role {
-                item["value"] = coded(&role.rubric, &role.code, &role.terminology);
+            if let Some(element) = item.as_object_mut().filter(|_| named_role) {
+                element.insert(
+                    "value".to_owned(),
+                    coded(&role.rubric, &role.code, &role.terminology),
+                );
             }
         }
     }
-    value["time_validity"] = interval(period);
     Ok(value.to_string())
 }
 
@@ -486,15 +495,6 @@ fn care_row(value: &serde_json::Value) -> CareRow {
     }
 }
 
-/// A care role as the access terminology's code reads it, for a form.
-#[must_use]
-pub fn role_code(role: &Role) -> Code {
-    Code {
-        rubric: role.rubric.clone(),
-        code: role.code.clone(),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::{CarePath, NewCare, Role, Span, changed_document, new_document, parse_list};
@@ -529,7 +529,10 @@ mod tests {
         assert_eq!("p1", row.subject.id);
         assert_eq!("ATND", row.role.code);
         assert_eq!("HL7_ParticipationType", row.role.terminology);
-        assert_eq!(("urn:oid:2.999.7.9".to_owned(), "dev".to_owned()), row.provider);
+        assert_eq!(
+            ("urn:oid:2.999.7.9".to_owned(), "dev".to_owned()),
+            row.provider
+        );
         assert_eq!(Some("2026-01-01".to_owned()), row.period.lower);
         assert_eq!(None, row.period.upper);
         assert_eq!(CarePath::Direct, row.path());
@@ -570,6 +573,6 @@ mod tests {
             all: true,
         };
         assert_eq!(2, span.query().len());
-        assert!(Span::default().query().is_empty());
+        assert_eq!(0, Span::default().query().len());
     }
 }

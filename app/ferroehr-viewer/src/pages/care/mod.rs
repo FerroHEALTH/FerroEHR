@@ -11,6 +11,7 @@
 //! on its own page, and deleted there when it was written in error. No
 //! openEHR specification governs these pages: our own design.
 
+pub mod party;
 pub mod relationship;
 
 use ferrohealth_ui::html::Html;
@@ -147,7 +148,10 @@ pub fn period_words(period: &Validity) -> String {
     tr_with(
         PolicyMsg::GrantsBetween,
         &[
-            ("from", period.lower.clone().unwrap_or_else(|| open.clone()).into()),
+            (
+                "from",
+                period.lower.clone().unwrap_or_else(|| open.clone()).into(),
+            ),
             ("to", period.upper.clone().unwrap_or(open).into()),
         ],
     )

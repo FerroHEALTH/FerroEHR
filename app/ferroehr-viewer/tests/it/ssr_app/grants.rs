@@ -85,15 +85,27 @@ async fn a_policy_party_is_marked_with_its_grants_and_an_ordinary_one_is_not() {
     let cookie = viewer.sign_in().await;
     let grants = viewer.page(&cookie, "/grants").await;
     let agent = party_link_before(grants.main(), "agent", ">lab-system<");
-    assert!(!agent.is_empty(), "the agent links its party:\n{}", grants.main());
+    assert!(
+        !agent.is_empty(),
+        "the agent links its party:\n{}",
+        grants.main()
+    );
     let page = viewer.page(&cookie, &agent).await;
     assert_eq!(page.status, http::StatusCode::OK, "{agent}: {}", page.body);
     for words in ["Policy party", "lab-system", "read_change_feed"] {
-        assert!(page.main().contains(words), "{agent} says {words:?}:\n{}", page.main());
+        assert!(
+            page.main().contains(words),
+            "{agent} says {words:?}:\n{}",
+            page.main()
+        );
     }
     let role = party_link_before(grants.main(), "role", ">write_access_policy<");
     let page = viewer.page(&cookie, &role).await;
-    assert!(page.main().contains("Policy party"), "{role}:\n{}", page.main());
+    assert!(
+        page.main().contains("Policy party"),
+        "{role}:\n{}",
+        page.main()
+    );
     let ordinary = viewer
         .page(&cookie, &format!("/parties/person/{}", id("party")))
         .await;

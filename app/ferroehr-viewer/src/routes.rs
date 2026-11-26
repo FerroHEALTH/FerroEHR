@@ -153,6 +153,12 @@ pub enum Page {
     EditAccessPolicy,
     /// `/grants`.
     Grants,
+    /// `/ehrs/:ehr_id/care`.
+    EhrCare,
+    /// `/parties/:kind/:uid/care`.
+    PartyCare,
+    /// `/care/:uid`.
+    CareRelationship,
     /// `/configuration` and its sections.
     Configuration,
     /// `/preferences` and its sections.
@@ -223,6 +229,9 @@ impl Page {
             "/access-policy/versions" => Self::AccessPolicyVersions,
             "/access-policy/edit" => Self::EditAccessPolicy,
             "/grants" => Self::Grants,
+            "/ehrs/:ehr_id/care" => Self::EhrCare,
+            "/parties/:kind/:uid/care" => Self::PartyCare,
+            "/care/:uid" => Self::CareRelationship,
             "/configuration" | "/configuration/:section" => Self::Configuration,
             "/preferences" | "/preferences/:section" => Self::Preferences,
             "/access" => Self::Access,
@@ -326,6 +335,7 @@ pub static ROUTES: &[&str] = &[
     "/ehrs/:ehr_id/contributions/:uid",
     "/ehrs/:ehr_id/contribution/new",
     "/ehrs/:ehr_id/tags",
+    "/ehrs/:ehr_id/care",
     "/ehrs/:ehr_id/compositions/new",
     "/ehrs/:ehr_id/compositions/:uid",
     "/ehrs/:ehr_id/compositions/:uid/edit",
@@ -337,6 +347,7 @@ pub static ROUTES: &[&str] = &[
     "/parties/contributions/:uid",
     "/parties/:kind/:uid",
     "/parties/:kind/:uid/edit",
+    "/parties/:kind/:uid/care",
     "/templates",
     "/templates/upload",
     "/templates/adl2/:template_id",
@@ -365,6 +376,7 @@ pub static ROUTES: &[&str] = &[
     "/access-policy/versions",
     "/access-policy/edit",
     "/grants",
+    "/care/:uid",
     "/configuration",
     "/configuration/:section",
     "/preferences",
@@ -433,6 +445,9 @@ pub async fn draw() -> Drawn {
         Page::AccessPolicyVersions => pages::policy::versions_page().await,
         Page::EditAccessPolicy => pages::policy::edit::page().await,
         Page::Grants => pages::policy::grants::page().await,
+        Page::EhrCare => pages::ehr::care::page().await,
+        Page::PartyCare => pages::care::party::page().await,
+        Page::CareRelationship => pages::care::relationship::page().await,
         Page::Configuration => pages::configuration::page().await,
         Page::Preferences => pages::preferences::page(),
         Page::Access => pages::access::page(),

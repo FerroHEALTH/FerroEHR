@@ -10,6 +10,7 @@
 pub mod about;
 pub mod access;
 pub mod audit;
+pub mod care;
 pub mod common;
 pub mod composition;
 pub mod configuration;

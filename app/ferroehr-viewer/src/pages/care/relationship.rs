@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! One care relationship: its facts, its versions with the audit details of
-//! each, and its writes. A change of its role or period and its end (the
+//! One care relationship: its facts, its versions and its writes.
+//!
+//! Its versions carry the audit details of each. A change of its role or period and its end (the
 //! period closed today) commit the next version with `If-Match` naming the
 //! version read; a delete removes one written in error. An older version
 //! opens read-only by its version uid. No openEHR specification governs the
@@ -10,7 +11,6 @@
 
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
-use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::dialog::{Confirmation, Stakes, confirm_dialog};
 use ferrohealth_ui::view::surface::{Crumb, Header, definitions, page_heading, section_intro};
@@ -81,13 +81,20 @@ async fn act(id: &str, row: &CareRow) -> Option<Unsaved> {
         .unwrap_or_else(|| row.version_uid.clone());
     let (written, done, refused) = match posted.intent().as_str() {
         "change" => {
-            let document =
-                changed_document(&row.body, &posted_role(&posted.text("role")), &posted_period(&posted));
+            let document = changed_document(
+                &row.body,
+                &posted_role(&posted.text("role")),
+                &posted_period(&posted),
+            );
             let written = match document {
                 Ok(document) => update(id.to_owned(), replaces, document).await,
                 Err(error) => Err(error),
             };
-            (written, PolicyMsg::CareChanged, PolicyMsg::CareChangeRefused)
+            (
+                written,
+                PolicyMsg::CareChanged,
+                PolicyMsg::CareChangeRefused,
+            )
         }
         "end" => {
             let ended = Validity {
@@ -136,7 +143,9 @@ async fn read(uid: String) -> Model {
         .ok()
         .and_then(|versions| versions.first())
         .map(|entry| entry.version_id.clone());
-    let current = latest.as_deref().is_none_or(|latest| latest == row.version_uid);
+    let current = latest
+        .as_deref()
+        .is_none_or(|latest| latest == row.version_uid);
     let unsaved = if current {
         act(&row.id, &row).await
     } else {
@@ -269,7 +278,7 @@ fn body(model: Model) -> Html {
         Model::Refused(refusal) => return card_panel(plain_section(refusal.view())),
     };
     let top = unsaved.map(|unsaved| {
-        let words = tr(Msg::Reload);
+        let words = tr(PolicyMsg::ReloadNone);
         plain_section(unsaved.view(&care_href(&row.id), words))
     });
     let older = (!current).then(|| plain_section(info_note(t(tr(PolicyMsg::CareOlder)))));
@@ -319,7 +328,7 @@ pub async fn page() -> Drawn {
         &current(),
         Header {
             title: tr(PolicyMsg::CareTitle).into(),
-            subtitle: Some(short(&uid).to_string().into()),
+            subtitle: Some(crate::pages::common::shortened(&uid).into()),
             crumbs: vec![Crumb::new(tr(Msg::NavParties), "/parties")],
             mono: false,
             badge: None,
@@ -329,6 +338,9 @@ pub async fn page() -> Drawn {
     );
     Drawn::page(
         tr(PolicyMsg::CareTitle),
-        heading.then(h(format!(r#"<div class="fui-stack">{}</div>"#, body(model)))),
+        heading.then(h(format!(
+            r#"<div class="fui-stack">{}</div>"#,
+            body(model)
+        ))),
     )
 }
