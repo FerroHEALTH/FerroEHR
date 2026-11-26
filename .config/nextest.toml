@@ -55,3 +55,9 @@ slow-timeout = { period = "60s" }
 filter = 'package(ferroehr) & binary(it) & test(/^(multimedia_s3|adl2_vetdf_ferroterm)::/)'
 test-group = 'containers'
 retries = 1
+
+# The statement budget's figures in every CI log, passing or failing, so the
+# Linux counts are read from the run (#6548).
+[[profile.ci.overrides]]
+filter = 'package(ferroehr-rest) & binary(it) & test(=statement_budget::paths::every_hot_path_stays_within_its_budget)'
+success-output = "final"
