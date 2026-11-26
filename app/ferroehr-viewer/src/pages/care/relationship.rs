@@ -27,8 +27,9 @@ use crate::pages::care::{
     role_coding, role_select,
 };
 use crate::pages::common::{
-    Refused, Unsaved, card_panel, document_section, info_note, plain_section, section, short,
+    Refused, card_panel, document_section, info_note, plain_section, section, short,
 };
+use crate::pages::editor::Unsaved;
 use crate::pages::policy::grants::party_href;
 use crate::pages::versions::History;
 use crate::routes::Drawn;
