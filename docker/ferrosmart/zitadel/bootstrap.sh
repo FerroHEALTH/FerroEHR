@@ -5,7 +5,7 @@
 # docker-compose.ferrosmart-zitadel.yml, through ZITADEL's v2 APIs with the
 # IAM_OWNER token its first instance wrote (`cmd/setup/steps.yaml`,
 # FirstInstance), as FerroSMART documents the setup:
-# https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/docs/architecture.md#1320-upstream-providers-zitadel
+# https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.8.0/docs/architecture.md#1320-upstream-providers-zitadel
 #
 #   project      ferrosmart, role assertion on, the roles CLINICIAN and
 #                PATIENT (project/v2 CreateProject, AddProjectRole)

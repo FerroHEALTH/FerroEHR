@@ -57,8 +57,8 @@
 
 services:
   ferroterm:
-    # Digest-pinned FerroTERM 0.4.5 (resolved 2026-11-10); no `:latest`.
-    image: ghcr.io/ferrohealth/ferroterm:0.4.7@sha256:52411e76ea664f9470fda0a7a08202a0ad6f7c39069322f42a754d971cf37a82
+    # Digest-pinned FerroTERM 0.4.8 (resolved 2026-11-26); no `:latest`.
+    image: ghcr.io/ferrohealth/ferroterm:0.4.8@sha256:f2e4d525b538f56922768ab1ae143cc855dd14c2f007f30c5e3e540bdf081511
     # FerroTERM 0.3 reads its configuration tree only (`FERROTERM__…`), and
     # serves no UI of its own: its console is a separate image.
     environment:
@@ -121,7 +121,7 @@ services:
   # never starts it. Same image; the release archive you hold a licence for is
   # mounted read-only and the index lands in the volume the server reads.
   ferroterm-build:
-    image: ghcr.io/ferrohealth/ferroterm:0.4.7@sha256:52411e76ea664f9470fda0a7a08202a0ad6f7c39069322f42a754d971cf37a82
+    image: ghcr.io/ferrohealth/ferroterm:0.4.8@sha256:f2e4d525b538f56922768ab1ae143cc855dd14c2f007f30c5e3e540bdf081511
     profiles: [terminology-build]
     entrypoint: ["/usr/local/bin/ferroterm-build"]
     command: ["--rf2", "/rf2/release.zip", "--out", "/data/index"]

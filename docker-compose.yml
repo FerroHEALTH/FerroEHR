@@ -339,7 +339,7 @@ services:
       SERVER_PORT: "8180"
       # A request for the scope ferroehr/scim gets a token for FerroEHR's SCIM
       # endpoint (the ferroehr-provision one-shot below); every other client
-      # credentials request gets one for FerroPIX.
+      # credentials request gets an RFC 9068 `at+jwt` token for FerroPIX.
       # `$$` is a literal `$` to compose.
       JSON_CONFIG: >-
         {"tokenCallbacks":[{"issuerId":"quickstart",
@@ -347,7 +347,7 @@ services:
         "claims":{"sub":"$${clientId}","client_id":"$${clientId}",
         "aud":["ferroehr-scim"],"scope":"$${scope}"}},
         {"requestParam":"grant_type","match":"client_credentials",
-        "claims":{"sub":"$${clientId}","client_id":"$${clientId}",
+        "typeHeader":"at+jwt","claims":{"sub":"$${clientId}","client_id":"$${clientId}",
         "aud":["http://localhost:8090/fhir"],"scope":"$${scope}"}}]}]}
     cap_drop: [ALL]
     security_opt:
@@ -401,7 +401,7 @@ services:
   # below names the client `ferroehr`). Pinned by tag and by the digest of its
   # image index.
   ferropix:
-    image: ghcr.io/ferrohealth/ferropix:0.0.39@sha256:b91cff886b9ec1413706630c25e80c08c6bf09a223e1916704a2421f7071a674
+    image: ghcr.io/ferrohealth/ferropix:0.0.43@sha256:94fa0f395de800e51f5dc34fb01c9f4d8443c2c4adaec1c22ce85b3f66dba3d9
     network_mode: service:identity-issuer
     depends_on:
       identity-issuer:
@@ -1145,19 +1145,11 @@ configs:
       url_file = "/etc/ferropix/db-url"
       data_key_file = "/var/lib/ferropix-key/data-key"
 
-      # The development issuer signs only client credentials tokens, of the
-      # Source and of FerroEHR, so it is a `machines` issuer. It signs plain
-      # JWTs (`typ` JWT) rather than the `at+jwt` of RFC 9068 and names the
-      # client in `client_id`, so the issuer takes the claims it carries.
+      # The development issuer signs RFC 9068 `at+jwt` client credentials
+      # tokens, of the Source and of FerroEHR, whose `sub` is their `client_id`.
       [auth.issuer.quickstart]
       issuer = "http://localhost:8180/quickstart"
-      kind = "machines"
       audience = ["http://localhost:8090/fhir"]
-
-      [auth.issuer.quickstart.profile]
-      token_types = ["JWT"]
-      required_claims = ["iss", "exp", "aud", "sub"]
-      client_claims = ["client_id", "azp"]
 
       # The clients the issuer, named by its table, signs for that may act as
       # a Patient Identity Source.
@@ -1169,6 +1161,7 @@ configs:
       system = "urn:oid:2.999.1.1"
       name = "Quickstart hospital"
       kind = "local"
+      identifier_type = "PI"
       source_client_id = "quickstart-source"
 
       [[pseudonym_domain]]

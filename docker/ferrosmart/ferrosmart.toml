@@ -7,7 +7,7 @@
 # provider for login only. The upstream overlay beside it names the provider
 # (docker-compose.ferrosmart-keycloak.yml, docker-compose.ferrosmart-zitadel.yml).
 # FerroSMART's own documentation is the reference for every key:
-# https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/docs/architecture.md#1310-the-configuration
+# https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.8.0/docs/architecture.md#1310-the-configuration
 
 [server]
 # FerroSMART shares the issuer's network namespace with FerroEHR, which holds
@@ -19,13 +19,17 @@ listen = "0.0.0.0:8280"
 # (RFC 8414 §2 as ferrohealth-smart reads it): a local example. A deployment
 # serves FerroSMART over https on its own name.
 issuer = "http://localhost:8280"
+# The example providers state no eIDAS level of assurance for their logins.
+# A deployment in the EU keeps the substantial floor and maps its provider's
+# values under [ferrosmart.upstream.assurance] (§13.28).
+assurance_minimum = "none"
 
 [ferrosmart.database]
 url_file = "/run/secrets/ferrosmart_database_url"
 max_connections = 8
 
 [ferrosmart.keys]
-private_key_file = "/run/secrets/ferrosmart_signing_key"
+private_key_files = ["/run/secrets/ferrosmart_signing_key"]
 
 # FerroEHR's openEHR REST base, the `aud` of every token for it. The patient
 # picker looks an EHR up under `subject_namespace`; the overlay sets it from
@@ -45,31 +49,6 @@ scopes = ["user/composition-*.cruds", "user/aql-*.cruds", "user/template-*.r"]
 name = "PATIENT"
 scopes = ["patient/composition-*.crs", "patient/aql-*.rs"]
 
-# The viewer, the EHR client that registers each EHR launch (§13.6 item 3,
-# the `system/launch.c` scope), with the public half of its key by value.
-[[ferrosmart.client]]
-client_id = "ferroehr-viewer"
-name = "FerroEHR viewer"
-kind = "confidential_asymmetric"
-jwks_file = "/run/secrets/ferrosmart_viewer_jwks"
-scopes = ["system/launch.c"]
-grant_types = ["client_credentials"]
-# The resource server whose launches the viewer registers (RFC 8707).
-resources = ["http://localhost:8080/ferroehr/rest/openehr/v1"]
-
-# An example SMART app: a public client with PKCE alone (SMART App Launch
-# 2.2.0, Client Types, client-public), launched from the viewer or
-# standalone.
-[[ferrosmart.client]]
-client_id = "example-app"
-name = "Example SMART app"
-kind = "public"
-redirect_uris = ["http://localhost:9000/callback"]
-scopes = [
-  "openid", "fhirUser", "launch", "launch/patient",
-  "user/composition-*.cruds", "user/aql-*.cruds", "user/template-*.r",
-  "patient/composition-*.crs", "patient/aql-*.rs",
-]
-grant_types = ["authorization_code"]
-# The resource server the app's tokens may name in `aud` (RFC 8707).
-resources = ["http://localhost:8080/ferroehr/rest/openehr/v1"]
+# The clients live in FerroSMART's database: the `ferrosmart-clients` one-shot of
+# docker-compose.ferrosmart.yml applies docker/ferrosmart/clients/ and the viewer's
+# document docker/ferrosmart/secrets.sh writes (`ferrosmart client apply`, §13.27).

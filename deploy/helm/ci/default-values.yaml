@@ -87,7 +87,6 @@ ferropix:
       issuer:
         pix:
           issuer: https://idp.example.com/realms/pix
-          kind: machines
           audience: [https://pix.example.com/fhir]
     # The clients the issuer, named by its key, signs for that may act as a
     # Patient Identity Source.
@@ -99,6 +98,7 @@ ferropix:
       - system: urn:oid:2.999.1.1
         name: Hospital
         kind: local
+        identifier_type: PI
         source_client_id: hospital-source
     pseudonym_domain:
       - namespace: urn:oid:2.999.7.1

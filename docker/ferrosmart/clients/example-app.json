@@ -1,0 +1,15 @@
+{
+  "client_id": "example-app",
+  "client_name": "Example SMART app",
+  "token_endpoint_auth_method": "none",
+  "redirect_uris": [
+    "http://localhost:9000/callback"
+  ],
+  "scope": "openid fhirUser launch launch/patient user/composition-*.cruds user/aql-*.cruds user/template-*.r patient/composition-*.crs patient/aql-*.rs",
+  "resources": [
+    "http://localhost:8080/ferroehr/rest/openehr/v1"
+  ],
+  "grant_types": [
+    "authorization_code"
+  ]
+}

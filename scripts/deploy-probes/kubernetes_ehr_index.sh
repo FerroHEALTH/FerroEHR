@@ -66,7 +66,7 @@ k8s_pix_values() {
   local config
   config="$(jq -cn --arg iss "$K8S_PIX_ISSUER" --arg aud "$K8S_PIX_AUDIENCE" \
     '{tokenCallbacks: [{issuerId: "machines", requestMappings: [{requestParam: "grant_type",
-      match: "client_credentials", claims: {iss: $iss, sub: "${clientId}",
+      match: "client_credentials", typeHeader: "at+jwt", claims: {iss: $iss, sub: "${clientId}",
       client_id: "${clientId}", aud: [$aud], scope: "${scope}"}}]}]}')"
   cat <<YAML
 database:
@@ -85,21 +85,18 @@ config:
     listen: "0.0.0.0:8080"
   auth:
     issuer:
-      - issuer: "$K8S_PIX_ISSUER"
-        kind: machines
-        profile: rfc9068
+      machines:
+        issuer: "$K8S_PIX_ISSUER"
         audience: ["$K8S_PIX_AUDIENCE"]
-        token_types: [JWT]
-        required_claims: [iss, exp, aud, sub]
-        client_claims: [client_id, azp]
   trust:
     issuer:
-      - issuer: "$K8S_PIX_ISSUER"
+      - issuer: machines
         clients: ["$K8S_PIX_SOURCE_CLIENT"]
   domain:
     - system: "$K8S_PIX_SOURCE_SYSTEM"
       name: "Probe hospital"
       kind: local
+      identifier_type: PI
       source_client_id: $K8S_PIX_SOURCE_CLIENT
   pseudonym_domain:
     - namespace: "$K8S_PIX_CLINICAL"

@@ -34,7 +34,7 @@ The three ways an app starts:
 
 `docker-compose.ferrosmart.yml` runs the whole platform from the quickstart
 ([Docker Compose](installation/compose.md#behind-ferrosmart)). FerroSMART's
-own setup is its [architecture](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/docs/architecture.md), sections 13.17
+own setup is its [architecture](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.8.0/docs/architecture.md), sections 13.17
 (launching an app from an EHR) and 13.21 (a product behind FerroSMART).
 
 <!-- toc -->
@@ -257,7 +257,7 @@ Request). The specification gives the EHR no way to hand the authorization
 server that context, so FerroSMART takes it through its own EHR launch API,
 the `launch_registration_endpoint` its discovery document
 `{issuer}/.well-known/smart-configuration` names
-(FerroSMART's architecture, [§13.17, Launching an app from an EHR](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/docs/architecture.md)).
+(FerroSMART's architecture, [§13.17, Launching an app from an EHR](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.8.0/docs/architecture.md)).
 The viewer is that EHR: with `[launch]` set, an EHR's **More** menu carries a
 **Launch** item per configured app, and a click does this:
 
@@ -283,29 +283,35 @@ The key that authenticates the viewer never reaches the browser, and the
 viewer logs no launch value. A launch FerroSMART refuses draws the refusal on
 the EHR's page in that window.
 
-Register the viewer and each app at FerroSMART, and list the apps in the
-viewer:
+Register the viewer and each app at FerroSMART with `ferrosmart client apply
+<file>...`, one RFC 7591 client document per file (FerroSMART's architecture,
+§13.27), and list the apps in the viewer. The viewer is the EHR client, its
+public key by value:
 
-```toml,ferrosmart
-# FerroSMART: the viewer is the EHR client, its public key by value.
-[[ferrosmart.client]]
-client_id = "ferroehr-viewer"
-name = "FerroEHR viewer"
-kind = "confidential_asymmetric"
-jwks_file = "/run/secrets/ferroehr-viewer.jwks.json"
-scopes = ["system/launch.c"]
-grant_types = ["client_credentials"]
-resources = ["https://ehr.example.org/ferroehr/rest/openehr/v1"]
+```json
+{
+  "client_id": "ferroehr-viewer",
+  "client_name": "FerroEHR viewer",
+  "token_endpoint_auth_method": "private_key_jwt",
+  "jwks": {"keys": [{"kty": "RSA", "kid": "viewer-1", "alg": "RS384", "n": "…", "e": "AQAB"}]},
+  "scope": "system/launch.c",
+  "grant_types": ["client_credentials"],
+  "resources": ["https://ehr.example.org/ferroehr/rest/openehr/v1"]
+}
+```
 
-# Each app it launches, a client of the authorization code grant.
-[[ferrosmart.client]]
-client_id = "growth-chart"
-name = "Growth chart"
-kind = "public"
-redirect_uris = ["https://apps.example.org/growth/callback"]
-scopes = ["openid", "fhirUser", "launch", "patient/composition-*.r"]
-grant_types = ["authorization_code"]
-resources = ["https://ehr.example.org/ferroehr/rest/openehr/v1"]
+Each app it launches is a client of the authorization code grant:
+
+```json
+{
+  "client_id": "growth-chart",
+  "client_name": "Growth chart",
+  "token_endpoint_auth_method": "none",
+  "redirect_uris": ["https://apps.example.org/growth/callback"],
+  "scope": "openid fhirUser launch patient/composition-*.r",
+  "grant_types": ["authorization_code"],
+  "resources": ["https://ehr.example.org/ferroehr/rest/openehr/v1"]
+}
 ```
 
 ```toml
@@ -323,15 +329,14 @@ client_id = "growth-chart"
 launch_url = "https://apps.example.org/growth/launch"
 ```
 
-The JWK Set FerroSMART registers holds the key's public half under the same
-`kid`. For an RSA key:
+The document's `jwks` holds the key's public half under the same `kid`. For
+an RSA key:
 
 ```sh
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out ferroehr-viewer-launch.pem
 n=$(openssl rsa -in ferroehr-viewer-launch.pem -noout -modulus | cut -d= -f2 | xxd -r -p \
   | openssl base64 -A | tr '+/' '-_' | tr -d '=')
-jq -n --arg n "$n" '{keys: [{kty: "RSA", kid: "viewer-1", alg: "RS384", n: $n, e: "AQAB"}]}' \
-  > ferroehr-viewer.jwks.json
+jq -n --arg n "$n" '{keys: [{kty: "RSA", kid: "viewer-1", alg: "RS384", n: $n, e: "AQAB"}]}'
 ```
 
 The viewer's configuration keys are in [the viewer's

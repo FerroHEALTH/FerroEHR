@@ -16,7 +16,7 @@
 # scopes, written into the ID Token's `roles`; and the demo user
 # clinician/clinician. FerroSMART's side is the environment below, the
 # setup FerroSMART documents for Keycloak:
-# https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/docs/architecture.md#1316-upstream-providers-keycloak
+# https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.8.0/docs/architecture.md#1316-upstream-providers-keycloak
 #
 # Keycloak runs in development mode (`start-dev`) with its data in the
 # container, on plain http at http://localhost:8380 in the issuer's network
