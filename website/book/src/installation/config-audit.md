@@ -72,8 +72,7 @@ and `Retry-After`. There is no fail mode and no queue: `fail_mode` and
 
 The local store is always on while auditing is: every record is written to
 it before its access is reported, and syslog and the FHIR feed deliver from
-it, so a down repository loses nothing. `enabled` is an unknown key, refused
-at load.
+it, so a down repository loses nothing.
 
 How long the store and the access log keep a record is the controller's
 access policy (`ACCESS_POLICY.log_retention`), not a configuration key: the

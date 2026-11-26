@@ -107,7 +107,7 @@ flowchart LR
 
 Each boundary below names the control that holds and the risk that remains.
 
-### B1 — Network and protocol
+### B1: Network and protocol
 
 **Control.** TLS terminates either at the server (`rustls`, TLS 1.3 by default,
 the post-quantum hybrid key exchange X25519MLKEM768 preferred) or in front of
@@ -140,7 +140,7 @@ the harness.
 - **TLS termination in front of the server is the operator's**; nothing in the
   software can tell whether the hop behind the proxy is encrypted.
 
-### B2 — Authentication
+### B2: Authentication
 
 **Control.** Two mechanisms: HTTP Basic against Argon2id PHC hashes with a
 verified-credential cache, and OAuth 2.0 bearer tokens validated against the
@@ -167,7 +167,7 @@ names no reason, so it is not an oracle for expired-versus-forged.
   is intended for machine callers and small deployments; the Argon2id cost is
   the only brake on offline cracking if a hash leaks.
 
-### B3 — Authorization
+### B3: Authorization
 
 **Control.** Five stages, each of which can only *narrow* what the previous one
 allowed, which is what makes an optional stage safe to leave off:
@@ -209,7 +209,7 @@ never consent, and a broken control never looks like a policy outcome.
   recorded.** That is what the audit trail is for, and detection is not
   prevention.
 
-### B4 — Content validation and outbound calls
+### B4: Content validation and outbound calls
 
 **Control.** Committed content is validated against the operational template
 (the WebTemplate walker), the Reference Model's own invariants (machine-derived
@@ -247,12 +247,12 @@ and reads nothing from the answer beyond its status code.
 - **Validation does not make content true.** A well-formed composition asserting
   a clinically wrong fact is stored, correctly.
 
-### B5 — Instance separation
+### B5: Instance separation
 
 **Control.** One instance serves one organisation: one database, one set of
 domain roles. There is no tenant column, no row policy and no session setting
 to get wrong, because there is nothing inside the instance to separate. That is
-also where openEHR puts the boundary — BASE `architecture_overview`
+also where openEHR puts the boundary: BASE `architecture_overview`
 `master06-design_of_the_ehr.adoc` §The EHR System calls a system "a distinct
 logical repository corresponding to an organisational entity that is _legally
 responsible_" for the data and "distinct from any underlying virtualisation
@@ -275,7 +275,7 @@ EHR systems in a multi-tenant fashion".
   one value mint version identifiers that cannot tell the responsible parties
   apart.
 
-### B6 — The database
+### B6: The database
 
 **Control.** The application connects with least-privilege roles, one per
 pseudonymisation domain, and the schema is prepared by a separate credential
@@ -306,7 +306,7 @@ contribution and an audit record in the same transaction.
   dumps are worth together, is
   [Backup artefacts](#backup-artefacts) below.
 
-### B7 — The audit trail
+### B7: The audit trail
 
 **Control.** Every access is recorded in both official renderings (DICOM PS3.15
 and FHIR R4 `AuditEvent`/BALP) into a local Audit Record Repository, on by
@@ -335,7 +335,7 @@ node authentication.
   actions; ITI-81 retrieval is a PHI-disclosure surface and is authorized like
   any other.
 
-### B8 — The supply chain
+### B8: The supply chain
 
 **Control.** Releases are built by a reusable workflow that satisfies SLSA v1.0
 Build L3, signed through Sigstore with a signer identity a consumer can pin,
