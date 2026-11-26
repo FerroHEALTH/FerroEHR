@@ -57,6 +57,7 @@ use crate::pages::item_tags::{TagAct, TagPanel, tag_act, tag_done, tag_panel};
 use crate::pages::versions::{History, history};
 use crate::routes::Drawn;
 
+pub mod binding_key;
 pub mod contribution;
 use crate::uid::{version_number, version_uid_at};
 
@@ -718,7 +719,13 @@ fn identities(rendered: &[RenderedSection]) -> Html {
 }
 
 /// The Overview tab.
-fn overview(kind: PartyKind, uid: &str, state: &PartyState, rendered: &[RenderedSection]) -> Html {
+fn overview(
+    kind: PartyKind,
+    uid: &str,
+    state: &PartyState,
+    rendered: &[RenderedSection],
+    admin: bool,
+) -> Html {
     let relationships = state.relationships.len();
     let facts = definitions(vec![
         (tr(Msg::ColumnKind), t(kind_words(kind))),
@@ -743,12 +750,19 @@ fn overview(kind: PartyKind, uid: &str, state: &PartyState, rendered: &[Rendered
         ),
     ]);
     panel(
-        section(Some(tr(Msg::PartyFacts)), None, None, facts).then(section(
-            Some(tr(RecordsMsg::PartyIdentities)),
-            None,
-            None,
-            identities(rendered),
-        )),
+        section(Some(tr(Msg::PartyFacts)), None, None, facts)
+            .then(section(
+                Some(tr(RecordsMsg::PartyIdentities)),
+                None,
+                None,
+                identities(rendered),
+            ))
+            .then(opt(binding_key::keys_section(
+                kind,
+                uid,
+                &state.body,
+                admin,
+            ))),
     )
 }
 
@@ -853,8 +867,8 @@ fn envelope(facts: Result<VersionedObjectFacts, Refused>) -> Html {
     }
 }
 
-/// What a post to a party's page asks, done: archive, restore, delete, set
-/// or remove a tag.
+/// What a post to a party's page asks, done: re-key, archive, restore,
+/// delete, set or remove a tag.
 async fn party_act(
     kind: PartyKind,
     uid: &str,
@@ -863,6 +877,9 @@ async fn party_act(
     let Some(posted) = crate::posted::posted() else {
         return (None, None);
     };
+    if let Some(refused) = binding_key::act(uid, &posted).await {
+        return (refused, None);
+    }
     if let Some(refused) = crate::pages::archive::act(
         crate::admin::Archived::Parties,
         uid,
@@ -1184,7 +1201,9 @@ fn party_view(uid: &str, party: Party) -> (String, Html) {
         ))
     });
     let body = match (body, &current) {
-        (PartyBody::Overview(rendered), Some(state)) => overview(kind, uid, state, &rendered),
+        (PartyBody::Overview(rendered), Some(state)) => {
+            overview(kind, uid, state, &rendered, admin)
+        }
         (PartyBody::Document(pretty), Some(state)) => panel(document_section(
             tr_with(
                 RecordsMsg::PartyDocumentTitle,

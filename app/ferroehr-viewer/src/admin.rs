@@ -214,6 +214,35 @@ pub async fn archive(kind: Archived, id: String, restore: bool) -> Result<(), Vi
     Ok(())
 }
 
+/// The request body of a re-key: the `PERSON` `party_id` and its new
+/// binding key, `id` under `issuer`.
+#[must_use]
+#[expect(
+    clippy::disallowed_types,
+    reason = "the re-key body is the CDR's JSON wire, built as an untyped object"
+)]
+pub fn rekey_body(party_id: &str, issuer: &str, id: &str) -> String {
+    serde_json::json!({ "party_id": party_id, "issuer": issuer, "id": id }).to_string()
+}
+
+/// Changes the binding key of the `PERSON` `party_id` under `issuer` to
+/// `id` (`POST {ext}/admin/party/binding-key`).
+///
+/// # Errors
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)), the CDR's words for
+/// a new key that is the administrator's own login (`403`), an unknown or
+/// deleted `PERSON` (`404`), no key under `issuer` or a key bound to another
+/// party (`409`) and an admin group that is off (`405`).
+pub async fn rekey(party_id: &str, issuer: &str, id: &str) -> Result<(), ViewerError> {
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.extensions_v1("admin/party/binding-key");
+    cdr.post(&url)
+        .body("application/json", rekey_body(party_id, issuer, id))
+        .ok()
+        .await?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::{AdminAvailability, Archived, archive_request, availability_of, renders_admin_ops};
