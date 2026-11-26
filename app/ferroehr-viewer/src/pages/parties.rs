@@ -870,8 +870,6 @@ fn envelope(facts: Result<VersionedObjectFacts, Refused>) -> Html {
 
 /// What a post to a party's page asks, done: re-key, archive, restore,
 /// delete, set or remove a tag.
-/// What a post to a party's page asks, done: archive, restore, delete, set
-/// or remove a tag.
 async fn party_act(
     kind: PartyKind,
     uid: &str,
@@ -1205,8 +1203,7 @@ fn party_view(uid: &str, party: Party, mark: Option<Html>) -> (String, Html) {
     });
     let body = match (body, &current) {
         (PartyBody::Overview(rendered), Some(state)) => {
-            overview(kind, uid, state, &rendered, admin)
-            opt(mark.map(panel)).then(overview(kind, uid, state, &rendered))
+            opt(mark.map(panel)).then(overview(kind, uid, state, &rendered, admin))
         }
         (PartyBody::Document(pretty), Some(state)) => panel(document_section(
             tr_with(
