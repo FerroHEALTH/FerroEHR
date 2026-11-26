@@ -184,7 +184,7 @@
                 ],
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0009"
+                  "value": "Tree"
                 }
               },
               "name": {
@@ -1449,7 +1449,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0008"
+              "value": "Tree"
             }
           },
           "subject": {
@@ -1512,7 +1512,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Tree"
             }
           },
           "encoding": {
@@ -1593,7 +1593,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "structure"
             }
           },
           "encoding": {
@@ -1682,7 +1682,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "structure"
             }
           },
           "encoding": {
@@ -1739,7 +1739,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "List"
             }
           },
           "encoding": {
@@ -1822,7 +1822,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Tree"
             }
           },
           "encoding": {
@@ -1854,7 +1854,7 @@
           "activities": [
             {
               "_type": "ACTIVITY",
-              "action_archetype_id": "/.*/",
+              "action_archetype_id": "openEHR-EHR-ACTION.medication.v1",
               "archetype_node_id": "at0001",
               "description": {
                 "_type": "ITEM_TREE",
@@ -1887,7 +1887,7 @@
                 ],
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "openEHR-EHR-ITEM_TREE.medication.v1"
+                  "value": "Medication description"
                 }
               },
               "name": {
@@ -1963,7 +1963,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "List"
             }
           },
           "encoding": {
@@ -1994,225 +1994,6 @@
       "name": {
         "_type": "DV_TEXT",
         "value": "Current Medications"
-      }
-    },
-    {
-      "_type": "SECTION",
-      "archetype_details": {
-        "_type": "ARCHETYPED",
-        "archetype_id": {
-          "_type": "ARCHETYPE_ID",
-          "value": "openEHR-EHR-SECTION.adverse_list.v1"
-        },
-        "rm_version": "1.2.0"
-      },
-      "archetype_node_id": "openEHR-EHR-SECTION.adverse_list.v1",
-      "items": [
-        {
-          "_type": "EVALUATION",
-          "archetype_details": {
-            "_type": "ARCHETYPED",
-            "archetype_id": {
-              "_type": "ARCHETYPE_ID",
-              "value": "openEHR-EHR-EVALUATION.exclusion-adverse.v1"
-            },
-            "rm_version": "1.2.0"
-          },
-          "archetype_node_id": "openEHR-EHR-EVALUATION.exclusion-adverse.v1",
-          "data": {
-            "_type": "ITEM_TREE",
-            "archetype_node_id": "at0001",
-            "items": [
-              {
-                "_type": "ELEMENT",
-                "archetype_node_id": "at0002.1",
-                "name": {
-                  "_type": "DV_TEXT",
-                  "value": "Global Statement"
-                },
-                "value": {
-                  "_type": "DV_CODED_TEXT",
-                  "defining_code": {
-                    "_type": "CODE_PHRASE",
-                    "code_string": "at0.3",
-                    "terminology_id": {
-                      "_type": "TERMINOLOGY_ID",
-                      "value": "local"
-                    }
-                  },
-                  "value": "No known adverse reactions"
-                }
-              }
-            ],
-            "name": {
-              "_type": "DV_TEXT",
-              "value": "at0001"
-            }
-          },
-          "encoding": {
-            "_type": "CODE_PHRASE",
-            "code_string": "UTF-8",
-            "terminology_id": {
-              "_type": "TERMINOLOGY_ID",
-              "value": "IANA_character-sets"
-            }
-          },
-          "language": {
-            "_type": "CODE_PHRASE",
-            "code_string": "en",
-            "terminology_id": {
-              "_type": "TERMINOLOGY_ID",
-              "value": "ISO_639-1"
-            }
-          },
-          "name": {
-            "_type": "DV_TEXT",
-            "value": "Exclusion statement - Adverse Reaction"
-          },
-          "subject": {
-            "_type": "PARTY_SELF"
-          }
-        },
-        {
-          "_type": "EVALUATION",
-          "archetype_details": {
-            "_type": "ARCHETYPED",
-            "archetype_id": {
-              "_type": "ARCHETYPE_ID",
-              "value": "openEHR-EHR-EVALUATION.adverse.v1"
-            },
-            "rm_version": "1.2.0"
-          },
-          "archetype_node_id": "openEHR-EHR-EVALUATION.adverse.v1",
-          "data": {
-            "_type": "ITEM_TREE",
-            "archetype_node_id": "at0002",
-            "items": [
-              {
-                "_type": "ELEMENT",
-                "archetype_node_id": "at0003",
-                "name": {
-                  "_type": "DV_TEXT",
-                  "value": "Agent description"
-                },
-                "value": {
-                  "_type": "DV_TEXT",
-                  "value": "Agent description"
-                }
-              },
-              {
-                "_type": "CLUSTER",
-                "archetype_node_id": "at0019",
-                "items": [
-                  {
-                    "_type": "ELEMENT",
-                    "archetype_node_id": "at0022",
-                    "name": {
-                      "_type": "DV_TEXT",
-                      "value": "Reaction description"
-                    },
-                    "value": {
-                      "_type": "DV_TEXT",
-                      "value": "Reaction description"
-                    }
-                  }
-                ],
-                "name": {
-                  "_type": "DV_TEXT",
-                  "value": "Exposure and reaction detail"
-                }
-              }
-            ],
-            "name": {
-              "_type": "DV_TEXT",
-              "value": "at0002"
-            }
-          },
-          "encoding": {
-            "_type": "CODE_PHRASE",
-            "code_string": "UTF-8",
-            "terminology_id": {
-              "_type": "TERMINOLOGY_ID",
-              "value": "IANA_character-sets"
-            }
-          },
-          "language": {
-            "_type": "CODE_PHRASE",
-            "code_string": "en",
-            "terminology_id": {
-              "_type": "TERMINOLOGY_ID",
-              "value": "ISO_639-1"
-            }
-          },
-          "name": {
-            "_type": "DV_TEXT",
-            "value": "Adverse reaction"
-          },
-          "subject": {
-            "_type": "PARTY_SELF"
-          }
-        },
-        {
-          "_type": "EVALUATION",
-          "archetype_details": {
-            "_type": "ARCHETYPED",
-            "archetype_id": {
-              "_type": "ARCHETYPE_ID",
-              "value": "openEHR-EHR-EVALUATION.clinical_synopsis.v1"
-            },
-            "rm_version": "1.2.0"
-          },
-          "archetype_node_id": "openEHR-EHR-EVALUATION.clinical_synopsis.v1",
-          "data": {
-            "_type": "ITEM_TREE",
-            "archetype_node_id": "at0001",
-            "items": [
-              {
-                "_type": "ELEMENT",
-                "archetype_node_id": "at0002",
-                "name": {
-                  "_type": "DV_TEXT",
-                  "value": "Synopsis"
-                },
-                "value": {
-                  "_type": "DV_TEXT",
-                  "value": "Synopsis"
-                }
-              }
-            ],
-            "name": {
-              "_type": "DV_TEXT",
-              "value": "at0001"
-            }
-          },
-          "encoding": {
-            "_type": "CODE_PHRASE",
-            "code_string": "UTF-8",
-            "terminology_id": {
-              "_type": "TERMINOLOGY_ID",
-              "value": "IANA_character-sets"
-            }
-          },
-          "language": {
-            "_type": "CODE_PHRASE",
-            "code_string": "en",
-            "terminology_id": {
-              "_type": "TERMINOLOGY_ID",
-              "value": "ISO_639-1"
-            }
-          },
-          "name": {
-            "_type": "DV_TEXT",
-            "value": "Allergies/Adverse Reactions overview"
-          },
-          "subject": {
-            "_type": "PARTY_SELF"
-          }
-        }
-      ],
-      "name": {
-        "_type": "DV_TEXT",
-        "value": "Allergies/Adverse Reactions"
       }
     },
     {
@@ -2295,6 +2076,26 @@
                     },
                     {
                       "_type": "ELEMENT",
+                      "archetype_node_id": "at0078",
+                      "name": {
+                        "_type": "DV_TEXT",
+                        "value": "Result"
+                      },
+                      "value": {
+                        "_type": "DV_CODED_TEXT",
+                        "defining_code": {
+                          "_type": "CODE_PHRASE",
+                          "code_string": "at0000",
+                          "terminology_id": {
+                            "_type": "TERMINOLOGY_ID",
+                            "value": "local"
+                          }
+                        },
+                        "value": "Example"
+                      }
+                    },
+                    {
+                      "_type": "ELEMENT",
                       "archetype_node_id": "at0057",
                       "name": {
                         "_type": "DV_TEXT",
@@ -2332,12 +2133,12 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
                   "_type": "DV_TEXT",
-                  "value": "at0002"
+                  "value": "Any event"
                 },
                 "time": {
                   "_type": "DV_DATE_TIME",
@@ -2347,7 +2148,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "Event Series"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -2393,7 +2194,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0004"
+              "value": "Tree"
             }
           },
           "subject": {
@@ -2499,7 +2300,7 @@
                   ],
                   "name": {
                     "_type": "DV_TEXT",
-                    "value": "at0003"
+                    "value": "Tree"
                   }
                 },
                 "name": {
@@ -2514,7 +2315,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "history"
             },
             "origin": {
               "_type": "DV_DATE_TIME",
@@ -2575,7 +2376,7 @@
             ],
             "name": {
               "_type": "DV_TEXT",
-              "value": "at0001"
+              "value": "List"
             }
           },
           "encoding": {
@@ -2611,6 +2412,440 @@
   ],
   "context": {
     "_type": "EVENT_CONTEXT",
+    "other_context": {
+      "_type": "ITEM_TREE",
+      "archetype_node_id": "at0001",
+      "items": [
+        {
+          "_type": "ELEMENT",
+          "archetype_node_id": "at0028",
+          "name": {
+            "_type": "DV_TEXT",
+            "value": "Requestor Identifier"
+          },
+          "value": {
+            "_type": "DV_TEXT",
+            "value": "Requestor Identifier"
+          }
+        },
+        {
+          "_type": "CLUSTER",
+          "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": {
+              "_type": "ARCHETYPE_ID",
+              "value": "openEHR-EHR-CLUSTER.individual_personal.v1"
+            },
+            "rm_version": "1.2.0"
+          },
+          "archetype_node_id": "openEHR-EHR-CLUSTER.individual_personal.v1",
+          "items": [
+            {
+              "_type": "CLUSTER",
+              "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": {
+                  "_type": "ARCHETYPE_ID",
+                  "value": "openEHR-EHR-CLUSTER.person_name.v1"
+                },
+                "rm_version": "1.2.0"
+              },
+              "archetype_node_id": "openEHR-EHR-CLUSTER.person_name.v1",
+              "items": [
+                {
+                  "_type": "CLUSTER",
+                  "archetype_node_id": "at0013",
+                  "items": [
+                    {
+                      "_type": "CLUSTER",
+                      "archetype_node_id": "at0002",
+                      "items": [
+                        {
+                          "_type": "ELEMENT",
+                          "archetype_node_id": "at0003",
+                          "name": {
+                            "_type": "DV_TEXT",
+                            "value": "Given name"
+                          },
+                          "value": {
+                            "_type": "DV_TEXT",
+                            "value": "Given name"
+                          }
+                        },
+                        {
+                          "_type": "ELEMENT",
+                          "archetype_node_id": "at0004",
+                          "name": {
+                            "_type": "DV_TEXT",
+                            "value": "Middle name"
+                          },
+                          "value": {
+                            "_type": "DV_CODED_TEXT",
+                            "defining_code": {
+                              "_type": "CODE_PHRASE",
+                              "code_string": "at0000",
+                              "terminology_id": {
+                                "_type": "TERMINOLOGY_ID",
+                                "value": "local"
+                              }
+                            },
+                            "value": "Example"
+                          }
+                        },
+                        {
+                          "_type": "ELEMENT",
+                          "archetype_node_id": "at0005",
+                          "name": {
+                            "_type": "DV_TEXT",
+                            "value": "Family name"
+                          },
+                          "value": {
+                            "_type": "DV_TEXT",
+                            "value": "Family name"
+                          }
+                        }
+                      ],
+                      "name": {
+                        "_type": "DV_TEXT",
+                        "value": "Structured name"
+                      }
+                    }
+                  ],
+                  "name": {
+                    "_type": "DV_TEXT",
+                    "value": "Personal name"
+                  }
+                }
+              ],
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "Personal name"
+              }
+            },
+            {
+              "_type": "ELEMENT",
+              "archetype_node_id": "at0016",
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "Identifier"
+              },
+              "value": {
+                "_type": "DV_TEXT",
+                "value": "Identifier"
+              }
+            },
+            {
+              "_type": "ELEMENT",
+              "archetype_node_id": "at0007",
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "Date of Birth"
+              },
+              "value": {
+                "_type": "DV_DATE_TIME",
+                "value": "2022-02-03T04:05:06Z"
+              }
+            },
+            {
+              "_type": "ELEMENT",
+              "archetype_node_id": "at0017",
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "Sex"
+              },
+              "value": {
+                "_type": "DV_CODED_TEXT",
+                "defining_code": {
+                  "_type": "CODE_PHRASE",
+                  "code_string": "at0020",
+                  "terminology_id": {
+                    "_type": "TERMINOLOGY_ID",
+                    "value": "local"
+                  }
+                },
+                "value": "Male"
+              }
+            },
+            {
+              "_type": "CLUSTER",
+              "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": {
+                  "_type": "ARCHETYPE_ID",
+                  "value": "openEHR-EHR-CLUSTER.address.v1"
+                },
+                "rm_version": "1.2.0"
+              },
+              "archetype_node_id": "openEHR-EHR-CLUSTER.address.v1",
+              "items": [
+                {
+                  "_type": "CLUSTER",
+                  "archetype_node_id": "at0001",
+                  "items": [
+                    {
+                      "_type": "ELEMENT",
+                      "archetype_node_id": "at0006",
+                      "name": {
+                        "_type": "DV_TEXT",
+                        "value": "Address Type"
+                      },
+                      "value": {
+                        "_type": "DV_CODED_TEXT",
+                        "defining_code": {
+                          "_type": "CODE_PHRASE",
+                          "code_string": "at0011",
+                          "terminology_id": {
+                            "_type": "TERMINOLOGY_ID",
+                            "value": "local"
+                          }
+                        },
+                        "value": "Residential"
+                      }
+                    },
+                    {
+                      "_type": "CLUSTER",
+                      "archetype_node_id": "at0003",
+                      "items": [
+                        {
+                          "_type": "ELEMENT",
+                          "archetype_node_id": "at0005",
+                          "name": {
+                            "_type": "DV_TEXT",
+                            "value": "Property number"
+                          },
+                          "value": {
+                            "_type": "DV_TEXT",
+                            "value": "Property number"
+                          }
+                        },
+                        {
+                          "_type": "ELEMENT",
+                          "archetype_node_id": "at0009",
+                          "name": {
+                            "_type": "DV_TEXT",
+                            "value": "Address line"
+                          },
+                          "value": {
+                            "_type": "DV_TEXT",
+                            "value": "Address line"
+                          }
+                        }
+                      ],
+                      "name": {
+                        "_type": "DV_TEXT",
+                        "value": "Structured address"
+                      }
+                    },
+                    {
+                      "_type": "ELEMENT",
+                      "archetype_node_id": "at0004",
+                      "name": {
+                        "_type": "DV_TEXT",
+                        "value": "Post code"
+                      },
+                      "value": {
+                        "_type": "DV_TEXT",
+                        "value": "Post code"
+                      }
+                    }
+                  ],
+                  "name": {
+                    "_type": "DV_TEXT",
+                    "value": "Address"
+                  }
+                }
+              ],
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "Address"
+              }
+            },
+            {
+              "_type": "CLUSTER",
+              "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": {
+                  "_type": "ARCHETYPE_ID",
+                  "value": "openEHR-EHR-CLUSTER.telecom_details.v1"
+                },
+                "rm_version": "1.2.0"
+              },
+              "archetype_node_id": "openEHR-EHR-CLUSTER.telecom_details.v1",
+              "items": [
+                {
+                  "_type": "ELEMENT",
+                  "archetype_node_id": "at0010",
+                  "name": {
+                    "_type": "DV_TEXT",
+                    "value": "Mode"
+                  },
+                  "value": {
+                    "_type": "DV_CODED_TEXT",
+                    "defining_code": {
+                      "_type": "CODE_PHRASE",
+                      "code_string": "at0011",
+                      "terminology_id": {
+                        "_type": "TERMINOLOGY_ID",
+                        "value": "local"
+                      }
+                    },
+                    "value": "Home"
+                  }
+                },
+                {
+                  "_type": "CLUSTER",
+                  "archetype_node_id": "at0001",
+                  "items": [
+                    {
+                      "_type": "ELEMENT",
+                      "archetype_node_id": "at0004",
+                      "name": {
+                        "_type": "DV_TEXT",
+                        "value": "Telecoms type"
+                      },
+                      "value": {
+                        "_type": "DV_CODED_TEXT",
+                        "defining_code": {
+                          "_type": "CODE_PHRASE",
+                          "code_string": "at0013",
+                          "terminology_id": {
+                            "_type": "TERMINOLOGY_ID",
+                            "value": "local"
+                          }
+                        },
+                        "value": "Telephone"
+                      }
+                    },
+                    {
+                      "_type": "ELEMENT",
+                      "archetype_node_id": "at0002",
+                      "name": {
+                        "_type": "DV_TEXT",
+                        "value": "Unstuctured telecoms"
+                      },
+                      "value": {
+                        "_type": "DV_TEXT",
+                        "value": "Unstuctured telecoms"
+                      }
+                    },
+                    {
+                      "_type": "CLUSTER",
+                      "archetype_node_id": "at0003",
+                      "items": [
+                        {
+                          "_type": "ELEMENT",
+                          "archetype_node_id": "at0005",
+                          "name": {
+                            "_type": "DV_TEXT",
+                            "value": "Country code"
+                          },
+                          "value": {
+                            "_type": "DV_TEXT",
+                            "value": "Country code"
+                          }
+                        },
+                        {
+                          "_type": "ELEMENT",
+                          "archetype_node_id": "at0006",
+                          "name": {
+                            "_type": "DV_TEXT",
+                            "value": "Area code"
+                          },
+                          "value": {
+                            "_type": "DV_TEXT",
+                            "value": "Area code"
+                          }
+                        },
+                        {
+                          "_type": "ELEMENT",
+                          "archetype_node_id": "at0007",
+                          "name": {
+                            "_type": "DV_TEXT",
+                            "value": "Number"
+                          },
+                          "value": {
+                            "_type": "DV_TEXT",
+                            "value": "Number"
+                          }
+                        },
+                        {
+                          "_type": "ELEMENT",
+                          "archetype_node_id": "at0019",
+                          "name": {
+                            "_type": "DV_TEXT",
+                            "value": "Extension"
+                          },
+                          "value": {
+                            "_type": "DV_TEXT",
+                            "value": "Extension"
+                          }
+                        }
+                      ],
+                      "name": {
+                        "_type": "DV_TEXT",
+                        "value": "Structured telecoms"
+                      }
+                    }
+                  ],
+                  "name": {
+                    "_type": "DV_TEXT",
+                    "value": "Telecoms"
+                  }
+                },
+                {
+                  "_type": "ELEMENT",
+                  "archetype_node_id": "at0009",
+                  "name": {
+                    "_type": "DV_TEXT",
+                    "value": "Email address"
+                  },
+                  "value": {
+                    "_type": "DV_TEXT",
+                    "value": "Email address"
+                  }
+                }
+              ],
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "Telecom details"
+              }
+            }
+          ],
+          "name": {
+            "_type": "DV_TEXT",
+            "value": "Patient"
+          }
+        },
+        {
+          "_type": "ELEMENT",
+          "archetype_node_id": "at0039",
+          "name": {
+            "_type": "DV_TEXT",
+            "value": "DateTime attested"
+          },
+          "value": {
+            "_type": "DV_DATE_TIME",
+            "value": "2022-02-03T04:05:06Z"
+          }
+        },
+        {
+          "_type": "ELEMENT",
+          "archetype_node_id": "at0040",
+          "name": {
+            "_type": "DV_TEXT",
+            "value": "Document Status"
+          },
+          "value": {
+            "_type": "DV_TEXT",
+            "value": "Document Status"
+          }
+        }
+      ],
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "Tree"
+      }
+    },
     "setting": {
       "_type": "DV_CODED_TEXT",
       "defining_code": {

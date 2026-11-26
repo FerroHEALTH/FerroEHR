@@ -67,7 +67,8 @@ honour **refuses to boot** rather than degrading at the first request:
 | an `issuer` not `https` (plain `http` is accepted on a loopback host only), carrying a query or fragment, or a user name or password | error: RFC 8414 §2, §6.2; OpenID Connect Core 1.0 §1.2 |
 | an issuer whose metadata or key set cannot be read | error: the start is refused rather than the first request |
 | `clock_skew` above `"5min"` | error: leeway may be "no more than a few minutes" (RFC 7519 §4.1.4) |
-| `algorithms` naming an `HS*` algorithm, or empty | error: the server accepts asymmetric algorithms only (RFC 8725 §3.1, §3.2) |
+| `algorithms` naming an `HS*` algorithm or `none` | error at parse: the server accepts asymmetric algorithms only (RFC 8725 §3.1, §3.2) |
+| `algorithms` empty | error: the server accepts asymmetric algorithms only (RFC 8725 §3.1, §3.2) |
 | a `jwks_file` holding a symmetric key or a private-key member | error: a verifier holds public keys only |
 | a `product_scope` that is neither a full URI nor starts with `__` | error: SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility |
 | a `password_hash` below `m=19456,t=2,p=1` argon2id | error: the OWASP Argon2id floor |

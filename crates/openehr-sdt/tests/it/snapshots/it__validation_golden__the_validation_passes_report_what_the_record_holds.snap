@@ -96,7 +96,7 @@ corpus/templates/ckm/diphtheria-case-investigation.example.json: 12 6f997b0ec28a
 corpus/templates/ckm/diphtheria-case-investigation.opt: 12 aec6bf3571724b25
 corpus/templates/ckm/eprescription-fhir.example.json: 12 ae2271d0a268381b
 corpus/templates/ckm/eprescription-fhir.opt: 9 e1d390fa0b28d987
-corpus/templates/ckm/ereferral.example.json: 27 273261f21d01b06a
+corpus/templates/ckm/ereferral.example.json: 12 892f357789b79e70
 corpus/templates/ckm/ereferral.opt: 12 5e4f10e4a7bc8b48
 corpus/templates/ckm/full/2024-master-infectious-disease-case-investigation-form-jm.opt: 12 aec6bf3571724b25
 corpus/templates/ckm/full/2025-master-infectious-disease-case-investigation-form-jm.opt: 12 aec6bf3571724b25

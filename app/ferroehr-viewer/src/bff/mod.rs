@@ -24,6 +24,7 @@ pub mod grants;
 pub mod item_tags;
 pub mod login;
 pub mod registers;
+pub mod signature;
 pub mod system;
 pub mod template_adl2;
 pub mod template_detail;
