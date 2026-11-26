@@ -44,6 +44,15 @@ impl Done {
         }
     }
 
+    /// A toast in the warn tone saying `title`.
+    #[must_use]
+    pub fn warn(title: impl Into<String>) -> Self {
+        Self {
+            tone: Tone::Warn,
+            ..Self::ok(title)
+        }
+    }
+
     /// The same toast with the line `line`.
     #[must_use]
     pub fn line(mut self, line: impl Into<String>) -> Self {
