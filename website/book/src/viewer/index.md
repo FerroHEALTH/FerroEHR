@@ -302,6 +302,8 @@ behind the menu button.
   log**. See [Server and audit log](server.md).
 - **Access policy:** the controller's access policy by section, its versions
   and its editor. See [Access control](access-control.md).
+- **Roles and grants:** the roles holding an `openehr_access` grant and the
+  system clients. See [Access control](access-control.md#roles-and-grants).
 - **Configuration:** the CDR's redacted running configuration, by section.
 - **About:** the viewer, the CDR and their versions, the manufacturer and
   the CDR's conformance manifest.
