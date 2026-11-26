@@ -80,7 +80,8 @@ Per request, `37c5dd3279`, 10 measured requests a path:
 | the population row read | 970 | 6,655 | 0.9 | 7.2 |
 
 Main on 19.0 shows the same two shapes (33,947 and 6,804 buffers). The
-regression is #6630.
+regression is #6630, whose change analyzes the care projection after a
+write of 1,000 rows or more.
 
 ## Main on 19.0
 
