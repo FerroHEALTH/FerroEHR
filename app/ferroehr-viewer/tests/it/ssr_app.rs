@@ -722,7 +722,17 @@ async fn every_screen_draws_its_heading_and_its_reading() {
         ),
         (
             "/parties".to_owned(),
-            vec!["The demographic tag index", "follow-up"],
+            vec![
+                "Last committed",
+                "Demo Clinic",
+                "Demo Person 0417",
+                "The demographic tag index",
+                "follow-up",
+            ],
+        ),
+        (
+            "/parties?list=organisation".to_owned(),
+            vec!["Demo Clinic", "Organisation"],
         ),
         (
             format!("/parties/person/{party}"),
@@ -975,6 +985,33 @@ async fn a_run_draws_the_rows_and_the_exports_post_the_query_again() {
     assert!(
         !main.contains(r#"name="shown""#),
         "a result with no numeric column offers no chart: {main}"
+    );
+}
+
+#[tokio::test]
+async fn a_party_find_lists_the_parties_whose_identities_hold_the_text() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let answer = viewer
+        .send(
+            http::Method::POST,
+            "/parties?list=person",
+            Some(&cookie),
+            Some(&[("intent", "find"), ("find", "Person 0417")]),
+        )
+        .await;
+    assert_eq!(answer.status, http::StatusCode::OK, "{}", answer.body);
+    let main = answer.main();
+    assert!(main.contains("Holding “Person 0417”"), "{main}");
+    let party = format!("/parties/person/{}", id("party"));
+    assert!(main.contains(&party), "the row opens its party: {main}");
+    assert!(
+        !main.contains("Demo Clinic"),
+        "an organisation is no person: {main}"
+    );
+    assert!(
+        !answer.headers.contains_key(http::header::LOCATION),
+        "the find stays out of the address: {main}"
     );
 }
 

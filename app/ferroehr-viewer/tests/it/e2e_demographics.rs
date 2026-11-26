@@ -294,6 +294,53 @@ async fn party_create_read_update_and_history() {
     h.finish().await;
 }
 
+/// The list: a party created over ITS-REST is listed under its kind, the
+/// find narrows the list to it without the text reaching the address, and
+/// its row opens it.
+#[tokio::test]
+async fn the_parties_list_finds_a_party_and_opens_it() {
+    let Some(h) = Harness::start("demographics-list").await else {
+        return;
+    };
+    let Some(cdr) = cdr_url() else {
+        h.finish().await;
+        return;
+    };
+    let http = reqwest::Client::new();
+    let v1 = format!("{cdr}/ferroehr/rest/openehr/v1");
+    let label = format!("listed-organisation-{}", jitter());
+    let organisation =
+        create_party_over_rest(&http, &v1, "organisation", "ORGANISATION", &label).await;
+
+    login_basic(&h).await;
+    h.goto("/parties?list=organisation").await;
+    wait_main_contains(&h, "Last committed").await;
+    wait_main_contains(&h, &label).await;
+
+    fill(&h, "#parties-find", &label).await;
+    // The find has one field, so Enter submits it (HTML §4.10.21.2).
+    common::submit_by_key(&h, thirtyfour::Key::Enter).await;
+    wait_main_contains(&h, "Holding").await;
+    let url = h.current_url().await;
+    assert!(
+        !url.contains(&label),
+        "a find stays out of the address: {url}"
+    );
+    h.shot(1, "parties-find").await;
+
+    let row = party_path("organisation", &organisation);
+    h.wait_css(&format!("main a.fui-row-link[href='{row}']"))
+        .await
+        .click()
+        .await;
+    h.wait_url_contains(&row).await;
+    wait_main_contains(&h, &label).await;
+
+    h.assert_console_clean(&["401", "Failed to load resource"])
+        .await;
+    h.finish().await;
+}
+
 /// Relating two parties: a relationship created from the PERSON's
 /// Relationships tab links both ends from its own page, and the PERSON's
 /// relationships list then links its target.
