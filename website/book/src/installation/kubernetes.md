@@ -5,7 +5,8 @@ Kubernetes workload (non-root, read-only root filesystem, a NetworkPolicy that
 admits its serving port only, its own user namespace) against an **external**
 PostgreSQL 19. This chapter
 covers installing it, verifying what you installed, the database role model it
-expects, its secrets, and upgrades. The security posture, the health probes
+expects, its secrets, and staying available while things move. Upgrading the
+release is on [Upgrades](../upgrades.md#upgrading-the-helm-release). The security posture, the health probes
 and authentication are on [Kubernetes: security posture, probes and
 authentication](kubernetes-security.md), and the optional integrations on
 [Kubernetes: integrations](kubernetes-integrations.md).
@@ -555,72 +556,3 @@ inter-zone cost, at the price of even load, so measure before setting it. And
 `autoscaling.behavior` passes scaling policies straight through; the documented
 defaults already scale up immediately and wait out a five-minute stabilization
 window before scaling down, so change it only to be *more* conservative.
-
-## Upgrades
-
-Migrations are **append-only** (a schema change is a new file, never an edit to
-an applied one) so a rolling upgrade stays compatible with the previous schema
-during the window where both versions run: additive DDL first, destructive
-changes in a later release once all pods are on the new version. Keep
-`replicaCount` at two or more (or `autoscaling.enabled`) and the default
-PodDisruptionBudget so upgrades and node drains never fully interrupt the API;
-the default `terminationGracePeriodSeconds` covers the binary's shutdown drain.
-Roll back by re-pinning the prior image tag or digest.
-
-The step from v5 to v6 is the exception: v6 starts from a new migration
-baseline and needs a new, empty database, so it is a new installation with the
-records moved by archive dump and load
-([Operations → Upgrading from v5 to v6](../upgrades.md#upgrading-from-v5-to-v6)).
-
-A change anywhere under `config`, `config.files` or `secrets` changes the
-`checksum/config` pod annotation, so `helm upgrade` rolls the pods for a
-configuration-only change too, including a rotated secret or an edited
-mounted file, both of which are read at boot and would otherwise reach the volume while
-every running pod kept using the old value.
-
-`helm uninstall` removes everything the chart created; the chart declares no
-PersistentVolumeClaim, so nothing is left behind; your database, and the Secret
-holding its DSN, are yours and survive.
-
-Preview an upgrade against what you have installed with
-`helm diff`, or render the new chart version and read it:
-
-```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 43.0.1 \
-  -n ferroehr -f my-values.yaml | less
-```
-
-Working from a checkout instead, `deploy/helm/validate.sh` runs the chart's full
-render gate: the helm-version pin, lint, YAML validity, the structural
-Restricted-profile and selector-immutability gates, the secret-leak gate, the
-values-schema probes, and the golden-render diff. It is the same gate CI runs on
-every change to the chart, so a local run and a pull request agree by
-construction.
-
-### Check your values before you deploy them
-
-A render that lints is not a deployment that boots. `validate.sh` never runs the
-server, so it cannot see a configuration the server refuses: a missing
-authentication mechanism, an `HS*` algorithm, a password hash that is not a
-real Argon2id PHC string, SMART enabled without its public base URL. Every one of those renders perfectly and crash-loops the pod. The
-script prints exactly which properties it does not check, on success as well as
-on failure, so a green run is not mistaken for a working deployment.
-
-The check that closes that gap runs the image against your rendered
-configuration:
-
-```shell
-FERROEHR_IMAGE=ghcr.io/ferrohealth/ferroehr:5.7.1-rc1 \
-  deploy/helm/ci/boot-check.sh my-values.yaml
-```
-
-It renders the chart, mounts the ConfigMap and the Secret exactly as the
-Deployment does (with their real values, not placeholders) replays the
-declared environment, and runs `ferroehr config check` inside the image. Point
-`FERROEHR_IMAGE` at the tag you intend to deploy: the answer is specific to that
-image, since a key your values carry may be newer than the server that has to
-read it.
-
-It validates configuration only; it opens no socket, so it cannot tell you the
-issuer resolves, the broker is reachable or the database accepts the DSN. CI
-runs the same script over every values overlay the chart ships.

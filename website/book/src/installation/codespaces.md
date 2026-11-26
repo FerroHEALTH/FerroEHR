@@ -38,7 +38,7 @@ checkout you opened it on: the `COMPOSE_FILE` environment variable inside the
 container pins every `docker compose` command to that file, so the
 repository's development override (which switches to from-source builds) does
 not apply. To develop FerroEHR itself, use a local checkout as described
-under [Repository development](compose.md#repository-development).
+under [Repository development](compose-overlays.md#repository-development).
 
 The Codespace runs on your own GitHub account. The smallest machine type
 (2 cores, 8 GB) is enough, and GitHub's free monthly Codespaces allowance

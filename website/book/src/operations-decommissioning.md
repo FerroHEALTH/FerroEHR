@@ -25,7 +25,7 @@ command:
   years after the last treatment or after death. If the records must survive
   the instance, move them first: export each EHR over the API, or take a full
   dump through `/ferroehr/rest/extensions/v1/admin/dump`
-  ([dump and load](operations-admin-apis.md#dump-and-load)), and check the
+  ([dump and load](storage-admin-apis.md#dump-and-load)), and check the
   copy in its new home before you erase. The retention marks and what is
   already due are described in
   [Retention, restriction and objection](compliance/retention.md).

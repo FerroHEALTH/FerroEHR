@@ -39,7 +39,7 @@ Two things make this safe to rely on:
   configuration strictly and rejects an unknown key with a did-you-mean, so a
   misspelled path fails loudly at startup instead of quietly doing nothing.
   Check before you deploy with the schema and boot gates described under
-  [Check your values before you deploy them](kubernetes.md#check-your-values-before-you-deploy-them).
+  [Check your values before you deploy them](../upgrades.md#check-your-values-before-you-deploy-them).
 - **Credentials do not belong in this tree.** `config` becomes a mounted
   file; secrets have their own routes (`secrets.*`, `existingSecret`, and the
   `*_file` key siblings); see
@@ -201,7 +201,7 @@ through it. The CDR's own `/terminology/*` extension routes are a separate
 switch: they answer only with `config.api.terminology=true`, which is
 `false` by default, and return `404` otherwise whether or not FerroTERM is
 running. It is the Helm equivalent of the
-[compose terminology overlay](compose.md#the-terminology-overlay-ferroterm).
+[compose terminology overlay](compose-overlays.md#the-terminology-overlay-ferroterm).
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \

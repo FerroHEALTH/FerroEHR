@@ -552,7 +552,7 @@ to other products or systems, ensure that this is done in a secure manner"
   `app/ferroehr/tests/it/decommission.rs`;
   [decommissioning](../operations-decommissioning.md);
   [physical deletion](../operations-admin-apis.md#physical-deletion);
-  [dump and load](../operations-admin-apis.md#dump-and-load).
+  [dump and load](../storage-admin-apis.md#dump-and-load).
 - **Status:** met, shipped in #3642. The decommissioning page lists what the
   erase cannot reach and the deploying organisation removes: backups, WAL
   archives and replicas, the chart's Secrets and claims, the database roles,
