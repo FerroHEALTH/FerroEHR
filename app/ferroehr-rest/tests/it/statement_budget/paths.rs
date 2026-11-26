@@ -598,6 +598,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitRole,
         conversions: 9,
+        // NOTE: our own design (#6706), this median moves by 4 between Linux runs.
         median: 1937,
         allocations: 1989,
         peak_bytes: 126_256,
