@@ -20,6 +20,7 @@ pub mod ehr_detail;
 pub mod ehr_tags;
 pub mod ehrs;
 pub mod integrity;
+pub mod grants;
 pub mod item_tags;
 pub mod login;
 pub mod report;

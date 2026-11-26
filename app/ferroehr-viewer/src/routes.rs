@@ -157,6 +157,8 @@ pub enum Page {
     AccessPolicyVersions,
     /// `/access-policy/edit`.
     EditAccessPolicy,
+    /// `/grants`.
+    Grants,
     /// `/configuration` and its sections.
     Configuration,
     /// `/preferences` and its sections.
@@ -229,6 +231,7 @@ impl Page {
             "/access-policy" => Self::AccessPolicy,
             "/access-policy/versions" => Self::AccessPolicyVersions,
             "/access-policy/edit" => Self::EditAccessPolicy,
+            "/grants" => Self::Grants,
             "/configuration" | "/configuration/:section" => Self::Configuration,
             "/preferences" | "/preferences/:section" => Self::Preferences,
             "/access" => Self::Access,
@@ -373,6 +376,7 @@ pub static ROUTES: &[&str] = &[
     "/access-policy",
     "/access-policy/versions",
     "/access-policy/edit",
+    "/grants",
     "/configuration",
     "/configuration/:section",
     "/preferences",
@@ -443,6 +447,7 @@ pub async fn draw() -> Drawn {
         Page::AccessPolicy => pages::policy::page().await,
         Page::AccessPolicyVersions => pages::policy::versions_page().await,
         Page::EditAccessPolicy => pages::policy::edit::page().await,
+        Page::Grants => pages::policy::grants::page().await,
         Page::Configuration => pages::configuration::page().await,
         Page::Preferences => pages::preferences::page(),
         Page::Access => pages::access::page(),
