@@ -237,6 +237,9 @@ pub struct Ran {
     aql: String,
     /// Its parameters as a JSON object text, for the exports.
     parameters: String,
+    /// Whether it ran over a cohort, whose predicates the page's form holds,
+    /// so the exports run the same cohort.
+    cohort: bool,
     /// Whether the reader asked for the chart.
     chart: bool,
     /// The route the exports post to.
@@ -244,8 +247,8 @@ pub struct Ran {
 }
 
 impl Ran {
-    /// What `page` answered to `aql` with `parameters`.
-    fn of(page: &ResultPage, aql: &str, parameters: &str) -> Self {
+    /// What `page` answered to `aql` with `parameters`, over a cohort or not.
+    fn of(page: &ResultPage, aql: &str, parameters: &str, cohort: bool) -> Self {
         Self {
             columns: page.columns.clone(),
             rows: page
@@ -261,6 +264,7 @@ impl Ran {
             own_window: crate::aql_text::carries_own_window(aql),
             aql: aql.to_owned(),
             parameters: parameters.to_owned(),
+            cohort,
             chart: chart_asked(),
             export: crate::export::EXPORT_ROUTE.to_owned(),
         }
@@ -283,7 +287,21 @@ impl Answer {
     #[must_use]
     pub fn of(outcome: Result<ResultPage, ViewerError>, aql: &str, parameters: &str) -> Self {
         match outcome {
-            Ok(page) => Self::Ran(Box::new(Ran::of(&page, aql, parameters))),
+            Ok(page) => Self::Ran(Box::new(Ran::of(&page, aql, parameters, false))),
+            Err(error) => Self::Refused(Refused::new(tr(QueriesMsg::QueryRunRefused), error)),
+        }
+    }
+
+    /// The answer of a run of `aql` with `parameters` over the cohort the
+    /// page's form selects; its exports run the same cohort.
+    #[must_use]
+    pub fn of_cohort(
+        outcome: Result<ResultPage, ViewerError>,
+        aql: &str,
+        parameters: &str,
+    ) -> Self {
+        match outcome {
+            Ok(page) => Self::Ran(Box::new(Ran::of(&page, aql, parameters, true))),
             Err(error) => Self::Refused(Refused::new(tr(QueriesMsg::QueryRunRefused), error)),
         }
     }
@@ -335,10 +353,15 @@ fn results(ran: Ran) -> Html {
         None => (Shown::Table, table(&ran.columns, &ran.rows)),
     };
     let body = h(format!(
-        r#"<input type="hidden" name="{SHOWN_DEFAULT}" value="{}"><input type="hidden" name="q" value="{}"><input type="hidden" name="parameters_json" value="{}">{body}"#,
+        r#"<input type="hidden" name="{SHOWN_DEFAULT}" value="{}"><input type="hidden" name="q" value="{}"><input type="hidden" name="parameters_json" value="{}">{}{body}"#,
         asked.key(),
         t(&ran.aql),
-        t(&ran.parameters)
+        t(&ran.parameters),
+        if ran.cohort {
+            r#"<input type="hidden" name="cohort" value="1">"#
+        } else {
+            ""
+        }
     ));
     results_pane(
         &current(),

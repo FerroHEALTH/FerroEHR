@@ -449,6 +449,11 @@ const ADMIN_READ: &[(&str, &str)] = &[
     ("GET", "/admin/ehr-access"),
     // The EHDS Art. 3(3) access-delay register (#4351).
     ("GET", "/admin/access-delay"),
+    // The research objection, the retention anchor and the held objects of
+    // one EHR (#6690).
+    ("GET", "/admin/research-objection"),
+    ("GET", "/admin/retention/anchor"),
+    ("GET", "/admin/retention/hold"),
     // The delivery of the audit records to the sinks: cursors and parked
     // records, by ids and counts (#6242).
     ("GET", "/admin/audit-delivery"),

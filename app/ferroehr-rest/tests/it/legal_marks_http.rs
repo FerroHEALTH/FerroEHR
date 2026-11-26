@@ -357,6 +357,9 @@ async fn the_mark_routes_are_behind_the_admin_switch() {
         get("/admin/restriction?ehr_id=00000000-0000-0000-0000-000000000000"),
         get("/admin/retention/policy"),
         get("/admin/retention/due"),
+        get("/admin/research-objection?ehr_id=00000000-0000-0000-0000-000000000000"),
+        get("/admin/retention/anchor?ehr_id=00000000-0000-0000-0000-000000000000"),
+        get("/admin/retention/hold?ehr_id=00000000-0000-0000-0000-000000000000"),
         post_json(
             "/admin/restriction",
             r#"{"ehr_id":"x","ground":"national"}"#,
@@ -459,4 +462,126 @@ async fn a_restricted_composition_is_refused_while_the_record_stays_in_use() {
     .await;
     let (status, body) = send_body(&app, get(&reads[0])).await;
     assert_eq!(status, StatusCode::OK, "after the lift: {body}");
+}
+
+/// The read of one mark, as JSON.
+async fn mark(app: &axum::Router, path: &str) -> serde_json::Value {
+    let (status, body) = send_body(app, get(path)).await;
+    assert_eq!(status, StatusCode::OK, "a mark read answers: {body}");
+    serde_json::from_str(&body).expect("mark json")
+}
+
+/// The research objection, the retention anchor and the held objects read
+/// back as they were set, each with its empty state first (#6690).
+#[tokio::test]
+async fn the_objection_the_anchor_and_the_holds_read_back_as_set() {
+    let (_pg, app) = common::app(common::api_config(true)).await;
+    let ehr_id = create_ehr(&app).await;
+    let objection = format!("/admin/research-objection?ehr_id={ehr_id}");
+    let anchor = format!("/admin/retention/anchor?ehr_id={ehr_id}");
+    let holds = format!("/admin/retention/hold?ehr_id={ehr_id}");
+
+    let none = mark(&app, &objection).await;
+    assert_eq!(none["objected"], serde_json::json!(false), "{none}");
+    assert!(none["objected_at"].is_null(), "{none}");
+    assert!(mark(&app, &anchor).await["anchor"].is_null());
+    assert_eq!(mark(&app, &holds).await["holds"], serde_json::json!([]));
+
+    let set = |path: &'static str, body: String| post_json(path, &body);
+    let (status, body) = send_body(
+        &app,
+        set(
+            "/admin/research-objection",
+            format!(r#"{{"ehr_id":"{ehr_id}","objected":true}}"#),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "objection: {body}");
+    let stands = mark(&app, &objection).await;
+    assert_eq!(stands["objected"], serde_json::json!(true), "{stands}");
+    assert!(stands["objected_at"].is_string(), "{stands}");
+    assert!(stands["ground"].is_null(), "{stands}");
+
+    let (status, body) = send_body(
+        &app,
+        set(
+            "/admin/research-objection",
+            format!(r#"{{"ehr_id":"{ehr_id}","objected":true,"ground":"public interest"}}"#),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "override: {body}");
+    let overridden = mark(&app, &objection).await;
+    assert_eq!(
+        overridden["objected"],
+        serde_json::json!(false),
+        "{overridden}"
+    );
+    assert_eq!(overridden["ground"], serde_json::json!("public interest"));
+
+    let (status, body) = send_body(
+        &app,
+        put_json(
+            "/admin/retention/anchor",
+            &format!(
+                r#"{{"ehr_id":"{ehr_id}","jurisdiction":"CH",
+                    "anchored_at":"1990-01-01T00:00:00Z",
+                    "hold_at":"2026-09-15T00:00:00Z","hold_ground":"litigation"}}"#
+            ),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "anchor: {body}");
+    let anchored = mark(&app, &anchor).await;
+    assert_eq!(anchored["anchor"]["jurisdiction"], serde_json::json!("CH"));
+    assert_eq!(
+        anchored["anchor"]["hold_ground"],
+        serde_json::json!("litigation")
+    );
+    assert!(anchored["anchor"]["anchored_at"].is_string(), "{anchored}");
+
+    let (status, body) = send_body(&app, get(&format!("/ehr/{ehr_id}/versioned_ehr_status"))).await;
+    assert_eq!(status, StatusCode::OK, "versioned status: {body}");
+    let status_vo: serde_json::Value = serde_json::from_str(&body).expect("versioned json");
+    let vo_id = status_vo["uid"]["value"].as_str().expect("uid").to_owned();
+    let (status, body) = send_body(
+        &app,
+        set(
+            "/admin/retention/hold",
+            format!(r#"{{"vo_id":"{vo_id}","held":true}}"#),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "hold: {body}");
+    let held = mark(&app, &holds).await;
+    assert_eq!(
+        held["holds"][0]["vo_id"],
+        serde_json::json!(vo_id),
+        "{held}"
+    );
+    assert!(held["holds"][0]["held_at"].is_string(), "{held}");
+}
+
+/// Each read refuses a missing or malformed `ehr_id` with `400` and an
+/// unknown EHR with `404` (#6690).
+#[tokio::test]
+async fn the_mark_reads_refuse_a_bad_or_unknown_ehr() {
+    let (_pg, app) = common::app(common::api_config(true)).await;
+    for path in [
+        "/admin/research-objection",
+        "/admin/retention/anchor",
+        "/admin/retention/hold",
+    ] {
+        let (status, body) = send_body(&app, get(path)).await;
+        assert_eq!(
+            status,
+            StatusCode::BAD_REQUEST,
+            "{path} without ehr_id: {body}"
+        );
+        let (status, body) = send_body(&app, get(&format!("{path}?ehr_id=nonsense"))).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{path} malformed: {body}");
+        let unknown = format!("{path}?ehr_id=00000000-0000-4000-8000-000000000000");
+        let (status, body) = send_body(&app, get(&unknown)).await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "{path} unknown: {body}");
+    }
 }
