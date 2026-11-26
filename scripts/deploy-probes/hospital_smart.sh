@@ -111,10 +111,12 @@ TOML
 }
 
 # The client documents of the scenario, which the overlay's
-# `ferrosmart-clients` one-shot applies beside the viewer's.
+# `ferrosmart-clients` one-shot applies: the viewer's, from the one
+# docker/ferrosmart/secrets.sh writes, names the scenario's base.
 hs_documents() {
   local dir client scope
   dir="$(hs_dir)/documents"
+  jq --arg base "$HS_BASE" '.resources = [$base]' "$(hs_dir)/viewer_client.json" > "$dir/ferroehr-viewer.json"
   jq -n --arg id "$HS_APP" --arg redirect "$HS_REDIRECT" --arg base "$HS_BASE" '{
     client_id: $id,
     client_name: "Hospital app",
@@ -141,12 +143,13 @@ hs_documents() {
 }
 
 # The `ferrosmart client apply` arguments of the scenario's documents, as the
-# one-shot reads them, the viewer's last.
+# one-shot reads them.
 hs_document_paths() {
   local client
-  printf '/etc/ferrosmart/clients/%s.json, ' "$HS_APP"
-  for client in $HS_SYSTEMS; do printf '/etc/ferrosmart/clients/%s.json, ' "$client"; done
-  printf '/run/secrets/ferrosmart_viewer_client'
+  for client in ferroehr-viewer "$HS_APP" $HS_SYSTEMS; do
+    printf '/etc/ferrosmart/clients/%s.json' "$client"
+    [[ "$client" == "${HS_SYSTEMS##* }" ]] || printf ', '
+  done
 }
 
 # The secrets, the system clients' keys and the configuration of a fresh run.
