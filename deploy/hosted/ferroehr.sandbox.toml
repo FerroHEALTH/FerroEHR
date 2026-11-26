@@ -57,6 +57,20 @@ group_identifier_issuer = "urn:example:groups"
 user = "ferroehr"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
 
+# Two more demo logins, with the same public password, for the demo dataset
+# (scripts/sandbox/seed/): ferroehr-clinician, a professional the box's
+# compose file provisions and grants clinical scopes, who reads records
+# outside a care relationship and attests; and ferroehr-proxy, whose PERSON
+# the seed writes as the representative of a demo patient, who reads the
+# subject view of that patient's access log.
+[[auth.basic.users]]
+user = "ferroehr-clinician"
+password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
+
+[[auth.basic.users]]
+user = "ferroehr-proxy"
+password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
+
 # The healthcare provider the sandbox acts for (an example id under the OID
 # arc 2.999), and the binding key of the demo user.
 [authz.party_binding]
@@ -66,6 +80,16 @@ provider = { issuer = "urn:oid:2.999.7.9", id = "sandbox" }
 user = "ferroehr"
 key_issuer = "urn:example:basic-user"
 key = "ferroehr"
+
+[[authz.party_binding.basic_user]]
+user = "ferroehr-clinician"
+key_issuer = "urn:example:basic-user"
+key = "ferroehr-clinician"
+
+[[authz.party_binding.basic_user]]
+user = "ferroehr-proxy"
+key_issuer = "urn:example:basic-user"
+key = "ferroehr-proxy"
 
 # The SCIM endpoint the demo PERSON is provisioned through (RFC 7644 §3.3), as
 # an identity provider provisions people: the ferroehr-grant service of the
@@ -89,10 +113,12 @@ public_base_url = "https://sandbox.ferroehr.eu"
 [auth.scim]
 
 # The operations the party store may grant: beside a system client's commit,
-# the scim_provision the ferroehr-grant service grants `sandbox-scim` and the
-# demo user's scopes the ferroehr-hold service grants.
+# the scim_provision the ferroehr-grant service grants `sandbox-scim`, the
+# demo users' scopes the ferroehr-hold services grant, and the access-control
+# writes and privileges the demo dataset grants. A sandbox posture only,
+# never a production default.
 [authz.grants]
-allowed = ["commit_composition", "scim_provision", "hold_scopes"]
+allowed = ["commit_composition", "scim_provision", "hold_scopes", "write_access_policy", "write_care_relationship", "write_representation", "access_service"]
 
 # Authentication only, no role gate — the one demo user deliberately reaches
 # every enabled surface, the admin group included (#2965). It is the first
