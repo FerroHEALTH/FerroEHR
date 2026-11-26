@@ -9,8 +9,10 @@
 #    the quickstart's posture of no role gate so the one user ferroehr /
 #    ferroehr reads every surface the viewer draws. The professional templates
 #    are loaded before serve, ferroehr is bound to a PERSON through SCIM, and
-#    its PERSON is granted write_access_policy, a grant of this recording's
-#    own that the grant ceiling admits here only.
+#    its PERSON is granted write_access_policy and is the first
+#    administrator, so it reads the policy parties; a system client is
+#    granted read_change_feed. Both grants are this recording's own, which
+#    the grant ceiling admits here only.
 # 2. Seeds it over ITS-REST as scripts/ui-e2e.sh does (the template, an EHR,
 #    a composition committed then updated, a FLAT composition) plus what the
 #    in-process screens read: the subject, a tag, a directory, a person, an
@@ -105,6 +107,7 @@ else
     FERROEHR__DATABASE__URL="postgres://$PG_ROLE:$PG_SECRET@127.0.0.1:$PG_PORT/$PG_ROLE"
     FERROEHR__SERVER__LISTEN="127.0.0.1:$CDR_PORT"
     FERROEHR__AUTHZ__RBAC__ENABLED=false
+    FERROEHR__AUTHZ__RBAC__FIRST_ADMIN=ferroehr
     "FERROEHR__AUTHZ__GRANTS__ALLOWED=commit_composition,read_change_feed,scim_provision,hold_roles,hold_scopes,write_access_policy"
     FERROEHR__USAGE_REPORT__ENABLED=false
     FERROEHR__TELEMETRY__FORMAT=json
@@ -122,6 +125,8 @@ if [[ -z "${VIEWER_RECORD_CDR:-}" ]]; then
     urn:example:basic-user ferroehr
   "${GRANT[@]}" party-binding grant --basic-user ferroehr \
     --operation write_access_policy >/dev/null
+  "${GRANT[@]}" party-binding grant --issuer https://login.example.org/machines \
+    --client-id lab-system --operation read_change_feed --element reader=lab >/dev/null
 fi
 
 V1="$CDR_URL/ferroehr/rest/openehr/v1"
@@ -248,6 +253,21 @@ RELATIONSHIP=$(jq -nc --arg s "$PARTY" --arg t "$ORGANISATION" '{
   | jq -r '.uid.value | split("::")[0]')
 quiet "${AUTH[@]}" -X PUT "$V1/demographic/person/$PARTY/tags" \
   "${JSON[@]}" -d '[{"key": "follow-up", "value": "2026-11-04"}]'
+
+# The system client acts for the clinic.
+LAB_AGENT=$(ask "${AUTH[@]}" -X POST "$V1/query/aql" "${JSON[@]}" \
+  -d '{"q":"SELECT a/uid/value FROM AGENT a WHERE a/name/value = '"'lab-system'"'"}' \
+  | jq -r '.rows[0][0] | split("::")[0]')
+jq -nc --arg s "$LAB_AGENT" --arg t "$ORGANISATION" '{
+    "_type": "PARTY_RELATIONSHIP",
+    "name": {"_type": "DV_CODED_TEXT", "value": "acts_for", "defining_code": {"_type": "CODE_PHRASE",
+      "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr_access"}, "code_string": "acts_for"}},
+    "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1",
+    "source": {"_type": "PARTY_REF", "namespace": "demographic", "type": "AGENT",
+      "id": {"_type": "HIER_OBJECT_ID", "value": $s}},
+    "target": {"_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
+      "id": {"_type": "HIER_OBJECT_ID", "value": $t}}}' \
+  | quiet "${AUTH[@]}" -X POST "$EXT/demographic/party_relationship" "${JSON[@]}" --data-binary @-
 
 # The access policy, committed twice so its history holds two versions.
 policy() {
