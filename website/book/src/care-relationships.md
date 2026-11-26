@@ -18,7 +18,9 @@ FerroEHR therefore stores the outcome as a fact, the care relationship, and
 decides every access and every query on it. This page explains the model.
 The fields, the policy attributes and the refusals are in
 [Caller facts: roles and care relationships](operational-policy.md#caller-facts-roles-and-care-relationships)
-and [Care relationship facts](operational-policy.md#care-relationship-facts).
+and [Care relationship facts](operational-policy.md#care-relationship-facts),
+and where care sits among the other steps of a decision is on [How FerroEHR
+decides access](explanation/access-model.md).
 
 <!-- toc -->
 
