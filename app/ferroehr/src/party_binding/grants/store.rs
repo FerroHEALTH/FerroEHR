@@ -425,10 +425,7 @@ pub(crate) async fn revisions(
         "SELECT r.revision, r.binding_revision, b.behind \
          FROM binding_grant_revision r, party.facts_behind($1::pg_snapshot) b(behind)",
     )
-    .bind(
-        held.and_then(|held| held.snapshot.as_deref())
-            .map(crate::db::snapshot::Snapshot::text),
-    )
+    .bind(held.and_then(|held| held.snapshot.as_deref()))
     .fetch_one(&mut *conn)
     .await?;
     let facts = held.map_or(FactsRead::Behind { after: None }, |held| held.found(behind));
