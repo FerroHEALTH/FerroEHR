@@ -400,7 +400,7 @@ pub async fn draw() -> Drawn {
         Page::NewComposition => pages::composition::new_page().await,
         Page::Composition => pages::composition::page().await,
         Page::EditComposition => pages::composition::edit_composition_page().await,
-        Page::Parties => pages::parties::list_page().await,
+        Page::Parties => pages::parties::list::list_page().await,
         Page::NewParty => pages::parties::new_party_page().await,
         Page::NewRelationship => pages::parties::new_relationship_page().await,
         Page::Relationship => pages::parties::relationship_page().await,

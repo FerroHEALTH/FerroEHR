@@ -748,28 +748,6 @@ crate::locale::messages! {
         KindRole = "kind-role",
         /// `New party`
         PartiesNew = "parties-new",
-        /// `No { $kind } and no other kind of party has this uid.`
-        PartiesNoKindHolds = "parties-no-kind-holds",
-        /// `No party carries a tag yet.`
-        PartiesNoTags = "parties-no-tags",
-        /// `No party has this uid.`
-        PartiesNoneHolds = "parties-none-holds",
-        /// `Parties follow the released RM 1.1.0 demographic model; the REST API for them is still in `
-        PartiesNote = "parties-note",
-        /// `The party could not be opened.`
-        PartiesOpenRefused = "parties-open-refused",
-        /// `People, organisations, groups, agents and roles, opened by their id.`
-        PartiesSubtitle = "parties-subtitle",
-        /// `The demographic tag index`
-        PartiesTagIndex = "parties-tag-index",
-        /// `On`
-        PartiesTagOn = "parties-tag-on",
-        /// `The tags on parties could not be read.`
-        PartiesTagsRefused = "parties-tags-refused",
-        /// `Tags on parties`
-        PartiesTagsTitle = "parties-tags-title",
-        /// `Party uid`
-        PartiesUid = "parties-uid",
         /// `Archetype`
         PartyArchetype = "party-archetype",
         /// `Opens the party as it stood then.`

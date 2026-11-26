@@ -19,6 +19,7 @@ pub mod access;
 pub mod console;
 pub mod definitions;
 pub mod overview;
+pub mod parties;
 pub mod queries;
 pub mod records;
 pub mod server;
@@ -549,6 +550,7 @@ mod tests {
     use super::console::ConsoleMsg;
     use super::definitions::DefinitionsMsg;
     use super::overview::OverviewMsg;
+    use super::parties::PartiesMsg;
     use super::queries::QueriesMsg;
     use super::records::RecordsMsg;
     use super::server::ServerMsg;
@@ -660,6 +662,7 @@ mod tests {
                 "console",
                 "definitions",
                 "overview",
+                "parties",
                 "queries",
                 "records",
                 "server",
@@ -672,6 +675,7 @@ mod tests {
         holds_every("access", AccessMsg::ALL);
         holds_every("overview", OverviewMsg::ALL);
         holds_every("records", RecordsMsg::ALL);
+        holds_every("parties", PartiesMsg::ALL);
         holds_every("definitions", DefinitionsMsg::ALL);
         holds_every("queries", QueriesMsg::ALL);
         holds_every("console", ConsoleMsg::ALL);
