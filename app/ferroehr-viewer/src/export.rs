@@ -31,6 +31,10 @@ pub struct ExportForm {
     /// `query_parameters` as a JSON object (empty = none).
     #[serde(default)]
     pub parameters_json: String,
+    /// The cohort predicates the run selected its EHRs by, a JSON array
+    /// text; empty for a query over every EHR.
+    #[serde(default)]
+    pub cohort: String,
 }
 
 /// `POST /export/aql/{format}`: run the query and answer with a file
@@ -73,8 +77,17 @@ async fn run(
             ServerMsg::ParametersMustJsonObject,
         )));
     }
-    let url = state.cdr.rest_v1("query/aql");
-    let body = serde_json::json!({ "q": form.q, "query_parameters": parameters }).to_string();
+    let (url, body) = if form.cohort.trim().is_empty() {
+        (
+            state.cdr.rest_v1("query/aql"),
+            serde_json::json!({ "q": form.q, "query_parameters": parameters }).to_string(),
+        )
+    } else {
+        (
+            state.cdr.extensions_v1("query/cohort"),
+            crate::bff::cohort::request_body(&form.q, &parameters, &form.cohort, None),
+        )
+    };
     let response = state
         .cdr
         .call(http::Method::POST, &url, admin.credential())

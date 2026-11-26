@@ -11,6 +11,7 @@
 //! is ITS-REST (`docs/specs/openehr/ITS-REST/`); the pages are our own design.
 
 pub mod audit;
+pub mod cohort;
 pub mod composition;
 pub mod dashboard;
 pub mod demographics;
