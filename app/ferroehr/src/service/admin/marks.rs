@@ -171,6 +171,25 @@ impl FerroEhrService {
         Ok(())
     }
 
+    /// The research objection one EHR carries: when the subject objected and
+    /// any Art. 21(6) override ground.
+    ///
+    /// # Errors
+    /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
+    /// - `exception` — a database fault.
+    /// - `service_overloaded` — the access record could not be written.
+    pub async fn research_objection(
+        &self,
+        ehr_id: EhrId,
+    ) -> Result<marks::ResearchObjectionRow, ServiceError> {
+        self.check_mark_target(ehr_id, None).await?;
+        self.emit_mark_access(EventActionCode::Read, ehr_id, None, "research-objection")
+            .await?;
+        marks::research_objection(&self.pool, ehr_id)
+            .await
+            .map_err(ServiceError::Storage)
+    }
+
     /// Declares the retention period of one content kind in one jurisdiction,
     /// optionally keyed on one EHDS category and one registered origin, with
     /// the legal citation it rests on.
@@ -291,6 +310,42 @@ impl FerroEhrService {
         let record = self.mark_record(EventActionCode::Update, ehr_id, None, "retention-anchor");
         self.commit_act_recorded(tx, vec![record]).await?;
         Ok(())
+    }
+
+    /// The retention facts of one EHR, `None` while none is recorded.
+    ///
+    /// # Errors
+    /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
+    /// - `exception` — a database fault.
+    /// - `service_overloaded` — the access record could not be written.
+    pub async fn retention_anchor(
+        &self,
+        ehr_id: EhrId,
+    ) -> Result<Option<marks::RetentionAnchorRow>, ServiceError> {
+        self.check_mark_target(ehr_id, None).await?;
+        self.emit_mark_access(EventActionCode::Read, ehr_id, None, "retention-anchor")
+            .await?;
+        marks::retention_anchor(&self.pool, ehr_id)
+            .await
+            .map_err(ServiceError::Storage)
+    }
+
+    /// The versioned objects of one EHR held from disposal, newest hold first.
+    ///
+    /// # Errors
+    /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
+    /// - `exception` — a database fault.
+    /// - `service_overloaded` — the access record could not be written.
+    pub async fn retention_holds(
+        &self,
+        ehr_id: EhrId,
+    ) -> Result<Vec<marks::RetentionHoldRow>, ServiceError> {
+        self.check_mark_target(ehr_id, None).await?;
+        self.emit_mark_access(EventActionCode::Read, ehr_id, None, "retention-hold")
+            .await?;
+        marks::retention_holds(&self.pool, ehr_id)
+            .await
+            .map_err(ServiceError::Storage)
     }
 
     /// Place or release the per-object retention hold.
