@@ -1388,14 +1388,14 @@ terminology:
     # -- Pull policy.
     pullPolicy: IfNotPresent
     # -- Image tag. Empty falls back to the FerroTERM release this chart is
-    # pinned to (0.4.8) — never `.Chart.appVersion`, which is FerroEHR's line.
+    # pinned to (0.4.9) — never `.Chart.appVersion`, which is FerroEHR's line.
     # A tag other than that pin is REFUSED while `digest` below is non-empty:
     # the digest wins, so the tag would be inert while the values file claimed
     # otherwise. Clear `digest` to deploy a tag.
     tag: ""
     # -- Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an
     # install runs the exact image this chart was validated against.
-    digest: sha256:f2e4d525b538f56922768ab1ae143cc855dd14c2f007f30c5e3e540bdf081511
+    digest: sha256:101080ef2c4378a9a55569726e058d76b8aa2541c58fca8b543601ff9d254065
   service:
     # -- Service type. ClusterIP deliberately: the CDR is the only caller.
     type: ClusterIP
@@ -1734,10 +1734,10 @@ ferropix:
   image:
     # -- The FerroPIX release the pinned `digest` belongs to. The dependency
     # chart deploys the digest, and the Artifact Hub entry names this tag.
-    tag: "0.0.43"
+    tag: "0.0.44"
     # -- FerroPIX image digest of release `tag`. Pinned here so
     # the image this chart deploys is stated by this chart.
-    digest: "sha256:94fa0f395de800e51f5dc34fb01c9f4d8443c2c4adaec1c22ce85b3f66dba3d9"
+    digest: "sha256:ce5fed1f5e96e9a15923804279c0c0e76fcdb5961961942859b99eb568ef9ba2"
   config:
     server:
       # -- FerroPIX's `[server] base_path`, read here to build the FHIR base the
