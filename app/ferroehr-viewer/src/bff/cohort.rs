@@ -1,12 +1,15 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Cohort queries: AQL run over the EHRs a set of demographic predicates
-//! selects, without disclosing a party identifier (`{ext}/query/cohort`).
+//! Cohort queries: AQL run over the EHRs a set of demographic predicates or
+//! named subjects selects, without disclosing a party identifier
+//! (`{ext}/query/cohort`).
 //!
 //! The predicates are keys the deployment bound in
-//! `[privacy.cohort.predicates]`; the route answers `404` while none is
-//! bound. No openEHR spec governs this route: the CDR's own extension.
+//! `[privacy.cohort.predicates]`, and subjects are named only where
+//! `[privacy.cohort] subjects` is on; the route answers `404` while the
+//! deployment allows neither. No openEHR spec governs this route: the CDR's
+//! own extension.
 
 #![expect(
     clippy::disallowed_types,
@@ -33,6 +36,49 @@ pub struct Predicate {
     /// The value.
     pub value: String,
 }
+
+/// One subject a cohort names by identifier: the `id` and `namespace` of
+/// its `OBJECT_REF` (RM common master04 §`OBJECT_REF`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Subject {
+    /// The identifier domain.
+    pub namespace: String,
+    /// The identifier.
+    pub id: String,
+}
+
+/// What selects a cohort: the predicates and the named subjects, which
+/// intersect.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Selection {
+    /// The filled predicates.
+    pub predicates: Vec<Predicate>,
+    /// The named subjects.
+    pub subjects: Vec<Subject>,
+}
+
+impl Selection {
+    /// Whether nothing selects a cohort.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.predicates.is_empty() && self.subjects.is_empty()
+    }
+}
+
+/// What the deployment lets a cohort select on.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Offered {
+    /// The predicate keys, in the order the form offers them.
+    pub keys: Vec<String>,
+    /// Whether a cohort may name its subjects.
+    pub subjects: bool,
+}
+
+/// The form field of the subjects' identifier domain.
+pub const SUBJECT_NAMESPACE_FIELD: &str = "cohort-subject-namespace";
+
+/// The form field of the subjects' identifiers, one per line.
+pub const SUBJECT_IDS_FIELD: &str = "cohort-subject-ids";
 
 /// What the CDR says of the cohort a run selected.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
@@ -66,16 +112,17 @@ struct Envelope {
     meta: Meta,
 }
 
-/// The request body of a cohort run of `aql` with `parameters` over
-/// `predicates`, the first `fetch` rows or the CDR's default window.
+/// The request body of a cohort run of `aql` with `parameters` over what
+/// `selection` selects, the first `fetch` rows or the CDR's default window.
 #[must_use]
 pub fn request_body(
     aql: &str,
     parameters: &serde_json::Value,
-    predicates: &[Predicate],
+    selection: &Selection,
     fetch: Option<u32>,
 ) -> String {
-    let cohort: Vec<serde_json::Value> = predicates
+    let cohort: Vec<serde_json::Value> = selection
+        .predicates
         .iter()
         .map(|predicate| serde_json::json!({"name": predicate.name, "value": predicate.value}))
         .collect();
@@ -84,27 +131,55 @@ pub fn request_body(
         "query_parameters": parameters,
         "cohort": cohort,
     });
-    if let (Some(fetch), Some(fields)) = (fetch, body.as_object_mut()) {
-        fields.insert("fetch".to_owned(), fetch.into());
+    if let Some(fields) = body.as_object_mut() {
+        if !selection.subjects.is_empty() {
+            let subjects: Vec<serde_json::Value> = selection
+                .subjects
+                .iter()
+                .map(
+                    |subject| serde_json::json!({"id": subject.id, "namespace": subject.namespace}),
+                )
+                .collect();
+            fields.insert("subjects".to_owned(), subjects.into());
+        }
+        if let Some(fetch) = fetch {
+            fields.insert("fetch".to_owned(), fetch.into());
+        }
     }
     body.to_string()
 }
 
-/// The predicates the cohort form `field` reads: each bindable key whose
-/// field `cohort-<key>` is filled.
-pub fn chosen(field: impl Fn(&str) -> String) -> Vec<Predicate> {
-    KEYS.iter()
+/// What the cohort form `field` reads: each bindable key whose field
+/// `cohort-<key>` is filled, and each identifier line under the subjects'
+/// namespace.
+pub fn chosen(field: impl Fn(&str) -> String) -> Selection {
+    let predicates = KEYS
+        .iter()
         .map(|key| Predicate {
             name: (*key).to_owned(),
             value: field(&format!("cohort-{key}")).trim().to_owned(),
         })
         .filter(|predicate| !predicate.value.is_empty())
-        .collect()
+        .collect();
+    let namespace = field(SUBJECT_NAMESPACE_FIELD).trim().to_owned();
+    let subjects = field(SUBJECT_IDS_FIELD)
+        .lines()
+        .map(str::trim)
+        .filter(|id| !id.is_empty())
+        .map(|id| Subject {
+            namespace: namespace.clone(),
+            id: id.to_owned(),
+        })
+        .collect();
+    Selection {
+        predicates,
+        subjects,
+    }
 }
 
-/// Runs `aql` with `parameters_json` over the cohort `predicates` select:
-/// the rows and the cohort's facts; `None` when the deployment binds no
-/// predicate (`404`).
+/// Runs `aql` with `parameters_json` over the cohort `selection` selects:
+/// the rows and the cohort's facts; `None` when the deployment allows no
+/// cohort (`404`).
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)), the CDR's words for
@@ -115,7 +190,7 @@ pub fn chosen(field: impl Fn(&str) -> String) -> Vec<Predicate> {
 pub async fn run_cohort(
     aql: &str,
     parameters_json: &str,
-    predicates: &[Predicate],
+    selection: &Selection,
 ) -> Result<Option<(ResultPage, CohortMeta)>, ViewerError> {
     let cdr = crate::bff::cdr()?;
     let parameters: serde_json::Value = if parameters_json.trim().is_empty() {
@@ -126,7 +201,7 @@ pub async fn run_cohort(
         })?
     };
     let url = cdr.extensions_v1("query/cohort");
-    let body = request_body(aql, &parameters, predicates, Some(crate::bff::PAGE_SIZE));
+    let body = request_body(aql, &parameters, selection, Some(crate::bff::PAGE_SIZE));
     let response = cdr.post(&url).body("application/json", body).send().await?;
     if response.is(http::StatusCode::NOT_FOUND) {
         return Ok(None);
@@ -139,28 +214,42 @@ pub async fn run_cohort(
     Ok(Some((crate::bff::ehrs::parse_result_set(&body, 0)?, meta)))
 }
 
-/// The predicate keys the deployment binds, read from its redacted
-/// configuration; `None` when the session may not read it.
+/// What the deployment lets a cohort select on, read from its redacted
+/// configuration; every key and the subjects when the session may not read
+/// it, for the CDR to judge.
 ///
 /// # Errors
 /// [`ViewerError::Failed`] for a configuration that does not read.
-pub async fn bound_keys() -> Result<Option<Vec<String>>, ViewerError> {
+pub async fn offered() -> Result<Offered, ViewerError> {
     let Ok(body) = crate::bff::system::fetch_admin_config().await else {
         // NOTE: no openEHR spec governs this: our own design; a configuration the
-        // session may not read leaves the bound keys unknown, and the CDR judges each.
-        return Ok(None);
+        // session may not read leaves the allowed selection unknown, and the CDR judges it.
+        return Ok(Offered {
+            keys: KEYS.iter().map(|key| (*key).to_owned()).collect(),
+            subjects: true,
+        });
     };
     let config: serde_json::Value = serde_json::from_str(&body)
         .map_err(|error| ViewerError::failed(tr_served(ServerMsg::CohortResultJson), error))?;
-    Ok(config
+    let bound = config
         .pointer("/privacy/cohort/predicates")
-        .and_then(serde_json::Value::as_object)
-        .map(|bound| bound.keys().cloned().collect()))
+        .and_then(serde_json::Value::as_object);
+    Ok(Offered {
+        keys: KEYS
+            .iter()
+            .filter(|key| bound.is_some_and(|bound| bound.contains_key(**key)))
+            .map(|key| (*key).to_owned())
+            .collect(),
+        subjects: config
+            .pointer("/privacy/cohort/subjects")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or_default(),
+    })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Envelope, chosen, request_body};
+    use super::{Envelope, SUBJECT_IDS_FIELD, SUBJECT_NAMESPACE_FIELD, chosen, request_body};
 
     /// The filled fields are the predicates, sent as the documented
     /// `{name, value}` entries.
@@ -176,6 +265,21 @@ mod tests {
         assert_eq!(
             request_body("q", &serde_json::json!({}), &predicates, None),
             r#"{"q":"q","query_parameters":{},"cohort":[{"name":"city","value":"Groningen"}]}"#
+        );
+    }
+
+    /// Each identifier line is a subject under the namespace, sent as the
+    /// documented `{id, namespace}` entries beside the predicates.
+    #[test]
+    fn the_cohort_names_each_subject_line() {
+        let selection = chosen(|field| match field {
+            SUBJECT_NAMESPACE_FIELD => " urn:oid:2.999.1.1 ".to_owned(),
+            SUBJECT_IDS_FIELD => "p-01\n\n p-02 \n".to_owned(),
+            _ => String::new(),
+        });
+        assert_eq!(
+            request_body("q", &serde_json::json!({}), &selection, None),
+            r#"{"q":"q","query_parameters":{},"cohort":[],"subjects":[{"id":"p-01","namespace":"urn:oid:2.999.1.1"},{"id":"p-02","namespace":"urn:oid:2.999.1.1"}]}"#
         );
     }
 

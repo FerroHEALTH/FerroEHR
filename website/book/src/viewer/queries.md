@@ -58,21 +58,25 @@ it there.
 ### Cohort
 
 **Cohort** runs AQL over a population the deployment's demographic
-predicates select, without a party identifier ever reaching you
-(`POST {ext}/query/cohort`; see [Cohort queries across the pseudonymisation
+predicates or the subjects you name select, without a party identifier ever
+reaching you (`POST {ext}/query/cohort`; see [Cohort queries across the
+pseudonymisation
 boundary](../querying-aql.md#cohort-queries-across-the-pseudonymisation-boundary)).
 Fill one or more predicates (city, postcode area, sex, age band as
-`<min>-<max>` years, organisation; several intersect), write the AQL, and
-**Run**. When your account may read the CDR's configuration, the tab offers
-only the predicates the deployment binds; otherwise it offers every bindable
-key and the CDR refuses an unbound one in its words.
+`<min>-<max>` years, organisation), or name subjects: a **Subject namespace**
+and the **Subject identifiers** in it, one per line. Everything you fill
+intersects. Write the AQL and **Run**. When your account may read the CDR's
+configuration, the tab offers only the predicates the deployment binds, and
+the subjects only where it lets a cohort name them
+(`[privacy.cohort] subjects`); otherwise it offers both, and the CDR refuses
+what it does not allow in its words.
 
 The rows come back as on the AQL tab, with the cohort's facts above them:
 how many EHRs the cohort resolved to, how many the rows came from, and the
 digest that names the cohort. When the rows came from fewer EHRs than the
 CDR's small-cell threshold, the CDR withholds them and the tab says so. An
 export runs the same cohort request again. A deployment that binds no
-predicate offers no cohort: the tab says so.
+predicate and takes no named subject offers no cohort: the tab says so.
 
 ![Cohort](img/queries/cohort.png)
 
