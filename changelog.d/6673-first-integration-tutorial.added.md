@@ -1,0 +1,1 @@
+- The book has a "Your first integration" tutorial: upload a template, create an EHR, commit, read, update and query a composition, and handle a stale `If-Match` and a missing record. Every request on the page runs against the server in CI with the status the page shows.
