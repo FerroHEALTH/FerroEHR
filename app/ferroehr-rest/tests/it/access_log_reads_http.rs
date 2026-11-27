@@ -365,10 +365,13 @@ async fn each_read_names_the_view_it_served() {
         ("the subject", patient(&fx.ehr), "subject"),
         ("a representative", parent(&fx.ehr), "subject"),
     ] {
-        for uri in [log_of(&fx.ehr, ""), entry.clone()] {
+        for (read, uri) in [
+            ("the list", log_of(&fx.ehr, "")),
+            ("an entry", entry.clone()),
+        ] {
             let (status, named) = named_view(&fx.app, &uri, &credential).await;
-            assert_eq!(status, StatusCode::OK, "{who}: {uri}");
-            assert_eq!(named.as_deref(), Some(view), "{who}: {uri}");
+            assert_eq!(status, StatusCode::OK, "{who} reading {read}");
+            assert_eq!(named.as_deref(), Some(view), "{who} reading {read}");
         }
     }
     let (status, named) = named_view(&fx.app, &log_of(&fx.elsewhere, ""), &patient(&fx.ehr)).await;
