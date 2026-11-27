@@ -62,11 +62,11 @@ use crate::state::AppState;
 /// so the concrete subtype is named by `xsi:type` on that same root, which is
 /// how an `IMPORTED_VERSION` stays distinguishable from an `ORIGINAL_VERSION`
 /// (RM common master06 §Version and its Subtypes).
-pub(super) const VERSION_ROOT_TAG: &str = "version";
+pub(crate) const VERSION_ROOT_TAG: &str = "version";
 
-// NOTE: no specification governs this: our own design. No ITS-XML bundle declares
-// an element for EHR, VERSIONED_COMPOSITION, VERSIONED_EHR_STATUS, VERSIONED_EHR_ACCESS
-// or REVISION_HISTORY, so each root is named after its class (#4652).
+// NOTE: no specification governs this: our own design. No ITS-XML bundle declares an element for
+// EHR, CONTRIBUTION, REVISION_HISTORY or a VERSIONED_OBJECT (VERSIONED_COMPOSITION, _EHR_STATUS,
+// _EHR_ACCESS, _PARTY), so each root is named after its class (#4652).
 /// The canonical-XML root tag of the `EHR` document.
 pub(super) const EHR_ROOT_TAG: &str = "ehr";
 /// The canonical-XML root tag of the `VERSIONED_COMPOSITION` document.
@@ -76,7 +76,11 @@ pub(super) const VERSIONED_EHR_STATUS_ROOT_TAG: &str = "versioned_ehr_status";
 /// The canonical-XML root tag of the `VERSIONED_EHR_ACCESS` document.
 pub(super) const VERSIONED_EHR_ACCESS_ROOT_TAG: &str = "versioned_ehr_access";
 /// The canonical-XML root tag of the `REVISION_HISTORY` document.
-pub(super) const REVISION_HISTORY_ROOT_TAG: &str = "revision_history";
+pub(crate) const REVISION_HISTORY_ROOT_TAG: &str = "revision_history";
+/// The canonical-XML root tag of the `CONTRIBUTION` document.
+pub(crate) const CONTRIBUTION_ROOT_TAG: &str = "contribution";
+/// The canonical-XML root tag of the `VERSIONED_PARTY` document.
+pub(crate) const VERSIONED_PARTY_ROOT_TAG: &str = "versioned_party";
 
 /// An RM object an EHR holds exactly one of (RM ehr, EHR class), as the
 /// `EHR_STATUS` reads serve it and the `EHR_ACCESS` reads serve it the same way.

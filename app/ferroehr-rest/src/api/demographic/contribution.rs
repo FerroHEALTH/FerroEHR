@@ -3,8 +3,9 @@
 
 //! The demographic CONTRIBUTION operations —
 //! `operations/demographic_contribution_create.yaml`,
-//! `demographic_contribution_get.yaml`. Canonical content negotiation; the
-//! commit body is a `NewContribution` wrapper (`schemas/demographic/NewContribution.yaml`).
+//! `demographic_contribution_get.yaml`. The CONTRIBUTION is served in canonical
+//! JSON or XML; the commit body is a `NewContribution` wrapper
+//! (`schemas/demographic/NewContribution.yaml`), JSON only.
 
 #![expect(
     clippy::disallowed_types,
@@ -16,8 +17,10 @@ use axum::response::Response;
 use http::StatusCode;
 
 use openehr_its::rest::generated::demographic::ContributionGetParams;
+use openehr_rm::prelude::Contribution;
 
 use crate::api::RequestParts;
+use crate::api::ehr::CONTRIBUTION_ROOT_TAG;
 use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::overview::negotiate::resource::Tree;
@@ -28,7 +31,8 @@ use ferroehr::service::response::ServiceResponse;
 pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let base = state.config().api.base_path.clone();
-    // A CONTRIBUTION commit is a `NewContribution` wrapper DTO, JSON only.
+    // A CONTRIBUTION commit is a `NewContribution` wrapper DTO, JSON only: no
+    // released schema defines its XML (#1605).
     let body = negotiate::decode::contribution_text(h, &parts.body)?;
     let resp = state
         .backend()
@@ -78,12 +82,17 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     {
         meta = meta.with_last_modified(at);
     }
-    let mut out = negotiate::body::respond(h, StatusCode::OK, &resp.body);
+    let mut out = negotiate::body::respond_rm::<Contribution>(
+        h,
+        StatusCode::OK,
+        &resp.body,
+        CONTRIBUTION_ROOT_TAG,
+    );
     negotiate::resource::set_versioning_headers(&mut out, &meta, Tree::Demographic);
     Ok(out)
 }
 
-/// A create response for a JSON-only payload (CONTRIBUTION), honouring `Prefer`
+/// A create response of the committed CONTRIBUTION, honouring `Prefer`
 /// and setting the demographic `ETag` + the creation `Location` (overview
 /// §Location — `201 Created` is exactly the case it scopes the header to).
 ///
@@ -105,7 +114,14 @@ fn write_shared(
         minimal_status,
         repr_status,
         resp.meta.as_ref().map(|m| m.uid.as_str()),
-        |status| negotiate::body::respond(h, status, &resp.body),
+        |status| {
+            negotiate::body::respond_rm::<Contribution>(
+                h,
+                status,
+                &resp.body,
+                CONTRIBUTION_ROOT_TAG,
+            )
+        },
     );
     if let Some(meta) = resp.meta.as_ref() {
         negotiate::resource::set_resource_headers(

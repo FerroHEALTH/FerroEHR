@@ -511,11 +511,17 @@ read uses, so a client never maps codes locally. `total` counts **all** of the
 EHR's contributions, not just the returned window.
 
 > [!NOTE]
-> The contribution envelope is **canonical JSON only**: openEHR publishes no
-> CONTRIBUTION XML document, so an XML `Accept` on these routes is a **406** and
-> an XML `Content-Type` a **415**. The FLAT and STRUCTURED formats, when used,
-> apply only to the inner composition `data` of each version, never to the
-> envelope.
+> A contribution is committed as **canonical JSON only**: no released schema
+> defines the XML of the commit body, so an XML `Content-Type` is a **415**. The
+> committed contribution is served in canonical JSON or XML: the by-uid read and
+> the answer of a create with `Prefer: return=representation` honour an XML
+> `Accept` under a `<contribution>` root of the ITS-XML `CONTRIBUTION` type (see
+> [Root elements no schema publishes](content-negotiation.md#root-elements-no-schema-publishes)).
+> Two answers stay JSON only and refuse an XML `Accept` with a **406**: a read
+> with `Prefer: resolve_refs`, whose versions are no `OBJECT_REF`s, and the
+> contribution list, a FerroEHR summary no schema defines. The FLAT and
+> STRUCTURED formats, when used, apply only to the inner composition `data` of
+> each version, never to the envelope.
 
 ## ITEM_TAG
 
