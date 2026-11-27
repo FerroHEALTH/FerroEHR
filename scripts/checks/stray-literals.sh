@@ -7,7 +7,11 @@
 #
 # It reads the hand-written .rs files under each ROOT, up to the file's
 # `#[cfg(test)]` module, and reports every string literal that reads as
-# words a reader sees:
+# words a reader sees. A file reached only through a `#[cfg(test)]` module
+# declaration, `#[path]` included, is test code and is passed over with
+# every module it declares in turn; the declarations are read from every
+# .rs file of the crate that holds a file read (the Rust Reference,
+# Modules, "Module Source Filenames" and "The path attribute"):
 #
 #   1. the value of an attribute a reader sees or hears (`aria-label`,
 #      `title`, `placeholder`, `alt`, `data-label`, `aria-description`,
@@ -159,7 +163,25 @@ self_test() {
   printf 'pub fn text() -> String {\n    let s = "auth = on requires";\n    s.to_owned()\n}\n' >"$project/src/refusal.rs"
   [[ "$(run --files src/refusal.rs)" == 1 ]] || fail "words without a dotted key passed as a configuration refusal"
 
-  echo "stray-literals: self-test OK (a new literal, a rise, a fall with its note, --update lowering and never raising, an allow line, named files and the configuration refusals the allow file passes)."
+  # A file reached only through a `#[cfg(test)]` module declaration, by
+  # `#[path]` or by name, is test code with every module it declares, read
+  # as a tree or named; declared without the gate, it is read.
+  rm "$project/src/refusal.rs"
+  printf 'pub fn level() -> u8 {\n    1\n}\n\n#[cfg(test)]\n#[path = "settings_tests.rs"]\nmod tests;\n' >"$project/src/settings.rs"
+  printf 'mod nested;\n\nfn words() -> String {\n    let s = "Words in a test";\n    s.to_owned()\n}\n' >"$project/src/settings_tests.rs"
+  literals nested.rs 1
+  mkdir -p "$project/src/store"
+  printf '#[cfg(test)]\n// The unit tests.\npub(crate) mod tests;\n' >"$project/src/store.rs"
+  literals store/tests.rs 1
+  [[ "$(run src)" == 0 ]] || fail "a test module reached through #[cfg(test)] was read: $(cat "$answer")"
+  [[ "$(run --files src/settings_tests.rs src/nested.rs src/store/tests.rs)" == 0 ]] || fail "a named test module was read: $(cat "$answer")"
+  printf 'pub fn level() -> u8 {\n    1\n}\n\n#[path = "settings_tests.rs"]\nmod tests;\n' >"$project/src/settings.rs"
+  [[ "$(run src)" == 1 ]] || fail "a module declared without #[cfg(test)] passed as test code"
+  grep -qF 'src/settings_tests.rs:4: "Words in a test"' "$answer" || fail "the ungated module was not read: $(cat "$answer")"
+  grep -qF 'src/nested.rs:5: "Words number 1"' "$answer" || fail "the ungated module's own module was not read: $(cat "$answer")"
+  grep -q 'src/store/tests.rs' "$answer" && fail "the gated module by name was read: $(cat "$answer")"
+
+  echo "stray-literals: self-test OK (a new literal, a rise, a fall with its note, --update lowering and never raising, an allow line, named files, the configuration refusals the allow file passes and the test modules a #[cfg(test)] declaration reaches, #[path] included)."
 }
 
 if [[ "${1:-}" = "--self-test" ]]; then
@@ -222,10 +244,138 @@ if [[ "${#files[@]}" -eq 0 ]]; then
   echo "stray-literals: no .rs file in $scope"
   exit 0
 fi
+
+# Sets `normalized` to `path` with every `.` and `name/..` segment folded
+# away.
+normal() {
+  local part
+  local -a out=() parts=()
+  IFS='/' read -r -a parts <<<"$1"
+  for part in "${parts[@]}"; do
+    case "$part" in
+      . | '') ;;
+      ..) ((${#out[@]})) && unset 'out[${#out[@]}-1]' ;;
+      *) out+=("$part") ;;
+    esac
+  done
+  local IFS='/'
+  normalized="${1%%[^/]*}${out[*]}"
+}
+
+# Prints the directory of the crate that holds `file`: its nearest ancestor
+# with a Cargo.toml, else the repository root.
+crate_of() {
+  local dir="${1%/*}"
+  [[ "$dir" == "$1" ]] && dir="."
+  while [[ "$dir" != "." && "$dir" != "/" && ! -f "$dir/Cargo.toml" ]]; do
+    case "$dir" in
+      */*) dir="${dir%/*}" ;;
+      *) dir="." ;;
+    esac
+  done
+  printf '%s\n' "$dir"
+}
+
+# Sets `target` to the file the module `name` declared in `declarer` loads,
+# `path` being its `#[path]` value or `-`, and `owned` to 1 when that file
+# resolves its own modules beside it as a mod.rs file does. `beside` is 1
+# when `declarer` itself does.
+resolve() {
+  local declarer="$1" beside="$2" name="$3" path="$4" base stem dir
+  base="${declarer%/*}"
+  [[ "$base" == "$declarer" ]] && base="."
+  stem="${declarer##*/}"
+  stem="${stem%.rs}"
+  if [[ "$path" != "-" ]]; then
+    target="$base/$path"
+    owned=1
+  else
+    case "$beside:$stem" in
+      1:* | *:main | *:mod | *:lib) dir="$base" ;;
+      *) dir="$base/$stem" ;;
+    esac
+    if [[ -f "$dir/$name/mod.rs" ]]; then
+      target="$dir/$name/mod.rs"
+    else
+      target="$dir/$name.rs"
+    fi
+    owned=0
+  fi
+  normal "$target"
+  target="$normalized"
+}
+
+# Prints the files reached only as test code: the target of every
+# `#[cfg(test)]` module declaration in the crates of the files read, and
+# every module those files declare in turn, one normalized path per line.
+test_files() {
+  local -A crates=() children=() testing=()
+  local -a sources=() queue=()
+  local file crate declarer gated name path entry beside target owned head=0
+  for file in "$@"; do
+    crates[$(crate_of "$file")]=1
+  done
+  for crate in $(printf '%s\n' "${!crates[@]}" | LC_ALL=C sort); do
+    while IFS= read -r file; do
+      sources+=("$file")
+    done < <(find "$crate" \( -name target -o -name .git -o -name .claude -o -name node_modules \) -prune \
+      -o -type f -name '*.rs' -print | LC_ALL=C sort)
+  done
+  [[ "${#sources[@]}" -gt 0 ]] || return 0
+  # NOTE: an attribute applies to the next item only, so a line that is neither an attribute, a comment nor blank clears what is pending.
+  while IFS=$'\t' read -r declarer gated name path; do
+    normal "$declarer"
+    declarer="$normalized"
+    children[$declarer]+="$name"$'\t'"$path"$'\n'
+    if [[ "$gated" == 1 ]]; then
+      resolve "$declarer" 0 "$name" "$path"
+      queue+=("$target"$'\t'"$owned")
+    fi
+  done < <(awk '
+    FNR == 1 { gated = 0; path = "-" }
+    /^#\[cfg\(test\)\][ \t]*$/ { gated = 1; next }
+    /^#\[path[ \t]*=[ \t]*"[^"]+"\][ \t]*$/ {
+      path = $0
+      sub(/^#\[path[ \t]*=[ \t]*"/, "", path)
+      sub(/"\][ \t]*$/, "", path)
+      next
+    }
+    /^#!?\[/ || /^[ \t]*(\/\/.*)?$/ { next }
+    /^(pub(\([a-z:_ ]+\))?[ \t]+)?mod[ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*;[ \t]*$/ {
+      name = $0
+      sub(/^(pub(\([a-z:_ ]+\))?[ \t]+)?mod[ \t]+/, "", name)
+      sub(/[ \t]*;[ \t]*$/, "", name)
+      printf "%s\t%d\t%s\t%s\n", FILENAME, gated, name, path
+    }
+    { gated = 0; path = "-" }
+  ' "${sources[@]}")
+  while ((head < ${#queue[@]})); do
+    file="${queue[head]%$'\t'*}"
+    beside="${queue[head]##*$'\t'}"
+    head=$((head + 1))
+    [[ -z "${testing[$file]:-}" ]] || continue
+    testing[$file]=1
+    while IFS=$'\t' read -r name path; do
+      [[ -n "$name" ]] || continue
+      resolve "$file" "$beside" "$name" "$path"
+      queue+=("$target"$'\t'"$owned")
+    done <<<"${children[$file]:-}"
+  done
+  [[ "${#testing[@]}" -gt 0 ]] || return 0
+  printf '%s\n' "${!testing[@]}" | LC_ALL=C sort
+}
+
+tests="$(test_files "${files[@]}")"
+read_files=()
+for file in "${files[@]}"; do
+  normal "$file"
+  read_files+=("$normalized")
+done
+files=("${read_files[@]}")
 echo "stray-literals: reading ${#files[@]} .rs files in $scope."
 
 found="$(
-  awk -v allowfile="$allow" '
+  TESTLIST="$tests" awk -v allowfile="$allow" '
     function wordy(t,    bare, n, i, toks, plain) {
       bare = t
       gsub(/\{[^{}]*\}/, "", bare)
@@ -262,12 +412,15 @@ found="$(
           exit 2
         }
       }
+      ntest = split(ENVIRON["TESTLIST"], testing, "\n")
+      for (i = 1; i <= ntest; i++) if (testing[i] != "") test[testing[i]] = 1
       visible = "(^|[^A-Za-z-])(aria-label|title|placeholder|alt|data-label|aria-description|aria-roledescription|aria-valuetext|label)[ \t]*=[ \t]*$"
     }
     FNR == 1 {
       off = 0
       for (i = 1; i <= nskip; i++) if (index(FILENAME, skip[i]) == 1) off = 1
       if ($0 ~ /@generated/) off = 1
+      if (FILENAME in test) off = 1
     }
     off { next }
     /^#\[cfg\(test\)\]/ { off = 1; next }
