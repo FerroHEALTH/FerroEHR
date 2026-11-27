@@ -59,6 +59,8 @@ pub enum Page {
     Ehrs,
     /// `/ehrs/new`.
     NewEhr,
+    /// `/ehrs/import`.
+    ImportExtract,
     /// `/ehrs/:ehr_id`, the EHR's compositions.
     Compositions,
     /// `/ehrs/:ehr_id/directory`.
@@ -159,6 +161,8 @@ pub enum Page {
     Activity,
     /// `/server/integrity`.
     Integrity,
+    /// `/server/repository`.
+    Repository,
     /// `/server/identity`.
     Identity,
     /// `/audit`.
@@ -206,6 +210,7 @@ impl Page {
             "/find" => Self::Find,
             "/ehrs" => Self::Ehrs,
             "/ehrs/new" => Self::NewEhr,
+            "/ehrs/import" => Self::ImportExtract,
             "/ehrs/:ehr_id" => Self::Compositions,
             "/ehrs/:ehr_id/directory" => Self::Directory,
             "/ehrs/:ehr_id/directory/edit" => Self::EditDirectory,
@@ -258,6 +263,7 @@ impl Page {
             "/server/smart" => Self::Smart,
             "/server/activity" => Self::Activity,
             "/server/integrity" => Self::Integrity,
+            "/server/repository" => Self::Repository,
             "/server/identity" => Self::Identity,
             "/audit" => Self::Audit,
             "/audit/delivery" => Self::Delivery,
@@ -365,6 +371,7 @@ pub static ROUTES: &[&str] = &[
     "/find",
     "/ehrs",
     "/ehrs/new",
+    "/ehrs/import",
     "/ehrs/:ehr_id",
     "/ehrs/:ehr_id/directory",
     "/ehrs/:ehr_id/directory/edit",
@@ -418,6 +425,7 @@ pub static ROUTES: &[&str] = &[
     "/server/smart",
     "/server/activity",
     "/server/integrity",
+    "/server/repository",
     "/server/identity",
     "/audit",
     "/audit/delivery",
@@ -450,6 +458,7 @@ pub async fn draw() -> Drawn {
         Page::Find => pages::find::page().await,
         Page::Ehrs => pages::ehrs::list_page().await,
         Page::NewEhr => pages::ehrs::new_page().await,
+        Page::ImportExtract => pages::ehrs::import::page().await,
         Page::Compositions => pages::ehr::compositions::page().await,
         Page::Directory => pages::ehr::directory::page().await,
         Page::EditDirectory => pages::ehr::directory::edit_page().await,
@@ -500,6 +509,7 @@ pub async fn draw() -> Drawn {
         Page::Smart => pages::server::smart_page().await,
         Page::Activity => pages::server::activity::page().await,
         Page::Integrity => pages::server::integrity::page().await,
+        Page::Repository => pages::server::repository::page().await,
         Page::Identity => pages::server::identity::page().await,
         Page::Audit => pages::audit::page().await,
         Page::Delivery => pages::audit::delivery::page().await,

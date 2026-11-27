@@ -151,7 +151,7 @@ first_admin = "ferroehr-admin"
 # access-control writes and privileges the demo dataset grants
 # (scripts/sandbox/seed/). A development posture only, never a production default.
 [authz.grants]
-allowed = ["commit_composition", "read_change_feed", "scim_provision", "hold_roles", "hold_scopes", "write_access_policy", "write_care_relationship", "write_representation", "access_service"]
+allowed = ["commit_composition", "read_change_feed", "scim_provision", "hold_roles", "hold_scopes", "write_access_policy", "write_care_relationship", "write_representation", "access_service", "import_ehr"]
 
 # A cohort may name its patients by identifier, as the demo dataset's cohort
 # query does.

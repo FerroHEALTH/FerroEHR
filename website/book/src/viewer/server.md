@@ -1,7 +1,7 @@
 # Server & audit log
 
 **Server** says what the CDR this viewer reads is, how it runs and what it
-serves, as up to nine tabs, and the **Audit log** browses its security audit trail.
+serves, as up to ten tabs, and the **Audit log** browses its security audit trail.
 Everything on them comes from the CDR's own endpoints over HTTP; the viewer
 has no privileged channel.
 
@@ -108,7 +108,7 @@ parsed grants, the grant types and PKCE methods, and the document itself.
 
 ## Activity and Integrity
 
-These two tabs drive the CDR's admin API and appear only when the CDR
+These two tabs, and Repository below, drive the CDR's admin API and appear only when the CDR
 mounts it (`api.admin`, see [Operations → Admin
 APIs](../operations-admin-apis.md)). Each action is the CDR's decision per
 request: a session without the admin role is refused in the CDR's words.
@@ -138,6 +138,27 @@ it did to each version. For a repository too large to check within the
 request timeout, use the streamed sweep the operations page describes.
 
 ![Integrity](img/server/integrity.png)
+
+## Repository
+
+**Repository**, the third admin tab, dumps the whole repository to an archive
+and loads one ([dump and
+load](../storage-admin-apis.md#dump-and-load)). The archive lives on the
+CDR's own file system, so both name a location there and nothing passes
+through your browser.
+
+- **Dump** writes every EHR and every standalone party to the location, in
+  the content format, compression and segment size you pick or the CDR's
+  defaults (`POST {ext}/admin/dump`).
+- **Load…** asks for confirmation, then writes every record of the archive at
+  the location into this repository (`POST {ext}/admin/load`). A record the
+  repository holds already is skipped.
+
+Each answer lists the records that did not move, with the CDR's reason, or
+says every record moved. A refusal, such as a location the CDR cannot write,
+is shown in the CDR's words.
+
+![Repository](img/server/repository.png)
 
 ## Identity feed
 
