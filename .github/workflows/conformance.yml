@@ -30,7 +30,9 @@
 # it is the record of record and the verdict of this job. The `development`
 # profile reads them against the pinned master of each openEHR repository,
 # which FerroEHR builds on; it is published beside the record under a heading
-# and an artifact of its own and is never counted toward it. Each run covers
+# and an artifact of its own and is never counted toward it, and its own
+# committed record (docs/conformance/ferroehr/development/) must hold its
+# statuses. Each run covers
 # the `smart` documents: the Action passes the SMART Platform base URL and
 # hands the committed test issuer's key to the container by name (#4503).
 #
@@ -419,7 +421,8 @@ jobs:
           path: conformance-views/development
           if-no-files-found: warn
       # The released run decides the job. The development run fails it only
-      # when it could not run at all, which is a defect of this pipeline. An
+      # when it could not run at all, which is a defect of this pipeline, or
+      # when its statuses differ from its committed record. An
       # advisory caller gets the same verdict as an output, a summary line and
       # a warning, and a green job.
       - id: verdict
@@ -429,6 +432,7 @@ jobs:
           RELEASED_EXIT: ${{ steps.released.outputs.exit-code }}
           RELEASED_RESULTS: ${{ steps.released.outputs.results }}
           DEVELOPMENT_EXIT: ${{ steps.development.outputs.exit-code }}
+          DEVELOPMENT_RESULTS: ${{ steps.development.outputs.results }}
           ADVISORY: ${{ inputs.advisory == true }}
         shell: bash
         run: |
@@ -470,6 +474,24 @@ jobs:
             *)
               problems+=("the released-profile run exited ${RELEASED_EXIT:-without a status}")
               bad=1
+              ;;
+          esac
+          # The development record holds the development run's statuses too
+          # (#6769), so its README badges name what that run gives.
+          case "$DEVELOPMENT_EXIT" in
+            0 | 1 | 3)
+              if [ ! -f "${DEVELOPMENT_RESULTS:-}" ]; then
+                problems+=("the development-profile run wrote no results.json to compare")
+                bad=1
+              elif ! compared="$(bash scripts/conformance-record.sh compare "$DEVELOPMENT_RESULTS" 2>&1)"; then
+                grep -v '^::error::' <<<"$compared" || true
+                while IFS= read -r line; do
+                  case "$line" in "::error::"*) problems+=("${line#::error::}") ;; esac
+                done <<<"$compared"
+                bad=1
+              else
+                echo "$compared"
+              fi
               ;;
           esac
           if [ "$bad" = 0 ]; then verdict=passed; else verdict=failed; fi

@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
-# The measured-results badges (#6763): shields.io endpoint documents under
+# The measured-results badges (#6763, #6769): shields.io endpoint documents under
 # conformance/badges/, each written from the committed record of one
 # measurement.
 #
 # - openehr-base.json, openehr-options.json: the BASE and OPTIONS rows of the
 #   Summary table of the committed released-profile record,
 #   docs/conformance/ferroehr/summary.md, which scripts/conformance-record.sh
-#   holds to every run. The count is the rows passed of the rows judged
-#   (passed, failed, warning, errored), the red rows are named with the
-#   ground of the deviations docs/conformance/party/ferroehr/deviations.json
-#   lists, and the rows not run are named apart.
+#   holds to every run; openehr-base-development.json and
+#   openehr-options-development.json the same of the development record
+#   under development/. The count is the rows passed of the rows judged
+#   (passed, failed, warning, errored). Each red row the summary details
+#   under the part's heading is a deviation when
+#   docs/conformance/party/ferroehr/deviations.json lists its case, named
+#   with the ground of its decision, and otherwise a row failed beside the
+#   deviations; the rows not run are named apart.
 # - atna-interop.json: the newest run under docs/conformance/interop/atna/,
 #   written by hand with scripts/interop/atna.sh: its verdict, the
 #   transactions it compared and the date it was measured.
@@ -45,8 +49,9 @@ cd "$(dirname "$0")/../.."
 . scripts/checks/badge-logos/logo.sh
 
 OUT=conformance/badges
-NAMES="openehr-base.json openehr-options.json atna-interop.json claims-review.json"
+NAMES="openehr-base.json openehr-options.json openehr-base-development.json openehr-options-development.json atna-interop.json claims-review.json"
 SUMMARY=docs/conformance/ferroehr/summary.md
+DEV_SUMMARY=docs/conformance/ferroehr/development/summary.md
 DEVIATIONS=docs/conformance/party/ferroehr/deviations.json
 ATNA=docs/conformance/interop/atna
 CLAIMS=website/book/src/compliance/claims-review.md
@@ -78,10 +83,25 @@ summary_row() {
   ' "$1"
 }
 
+# Prints the case of each red row the summary $1 details under its heading
+# `## $2`, one per line.
+red_cases() {
+  awk -v part="## $2" '
+    /^## / { inside = ($0 == part); next }
+    inside && /<summary><b>(Failed|Errored|Inconclusive)<\/b>: <code>/ {
+      line = $0
+      sub(/.*<code>/, "", line)
+      sub(/<\/code>.*/, "", line)
+      print line
+    }
+  ' "$1"
+}
+
 # Writes the openEHR badge $1 of the Summary row $2 of summary $3, with the
-# deviations of the list $4.
+# deviations of the list $4, labelled with the record $5.
 openehr_badge() {
-  local out="$1" part="$2" summary="$3" deviations="$4" passed failed warning errored skipped judged red message
+  local out="$1" part="$2" summary="$3" deviations="$4" record="$5"
+  local passed failed warning errored skipped judged red message cases listed deviant=0 other=0 case
   local decisions decision grounds="" ground
   read -r passed failed warning errored skipped < <(summary_row "$summary" "$part") || {
     echo "measured-badges: $summary has no $part row in its Summary table" >&2
@@ -89,9 +109,24 @@ openehr_badge() {
   }
   judged=$((passed + failed + warning + errored))
   red=$((failed + errored))
+  cases="$(red_cases "$summary" "$part")"
+  listed="$(jq -r '.deviations[].case' "$deviations")"
+  while IFS= read -r case; do
+    [[ -n "$case" ]] || continue
+    if grep -qxF -- "$case" <<< "$listed"; then
+      deviant=$((deviant + 1))
+      decisions+="$(jq -r --arg c "$case" '.deviations[] | select(.case == $c) | .decision' "$deviations")"$'\n'
+    else
+      other=$((other + 1))
+    fi
+  done <<< "$cases"
+  [[ $((deviant + other)) -eq "$red" ]] || {
+    echo "measured-badges: $summary details $((deviant + other)) red $part rows and counts $red" >&2
+    return 1
+  }
   message="$passed/$judged rows passed"
-  if [[ "$red" -gt 0 ]]; then
-    decisions="$(jq -r '[.deviations[].decision] | unique | .[]' "$deviations")"
+  if [[ "$deviant" -gt 0 ]]; then
+    decisions="$(LC_ALL=C sort -u <<< "$decisions")"
     while IFS= read -r decision; do
       [[ -n "$decision" ]] || continue
       ground="$(ground_of "$decision")" || {
@@ -100,14 +135,11 @@ openehr_badge() {
       }
       grounds+="${grounds:+; }$ground"
     done <<< "$decisions"
-    [[ -n "$grounds" ]] || {
-      echo "measured-badges: $summary has $red red $part rows and $deviations lists no deviation" >&2
-      return 1
-    }
-    message+=", $red red by deliberate deviation ($grounds)"
+    message+=", $deviant red by deliberate deviation ($grounds)"
   fi
+  [[ "$other" -gt 0 ]] && message+=", $other failed beside the deviations"
   [[ "$skipped" -gt 0 ]] && message+=", $skipped not run"
-  badge "$out" "openEHR $part · released record" "$message" "$(badge_count_color "$passed" "$judged")" award
+  badge "$out" "openEHR $part · $record record" "$message" "$(badge_count_color "$passed" "$judged")" award
 }
 
 # Writes the ATNA interoperability badge $1 from the newest run under $2.
@@ -153,8 +185,10 @@ claims_badge() {
 render() {
   local dir="$1"
   mkdir -p "$dir"
-  openehr_badge "$dir/openehr-base.json" BASE "$SUMMARY" "$DEVIATIONS"
-  openehr_badge "$dir/openehr-options.json" OPTIONS "$SUMMARY" "$DEVIATIONS"
+  openehr_badge "$dir/openehr-base.json" BASE "$SUMMARY" "$DEVIATIONS" released
+  openehr_badge "$dir/openehr-options.json" OPTIONS "$SUMMARY" "$DEVIATIONS" released
+  openehr_badge "$dir/openehr-base-development.json" BASE "$DEV_SUMMARY" "$DEVIATIONS" development
+  openehr_badge "$dir/openehr-options-development.json" OPTIONS "$DEV_SUMMARY" "$DEVIATIONS" development
   atna_badge "$dir/atna-interop.json" "$ATNA"
   claims_badge "$dir/claims-review.json" "$CLAIMS"
 }
@@ -179,23 +213,32 @@ if [[ "$mode" == self-test ]]; then
   tmp=$(mktemp -d)
   trap 'rm -rf "$tmp"' EXIT
   mkdir -p "$tmp/interop"
-  printf '| Part | Passed | Failed | Warning | Errored | Skipped | Total |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n| BASE | 10 | 1 | 0 | 1 | 3 | 15 |\n| OPTIONS | 4 | 0 | 0 | 0 | 0 | 4 |\n' > "$tmp/summary.md"
-  printf '{"deviations":[{"case":"a","decision":"https://github.com/FerroHEALTH/FerroEHR/issues/5002"}]}' > "$tmp/deviations.json"
-  openehr_badge "$tmp/base.json" BASE "$tmp/summary.md" "$tmp/deviations.json"
-  openehr_badge "$tmp/options.json" OPTIONS "$tmp/summary.md" "$tmp/deviations.json"
+  printf '| Part | Passed | Failed | Warning | Errored | Skipped | Total |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n| BASE | 10 | 1 | 0 | 1 | 3 | 15 |\n| OPTIONS | 4 | 0 | 0 | 0 | 0 | 4 |\n\n## BASE\n\n<summary><b>Failed</b>: <code>a/x</code> row 0, BASE</summary>\n<summary><b>Errored</b>: <code>a/x</code> row 1, BASE</summary>\n\n## OPTIONS\n\n## Skipped rows\n' > "$tmp/summary.md"
+  printf '{"deviations":[{"case":"a/x","decision":"https://github.com/FerroHEALTH/FerroEHR/issues/5002"}]}' > "$tmp/deviations.json"
+  openehr_badge "$tmp/base.json" BASE "$tmp/summary.md" "$tmp/deviations.json" released
+  openehr_badge "$tmp/options.json" OPTIONS "$tmp/summary.md" "$tmp/deviations.json" released
   [[ "$(jq -r .message "$tmp/base.json")" == "10/12 rows passed, 2 red by deliberate deviation (the authenticated committer, EHDS Annex II 3.1), 3 not run" ]] ||
     { echo "self-test: the BASE badge says $(jq -r .message "$tmp/base.json")" >&2; exit 1; }
+  [[ "$(jq -r .label "$tmp/base.json")" == "openEHR BASE · released record" ]] || { echo "self-test: the BASE label" >&2; exit 1; }
   [[ "$(jq -r .color "$tmp/base.json")" == yellow ]] || { echo "self-test: a BASE badge with red rows is not yellow" >&2; exit 1; }
   [[ "$(jq -r .message "$tmp/options.json")" == "4/4 rows passed" ]] ||
     { echo "self-test: the OPTIONS badge says $(jq -r .message "$tmp/options.json")" >&2; exit 1; }
-  printf '{"deviations":[{"case":"a","decision":"https://example.org/other"}]}' > "$tmp/other.json"
-  if openehr_badge "$tmp/x.json" BASE "$tmp/summary.md" "$tmp/other.json" 2> /dev/null; then
+  printf '| Part | Passed | Failed | Warning | Errored | Skipped | Total |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n| BASE | 10 | 1 | 0 | 0 | 0 | 11 |\n| OPTIONS | 4 | 1 | 0 | 0 | 0 | 5 |\n\n## BASE\n\n<summary><b>Failed</b>: <code>a/x</code> row 0, BASE</summary>\n\n## OPTIONS\n\n<summary><b>Failed</b>: <code>c/y</code> row 0, option z</summary>\n' > "$tmp/dev.md"
+  openehr_badge "$tmp/devbase.json" BASE "$tmp/dev.md" "$tmp/deviations.json" development
+  openehr_badge "$tmp/devoptions.json" OPTIONS "$tmp/dev.md" "$tmp/deviations.json" development
+  [[ "$(jq -r .message "$tmp/devbase.json")" == "10/11 rows passed, 1 red by deliberate deviation (the authenticated committer, EHDS Annex II 3.1)" ]] ||
+    { echo "self-test: the development BASE badge says $(jq -r .message "$tmp/devbase.json")" >&2; exit 1; }
+  [[ "$(jq -r .message "$tmp/devoptions.json")" == "4/5 rows passed, 1 failed beside the deviations" ]] ||
+    { echo "self-test: the development OPTIONS badge says $(jq -r .message "$tmp/devoptions.json")" >&2; exit 1; }
+  [[ "$(jq -r .label "$tmp/devoptions.json")" == "openEHR OPTIONS · development record" ]] || { echo "self-test: the development label" >&2; exit 1; }
+  printf '{"deviations":[{"case":"a/x","decision":"https://example.org/other"}]}' > "$tmp/other.json"
+  if openehr_badge "$tmp/x.json" BASE "$tmp/summary.md" "$tmp/other.json" released 2> /dev/null; then
     echo "self-test: a deviation with an unknown ground passed" >&2
     exit 1
   fi
-  printf '{"deviations":[]}' > "$tmp/none.json"
-  if openehr_badge "$tmp/x.json" BASE "$tmp/summary.md" "$tmp/none.json" 2> /dev/null; then
-    echo "self-test: red rows with no listed deviation passed" >&2
+  sed 's/| BASE | 10 | 1 | 0 | 1 |/| BASE | 10 | 2 | 0 | 1 |/' "$tmp/summary.md" > "$tmp/short.md"
+  if openehr_badge "$tmp/x.json" BASE "$tmp/short.md" "$tmp/deviations.json" released 2> /dev/null; then
+    echo "self-test: a summary that details fewer red rows than it counts passed" >&2
     exit 1
   fi
   printf '| Transaction | Independent implementation | Result |\n|---|---|---|\n| a | b | c |\n| d | e | f |\n\nVERDICT: no disagreement\n' > "$tmp/interop/2026-01-02.md"
@@ -207,7 +250,7 @@ if [[ "$mode" == self-test ]]; then
   claims_badge "$tmp/claims.json" "$tmp/claims.md"
   [[ "$(jq -r .message "$tmp/claims.json")" == "2026-02-01, for 1.1: 2 texts changed, 1 left open" ]] ||
     { echo "self-test: the claims badge says $(jq -r .message "$tmp/claims.json")" >&2; exit 1; }
-  for name in base options atna claims; do
+  for name in base options devbase devoptions atna claims; do
     badge_logo_check "$tmp/$name.json" || { echo "self-test: $name carries no logo" >&2; exit 1; }
     badge_color_check "$tmp/$name.json" || { echo "self-test: $name has the wrong colour" >&2; exit 1; }
   done

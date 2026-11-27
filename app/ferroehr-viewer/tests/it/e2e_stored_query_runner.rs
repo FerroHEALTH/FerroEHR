@@ -23,7 +23,7 @@
 
 use crate::common;
 
-use common::{Harness, confirm_in_dialog, env, fill, login_basic_as, wait_main_contains};
+use common::{Harness, confirm_in_dialog, fill, login_basic_as, wait_main_contains};
 
 /// The namespace half of every stored-query name these journeys save.
 const QUERY_NAMESPACE: &str = "org.example";
@@ -60,15 +60,6 @@ const REFUSED_AQL: &str = "SELECT c/name/value AS name FROM EHR e CONTAINS COMPO
 /// The parameterised query the RUN journey stores and executes.
 const RUNNER_AQL: &str = "SELECT c/name/value AS name FROM EHR e CONTAINS COMPOSITION c \
      WHERE c/archetype_details/template_id/value=$template";
-
-/// The admin dev user (quickstart `docker/ferroehr.dev.toml`) — the stored-query
-/// delete used for self-cleaning is RBAC-gated.
-fn admin_credentials() -> (String, String) {
-    (
-        env("UI_E2E_ADMIN_USER").unwrap_or_else(|| "ferroehr-admin".to_owned()),
-        env("UI_E2E_ADMIN_PASS").unwrap_or_else(|| "ferroehr".to_owned()),
-    )
-}
 
 /// Save `aql` as version 1.0.0 of `bare_name` in [`QUERY_NAMESPACE`] from
 /// Query's AQL tab.
@@ -121,7 +112,7 @@ async fn stored_query_lifts_back_into_the_builder() {
     let Some(h) = Harness::start("stored-query-reverse-lift").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
 
     store_query(&h, LIFTABLE_BARE_NAME, LIFTABLE_AQL).await;
@@ -166,7 +157,7 @@ async fn stored_query_runs_with_parameters_in_every_resolution_form() {
     let Some(h) = Harness::start("stored-query-parameterised-run").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
     store_query(&h, RUNNER_BARE_NAME, RUNNER_AQL).await;
 

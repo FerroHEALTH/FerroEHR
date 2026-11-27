@@ -50,6 +50,10 @@
 [![specification · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/profile.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
 [![veredictum · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/instrument.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
 <br>
+<sub>The committed development record, with its deviation</sub><br>
+[![openEHR BASE · development record](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-base-development.json)](docs/conformance/ferroehr/development/summary.md)
+[![openEHR OPTIONS · development record](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-options-development.json)](docs/conformance/ferroehr/development/summary.md)
+<br>
 **Compliance**<br>
 [![EHDS](https://img.shields.io/badge/EHDS-readiness%20statement-blue?logo=europeanunion&labelColor=003399&logoColor=FFCC00)](https://ferrohealth.eu/docs/ehds/readiness.html)
 [![CRA](https://img.shields.io/badge/CRA-risk%20assessment-blue?logo=europeanunion&labelColor=003399&logoColor=FFCC00)](https://ferroehr.eu/docs/latest/compliance/cra-risk-assessment.html)
@@ -61,6 +65,8 @@
 [![EEHRxF draft · PDF/A originals](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Fpdf-originals.json)](https://ferroehr.eu/docs/dev/compliance/eehrxf-pdf-originals.html)
 [![IHE ATNA interoperability · HAPI FHIR, syslog-ng](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fatna-interop.json)](docs/conformance/interop/atna/)
 [![EHDS Art. 28 claims review](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fclaims-review.json)](https://ferroehr.eu/docs/dev/compliance/claims-review.html)
+<br>
+<sub>Annex III: the eight elements the Reference Model holds only in part or not at all are written by FerroBRIDGE, the European interoperability software component, from its template mapping and configuration and by the jurisdiction's rule (<a href="https://ferroehr.eu/docs/dev/compliance/eehrxf-annex-iii.html#what-ferrobridge-takes-from-elsewhere">what FerroBRIDGE takes from elsewhere</a>).</sub>
 
 </div>
 
