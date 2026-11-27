@@ -2104,6 +2104,7 @@ dependencies = [
  "arc-swap",
  "assert_fs",
  "async-trait",
+ "aws-lc-rs",
  "axum",
  "base64 0.23.1",
  "bytes",
@@ -2143,6 +2144,7 @@ dependencies = [
  "openehr-term",
  "opentelemetry",
  "opentelemetry_sdk",
+ "pem 4.0.0",
  "pgp",
  "pprof",
  "proptest",
@@ -2304,6 +2306,7 @@ dependencies = [
 name = "ferroehr-viewer"
 version = "5.7.1-rc1"
 dependencies = [
+ "aws-lc-rs",
  "axum",
  "base64 0.23.1",
  "clap",

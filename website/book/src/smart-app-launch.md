@@ -293,7 +293,7 @@ public key by value:
   "client_id": "ferroehr-viewer",
   "client_name": "FerroEHR viewer",
   "token_endpoint_auth_method": "private_key_jwt",
-  "jwks": {"keys": [{"kty": "RSA", "kid": "viewer-1", "alg": "RS384", "n": "…", "e": "AQAB"}]},
+  "jwks": {"keys": [{"kty": "AKP", "kid": "viewer-1", "alg": "ML-DSA-65", "pub": "…"}]},
   "scope": "system/launch.c",
   "grant_types": ["client_credentials"],
   "resources": ["https://ehr.example.org/ferroehr/rest/openehr/v1"]
@@ -329,8 +329,22 @@ client_id = "growth-chart"
 launch_url = "https://apps.example.org/growth/launch"
 ```
 
-The document's `jwks` holds the key's public half under the same `kid`. For
-an RSA key:
+The document's `jwks` holds the key's public half under the same `kid`. The
+viewer signs its client assertion with the algorithm of its key: ML-DSA-44,
+ML-DSA-65 or ML-DSA-87 (RFC 9964) with an ML-DSA key, RS384 with an RSA key
+and ES384 with a P-384 key. FerroSMART takes all five; RS384 and ES384 are the
+two SMART App Launch 2.2.0 has every server support. For an ML-DSA-65 key,
+made with OpenSSL 3.5 or later (its public key is the last 1952 octets of the
+RFC 9881 SubjectPublicKeyInfo):
+
+```sh
+openssl genpkey -algorithm ML-DSA-65 -out ferroehr-viewer-launch.pem
+pub=$(openssl pkey -in ferroehr-viewer-launch.pem -pubout -outform DER | tail -c 1952 \
+  | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+jq -n --arg pub "$pub" '{keys: [{kty: "AKP", kid: "viewer-1", alg: "ML-DSA-65", pub: $pub}]}'
+```
+
+For an RSA key:
 
 ```sh
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out ferroehr-viewer-launch.pem

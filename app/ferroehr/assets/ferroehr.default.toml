@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 655 keys. A deployment that holds real data sets the 8 below,
+# This file lists 656 keys. A deployment that holds real data sets the 8 below,
 # the only live lines; every other key is optional and runs on the built-in
 # default its `#?` line shows, or stays unset where its note says so.
 #
@@ -252,6 +252,11 @@ profile = "sandbox"
 # The product's own scope, a full URI or a string starting with `__`; empty for
 # none. Optional (trust).
 #? product_scope = ""
+# Whether access token and `DPoP` proof signatures verify with ML-DSA alone
+# (RFC 9964 §5). On, every issuer's `algorithms` and `[auth.dpop] algorithms`
+# left at their default become ML-DSA-44, ML-DSA-65 and ML-DSA-87, and a list
+# naming any other algorithm stops the start. Optional (trust).
+#? post_quantum_only = false
 
 # The `[auth.issuer.<name>]` tables by name, each issuer with its own settings.
 # The environment and every other key address an issuer by its name, never by a

@@ -1607,5 +1607,6 @@ mod tests {
     mod challenge;
     mod described;
     mod outcome_status;
+    mod post_quantum;
     mod remote_issuer;
 }
