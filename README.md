@@ -65,6 +65,8 @@
 [![EEHRxF draft · PDF/A originals](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Fpdf-originals.json)](https://ferroehr.eu/docs/dev/compliance/eehrxf-pdf-originals.html)
 [![IHE ATNA interoperability · HAPI FHIR, syslog-ng](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fatna-interop.json)](docs/conformance/interop/atna/)
 [![EHDS Art. 28 claims review](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fclaims-review.json)](https://ferroehr.eu/docs/dev/compliance/claims-review.html)
+<br>
+<sub>Annex III: the eight elements the Reference Model holds only in part or not at all are written by FerroBRIDGE, the European interoperability software component, from its template mapping and configuration and by the jurisdiction's rule (<a href="https://ferroehr.eu/docs/dev/compliance/eehrxf-annex-iii.html#what-ferrobridge-takes-from-elsewhere">what FerroBRIDGE takes from elsewhere</a>).</sub>
 
 </div>
 
