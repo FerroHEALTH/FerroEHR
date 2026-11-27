@@ -130,7 +130,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 43.0.1 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 43.0.2 \
   -n ferroehr -f my-values.yaml | less
 ```
 

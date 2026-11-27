@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 19 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). The chart refuses to render until config.deployment.profile names the posture: sandbox, which must not hold real patient data, or production (start from values-production.yaml).
 
-![Version: 43.0.1](https://img.shields.io/badge/Version-43.0.1-informational?style=flat-square&logo=helm) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square&logo=helm) ![AppVersion: 5.7.1-rc1](https://img.shields.io/badge/AppVersion-5.7.1--rc1-informational?style=flat-square&logo=helm)
+![Version: 43.0.2](https://img.shields.io/badge/Version-43.0.2-informational?style=flat-square&logo=helm) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square&logo=helm) ![AppVersion: 5.7.1-rc1](https://img.shields.io/badge/AppVersion-5.7.1--rc1-informational?style=flat-square&logo=helm)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 19-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 43.0.1 \
+  --version 43.0.2 \
   --namespace ferroehr --create-namespace \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
@@ -62,7 +62,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `43.0.1` |
+| the **chart** (templates, defaults, this document) | `--version` | `43.0.2` |
 | the **server image** | `image.tag` | `5.7.1-rc1` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -74,7 +74,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:43.0.1 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:43.0.2 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -82,7 +82,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:43.0.1 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:43.0.1 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:43.0.2 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.7.1-rc1 \
   -R FerroHEALTH/FerroEHR
@@ -331,24 +331,24 @@ each one holds.
 | config.telemetry.format | string | `"json"` |  |
 | database.audit.existingSecret | string | `""` | Reference an existing Secret holding the DSN the audit repository is written through. The audit trail is not a pseudonymisation domain — it is the node's security-surveillance record, strictly outside the EHR content — but it is the one domain a deployment most often wants on its own server, which DSV Art. 4 Abs. 5 asks for. |
 | database.audit.existingSecretKey | string | `"FERROEHR__DATABASE__AUDIT__URL"` | Key WITHIN it holding that DSN. Mounted as a file. |
-| database.audit.migrateExistingSecret | string | `""` | Reference an existing Secret holding the DSN that PREPARES the database this domain lives in, when it is not the database `database.migrateExistingSecret` reaches (a migrator of THAT database). Mounted into the migration Job, which applies the schema there, and into the server, which verifies it there under `config.db.migrate=verify`. Empty: such a database is prepared on this domain's own DSN, which a DML-only role cannot do. |
+| database.audit.migrateExistingSecret | string | `""` | Reference an existing Secret holding the DSN that PREPARES the database this domain lives in, when it is not the database `database.migrateExistingSecret` reaches (a migrator of THAT database). Mounted into the migration Job, which applies the schema there, and into the server, which verifies it there under `config.database.migrations=verify`. Empty: such a database is prepared on this domain's own DSN, which a DML-only role cannot do. |
 | database.audit.migrateExistingSecretKey | string | `"FERROEHR__DATABASE__AUDIT__MIGRATE_URL"` | Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file. |
 | database.audit.url | string | `""` | Inline audit DSN (DEV/TEST ONLY). Ignored when `audit.existingSecret` is set. |
 | database.caConfigMap | string | `""` | An existing ConfigMap holding the CA certificate the database servers' certificates chain to, for DSNs carrying `?sslmode=verify-full&sslrootcert=/etc/ferroehr-db-ca/ca.crt`. Mounted read-only at `/etc/ferroehr-db-ca` into the server, the migration Job and the backup CronJobs, every pod that opens a database connection. Empty mounts nothing; a CA the image already trusts needs no ConfigMap. |
 | database.caConfigMapKey | string | `"ca.crt"` | Key WITHIN caConfigMap holding the PEM CA certificate; it lands as `/etc/ferroehr-db-ca/ca.crt`. |
 | database.clinical.existingSecret | string | `""` | Reference an existing Secret holding the CLINICAL-role DSN (`postgres://ferroehr_clinical:...@host:5432/ferroehr`). Empty uses `database.existingSecret` / `database.url`. |
 | database.clinical.existingSecretKey | string | `"FERROEHR__DATABASE__CLINICAL__URL"` | Key WITHIN it holding that DSN. Mounted as a file; only its PATH reaches the pod's environment. |
-| database.clinical.migrateExistingSecret | string | `""` | Reference an existing Secret holding the DSN that PREPARES the database this domain lives in, when it is not the database `database.migrateExistingSecret` reaches (a migrator of THAT database). Mounted into the migration Job, which applies the schema there, and into the server, which verifies it there under `config.db.migrate=verify`. Empty: such a database is prepared on this domain's own DSN, which a DML-only role cannot do. |
+| database.clinical.migrateExistingSecret | string | `""` | Reference an existing Secret holding the DSN that PREPARES the database this domain lives in, when it is not the database `database.migrateExistingSecret` reaches (a migrator of THAT database). Mounted into the migration Job, which applies the schema there, and into the server, which verifies it there under `config.database.migrations=verify`. Empty: such a database is prepared on this domain's own DSN, which a DML-only role cannot do. |
 | database.clinical.migrateExistingSecretKey | string | `"FERROEHR__DATABASE__CLINICAL__MIGRATE_URL"` | Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file. |
 | database.clinical.url | string | `""` | Inline clinical DSN (DEV/TEST ONLY — lands in a chart-managed Secret). Ignored when `clinical.existingSecret` is set. |
 | database.existingSecret | string | `""` | Reference an existing Secret holding the app-role DSN (STRONGLY preferred for production — keeps the credential out of chart values and git). The secret's value must be a full `postgres://ferroehr_clinical:...@host:5432/ferroehr` (optionally `?sslmode=verify-full`). |
 | database.existingSecretKey | string | `"FERROEHR__DATABASE__URL"` | Key WITHIN existingSecret that holds the DSN. This is a Secret key name, not an environment variable name: the chart mounts that key as a file and passes only its PATH as `FERROEHR__DATABASE__URL_FILE`, so the DSN never enters the pod's environment. The default spelling is kept for compatibility with existing Secrets created for the older env-borne arrangement. |
-| database.migrateExistingSecret | string | `""` | Reference an existing Secret holding the DSN that PREPARES the schema (`postgres://ferroehr_migrator:...@host:5432/ferroehr`). Required when the runtime DSNs are domain-scoped roles, including under `config.db.migrate=verify`. |
+| database.migrateExistingSecret | string | `""` | Reference an existing Secret holding the DSN that PREPARES the schema (`postgres://ferroehr_migrator:...@host:5432/ferroehr`). Required when the runtime DSNs are domain-scoped roles, including under `config.database.migrations=verify`. |
 | database.migrateExistingSecretKey | string | `"FERROEHR__DATABASE__MIGRATE_URL"` | Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file; only its PATH reaches the pod's environment. |
 | database.migrateUrl | string | `""` | Inline schema-preparation DSN (DEV/TEST ONLY — lands in a chart-managed Secret). Ignored when migrateExistingSecret is set. |
 | database.party.existingSecret | string | `""` | Reference an existing Secret holding the PARTY-role DSN (`postgres://ferroehr_party:...@host:5432/ferroehr`), a different credential from `database.existingSecret`. |
 | database.party.existingSecretKey | string | `"FERROEHR__DATABASE__PARTY__URL"` | Key WITHIN it holding that DSN. Mounted as a file. |
-| database.party.migrateExistingSecret | string | `""` | Reference an existing Secret holding the DSN that PREPARES the database this domain lives in, when it is not the database `database.migrateExistingSecret` reaches (a migrator of THAT database). Mounted into the migration Job, which applies the schema there, and into the server, which verifies it there under `config.db.migrate=verify`. Empty: such a database is prepared on this domain's own DSN, which a DML-only role cannot do. |
+| database.party.migrateExistingSecret | string | `""` | Reference an existing Secret holding the DSN that PREPARES the database this domain lives in, when it is not the database `database.migrateExistingSecret` reaches (a migrator of THAT database). Mounted into the migration Job, which applies the schema there, and into the server, which verifies it there under `config.database.migrations=verify`. Empty: such a database is prepared on this domain's own DSN, which a DML-only role cannot do. |
 | database.party.migrateExistingSecretKey | string | `"FERROEHR__DATABASE__PARTY__MIGRATE_URL"` | Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file. |
 | database.party.url | string | `""` | Inline party DSN (DEV/TEST ONLY). Ignored when `party.existingSecret` is set. |
 | database.url | string | `""` | Inline DSN (DEV/TEST ONLY — lands in a chart-managed Secret). Leave empty and use existingSecret in production. Ignored when existingSecret is set. |
@@ -388,7 +388,7 @@ each one holds.
 | metrics.serviceMonitor.scrapeTimeout | string | `"10s"` | Per-scrape timeout. Must be shorter than the interval. |
 | migrations.job.activeDeadlineSeconds | int | `600` | Hard ceiling on the migration step; a migration blocked behind live traffic must fail the release rather than hang it. |
 | migrations.job.backoffLimit | int | `3` | Retries before the Job (and therefore the release) is declared failed. |
-| migrations.job.enabled | bool | `false` | Run the migrations as a pre-install/pre-upgrade hook Job under the migrator DSN. Pair it with config.db.migrate=verify and an app-role-only runtime DSN for the least-privilege posture. |
+| migrations.job.enabled | bool | `false` | Run the migrations as a pre-install/pre-upgrade hook Job under the migrator DSN. Pair it with config.database.migrations=verify and an app-role-only runtime DSN for the least-privilege posture. |
 | migrations.job.existingSecret | string | `""` | REQUIRED when enabled: an existing Secret holding the MIGRATOR DSN (`postgres://ferroehr_migrator:...@host:5432/ferroehr`). Deliberately a different credential from `database.*`, which carries the runtime app-role DSN — rendering fails if it is empty. |
 | migrations.job.existingSecretKey | string | `"FERROEHR__DATABASE__URL"` | Key WITHIN existingSecret holding the migrator DSN. Mounted as a file; only its PATH reaches the pod's environment. |
 | migrations.job.nodeSelector | object | `{}` | Node selector for the migration pod. |

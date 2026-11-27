@@ -41,7 +41,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DATABASE__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 43.0.1 -n ferroehr \
+  --version 43.0.2 -n ferroehr \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.7.1-rc1 \
@@ -71,7 +71,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 43.0.1
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 43.0.2
 ```
 
 ### Pin two versions, not one
@@ -84,7 +84,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 43.0.1` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 43.0.2` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.7.1-rc1` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -184,7 +184,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 43.0.1 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 43.0.2 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -201,12 +201,23 @@ image, and FerroTERM.
 > overlay the chart carries, so this matters mainly when you install from a
 > checkout of `main`, or pin an image older than the chart.
 
-That install alone **boots but answers `401` to everything**, deliberately:
+That command alone **is refused at render**, deliberately:
 `config.auth.enabled` is on and no mechanism is configured yet, and a server that
-authenticates nothing is not a safe default. Add a `config.auth.issuer` table
-by name (with its `issuer`) or a `config.auth.basic.users` entry before expecting a
-request to succeed. Every route also checks the SMART on openEHR scopes of the
-caller: a Basic user's `scopes`, a token's `scope` claim.
+authenticates nothing is not a safe default. The refusal names the two ways
+forward: a `config.auth.issuer` table by name (with its `issuer` and its
+`audience`), or a `config.auth.basic.users` entry, as
+`deploy/helm/ci/basic-auth-values.yaml` in the repository carries.
+
+A credential is not yet a caller. A Basic user is a person: it maps to the key
+of a `PERSON` under `config.authz.party_binding.basic_user`, and until that
+`PERSON` exists every request it makes answers `403` with
+`refused-unbound`. A token's user is bound the same way through the `party`
+table of its issuer. Create the first persons and grants as
+[The first grant](../operational-policy.md#the-first-grant) describes, with
+`ferroehr party-binding grant` run in a server pod
+(`kubectl -n ferroehr exec deploy/ferroehr -c ferroehr -- /usr/local/bin/ferroehr party-binding grant …`).
+Every route also checks the SMART on openEHR scopes of the caller: the scopes
+a Basic user's `PERSON` holds, a token's `scope` claim.
 
 ## Configuration: one key, one file
 
@@ -326,7 +337,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 43.0.1 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 43.0.2 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -388,8 +399,8 @@ migrations:
     enabled: true
     existingSecret: ferroehr-db-migrator      # the same credential, its own Secret mount
 config:
-  db:
-    migrate: verify
+  database:
+    migrations: verify
 ```
 
 The demographic domain takes its own credential the same way,

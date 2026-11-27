@@ -64,6 +64,33 @@ impl FerroEhrConfig {
             )));
         }
         self.validate_body_tier(&mut errors);
+        self.validate_database_table(&mut errors);
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(ConfigErrors(errors))
+        }
+    }
+
+    /// The rules of the `[database]` table alone, which is all `ferroehr db
+    /// migrate` and `ferroehr db verify` read: a schema step run with the
+    /// migrator DSN and no other configuration, as the chart's migration Job
+    /// runs it, is not refused for a key it never reads.
+    ///
+    /// # Errors
+    /// [`ConfigErrors`] carrying every failing rule of the table.
+    pub fn validate_database(&self) -> Result<(), ConfigErrors> {
+        let mut errors = Vec::new();
+        self.validate_database_table(&mut errors);
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(ConfigErrors(errors))
+        }
+    }
+
+    fn validate_database_table(&self, errors: &mut Vec<ConfigError>) {
         errors.extend(
             self.database
                 .budget_errors()
@@ -77,12 +104,6 @@ impl FerroEhrConfig {
                 "database.audit.listen_url is not used: no policy listener listens on the audit domain"
                     .to_owned(),
             ));
-        }
-
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(ConfigErrors(errors))
         }
     }
 

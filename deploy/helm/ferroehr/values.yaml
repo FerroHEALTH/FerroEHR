@@ -20,7 +20,7 @@
 # always served on the HTTP port.
 #
 # The env-mapping grammar for overrides is FERROEHR_ + the TOML path upper-cased
-# with `__` between segments (e.g. config.db.max_connections ⇔
+# with `__` between segments (e.g. config.database.max_connections ⇔
 # FERROEHR__DATABASE__MAX_CONNECTIONS). app/ferroehr/assets/ferroehr.default.toml is the
 # complete TOML schema with every key and its default.
 #
@@ -183,7 +183,7 @@ database:
     # this domain lives in, when it is not the database
     # `database.migrateExistingSecret` reaches (a migrator of THAT database).
     # Mounted into the migration Job, which applies the schema there, and into
-    # the server, which verifies it there under `config.db.migrate=verify`.
+    # the server, which verifies it there under `config.database.migrations=verify`.
     # Empty: such a database is prepared on this domain's own DSN, which a
     # DML-only role cannot do.
     migrateExistingSecret: ""
@@ -204,7 +204,7 @@ database:
     # this domain lives in, when it is not the database
     # `database.migrateExistingSecret` reaches (a migrator of THAT database).
     # Mounted into the migration Job, which applies the schema there, and into
-    # the server, which verifies it there under `config.db.migrate=verify`.
+    # the server, which verifies it there under `config.database.migrations=verify`.
     # Empty: such a database is prepared on this domain's own DSN, which a
     # DML-only role cannot do.
     migrateExistingSecret: ""
@@ -227,7 +227,7 @@ database:
     # this domain lives in, when it is not the database
     # `database.migrateExistingSecret` reaches (a migrator of THAT database).
     # Mounted into the migration Job, which applies the schema there, and into
-    # the server, which verifies it there under `config.db.migrate=verify`.
+    # the server, which verifies it there under `config.database.migrations=verify`.
     # Empty: such a database is prepared on this domain's own DSN, which a
     # DML-only role cannot do.
     migrateExistingSecret: ""
@@ -236,7 +236,7 @@ database:
 
   # ── the credential that prepares the schema ────────────────────────────────
   # No domain DSN above can do it. Preparing spans every schema of a database —
-  # the DDL of each resident migration set under config.db.migrate=apply, their
+  # the DDL of each resident migration set under config.database.migrations=apply, their
   # _sqlx_migrations bookkeeping tables under verify — while each runtime role
   # holds one domain, so a pod on ferroehr_clinical cannot even VERIFY, and is
   # refused on the first set. It prepares every domain whose DSN reaches the
@@ -256,7 +256,7 @@ database:
   # -- Reference an existing Secret holding the DSN that PREPARES the schema
   # (`postgres://ferroehr_migrator:...@host:5432/ferroehr`). Required when the
   # runtime DSNs are domain-scoped roles, including under
-  # `config.db.migrate=verify`.
+  # `config.database.migrations=verify`.
   migrateExistingSecret: ""
   # -- Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file;
   # only its PATH reaches the pod's environment.
@@ -270,11 +270,11 @@ database:
 #
 # Migrations are append-only DDL, so whoever applies them can rewrite the
 # schema. Two postures, and the choice is yours:
-#   (a) The server migrates itself at boot (config.db.migrate=apply, the
+#   (a) The server migrates itself at boot (config.database.migrations=apply, the
 #       default). Simplest, and the runtime DSN must then be a member of
 #       ferroehr_migrator — i.e. the running process holds DDL rights.
 #   (b) A separate migration step under a migrator DSN, with the server on
-#       config.db.migrate=verify and a DSN that is ferroehr_clinical ONLY. The server
+#       config.database.migrations=verify and a DSN that is ferroehr_clinical ONLY. The server
 #       then issues no DDL at all and refuses to boot against a database that
 #       has not been migrated. Recommended for production.
 # Setting migrations.job.enabled runs (b) for you as a pre-install/pre-upgrade
@@ -289,7 +289,7 @@ migrations:
   runByMigratorRole: true
   job:
     # -- Run the migrations as a pre-install/pre-upgrade hook Job under the
-    # migrator DSN. Pair it with config.db.migrate=verify and an app-role-only
+    # migrator DSN. Pair it with config.database.migrations=verify and an app-role-only
     # runtime DSN for the least-privilege posture.
     enabled: false
     # -- REQUIRED when enabled: an existing Secret holding the MIGRATOR DSN
