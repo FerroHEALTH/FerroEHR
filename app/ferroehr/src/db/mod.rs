@@ -1506,6 +1506,9 @@ async fn verify_set(
     Ok(())
 }
 
+/// The session advisory lock the whole preparation of one database holds.
+const PREPARATION_LOCK: &str = "SELECT pg_advisory_lock(hashtext('ferroehr:schema-preparation'))";
+
 /// Runs the bootstrap, the `ext` set and each named set on one dedicated
 /// connection.
 ///
@@ -1514,7 +1517,16 @@ async fn verify_set(
 /// ([`Domain::names_schemas_of`]) that this run created is dropped again with
 /// `RESTRICT` (<https://www.postgresql.org/docs/18/sql-dropschema.html>), so
 /// one that came to hold anything stays and the failure is reported.
+///
+/// The whole sequence holds one session advisory lock
+/// (<https://www.postgresql.org/docs/18/explicit-locking.html#ADVISORY-LOCKS>),
+/// so replicas that boot together prepare one at a time and the later ones
+/// find every set applied. The lock ends with the session, and both callers
+/// close the connection afterwards, so an early return releases it too.
 async fn apply_migrations(conn: &mut PgConnection, domains: &[Domain]) -> Result<(), DbError> {
+    // NOTE: our own design (#6744): two sessions running `CREATE SCHEMA IF NOT EXISTS`
+    // at once collide on `pg_namespace_nspname_index`, before sqlx's own migration lock.
+    sqlx::query(PREPARATION_LOCK).execute(&mut *conn).await?;
     retired::guard(&mut *conn).await?;
     let named_only: Vec<&'static str> = bootstrap_schemas(domains)
         .into_iter()
