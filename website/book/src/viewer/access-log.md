@@ -25,6 +25,8 @@ view the CDR names in its answer. Any other account sees that it may not read
 the log. The person's own reads of their log are left out until you tick
 **Include the person's own reads of this log**.
 
+![A patient's access log as their representative reads it](img/access-log/own-view.png)
+
 The tab stays on every EHR page. If the CDR serves no access log for the
 record, the tab says so. The viewer does not check in advance, because each
 read of the log is itself recorded.
