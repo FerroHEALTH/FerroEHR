@@ -798,10 +798,10 @@ while read -r entry; do
   ovid=$(etag_uid)
   token "__ID:${key}__" "${ovid%%::*}"
 done < <(jq -c '.world.relationships[]' "$MANIFEST")
-echo "==> $world_parties world parties, $world_versions further party versions, the representation"
+echo "==> $world_parties world parties, $world_versions further party versions, $(jq '.world.relationships | length' "$MANIFEST") party relationships"
 
-# The care relationships, each written on the route of its subject; an
-# `ended` body closes one as a second version.
+# The care relationships, each written on the route of its subject; a `next`
+# body commits a second version, which renews one or ends it.
 cares=0
 while read -r entry; do
   key=$(jq -r '.key' <<< "$entry")
@@ -814,12 +814,12 @@ while read -r entry; do
   expect "care relationship $key" "$code" 201
   ovid=$(etag_uid)
   token "__ID:${key}__" "${ovid%%::*}"
-  ended=$(jq -r '.ended // empty' <<< "$entry")
-  if [[ -n "$ended" ]]; then
-    world_body "$ended" "$WORK/care.json"
-    code=$(request "care relationship $key ended" PUT "$EXT/care_relationship/${ovid%%::*}" \
+  next=$(jq -r '.next // empty' <<< "$entry")
+  if [[ -n "$next" ]]; then
+    world_body "$next" "$WORK/care.json"
+    code=$(request "care relationship $key version" PUT "$EXT/care_relationship/${ovid%%::*}" \
       -H "$CT_JSON" -H "If-Match: \"$ovid\"" --data-binary @"$WORK/care.json")
-    expect "care relationship $key ended" "$code" 200 204
+    expect "care relationship $key version" "$code" 200 204
   fi
   cares=$((cares + 1))
 done < <(jq -c '.world.care_relationships[]' "$MANIFEST")
@@ -902,8 +902,9 @@ code=$(request "access-delay register" PUT "$EXT/admin/registers/access-delay" -
   -H "If-Match: \"$register_version\"" -d "$(jq -c '.access_delay_register' "$marks")")
 expect "access-delay register" "$code" 200
 delay_slot=$(jq -r '.access_delay.ehr' "$marks")
-admin_post "access delay" access-delay "$(jq -c --arg e "${ehrs[$delay_slot]}" \
-  --arg v "$(composition_of "$delay_slot" "$(jq -r '.access_delay.composition' "$marks")")" \
+delayed=$(composition_of "$delay_slot" "$(jq -r '.access_delay.composition' "$marks")")
+token "__VO:access-delay__" "$delayed"
+admin_post "access delay" access-delay "$(jq -c --arg e "${ehrs[$delay_slot]}" --arg v "$delayed" \
   '.access_delay | {ehr_id: $e, vo_id: $v, note}' "$marks")" 204
 while read -r period; do
   code=$(request "retention period" PUT "$EXT/admin/retention/policy" -H "$CT_JSON" -d "$period")
@@ -915,10 +916,13 @@ while read -r anchor; do
     -d "$(jq -c --arg e "${ehrs[$slot]}" 'del(.ehr) + {ehr_id: $e}' <<< "$anchor")")
   expect "retention anchor" "$code" 204
 done < <(jq -c '.retention_anchors[]' "$marks")
+holds=0
 while read -r hold; do
   slot=$(jq -r '.ehr' <<< "$hold")
-  admin_post "retention hold" retention/hold "$(jq -nc \
-    --arg v "$(composition_of "$slot" "$(jq -r '.composition' <<< "$hold")")" '{vo_id: $v, held: true}')" 204
+  held=$(composition_of "$slot" "$(jq -r '.composition' <<< "$hold")")
+  holds=$((holds + 1))
+  token "__VO:retention-hold-${holds}__" "$held"
+  admin_post "retention hold" retention/hold "$(jq -nc --arg v "$held" '{vo_id: $v, held: true}')" 204
 done < <(jq -c '.retention_holds[]' "$marks")
 code=$(request "retention due" GET "$EXT/admin/retention/due")
 expect "retention due" "$code" 200
@@ -951,6 +955,35 @@ while read -r rel; do
   archetypes=$((archetypes + 1))
 done < <(mf '.world.adl14_archetypes[]')
 echo "==> $attested attested versions, $archetypes ADL 1.4 archetypes"
+
+# The tags: a composition's, keyed by the series whose first composition it
+# is, and a party's, keyed by the party.
+tags=0
+while read -r entry; do
+  slot=$(jq -r '.ehr' <<< "$entry")
+  vo=$(jq -r --arg k "__SERIES:$(jq -r '.series' <<< "$entry")__" '.[$k] // empty' "$TOKENS")
+  [[ -n "$vo" ]] || {
+    echo "::error::no series $(jq -r '.series' <<< "$entry") was committed for its tags" >&2
+    exit 1
+  }
+  code=$(request "composition tags" PUT "$BASE/ehr/${ehrs[$slot]}/composition/$vo/tags" -H "$CT_JSON" \
+    -d "$(jq -c '.tags' <<< "$entry")")
+  expect "composition tags" "$code" 200 204
+  tags=$((tags + 1))
+done < <(jq -c '.world.tags.compositions[]' "$MANIFEST")
+while read -r entry; do
+  key=$(jq -r '.key' <<< "$entry")
+  id=$(jq -r --arg k "__ID:${key}__" '.[$k] // empty' "$TOKENS")
+  [[ -n "$id" ]] || {
+    echo "::error::no party $key was written for its tags" >&2
+    exit 1
+  }
+  code=$(request "party tags $key" PUT "$BASE/demographic/$(jq -r '.kind' <<< "$entry")/$id/tags" \
+    -H "$CT_JSON" -d "$(jq -c '.tags' <<< "$entry")")
+  expect "party tags $key" "$code" 200 204
+  tags=$((tags + 1))
+done < <(jq -c '.world.tags.parties[]' "$MANIFEST")
+echo "==> the tags of $tags compositions and parties"
 
 # ── 11. stored AQL queries ───────────────────────────────────────────────────
 #

@@ -20,7 +20,7 @@ async fn the_tab_shows_each_register() {
     let viewer = Viewer::start().await;
     let cookie = viewer.sign_in().await;
     let page = viewer
-        .page(&cookie, &format!("/ehrs/{}/marks", id("ehr")))
+        .page(&cookie, &format!("/ehrs/{}/marks", id("ehr_due")))
         .await;
     assert_eq!(page.status, http::StatusCode::OK, "{}", page.body);
     for words in [
@@ -30,7 +30,7 @@ async fn the_tab_shows_each_register() {
         "Retention",
         "Record the objection",
         "Hold from disposal",
-        "CH",
+        "NL",
     ] {
         assert!(
             page.main().contains(words),
@@ -44,14 +44,16 @@ async fn the_tab_shows_each_register() {
 async fn a_write_of_each_kind_returns_to_the_tab() {
     let viewer = Viewer::start().await;
     let cookie = viewer.sign_in().await;
-    let ehr = id("ehr");
-    let held = id("composition_flat");
-    let tab = format!("/ehrs/{ehr}/marks");
-    for fields in [
-        vec![("intent", "lift")],
-        vec![("intent", "withdraw")],
-        vec![("intent", "unhold"), ("vo_id", held.as_str())],
+    let held = id("retention_held");
+    for (ehr, fields) in [
+        (id("ehr_restricted"), vec![("intent", "lift")]),
+        (id("ehr_objected"), vec![("intent", "withdraw")]),
+        (
+            id("ehr_due"),
+            vec![("intent", "unhold"), ("vo_id", held.as_str())],
+        ),
     ] {
+        let tab = format!("/ehrs/{ehr}/marks");
         let answer = viewer
             .send(http::Method::POST, &tab, Some(&cookie), Some(&fields))
             .await;
@@ -114,7 +116,7 @@ async fn a_held_composition_shows_its_hold_and_the_professional_releases_it() {
     let viewer = Viewer::start().await;
     let cookie = viewer.sign_in().await;
     let ehr = id("ehr");
-    let held = id("composition_flat");
+    let held = id("held");
     let page = viewer
         .page(&cookie, &format!("/ehrs/{ehr}/compositions/{held}"))
         .await;

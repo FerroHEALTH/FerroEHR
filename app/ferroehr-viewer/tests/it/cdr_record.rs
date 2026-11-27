@@ -183,7 +183,8 @@ pub(crate) fn respond(exchange: &Value) -> http::Response<axum::body::Body> {
 
 /// Merges a recording run into `tests/fixtures/cdr/`.
 ///
-/// Every UUID, digest and run instant becomes a numbered stand-in, so a second
+/// Every UUID, digest and run instant becomes a numbered stand-in, and every
+/// date the seed counted from the day it ran moves with the epoch, so a second
 /// recording of the same screens writes the same bytes.
 #[tokio::test]
 #[ignore = "the recorder's last step: scripts/viewer-record.sh runs it after a recording run"]
@@ -233,6 +234,12 @@ async fn write_the_recording() {
     let stand_ins = stand_ins.finish(seeded);
     stand_ins.apply(&mut exchanges);
     stand_ins.apply(&mut manifest);
+    let days: Vec<i32> = std::fs::read_to_string(recording.dir.join("seed-days"))
+        .expect("the recorder writes the seed's day offsets")
+        .lines()
+        .map(|line| line.trim().parse().expect("a day offset is an integer"))
+        .collect();
+    shift_dates(&mut exchanges, started, &days);
 
     let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/cdr");
     std::fs::write(fixtures.join("recording.json"), pretty(&exchanges))
@@ -245,6 +252,79 @@ async fn write_the_recording() {
         ),
     )
     .expect("the manifest should be written");
+}
+
+/// Moves every date of the exchanges that the seed counted from the day of the
+/// run (`started`), one of `days` away, to the same distance from the stand-in
+/// epoch's day, so those dates repeat. A request takes them too, since the
+/// viewer copies them from an answer.
+fn shift_dates(exchanges: &mut Value, started: jiff::Timestamp, days: &[i32]) {
+    let run = started.to_zoned(jiff::tz::TimeZone::UTC).date();
+    let epoch = STAND_IN_EPOCH
+        .parse::<jiff::Timestamp>()
+        .expect("the stand-in epoch is an RFC 3339 instant")
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .date();
+    let moved: BTreeMap<String, String> = days
+        .iter()
+        .map(|days| {
+            let span = jiff::Span::new().days(*days);
+            let day = |from: jiff::civil::Date| {
+                from.checked_add(span)
+                    .expect("a seed's date is in range")
+                    .to_string()
+            };
+            (day(run), day(epoch))
+        })
+        .collect();
+    let shift = |text: &str| -> String {
+        let mut out = String::with_capacity(text.len());
+        let mut copied = 0;
+        for (start, end) in dates(text) {
+            let Some(stand_in) = text.get(start..end).and_then(|date| moved.get(date)) else {
+                continue;
+            };
+            out.push_str(text.get(copied..start).unwrap_or_default());
+            out.push_str(stand_in);
+            copied = end;
+        }
+        out.push_str(text.get(copied..).unwrap_or_default());
+        out
+    };
+    shift_strings(exchanges, &shift);
+}
+
+/// Replaces every string inside `value` with what `shift` makes of it.
+fn shift_strings(value: &mut Value, shift: &impl Fn(&str) -> String) {
+    match value {
+        Value::String(text) => *text = shift(text),
+        Value::Array(items) => items.iter_mut().for_each(|item| shift_strings(item, shift)),
+        Value::Object(map) => map.values_mut().for_each(|item| shift_strings(item, shift)),
+        Value::Null | Value::Bool(_) | Value::Number(_) => {}
+    }
+}
+
+/// The spans of `text` shaped as a calendar date, alone or opening an
+/// instant.
+fn dates(text: &str) -> Vec<(usize, usize)> {
+    const SHAPE: &[u8] = b"9999-99-99";
+    let bytes = text.as_bytes();
+    let digit = |at: Option<usize>| {
+        at.and_then(|at| bytes.get(at))
+            .is_some_and(u8::is_ascii_digit)
+    };
+    let mut found = Vec::new();
+    let mut at = 0;
+    while at + SHAPE.len() <= bytes.len() {
+        let end = at + SHAPE.len();
+        if shaped(bytes, at, SHAPE) && !digit(at.checked_sub(1)) && !digit(Some(end)) {
+            found.push((at, end));
+            at = end;
+        } else {
+            at += 1;
+        }
+    }
+    found
 }
 
 /// `value` as JSON indented by one space, ending in a newline.

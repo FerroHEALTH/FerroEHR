@@ -37,12 +37,12 @@ async fn the_roles_holding_a_grant_and_the_system_agents_are_listed() {
     for words in [
         "Roles holding a grant",
         "write_access_policy",
-        "read_change_feed",
+        "commit_composition",
         "hold_scopes",
         "In force",
         "System agents",
-        "lab-system",
-        "https://login.example.org/machines",
+        "demo-lab-engine",
+        "https://machines.ferroehr.invalid",
         "ORGANISATION",
         "/parties/role/",
         "/parties/agent/",
@@ -84,7 +84,7 @@ async fn a_policy_party_is_marked_with_its_grants_and_an_ordinary_one_is_not() {
     let viewer = Viewer::start().await;
     let cookie = viewer.sign_in().await;
     let grants = viewer.page(&cookie, "/grants").await;
-    let agent = party_link_before(grants.main(), "agent", ">lab-system<");
+    let agent = party_link_before(grants.main(), "agent", ">demo-lab-engine<");
     assert!(
         !agent.is_empty(),
         "the agent links its party:\n{}",
@@ -92,7 +92,7 @@ async fn a_policy_party_is_marked_with_its_grants_and_an_ordinary_one_is_not() {
     );
     let page = viewer.page(&cookie, &agent).await;
     assert_eq!(page.status, http::StatusCode::OK, "{agent}: {}", page.body);
-    for words in ["Policy party", "lab-system", "read_change_feed"] {
+    for words in ["Policy party", "demo-lab-engine", "commit_composition"] {
         assert!(
             page.main().contains(words),
             "{agent} says {words:?}:\n{}",

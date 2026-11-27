@@ -93,7 +93,7 @@
     },
     "upper": {
       "_type": "DV_DATE",
-      "value": "__DATE:-1__"
+      "value": "__DATE:-30__"
     },
     "lower_unbounded": false,
     "upper_unbounded": false,

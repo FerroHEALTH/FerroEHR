@@ -49,7 +49,7 @@ const GROWTH: &str = "https://apps.example.org/growth/launch?theme=light";
 const MEDS: &str = "https://apps.example.org/meds/launch";
 
 /// The FHIR `Patient` id of the fixture EHR's subject.
-const PATIENT: &str = "p-0417";
+const PATIENT: &str = "sandbox-patient-01";
 
 /// A form as the stub received it.
 type Form = Vec<(String, String)>;
@@ -437,7 +437,7 @@ fn launch_section(stub: &Stub, key: &std::path::Path) -> ferroehr_viewer::launch
         private_key_file: Some(key.to_path_buf()),
         kid: "viewer-1".to_owned(),
         resource: "https://ehr.example.org/ferroehr/rest/openehr/v1".to_owned(),
-        patient_namespaces: vec!["demo.hospital.mrn".to_owned()],
+        patient_namespaces: vec!["ferroehr-sandbox".to_owned()],
         fhir_base: stub.fhir_base(),
         app: vec![
             app("Growth chart", "growth-chart", GROWTH),

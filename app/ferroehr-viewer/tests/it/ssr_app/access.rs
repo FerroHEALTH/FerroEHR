@@ -34,12 +34,12 @@ fn first_version(main: &str) -> String {
 async fn the_settings_are_drawn_by_directive_with_their_versions() {
     let viewer = Viewer::start().await;
     let cookie = viewer.sign_in().await;
-    let tab = format!("/ehrs/{}/access", id("ehr"));
+    let tab = format!("/ehrs/{}/access", id("ehr_access"));
     let page = viewer.page(&cookie, &tab).await;
     assert_eq!(page.status, http::StatusCode::OK, "{}", page.body);
     for words in [
         "These settings",
-        "Consent for the family doctor",
+        "Consent for the cardiology ward",
         "consent",
         "permit",
         "Versions",
@@ -74,7 +74,7 @@ async fn the_settings_are_drawn_by_directive_with_their_versions() {
 async fn a_commit_over_a_version_no_longer_current_is_refused_and_kept() {
     let viewer = Viewer::start().await;
     let cookie = viewer.sign_in().await;
-    let tab = format!("/ehrs/{}/access", id("ehr"));
+    let tab = format!("/ehrs/{}/access", id("ehr_access"));
     let older = first_version(viewer.page(&cookie, &tab).await.main());
     let answer = viewer
         .send(
@@ -100,7 +100,7 @@ async fn a_commit_over_a_version_no_longer_current_is_refused_and_kept() {
 async fn a_repair_of_settings_that_parse_is_refused_in_the_cdrs_words() {
     let viewer = Viewer::start().await;
     let cookie = viewer.sign_in().await;
-    let tab = format!("/ehrs/{}/access", id("ehr"));
+    let tab = format!("/ehrs/{}/access", id("ehr_access"));
     let answer = viewer
         .send(
             http::Method::POST,
@@ -117,7 +117,7 @@ async fn a_repair_of_settings_that_parse_is_refused_in_the_cdrs_words() {
 async fn a_refused_account_sees_the_refusal() {
     let refused = json!({
         "method": "GET",
-        "path": format!("/ferroehr/rest/extensions/v1/ehr/{}/ehr_access", id("ehr")),
+        "path": format!("/ferroehr/rest/extensions/v1/ehr/{}/ehr_access", id("ehr_access")),
         "body": "",
         "status": 403,
         "headers": { "content-type": "application/json" },
@@ -126,7 +126,7 @@ async fn a_refused_account_sees_the_refusal() {
     let viewer = Viewer::start_with(vec![refused]).await;
     let cookie = viewer.sign_in().await;
     let page = viewer
-        .page(&cookie, &format!("/ehrs/{}/access", id("ehr")))
+        .page(&cookie, &format!("/ehrs/{}/access", id("ehr_access")))
         .await;
     assert!(
         page.main()

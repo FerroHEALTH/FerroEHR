@@ -5,32 +5,27 @@
 # against the FerroEHR of this checkout.
 #
 # 1. Starts a throwaway PostgreSQL (the published ferroehr-postgres image) and
-#    the checkout's own `ferroehr` binary over docker/ferroehr.dev.toml, with
-#    the quickstart's posture of no role gate so the one user ferroehr /
-#    ferroehr reads every surface the viewer draws. The professional templates
-#    are loaded before serve, ferroehr is bound to a PERSON through SCIM, and
-#    its PERSON is granted write_access_policy and is the first
-#    administrator, so it reads the policy parties; a system client is
-#    granted read_change_feed. Both grants are this recording's own, which
-#    the grant ceiling admits here only.
-# 2. Seeds it over ITS-REST as scripts/ui-e2e.sh does (the template, an EHR,
-#    a composition committed then updated, a FLAT composition) plus what the
-#    in-process screens read: the subject, a tag, a directory, a person, an
-#    organisation, their relationship, a demographic tag and a stored query.
+#    the checkout's own `ferroehr` binary over docker/ferroehr.dev.toml, the
+#    posture the browser journeys run, and binds its Basic users to PERSONs
+#    through SCIM as scripts/ui-e2e.sh does.
+# 2. Seeds it with the one demo seed (scripts/sandbox/reseed.sh) as the
+#    journeys do: ferroehr-admin seeds, ferroehr is the clinician and
+#    ferroehr-proxy the representative. The ids the screens open are read
+#    from the ids file the seed writes.
 # 3. Runs the `ssr_app` tests with the recorder on, each forwarding to the
-#    CDR and writing the exchanges it made.
+#    CDR as ferroehr-admin and writing the exchanges it made.
 # 4. Runs the recorder's last step, which merges them into recording.json and
-#    manifest.json with stand-ins for every id and instant the run stamped,
-#    so a second run writes the same bytes.
+#    manifest.json with stand-ins for every id and instant the run stamped and
+#    for the dates the seed counted from the day it ran, so a second run
+#    writes the same bytes.
 #
 # Usage:
 #   scripts/viewer-record.sh
 #
 # Env:
 #   VIEWER_RECORD_CDR       record against this running CDR instead (its
-#                           database must be empty; user ferroehr / ferroehr
-#                           must read the admin API, be bound to a PERSON and
-#                           hold write_access_policy)
+#                           database must be empty, and its logins bound and
+#                           granted as scripts/ui-e2e.sh leaves them)
 #   VIEWER_RECORD_PG_NAME   the PostgreSQL container's name (default
 #                           ferroehr-viewer-record-pg)
 #   VIEWER_RECORD_PG_IMAGE  the PostgreSQL image (default: the compose pin)
@@ -106,9 +101,7 @@ else
   SERVER_ENV=(FERROEHR_CONFIG=docker/ferroehr.dev.toml
     FERROEHR__DATABASE__URL="postgres://$PG_ROLE:$PG_SECRET@127.0.0.1:$PG_PORT/$PG_ROLE"
     FERROEHR__SERVER__LISTEN="127.0.0.1:$CDR_PORT"
-    FERROEHR__AUTHZ__RBAC__ENABLED=false
-    FERROEHR__AUTHZ__RBAC__FIRST_ADMIN=ferroehr
-    "FERROEHR__AUTHZ__GRANTS__ALLOWED=commit_composition,read_change_feed,scim_provision,hold_roles,hold_scopes,write_access_policy"
+    "FERROEHR__AUDIT__PURPOSE_CODES=TREAT,ETREAT"
     FERROEHR__USAGE_REPORT__ENABLED=false
     FERROEHR__TELEMETRY__FORMAT=json
     FERROEHR__AUTH__ISSUER__BASIC_USERS__JWKS_FILE="$ROOT/deploy/hosted/basic-users-jwks.json"
@@ -119,35 +112,14 @@ else
 fi
 wait_for "$CDR_URL/health/readiness" 120
 if [[ -z "${VIEWER_RECORD_CDR:-}" ]]; then
-  echo "── binding ferroehr to a PERSON through SCIM"
-  GRANT=(env "${SERVER_ENV[@]}" "$ROOT/target/debug/ferroehr")
-  SCIM_GRANT="${GRANT[*]}" bash scripts/scim-provision.sh "$CDR_URL" basic-users \
-    urn:example:basic-user ferroehr
-  "${GRANT[@]}" party-binding grant --basic-user ferroehr \
-    --operation write_access_policy >/dev/null
-  "${GRANT[@]}" party-binding grant --issuer https://login.example.org/machines \
-    --client-id lab-system --operation read_change_feed --element reader=lab >/dev/null
+  echo "── binding the Basic users to PERSONs through SCIM"
+  SCIM_GRANT="env ${SERVER_ENV[*]} $ROOT/target/debug/ferroehr" bash scripts/scim-provision.sh \
+    "$CDR_URL" basic-users urn:example:basic-user \
+    ferroehr ferroehr-admin --roles READONLY ferroehr-readonly
 fi
 
-V1="$CDR_URL/ferroehr/rest/openehr/v1"
-EXT="$CDR_URL/ferroehr/rest/extensions/v1"
-AUTH=(-u ferroehr:ferroehr)
-JSON=(-H "Content-Type: application/json")
-ACCEPT=(-H "Accept: application/json")
-# quiet CURL-ARGS...: a call whose answer only matters when it fails.
-quiet() {
-  if ! curl -sS --fail-with-body -o "$WORK/answer" "$@"; then
-    cat "$WORK/answer" >&2
-    echo >&2
-    return 1
-  fi
-}
-# ask CURL-ARGS...: a call whose answer is printed, or refused with its body.
-ask() {
-  quiet "$@" || return 1
-  cat "$WORK/answer"
-}
-ehrs=$(ask "${AUTH[@]}" -X POST "$V1/query/aql" "${JSON[@]}" \
+ehrs=$(curl -sS --fail-with-body -u ferroehr-admin:ferroehr -X POST \
+  "$CDR_URL/ferroehr/rest/openehr/v1/query/aql" -H "Content-Type: application/json" \
   -d '{"q":"SELECT COUNT(*) FROM EHR e"}' | jq -r '.rows[0][0]')
 if [[ "$ehrs" != "0" ]]; then
   echo "FATAL: the CDR already holds $ehrs EHRs; the recording needs an empty one" >&2
@@ -156,282 +128,46 @@ fi
 
 # ── 2. The seed ─────────────────────────────────────────────────────────────
 date -u +%Y-%m-%dT%H:%M:%SZ >"$WORK/started"
-echo "── seeding"
-TEMPLATE="minimal_evaluation.en.v1"
-quiet "${AUTH[@]}" -X POST "$V1/definition/template/adl1.4" \
-  -H "Content-Type: application/xml" \
-  --data-binary @app/ferroehr-viewer/tests/fixtures/minimal_evaluation.opt
+# The days from the run its bodies' `__DATE:<days>__` tokens name, which the
+# last step moves with the stand-in epoch.
+grep -rhoE '__DATE:[+-]?[0-9]+__' scripts/sandbox/seed \
+  | sed -E 's/__DATE:\+?(-?[0-9]+)__/\1/' | sort -un >"$WORK/seed-days"
+echo "── seeding the demo dataset"
+SANDBOX_BASE="$CDR_URL" SANDBOX_USER=ferroehr-admin SANDBOX_CLINICIAN=ferroehr \
+  SANDBOX_TERMINOLOGY=without-loinc \
+  SANDBOX_IDS_OUT="$WORK/seed-ids.json" bash scripts/sandbox/reseed.sh
 
-# The subject is a synthetic record number (.claude/rules/personal-data.md).
-EHR=$(ask "${AUTH[@]}" -X POST "$V1/ehr" "${JSON[@]}" \
-  "${ACCEPT[@]}" -H "Prefer: return=representation" -d '{
-    "_type": "EHR_STATUS",
-    "name": {"_type": "DV_TEXT", "value": "EHR Status"},
-    "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
-    "archetype_details": {"_type": "ARCHETYPED", "rm_version": "1.2.0",
-      "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-EHR_STATUS.generic.v1"}},
-    "subject": {"_type": "PARTY_SELF", "external_ref": {"_type": "PARTY_REF",
-      "namespace": "demo.hospital.mrn", "type": "PERSON",
-      "id": {"_type": "GENERIC_ID", "value": "p-0417", "scheme": "mrn"}}},
-    "is_queryable": true, "is_modifiable": true}' | jq -r '.ehr_id.value')
-
-etag_of() { tr -d '\r' | sed -n 's/^[Ee][Tt]ag: W\/"\(.*\)"$/\1/p'; }
-
-ask "${AUTH[@]}" "$V1/definition/template/adl1.4/$TEMPLATE/example" \
-  "${ACCEPT[@]}" >"$WORK/example.json"
-VUID=$(curl -sS --fail-with-body -D - -o /dev/null "${AUTH[@]}" -X POST "$V1/ehr/$EHR/composition" \
-  "${JSON[@]}" -H "Prefer: return=minimal" \
-  --data-binary @"$WORK/example.json" | etag_of)
-COMPOSITION="${VUID%%::*}"
-quiet "${AUTH[@]}" -X PUT "$V1/ehr/$EHR/composition/$COMPOSITION" \
-  "${JSON[@]}" -H "If-Match: \"$VUID\"" \
-  --data-binary @"$WORK/example.json"
-
-FLAT_VUID=$(curl -sS --fail-with-body -D - -o /dev/null "${AUTH[@]}" -X POST "$V1/ehr/$EHR/composition" \
-  -H "Content-Type: application/openehr.wt.flat+json" -H "openehr-template-id: $TEMPLATE" \
-  -H "Prefer: return=minimal" -d '{
-    "ctx/language": "en", "ctx/territory": "US",
-    "ctx/composer_name": "Seed composer", "ctx/time": "2026-07-14T08:00:00Z",
-    "minimal/minimal/quantity|magnitude": 36.5, "minimal/minimal/quantity|unit": "kg"}' \
-  | etag_of)
-COMPOSITION_FLAT="${FLAT_VUID%%::*}"
-
-quiet "${AUTH[@]}" -X PUT "$V1/ehr/$EHR/composition/$COMPOSITION/tags" \
-  "${JSON[@]}" -d '[{"key": "reviewed", "value": "yes"}]'
-
-quiet "${AUTH[@]}" -X POST "$V1/ehr/$EHR/directory" \
-  "${JSON[@]}" -d "{
-    \"_type\": \"FOLDER\", \"name\": {\"_type\": \"DV_TEXT\", \"value\": \"root\"},
-    \"archetype_node_id\": \"openEHR-EHR-FOLDER.generic.v1\",
-    \"archetype_details\": {\"_type\": \"ARCHETYPED\",
-      \"archetype_id\": {\"_type\": \"ARCHETYPE_ID\", \"value\": \"openEHR-EHR-FOLDER.generic.v1\"},
-      \"rm_version\": \"1.1.0\"},
-    \"folders\": [{\"_type\": \"FOLDER\",
-      \"name\": {\"_type\": \"DV_TEXT\", \"value\": \"Episodes\"},
-      \"archetype_node_id\": \"at0001\",
-      \"items\": [{\"_type\": \"OBJECT_REF\", \"namespace\": \"local\",
-        \"type\": \"VERSIONED_COMPOSITION\",
-        \"id\": {\"_type\": \"HIER_OBJECT_ID\", \"value\": \"$COMPOSITION\"}}]}]}"
-
-# party RM_TYPE SEGMENT LABEL...: creates a party whose one identity holds
-# one ELEMENT per label and prints its versioned-object id.
-party() {
-  local rm_type="$1" segment="$2"
-  shift 2
-  local archetype="openEHR-DEMOGRAPHIC-$rm_type.$segment.v1"
-  local items
-  items=$(jq -nc --args '[$ARGS.positional | to_entries[] | (.value | index(":")) as $at | {
-    "_type": "ELEMENT", "name": {"_type": "DV_TEXT", "value": .value[0:$at]},
-    "archetype_node_id": "at000\(.key + 2)",
-    "value": {"_type": "DV_TEXT", "value": .value[$at + 1:]}}]' "$@")
-  jq -nc --arg t "$rm_type" --arg a "$archetype" --arg s "$segment" --argjson items "$items" '{
-    "_type": $t, "name": {"_type": "DV_TEXT", "value": $t}, "archetype_node_id": $a,
-    "archetype_details": {"_type": "ARCHETYPED",
-      "archetype_id": {"_type": "ARCHETYPE_ID", "value": $a}, "rm_version": "1.1.0"},
-    "identities": [{"_type": "PARTY_IDENTITY",
-      "name": {"_type": "DV_TEXT", "value": "legal name"},
-      "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_IDENTITY.\($s)_name.v1",
-      "details": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "Details"},
-        "archetype_node_id": "at0001", "items": $items}}]}' \
-    | ask "${AUTH[@]}" -X POST "$V1/demographic/$segment" \
-      "${JSON[@]}" "${ACCEPT[@]}" \
-      -H "Prefer: return=representation" --data-binary @- \
-    | jq -r '.uid.value | split("::")[0]'
-}
-PARTY=$(party PERSON person "Given name:Demo" "Family name:Person 0417")
-ORGANISATION=$(party ORGANISATION organisation "Name:Demo Clinic")
-RELATIONSHIP=$(jq -nc --arg s "$PARTY" --arg t "$ORGANISATION" '{
-    "_type": "PARTY_RELATIONSHIP", "name": {"_type": "DV_TEXT", "value": "employment"},
-    "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.employment.v1",
-    "source": {"_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
-      "id": {"_type": "HIER_OBJECT_ID", "value": $s}},
-    "target": {"_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
-      "id": {"_type": "HIER_OBJECT_ID", "value": $t}}}' \
-  | ask "${AUTH[@]}" -X POST "$EXT/demographic/party_relationship" \
-    "${JSON[@]}" "${ACCEPT[@]}" \
-    -H "Prefer: return=representation" --data-binary @- \
-  | jq -r '.uid.value | split("::")[0]')
-quiet "${AUTH[@]}" -X PUT "$V1/demographic/person/$PARTY/tags" \
-  "${JSON[@]}" -d '[{"key": "follow-up", "value": "2026-11-04"}]'
-
-# The system client acts for the clinic.
-LAB_AGENT=$(ask "${AUTH[@]}" -X POST "$V1/query/aql" "${JSON[@]}" \
-  -d '{"q":"SELECT a/uid/value FROM AGENT a WHERE a/name/value = '"'lab-system'"'"}' \
-  | jq -r '.rows[0][0] | split("::")[0]')
-jq -nc --arg s "$LAB_AGENT" --arg t "$ORGANISATION" '{
-    "_type": "PARTY_RELATIONSHIP",
-    "name": {"_type": "DV_CODED_TEXT", "value": "acts_for", "defining_code": {"_type": "CODE_PHRASE",
-      "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr_access"}, "code_string": "acts_for"}},
-    "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1",
-    "source": {"_type": "PARTY_REF", "namespace": "demographic", "type": "AGENT",
-      "id": {"_type": "HIER_OBJECT_ID", "value": $s}},
-    "target": {"_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
-      "id": {"_type": "HIER_OBJECT_ID", "value": $t}}}' \
-  | quiet "${AUTH[@]}" -X POST "$EXT/demographic/party_relationship" "${JSON[@]}" --data-binary @-
-
-# The access policy, committed twice so its history holds two versions.
-policy() {
-  jq -nc --arg o "$ORGANISATION" --arg grace "$1" '{
-    "_type": "ACCESS_POLICY", "name": {"_type": "DV_TEXT", "value": "Demo access policy"},
-    "archetype_node_id": "openEHR-EHR-ACCESS_POLICY.controller.v1",
-    "archetype_details": {"_type": "ARCHETYPED", "rm_version": "1.2.0",
-      "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-ACCESS_POLICY.controller.v1"}},
-    "controller": {"_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
-      "id": {"_type": "HIER_OBJECT_ID", "value": $o}},
-    "care_relationship_required": false,
-    "relationship_grace": {"_type": "DV_DURATION", "value": $grace},
-    "concealed_confidentialities": [{"_type": "DV_CODED_TEXT", "value": "very restricted",
-      "defining_code": {"_type": "CODE_PHRASE",
-        "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "HL7_Confidentiality"},
-        "code_string": "V"}}],
-    "purpose_required": false}'
-}
-POLICY_VUID=$(policy P14D | curl -sS --fail-with-body -D - -o /dev/null "${AUTH[@]}" -X PUT \
-  "$EXT/admin/access_policy" "${JSON[@]}" -H "If-None-Match: *" --data-binary @- | etag_of)
-policy P7D | quiet "${AUTH[@]}" -X PUT "$EXT/admin/access_policy" "${JSON[@]}" \
-  -H "If-Match: \"$POLICY_VUID\"" --data-binary @-
-
-# The access delay, committed over the default so its history holds two
-# versions.
-quiet "${AUTH[@]}" -X PUT "$EXT/admin/registers/access-delay" "${JSON[@]}" -H 'If-Match: "0"' \
-  -d '{"enabled": true, "categories": ["Laboratory-Reports"], "max_delay": "72h"}'
-
-# The EHR's legal marks: a restriction requested and lifted, a retention
-# anchor whose declared period has run, and the FLAT composition held from
-# the person and from disposal.
-quiet "${AUTH[@]}" -X POST "$EXT/admin/restriction" "${JSON[@]}" \
-  -d "{\"ehr_id\": \"$EHR\", \"ground\": \"gdpr-18-1-a\", \"note\": \"accuracy contested\"}"
-quiet "${AUTH[@]}" -X POST "$EXT/admin/restriction/lift" "${JSON[@]}" -d "{\"ehr_id\": \"$EHR\"}"
-quiet "${AUTH[@]}" -X PUT "$EXT/admin/retention/anchor" "${JSON[@]}" \
-  -d "{\"ehr_id\": \"$EHR\", \"jurisdiction\": \"CH\", \"anchored_at\": \"2026-01-31T00:00:00Z\"}"
-quiet "${AUTH[@]}" -X PUT "$EXT/admin/retention/policy" "${JSON[@]}" \
-  -d '{"kind": "EHR", "jurisdiction": "CH", "period": "6 months", "anchor": "last_commit", "source": "Synthetic period of the recording"}'
-quiet "${AUTH[@]}" -X POST "$EXT/admin/access-delay" "${JSON[@]}" \
-  -d "{\"ehr_id\": \"$EHR\", \"vo_id\": \"$COMPOSITION_FLAT\", \"note\": \"to discuss at the visit\"}"
-quiet "${AUTH[@]}" -X POST "$EXT/admin/retention/hold" "${JSON[@]}" \
-  -d "{\"vo_id\": \"$COMPOSITION_FLAT\", \"held\": true}"
-
-# The EHR's access settings, committed on the person's instruction over the
-# version the EHR was created with: open by default, with one consent.
-ACCESS_VUID=$(ask "${AUTH[@]}" "$EXT/admin/ehr-access?ehr_id=$EHR" "${ACCEPT[@]}" \
-  | jq -r '.versions[0].version_uid')
-jq -nc --arg e "$EHR" --arg v "$ACCESS_VUID" --arg p "$PARTY" '
-  def access($c): {"_type": "DV_CODED_TEXT", "value": $c, "defining_code": {"_type": "CODE_PHRASE",
-    "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr_access"}, "code_string": $c}};
-  {"ehr_id": $e, "preceding_version_uid": $v, "settings": {
-    "_type": "ACCESS_DIRECTIVE_SETTINGS", "default_access": access("open"),
-    "directives": [{"_type": "ACCESS_DIRECTIVE",
-      "name": {"_type": "DV_TEXT", "value": "Consent for the family doctor"},
-      "archetype_node_id": "at0001", "kind": access("consent"),
-      "effect": {"_type": "DV_CODED_TEXT", "value": "permit", "defining_code": {"_type": "CODE_PHRASE",
-        "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "HL7_ConsentProvisionType"},
-        "code_string": "permit"}},
-      "applies_to": [{"_type": "ACCESS_ACTOR_SCOPE", "party": {"_type": "PARTY_REF",
-        "namespace": "demographic", "type": "PERSON", "id": {"_type": "HIER_OBJECT_ID", "value": $p}}}],
-      "emergency_override": false}]}}' \
-  | quiet "${AUTH[@]}" -X POST "$EXT/admin/ehr-access" "${JSON[@]}" --data-binary @-
-
-QUERY="org.example.cardio::latest"
-quiet "${AUTH[@]}" -X PUT "$V1/definition/query/$QUERY" \
-  -H "Content-Type: text/plain" \
-  --data-binary "SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c"
-
-# The EHR's subject declares its record subject on a PERSON of its own, so
-# its care relationships resolve; the provider ORGANISATION carries the
-# identifier the dev configuration's party binding names.
-access() {
-  jq -nc --arg c "$1" '{"_type": "DV_CODED_TEXT", "value": $c, "defining_code": {"_type": "CODE_PHRASE",
-    "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr_access"}, "code_string": $c}}'
-}
-PATIENT=$(jq -nc --argjson n "$(access record_subject)" '{
-    "_type": "PERSON", "name": {"_type": "DV_TEXT", "value": "PERSON"},
-    "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
-    "archetype_details": {"_type": "ARCHETYPED", "rm_version": "1.1.0",
-      "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-DEMOGRAPHIC-PERSON.person.v1"}},
-    "identities": [{"_type": "PARTY_IDENTITY", "name": {"_type": "DV_TEXT", "value": "legal name"},
-      "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v1",
-      "details": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "Details"},
-        "archetype_node_id": "at0001", "items": [{"_type": "ELEMENT",
-          "name": {"_type": "DV_TEXT", "value": "Given name"}, "archetype_node_id": "at0002",
-          "value": {"_type": "DV_TEXT", "value": "Patient 0417"}}]}}],
-    "details": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "details"},
-      "archetype_node_id": "at0010", "items": [{"_type": "ELEMENT", "archetype_node_id": "at0011",
-        "name": $n, "value": {"_type": "DV_IDENTIFIER", "issuer": "demo.hospital.mrn",
-          "id": "p-0417", "type": "MR"}}]}}' \
-  | ask "${AUTH[@]}" -X POST "$V1/demographic/person" "${JSON[@]}" "${ACCEPT[@]}" \
-    -H "Prefer: return=representation" --data-binary @- \
-  | jq -r '.uid.value | split("::")[0]')
-jq -nc '{
-    "_type": "ORGANISATION", "name": {"_type": "DV_TEXT", "value": "ORGANISATION"},
-    "archetype_node_id": "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v1",
-    "archetype_details": {"_type": "ARCHETYPED", "rm_version": "1.1.0",
-      "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v1"}},
-    "identities": [{"_type": "PARTY_IDENTITY", "name": {"_type": "DV_TEXT", "value": "legal name"},
-      "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_IDENTITY.organisation_name.v1",
-      "details": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "Details"},
-        "archetype_node_id": "at0001", "items": [{"_type": "ELEMENT",
-          "name": {"_type": "DV_TEXT", "value": "Name"}, "archetype_node_id": "at0002",
-          "value": {"_type": "DV_TEXT", "value": "Demo Hospital"}}]}}],
-    "details": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "details"},
-      "archetype_node_id": "at0010", "items": [{"_type": "ELEMENT", "archetype_node_id": "at0011",
-        "name": {"_type": "DV_TEXT", "value": "Identifier"},
-        "value": {"_type": "DV_IDENTIFIER", "issuer": "urn:oid:2.999.7.9", "id": "dev",
-          "type": "ORGANISATION"}}]}}' \
-  | quiet "${AUTH[@]}" -X POST "$V1/demographic/organisation" "${JSON[@]}" --data-binary @-
-# care CODE RUBRIC FROM TO: a care relationship of the patient to the demo
-# person.
-care() {
-  jq -nc --arg p "$PATIENT" --arg d "$PARTY" --arg code "$1" --arg rubric "$2" \
-    --arg from "$3" --arg to "$4" \
-    --argjson n "$(access under_care_of)" --argjson r "$(access care_role)" \
-    --argjson pv "$(access provider)" '{
-      "_type": "PARTY_RELATIONSHIP", "name": $n,
-      "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v2",
-      "details": {"_type": "ITEM_TREE", "archetype_node_id": "at0001",
-        "name": {"_type": "DV_TEXT", "value": "details"}, "items": [
-          {"_type": "ELEMENT", "archetype_node_id": "at0002", "name": $r,
-           "value": {"_type": "DV_CODED_TEXT", "value": $rubric, "defining_code": {"_type": "CODE_PHRASE",
-             "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "HL7_ParticipationType"},
-             "code_string": $code}}},
-          {"_type": "ELEMENT", "archetype_node_id": "at0003", "name": $pv,
-           "value": {"_type": "DV_IDENTIFIER", "issuer": "urn:oid:2.999.7.9", "id": "dev",
-             "type": "ORGANISATION"}}]},
-      "time_validity": {"_type": "DV_INTERVAL", "lower": {"_type": "DV_DATE", "value": $from},
-        "upper": {"_type": "DV_DATE", "value": $to}, "lower_unbounded": false, "upper_unbounded": false},
-      "source": {"_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
-        "id": {"_type": "HIER_OBJECT_ID", "value": $p}},
-      "target": {"_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
-        "id": {"_type": "HIER_OBJECT_ID", "value": $d}}}'
-}
-# The live relationship, its role changed once so it has two versions; one
-# ended last year; and one the in-process screens end.
-CARE_VUID=$(care ATND attender 2026-01-01 2027-12-31 | curl -sS --fail-with-body -D - -o /dev/null \
-  "${AUTH[@]}" -X POST "$EXT/demographic/person/$PATIENT/care_relationship" "${JSON[@]}" \
-  --data-binary @- | etag_of)
-CARE="${CARE_VUID%%::*}"
-care RESP "responsible party" 2026-01-01 2027-12-31 | quiet "${AUTH[@]}" -X PUT "$EXT/care_relationship/$CARE" \
-  "${JSON[@]}" -H "If-Match: \"$CARE_VUID\"" --data-binary @-
-care CON consultant 2025-01-01 2025-06-30 | quiet "${AUTH[@]}" -X POST \
-  "$EXT/demographic/person/$PATIENT/care_relationship" "${JSON[@]}" --data-binary @-
-CARE_END=$(care PART participation 2026-02-01 2027-06-30 | curl -sS --fail-with-body -D - -o /dev/null \
-  "${AUTH[@]}" -X POST "$EXT/demographic/person/$PATIENT/care_relationship" "${JSON[@]}" \
-  --data-binary @- | etag_of)
-CARE_END="${CARE_END%%::*}"
-
-jq -nc --arg ehr "$EHR" --arg composition "$COMPOSITION" \
-  --arg composition_flat "$COMPOSITION_FLAT" --arg party "$PARTY" \
-  --arg organisation "$ORGANISATION" --arg relationship "$RELATIONSHIP" \
-  --arg template "$TEMPLATE" --arg query "$QUERY" --arg patient "$PATIENT" \
-  --arg care "$CARE" --arg care_end "$CARE_END" \
-  '{$ehr, $composition, $composition_flat, $party, $organisation, $relationship,
-    $template, $query, "query_version": "1.0.0", $patient, $care, $care_end}' >"$WORK/manifest.json"
-for id in "$EHR" "$COMPOSITION" "$COMPOSITION_FLAT" "$PARTY" "$ORGANISATION" "$RELATIONSHIP" \
-  "$PATIENT" "$CARE" "$CARE_END"; do
-  if [[ -z "$id" || "$id" == null ]]; then
-    echo "FATAL: the seed is incomplete: $(cat "$WORK/manifest.json")" >&2
-    exit 1
-  fi
-done
+# The ids the screens open, each read from the seed's ids file at the slot or
+# key the seed's manifest gives it.
+jq --slurpfile m scripts/sandbox/seed/manifest.json '
+  $m[0] as $m | .tokens as $t | .ehrs as $e
+  | ($m.world.legal_marks) as $marks
+  | {
+      ehr: $e[0],
+      composition: $t["__SERIES:minimal-evaluation__"],
+      held: $t["__VO:access-delay__"],
+      ehr_access: $e[$m.world.ehr_access[0].ehr],
+      ehr_restricted: $e[$marks.restriction.ehr],
+      ehr_objected: $e[$marks.research_objection.ehr],
+      ehr_due: $e[$marks.retention_anchors[0].ehr],
+      retention_held: $t["__VO:retention-hold-1__"],
+      ehr_care_ended: $e[$m.world.care_relationships[] | select(.key == "care-patient-02") | .ehr],
+      patient: $t["__ID:patient-01__"],
+      carer: $t["__ID:group-cardiology__"],
+      care: $t["__ID:care-patient-01__"],
+      care_ended: $t["__ID:care-patient-02__"],
+      care_end: $t["__ID:care-patient-03__"],
+      party: $t["__ID:person-01__"],
+      organisation: $t["__ID:organisation-hospital__"],
+      relationship: $t["__ID:representation-guardian__"],
+      template: "minimal_evaluation.en.v1",
+      query: "eu.ferroehr.sandbox::composition_index",
+      query_version: "1.0.0"
+    }' "$WORK/seed-ids.json" >"$WORK/manifest.json"
+if jq -e '[.[] | select(. == null or . == "")] | length > 0' "$WORK/manifest.json" >/dev/null; then
+  echo "FATAL: the seed left an id unnamed: $(cat "$WORK/manifest.json")" >&2
+  exit 1
+fi
 echo "   seeded $(cat "$WORK/manifest.json")"
 # A second later, so the marker falls after every instant the seed stamped.
 sleep 1
