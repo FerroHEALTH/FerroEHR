@@ -66,6 +66,20 @@
     "value": "P14D"
   },
   "purpose_required": false,
+  "concealed_confidentialities": [
+    {
+      "_type": "DV_CODED_TEXT",
+      "value": "very restricted",
+      "defining_code": {
+        "_type": "CODE_PHRASE",
+        "terminology_id": {
+          "_type": "TERMINOLOGY_ID",
+          "value": "HL7_Confidentiality"
+        },
+        "code_string": "V"
+      }
+    }
+  ],
   "classifications": [
     {
       "_type": "ACCESS_CLASSIFICATION",

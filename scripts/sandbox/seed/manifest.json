@@ -14,11 +14,12 @@
     "ADL 1.4 CKM archetypes, 8 EHRs with their compositions, further COMPOSITION and EHR_STATUS",
     "versions, 3 Simplified Flat compositions with measured values, a directory in every EHR,",
     "the demographic parties (persons, the patients with their record subjects, the provider",
-    "organisation, care teams, a system client and the roles that grant), a representation,",
-    "3 care relationships, the controller's access policy in 2 versions with a justified and",
-    "an emergency read between them, 2 EHR access settings, the legal marks (a restriction of",
-    "processing, a research objection, an access delay, retention periods with something due",
-    "and holds), 2 attested versions, 6 stored AQL queries (one run as a cohort), the subject",
+    "organisation, care teams, a system client acting for it and the roles that grant), 2",
+    "representations, 3 care relationships (2 with a second version), the controller's access",
+    "policy in 2 versions with a justified and an emergency read between them, 2 EHR access",
+    "settings, the legal marks (a restriction of processing, a research objection, an access",
+    "delay, retention periods with something due and holds), 2 attested versions, a",
+    "composition's and a person's tags, 6 stored AQL queries (one run as a cohort), the subject",
     "view of a patient's access log and, where the server signs with an OpenPGP key, a signed",
     "access-log checkpoint that verifies. One marker EHR records completion, so a second run",
     "exits immediately and the instance data is never doubled.",
@@ -187,11 +188,12 @@
     ],
     "relationships": [
       { "key": "representation-guardian", "file": "world/representation-guardian.json" },
-      { "key": "representation-proxy", "file": "world/representation-proxy.json" }
+      { "key": "representation-proxy", "file": "world/representation-proxy.json" },
+      { "key": "acts-for-lab-engine", "file": "world/acts-for-lab-engine.json" }
     ],
     "care_relationships": [
-      { "key": "care-patient-01", "ehr": 0, "file": "world/care-patient-01-cardiology.json" },
-      { "key": "care-patient-02", "ehr": 1, "file": "world/care-patient-02-cardiology.json", "ended": "world/care-patient-02-cardiology.ended.json" },
+      { "key": "care-patient-01", "ehr": 0, "file": "world/care-patient-01-cardiology.json", "next": "world/care-patient-01-cardiology.renewed.json" },
+      { "key": "care-patient-02", "ehr": 1, "file": "world/care-patient-02-cardiology.json", "next": "world/care-patient-02-cardiology.ended.json" },
       { "key": "care-patient-03", "ehr": 2, "file": "world/care-patient-03-emergency.json" }
     ],
     "access_policy": {
@@ -233,6 +235,14 @@
       { "ehr": 0, "file": "records/attested-signed.json" },
       { "ehr": 1, "file": "records/attested-pending.json" }
     ],
+    "tags": {
+      "compositions": [
+        { "series": "minimal-evaluation", "ehr": 0, "tags": [{ "key": "reviewed", "value": "yes" }] }
+      ],
+      "parties": [
+        { "key": "person-01", "kind": "person", "tags": [{ "key": "follow-up", "value": "cardiology" }] }
+      ]
+    },
     "adl14_archetypes": [
       "corpus/archetypes/ckm/adl14/openEHR-EHR-OBSERVATION.blood_pressure.v2.adl",
       "corpus/archetypes/ckm/adl14/openEHR-EHR-OBSERVATION.body_temperature.v2.adl",

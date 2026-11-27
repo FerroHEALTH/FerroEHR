@@ -128,7 +128,7 @@ pub(crate) mod tempfile_path {
 }
 
 /// `[launch]` against `issuer`, signing with the key at `key`, launching
-/// one app, its EHR subjects of `demo.hospital.mrn` FHIR Patient ids.
+/// one app, its EHR subjects of `ferroehr-sandbox` FHIR Patient ids.
 fn section(issuer: &str, key: &std::path::Path) -> ferroehr_viewer::launch::LaunchSection {
     ferroehr_viewer::launch::LaunchSection {
         issuer: issuer.to_owned(),
@@ -136,7 +136,7 @@ fn section(issuer: &str, key: &std::path::Path) -> ferroehr_viewer::launch::Laun
         private_key_file: Some(key.to_path_buf()),
         kid: "viewer-1".to_owned(),
         resource: RESOURCE.to_owned(),
-        patient_namespaces: vec!["demo.hospital.mrn".to_owned()],
+        patient_namespaces: vec!["ferroehr-sandbox".to_owned()],
         app: vec![ferroehr_viewer::launch::LaunchApp {
             name: "Growth chart".to_owned(),
             client_id: "growth-chart".to_owned(),
@@ -250,7 +250,7 @@ async fn a_launch_registers_the_ehr_and_sends_the_new_window_to_the_app() {
     assert_eq!(field(form, "app_client_id"), Some("growth-chart"));
     assert_eq!(field(form, "resource"), Some(RESOURCE));
     assert_eq!(field(form, "ehrId"), Some(ehr.as_str()));
-    assert_eq!(field(form, "patient"), Some("p-0417"));
+    assert_eq!(field(form, "patient"), Some("sandbox-patient-01"));
     assert_eq!(field(form, "need_patient_banner"), Some("false"));
     let names: Vec<&str> = form.iter().map(|(name, _)| name.as_str()).collect();
     assert_eq!(

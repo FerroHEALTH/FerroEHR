@@ -44,10 +44,10 @@ async fn the_policy_in_force_is_drawn_by_section_with_its_coded_values() {
     let page = viewer.page(&cookie, "/access-policy").await;
     assert_eq!(page.status, http::StatusCode::OK, "{}", page.body);
     for words in [
-        "Demo access policy",
+        "FerroEHR Demo Hospital access policy",
         "Care relationship facts",
         "Care relationship required",
-        "P7D",
+        "P14D",
         "Concealed confidentialities",
         "very restricted",
         "HL7_Confidentiality",
@@ -103,7 +103,7 @@ async fn a_save_over_a_version_no_longer_newest_is_refused_with_412_and_kept() {
     let archetype = "openEHR-EHR-ACCESS_POLICY.controller.v1";
     let document = json!({
         "_type": "ACCESS_POLICY",
-        "name": { "_type": "DV_TEXT", "value": "Demo access policy, stale edit" },
+        "name": { "_type": "DV_TEXT", "value": "FerroEHR Demo Hospital access policy, stale edit" },
         "archetype_node_id": archetype,
         "archetype_details": { "_type": "ARCHETYPED", "rm_version": "1.2.0",
             "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype } },

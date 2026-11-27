@@ -72,6 +72,10 @@ pub(crate) fn id(key: &str) -> String {
         .to_owned()
 }
 
+/// The login the recording signs in as: the administrator who reads every
+/// screen the viewer draws.
+pub(crate) const RECORDED_USER: &str = "ferroehr-admin";
+
 /// The access token the test OpenID Provider issues for the CDR, which the
 /// replayed CDR accepts as it accepts the recording's own credential.
 pub(crate) const CDR_BEARER: &str = "synthetic-cdr-access";
@@ -81,7 +85,7 @@ pub(crate) const CDR_BEARER: &str = "synthetic-cdr-access";
 fn signed(headers: &http::HeaderMap) -> bool {
     let expected = format!(
         "Basic {}",
-        base64::engine::general_purpose::STANDARD.encode("ferroehr:ferroehr")
+        base64::engine::general_purpose::STANDARD.encode(format!("{RECORDED_USER}:ferroehr"))
     );
     let bearer = format!("Bearer {CDR_BEARER}");
     headers
@@ -417,7 +421,7 @@ impl Viewer {
                 "/sign-in",
                 None,
                 Some(&[
-                    ("username", "ferroehr"),
+                    ("username", RECORDED_USER),
                     ("password", "ferroehr"),
                     ("next", "/"),
                 ]),
@@ -457,7 +461,7 @@ async fn a_wrong_password_draws_the_refusal_and_sets_no_session() {
             "/sign-in",
             None,
             Some(&[
-                ("username", "ferroehr"),
+                ("username", RECORDED_USER),
                 ("password", "wrong"),
                 ("next", "/ehrs"),
             ]),
@@ -479,7 +483,7 @@ async fn a_wrong_password_draws_the_refusal_and_sets_no_session() {
         "a refused sign-in sets no session"
     );
     assert!(
-        answer.body.contains(r#"value="ferroehr""#),
+        answer.body.contains(&format!(r#"value="{RECORDED_USER}""#)),
         "the username is kept"
     );
 }
@@ -493,7 +497,7 @@ async fn an_accepted_sign_in_lands_on_a_same_origin_destination_only() {
             "/sign-in",
             None,
             Some(&[
-                ("username", "ferroehr"),
+                ("username", RECORDED_USER),
                 ("password", "ferroehr"),
                 ("next", "/ehrs?x=1"),
             ]),
@@ -506,7 +510,7 @@ async fn an_accepted_sign_in_lands_on_a_same_origin_destination_only() {
             "/sign-in",
             None,
             Some(&[
-                ("username", "ferroehr"),
+                ("username", RECORDED_USER),
                 ("password", "ferroehr"),
                 ("next", "https://evil.example/"),
             ]),
@@ -701,7 +705,7 @@ async fn every_screen_draws_its_heading_and_its_reading() {
         ),
         (
             format!("/ehrs/{ehr}/directory"),
-            vec!["Episodes", "Versions"],
+            vec!["episodes", "Versions"],
         ),
         (
             format!("/ehrs/{ehr}/contributions"),
@@ -744,23 +748,23 @@ async fn every_screen_draws_its_heading_and_its_reading() {
             "/parties".to_owned(),
             vec![
                 "Last committed",
-                "Demo Clinic",
-                "Demo Person 0417",
+                "FerroEHR Demo Hospital",
+                "Alice Bloom",
                 "The demographic tag index",
                 "follow-up",
             ],
         ),
         (
             "/parties?list=organisation".to_owned(),
-            vec!["Demo Clinic", "Organisation"],
+            vec!["FerroEHR Demo Hospital", "Organisation"],
         ),
         (
             format!("/parties/person/{party}"),
-            vec!["Demo Person 0417", "Identities"],
+            vec!["Alice Bloom", "Identities"],
         ),
         (
             format!("/parties/relationships/{relationship}"),
-            vec!["employment", "Organisation"],
+            vec!["represents", "Person"],
         ),
         (
             "/templates".to_owned(),
@@ -770,10 +774,16 @@ async fn every_screen_draws_its_heading_and_its_reading() {
             "/templates/minimal_evaluation.en.v1".to_owned(),
             vec!["Minimal evaluation", "Identity"],
         ),
-        ("/queries".to_owned(), vec!["org.example.cardio", "latest"]),
         (
-            "/queries/org.example.cardio::latest/1.0.0".to_owned(),
-            vec!["org.example.cardio::latest · version 1.0.0", "Definition"],
+            "/queries".to_owned(),
+            vec!["eu.ferroehr.sandbox", "composition_index"],
+        ),
+        (
+            "/queries/eu.ferroehr.sandbox::composition_index/1.0.0".to_owned(),
+            vec![
+                "eu.ferroehr.sandbox::composition_index · version 1.0.0",
+                "Definition",
+            ],
         ),
         (
             "/query/aql".to_owned(),
@@ -787,7 +797,7 @@ async fn every_screen_draws_its_heading_and_its_reading() {
             "/about".to_owned(),
             vec!["ferrohealth-ui 0.6.11", "The conformance manifest"],
         ),
-        ("/access".to_owned(), vec!["Signed in as", "ferroehr"]),
+        ("/access".to_owned(), vec!["Signed in as", RECORDED_USER]),
         (
             "/preferences".to_owned(),
             vec!["Only for you, in this browser.", "Theme"],
@@ -962,12 +972,16 @@ async fn an_ehr_shows_its_subject_masked_until_the_reader_asks() {
     let ehr = id("ehr");
     let masked = viewer.page(&cookie, &format!("/ehrs/{ehr}")).await;
     assert!(
-        !masked.main().contains("p-0417"),
+        !masked.main().contains("sandbox-patient-01"),
         "the subject id is masked"
     );
-    assert!(masked.main().contains("417"), "its tail is shown");
+    assert!(masked.main().contains("ends in 01"), "its tail is shown");
     let revealed = viewer.page(&cookie, &format!("/ehrs/{ehr}?reveal=1")).await;
-    assert!(revealed.main().contains("p-0417"), "{}", revealed.main());
+    assert!(
+        revealed.main().contains("sandbox-patient-01"),
+        "{}",
+        revealed.main()
+    );
 }
 
 #[tokio::test]
@@ -1055,16 +1069,16 @@ async fn a_party_find_lists_the_parties_whose_identities_hold_the_text() {
             http::Method::POST,
             "/parties?list=person",
             Some(&cookie),
-            Some(&[("intent", "find"), ("find", "Person 0417")]),
+            Some(&[("intent", "find"), ("find", "Bloom")]),
         )
         .await;
     assert_eq!(answer.status, http::StatusCode::OK, "{}", answer.body);
     let main = answer.main();
-    assert!(main.contains("Holding “Person 0417”"), "{main}");
+    assert!(main.contains("Holding “Bloom”"), "{main}");
     let party = format!("/parties/person/{}", id("party"));
     assert!(main.contains(&party), "the row opens its party: {main}");
     assert!(
-        !main.contains("Demo Clinic"),
+        !main.contains("FerroEHR Demo Hospital"),
         "an organisation is no person: {main}"
     );
     assert!(

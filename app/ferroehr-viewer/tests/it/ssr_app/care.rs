@@ -11,14 +11,16 @@ use super::{Viewer, id};
 async fn an_ehr_lists_its_subjects_live_care_and_the_ended_on_request() {
     let viewer = Viewer::start().await;
     let cookie = viewer.sign_in().await;
-    let ehr = id("ehr");
-    let live = viewer.page(&cookie, &format!("/ehrs/{ehr}/care")).await;
+    let live = viewer
+        .page(&cookie, &format!("/ehrs/{}/care", id("ehr")))
+        .await;
     assert_eq!(live.status, http::StatusCode::OK, "{}", live.body);
     for words in [
         "Care relationships",
-        "responsible party",
+        "primary performer",
         "HL7_ParticipationType",
-        "Direct",
+        "GROUP",
+        "Team",
     ] {
         assert!(
             live.main().contains(words),
@@ -26,15 +28,16 @@ async fn an_ehr_lists_its_subjects_live_care_and_the_ended_on_request() {
             live.main()
         );
     }
+    let tab = format!("/ehrs/{}/care", id("ehr_care_ended"));
+    let ended = format!("/care/{}", id("care_ended"));
+    let page = viewer.page(&cookie, &tab).await;
     assert!(
-        !live.main().contains("2025-06-30"),
+        !page.main().contains(&ended),
         "an ended relationship is left out by default:\n{}",
-        live.main()
+        page.main()
     );
-    let all = viewer
-        .page(&cookie, &format!("/ehrs/{ehr}/care?all=true"))
-        .await;
-    assert!(all.main().contains("2025-06-30"), "{}", all.main());
+    let all = viewer.page(&cookie, &format!("{tab}?all=true")).await;
+    assert!(all.main().contains(&ended), "{}", all.main());
 }
 
 #[tokio::test]
@@ -48,7 +51,7 @@ async fn a_person_shows_its_care_and_a_carer_the_subjects_in_its_care() {
     for words in [
         "Care relationships of this person",
         "Add a care relationship",
-        "responsible party",
+        "primary performer",
     ] {
         assert!(
             patient.main().contains(words),
@@ -57,7 +60,7 @@ async fn a_person_shows_its_care_and_a_carer_the_subjects_in_its_care() {
         );
     }
     let carer = viewer
-        .page(&cookie, &format!("/parties/person/{}/care", id("party")))
+        .page(&cookie, &format!("/parties/group/{}/care", id("carer")))
         .await;
     assert!(carer.main().contains("In their care"), "{}", carer.main());
     assert!(
@@ -75,7 +78,7 @@ async fn a_relationship_shows_its_versions_with_their_audit_details() {
     assert_eq!(page.status, http::StatusCode::OK, "{}", page.body);
     for words in [
         "This care relationship",
-        "responsible party",
+        "primary performer",
         "Versions",
         "End today",
         "Delete",
@@ -98,7 +101,7 @@ async fn an_added_relationship_opens_its_page() {
     let viewer = Viewer::start().await;
     let cookie = viewer.sign_in().await;
     let patient = id("patient");
-    let party = id("party");
+    let carer = id("carer");
     let answer = viewer
         .send(
             http::Method::POST,
@@ -106,8 +109,8 @@ async fn an_added_relationship_opens_its_page() {
             Some(&cookie),
             Some(&[
                 ("intent", "add"),
-                ("carer_kind", "PERSON"),
-                ("carer_id", party.as_str()),
+                ("carer_kind", "GROUP"),
+                ("carer_id", carer.as_str()),
                 ("role", "SPRF"),
                 ("issuer", "urn:oid:2.999.7.9"),
                 ("provider", "dev"),

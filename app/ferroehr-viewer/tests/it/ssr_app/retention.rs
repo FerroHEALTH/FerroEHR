@@ -19,10 +19,10 @@ use super::{Viewer, id};
 const SEEDED: [(&str, &str); 6] = [
     ("intent", "declare"),
     ("kind", "EHR"),
-    ("jurisdiction", "CH"),
-    ("period", "6 months"),
+    ("jurisdiction", "NL"),
+    ("period", "P20Y"),
     ("anchor", "last_commit"),
-    ("source", "Synthetic period of the recording"),
+    ("source", "WGBO art. 7:454 lid 3 (synthetic demo period)"),
 ];
 
 #[tokio::test]
@@ -33,7 +33,7 @@ async fn the_register_and_what_is_due_are_listed() {
     assert_eq!(page.status, http::StatusCode::OK, "{}", page.body);
     for words in [
         "Declared periods",
-        "Synthetic period of the recording",
+        "WGBO art. 7:454 lid 3 (synthetic demo period)",
         "last_commit",
         "What is due",
         "Declare or change a period",
@@ -45,7 +45,7 @@ async fn the_register_and_what_is_due_are_listed() {
         );
     }
     assert!(
-        page.main().contains(&format!("/ehrs/{}", id("ehr"))),
+        page.main().contains(&format!("/ehrs/{}", id("ehr_due"))),
         "the anchored EHR is due:\n{}",
         page.main()
     );

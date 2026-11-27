@@ -103,7 +103,8 @@ The dataset holds:
   evaluation template, three of whose compositions were sent in the
   Simplified Flat format with measured values. Seven compositions have more
   than one version, so `LATEST_VERSION` and `ALL_VERSIONS` differ on real
-  data, and two carry an attestation, one signed and one pending.
+  data, and two carry an attestation, one signed and one pending. One
+  composition and one person carry tags.
 - **233 ADL 2 archetypes and 3 ADL 2 templates**, browsable under
   `extensions/v1/definition/archetype/adl2` and
   `openehr/v1/definition/template/adl2`. Two of the
@@ -115,15 +116,18 @@ The dataset holds:
 - **Demographic parties**: persons, a patient `PERSON` for six of the EHRs
   with its identifiers and the record subject it stands for, the healthcare
   provider `ORGANISATION` the sandbox acts for (in two versions), a second
-  organisation, two care-team `GROUP`s, a system client's `AGENT`, the
+  organisation, two care-team `GROUP`s, a system client's `AGENT` that acts
+  for the provider, the
   `ROLE`s that grant (a privacy officer's access-control writes, the lab
   feed's commits), party relationships and two representations. The parties
   list and search find them all.
 - **Access control**: the controller's access policy in two versions (the
   first requires a care relationship and admits a justified and an emergency
   access, the second lifts that requirement and withholds the accessor's
-  roles from the subject view of the access log), three care relationships
-  (one ended in its second version), and the EHR access settings of two
+  roles from the subject view of the access log and answers a refused
+  record of very restricted confidentiality as absent), three care
+  relationships (one renewed and one ended in its second version), and the
+  EHR access settings of two
   EHRs: a restriction of a named professional with a consent, and an opt-out
   from the access services.
 - **Legal marks**: a restriction of processing on one composition, a research
