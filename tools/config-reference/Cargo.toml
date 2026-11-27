@@ -15,7 +15,9 @@ publish = false
 [dependencies]
 ferroehr = { path = "../../app/ferroehr", features = ["schema"] }
 schemars.workspace = true
-serde_json.workspace = true
+# NOTE: preserve_order keeps the schema's properties in declaration order, the
+# order the reference and the default ferroehr.toml list the keys in (#6734).
+serde_json = { workspace = true, features = ["preserve_order"] }
 
 [lints]
 workspace = true

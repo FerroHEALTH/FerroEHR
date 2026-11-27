@@ -62,7 +62,9 @@ ferrohealth-health = { workspace = true, features = ["registry"] }
 fluent-templates.workspace = true
 serde.workspace = true
 toml.workspace = true
-serde_json.workspace = true
+# NOTE: preserve_order draws the configuration page and an RM object without a
+# declared attribute order in the order the CDR answers them (#6734).
+serde_json = { workspace = true, features = ["preserve_order"] }
 # ISO 8601 parsing/formatting for the results chart's time axis.
 jiff.workspace = true
 thiserror.workspace = true
