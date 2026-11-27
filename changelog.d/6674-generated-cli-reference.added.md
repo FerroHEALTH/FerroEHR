@@ -1,0 +1,2 @@
+- The book has a Command-line reference generated from the `ferroehr` binary's own `clap` definition: every command and option as `--help` prints it. A test fails when the page and the binary disagree.
+- The book has two more reference pages generated from the code, each checked by a test: the AQL built-in functions the parser accepts, and every access refusal code with the status its caller receives.

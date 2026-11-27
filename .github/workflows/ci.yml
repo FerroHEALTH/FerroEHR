@@ -1693,7 +1693,7 @@ jobs:
           persist-credentials: false
       # xmllint is what the C14N XML parity gate shells out to (serialization.md).
       - name: xmllint
-        run: command -v xmllint >/dev/null || { sudo apt-get update && sudo apt-get install -y libxml2-utils; }
+        run: command -v xmllint >/dev/null || bash scripts/lib/apt-install.sh libxml2-utils
       # The toolchain without a cache: the codegen drift tests run rustfmt.
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
@@ -1755,7 +1755,7 @@ jobs:
           persist-credentials: false
       # xmllint is what the C14N XML parity gate shells out to (serialization.md).
       - name: xmllint
-        run: command -v xmllint >/dev/null || { sudo apt-get update && sudo apt-get install -y libxml2-utils; }
+        run: command -v xmllint >/dev/null || bash scripts/lib/apt-install.sh libxml2-utils
       # The toolchain without a cache: the codegen drift tests run rustfmt.
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
@@ -1841,7 +1841,7 @@ jobs:
           secret-access-key: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_SECRET_ACCESS_KEY || secrets.SCCACHE_RW_SECRET_ACCESS_KEY }}
           read-only: ${{ github.event_name == 'pull_request' }}
       - name: Install valgrind
-        run: sudo apt-get update && sudo apt-get install -y valgrind
+        run: bash scripts/lib/apt-install.sh valgrind
       - run: bash scripts/perf/instructions.sh
 
   # ── The viewer's own build + unit tests ────────────────────────────────────
