@@ -19,10 +19,12 @@
 #                            the message colour of N passing out of M, of
 #                            which HELD failing ones an open upstream report
 #                            holds
-#   badge_color_check FILE...
+#   badge_color_check FILE[=HELD]...
 #                            fails for each endpoint badge whose colour does
-#                            not follow its count, or, with no count, is not
-#                            the informational blue
+#                            not follow its count, with HELD failing cases
+#                            an open upstream report holds when the caller
+#                            names them, or, with no count, is not the
+#                            informational blue
 #   badge_length_check FILE...
 #                            fails for each endpoint badge whose label runs
 #                            past badge_label_max characters, whose message
@@ -41,7 +43,8 @@
 #                            the cases of badge_count_color
 #   badge_post_quantum TSV   the endpoint JSON of the post-quantum badge of
 #                            the inventory TSV: label post-quantum, message
-#                            <safe>/<total>, coloured by the count
+#                            <safe>/<rows with a standard>, coloured by the
+#                            count
 #   badge_post_quantum_check TSV FILE
 #                            fails when the badge FILE disagrees with TSV,
 #                            or TSV holds a malformed row
@@ -51,7 +54,9 @@
 # A post-quantum inventory (conformance/post-quantum.tsv) has the header
 # use, algorithm, safe, pq_standard, location, tab-separated, and one row
 # per cryptographic use; safe is yes or no. A row whose pq_standard is
-# "no standard yet" counts as not safe whatever its safe column says. The
+# "no standard yet" counts as not safe whatever its safe column says, and
+# stays out of the badge fraction, since no change can move it until a
+# standard exists; the caller's page names those rows. The
 # rows count what NIST IR 8547 (final) §4.1 and the EU coordinated
 # implementation roadmap (NIS Cooperation Group, v1.1) §4.1 and §4.2 treat
 # as quantum-vulnerable.
@@ -159,16 +164,34 @@ badge_count_color_self_test() {
       return 1
     fi
   done
+  local work
+  work="$(mktemp -d)"
+  jq -cn '{message: "2/4", color: "yellowgreen"}' > "$work/b.json"
+  if ! badge_color_check "$work/b.json=2" 2> /dev/null || badge_color_check "$work/b.json" 2> /dev/null ||
+    badge_color_check "$work/b.json=1" 2> /dev/null; then
+    echo "badge colour: self-test FAILED: badge_color_check does not read the held count its caller names" >&2
+    rm -f "$work/b.json"
+    rmdir "$work"
+    return 1
+  fi
+  rm -f "$work/b.json"
+  rmdir "$work"
   echo "badge colour: self-test OK"
 }
 
 badge_color_check() {
-  local file message color want failures=0
-  for file in "$@"; do
+  local entry file held message color want failures=0
+  for entry in "$@"; do
+    file="$entry"
+    held=0
+    if [[ "$entry" =~ ^(.+)=([0-9]+)$ && ! -f "$entry" ]]; then
+      file="${BASH_REMATCH[1]}"
+      held="${BASH_REMATCH[2]}"
+    fi
     message="$(jq -r .message "$file")"
     color="$(jq -r .color "$file")"
     if [[ "$message" =~ ([0-9]+)\ ?/\ ?([0-9]+) ]]; then
-      want="$(badge_count_color "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}")"
+      want="$(badge_count_color "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "$held")"
     else
       want=blue
     fi
@@ -393,30 +416,30 @@ badge_length_self_test() {
 # The header of a post-quantum inventory.
 badge_post_quantum_header=$'use\talgorithm\tsafe\tpq_standard\tlocation'
 
-# Prints "<safe> <total>" of the post-quantum inventory $1, or fails naming
-# the first malformed row.
+# Prints "<safe> <with a standard> <total>" of the post-quantum inventory
+# $1, or fails naming the first malformed row.
 badge_post_quantum_count() {
   awk -F'\t' -v header="$badge_post_quantum_header" '
     /^(#|$)/ { next }
     !seen { seen = 1; if ($0 != header) { print "post-quantum: the header is not " header > "/dev/stderr"; bad = 1; exit } next }
     NF != 5 { printf "post-quantum: line %d has %d columns, not 5\n", NR, NF > "/dev/stderr"; bad = 1; exit }
     $3 != "yes" && $3 != "no" { printf "post-quantum: line %d says safe is %s, not yes or no\n", NR, $3 > "/dev/stderr"; bad = 1; exit }
-    { total++; if ($3 == "yes" && $4 != "no standard yet") safe++ }
+    { total++; if ($4 != "no standard yet") { standard++; if ($3 == "yes") safe++ } }
     END {
       if (bad) exit 1
       if (!seen) { print "post-quantum: the inventory is empty" > "/dev/stderr"; exit 1 }
-      print safe + 0, total + 0
+      print safe + 0, standard + 0, total + 0
     }
   ' "$1"
 }
 
 badge_post_quantum() {
-  local counts safe total color logo
+  local counts safe standard color logo
   counts="$(badge_post_quantum_count "$1")" || return 1
-  read -r safe total <<< "$counts"
-  color="$(badge_count_color "$safe" "$total")"
+  read -r safe standard _ <<< "$counts"
+  color="$(badge_count_color "$safe" "$standard")"
   logo="$(badge_logo_fields key)"
-  jq -cn --arg message "$safe/$total" --arg color "$color" --argjson logo "$logo" \
+  jq -cn --arg message "$safe/$standard" --arg color "$color" --argjson logo "$logo" \
     '{schemaVersion: 1, label: "post-quantum", message: $message, color: $color} + $logo'
 }
 
@@ -460,7 +483,15 @@ badge_post_quantum_self_test() {
   { echo "$header"; badge_pq_row tls X25519 no 'RFC 10024' a; badge_pq_row tokens RS256 no 'RFC 9964' b; } > "$work/pq.tsv"
   badge_pq_expect 0/2 red "no row safe" || return 1
   { echo "$header"; badge_pq_row tls X25519MLKEM768 yes 'RFC 10024' a; badge_pq_row saml RSA yes 'no standard yet' b; } > "$work/pq.tsv"
-  badge_pq_expect 1/2 yellow "a no-standard-yet row marked yes" || return 1
+  badge_pq_expect 1/1 brightgreen "a no-standard-yet row marked yes, out of the fraction" || return 1
+  { echo "$header"; badge_pq_row tls X25519 no 'RFC 10024' a; badge_pq_row saml RSA no 'no standard yet' b; } > "$work/pq.tsv"
+  badge_pq_expect 0/1 red "an unsafe row beside one with no standard" || return 1
+  if [[ "$(badge_post_quantum_count "$work/pq.tsv")" != "0 1 2" ]]; then
+    echo "post-quantum: self-test FAILED: the count names the rows with a standard and every row" >&2
+    rm -f "$work/pq.tsv"
+    rmdir "$work"
+    return 1
+  fi
   { echo "$header"; badge_pq_row tls X25519 no 'RFC 10024' a; printf 'tokens\tRS256\tno\tRFC 9964\n'; } > "$work/pq.tsv"
   badge_pq_refused "a row of four columns" || return 1
   { echo "$header"; badge_pq_row tls X25519 maybe 'RFC 10024' a; } > "$work/pq.tsv"
