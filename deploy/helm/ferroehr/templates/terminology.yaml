@@ -8,7 +8,7 @@ byte-identical to a chart without this file. FerroTERM is the Ferro family's
 FHIR terminology server (R4 /r4, R4B /r4b, R5 /r5; no JVM, no database): the
 CDR resolves archetype value-set bindings against it at commit and expands AQL
 TERMINOLOGY() through it. The CDR's own /terminology/* extension routes are a
-separate switch — they answer only with config.terminology.api_enabled=true,
+separate switch — they answer only with config.api.terminology=true,
 which is off by default — so enabling this workload does not mount them.
 
 The pod-security posture is NOT inherited from the server's values: a second

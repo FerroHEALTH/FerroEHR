@@ -246,10 +246,10 @@ impl DeploymentGap {
                  settings per EHR"
             }
             Self::MigrateOnRuntimeCredential => {
-                "[database] migrate is `apply` on a credential that also serves requests; set [database] \
-                 migrate_url to the credential that prepares the schema, give a relocated domain \
-                 its database's migrator in [database.<domain>] migrate_url, or run migrate = \
-                 \"verify\""
+                "[database] migrations is `apply` on a credential that also serves requests; set \
+                 [database] migrate_url to the credential that prepares the schema, give a relocated \
+                 domain its database's migrator in [database.<domain>] migrate_url, or run \
+                 migrations = \"verify\""
             }
             Self::AuthOff => {
                 "[auth] enabled is false, so every request is served unauthenticated; set [auth] \

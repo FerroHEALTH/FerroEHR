@@ -361,7 +361,7 @@ error naming the pair:
 
 | Secret | File sibling |
 |---|---|
-| the database DSN, per storage domain, and the credential that prepares the schema | `database.url_file`, `database.<domain>.url_file`, `db.migrate_url_file` |
+| the database DSN, per storage domain, and the credential that prepares the schema | `database.url_file`, `database.<domain>.url_file`, `database.migrate_url_file` |
 | a Basic user's Argon2 hash | `auth.basic.users[].password_hash_file` |
 | the PGP signing-key passphrase | `record.signing.key_passphrase_file` |
 | a terminology OAuth2 client secret | `[terminology].oauth.client_secret_file` |

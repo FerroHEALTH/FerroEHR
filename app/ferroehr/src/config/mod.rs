@@ -322,6 +322,23 @@ mod tests {
         assert!(standalone().validate().is_ok());
     }
 
+    /// The schema steps validate the `[database]` table alone: the defaults
+    /// the whole tree refuses pass it, and a broken rule of the table still
+    /// refuses.
+    #[test]
+    fn the_schema_steps_validate_the_database_table_alone() {
+        assert!(FerroEhrConfig::default().validate().is_err());
+        assert!(FerroEhrConfig::default().validate_database().is_ok());
+        let mut listener = FerroEhrConfig::default();
+        listener.database.audit.listen_url =
+            Some(SecretUrl::new("postgres://u:p@db:5432/ferroehr"));
+        let text = listener
+            .validate_database()
+            .expect_err("an audit listener DSN connects nothing")
+            .to_string();
+        assert!(text.contains("database.audit.listen_url"), "{text}");
+    }
+
     /// `c` serialized as the TOML table `ferroehr config check` renders
     /// (`ferrohealth_config::report::check_report` writes the same table).
     pub(super) fn rendered(c: &FerroEhrConfig) -> String {
