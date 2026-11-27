@@ -125,7 +125,7 @@ Each record additionally carries:
 | `purpose` | The purpose of use the caller declared in the `x-purpose-of-use` header, when the deployment accepts it. |
 | `token_attributes` | The purposes of use and the professional roles the access token states, each with its code system, for an issuer with an `[auth.issuer.<name>.attributes]` table ([where the purpose comes from](ehds-logging.md#where-the-purpose-of-use-comes-from)). |
 | `justification` | `{"kind": "justification" \| "emergency", "reason": …}` when the access rested on a justification of the access policy, with the reason the clinician stated; `NULL` otherwise ([justified and emergency access](ehds-logging.md#justified-and-emergency-access)). |
-| `legal_basis` | The basis the deployment processes under, from `[audit] legal_basis`. |
+| `legal_basis` | The legal basis the deployment processes under, from `[audit.regulatory] legal_basis`: the GDPR Art. 6(1) point and, for data concerning health, the Art. 9(2) condition, stored as `{"lawfulness": "public-task", "condition": "health-or-social-care"}`. |
 | `result_count` | How many records the operation served. |
 | `request_id` | The `x-request-id` correlation id the response carried. |
 
@@ -168,8 +168,26 @@ lives in the record:
 Two of these are the deployment's to supply. `purpose` is only as meaningful as
 the vocabulary you agree with your callers: set `[audit] purpose_codes` to that
 vocabulary and a code outside it is recorded as absent rather than as free text
-that reads at review time like an established purpose. `legal_basis` is a
-deployment-level fact and is recorded on every access once you set it.
+that reads at review time like an established purpose. The legal basis is a
+deployment-level fact and is recorded on every access once you declare it in
+`[audit.regulatory]`, beside the controllers and processors the FHIR
+`AuditEvent` names (Xt-EHR D5.2 §7.2.7):
+
+```toml
+[audit.regulatory]
+legal_basis = { lawfulness = "public-task", condition = "health-or-social-care" }
+controllers = ["urn:oid:2.16.528.1.1007.3.3:zh-noordwest"]
+processors = ["urn:oid:2.16.528.1.1007.3.3:hosting-provider"]
+```
+
+`lawfulness` names the GDPR Art. 6(1) point (`consent`, `contract`,
+`legal-obligation`, `vital-interests`, `public-task` or
+`legitimate-interests`) and `condition` the Art. 9(2) point
+(`explicit-consent`, `employment`, `vital-interests`, `not-for-profit-body`,
+`made-public`, `legal-claims`, `substantial-public-interest`,
+`health-or-social-care`, `public-health` or `archiving-or-research`). The
+FHIR `AuditEvent` writes them as `gdpr-art-6-1-<point>` and
+`gdpr-art-9-2-<point>`.
 
 Mapping the recorded fields onto your own retention schedule and review process
 stays yours: the software records the events and serves them back, and no

@@ -60,6 +60,15 @@
       },
       {
         "requestor": false,
+        "type": {
+          "coding": [
+            {
+              "code": "PROV",
+              "display": "healthcare provider",
+              "system": "http://terminology.hl7.org/CodeSystem/v3-RoleClass"
+            }
+          ]
+        },
         "who": {
           "identifier": {
             "value": "provider-1"

@@ -157,6 +157,15 @@
       },
       {
         "requestor": false,
+        "type": {
+          "coding": [
+            {
+              "code": "PROV",
+              "display": "healthcare provider",
+              "system": "http://terminology.hl7.org/CodeSystem/v3-RoleClass"
+            }
+          ]
+        },
         "who": {
           "identifier": {
             "value": "Example Hospital"
@@ -283,6 +292,14 @@
           {
             "type": "ehds-retention-floor",
             "valueString": "eu-2025-327-art-9-2"
+          },
+          {
+            "type": "ehds-legal-basis",
+            "valueString": "gdpr-art-6-1-e"
+          },
+          {
+            "type": "ehds-legal-condition",
+            "valueString": "gdpr-art-9-2-h"
           }
         ],
         "name": "ehds-categories",
