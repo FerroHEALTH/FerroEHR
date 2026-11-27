@@ -64,8 +64,13 @@ use super::{CHAINER_RELEASE, calls, counted, drained};
 use crate::access_evaluator_http::{credential, ehr_with_composition};
 use crate::common::{self, BASE, FHIR};
 
-/// The measured requests of each path.
-pub(super) const REQUESTS: u64 = 15;
+/// The measured requests of each path that writes.
+pub(super) const REQUESTS: u64 = 10;
+
+/// The measured requests of each path that only reads: it writes no
+/// fixture, so a longer window leaves every other path's data as it is, and
+/// it holds enough requests that one meets no read-buffer step (#6736).
+const READS: u64 = 15;
 
 /// The requests of each path sent before the measured ones.
 pub(super) const WARM: u64 = 3;
@@ -175,6 +180,27 @@ impl Path {
         Self::CommitRole,
         Self::CommitAgent,
     ];
+
+    /// The measured requests of the path: [`READS`] for a read, else
+    /// [`REQUESTS`].
+    fn requests(self) -> u64 {
+        match self {
+            Self::ReadJson
+            | Self::ReadXml
+            | Self::ReadFlat
+            | Self::EhrRead
+            | Self::AqlSingle
+            | Self::AqlPopulation
+            | Self::AqlMatches
+            | Self::AqlParty
+            | Self::Iti81
+            | Self::PartyRead
+            | Self::ReadAtTime
+            | Self::ReadStatus
+            | Self::ReadVersion => READS,
+            _ => REQUESTS,
+        }
+    }
 
     pub(super) fn name(self) -> &'static str {
         match self {
@@ -1470,9 +1496,11 @@ fn episode_ips(terminology: &str) -> Value {
     body
 }
 
-/// What one path measured over [`REQUESTS`] requests.
+/// What one path measured over its window of [`Path::requests`].
 #[derive(Default)]
 struct Measure {
+    /// The requests of the window.
+    requests: u64,
     conversions: BTreeMap<String, u64>,
     /// The allocations, the bytes allocated and the peak of each request.
     each: Vec<Allocated>,
@@ -1501,7 +1529,7 @@ impl Measure {
             .iter()
             .map(figure)
             .sum::<u64>()
-            .div_euclid(REQUESTS)
+            .div_euclid(self.requests)
     }
 
     /// The least request's `figure`: what a request of the path allocates
@@ -1510,7 +1538,8 @@ impl Measure {
         self.each.iter().map(figure).min().unwrap_or(0)
     }
 
-    /// The lower-quartile request's `figure`, the fourth smallest of fifteen.
+    /// The lower-quartile request's `figure`, the third smallest of ten or the
+    /// fourth of fifteen.
     ///
     /// A request handed a pool connection whose buffers have not grown to
     /// the path's messages yet, or that opens one, grows them inside its
@@ -1557,7 +1586,7 @@ impl Measure {
             .filter(|(op, _)| keep(op))
             .map(|(_, n)| n)
             .sum::<u64>()
-            .div_euclid(REQUESTS)
+            .div_euclid(self.requests)
     }
 }
 
@@ -1675,7 +1704,7 @@ async fn settle(pools: &DomainPools) {
 /// before (#6706).
 const ALIGN: &str = "SELECT /* statement_budget_own */ repeat('x', 65536)";
 
-/// Measures [`REQUESTS`] requests of `path`.
+/// Measures the [`Path::requests`] of `path`.
 async fn measure(
     app: &Router,
     pool: &PgPool,
@@ -1692,11 +1721,15 @@ async fn measure(
         .expect("the statement counts reset");
     *counter.0.lock().unwrap() = Counts::default();
     let mut marks = vec![super::wal::insert_lsn(pool).await];
-    let mut out = Measure::default();
+    let requests = path.requests();
+    let mut out = Measure {
+        requests,
+        ..Measure::default()
+    };
     if let Some(wire) = wire {
         drop(wire.take());
     }
-    for n in 0..REQUESTS {
+    for n in 0..requests {
         let n = usize::try_from(WARM + n).unwrap();
         let call = world.call(path, n);
         settle(pools).await;
@@ -1741,10 +1774,11 @@ async fn measure(
     let chainer = calls(&statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE;
     let counts = std::mem::take(&mut *counter.0.lock().unwrap());
     out.conversions = counts.conversions;
-    out.round_trips = counts.round_trips.div_euclid(REQUESTS);
-    out.nested = nested.saturating_sub(chainer).div_euclid(REQUESTS);
-    out.notifies = notifies.div_euclid(REQUESTS);
-    out.statements = sent_ledger(&counts.sent) + &nested_ledger(&statements, nested, chainer);
+    out.round_trips = counts.round_trips.div_euclid(requests);
+    out.nested = nested.saturating_sub(chainer).div_euclid(requests);
+    out.notifies = notifies.div_euclid(requests);
+    out.statements =
+        sent_ledger(&counts.sent, requests) + &nested_ledger(&statements, nested, chainer);
     (out.wal, out.wal_ledger) = row_records(pool, &marks).await;
     testkit::statements::assert_statements_kept(pool, evicted)
         .await
@@ -1753,8 +1787,8 @@ async fn measure(
 }
 
 /// The round trips of a window by their statement, per request.
-fn sent_ledger(sent: &BTreeMap<String, u64>) -> String {
-    let mut out = format!("round trips by statement over {REQUESTS} requests:\n");
+fn sent_ledger(sent: &BTreeMap<String, u64>, requests: u64) -> String {
+    let mut out = format!("round trips by statement over {requests} requests:\n");
     for (statement, n) in sent {
         writeln!(out, "  {n:>5}  {statement}").unwrap();
     }
@@ -1792,10 +1826,11 @@ fn wire_ledger(m: &Measure) -> String {
     let total = m.wire.total();
     let mut out = format!(
         "database wire per request (each request {:?}): {} sent, {} received; \
-         by statement, the calls over {REQUESTS} requests and the bytes per request:\n",
+         by statement, the calls over {} requests and the bytes per request:\n",
         m.wire_each,
-        total.sent.div_euclid(REQUESTS),
-        total.received.div_euclid(REQUESTS),
+        m.requests,
+        total.sent.div_euclid(m.requests),
+        total.received.div_euclid(m.requests),
     );
     let mut lines: Vec<_> = m
         .wire
@@ -1811,8 +1846,8 @@ fn wire_ledger(m: &Measure) -> String {
             out,
             "  {:>5} calls {:>8} B sent {:>8} B received  {text}",
             tally.calls,
-            tally.sent.div_euclid(REQUESTS),
-            tally.received.div_euclid(REQUESTS),
+            tally.sent.div_euclid(m.requests),
+            tally.received.div_euclid(m.requests),
         )
         .unwrap();
     }
@@ -1933,7 +1968,7 @@ async fn every_hot_path_stays_within_its_budget() {
         let ops: Vec<String> = m
             .conversions
             .iter()
-            .map(|(op, n)| format!("{op}={}", n.div_euclid(REQUESTS)))
+            .map(|(op, n)| format!("{op}={}", n.div_euclid(m.requests)))
             .collect();
         writeln!(ledger, "{}: {}", path.name(), ops.join(", ")).unwrap();
         writeln!(
@@ -1947,8 +1982,8 @@ async fn every_hot_path_stays_within_its_budget() {
         .unwrap();
     }
     eprintln!(
-        "{report}\nconversions per request by op:\n{ledger}\nnested statements over {REQUESTS} \
-         requests:\n{statements}"
+        "{report}\nconversions per request by op:\n{ledger}\nnested statements over each path's \
+         window:\n{statements}"
     );
     assert!(
         over.is_empty(),
@@ -1995,8 +2030,8 @@ async fn every_hot_path_stays_within_its_wire_budget() {
             report,
             "{} | {cell} | {} | {}",
             path.name(),
-            total.sent.div_euclid(REQUESTS),
-            total.received.div_euclid(REQUESTS),
+            total.sent.div_euclid(m.requests),
+            total.received.div_euclid(m.requests),
         )
         .unwrap();
         writeln!(ledgers, "{}: {}", path.name(), wire_ledger(m)).unwrap();

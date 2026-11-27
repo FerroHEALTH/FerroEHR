@@ -44,10 +44,7 @@ use tracing_subscriber::layer::{Context, SubscriberExt as _};
 use tracing_subscriber::registry::LookupSpan;
 
 use super::drained;
-use super::paths::{Path, World, exchange, order};
-
-/// The measured requests of each path.
-const REQUESTS: u64 = 10;
+use super::paths::{Path, REQUESTS, World, exchange, order};
 
 /// The most CPU each path's lower-quartile request may take, in thousandths
 /// of the [`reference`] round trip timed on the same thread (#6321).
