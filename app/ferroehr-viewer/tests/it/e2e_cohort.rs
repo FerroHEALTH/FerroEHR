@@ -19,10 +19,10 @@
     clippy::disallowed_types,
     reason = "the journey seeds its records as raw JSON by the testing rule (.claude/rules/testing.md)"
 )]
-//! End-to-end journey over Query › Cohort: the administrator runs AQL over
+//! End-to-end journeys over Query › Cohort: the administrator runs AQL over
 //! the EHRs a bound predicate selects, reads the rows of a cohort as large as
 //! the CDR's small-cell threshold, and finds the rows of a smaller one
-//! withheld.
+//! withheld; and runs AQL over the demo seed's patients named as subjects.
 //!
 //! The journeys' posture binds the `city` predicate to the `at0012` ELEMENT
 //! of `openEHR-DEMOGRAPHIC-PERSON.person.v1` (`docker/viewer/e2e-env.yml`)
@@ -31,7 +31,7 @@
 
 use crate::common;
 
-use common::{Harness, fill, login_basic_as, main_text, submit, wait_main_contains};
+use common::{Harness, env, fill, login_basic_as, main_text, submit, wait_main_contains};
 
 /// The AQL each run sends: the id of every EHR in the cohort.
 const AQL: &str = "SELECT e/ehr_id/value AS ehr FROM EHR e";
@@ -136,6 +136,48 @@ async fn admin_runs_a_cohort_and_a_small_cell_is_withheld() {
         "a cohort under the threshold is withheld: {text}"
     );
     h.shot(3, "cohort-withheld").await;
+
+    h.assert_console_clean(&["Failed to load resource"]).await;
+    h.finish().await;
+}
+
+/// The identifier domain the demo seed names its patients in, beside no
+/// patient identity source (`scripts/sandbox/seed/manifest.json`).
+const SEED_SUBJECTS: &str = "ferroehr-sandbox";
+
+#[tokio::test]
+async fn admin_runs_a_cohort_of_the_seeds_named_patients() {
+    let Some(h) = Harness::start("cohort-subjects").await else {
+        return;
+    };
+    let Some(ehr) = env("UI_E2E_SEEDED_EHR_ID") else {
+        println!("SKIP cohort-subjects: UI_E2E_SEEDED_EHR_ID is unset (run scripts/ui-e2e.sh)");
+        h.finish().await;
+        return;
+    };
+    let (user, pass) = common::admin_credentials();
+    login_basic_as(&h, &user, &pass).await;
+
+    common::follow_nav(&h, "/query").await;
+    common::open_tab(&h, "cohort").await;
+    wait_main_contains(&h, "Subject identifiers").await;
+    fill(&h, "#cohort-subject-namespace", SEED_SUBJECTS).await;
+    let patients: Vec<String> = (1..=6).map(|n| format!("sandbox-patient-{n:02}")).collect();
+    fill(&h, "#cohort-subject-ids", &patients.join("\n")).await;
+    fill(&h, "#aql", AQL).await;
+    h.shot(1, "cohort-subjects").await;
+    submit(&h, "header.fui-page-header button[form='query-form']").await;
+    wait_main_contains(&h, "EHRs in the cohort").await;
+    let text = main_text(&h).await;
+    assert!(
+        text.contains(ehr.as_str()),
+        "the first named patient's EHR is in the rows: {text}"
+    );
+    assert!(
+        !text.contains("The rows are withheld"),
+        "six named patients reach the threshold: {text}"
+    );
+    h.shot(2, "cohort-subjects-rows").await;
 
     h.assert_console_clean(&["Failed to load resource"]).await;
     h.finish().await;
