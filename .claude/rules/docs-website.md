@@ -1,5 +1,5 @@
 ---
-paths: ["website/**", "scripts/site/build.sh", "scripts/site/cut-version.sh", ".github/workflows/docs.yml", ".github/workflows/release.yml"]
+paths: ["website/**", "scripts/site/build.sh", "scripts/site/cut-version.sh", ".github/workflows/docs.yml", ".github/workflows/docs-build.yml", ".github/workflows/release.yml"]
 ---
 
 # The documentation website (`website/**`)
@@ -9,7 +9,9 @@ paths: ["website/**", "scripts/site/build.sh", "scripts/site/cut-version.sh", ".
      website files are touched. -->
 
 The public site — https://ferroehr.eu/ — is built from
-`website/` by `.github/workflows/docs.yml` and deployed to GitHub Pages.
+`website/` by `.github/workflows/docs-build.yml` (on a pull request through
+`ci.yml`, on `main` through `docs.yml`) and deployed to GitHub Pages by
+`docs.yml`.
 No openEHR spec governs the website — our own design; this rule is the
 authority for layout, look & feel, and content.
 

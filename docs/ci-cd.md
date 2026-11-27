@@ -23,8 +23,8 @@ changes no threshold, corpus or test.
 |---|---|---|---|
 | Gate | `pull_request` | change detection, fmt, lint and guards, clippy, the test build and its shards, rustdoc, codegen drift, cargo-deny, the exact budgets, conformance, the deployment harness, chart boot | yes, through `conclusion` |
 | Queue | `merge_group` | change detection, fmt, lint and guards, cargo-deny, the bin link, the test archive and its smoke set (every library and bin test target and the server's wiring tests) | yes, through `conclusion` |
-| Pull request | `pull_request` | the guards that read pull-request context (changelog, crate and chart versions, migrations, screenshots, privacy boundary), the browser lanes when the viewer changed, CodeQL when Rust or workflow paths changed | yes for the guards and the browser lanes; CodeQL is advisory |
-| Main | `push` to `main` | the caches pull requests read, the docs deploy, the images, coverage with SonarQube Cloud | no |
+| Pull request | `pull_request` | the guards that read pull-request context (changelog, crate and chart versions, migrations, screenshots, privacy boundary), the browser lanes when the viewer changed, the documentation site build with its lint and internal link check when a site input changed (`docs-build.yml`), CodeQL when Rust or workflow paths changed | yes for the guards, the browser lanes and the site build; CodeQL is advisory |
+| Main | `push` to `main` | the caches pull requests read, the docs build and deploy (`docs.yml`), the images, coverage with SonarQube Cloud | no |
 | Nightly | `schedule` on `main`, `workflow_dispatch`, the `ci:perf` and `ci:heavy` labels | every `ci.yml` lane with the browser lanes in full, perf A/B, the CPU budget, the feature-combination and MSRV sweeps, fuzzing, CodeQL's baseline | no |
 
 The pull request runs the full gate on its own tree, so a merge group runs the light queue set (owner ruling 2026-11-25): it proves the merged tree builds and passes its smoke set, and the nightly full run checks `main`. The merge queue checks the exact tree that lands

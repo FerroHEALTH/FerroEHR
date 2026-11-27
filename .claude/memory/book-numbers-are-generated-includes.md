@@ -12,7 +12,7 @@ therefore never goes into a page by hand: write a small renderer under
 `scripts/render/` (jq over the committed record under `docs/conformance/`),
 have it write `website/book/generated/<name>.md` (render output, gitignored),
 include it with `{{#include ../generated/<name>.md}}`, and register the
-renderer in BOTH `scripts/site/build.sh` and `.github/workflows/docs.yml`
+renderer in BOTH `scripts/site/build.sh` and `.github/workflows/docs-build.yml`
 beside `perf-assets.sh`.
 
 **Why:** the #3276 cohort-benchmark table turned the docs build red the first
