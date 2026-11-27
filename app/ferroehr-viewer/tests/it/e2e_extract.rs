@@ -16,12 +16,12 @@
     reason = "the shared `common` harness is compiled into every journey binary; each one drives a different subset of it"
 )]
 //! End-to-end journey over EHR Extracts: an EHR the journey creates is
-//! exported, and its extract imported under a fresh id, which opens the new
-//! EHR (#6657).
+//! exported, and an extract another system wrote is imported under a fresh
+//! id, which opens the new EHR (#6657).
 
 use crate::common;
 
-use common::{Harness, env, fill, login_basic};
+use common::{Harness, env, fill, login_basic_as};
 
 /// A fresh UUID-shaped id from the clock, unique per run.
 fn generated_uuid() -> String {
@@ -32,7 +32,12 @@ fn generated_uuid() -> String {
     format!("{low:08x}-{mid:04x}-4000-8000-{node:012x}")
 }
 
-/// Export an EHR as an extract and import it as a new EHR.
+/// Export an EHR as an extract, and import another system's extract as a new
+/// EHR.
+///
+/// The import is not the journey's own export: the CDR refuses an extract
+/// whose committers are its own parties or logins unless a grant vouches for
+/// the system that wrote it, and never for its own system.
 #[tokio::test]
 async fn an_exported_extract_imports_as_a_new_ehr() {
     let Some(cdr) = env("UI_E2E_CDR_URL") else {
@@ -42,7 +47,10 @@ async fn an_exported_extract_imports_as_a_new_ehr() {
     let Some(h) = Harness::start("extract-export-import").await else {
         return;
     };
-    login_basic(&h).await;
+    // The seed grants the administrator import_ehr over EHRs with no subject.
+    let user = env("UI_E2E_ADMIN_USER").unwrap_or_else(|| "ferroehr-admin".to_owned());
+    let pass = env("UI_E2E_ADMIN_PASS").unwrap_or_else(|| "ferroehr".to_owned());
+    login_basic_as(&h, &user, &pass).await;
 
     h.goto("/ehrs/new").await;
     common::submit(&h, "#editor-dock button[value='save']").await;
@@ -61,7 +69,7 @@ async fn an_exported_extract_imports_as_a_new_ehr() {
         .get(format!(
             "{cdr}/ferroehr/rest/extensions/v1/message/export/{ehr_id}"
         ))
-        .basic_auth("ferroehr", Some("ferroehr"))
+        .basic_auth(&user, Some(&pass))
         .header("Accept", "application/json")
         .send()
         .await
@@ -69,13 +77,18 @@ async fn an_exported_extract_imports_as_a_new_ehr() {
     let status = exported.status();
     let extract = exported.text().await.expect("the extract reads");
     assert!(
-        status.is_success(),
+        status.is_success() && extract.contains(r#""_type":"EXTRACT""#),
         "the export answered {status}: {extract}"
     );
 
+    let foreign = std::fs::read_to_string(format!(
+        "{}/tests/fixtures/extract/foreign-ehr.json",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .expect("the foreign extract fixture reads");
     let clone = generated_uuid();
     h.goto("/ehrs/import").await;
-    fill(&h, "#source-text", &extract).await;
+    h.wait_css("#source-text").await.paste(&foreign).await;
     fill(&h, "#x-ehr", &clone).await;
     common::submit(&h, "main button[name='intent'][value='import']").await;
     let target = format!("/ehrs/{clone}");
