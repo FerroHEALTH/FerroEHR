@@ -138,3 +138,27 @@ async fn a_user_the_cdr_does_not_admit_reads_who_may() {
         .await;
     h.finish().await;
 }
+
+/// A reviewer reads the records across EHRs, then verifies the log on the
+/// Integrity tab and reads what the verification found.
+#[tokio::test]
+async fn a_reviewer_reviews_the_log_and_verifies_it() {
+    let Some(h) = Harness::start("access-log-integrity").await else {
+        return;
+    };
+    let (user, pass) = admin_credentials();
+    login_basic_as(&h, &user, &pass).await;
+    h.goto("/access-log").await;
+    wait_main_contains(&h, "Entries of the access log").await;
+    h.shot(1, "access-review").await;
+
+    h.goto("/access-log/integrity").await;
+    wait_main_contains(&h, "Show seals").await;
+    common::submit(&h, "button[name=intent][value=verify]").await;
+    wait_main_contains(&h, "Verification").await;
+    h.shot(2, "access-integrity").await;
+
+    h.assert_console_clean(&["401", "Failed to load resource"])
+        .await;
+    h.finish().await;
+}
