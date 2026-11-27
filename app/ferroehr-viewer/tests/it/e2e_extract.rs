@@ -78,7 +78,11 @@ async fn an_exported_extract_imports_as_a_new_ehr() {
     fill(&h, "#source-text", &extract).await;
     fill(&h, "#x-ehr", &clone).await;
     common::submit(&h, "main button[name='intent'][value='import']").await;
-    h.wait_url_contains(&format!("/ehrs/{clone}")).await;
+    let target = format!("/ehrs/{clone}");
+    if !common::poll_until(async || h.current_url().await.contains(&target)).await {
+        let page = common::read_text(&h, "main").await.unwrap_or_default();
+        panic!("the import never opened {target}; the page reads: {page}");
+    }
     common::wait_text_contains(&h, ".fui-toast-text", "EHR imported").await;
     h.shot(1, "extract-imported").await;
 
