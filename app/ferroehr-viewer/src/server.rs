@@ -79,10 +79,6 @@ pub fn router(app_state: AppState) -> axum::Router {
             axum::routing::get(crate::download::download_archetype),
         )
         .route(
-            "/download/archetype/{family}/{id}",
-            axum::routing::get(crate::download::download_archetype),
-        )
-        .route(
             "/download/extract/{ehr_id}",
             axum::routing::get(crate::download::download_extract),
         )
