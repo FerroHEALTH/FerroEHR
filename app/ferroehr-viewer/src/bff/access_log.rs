@@ -108,10 +108,24 @@ pub(crate) fn json(body: &str) -> Result<Value, ViewerError> {
 /// not JSON.
 pub(crate) async fn read_page(
     path: &str,
-    mut pairs: Vec<(&'static str, String)>,
+    pairs: Vec<(&'static str, String)>,
     offset: u32,
     fetch: u32,
 ) -> Result<Value, ViewerError> {
+    json(&page_response(path, pairs, offset, fetch).await?.body)
+}
+
+/// The CDR's answer to the page at `offset` of `fetch` records of the list
+/// at the extensions `path`, read with the query `pairs`.
+///
+/// # Errors
+/// The errors of a CDR call.
+async fn page_response(
+    path: &str,
+    mut pairs: Vec<(&'static str, String)>,
+    offset: u32,
+    fetch: u32,
+) -> Result<crate::cdr::CdrResponse, ViewerError> {
     let cdr = crate::bff::cdr()?;
     pairs.push(("offset", offset.to_string()));
     pairs.push(("fetch", fetch.to_string()));
@@ -120,7 +134,7 @@ pub(crate) async fn read_page(
         .map(|(name, value)| format!("{name}={}", urlencoding::encode(value)))
         .collect();
     let url = format!("{}?{}", cdr.extensions_v1(path), query.join("&"));
-    json(&cdr.get(&url).ok().await?.body)
+    cdr.get(&url).ok().await
 }
 
 /// The first instant of `day` in UTC, or its last when `end`; a text that is
@@ -379,6 +393,44 @@ fn log_path(ehr_id: &str, uid: Option<&str>) -> String {
     }
 }
 
+/// The view of an EHR's access log the CDR served, as its
+/// `FerroEHR-Access-Log-View` header names it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LogView {
+    /// The subject view, which the person and their representative read.
+    Subject,
+    /// The full view, which a reviewer reads.
+    Full,
+}
+
+impl LogView {
+    /// The view `response` names, or `None` when it names none.
+    fn of(response: &crate::cdr::CdrResponse) -> Option<Self> {
+        match response.access_log_view.as_deref() {
+            Some("subject") => Some(Self::Subject),
+            Some("full") => Some(Self::Full),
+            _ => None,
+        }
+    }
+}
+
+/// What a read of an EHR's access log answered, with the view it served.
+#[derive(Debug, Clone)]
+pub struct Served<T> {
+    /// The view the CDR named, `None` when it named none.
+    pub view: Option<LogView>,
+    /// What it answered.
+    pub value: T,
+}
+
+impl<T> Served<T> {
+    /// Whether the CDR served the subject view.
+    #[must_use]
+    pub fn is_subject_view(&self) -> bool {
+        self.view == Some(LogView::Subject)
+    }
+}
+
 /// The entries of the EHR `ehr_id`'s access log that `filters` select,
 /// newest first, one page at `offset`.
 ///
@@ -396,15 +448,19 @@ pub async fn ehr_access_log(
     offset: u32,
     // How many entries the page holds.
     fetch: u32,
-) -> Result<Vec<Entry>, ViewerError> {
-    let doc = read_page(
+) -> Result<Served<Vec<Entry>>, ViewerError> {
+    let response = page_response(
         &log_path(ehr_id, None),
         filters.query_pairs(),
         offset,
         fetch,
     )
     .await?;
-    Ok(each(&doc, "entries").filter_map(entry_of).collect())
+    let doc = json(&response.body)?;
+    Ok(Served {
+        view: LogView::of(&response),
+        value: each(&doc, "entries").filter_map(entry_of).collect(),
+    })
 }
 
 /// The entry `uid` of the EHR `ehr_id`'s access log.
@@ -416,11 +472,16 @@ pub async fn ehr_access_log_entry(
     ehr_id: &str,
     // The entry's uid.
     uid: &str,
-) -> Result<Entry, ViewerError> {
+) -> Result<Served<Entry>, ViewerError> {
     let cdr = crate::bff::cdr()?;
     let url = cdr.extensions_v1(&log_path(ehr_id, Some(uid)));
-    let doc = json(&cdr.get(&url).ok().await?.body)?;
-    entry_of(&doc).ok_or_else(|| ViewerError::Internal(tr(AccessMsg::LogJson)))
+    let response = cdr.get(&url).ok().await?;
+    let doc = json(&response.body)?;
+    let entry = entry_of(&doc).ok_or_else(|| ViewerError::Internal(tr(AccessMsg::LogJson)))?;
+    Ok(Served {
+        view: LogView::of(&response),
+        value: entry,
+    })
 }
 
 #[cfg(test)]

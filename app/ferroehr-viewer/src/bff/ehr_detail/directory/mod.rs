@@ -529,6 +529,7 @@ mod tests {
             status: http::StatusCode::OK,
             etag: etag.map(str::to_owned),
             location: None,
+            access_log_view: None,
             body: r#"{"_type":"FOLDER","uid":{"value":"7d44::sys::1"}}"#.to_owned(),
         }
     }
