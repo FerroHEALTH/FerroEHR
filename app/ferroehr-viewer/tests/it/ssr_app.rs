@@ -27,6 +27,7 @@ use ferrohealth_session::cookies::CookieNames;
 use serde_json::Value;
 use tower::util::ServiceExt;
 
+mod care;
 mod grants;
 mod policy;
 

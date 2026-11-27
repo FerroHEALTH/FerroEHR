@@ -926,9 +926,11 @@ fn party_view(uid: &str, party: Party, mark: Option<Html>) -> (String, Html) {
         ))
     });
     let body = match (body, &current) {
-        (PartyBody::Overview(rendered), Some(state)) => {
-            opt(mark.map(panel)).then(overview(kind, uid, state, &rendered, admin))
-        }
+        (PartyBody::Overview(rendered), Some(state)) => Html::join([
+            opt(mark.map(panel)),
+            crate::pages::care::party::care_link(kind, uid),
+            overview(kind, uid, state, &rendered, admin),
+        ]),
         (PartyBody::Document(pretty), Some(state)) => panel(document_section(
             tr_with(
                 RecordsMsg::PartyDocumentTitle,

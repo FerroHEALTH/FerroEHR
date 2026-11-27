@@ -201,5 +201,147 @@ crate::locale::messages! {
         MarkTitle = "mark-title",
         /// `Only an administrator reads and writes this party, as it holds a grant or binds a client.`
         MarkIntro = "mark-intro",
+        /// `Add`
+        CareAdd = "care-add",
+        /// `A care relationship of this person: the carer, the part they play, the provider in whose care it is, and the period. The CDR checks the role against the value set the access policy binds and the writer's grant.`
+        CareAddIntro = "care-add-intro",
+        /// `The CDR did not add the care relationship.`
+        CareAddRefused = "care-add-refused",
+        /// `Add a care relationship`
+        CareAddTitle = "care-add-title",
+        /// `Care relationship added`
+        CareAdded = "care-added",
+        /// `Ended ones too`
+        CareAll = "care-all",
+        /// `Live on`
+        CareAt = "care-at",
+        /// `Care relationships`
+        CareCaption = "care-caption",
+        /// `Carer`
+        CareCarer = "care-carer",
+        /// `Carer id`
+        CareCarerId = "care-carer-id",
+        /// `The carer party's id: a professional's PERSON or ROLE, a care team's GROUP or an ORGANISATION unit.`
+        CareCarerIdHelp = "care-carer-id-help",
+        /// `Carer kind`
+        CareCarerKind = "care-carer-kind",
+        /// `Change`
+        CareChange = "care-change",
+        /// `Change the role or the period. The save replaces the version you read; End closes the period today.`
+        CareChangeIntro = "care-change-intro",
+        /// `The CDR did not change the care relationship.`
+        CareChangeRefused = "care-change-refused",
+        /// `Care relationship changed`
+        CareChanged = "care-changed",
+        /// `Delete`
+        CareDelete = "care-delete",
+        /// `Delete this care relationship as written in error? Its earlier versions keep it.`
+        CareDeleteMessage = "care-delete-message",
+        /// `The CDR did not delete the care relationship.`
+        CareDeleteRefused = "care-delete-refused",
+        /// `Care relationship deleted`
+        CareDeleted = "care-deleted",
+        /// `Direct`
+        CareDirect = "care-direct",
+        /// `PARTY_RELATIONSHIP`, version `$version`
+        CareDocument = "care-document",
+        /// `The care relationships of this EHR's subject, as the CDR lets you read them: live ones today unless you ask for a day or for ended ones.`
+        CareEhrIntro = "care-ehr-intro",
+        /// Care · EHR `$id`
+        CareEhrTitle = "care-ehr-title",
+        /// `End today`
+        CareEnd = "care-end",
+        /// `End this care relationship today? Its period closes, and from tomorrow it gives no ground for access.`
+        CareEndMessage = "care-end-message",
+        /// `The CDR did not end the care relationship.`
+        CareEndRefused = "care-end-refused",
+        /// `Care relationship ended`
+        CareEnded = "care-ended",
+        /// `Your account may not read these care relationships.`
+        CareForbidden = "care-forbidden",
+        /// `From`
+        CareFrom = "care-from",
+        /// `This care relationship is deleted.`
+        CareGone = "care-gone",
+        /// `In their care`
+        CareInCare = "care-in-care",
+        /// `The care relationships that reach this party as the carer, directly or through a team.`
+        CareInCareIntro = "care-in-care-intro",
+        /// `The CDR's care relationship is not JSON`
+        CareJson = "care-json",
+        /// `Manage on the person's page`
+        CareManage = "care-manage",
+        /// `Add, change or end a care relationship on the subject's PERSON.`
+        CareManageLine = "care-manage-line",
+        /// `This EHR's subject carries no external reference, so no care relationship names it.`
+        CareNoSubject = "care-no-subject",
+        /// `No care relationship`
+        CareNone = "care-none",
+        /// `None that you may read.`
+        CareNoneLine = "care-none-line",
+        /// `Care relationships of this person`
+        CareOfPerson = "care-of-person",
+        /// `Who cares for this person, as the CDR lets you read it.`
+        CareOfPersonIntro = "care-of-person-intro",
+        /// `An older version, read-only.`
+        CareOlder = "care-older",
+        /// `open`
+        CareOpen = "care-open",
+        /// `Care relationship pages`
+        CarePages = "care-pages",
+        /// `Who cares for this party, and whom it cares for.`
+        CarePartySubtitle = "care-party-subtitle",
+        /// Care · `$id`
+        CarePartyTitle = "care-party-title",
+        /// `Path`
+        CarePath = "care-path",
+        /// `Period`
+        CarePeriod = "care-period",
+        /// `Provider`
+        CareProvider = "care-provider",
+        /// `An identifier the provider's ORGANISATION carries: its issuer and its id.`
+        CareProviderHelp = "care-provider-help",
+        /// `Provider id`
+        CareProviderId = "care-provider-id",
+        /// `Provider identifier issuer`
+        CareProviderIssuer = "care-provider-issuer",
+        /// `The care relationships could not be read.`
+        CareRefused = "care-refused",
+        /// `Care role`
+        CareRole = "care-role",
+        /// `The part the carer plays. A role of another terminology is posted as terminology|code.`
+        CareRoleHelp = "care-role-help",
+        /// `Save the change`
+        CareSave = "care-save",
+        /// `Show`
+        CareShow = "care-show",
+        /// `Subject`
+        CareSubject = "care-subject",
+        /// `Care`
+        CareTab = "care-tab",
+        /// `Team`
+        CareTeam = "care-team",
+        /// `This care relationship`
+        CareThis = "care-this",
+        /// `Care relationship`
+        CareTitle = "care-title",
+        /// `To`
+        CareTo = "care-to",
+        /// `Every version of this care relationship, newest first, with who committed it and when.`
+        CareVersionsIntro = "care-versions-intro",
+        /// `The versions could not be read.`
+        CareVersionsRefused = "care-versions-refused",
+        /// `attender`
+        RoleAtnd = "role-atnd",
+        /// `consultant`
+        RoleCon = "role-con",
+        /// `participation`
+        RolePart = "role-part",
+        /// `primary performer`
+        RolePprf = "role-pprf",
+        /// `responsible party`
+        RoleResp = "role-resp",
+        /// `secondary performer`
+        RoleSprf = "role-sprf",
     }
 }

@@ -27,6 +27,7 @@ mod e2e_admin_ops;
 mod e2e_archive;
 mod e2e_audit;
 mod e2e_browse;
+mod e2e_care;
 mod e2e_chart;
 mod e2e_composition;
 mod e2e_compositions_filters;
