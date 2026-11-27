@@ -92,6 +92,9 @@ Two things to know before you build discovery on it:
   only the BASE rows do, and leaves the member out otherwise. ITS-REST types
   the member as a free string and the openEHR conformance framework names no
   profiles, so these values are FerroEHR's own. No configuration key sets it.
+  The current record holds the committer deviation as failed BASE rows
+  ([Known deviations](../conformance.md#known-deviations)), so the server
+  leaves the member out.
 
 > [!NOTE]
 > The manifest lives at the API base path and nowhere else. Point discovery

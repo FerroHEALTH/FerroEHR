@@ -69,14 +69,7 @@ use ferroehr::config::rest::SystemOptionsConfig;
 #[schema(
     as = Options,
     title = "Options",
-    example = json!({
-        "solution": "FerroEHR",
-        "solution_version": "3.11.0",
-        "vendor": "Cadasto B.V.",
-        "restapi_specs_version": "1.1.0",
-        "conformance_profile": ferroehr::telemetry::provenance::CONFORMANCE_PROFILE,
-        "endpoints": ["/ehr", "/demographic", "/definition", "/query"]
-    })
+    example = options_example
 )]
 struct OptionsDoc<'a> {
     /// The product implementing the API.
@@ -94,6 +87,25 @@ struct OptionsDoc<'a> {
     /// The API groups this server actually mounts (the live set, not a
     /// static list).
     endpoints: &'a [String],
+}
+
+/// The documented example of the manifest, carrying `conformance_profile` only
+/// when the committed record earns one, as the server sends it.
+fn options_example() -> serde_json::Value {
+    let mut example = serde_json::json!({
+        "solution": "FerroEHR",
+        "solution_version": "3.11.0",
+        "vendor": "Cadasto B.V.",
+        "restapi_specs_version": "1.1.0",
+        "endpoints": ["/ehr", "/demographic", "/definition", "/query"]
+    });
+    if let (Some(profile), Some(members)) = (
+        ferroehr::telemetry::provenance::CONFORMANCE_PROFILE,
+        example.as_object_mut(),
+    ) {
+        members.insert("conformance_profile".to_owned(), profile.into());
+    }
+    example
 }
 
 /// The immutable System-Options manifest, built once at wiring time from
@@ -218,14 +230,7 @@ where
                     description = "`application/json` — the manifest's only \
                                    representation."),
             ),
-            example = json!({
-                "solution": "FerroEHR",
-                "solution_version": "3.11.0",
-                "vendor": "Cadasto B.V.",
-                "restapi_specs_version": "1.1.0",
-                "conformance_profile": ferroehr::telemetry::provenance::CONFORMANCE_PROFILE,
-                "endpoints": ["/ehr", "/demographic", "/definition", "/query"]
-            })),
+            example = options_example),
         (status = 406, description = "No acceptable representation: the \
                                       manifest has no canonical-XML shape, \
                                       so an exclusively-XML `Accept` cannot \
@@ -343,11 +348,11 @@ mod tests {
             v["restapi_specs_version"],
             ferroehr::telemetry::provenance::ITS_REST
         );
-        // The profile the committed record earns, derived at build time.
-        assert_eq!(v["conformance_profile"], "BASE+OPTIONS");
+        // The profile the committed record earns, derived at build time, and
+        // no member when it earns none.
         assert_eq!(
-            v["conformance_profile"].as_str(),
-            ferroehr::telemetry::provenance::CONFORMANCE_PROFILE
+            v.get("conformance_profile").map(|p| p.as_str()),
+            ferroehr::telemetry::provenance::CONFORMANCE_PROFILE.map(Some)
         );
         assert!(v["endpoints"].is_array());
     }
@@ -379,7 +384,8 @@ mod tests {
     }
 
     /// `OPTIONS /` sends the six members of ITS-REST 1.1.0
-    /// `schemas/others/Options.yaml`, the profile among them (#4672).
+    /// `schemas/others/Options.yaml`, the profile among them only when the
+    /// committed record earns one (#4672, #6747).
     #[tokio::test]
     async fn the_manifest_sends_the_six_members() {
         let v = body_json(manifest().respond(&HeaderMap::new())).await;
@@ -390,17 +396,17 @@ mod tests {
             .map(String::as_str)
             .collect();
         members.sort_unstable();
-        assert_eq!(
-            members,
-            [
-                "conformance_profile",
-                "endpoints",
-                "restapi_specs_version",
-                "solution",
-                "solution_version",
-                "vendor"
-            ]
-        );
+        let mut want = vec![
+            "endpoints",
+            "restapi_specs_version",
+            "solution",
+            "solution_version",
+            "vendor",
+        ];
+        if ferroehr::telemetry::provenance::CONFORMANCE_PROFILE.is_some() {
+            want.insert(0, "conformance_profile");
+        }
+        assert_eq!(members, want);
     }
 
     #[tokio::test]

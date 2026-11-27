@@ -682,6 +682,16 @@ jobs:
       - name: citation-guard / The ferroehr party statement's product version matches the workspace
         if: ${{ !cancelled() }}
         run: bash scripts/checks/statement-version.sh
+      # The committed conformance record said every judged row passed for three
+      # weeks while every run on main failed the committer deviations (#6747):
+      # it must be a released run of the pinned Veredictum, red exactly on the
+      # rows deviations.json lists. conformance.yml compares it with each run.
+      - name: citation-guard / The conformance record guard refuses a stale record
+        if: ${{ !cancelled() }}
+        run: bash scripts/conformance-record.sh --self-test
+      - name: citation-guard / The committed conformance record carries the listed deviations at the pinned Veredictum
+        if: ${{ !cancelled() }}
+        run: bash scripts/conformance-record.sh check
       - name: citation-guard / CITATION.cff version matches the workspace version
         if: ${{ !cancelled() }}
         run: |

@@ -121,14 +121,14 @@ mod tests {
         assert!(profile(&summary("10 | 0 | x | 0 | 0 | 10", "4 | 0 | 0 | 0 | 0 | 4")).is_err());
     }
 
-    /// The committed record earns the profile the server sends.
+    /// The committed record earns the profile the server sends. Its BASE rows
+    /// hold the committer deviations as failed and errored rows
+    /// (`docs/conformance/party/ferroehr/deviations.json`, #6747), so it earns
+    /// none and the server leaves the member out.
     #[test]
     fn the_committed_record_earns_the_served_profile() {
         let committed = include_str!("../../../../docs/conformance/ferroehr/summary.md");
-        assert_eq!(profile(committed), Ok(Some("BASE+OPTIONS")));
-        assert_eq!(
-            crate::telemetry::provenance::CONFORMANCE_PROFILE,
-            Some("BASE+OPTIONS")
-        );
+        assert_eq!(profile(committed), Ok(None));
+        assert_eq!(crate::telemetry::provenance::CONFORMANCE_PROFILE, None);
     }
 }
