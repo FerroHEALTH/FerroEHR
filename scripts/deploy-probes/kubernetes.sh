@@ -36,6 +36,7 @@ K8S_RELEASE="ferroehr"
 K8S_PORT="${PROBE_K8S_PORT:-18081}"
 K8S_CDR="http://127.0.0.1:${K8S_PORT}"
 K8S_API="$K8S_CDR/ferroehr/rest/openehr/v1"
+K8S_EXT="$K8S_CDR/ferroehr/rest/extensions/v1"
 # The identity the documented Basic-auth overlay ships. The chart REFUSES to
 # render with authentication on and no mechanism configured, so every install
 # below carries deploy/helm/ci/basic-auth-values.yaml — which is the file the
@@ -98,7 +99,7 @@ K8S_BRIDGE_SECRET="ferroehr-bridge-cdr"
 # The machines issuer FerroBRIDGE's client credentials tokens come from
 # (#5093): the mock authorization server the compose quickstart runs, in the
 # probe namespace, signing every token with `iss` set to the issuer below. The
-# CDR trusts that issuer as `kind: machines` through the key set the probe reads
+# CDR trusts that issuer through the key set the probe reads
 # from the running server, so no key material is kept anywhere.
 K8S_MACHINES="probe-machines"
 K8S_MACHINES_IMAGE="ghcr.io/navikt/mock-oauth2-server:6.1.5@sha256:d88e445d55c4ff6eed59b02d86adfece47d985233b1616fb712669b98328c8a2"
@@ -611,9 +612,9 @@ probes_k8s_secrets() {
   # that is projected and never opened looks identical from outside.
   probe "P-K8S-SECRET-READ" "$PROBE_BROKEN" "chart" "-" \
     "a *_file key pointing at a missing path makes the boot REFUSE, naming the file"
-  k8s_install --set config.signing.enabled=true \
-              --set config.signing.mode=pgp \
-              --set config.signing.key_passphrase_file=/etc/ferroehr-secrets/absent
+  k8s_install --set config.record.signing.enabled=true \
+              --set config.record.signing.mode=pgp \
+              --set config.record.signing.key_passphrase_file=/etc/ferroehr-secrets/absent
   # The rollout is EXPECTED to fail here; what matters is the reason it gives.
   k8s_rollout 90s
   local bad_logs
@@ -874,7 +875,7 @@ k8s_term_install() {
   # routes — which is the surface an operator watches a resolution through, and
   # the only way to see a call leave the CDR pod rather than infer it.
   k8s_install --set terminology.enabled=true \
-              --set config.terminology.api_enabled=true "$@"
+              --set config.api.terminology=true "$@"
 }
 
 # 300s: the terminology container's own startup probe allows five minutes, and a
@@ -1075,7 +1076,7 @@ probes_k8s_term_netpol() {
   # a 200 here is a packet that left the CDR pod and arrived.
   local enc code
   enc="$(printf '%s' "$K8S_TERM_SYSTEM" | jq -sRr @uri)"
-  code="$(http_code -u "$K8S_BASIC" "$K8S_API/terminology/$enc/term/$K8S_TERM_CODE")"
+  code="$(http_code -u "$K8S_BASIC" "$K8S_EXT/terminology/$enc/term/$K8S_TERM_CODE")"
   assert_eq "200" "$code" \
     "a policy that also refuses the caller it was written for is a broken recipe, not a hardened one"
   probe_done
@@ -1233,23 +1234,21 @@ bridge:
         ports:
           - port: 8080
             protocol: TCP
-# The CDR trusts the machines issuer beside the Basic users' issuer of
-# $K8S_AUTH_VALUES (a values list replaces, so both are named), checking its
-# tokens against the key set read from it.
+# The CDR trusts the machines issuer beside the issuers of $K8S_AUTH_VALUES
+# (the issuer tables are named, so the values merge), checking its tokens
+# against the key set read from it. It has no party table: its tokens are
+# clients' own.
 config:
   files:
     machines-jwks.json: '$(cat "$PROBE_TMP/machines-jwks.json")'
   auth:
     issuer:
-      - issuer: https://basic-users.ferroehr.invalid
-        kind: persons
-        audience: [ferroehr-basic-users]
-        jwks_file: /opt/sandbox-posture/basic-users-jwks.json
-      - issuer: $K8S_MACHINES_ISSUER
-        kind: machines
+      machines:
+        issuer: $K8S_MACHINES_ISSUER
         audience: [$K8S_MACHINES_AUDIENCE]
         jwks_file: /etc/ferroehr/machines-jwks.json
-        token_types: [JWT]
+        profile:
+          token_types: [JWT]
 YAML
 }
 
@@ -1439,8 +1438,8 @@ probes_k8s_bridge() {
              --set bridge.enabled=true --set bridge.cdr.existingSecret=probe \
              --set bridge.cdr.oauth.issuer=https://untrusted.example.org --set bridge.cdr.oauth.clientId=probe \
              --set-json 'bridge.networkPolicy.ingressFrom=[{"podSelector":{"matchLabels":{"probe":"x"}}}]' 2>&1)"
-  assert_contains "$guard" "kind: machines" \
-    "a client of an issuer the CDR does not trust as machines would be refused on every call, so it must not render"
+  assert_contains "$guard" "is not an issuer of config.auth.issuer" \
+    "a client of an issuer the CDR does not trust would be refused on every call, so it must not render"
   probe_done
 
   # The live rows need the authorization server FerroBRIDGE's client
@@ -1478,7 +1477,7 @@ probes_k8s_bridge() {
       "the bridge workload never installed, so nothing about it could be observed"
     return 0
   fi
-  # The CDR rolls too (this install leaves config.terminology.api_enabled at its
+  # The CDR rolls too (this install leaves config.api.terminology at its
   # default, which rewrites its ConfigMap), and the bridge fetches its template
   # from it at boot, so the CDR settles first and its forward is rebuilt.
   k8s_rollout 180s
