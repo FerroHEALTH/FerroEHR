@@ -602,6 +602,13 @@ jobs:
         if: ${{ !cancelled() }}
         run: bash scripts/checks/file-size.sh
 
+      # ---- trivy-pins --------------------------------------------------
+      # Every workflow pins one Trivy version, and install-trivy.sh pins its
+      # tarball by sha256 for Linux and macOS on x86_64 and arm64 (#6743).
+      - name: trivy-pins / One Trivy version, pinned for every platform
+        if: ${{ !cancelled() }}
+        run: bash scripts/security/install-trivy.sh --check
+
       # ---- forwarders --------------------------------------------------
       # No function only forwards to another (.claude/rules/rust-style.md,
       # #4663): the forwarders tools/forwarders finds in app/*/src, crates/*/src
