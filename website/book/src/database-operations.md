@@ -261,8 +261,8 @@ and refuses a database whose recorded checksum no longer matches, so a
 corrected schema arrives as a new migration rather than as a change to an old
 one. A CI guard fails any pull request that modifies, renames or deletes a
 migration a release carries. v6.0.0 starts the line again from one baseline per
-schema, so a v5 database is not upgraded in place; see
-[Upgrading from v5 to v6](upgrades.md#upgrading-from-v5-to-v6).
+schema, so a v6 installation starts fresh; see
+[Coming from a 5.x release](upgrades.md#coming-from-a-5x-release).
 
 With `verify`, something else has to run the migrations first. Use the binary's
 own subcommand under the migrator DSN: a CI/CD stage, a one-shot job, or the

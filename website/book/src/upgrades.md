@@ -18,7 +18,7 @@ How to move a running deployment to a new release, and how long a release is sup
   the _previous_ schema for the window in which both versions run: additive
   changes first, destructive changes a release later.
 
-  A v5 database is not upgraded in place: see [Upgrading from v5 to v6](#upgrading-from-v5-to-v6).
+  A 5.x installation is not upgraded: see [Coming from a 5.x release](#coming-from-a-5x-release).
 - **Sweep for stale decomposition after a release that changes how content is
   decomposed.** The version body is unaffected and every read serves it
   correctly; what is stale is the decomposed index over it, which a
@@ -45,40 +45,11 @@ How to move a running deployment to a new release, and how long a release is sup
   shutdown; the audit records are stored before each response, so a
   replica that stops leaves nothing in memory.
 
-## Upgrading from v5 to v6
+## Coming from a 5.x release
 
-**v6 needs a new, empty database.** v6.0.0 replaces the whole migration
-history of every schema (`ext`, `clinical`, `party`, `audit`) with one
-baseline that creates each object once, in its final shape. A database
-prepared by v5 carries the v5 migration bookkeeping, and a v6 server refuses
-to start against it, naming the schema it found and this way forward, rather
-than apply its baseline over the old schema. Nothing is upgraded in place, and
-no compatibility layer reads a v5 database.
-
-Move the records instead:
-
-1. With the v5 server still running, dump the repository with
-   [`POST {ext}/admin/dump`](storage-admin-apis.md#post-extadmindump) to a location both
-   servers can reach.
-2. Create a new, empty PostgreSQL 19 database (or one per relocated domain,
-   as the v5 deployment had), and start the v6 server against it. With
-   `[database] migrations = "apply"` it applies the baseline at its first
-   boot; with `"verify"`, run `ferroehr db migrate` under the migrator
-   credential first.
-3. Load the archive into the v6 server with
-   [`POST {ext}/admin/load`](storage-admin-apis.md#post-extadminload).
-4. Put the controller's access policy in place before you load an archive
-   that holds open care relationships
-   ([operational policy](operational-policy.md)), and check the configuration
-   with `ferroehr config check`, since v6 refuses the keys v5 removed.
-
-The audit trail is not part of the archive. Export what you need of the v5
-audit trail over ITI-81 before you retire the v5 database.
-
-The v6 baseline creates no `linkage` schema and no `ferroehr_linkage` role: a
-cluster that held v5 databases may still carry that role, which v6 never names,
-and you drop it with `DROP ROLE ferroehr_linkage` once no v5 database in the
-cluster grants it anything.
+v6 is the first stable release, and no 5.x installation is upgraded to it: a
+v6 installation starts fresh, on a new, empty PostgreSQL 19 database, and you
+reimport your data into it.
 
 ## How long the version you pinned is supported
 
@@ -142,10 +113,8 @@ PodDisruptionBudget so upgrades and node drains never fully interrupt the API;
 the default `terminationGracePeriodSeconds` covers the binary's shutdown drain.
 Roll back by re-pinning the prior image tag or digest.
 
-The step from v5 to v6 is the exception: v6 starts from a new migration
-baseline and needs a new, empty database, so it is a new installation with the
-records moved by archive dump and load
-([Operations → Upgrading from v5 to v6](upgrades.md#upgrading-from-v5-to-v6)).
+A 5.x release is not upgraded to v6: a v6 installation starts fresh and you
+reimport your data ([Coming from a 5.x release](#coming-from-a-5x-release)).
 
 A change anywhere under `config`, `config.files` or `secrets` changes the
 `checksum/config` pod annotation, so `helm upgrade` rolls the pods for a
