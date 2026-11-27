@@ -113,7 +113,7 @@ async fn admin_runs_a_cohort_and_a_small_cell_is_withheld() {
 
     common::follow_nav(&h, "/query").await;
     common::open_tab(&h, "cohort").await;
-    wait_main_contains(&h, "Fill the predicates that select the cohort").await;
+    wait_main_contains(&h, "Fill the predicates or name the subjects").await;
     h.shot(1, "cohort-form").await;
     run(&h, &served).await;
     let text = main_text(&h).await;
