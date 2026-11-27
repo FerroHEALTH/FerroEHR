@@ -22,8 +22,11 @@ name: SonarQube Cloud
 
 # On a push to main and weekly, never on a pull request or a merge group
 # (owner decision 2026-11-25, #6574): the analysis and its coverage run are advisory
-# (ai-code-review.md) and gate nothing. A newer push cancels the older
-# analysis on its ref, so main is analysed at its latest commit.
+# (ai-code-review.md) and gate nothing. An analysis in progress always
+# finishes: a newer push waits behind it, and a push that waits is replaced by
+# the next one, so main is analysed at its newest commit without a run being
+# cut short (#6784). An analysis takes about half an hour, so cancelling on
+# each push left main unanalysed through a busy day.
 on:
   push:
     branches: [main]
@@ -33,7 +36,7 @@ on:
 
 concurrency:
   group: sonar-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions: {}
 
