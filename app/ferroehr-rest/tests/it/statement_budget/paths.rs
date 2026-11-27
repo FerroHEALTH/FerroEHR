@@ -1662,17 +1662,26 @@ async fn updates_in_place(pool: &PgPool, from: &str, to: &str) -> u64 {
 /// Waits [`SETTLE`], then takes and returns the connection of each domain
 /// pool, so the measured request meets it idle for less than the pool's
 /// idle probe (`ferroehr::db::pool::IDLE_PROBE`) and sends no probe of its
-/// own.
+/// own, and with its read buffer at the start of a fresh region ([`ALIGN`]).
 async fn settle(pools: &DomainPools) {
     tokio::time::sleep(SETTLE).await;
     for domain in Domain::ALL {
-        drop(
-            ferroehr::db::acquire::acquire(pools.get(domain))
-                .await
-                .expect("the kept connection"),
-        );
+        let mut conn = ferroehr::db::acquire::acquire(pools.get(domain))
+            .await
+            .expect("the kept connection");
+        sqlx::query(ALIGN)
+            .execute(&mut *conn)
+            .await
+            .expect("the aligning read");
+        drop(conn);
     }
 }
+
+/// A row longer than sqlx's 8 KiB read region, which the connection reads
+/// into a region of its own, so the next message starts a fresh one and
+/// each request meets the same read buffer whatever the connection read
+/// before (#6706).
+const ALIGN: &str = "SELECT /* statement_budget_own */ repeat('x', 65536)";
 
 /// Measures [`REQUESTS`] requests of `path`.
 async fn measure(
@@ -1699,6 +1708,9 @@ async fn measure(
         let n = usize::try_from(WARM + n).unwrap();
         let call = world.call(path, n);
         settle(pools).await;
+        if let Some(wire) = wire {
+            drop(wire.take());
+        }
         let mut allocated = Allocated::default();
         let (status, headers, body) = Measured {
             inner: Box::pin(
