@@ -397,6 +397,8 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         review("/access-policy/edit", "access-policy/edit"),
         light("/grants", "grants/grants"),
         both("/audit", "audit/audit"),
+        light("/access-log", "access-log/review"),
+        light("/access-log/integrity", "access-log/integrity"),
         review("/audit?patient=no-such-patient", "audit/audit-empty"),
         review("/configuration", "configuration/configuration"),
         light("/configuration/viewer", "configuration/viewer"),
