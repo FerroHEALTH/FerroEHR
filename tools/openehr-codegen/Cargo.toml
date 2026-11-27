@@ -17,7 +17,9 @@ name = "openehr-codegen"
 path = "src/main.rs"
 
 [dependencies]
-serde_json.workspace = true
+# NOTE: preserve_order reads a BMM class's properties, generic parameters and
+# constants in document order, the order of every emitted type (#6734).
+serde_json = { workspace = true, features = ["preserve_order"] }
 roxmltree.workspace = true      # XSD reader (emit-xml)
 serde_norway.workspace = true   # OAS YAML reader (emit-rest)
 http.workspace = true           # the status registry the emitted client outcomes name (emit-rest)

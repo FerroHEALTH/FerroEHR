@@ -372,8 +372,10 @@ jiff-sqlx = { version = "0.2.0", features = ["postgres"] }   # official jiff<->s
 # ── Serialization & data formats ─────────────────────────────────────────────
 serde = { version = "1", features = ["derive", "rc"] }
 # float_roundtrip: a parsed decimal is the exact nearest double, which the
-# RFC 8785 number form of a signed VERSION is computed from.
-serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
+# RFC 8785 number form of a signed VERSION is computed from. preserve_order is
+# left to the members that read a JSON object in its member order (#6734), so
+# the published openehr-* crates do not force it on their consumers.
+serde_json = { version = "1", features = ["float_roundtrip"] }
 # The JSON Schema of the configuration tree (`schema` feature of `ferroehr`),
 # from which the configuration reference and the default ferroehr.toml are
 # generated (#5316). The family crates derive it on the sections they own.
