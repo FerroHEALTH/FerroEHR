@@ -23,14 +23,6 @@ use crate::common;
 
 use common::{Harness, env, login_basic_as, main_text, wait_main_contains};
 
-/// The admin dev user (quickstart `docker/ferroehr.dev.toml`).
-fn admin_credentials() -> (String, String) {
-    (
-        env("UI_E2E_ADMIN_USER").unwrap_or_else(|| "ferroehr-admin".to_owned()),
-        env("UI_E2E_ADMIN_PASS").unwrap_or_else(|| "ferroehr".to_owned()),
-    )
-}
-
 #[tokio::test]
 async fn admin_reads_and_commits_an_ehrs_access_settings() {
     let Some(h) = Harness::start("ehr-access").await else {
@@ -41,7 +33,7 @@ async fn admin_reads_and_commits_an_ehrs_access_settings() {
         h.finish().await;
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
 
     h.goto(&format!("/ehrs/{ehr}/access")).await;

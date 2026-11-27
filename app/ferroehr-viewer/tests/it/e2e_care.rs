@@ -27,14 +27,6 @@ use crate::common;
 
 use common::{Harness, env, fill, login_basic_as, main_text, submit, wait_main_contains};
 
-/// The admin dev user (quickstart `docker/ferroehr.dev.toml`).
-fn admin_credentials() -> (String, String) {
-    (
-        env("UI_E2E_ADMIN_USER").unwrap_or_else(|| "ferroehr-admin".to_owned()),
-        env("UI_E2E_ADMIN_PASS").unwrap_or_else(|| "ferroehr".to_owned()),
-    )
-}
-
 /// A party of `rm_type` and `archetype` whose `details` hold `details`,
 /// created as the administrator; its container id.
 async fn party(
@@ -44,7 +36,7 @@ async fn party(
     name: &str,
     details: Vec<serde_json::Value>,
 ) -> String {
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     let rm_type = segment.to_uppercase();
     let mut body = serde_json::json!({
         "_type": rm_type, "name": { "_type": "DV_TEXT", "value": rm_type },
@@ -129,7 +121,7 @@ async fn admin_adds_ends_and_reads_a_care_relationship() {
         ],
     )
     .await;
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
 
     h.goto(&format!("/parties/person/{patient}/care")).await;

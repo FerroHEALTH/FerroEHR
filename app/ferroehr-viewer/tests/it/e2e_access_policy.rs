@@ -22,23 +22,14 @@
 
 use crate::common;
 
-use common::{Harness, env, login_basic_as, main_text, wait_main_contains};
-
-/// The admin dev user (quickstart `docker/ferroehr.dev.toml`), which
-/// scripts/ui-e2e.sh grants `write_access_policy`.
-fn admin_credentials() -> (String, String) {
-    (
-        env("UI_E2E_ADMIN_USER").unwrap_or_else(|| "ferroehr-admin".to_owned()),
-        env("UI_E2E_ADMIN_PASS").unwrap_or_else(|| "ferroehr".to_owned()),
-    )
-}
+use common::{Harness, login_basic_as, main_text, wait_main_contains};
 
 #[tokio::test]
 async fn admin_reads_the_policy_its_versions_and_a_stale_save_is_refused() {
     let Some(h) = Harness::start("access-policy").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
 
     common::follow_nav(&h, "/access-policy").await;
