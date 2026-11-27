@@ -14,6 +14,7 @@
 //! design.
 
 pub mod access;
+pub mod access_log;
 pub mod care;
 pub mod compositions;
 pub mod contribution;
@@ -38,6 +39,7 @@ use crate::bff::ehr_detail::EhrSummary;
 use crate::bff::ehr_detail::status::EhrStatusState;
 use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
+use crate::locale::access::AccessMsg;
 use crate::locale::records::RecordsMsg;
 use crate::locale::server::ServerMsg;
 use crate::locale::{Msg, current, tr, tr_with};
@@ -66,6 +68,8 @@ pub enum EhrTab {
     Marks,
     /// Its access settings.
     Access,
+    /// Its access log.
+    AccessLog,
 }
 
 impl EhrTab {
@@ -80,6 +84,7 @@ impl EhrTab {
             Self::Care => "care",
             Self::Marks => "marks",
             Self::Access => "access",
+            Self::AccessLog => "access-log",
         }
     }
 }
@@ -551,6 +556,11 @@ fn tabs(ehr_id: &str, facts: &EhrHead) -> Vec<Tab> {
             EhrTab::Marks.key(),
             tab_href(ehr_id, EhrTab::Marks),
             tr(crate::locale::policy::PolicyMsg::MarksTab),
+        ),
+        Tab::new(
+            EhrTab::AccessLog.key(),
+            tab_href(ehr_id, EhrTab::AccessLog),
+            tr(AccessMsg::Tab),
         ),
     ]);
     tabs

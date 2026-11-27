@@ -77,6 +77,10 @@ pub enum Page {
     NewContribution,
     /// `/ehrs/:ehr_id/tags`.
     Tags,
+    /// `/ehrs/:ehr_id/access-log`.
+    AccessLog,
+    /// `/ehrs/:ehr_id/access-log/:uid`.
+    AccessLogEntry,
     /// `/ehrs/:ehr_id/compositions/new`.
     NewComposition,
     /// `/ehrs/:ehr_id/compositions/:uid`.
@@ -201,6 +205,8 @@ impl Page {
             "/ehrs/:ehr_id/contributions/:uid" => Self::Contribution,
             "/ehrs/:ehr_id/contribution/new" => Self::NewContribution,
             "/ehrs/:ehr_id/tags" => Self::Tags,
+            "/ehrs/:ehr_id/access-log" => Self::AccessLog,
+            "/ehrs/:ehr_id/access-log/:uid" => Self::AccessLogEntry,
             "/ehrs/:ehr_id/compositions/new" => Self::NewComposition,
             "/ehrs/:ehr_id/compositions/:uid" => Self::Composition,
             "/ehrs/:ehr_id/compositions/:uid/edit" => Self::EditComposition,
@@ -357,6 +363,8 @@ pub static ROUTES: &[&str] = &[
     "/ehrs/:ehr_id/marks",
     "/ehrs/:ehr_id/access",
     "/ehrs/:ehr_id/access/edit",
+    "/ehrs/:ehr_id/access-log",
+    "/ehrs/:ehr_id/access-log/:uid",
     "/ehrs/:ehr_id/compositions/new",
     "/ehrs/:ehr_id/compositions/:uid",
     "/ehrs/:ehr_id/compositions/:uid/edit",
@@ -431,10 +439,12 @@ pub async fn draw() -> Drawn {
         Page::Contribution => pages::ehr::contribution::page().await,
         Page::NewContribution => pages::ehr::contribution::new_page().await,
         Page::Tags => pages::ehr::tags::page().await,
+        Page::AccessLog => pages::ehr::access_log::page().await,
+        Page::AccessLogEntry => pages::ehr::access_log::entry_page().await,
         Page::NewComposition => pages::composition::new_page().await,
         Page::Composition => pages::composition::page().await,
         Page::EditComposition => pages::composition::edit_composition_page().await,
-        Page::Parties => pages::parties::list_page().await,
+        Page::Parties => pages::parties::list::list_page().await,
         Page::NewParty => pages::parties::new_party_page().await,
         Page::NewRelationship => pages::parties::new_relationship_page().await,
         Page::Relationship => pages::parties::relationship_page().await,
