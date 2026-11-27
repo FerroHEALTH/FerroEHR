@@ -354,8 +354,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::Iti81,
         conversions: 0,
-        // NOTE: our own design (#6706), this median moves by 4 between Linux runs.
-        median: 6642,
+        // NOTE: our own design (#6706), this median moves by 2 between Linux runs.
+        median: 6640,
         allocations: 6744,
         peak_bytes: 577_536,
         round_trips: 1,
@@ -367,8 +367,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyRead,
         conversions: 0,
-        // NOTE: our own design (#6706), this median moves by 4 between Linux runs.
-        median: 897,
+        median: 893,
         allocations: 960,
         peak_bytes: 78_848,
         round_trips: 6,
@@ -550,8 +549,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyUpdate,
         conversions: 8,
-        // NOTE: our own design (#6706), this median moves by 4 between Linux runs.
-        median: 1763,
+        median: 1759,
         allocations: 1819,
         peak_bytes: 129_641,
         round_trips: 9,
@@ -599,8 +597,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitRole,
         conversions: 9,
-        // NOTE: our own design (#6706), this median moves by 4 between Linux runs.
-        median: 1937,
+        median: 1933,
         allocations: 1989,
         peak_bytes: 126_256,
         round_trips: 16,
@@ -1509,11 +1506,16 @@ impl Measure {
             .div_euclid(REQUESTS)
     }
 
-    /// The median request's `figure`, the sixth smallest of ten: what a
-    /// request of the window allocates, whichever requests the read buffer
+    /// The lower median request's `figure`, the fifth smallest of ten: what
+    /// a request of the window allocates, whichever requests the read buffer
     /// of the pool's connection grows inside (#6706).
     fn median(&self, figure: impl Fn(&Allocated) -> u64) -> u64 {
-        self.ranked(figure, 2)
+        let mut figures: Vec<u64> = self.each.iter().map(figure).collect();
+        figures.sort_unstable();
+        figures
+            .get(figures.len().saturating_sub(1).div_euclid(2))
+            .copied()
+            .unwrap_or(0)
     }
 
     /// The lower-quartile request's `figure`, the third smallest of ten.
