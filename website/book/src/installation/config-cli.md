@@ -10,6 +10,9 @@ environment-name grammar, and file discovery are on the
 
 ## The command line
 
+Every command with every option, as `--help` prints it, is on the generated
+[Command-line reference](../reference/cli.md). This section explains them.
+
 Two flags are global: they apply to the server and to every subcommand:
 
 | Flag | Description |
