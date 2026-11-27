@@ -1,7 +1,9 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 
-# .github/workflows/docs.yml — build + deploy the documentation website.
+# .github/workflows/docs.yml: build and deploy the documentation website on a
+# push to main or a dispatch. A pull request builds the site in ci.yml, through
+# the same docs-build.yml (#6733).
 # Rust-only toolchain, vendored static assets, no Node/Python build step for
 # the site render.
 #
@@ -15,9 +17,6 @@ name: Docs
 on:
   push:
     branches: [main]     # redeploy dev docs + landing
-  pull_request:             # PR: build + lint + link-check ONLY (no deploy),
-                            # and only when a site input changed (the `changes`
-                            # gate below)
   workflow_dispatch:
 
 # The pinned toolchain lives in .github/actions/docs-toolchain (#2775) — it was
@@ -28,7 +27,7 @@ env:
   SITE_ORIGIN: "https://ferroehr.eu"
   SITE_BASE: ""
 
-# Cancel only PR runs (#2845). Push and dispatch runs QUEUE instead: at every
+# Push and dispatch runs QUEUE (#2845): at every
 # release cut the merge push starts a Docs run and the pipeline's docs-freeze
 # leg dispatches a second one ~90s later — with blanket cancellation the push
 # run died as a scary-looking "Cancelled" row on every healthy cut (three in a
@@ -41,154 +40,24 @@ env:
 # benign.
 concurrency:
   group: docs-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
 
 permissions: {}
 
 jobs:
-  # ── Change detection (pull requests only) ───────────────────────────────────
-  # The site build renders the conformance assets (which installs the
-  # `veredictum` release of the committed record), lints the book and
-  # link-checks the assembled tree — 30 minutes of work that a pull request
-  # touching none of its inputs has no reason to pay (#2777).
-  #
-  # It is an IN-WORKFLOW gate, not a workflow-level `paths:` filter, for the
-  # documented reason `ci.yml` uses the same shape: a workflow skipped by path
-  # filtering leaves its checks in a pending state forever if one is ever
-  # required, whereas a job skipped by `if:` reports as skipped and satisfies
-  # branch protection
-  # (https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks).
-  #
-  # Any non-pull-request event answers `true` unconditionally: a main push
-  # deploys the site and a manual dispatch is an explicit request to rebuild
-  # it, so neither is ever gated on a delta.
-  changes:
-    name: change detection
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    outputs:
-      docs: ${{ steps.filter.outputs.docs }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - name: The path classifier finds a match first and last in a 2000-path list
-        run: bash scripts/lib/change-lanes.sh --self-test
-      - id: filter
-        shell: bash
-        # Context reaches the shell through env, never `${{ }}`-inline (the
-        # template-injection rule; `ci.yml`'s filter is the pattern).
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          PR_BASE: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT_NAME" != "pull_request" ]; then
-            echo "$EVENT_NAME is not a pull request — building the site unconditionally."
-            echo "docs=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # The pull request's own paths, from its merge base (#4129).
-          if ! git rev-parse --verify --quiet "$PR_BASE" >/dev/null \
-            || ! changed=$(bash scripts/lib/changed-paths.sh "$PR_BASE" "$PR_HEAD"); then
-            echo "Base $PR_BASE unavailable — treating as a docs change."
-            echo "docs=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "Changed files:"; echo "$changed"
-          # The site's sources, plus every INPUT the build's own gates read:
-          # the committed conformance artifacts the render scripts read, the pin
-          # that decides WHICH instrument renders them, the render/assemble
-          # scripts, the stale-numbers gate's script, and the
-          # job's own recipe — this workflow and the toolchain action — so a
-          # change to what the job DOES exercises the job it changes.
-          # The list is in scripts/lib/change-lanes.sh, matched from a
-          # here-string so a long change list cannot read as a miss (#4208).
-          result=$(bash scripts/lib/change-lanes.sh docs <<<"$changed")
-          echo "$result" | tee -a "$GITHUB_OUTPUT"
-          if [ "$result" = "docs=false" ]; then
-            echo "No site-relevant paths touched — the docs build will be skipped."
-          fi
-
   # ── Build + verify (no deploy) ──────────────────────────────────────────────
+  # The build and its gates are docs-build.yml, which ci.yml also calls on a
+  # pull request that changes a site input (#6733).
   build:
-    needs: changes
-    if: needs.changes.outputs.docs == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
     permissions:
       contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          # Full history: conformance-stats.sh dates the record by the AUTHOR
-          # date of results.json. On a shallow checkout that git log is empty
-          # and the date falls back to the CHECKOUT day (#2402).
-          fetch-depth: 0
-      # The deployed site is rebuilt in the deploy job, which restores no build
-      # cache; this job publishes only a pull-request diagnostic artifact. It
-      # compiles docs-meta alone, which has no dependency, so it keeps no cache
-      # (#6388).
-      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
-        with:
-          cache: false
-      - uses: ./.github/actions/docs-toolchain # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
-      - name: Stale-numbers gate (no hand-typed conformance claims in site sources)
-        run: bash scripts/checks/conformance-numbers.sh
-      - name: Render conformance stats + perf assets (the generated includes must exist before lint)
-        run: |
-          bash scripts/render/conformance-stats.sh includes
-          bash scripts/render/perf-assets.sh
-          bash scripts/render/cohort-bench.sh
-          bash scripts/render/storage-bench.sh
-          bash scripts/render/access-index-bench.sh
-          bash scripts/render/access-path-bench.sh
-          bash scripts/render/care-caseload-bench.sh
-      - name: Perf-assets drift gate (regenerated SVGs match the committed assets)
-        run: git diff --exit-code -- website/book/src/perf-assets
-      - name: Markdown lint gate
-        run: mdbook-lint lint website/book/src
-      - name: Assemble _site (landing + /docs/dev/)
-        run: bash scripts/site/build.sh --dev-only       # writes ./_site
-      - name: Link-check gate (internal links only — blocking)
-        # `--offline` blocks network requests, so this checks exactly the
-        # property this repository controls: that every relative and absolute
-        # in-site link resolves inside the built tree. A broken cross-reference
-        # is a real defect and this is the only thing that catches it.
-        #
-        # External reachability is NOT checked here, deliberately. A remote host
-        # rate-limiting or resetting a CI runner's connection says nothing about
-        # the change under review, and it failed two consecutive unrelated pull
-        # requests on links that return 200 when fetched directly (#2287). A
-        # gate that goes red for reasons the author cannot fix or influence
-        # teaches people to merge past red, which costs more than the check is
-        # worth. External links move to link-check-external.yml, which reports
-        # somewhere a human reads instead of blocking a merge.
-        #
-        # The deployed site is served at the ferroehr.eu apex ROOT, so absolute
-        # /docs/... links resolve against _site itself — no prefixed check tree
-        # is needed.
-        run: |
-          lychee --offline --no-progress --exclude-loopback \
-            --root-dir "$PWD/_site" \
-            './_site/**/*.html'
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: site
-          path: _site
+    uses: ./.github/workflows/docs-build.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
 
   # ── Deploy the full site (main push or manual dispatch) ──────────────────
   deploy:
     needs: build
-    # Deploy on any non-PR event. The release pipeline's docs-freeze leg
-    # dispatches this workflow after it pushes a frozen version, so a release
-    # reaches the site through this same job.
-    if: github.event_name != 'pull_request'
+    # The release pipeline's docs-freeze leg dispatches this workflow after it
+    # pushes a frozen version, so a release reaches the site through this job.
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
