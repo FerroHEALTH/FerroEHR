@@ -173,6 +173,7 @@
       { "key": "agent-lab-engine", "kind": "agent", "file": "world/agent-lab-engine.json" },
       { "key": "role-lab-feed", "kind": "role", "file": "world/role-lab-feed.json" },
       { "key": "role-privacy-officer", "kind": "role", "file": "world/role-privacy-officer.json" },
+      { "key": "role-records-migration", "kind": "role", "file": "world/role-records-migration.json" },
       { "key": "patient-01", "kind": "person", "file": "world/patient-01.json" },
       { "key": "patient-02", "kind": "person", "file": "world/patient-02.json" },
       { "key": "patient-03", "kind": "person", "file": "world/patient-03.json" },

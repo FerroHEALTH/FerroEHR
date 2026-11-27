@@ -377,10 +377,10 @@ the FHIR facade's base, the page of an EHR whose subject namespace is one of
 Launching a Task changes no Task status. The section needs these, beside the
 EHR launch setup above:
 
-- **An OpenID Connect sign-in at FerroSMART** over a `memory` session store
-  with `oidc.offline_access = true`, so the session holds the refresh token
-  the facade token comes from. A Basic sign-in or a `sealed` store holds
-  none, and the section asks you to sign in with FerroSMART.
+- **An OpenID Connect sign-in at FerroSMART** with
+  `oidc.offline_access = true`, so the session holds the refresh token the
+  facade token comes from. A Basic sign-in holds none, and the section asks
+  you to sign in with FerroSMART.
 - **The FHIR scopes in the sign-in**: `oidc.scopes` lists the scopes the
   facade token needs, such as `user/Task.rs`, and the viewer's sign-in client
   at FerroSMART carries them in its `scopes` ceiling. FerroSMART narrows the

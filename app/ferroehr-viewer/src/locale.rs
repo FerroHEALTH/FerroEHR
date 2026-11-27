@@ -349,6 +349,8 @@ messages! {
         NavStoredQueries = "nav-stored-queries",
         /// `Templates`
         NavTemplates = "nav-templates",
+        /// `Archetypes`
+        NavArchetypes = "nav-archetypes",
         /// `Terminology`
         NavTerminology = "nav-terminology",
         /// `FerroEHR { $version } at { $address }`

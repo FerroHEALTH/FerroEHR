@@ -63,8 +63,8 @@ pub fn router(app_state: AppState) -> axum::Router {
             crate::paging::PAGING_ROUTE,
             axum::routing::post(crate::paging::choose_paging),
         )
-        // A template's Download: the stored source as a file, read with the
-        // session's credential.
+        // A template's, an archetype's or an EHR Extract's Download: what the CDR
+        // serves, as a file, read with the session's credential.
         .route(
             "/download/template/{family}/{id}",
             axum::routing::get(crate::download::download_template),
@@ -73,6 +73,14 @@ pub fn router(app_state: AppState) -> axum::Router {
         .route(
             "/download/access-log/{ehr_id}",
             axum::routing::get(crate::download::download_access_log),
+        )
+        .route(
+            "/download/archetype/{family}/{id}",
+            axum::routing::get(crate::download::download_archetype),
+        )
+        .route(
+            "/download/extract/{ehr_id}",
+            axum::routing::get(crate::download::download_extract),
         )
         .route(
             crate::pages::about::DOWNLOAD_ROUTE,

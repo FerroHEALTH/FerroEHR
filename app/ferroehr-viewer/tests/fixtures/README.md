@@ -9,6 +9,12 @@ without breaking this suite (#2616).
 Consumers: `tests/it/e2e_browse.rs`, `tests/it/e2e_docs_shots.rs` and
 `scripts/ui-e2e.sh`.
 
+`extract/foreign-ehr.json` is a synthetic EHR Extract, as an export lists
+it, of an EHR another system (`hospital-b.example`) wrote: one `EHR_STATUS`
+with no subject, committed by a party of that system. `tests/it/e2e_extract.rs`
+imports it, since the CDR refuses an extract whose committers are its own
+parties or logins.
+
 `cdr/recording.json` is a recording of the exchanges between the viewer and the
 FerroEHR of the checkout it was taken in, and `cdr/manifest.json` names the ids
 it holds. `tests/it/ssr_app.rs` replays it as the CDR, so every screen is drawn
