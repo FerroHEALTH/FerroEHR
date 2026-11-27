@@ -10408,7 +10408,6 @@
                   "solution_version": "3.11.0",
                   "vendor": "Cadasto B.V.",
                   "restapi_specs_version": "1.1.0",
-                  "conformance_profile": "BASE+OPTIONS",
                   "endpoints": [
                     "/ehr",
                     "/demographic",
@@ -29240,7 +29239,6 @@
           "solution_version": "3.11.0",
           "vendor": "Cadasto B.V.",
           "restapi_specs_version": "1.1.0",
-          "conformance_profile": "BASE+OPTIONS",
           "endpoints": [
             "/ehr",
             "/demographic",
