@@ -169,12 +169,7 @@ pub async fn page() -> Drawn {
         ),
         _ => tr(PolicyMsg::PolicySubtitle),
     };
-    let body = match read {
-        Form::Shown(editor) => edit_form(*editor),
-        Form::Refused(refusal) => refusal.view(),
-        Form::Not(never) => match never {},
-        Form::Left => Html::empty(),
-    };
+    let body = read.view(edit_form);
     let heading = editor_heading(
         &current(),
         message(RecordsMsg::EditorTitle),

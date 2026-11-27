@@ -358,12 +358,9 @@ pub async fn edit_page() -> Drawn {
     let Some(register) = register_param() else {
         return crate::pages::errors::not_found_page();
     };
-    let body = match read_edit(register).await {
-        Form::Shown(editor) => edit_form(register, *editor),
-        Form::Refused(refusal) => refusal.view(),
-        Form::Not(never) => match never {},
-        Form::Left => Html::empty(),
-    };
+    let body = read_edit(register)
+        .await
+        .view(|editor| edit_form(register, editor));
     let heading = editor_heading(
         &current(),
         message(RecordsMsg::EditorTitle),
