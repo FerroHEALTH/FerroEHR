@@ -1681,7 +1681,7 @@ async fn settle(pools: &DomainPools) {
 /// into a region of its own, so the next message starts a fresh one and
 /// each request meets the same read buffer whatever the connection read
 /// before (#6706).
-const ALIGN: &str = "SELECT /* statement_budget_own */ repeat('x', 65536)";
+const ALIGN: &str = "SELECT /* statement_budget_own */ repeat('x', 9000)";
 
 /// Measures [`REQUESTS`] requests of `path`.
 async fn measure(
