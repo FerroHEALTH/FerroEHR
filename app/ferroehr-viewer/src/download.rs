@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! A template's or an archetype's Download: the source the CDR stores, as a
-//! file.
+//! A template's, an archetype's or an EHR Extract's Download: what the CDR
+//! serves, as a file.
 //!
 //! The browser holds no CDR credential, so it cannot link to the CDR's
 //! `definition/template` resources itself. This route reads the template
@@ -162,6 +162,46 @@ pub async fn download_archetype(
         .ok()
         .await;
     attachment(answer, "text/plain", &file_name(id, extension))
+}
+
+/// The route an EHR's Export as EHR Extract reads from, followed by the
+/// EHR id.
+pub const EXTRACT_DOWNLOAD_ROUTE: &str = "/download/extract";
+
+/// The address of the EHR Extract download of the EHR `ehr_id`.
+#[must_use]
+pub fn extract_href(ehr_id: &str) -> String {
+    format!("{EXTRACT_DOWNLOAD_ROUTE}/{}", urlencoding::encode(ehr_id))
+}
+
+/// `GET /download/extract/{ehr_id}`: the EHR as the CDR exports it, the list
+/// of `EXTRACT`s it serves, as a file.
+///
+/// The session guard runs first, as for [`download_template`]; an id that
+/// can name no EHR is a `404` before any CDR call, and a CDR refusal answers
+/// `502` with the CDR's words.
+pub async fn download_extract(
+    axum::Extension(state): axum::Extension<crate::state::AppState>,
+    axum::Extension(viewer): axum::Extension<ferrohealth_session::record::Session>,
+    axum::extract::Path(ehr_id): axum::extract::Path<String>,
+) -> Response {
+    let Some(id) = template_id(&ehr_id) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let url = state
+        .cdr
+        .extensions_v1(&crate::bff::extract::export_path(id));
+    let answer = state
+        .cdr
+        .call(http::Method::GET, &url, viewer.credential())
+        .accept("application/json")
+        .ok()
+        .await;
+    attachment(
+        answer,
+        "application/json",
+        &file_name(&format!("ehr-extract-{id}"), "json"),
+    )
 }
 
 /// The CDR's `answer` as a file named `name` of the media type

@@ -496,7 +496,11 @@ crate::locale::messages! {
         ServerIntegrity = "server-integrity",
         /// `Checks every stored version against the rows the query engine reads, and repairs what it finds.`
         ServerIntegrityLine = "server-integrity-line",
-        /// `The CDR has its admin API turned off, so Activity, Integrity and Identity feed are not offered.`
+        /// `Repository`
+        ServerRepository = "server-repository",
+        /// `The whole repository dumped to an archive on the CDR's file system, and loaded from one.`
+        ServerRepositoryLine = "server-repository-line",
+        /// `The CDR has its admin API turned off, so Activity, Integrity, Repository and Identity feed are not offered.`
         ServerNoAdmin = "server-no-admin",
         /// `Report`
         ActivityAsk = "activity-ask",
