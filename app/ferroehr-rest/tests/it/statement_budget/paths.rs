@@ -309,7 +309,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 0,
         least: 805,
         allocations: 855,
-        peak_bytes: 276_480,
+        // NOTE: our own design (#6736), the aligned read buffer holds 64 KiB regions.
+        peak_bytes: 364_544,
         round_trips: 1,
         nested: 1,
         notifies: 0,
@@ -321,7 +322,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 2,
         least: 10_095,
         allocations: 10_144,
-        peak_bytes: 730_112,
+        // NOTE: our own design (#6736), the aligned read buffer holds 64 KiB regions.
+        peak_bytes: 808_960,
         round_trips: 1,
         nested: 1,
         notifies: 0,
@@ -333,7 +335,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 2,
         least: 14_728,
         allocations: 14_783,
-        peak_bytes: 1_295_360,
+        // NOTE: our own design (#6736), the aligned read buffer holds 64 KiB regions.
+        peak_bytes: 1_378_304,
         round_trips: 1,
         nested: 1,
         notifies: 0,
