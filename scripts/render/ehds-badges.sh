@@ -97,10 +97,10 @@ render() {
   read -r total counted < <(count_rows "$BOOK/logging-checklist.md" Evidenced)
   badge "$dir/logging.json" "Xt-EHR D8.2 2026-05-19" "$counted/$total evidenced" "$counted" "$total"
   read -r total counted < <(count_rows "$BOOK/eehrxf-annex-iii.md" Sourced)
-  badge "$dir/annex-iii.json" "EEHRxF 2026-11-23 Annex III" "$counted/$total sourced" "$counted" "$total"
+  badge "$dir/annex-iii.json" "Annex III from the RM" "$counted/$total sourced" "$counted" "$total"
   read -r total counted < <(count_rows "$BOOK/eehrxf-pdf-originals.md" Byte-identical \
     app/ferroehr-rest/tests/it/pdf_original_http.rs)
-  badge "$dir/pdf-originals.json" "EEHRxF 2026-11-23 PDF/A" "$counted/$total byte-identical" "$counted" "$total"
+  badge "$dir/pdf-originals.json" "PDF/A originals" "$counted/$total byte-identical" "$counted" "$total"
   badge_length_check "$dir"/*.json
 }
 
@@ -206,5 +206,7 @@ badge_caption_check README.md || fail=1
 badge_color_check "$OUT"/*.json || fail=1
 badge_length_check "$OUT"/*.json || fail=1
 badge_length_readme README.md || fail=1
+badge_block_check README.md || fail=1
+badge_render_check README.md || fail=1
 [[ "$fail" -eq 0 ]] && echo "ehds-badges: the badges match their tables, carry their logos and claim no certification"
 exit "$fail"

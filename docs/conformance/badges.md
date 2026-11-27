@@ -17,3 +17,14 @@ with them.
 | openEHR OPTIONS development | 364 of 365 rows passed | 1 failed beside the deviations; 119 not run | [the development record](ferroehr/development/summary.md), by veredictum 0.4.1 |
 | IHE ATNA interoperability | 3 of 3 transactions agree, measured 2026-10-29 | no disagreement, ITI-20 FHIR feed against HAPI FHIR `v8.12.0-2`, validator with IHE BALP 1.1.4: 71 of 71 records delivered; 0 failed validation<br>ITI-20 syslog (RFC 5425 TLS, RFC 5424, DICOM PS3.15 A.5) against syslog-ng `4.11.0`, libxml2: 72 messages received; 0 problems<br>ITI-81 retrieval against HAPI FHIR AuditEvent search over the delivered records: 10 searches compared | [the run](interop/atna/2026-10-29.md) |
 | EHDS Art. 28 claims review | 2026-11-13, for 5.7.1-rc1 | 3 texts changed, 4 left open | [the review](https://ferroehr.eu/docs/dev/compliance/claims-review.html) |
+
+## The deviation
+
+The red BASE rows, in the released and the development record, are one
+deliberate deviation: the server records the authenticated caller as the
+committer and refuses a stated committer that names someone else, where
+ITS-REST asks that it be merged. The ground is Regulation (EU) 2025/327
+Annex II 3.1 and Art. 13(4), the decision
+[#5002](https://github.com/FerroHEALTH/FerroEHR/issues/5002) and the upstream
+report [#5019](https://github.com/FerroHEALTH/FerroEHR/issues/5019)
+([Known deviations](https://ferroehr.eu/docs/latest/conformance.html#known-deviations)).
