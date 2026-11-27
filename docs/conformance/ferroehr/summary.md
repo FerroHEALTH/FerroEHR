@@ -92,9 +92,9 @@ Rows to look at (open one for its explanation):
 | **What was checked** | Delete the COMPOSITION with a description in openehr-audit-details. |
 | **Expected** | status 204 |
 | **Received** | status 403 |
-| **Exchange** | `DELETE http://127.0.0.1:8080/ferroehr/rest/openehr/v1/ehr/935302f1-ca71-42b5-a8d5-2c67d9d7e462/composition/01a21c4a-e7d5-7726-87ca-2a043c4e9527%3A%3Alocalhost%3A%3A1` answered 403, recording entry 282 |
+| **Exchange** | `DELETE http://127.0.0.1:8080/ferroehr/rest/openehr/v1/ehr/8fd22967-5fac-4029-af7f-241f0a2d466e/composition/01a21d01-4170-77bb-a40b-9b73cf9c99c9%3A%3Alocalhost%3A%3A1` answered 403, recording entry 282 |
 | **Whose problem** | The server. A failed row counts against the claimed capability. |
-| **Inputs** | `ehr_id` = `"935302f1-ca71-42b5-a8d5-2c67d9d7e462"` (generated) |
+| **Inputs** | `ehr_id` = `"8fd22967-5fac-4029-af7f-241f0a2d466e"` (generated) |
 
 **Why it is required:** [specs/openehr/ITS-REST/specifications/responses/204\_version\_deleted.yaml, description](https://github.com/openEHR/specifications-ITS-REST/blob/24058992d5fa96e8dfbd855d9c133f328387fc09/specifications/responses/204_version_deleted.yaml)
 
@@ -131,9 +131,9 @@ Rows to look at (open one for its explanation):
 | **What was checked** | Commit a CONTRIBUTION whose member committer is a PARTY\_RELATED, and keep its version\_uid. |
 | **Expected** | status 201 |
 | **Received** | status 403 |
-| **Exchange** | `POST http://127.0.0.1:8080/ferroehr/rest/openehr/v1/ehr/b43989d8-1069-444d-8d91-be2b55065d9e/contribution` answered 403, recording entry 5460 |
+| **Exchange** | `POST http://127.0.0.1:8080/ferroehr/rest/openehr/v1/ehr/2edd988a-2306-4dab-8603-08dc8ce72739/contribution` answered 403, recording entry 5460 |
 | **Whose problem** | The server. A failed row counts against the claimed capability. |
-| **Inputs** | `ehr_id` = `"b43989d8-1069-444d-8d91-be2b55065d9e"` (generated) |
+| **Inputs** | `ehr_id` = `"2edd988a-2306-4dab-8603-08dc8ce72739"` (generated) |
 
 **Why it is required:** [specs/openehr/ITS-REST/specifications/responses/201\_CONTRIBUTION.yaml, description](https://github.com/openEHR/specifications-ITS-REST/blob/24058992d5fa96e8dfbd855d9c133f328387fc09/specifications/responses/201_CONTRIBUTION.yaml)
 
@@ -151,7 +151,7 @@ Rows to look at (open one for its explanation):
 | **Expected** | the control \`contribution\_create/commit\_contribution-committer\_related\` accepted |
 | **Received** | not judged: the control \`contribution\_create/commit\_contribution-committer\_related\` ended FAILED |
 | **Whose problem** | The instrument could not judge it. The row does not count against the server. |
-| **Inputs** | `ehr_id` = `"4a9c419c-ba05-4715-ac6f-757cbe6367d9"` (generated) |
+| **Inputs** | `ehr_id` = `"caaadbda-2045-4ca3-84d8-abe09eff26b0"` (generated) |
 
 **Why it is required:** no citation resolved.
 
@@ -372,7 +372,7 @@ What the statement selected. Each option is labelled with its kind: **Recommende
 
 | Option | Kind | Selected arm | Passed | Failed | Warning | Errored | Skipped |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| `contribution-xml-read` | Optional (MAY) | `contribution-xml-unsupported` | 2 | 0 | 0 | 0 | 2 |
+| `contribution-xml-read` | Optional (MAY) | `contribution-xml-supported` | 2 | 0 | 0 | 0 | 2 |
 | `contribution-xml-write` | Optional (MAY) | `contribution-xml-write-refused` | 1 | 0 | 0 | 0 | 0 |
 
 <details>
@@ -431,11 +431,11 @@ What the statement selected. Each option is labelled with its kind: **Recommende
 
 | Option | Kind | Selected arm | Passed | Failed | Warning | Errored | Skipped |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| `demographic-contribution-xml-read` | Optional (MAY) | `demographic-contribution-xml-unsupported` | 2 | 0 | 0 | 0 | 2 |
+| `demographic-contribution-xml-read` | Optional (MAY) | `demographic-contribution-xml-supported` | 2 | 0 | 0 | 0 | 2 |
 | `demographic-contribution-xml-write` | Optional (MAY) | `demographic-contribution-xml-write-refused` | 1 | 0 | 0 | 0 | 0 |
 | `party-xml-read` | Optional (MAY) | `party-xml-supported` | 15 | 0 | 0 | 0 | 15 |
 | `party-xml-write` | Optional (MAY) | `party-xml-write-accepted` | 10 | 0 | 0 | 0 | 10 |
-| `versioned-party-xml-read` | Optional (MAY) | `versioned-party-xml-unsupported` | 4 | 0 | 0 | 0 | 4 |
+| `versioned-party-xml-read` | Optional (MAY) | `versioned-party-xml-supported` | 4 | 0 | 0 | 0 | 4 |
 
 <details>
 <summary>What these options decide</summary>
@@ -631,8 +631,8 @@ A skipped row was not run, for the reason given. It never counts for or against 
 | `content_item_unmatched_accepted/item-unmatched_member_accepted-accepted row 0` | option-not-selected |
 | `contribution_lifecycle/commit_contribution-lifecycle_deactivate row 0` | development-only |
 | `contribution_lifecycle/commit_contribution-lifecycle_abandon row 0` | development-only |
-| `contribution_read_xml/get_contribution-xml row 0` | option-not-selected |
-| `contribution_write_xml_accept/commit_contribution-accept_xml row 0` | option-not-selected |
+| `contribution_read_xml_not_acceptable/get_contribution-xml_not_acceptable row 0` | option-not-selected |
+| `contribution_write_xml_not_acceptable/commit_contribution-accept_xml row 0` | option-not-selected |
 | `template_adl14_web_template_not_acceptable/upload_template-web_template_not_acceptable row 0` | option-not-selected |
 | `template_adl14_web_template_not_acceptable/get_template-web_template_not_acceptable row 0` | option-not-selected |
 | `template_adl14_web_template_not_acceptable/get_template-web_template_warning row 0` | option-not-selected |
@@ -664,8 +664,8 @@ A skipped row was not run, for the reason given. It never counts for or against 
 | `agent_direct_commit/create_agent-change_type_deleted_refused row 0` | development-only |
 | `agent_direct_commit/delete_agent-change_type_deleted_default row 0` | development-only |
 | `agent_direct_commit/delete_agent-change_type_creation_refused row 0` | development-only |
-| `demographic_contribution_read_xml/commit_demographic_contribution-accept_xml row 0` | option-not-selected |
-| `demographic_contribution_read_xml/get_demographic_contribution-accept_xml row 0` | option-not-selected |
+| `demographic_contribution_read_xml_not_acceptable/commit_demographic_contribution-accept_xml row 0` | option-not-selected |
+| `demographic_contribution_read_xml_not_acceptable/get_demographic_contribution-accept_xml row 0` | option-not-selected |
 | `group_direct_commit/create_group-lifecycle_complete_default row 0` | development-only |
 | `group_direct_commit/update_group-lifecycle_complete_default row 0` | development-only |
 | `group_direct_commit/update_group-change_type_amendment row 0` | development-only |
@@ -723,10 +723,10 @@ A skipped row was not run, for the reason given. It never counts for or against 
 | `role_direct_commit/create_role-change_type_deleted_refused row 0` | development-only |
 | `role_direct_commit/delete_role-change_type_deleted_default row 0` | development-only |
 | `role_direct_commit/delete_role-change_type_creation_refused row 0` | development-only |
-| `versioned_party_read_xml/get_versioned_party-xml row 0` | option-not-selected |
-| `versioned_party_read_xml/get_versioned_party_version-xml row 0` | option-not-selected |
-| `versioned_party_read_xml/get_versioned_party_version_by_id-xml row 0` | option-not-selected |
-| `versioned_party_read_xml/get_versioned_party_revision_history-xml row 0` | option-not-selected |
+| `versioned_party_read_xml_not_acceptable/get_versioned_party-xml_not_acceptable row 0` | option-not-selected |
+| `versioned_party_read_xml_not_acceptable/get_versioned_party_version-xml_not_acceptable row 0` | option-not-selected |
+| `versioned_party_read_xml_not_acceptable/get_versioned_party_version_by_id-xml_not_acceptable row 0` | option-not-selected |
+| `versioned_party_read_xml_not_acceptable/get_versioned_party_revision_history-xml_not_acceptable row 0` | option-not-selected |
 | `directory_read_xml_not_acceptable/get_directory-xml_not_acceptable row 0` | option-not-selected |
 | `directory_read_xml_not_acceptable/get_directory_version-xml_not_acceptable row 0` | option-not-selected |
 | `directory_write_xml_not_acceptable/create_directory-accept_xml row 0` | option-not-selected |
