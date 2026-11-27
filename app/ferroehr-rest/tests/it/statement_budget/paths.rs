@@ -354,7 +354,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::Iti81,
         conversions: 0,
-        // NOTE: our own design (#6706), a read-buffer step moves this median until #6736.
+        // NOTE: our own design (#6706), this median takes one read-buffer step that #6736 removes.
         median: 6642,
         allocations: 6744,
         peak_bytes: 577_536,
@@ -597,7 +597,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitRole,
         conversions: 9,
-        // NOTE: our own design (#6706), a read-buffer step moves this median until #6736.
+        // NOTE: our own design (#6706), this median takes one read-buffer step that #6736 removes.
         median: 1937,
         allocations: 1989,
         peak_bytes: 126_256,
