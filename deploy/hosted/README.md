@@ -180,6 +180,29 @@ deployment being replaced answers 200 too.
 No Hetzner API token exists in CI at all — the deploy talks to the host and
 nothing else, so a leaked key cannot destroy the server.
 
+## The image the box names: the release, or a v6 candidate
+
+`deploy.sh` deploys the image the app box's `.env` names in `FERROEHR_IMAGE`
+and `FERROEHR_VIEWER_IMAGE`. Normally both name the `:latest` release
+pointer, so the `sandbox` leg of a release deploys that release and its
+version check finds the release's `server_version`.
+
+During the v6 candidates the box runs each candidate instead (owner decision,
+2026-11-26, #6717):
+
+1. **When a candidate is cut** (`v6.0.0-rcN`), whoever cuts it moves both
+   lines in the box's `.env` to that candidate's tag and keeps the previous
+   file as `.env.prev`. Then they run the full reseed on it
+   (`sandbox-reseed.yml`, #6694). A prerelease moves no `:latest`, so no
+   release leg does this step.
+2. **Before the v6.0.0 release's `sandbox` leg runs**, whoever cuts the
+   release moves both lines back to the `:latest` release pointer. A pinned
+   line left behind deploys the last candidate again, and the leg's version
+   check then fails against the release.
+
+Read the two lines on the box with `grep -E '^FERROEHR(_VIEWER)?_IMAGE=' /opt/ferroehr-sandbox/.env`
+before a release's `sandbox` leg, and after each candidate.
+
 ## The demo dataset
 
 `scripts/sandbox/reseed.sh` fills the wiped sandbox, driving only the public
