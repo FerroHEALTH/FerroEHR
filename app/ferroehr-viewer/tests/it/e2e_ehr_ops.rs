@@ -137,10 +137,7 @@ async fn a_subject_bound_ehr_created_in_the_viewer_carries_its_subject() {
     );
     h.shot(1, "ehr-created-with-subject").await;
 
-    h.wait_css("a.fui-tab[data-tab='status']")
-        .await
-        .click()
-        .await;
+    common::open_tab(&h, "status").await;
     h.wait_url_contains("/status").await;
     wait_main_contains(&h, SUBJECT_NAMESPACE).await;
     h.shot(2, "ehr-status-carries-the-subject").await;

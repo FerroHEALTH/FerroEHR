@@ -1,0 +1,1 @@
+- The viewer lists a person's binding keys on its Overview, and an administrator re-keys one, giving the new id behind a confirmation, with every refusal in the CDR's words.

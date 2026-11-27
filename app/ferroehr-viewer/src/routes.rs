@@ -111,6 +111,14 @@ pub enum Page {
     Adl2Template,
     /// `/templates/:template_id`.
     Template,
+    /// `/archetypes`.
+    Archetypes,
+    /// `/archetypes/upload`.
+    UploadArchetype,
+    /// `/archetypes/adl2/:archetype_id`.
+    Adl2Archetype,
+    /// `/archetypes/:archetype_id`.
+    Archetype,
     /// `/terminology`.
     Terminologies,
     /// `/terminology/lookup`.
@@ -155,6 +163,10 @@ pub enum Page {
     Audit,
     /// `/audit/:id`.
     AuditRecord,
+    /// `/access-log`.
+    AccessReview,
+    /// `/access-log/integrity`.
+    AccessIntegrity,
     /// `/access-policy`.
     AccessPolicy,
     /// `/access-policy/versions`.
@@ -163,6 +175,12 @@ pub enum Page {
     EditAccessPolicy,
     /// `/grants`.
     Grants,
+    /// `/ehrs/:ehr_id/care`.
+    EhrCare,
+    /// `/parties/:kind/:uid/care`.
+    PartyCare,
+    /// `/care/:uid`.
+    CareRelationship,
     /// `/configuration` and its sections.
     Configuration,
     /// `/preferences` and its sections.
@@ -212,6 +230,10 @@ impl Page {
                 Self::Adl2Template
             }
             "/templates/:template_id" => Self::Template,
+            "/archetypes" => Self::Archetypes,
+            "/archetypes/upload" => Self::UploadArchetype,
+            "/archetypes/adl2/:archetype_id" => Self::Adl2Archetype,
+            "/archetypes/:archetype_id" => Self::Archetype,
             "/terminology" => Self::Terminologies,
             "/terminology/lookup" => Self::Lookup,
             "/terminology/valuesets" => Self::ValueSets,
@@ -234,10 +256,15 @@ impl Page {
             "/server/integrity" => Self::Integrity,
             "/audit" => Self::Audit,
             "/audit/:id" => Self::AuditRecord,
+            "/access-log" => Self::AccessReview,
+            "/access-log/integrity" => Self::AccessIntegrity,
             "/access-policy" => Self::AccessPolicy,
             "/access-policy/versions" => Self::AccessPolicyVersions,
             "/access-policy/edit" => Self::EditAccessPolicy,
             "/grants" => Self::Grants,
+            "/ehrs/:ehr_id/care" => Self::EhrCare,
+            "/parties/:kind/:uid/care" => Self::PartyCare,
+            "/care/:uid" => Self::CareRelationship,
             "/configuration" | "/configuration/:section" => Self::Configuration,
             "/preferences" | "/preferences/:section" => Self::Preferences,
             "/access" => Self::Access,
@@ -341,6 +368,7 @@ pub static ROUTES: &[&str] = &[
     "/ehrs/:ehr_id/contributions/:uid",
     "/ehrs/:ehr_id/contribution/new",
     "/ehrs/:ehr_id/tags",
+    "/ehrs/:ehr_id/care",
     "/ehrs/:ehr_id/access-log",
     "/ehrs/:ehr_id/access-log/:uid",
     "/ehrs/:ehr_id/compositions/new",
@@ -354,11 +382,16 @@ pub static ROUTES: &[&str] = &[
     "/parties/contributions/:uid",
     "/parties/:kind/:uid",
     "/parties/:kind/:uid/edit",
+    "/parties/:kind/:uid/care",
     "/templates",
     "/templates/upload",
     "/templates/adl2/:template_id",
     "/templates/adl2/:template_id/:release",
     "/templates/:template_id",
+    "/archetypes",
+    "/archetypes/upload",
+    "/archetypes/adl2/:archetype_id",
+    "/archetypes/:archetype_id",
     "/terminology",
     "/terminology/lookup",
     "/terminology/valuesets",
@@ -381,10 +414,13 @@ pub static ROUTES: &[&str] = &[
     "/server/integrity",
     "/audit",
     "/audit/:id",
+    "/access-log",
+    "/access-log/integrity",
     "/access-policy",
     "/access-policy/versions",
     "/access-policy/edit",
     "/grants",
+    "/care/:uid",
     "/configuration",
     "/configuration/:section",
     "/preferences",
@@ -432,6 +468,10 @@ pub async fn draw() -> Drawn {
         Page::UploadTemplate => pages::templates::upload_page().await,
         Page::Adl2Template => pages::templates::adl2_page().await,
         Page::Template => pages::templates::page().await,
+        Page::Archetypes => pages::archetypes::list_page().await,
+        Page::UploadArchetype => pages::archetypes::upload_page().await,
+        Page::Adl2Archetype => pages::archetypes::adl2_page().await,
+        Page::Archetype => pages::archetypes::page().await,
         Page::Terminologies => pages::terminology::terminologies_page().await,
         Page::Lookup => pages::terminology::lookup_page().await,
         Page::ValueSets => pages::terminology::value_sets_page().await,
@@ -454,10 +494,15 @@ pub async fn draw() -> Drawn {
         Page::Integrity => pages::server::integrity::page().await,
         Page::Audit => pages::audit::page().await,
         Page::AuditRecord => pages::audit::record_page().await,
+        Page::AccessReview => pages::access_review::page().await,
+        Page::AccessIntegrity => pages::access_review::integrity_page().await,
         Page::AccessPolicy => pages::policy::page().await,
         Page::AccessPolicyVersions => pages::policy::versions_page().await,
         Page::EditAccessPolicy => pages::policy::edit::page().await,
         Page::Grants => pages::policy::grants::page().await,
+        Page::EhrCare => pages::ehr::care::page().await,
+        Page::PartyCare => pages::care::party::page().await,
+        Page::CareRelationship => pages::care::relationship::page().await,
         Page::Configuration => pages::configuration::page().await,
         Page::Preferences => pages::preferences::page(),
         Page::Access => pages::access::page(),

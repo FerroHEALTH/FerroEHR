@@ -59,7 +59,7 @@ pub enum ValidityRefusal {
     /// It has no end, and no entry lets it stay open or gives it a default
     /// period.
     #[error(
-        "a care relationship in the role {role} is written with an end: no relationship_validity \
+        "a care relationship in the role {role} must be written with an end: no relationship_validity \
          entry of the access policy covers its role and provider type with a default period"
     )]
     EndRequired {

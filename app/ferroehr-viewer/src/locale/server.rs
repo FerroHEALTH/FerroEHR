@@ -66,6 +66,10 @@ crate::locale::messages! {
         StoredQueryResultJson = "stored-query-result-json",
         /// `conformance manifest JSON`
         ConformanceManifestJson = "conformance-manifest-json",
+        /// `archetype list JSON`
+        ArchetypeListJson = "archetype-list-json",
+        /// `ADL 2 conversion JSON`
+        ConversionJson = "conversion-json",
         /// `activity report JSON`
         ActivityReportJson = "activity-report-json",
         /// `integrity report JSON`
