@@ -129,9 +129,10 @@ self_test() {
     upstream_report: "https://github.com/FerroHEALTH/FerroEHR/issues/2"}]}' >"$dir/deviations.json"
   printf '| **Instrument** | veredictum 9.9.9, pre-approval |\n' >"$dir/summary.md"
   doc() { # <file> <profile> <engine> <listed status> <other status>
-    jq -n --arg p "$2" --arg e "$3" --arg a "$4" --arg b "$5" \
+    local file="$1" profile="$2" engine="$3" listed="$4" other="$5"
+    jq -n --arg p "$profile" --arg e "$engine" --arg a "$listed" --arg b "$other" \
       '{engine: {version: $e}, specification: {profile: $p},
-        rows: [{case: "a/listed", row: 0, status: $a}, {case: "b/other", row: 0, status: $b}]}' >"$1"
+        rows: [{case: "a/listed", row: 0, status: $a}, {case: "b/other", row: 0, status: $b}]}' >"$file"
   }
   expect() { # <name> <want exit> <command...>
     local name="$1" want="$2"

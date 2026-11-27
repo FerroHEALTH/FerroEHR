@@ -136,19 +136,20 @@ fn contribution_of(data: &Value) -> Value {
 }
 
 /// Commits `body` to `uri` asking for the CONTRIBUTION in XML; returns its uid
-/// and the root's start tag.
-async fn commit_xml(app: &Router, uri: &str, body: &Value) -> (String, String) {
+/// and the root's start tag. Failures name the commit by `what`, never by its
+/// URI, which carries identifiers.
+async fn commit_xml(app: &Router, what: &str, uri: &str, body: &Value) -> (String, String) {
     let req = common::req("POST", uri.to_owned())
         .accept("application/xml")
         .prefer_representation()
         .json(body.to_string())
         .build();
     let (status, headers, text) = common::send(app, req).await;
-    assert_eq!(status, StatusCode::CREATED, "{uri}: {text}");
+    assert_eq!(status, StatusCode::CREATED, "{what}: {text}");
     assert_eq!(
         headers.get(header::CONTENT_TYPE).unwrap(),
         "application/xml",
-        "{uri}"
+        "{what}"
     );
     (common::etag_uid(&headers), root_start_tag(&text).to_owned())
 }
@@ -171,6 +172,7 @@ async fn contribution_and_versioned_party_reads_answer_in_xml() {
     let ehr_uri = format!("{BASE}/ehr/{ehr_id}/contribution");
     let (cid, root) = commit_xml(
         &app,
+        "the EHR CONTRIBUTION commit",
         &ehr_uri,
         &contribution_of(&common::ips_canonical_composition()),
     )
@@ -213,7 +215,13 @@ async fn contribution_and_versioned_party_reads_answer_in_xml() {
         }]
     });
     let demographic_uri = format!("{BASE}/demographic/contribution");
-    let (cid, root) = commit_xml(&app, &demographic_uri, &contribution_of(&person)).await;
+    let (cid, root) = commit_xml(
+        &app,
+        "the demographic CONTRIBUTION commit",
+        &demographic_uri,
+        &contribution_of(&person),
+    )
+    .await;
     assert_class_named_root(&demographic_uri, "contribution", &root);
     let read = format!("{demographic_uri}/{cid}");
     let json_read = common::req("GET", read.clone())
