@@ -1,0 +1,1 @@
+- The viewer exports an EHR as an EHR Extract from its More menu and imports an extract as a new EHR from the EHRs list, and Server's Repository tab dumps the whole repository to an archive on the CDR's file system and loads one behind a confirmation, each answer listing the records that did not move.

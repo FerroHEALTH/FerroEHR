@@ -31,8 +31,8 @@ the openEHR-ADL engine's own words. With JavaScript off, paste the source.
 
 ### A template
 
-A template's page has four tabs, and a fifth, **Compare**, when it has more
-than one release. **Overview** reads its identity, its releases with the
+An ADL 1.4 template's page has five tabs, and a sixth, **Compare**, when it has
+more than one release. **Overview** reads its identity, its releases with the
 number of compositions committed against each, and how to query it. The
 release you are reading is named beside the title; with more than one
 release it opens a list of the others, the newest marked, each a link that
@@ -51,6 +51,15 @@ answers the arrow keys; without them each node is a link.
 **Source** is the template as stored, with line numbers and Copy; **Download** in the More menu saves it as a file. **Example**
 is the composition the CDR generates for it, in the format, type and detail
 you pick.
+
+**ADL 2** shows the ADL 1.4 template converted to ADL 2, as the CDR converts
+it (`GET {ext}/definition/template/adl1.4/{template_id}/adl2`): one ADL 2
+archetype per archetype root the template embeds, the top root first, each
+with the conversion's notes, what it dropped or changed, and its source, then
+the slot fills that joined the roots. The conversion only reads; nothing is
+stored. See [Archetypes](archetypes.md) for the archetypes themselves.
+
+![A template's ADL 2 conversion](img/templates/template-adl2-conversion.png)
 
 **Compare** reads two releases, the one you are reading and the one before it
 unless you choose others, and lists each path the later release adds,
@@ -146,6 +155,21 @@ restored. Both need the CDR's ADMIN role; a refusal, such as an EHR the CDR
 does not hold, is shown in the CDR's words.
 
 ![Archiving an EHR](img/ehrs/ehr-archive.png)
+
+### EHR Extracts
+
+**Export as EHR Extract** in an EHR's More menu downloads the EHR as the CDR
+exports it (`GET {ext}/message/export/{ehr_id}`): a JSON list holding one
+`EXTRACT` with every versioned object of the EHR, latest versions only, saved
+as `ehr-extract-<ehr_id>.json`. **Import EHR Extract** in the EHRs list's
+More menu takes an extract, JSON or XML, chosen, dropped or pasted, and
+imports it as a new EHR (`POST {ext}/message/import`), under the EHR id you
+give or else under the one the extract carries. A file the viewer exported
+imports as it is. A success opens the imported EHR; a refusal, such as an EHR
+id that exists already, stays on the page in the CDR's words. See [EHR
+Extract & messaging](../beyond-core/messaging.md).
+
+![Import EHR Extract](img/ehrs/import.png)
 
 ### Committing several changes at once
 

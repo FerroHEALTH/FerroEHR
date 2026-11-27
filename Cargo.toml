@@ -227,11 +227,11 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 ferrohealth-smart = { version = "=0.35.0", default-features = false, features = ["fetch"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroSMART, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
-# memory and sealed stores, and the sign-in routes (`axum`), over
-# ferrohealth-smart's relying party; 0.30 is the release on ferrohealth-smart
-# 0.35, and 0.30.1 keeps the justification an operator states for one object
-# (#6689). Verified on crates.io 2026-11-26.
-ferrohealth-session = { version = "=0.30.1", default-features = false }
+# memory store, and the sign-in routes (`axum`), over ferrohealth-smart's
+# relying party; 0.31 removes the sealed store and keeps the justification an
+# operator states for one object (#6689, #6721). Verified on crates.io
+# 2026-11-26.
+ferrohealth-session = { version = "=0.31.0", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
