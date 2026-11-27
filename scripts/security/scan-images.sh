@@ -28,7 +28,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-command -v trivy >/dev/null || { echo "trivy is required (brew install trivy)" >&2; exit 2; }
+# The lanes' own Trivy, so a local verdict is the lane's verdict.
+pinned="$(bash scripts/security/install-trivy.sh --pinned)"
+install_hint="install it with scripts/security/install-trivy.sh $pinned <bindir> and put <bindir> on PATH"
+command -v trivy >/dev/null || { echo "trivy $pinned is required: $install_hint" >&2; exit 2; }
+have="$(trivy --version | sed -nE 's/^Version: *v?//p' | sed -n 1p)"
+[[ "$have" == "$pinned" ]] || { echo "trivy reports version '$have', the lanes pin $pinned: $install_hint" >&2; exit 2; }
 command -v jq >/dev/null || { echo "jq is required" >&2; exit 2; }
 
 SCAN_TAG=${SCAN_TAG:-latest}
