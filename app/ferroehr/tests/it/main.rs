@@ -180,6 +180,7 @@ mod relationship_commit_parity;
 mod relocated_domain_preparation;
 mod replica_chains;
 mod report;
+mod schema_preparation_concurrency;
 mod schema_preparation_credential;
 mod scim_users;
 mod secondary_use_batch;
