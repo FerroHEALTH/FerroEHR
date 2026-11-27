@@ -140,7 +140,7 @@ jobs:
           persist-credentials: false
       # xmllint is what the C14N XML parity gate shells out to (serialization.md).
       - name: xmllint
-        run: command -v xmllint >/dev/null || { sudo apt-get update && sudo apt-get install -y libxml2-utils; }
+        run: command -v xmllint >/dev/null || bash scripts/lib/apt-install.sh libxml2-utils
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           components: llvm-tools-preview
@@ -236,7 +236,7 @@ jobs:
           SHARD_COUNT: ${{ needs.changes.outputs.shard_count }}
         run: |
           set -euo pipefail
-          sudo apt-get update && sudo apt-get install -y lcov
+          bash scripts/lib/apt-install.sh lcov
           shards=(coverage/lcov-viewer.info)
           for i in $(seq 1 "$SHARD_COUNT"); do shards+=("coverage/lcov-shard-$i.info"); done
           for f in "${shards[@]}"; do
