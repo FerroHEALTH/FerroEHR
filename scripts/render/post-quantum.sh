@@ -152,6 +152,7 @@ check() {
   else
     badge_logo_check "$badge" || failed=1
     badge_color_check "$badge" || failed=1
+    badge_length_check "$badge" || failed=1
   fi
   if ! grep -qF 'conformance%2Fbadges%2Fpost-quantum.json' "$readme"; then
     echo "post-quantum: $readme carries no post-quantum badge" >&2
@@ -195,6 +196,9 @@ if [[ "$mode" == self-test ]]; then
     || fail "the badge of two safe rows of four is $(cat "$tmp/badge.json")"
   badge_logo_check "$tmp/badge.json" || fail "the badge carries no logo"
   badge_color_check "$tmp/badge.json" || fail "the badge colour does not follow its count"
+  badge_length_check "$tmp/badge.json" || fail "the badge runs past the length limits"
+  jq -c '.label = "post-quantum safe cryptographic uses"' "$tmp/badge.json" > "$tmp/long.json"
+  if badge_length_check "$tmp/long.json" 2> /dev/null; then fail "a label past 30 characters passes"; fi
   printf '%s\n' "$HEADER" > "$tmp/none.tsv"
   awk -F'\t' '$3 == "no"' "$tmp/inventory.tsv" >> "$tmp/none.tsv"
   [[ "$(badge_of "$tmp/none.tsv" | jq -r .color)" == red ]] || fail "an inventory with no safe row is not red"

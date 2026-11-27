@@ -7,12 +7,14 @@
 # - logging.json: the rows of compliance/logging-checklist.md whose state is
 #   Evidenced and whose every cited test function exists.
 # - annex-iii.json: the elements of compliance/eehrxf-annex-iii.md whose state
-#   is Sourced, beside the counts of those Partly sourced and of those with No
+#   is Sourced; the page's table names those Partly sourced and those with No
 #   RM source, which FerroBRIDGE supplies (#6750).
 # - pdf-originals.json: the round trips of compliance/eehrxf-pdf-originals.md
 #   whose state is Byte-identical and whose test function exists.
 #
-# A badge names its source and the source's date and shows N/M. No label or
+# A badge names its source and the source's date and shows N/M, within the
+# family's length limits (owner decision, 2026-11-27): the rest of the count
+# is the linked page's table. No label or
 # message may say certified, compliant or conformant, and the README's EHDS
 # badges are held to the same words. Every badge carries the EU emblem on EU
 # blue, and every static badge of the README a logo, from
@@ -90,18 +92,16 @@ badge() {
 # Writes the three documents into the directory $1 from the tree in the
 # current directory.
 render() {
-  local dir="$1" total counted partly none
+  local dir="$1" total counted
   mkdir -p "$dir"
   read -r total counted < <(count_rows "$BOOK/logging-checklist.md" Evidenced)
-  badge "$dir/logging.json" "EHDS logging checklist · Xt-EHR D8.2 2026-05-19" "$counted/$total evidenced" "$counted" "$total"
+  badge "$dir/logging.json" "Xt-EHR D8.2 2026-05-19" "$counted/$total evidenced" "$counted" "$total"
   read -r total counted < <(count_rows "$BOOK/eehrxf-annex-iii.md" Sourced)
-  read -r _ partly < <(count_rows "$BOOK/eehrxf-annex-iii.md" "Partly sourced")
-  read -r _ none < <(count_rows "$BOOK/eehrxf-annex-iii.md" "No RM source")
-  badge "$dir/annex-iii.json" "EEHRxF draft 2026-11-23 · Annex III from the RM" \
-    "$counted/$total sourced · $partly partly · $none no RM source" "$counted" "$total"
+  badge "$dir/annex-iii.json" "EEHRxF 2026-11-23 Annex III" "$counted/$total sourced" "$counted" "$total"
   read -r total counted < <(count_rows "$BOOK/eehrxf-pdf-originals.md" Byte-identical \
     app/ferroehr-rest/tests/it/pdf_original_http.rs)
-  badge "$dir/pdf-originals.json" "EEHRxF draft 2026-11-23 · PDF/A originals" "byte-identical $counted/$total" "$counted" "$total"
+  badge "$dir/pdf-originals.json" "EEHRxF 2026-11-23 PDF/A" "$counted/$total byte-identical" "$counted" "$total"
+  badge_length_check "$dir"/*.json
 }
 
 # Prints each badge label or message under $1, and each README badge of the
@@ -137,8 +137,8 @@ EOF
 | `xml` | `gone_round_trip` | Byte-identical |
 EOF
   (cd "$tmp" && BOOK="$BOOK" render out)
-  for want in 'logging.json 1/3 evidenced' 'annex-iii.json 1/3 sourced · 1 partly · 1 no RM source' \
-    'pdf-originals.json byte-identical 1/2'; do
+  for want in 'logging.json 1/3 evidenced' 'annex-iii.json 1/3 sourced' \
+    'pdf-originals.json 1/2 byte-identical'; do
     got=$(jq -r .message "$tmp/out/${want%% *}")
     [[ "$got" == "${want#* }" ]] || { echo "self-test: ${want%% *} says '$got', want '${want#* }'" >&2; exit 1; }
   done
@@ -166,6 +166,10 @@ EOF
   if badge_caption_check "$tmp/README.md" 2> /dev/null; then echo "self-test: a README without the conformance caption passed" >&2; exit 1; fi
   printf '[![EEHRxF conformant](x)](y)\n' > "$tmp/README.md"
   [[ -n "$(forbidden_words "$tmp/out" "$tmp/README.md")" ]] || { echo "self-test: a conformant README badge passed" >&2; exit 1; }
+  badge_length_check "$tmp"/out/*.json || { echo "self-test: a rendered badge runs past the length limits" >&2; exit 1; }
+  badge "$tmp/long.json" "EEHRxF draft 2026-11-23 · Annex III from the RM" "1/3 sourced" 1 3
+  if badge_length_check "$tmp/long.json" 2> /dev/null; then echo "self-test: a label past 30 characters passed" >&2; exit 1; fi
+  badge_length_self_test > /dev/null || exit 1
   echo "ehds-badges: self-test passed"
   exit 0
 fi
@@ -197,5 +201,6 @@ badge_logo_check "$OUT"/*.json || fail=1
 badge_logo_readme README.md || fail=1
 badge_caption_check README.md || fail=1
 badge_color_check "$OUT"/*.json || fail=1
+badge_length_check "$OUT"/*.json || fail=1
 [[ "$fail" -eq 0 ]] && echo "ehds-badges: the badges match their tables, carry their logos and claim no certification"
 exit "$fail"

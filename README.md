@@ -40,8 +40,8 @@
 [![veredictum · released](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/instrument.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
 <br>
 <sub>The committed released record, with its deviation</sub><br>
-[![openEHR BASE · released record](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-base.json)](docs/conformance/ferroehr/summary.md)
-[![openEHR OPTIONS · released record](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-options.json)](docs/conformance/ferroehr/summary.md)
+[![openEHR BASE released](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-base.json)](docs/conformance/badges.md)
+[![openEHR OPTIONS released](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-options.json)](docs/conformance/badges.md)
 <br>
 <sub>The red BASE rows, here and in the development run, are one deliberate deviation: the server records the authenticated caller as the committer and refuses a stated committer that names someone else, where ITS-REST asks that it be merged. The ground is Regulation (EU) 2025/327 Annex II 3.1 and Art. 13(4), the decision <a href="https://github.com/FerroHEALTH/FerroEHR/issues/5002">#5002</a> and the upstream report <a href="https://github.com/FerroHEALTH/FerroEHR/issues/5019">#5019</a> (<a href="https://ferroehr.eu/docs/latest/conformance.html#known-deviations">Known deviations</a>).</sub><br>
 <sub>Against the development openEHR specifications (master)</sub><br>
@@ -51,8 +51,8 @@
 [![veredictum · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/instrument.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
 <br>
 <sub>The committed development record, with its deviation</sub><br>
-[![openEHR BASE · development record](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-base-development.json)](docs/conformance/ferroehr/development/summary.md)
-[![openEHR OPTIONS · development record](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-options-development.json)](docs/conformance/ferroehr/development/summary.md)
+[![openEHR BASE development](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-base-development.json)](docs/conformance/badges.md)
+[![openEHR OPTIONS development](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-options-development.json)](docs/conformance/badges.md)
 <br>
 **Compliance**<br>
 [![EHDS](https://img.shields.io/badge/EHDS-readiness%20statement-blue?logo=europeanunion&labelColor=003399&logoColor=FFCC00)](https://ferrohealth.eu/docs/ehds/readiness.html)
@@ -60,10 +60,10 @@
 <br>
 **EHDS**<br>
 <sub>(self-tested and self-assessed counts; none is a certification)</sub><br>
-[![EHDS logging checklist · Xt-EHR D8.2](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Flogging.json)](https://ferroehr.eu/docs/dev/compliance/logging-checklist.html)
-[![EEHRxF draft · Annex III from the RM](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Fannex-iii.json)](https://ferroehr.eu/docs/dev/compliance/eehrxf-annex-iii.html)
-[![EEHRxF draft · PDF/A originals](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Fpdf-originals.json)](https://ferroehr.eu/docs/dev/compliance/eehrxf-pdf-originals.html)
-[![IHE ATNA interoperability · HAPI FHIR, syslog-ng](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fatna-interop.json)](docs/conformance/interop/atna/)
+[![Xt-EHR D8.2 2026-05-19 logging checklist](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Flogging.json)](https://ferroehr.eu/docs/dev/compliance/logging-checklist.html)
+[![EEHRxF 2026-11-23 Annex III from the RM](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Fannex-iii.json)](https://ferroehr.eu/docs/dev/compliance/eehrxf-annex-iii.html)
+[![EEHRxF 2026-11-23 PDF/A originals](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Fpdf-originals.json)](https://ferroehr.eu/docs/dev/compliance/eehrxf-pdf-originals.html)
+[![IHE ATNA interoperability](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fatna-interop.json)](docs/conformance/badges.md)
 [![EHDS Art. 28 claims review](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fclaims-review.json)](https://ferroehr.eu/docs/dev/compliance/claims-review.html)
 <br>
 <sub>Annex III: the eight elements the Reference Model holds only in part or not at all are written by FerroBRIDGE, the European interoperability software component, from its template mapping and configuration and by the jurisdiction's rule (<a href="https://ferroehr.eu/docs/dev/compliance/eehrxf-annex-iii.html#what-ferrobridge-takes-from-elsewhere">what FerroBRIDGE takes from elsewhere</a>).</sub>
