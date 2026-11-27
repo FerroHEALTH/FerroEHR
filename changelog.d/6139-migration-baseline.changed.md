@@ -6,7 +6,7 @@
   by v5 is refused at boot with a message that names the schema it found and
   the way forward: start v6 against a new, empty database, dump the records
   with the v5 server's `POST {ext}/admin/dump` and load the archive with
-  v6's `POST {ext}/admin/load` (Operations, "Upgrading from v5 to v6"). The
+  v6's `POST {ext}/admin/load` (Upgrades, "Coming from a 5.x release"). The
   schema a baseline builds equals the one the v5 history built, except where
   the history left an artefact: the `ferroehr_linkage` role is never created,
   `party.vo_head.access_restricted_at` (which nothing reads) is gone, the
