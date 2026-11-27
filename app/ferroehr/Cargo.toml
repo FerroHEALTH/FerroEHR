@@ -87,7 +87,9 @@ moka.workspace = true
 # The commit audit shared parts this process has seen (#6395).
 arc-swap.workspace = true
 serde.workspace = true
-serde_json = { workspace = true, features = ["raw_value"] }
+# NOTE: preserve_order keeps a committed body's members in the order they were
+# sent, which the stored rendering serves verbatim and `shift_remove` keeps (#6734).
+serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }
 # OPT 1.4 upload structure validation (`service::template`): a depth-aware scan
 # of the template XML that rejects foreign / duplicated top-level elements the
 # tolerant opt14 codec would otherwise accept (CNF master04 upload_opt-invalid_opt).

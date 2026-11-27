@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/postgres-os-packages",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-11-26T00:00:00Z",
-  "version": 14,
+  "timestamp": "2026-11-27T00:00:00Z",
+  "version": 15,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -2955,6 +2955,150 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "GHSA-46fr-jh49-xvhx: a double free when a filter grows too large in libseccomp, which builds the seccomp filters a program installs on itself (Debian tracks it as TEMP-0000000-FCA4C0, unfixed in trixie's libseccomp 2.6.0-2). In the image only apt's download methods under /usr/lib/apt/methods and libsystemd-shared-257.so, the library of the systemd tools, import seccomp_init and seccomp_load (objdump -T over every ELF file of the :main image of 2026-11-25 (sha256:be3e3d75), 992 on amd64 and 991 on arm64). The PostgreSQL server, its modules and the entrypoint neither load libseccomp nor install a filter, and the container never runs apt or a systemd tool, so no filter libseccomp builds is ever loaded. The container's own seccomp profile comes from the container runtime, not from this library."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-137067"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The use-after-free is in the DTD validation of a reused xmlTextReader: xmlCtxtReset frees the DTD while xmlValidatePopElement still holds validation states. In libxml2 2.9.14, which Debian's 2.12.7+dfsg+really2.9.14 package carries, xmlValidatePopElement and xmlValidatePushElement are called only from xmlreader.c (valid.c and xmlreader.c of the 2.9.14 source). Five ELF files of the image link libxml2.so.2 (objdump -p over every ELF file of the :main image of 2026-11-26, both architectures): the PostgreSQL 19 server, contrib's pgxml.so, libxslt, libexslt and libLLVM. None imports an xmlTextReader or xmlReader function (llvm-nm -D), no other file names libxml2.so, and inside libxml2 only xmlreader.c calls the reader, so no program in the image runs the reader code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-137068"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The use-after-free frees the reader->faketext node of an xmlTextReader that is reused after reading a namespace declaration's value, so only a program that drives the xmlTextReader API reaches it. Five ELF files of the image link libxml2.so.2 (objdump -p over every ELF file of the :main image of 2026-11-26, both architectures): the PostgreSQL 19 server, contrib's pgxml.so, libxslt, libexslt and libLLVM. None imports an xmlTextReader or xmlReader function (llvm-nm -D), no other file names libxml2.so, and inside libxml2 2.9.14 only xmlreader.c calls the reader, so no program in the image runs the reader code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-137069"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The denial of service is in xmlTextReaderSetup, which leaves reader->state set when an xmlTextReader is reused, so only a program that drives the xmlTextReader API reaches it. Five ELF files of the image link libxml2.so.2 (objdump -p over every ELF file of the :main image of 2026-11-26, both architectures): the PostgreSQL 19 server, contrib's pgxml.so, libxslt, libexslt and libLLVM. None imports an xmlTextReader or xmlReader function (llvm-nm -D), no other file names libxml2.so, and inside libxml2 2.9.14 only xmlreader.c calls the reader, so no program in the image runs the reader code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-137072"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The use-after-free is reached when xmlTextReaderClose pops validation states after a document taken with xmlTextReaderCurrentDoc was freed, so only a program that drives the xmlTextReader API reaches it. In libxml2 2.9.14, which Debian's 2.12.7+dfsg+really2.9.14 package carries, xmlValidatePopElement is called only from xmlreader.c. Five ELF files of the image link libxml2.so.2 (objdump -p over every ELF file of the :main image of 2026-11-26, both architectures): the PostgreSQL 19 server, contrib's pgxml.so, libxslt, libexslt and libLLVM. None imports an xmlTextReader or xmlReader function (llvm-nm -D) and no other file names libxml2.so, so no program in the image runs the reader code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-137073"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The double free is in xmlReaderNewWalker on an xmlTextReader that xmlTextReaderClose already closed, so only a program that calls the reader API reaches it. Five ELF files of the image link libxml2.so.2 (objdump -p over every ELF file of the :main image of 2026-11-26, both architectures): the PostgreSQL 19 server, contrib's pgxml.so, libxslt, libexslt and libLLVM. None imports xmlReaderNewWalker or any other xmlTextReader or xmlReader function (llvm-nm -D), no other file names libxml2.so, and inside libxml2 2.9.14 only xmlreader.c calls the reader, so no program in the image runs the reader code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-137074"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The NULL dereference is in xmlGetActualEncoding, which xmlTextReaderConstEncoding calls from libxml2 2.12.6 on. The image's libxml2 is Debian's 2.12.7+dfsg+really2.9.14 package, upstream 2.9.14 under a higher version number, and the 2.9.14 source has no xmlGetActualEncoding: its xmlTextReaderConstEncoding reads the document's encoding field and never ctxt->input. No program in the image calls the reader either: of the five ELF files that link libxml2.so.2 (the PostgreSQL 19 server, contrib's pgxml.so, libxslt, libexslt and libLLVM, objdump -p over the :main image of 2026-11-26, both architectures), none imports an xmlTextReader or xmlReader function (llvm-nm -D)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-137075"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The missing NUL terminator is in the xmlBufferAddHead of buf.c, which libxml2 2.14.0 introduced. The image's libxml2 is Debian's 2.12.7+dfsg+really2.9.14 package, upstream 2.9.14 under a higher version number, whose xmlBufferAddHead is the one in tree.c: it writes the terminator after every insertion into a newly sized buffer (buf->content[buf->use] = 0) and moves the start of a buffer whose terminator is already in place. Nothing calls it: libxml2 2.9.14 never calls xmlBufferAddHead itself, and none of the five ELF files that link libxml2.so.2 (the PostgreSQL 19 server, contrib's pgxml.so, libxslt, libexslt and libLLVM, objdump -p over the :main image of 2026-11-26, both architectures) imports it (llvm-nm -D)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-137082"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libxml2"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The NULL dereference needs a parser context that parsed attributes with XML_PARSE_SAX1 and is then reused without it. No program in the image parses with SAX1. Five ELF files link libxml2.so.2 (objdump -p over every ELF file of the :main image of 2026-11-26, both architectures), and none imports xmlSAXVersion or xmlSAXDefaultVersion (llvm-nm -D). PostgreSQL 19.0's xml.c gives its parser contexts the options XML_PARSE_NOENT and XML_PARSE_DTDATTR, with XML_PARSE_NOBLANKS, or no options at all, and its xmlParseBalancedChunkMemory makes and frees a context of its own; contrib's xml2 (xpath.c, xslt_proc.c) and libLLVM parse with xmlReadMemory, which makes and frees a new context for each document; and libxslt and libexslt 1.1.35 never name XML_PARSE_SAX1."
     }
   ]
 }

@@ -5,7 +5,6 @@
 # files it does not cover.
 
 skip app/ferroehr-viewer/src/locale.rs   # the catalog mechanism: message ids
-skip app/ferroehr-viewer/src/config_tests.rs   # the config module's unit tests, declared under #[cfg(test)] through #[path]
 
 allow ^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|Enter|Escape|Tab)$   # UI Events KeyboardEvent.key values
 allow ^Ferro(BRIDGE|FED|EHR|TERM|HEALTH)   # product names, the same in every language

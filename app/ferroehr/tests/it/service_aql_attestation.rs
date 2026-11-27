@@ -220,16 +220,21 @@ fn first_cells(rows: &[Value]) -> Vec<String> {
     cells
 }
 
-/// Commit a COMPOSITION through a CONTRIBUTION whose member carries
+/// Commit the COMPOSITION `data` through a CONTRIBUTION whose member carries
 /// `attestations` at committal (`UPDATE_VERSION.attestations`).
-async fn commit_with(svc: &FerroEhrService, ehr: EhrId, name: &str, attestations: Value) -> String {
+async fn commit_with(
+    svc: &FerroEhrService,
+    ehr: EhrId,
+    data: Value,
+    attestations: Value,
+) -> String {
     let contribution = json!({
         "_type": "CONTRIBUTION",
         "versions": [{
             "_type": "ORIGINAL_VERSION",
             "commit_audit": commit_audit("249", "creation", "transcriptionist"),
             "lifecycle_state": change_type("532", "complete"),
-            "data": composition(name),
+            "data": data,
             "attestations": attestations
         }],
         "audit": commit_audit("249", "creation", "transcriptionist")
@@ -268,7 +273,7 @@ async fn the_worklist_returns_a_pending_version_until_it_is_signed() {
     let pending = commit_with(
         &svc,
         ehr,
-        "pending result",
+        composition("pending result"),
         json!([attestation_by("transcriptionist", "authorisation", true)]),
     )
     .await;
@@ -397,7 +402,7 @@ async fn latest_and_all_versions_read_their_own_versions_attestations() {
     let v1 = commit_with(
         &svc,
         ehr,
-        "result",
+        composition("result"),
         json!([attestation_by("transcriptionist", "authorisation", true)]),
     )
     .await;
@@ -515,7 +520,7 @@ async fn a_pending_attestation_after_signing_puts_the_version_back_on_the_workli
     let signed = commit_with(
         &svc,
         ehr,
-        "signed result",
+        composition("signed result"),
         json!([attestation_by("clinician a", "signed", false)]),
     )
     .await;
@@ -559,7 +564,7 @@ async fn the_worklist_reads_the_latest_version_only() {
     let v1 = commit_with(
         &svc,
         ehr,
-        "result",
+        composition("result"),
         json!([attestation_by("transcriptionist", "authorisation", true)]),
     )
     .await;
@@ -622,7 +627,7 @@ async fn attestation_columns_are_one_flat_list_and_null_without_attestations() {
     let v1 = commit_with(
         &svc,
         ehr,
-        "result",
+        composition("result"),
         json!([by_a, attestation_by("B", "second", true)]),
     )
     .await;
@@ -673,5 +678,150 @@ async fn attestation_columns_are_one_flat_list_and_null_without_attestations() {
             ]),
             json!([v2, null, null, null, null, null, null]),
         ]
+    );
+}
+
+/// The vendored `minimal_event` composition, of the template [`REPORT`],
+/// started at `start`.
+fn worklist_report(start: &str) -> Value {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../corpus/fixtures/composition/minimal_event.v1.json");
+    let mut body: Value = serde_json::from_str(
+        &std::fs::read_to_string(path).expect("the vendored composition is readable"),
+    )
+    .expect("the composition fixture is JSON");
+    body["context"]["start_time"]["value"] = json!(start);
+    body
+}
+
+/// The template the worklist queries of #6590 filter on, that of the vendored
+/// `minimal_event` OPT.
+const REPORT: &str = "minimal_evaluation.en.v1";
+
+/// The rows `aql` answers over every EHR, with `$template` bound to
+/// [`REPORT`], sorted by their second cell.
+async fn worklist_rows(svc: &FerroEhrService, aql: &str) -> Vec<Value> {
+    let request = AqlQueryRequest {
+        parameters: serde_json::from_value(json!({ "template": REPORT })).expect("parameters"),
+        ..AqlQueryRequest::default()
+    };
+    let mut rows = svc
+        .execute_aql(aql, None, &request)
+        .await
+        .unwrap_or_else(|e| panic!("query {aql:?}: {e:?}"))
+        .result_set
+        .to_value()
+        .unwrap()["rows"]
+        .as_array()
+        .expect("rows array")
+        .clone();
+    rows.sort_by_key(|row| row[1].as_str().map(str::to_owned));
+    rows
+}
+
+/// The worklist queries of #6590 over every EHR: filtered on the template
+/// with no EHR named, each row names its EHR; a comparison on
+/// `committer/name` keeps the versions an attestation by that committer holds;
+/// `NOT EXISTS v/attestations` keeps the versions holding none; and the
+/// attestation columns beside paths into the composition add no row.
+#[tokio::test]
+async fn the_worklist_queries_read_every_ehr_and_add_no_rows() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let opt = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../corpus/templates/minimal_event.opt");
+    svc.template_adl14_upload(&std::fs::read_to_string(opt).expect("the vendored OPT is readable"))
+        .await
+        .expect("the OPT uploads");
+    let first = crate::fixtures::create_ehr(&svc).await;
+    let second = crate::fixtures::create_ehr(&svc).await;
+    let reviewed = commit_with(
+        &svc,
+        first,
+        worklist_report("2026-11-20T09:00:00Z"),
+        json!([
+            attestation_by("A", "review", false),
+            attestation_by("B", "review", false)
+        ]),
+    )
+    .await;
+    let unreviewed = svc
+        .create_composition(
+            first,
+            uv(&worklist_report("2026-11-21T09:00:00Z"), "249", None),
+        )
+        .await
+        .expect("a report without attestations")
+        .version_uid();
+    let elsewhere = commit_with(
+        &svc,
+        second,
+        worklist_report("2026-11-22T09:00:00Z"),
+        json!([attestation_by("B", "review", true)]),
+    )
+    .await;
+    commit_with(
+        &svc,
+        second,
+        composition("no template"),
+        json!([attestation_by("A", "review", false)]),
+    )
+    .await;
+    let across = worklist_rows(
+        &svc,
+        "SELECT e/ehr_id/value, v/uid/value, v/attestations/committer/name \
+         FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c \
+         WHERE c/archetype_details/template_id/value = $template",
+    )
+    .await;
+    let mut expected = vec![
+        json!([first.to_string(), reviewed, ["A", "B"]]),
+        json!([first.to_string(), unreviewed, null]),
+        json!([second.to_string(), elsewhere, ["B"]]),
+    ];
+    expected.sort_by_key(|row| row[1].as_str().map(str::to_owned));
+    assert_eq!(across, expected);
+
+    let by_a = worklist_rows(
+        &svc,
+        "SELECT e/ehr_id/value, v/uid/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c \
+         WHERE c/archetype_details/template_id/value = $template \
+           AND v/attestations/committer/name = 'A'",
+    )
+    .await;
+    assert_eq!(by_a, [json!([first.to_string(), reviewed])]);
+
+    let none = worklist_rows(
+        &svc,
+        "SELECT e/ehr_id/value, v/uid/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c \
+         WHERE c/archetype_details/template_id/value = $template \
+           AND NOT EXISTS v/attestations",
+    )
+    .await;
+    assert_eq!(none, [json!([first.to_string(), unreviewed])]);
+
+    let composition_only = worklist_rows(
+        &svc,
+        "SELECT c/context/start_time/value, c/uid/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c \
+         WHERE c/archetype_details/template_id/value = $template",
+    )
+    .await;
+    let with_attestations = worklist_rows(
+        &svc,
+        "SELECT c/context/start_time/value, c/uid/value, v/attestations/committer/name, \
+                v/attestations/time_committed/value \
+         FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c \
+         WHERE c/archetype_details/template_id/value = $template",
+    )
+    .await;
+    assert_eq!(composition_only.len(), 3, "{composition_only:?}");
+    assert_eq!(
+        with_attestations
+            .iter()
+            .map(|row| [row[0].clone(), row[1].clone()])
+            .collect::<Vec<_>>(),
+        composition_only
+            .iter()
+            .map(|row| [row[0].clone(), row[1].clone()])
+            .collect::<Vec<_>>(),
     );
 }
