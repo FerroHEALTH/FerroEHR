@@ -290,5 +290,69 @@ crate::locale::messages! {
         TermValueSets = "term-value-sets",
         /// `Delete…`
         TemplateDeleteRow = "template-delete-row",
+        /// `Archetypes`
+        ArchetypesTitle = "archetypes-title",
+        /// `The archetypes the CDR keeps beside its templates, in ADL 1.4 and ADL 2.`
+        ArchetypesSubtitle = "archetypes-subtitle",
+        /// `ADL 1.4`
+        ArchetypesAdl14 = "archetypes-adl14",
+        /// `ADL 2`
+        ArchetypesAdl2 = "archetypes-adl2",
+        /// `Archetype families`
+        ArchetypesFamilies = "archetypes-families",
+        /// `Upload an archetype`
+        ArchetypesUpload = "archetypes-upload",
+        /// `The CDR keeps no archetype of this family.`
+        ArchetypesEmpty = "archetypes-empty",
+        /// `The archetypes could not be read.`
+        ArchetypesRefused = "archetypes-refused",
+        /// `This CDR keeps no archetypes: it serves no archetype routes.`
+        ArchetypesAbsent = "archetypes-absent",
+        /// `Archetype`
+        ArchetypeId = "archetype-id",
+        /// `Source`
+        ArchetypeSource = "archetype-source",
+        /// `ADL 2`
+        ArchetypeAdl2 = "archetype-adl2",
+        /// `Archetype views`
+        ArchetypeViews = "archetype-views",
+        /// `ADL 1.4 archetype`
+        ArchetypeAdl14Line = "archetype-adl14-line",
+        /// `ADL 2 archetype`
+        ArchetypeAdl2Line = "archetype-adl2-line",
+        /// `Download`
+        ArchetypeDownload = "archetype-download",
+        /// `The CDR holds no archetype under this id.`
+        ArchetypeMissing = "archetype-missing",
+        /// `The archetype could not be read.`
+        ArchetypeRefused = "archetype-refused",
+        /// `Upload an archetype`
+        ArchetypeUploadTitle = "archetype-upload-title",
+        /// `An ADL 1.4 source; one stored under the same id is replaced.`
+        ArchetypeUploadSubtitle = "archetype-upload-subtitle",
+        /// `ADL 1.4 source`
+        ArchetypeAdl14Source = "archetype-adl14-source",
+        /// `Paste the ADL 1.4 source, or choose a file`
+        ArchetypePlaceholder = "archetype-placeholder",
+        /// `Upload`
+        ArchetypeUploadSave = "archetype-upload-save",
+        /// `Archetype uploaded`
+        ArchetypeUploaded = "archetype-uploaded",
+        /// `The CDR refused the archetype.`
+        ArchetypeUploadRefused = "archetype-upload-refused",
+        /// `The CDR could not convert this to ADL 2.`
+        ConversionRefused = "conversion-refused",
+        /// `ADL 2 source`
+        ConversionSource = "conversion-source",
+        /// `Slot fills`
+        ConversionStructure = "conversion-structure",
+        /// `Archetype`
+        ConversionParent = "conversion-parent",
+        /// `Slot`
+        ConversionPath = "conversion-path",
+        /// `Filled by`
+        ConversionChild = "conversion-child",
+        /// `ADL 2`
+        TemplateConverted = "template-converted",
     }
 }

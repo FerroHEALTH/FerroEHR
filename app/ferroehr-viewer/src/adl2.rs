@@ -35,6 +35,15 @@ impl TemplateFamily {
         }
     }
 
+    /// The files an upload of this family takes.
+    #[must_use]
+    pub const fn sources(self) -> &'static [&'static str] {
+        match self {
+            Self::Adl14 => crate::components::OPT_SOURCES,
+            Self::Adl2 => crate::components::ADL2_SOURCES,
+        }
+    }
+
     /// The family switch's visible label.
     #[must_use]
     pub fn label(self) -> Msg {

@@ -101,6 +101,7 @@ nav-dashboard = Dashboard
 nav-ehrs = EHRs
 nav-parties = Parties
 nav-templates = Templates
+nav-archetypes = Archetypes
 nav-terminology = Terminology
 nav-stored-queries = Stored queries
 nav-query = Query

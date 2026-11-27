@@ -65,6 +65,7 @@
 - [FerroEHR Viewer](viewer/index.md)
   - [Dashboard & queries](viewer/queries.md)
   - [Templates & EHRs](viewer/browsing.md)
+  - [Archetypes](viewer/archetypes.md)
   - [Parties](viewer/parties.md)
   - [Access log](viewer/access-log.md)
   - [Terminology](viewer/terminology.md)

@@ -181,7 +181,7 @@ async fn replayed_cdr_with(stubs: Vec<Value>) -> String {
     format!("http://{addr}")
 }
 
-/// The viewer's state, pointed at `cdr`, with a sealed session store.
+/// The viewer's state, pointed at `cdr`, with the memory session store.
 fn app_state(cdr: &str) -> ferroehr_viewer::state::AppState {
     app_state_launching(cdr, ferroehr_viewer::launch::LaunchSection::default())
 }
@@ -191,28 +191,15 @@ fn app_state_launching(
     cdr: &str,
     launch: ferroehr_viewer::launch::LaunchSection,
 ) -> ferroehr_viewer::state::AppState {
-    app_state_in(cdr, launch, ferrohealth_session::config::StoreKind::Sealed)
-}
-
-/// The viewer's state over the CDR at `cdr`, launching the apps `launch`
-/// names, its sessions in `store`.
-fn app_state_in(
-    cdr: &str,
-    launch: ferroehr_viewer::launch::LaunchSection,
-    store: ferrohealth_session::config::StoreKind,
-) -> ferroehr_viewer::state::AppState {
     let defaults = ferroehr_viewer::config::ViewerConfig::default();
-    let sealed = store == ferrohealth_session::config::StoreKind::Sealed;
     let config = ferroehr_viewer::config::ViewerConfig {
         cdr: ferroehr_viewer::config::CdrConfig {
             base_url: cdr.to_owned(),
             management_base_url: format!("{cdr}/management"),
             ..Default::default()
         },
-        // The sealed store a scaled deployment runs takes a synthetic key.
         session: ferrohealth_session::config::SessionSection {
-            store,
-            key: sealed.then(|| ferrohealth_secret::secret::Secret::new(SESSION_KEY)),
+            store: ferrohealth_session::config::StoreKind::Memory,
             ..defaults.session.clone()
         },
         launch,
@@ -223,10 +210,6 @@ fn app_state_in(
     ferroehr_viewer::state::AppState::new(config, cdr, None)
         .expect("the default session store should build")
 }
-
-/// The sealing key of the test viewer's store: base64 of 64 synthetic bytes.
-const SESSION_KEY: &str =
-    "c3ludGhldGljLXZpZXdlci1zZXNzaW9uLWtleS1mb3ItdGVzdHMtb25seS0wMTIzNDU2Nzg5YWJjZGVmZ2hpag==";
 
 /// Whether `cookie` is the viewer's session cookie, `__Host-` prefixed as a
 /// `Secure` one is.
@@ -293,19 +276,6 @@ impl Viewer {
         let cdr = replayed_cdr_with(stubs).await;
         Self {
             service: ferroehr_viewer::server::router(app_state(&cdr)),
-        }
-    }
-
-    /// The viewer over a fresh replayed CDR answering `stubs` first, its
-    /// sessions in the memory store.
-    async fn start_in_memory(stubs: Vec<Value>) -> Self {
-        let cdr = replayed_cdr_with(stubs).await;
-        Self {
-            service: ferroehr_viewer::server::router(app_state_in(
-                &cdr,
-                ferroehr_viewer::launch::LaunchSection::default(),
-                ferrohealth_session::config::StoreKind::Memory,
-            )),
         }
     }
 
@@ -1219,7 +1189,7 @@ async fn a_preference_is_kept_in_its_own_cookie() {
 }
 
 /// A signed-in page carries FerroUI's session watch over the viewer's
-/// session route, with what the session has left once the page re-seals it:
+/// session route, with what the session has left once the page extends it:
 /// the whole idle hour, inside the twelve-hour lifetime.
 #[tokio::test]
 async fn a_signed_in_page_carries_the_session_watch() {
@@ -1277,7 +1247,7 @@ async fn the_session_route_reads_extends_and_refuses() {
     assert!(left.idle <= 3601 && left.idle <= left.absolute, "{left:?}");
     assert!(
         read.cookies().is_empty(),
-        "a read never re-seals the session: {:?}",
+        "a read writes no cookie: {:?}",
         read.cookies()
     );
 
@@ -1295,11 +1265,28 @@ async fn the_session_route_reads_extends_and_refuses() {
         serde_json::from_str(&extended.body).expect("the route answers what is left");
     assert_eq!(3600, left.idle, "an extend starts the idle window again");
     assert!(
-        extended
+        !extended
             .cookies()
             .iter()
             .any(|cookie| is_session_cookie(cookie)),
-        "an extend re-seals the session"
+        "the memory store extends the session under the same cookie: {:?}",
+        extended.cookies()
+    );
+    let after = viewer
+        .send_accepting(
+            http::Method::GET,
+            route,
+            Some(&cookie),
+            None,
+            "application/json",
+        )
+        .await;
+    assert_eq!(after.status, http::StatusCode::OK, "{}", after.body);
+    let left: ferrohealth_ui::view::session::Left =
+        serde_json::from_str(&after.body).expect("the route answers what is left");
+    assert!(
+        left.idle >= 3599,
+        "the store keeps the extension for the same cookie: {left:?}"
     );
 
     for method in [http::Method::GET, http::Method::POST] {
@@ -1711,7 +1698,7 @@ async fn a_refused_record_offers_a_justification_that_holds_until_ended() {
         "headers": { "content-type": "application/problem+json" },
         "response": r#"{"type":"about:blank","title":"Forbidden","status":403,"detail":"access denied: refused-no-care-relationship: the access policy requires a care relationship to the subject and the caller has none","refusal":"refused-no-care-relationship"}"#,
     });
-    let viewer = Viewer::start_in_memory(vec![
+    let viewer = Viewer::start_with(vec![
         stub(
             "/ferroehr/rest/extensions/v1/access/purposes",
             "application/json",
@@ -1793,7 +1780,7 @@ async fn a_refused_record_offers_a_justification_that_holds_until_ended() {
 /// A reason the CDR would refuse is never kept: the toast says why.
 #[tokio::test]
 async fn an_empty_reason_keeps_no_justification() {
-    let viewer = Viewer::start_in_memory(Vec::new()).await;
+    let viewer = Viewer::start_with(Vec::new()).await;
     let cookie = viewer.sign_in().await;
     let path = format!("/ehrs/{}", id("ehr"));
     let answer = viewer

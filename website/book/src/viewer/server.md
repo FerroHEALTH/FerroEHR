@@ -1,7 +1,7 @@
 # Server & audit log
 
 **Server** says what the CDR this viewer reads is, how it runs and what it
-serves, as six tabs, and the **Audit log** browses its security audit trail.
+serves, as up to ten tabs, and the **Audit log** browses its security audit trail.
 Everything on them comes from the CDR's own endpoints over HTTP; the viewer
 has no privileged channel.
 
@@ -106,11 +106,88 @@ The family stays in the address (`?family=query`).
 parsed grants, the grant types and PKCE methods, and the document itself.
 [Your access](index.md#your-access) shows the scopes your session holds.
 
+## Activity and Integrity
+
+These two tabs, and Repository below, drive the CDR's admin API and appear only when the CDR
+mounts it (`api.admin`, see [Operations → Admin
+APIs](../operations-admin-apis.md)). Each action is the CDR's decision per
+request: a session without the admin role is refused in the CDR's words.
+
+**Activity** counts the repository's change history for one service over an
+interval ([the activity
+report](../operations-admin-apis.md#the-activity-report)). Pick a service and,
+if you like, a committed date range, then **Count**: the tab shows the
+contributions, the composition containers changed and the composition
+versions committed, and lists the contribution ids a page at a time. A
+demographic contribution opens on its own page. The service and the range
+stay in the address (`/server/activity?a_service=EHR&from=2026-01-01`). An
+interval the CDR refuses, such as one whose start is after its end, is
+reported beside the fields.
+
+![Activity](img/server/activity.png)
+
+**Integrity** checks every stored version against the rows the query engine
+reads ([storage integrity](../storage-admin-apis.md#storage-integrity)).
+Leave the scope empty to check the whole repository, or narrow it to an EHR,
+a versioned object, one of its versions, or what was committed since an
+instant, then **Verify**. The report gives the versions checked and each
+finding with its domain, kind and defect. When there are findings,
+**Rebuild…** asks for confirmation, then has the CDR rewrite the rows of each
+damaged version from its stored document over the same scope, and shows what
+it did to each version. For a repository too large to check within the
+request timeout, use the streamed sweep the operations page describes.
+
+![Integrity](img/server/integrity.png)
+
+## Repository
+
+**Repository**, the third admin tab, dumps the whole repository to an archive
+and loads one ([dump and
+load](../storage-admin-apis.md#dump-and-load)). The archive lives on the
+CDR's own file system, so both name a location there and nothing passes
+through your browser.
+
+- **Dump** writes every EHR and every standalone party to the location, in
+  the content format, compression and segment size you pick or the CDR's
+  defaults (`POST {ext}/admin/dump`).
+- **Load…** asks for confirmation, then writes every record of the archive at
+  the location into this repository (`POST {ext}/admin/load`). A record the
+  repository holds already is skipped.
+
+Each answer lists the records that did not move, with the CDR's reason, or
+says every record moved. A refusal, such as a location the CDR cannot write,
+is shown in the CDR's words.
+
+![Repository](img/server/repository.png)
+
+## Identity feed
+
+**Identity feed**, an admin tab shown while the CDR mounts its admin API,
+lists the patient identity feed's messages the CDR refused (IHE PMIR,
+ITI-93; `GET {ext}/admin/pmir/messages`): each message's id, refusal code,
+when it was refused, its apply attempts and how many identifiers and record
+subjects it keeps split, never an identifier value. **Retry** puts a message
+back at its arrival position once its cause is fixed, and **Settle** closes it
+without applying it, as **Discard** (its splits stay) or **Lift the splits**
+(its identifiers and subjects resolve as before it), with a reason the CDR
+records. Each asks for confirmation above the list. A CDR that runs no
+identity feed answers `404`, and the tab says so; see [Integrations → the
+patient identity
+feed](../installation/config-integrations.md).
+
+![Identity feed](img/server/identity.png)
+
 ## Configuration
 
 **Configuration** in the sidebar shows the CDR's redacted running
 configuration by section, each key with what it means; secrets show as their
 reference, never their value.
+
+The **Viewer** tab shows the viewer's own settings from
+`ferroehr-viewer.toml`: the CDR it reaches, its sign-in methods, the session
+lifetimes and its language.
+
+![The viewer's own settings](img/configuration/viewer.png)
 
 ## Audit log
 
@@ -130,6 +207,18 @@ outcome, and the stored FHIR R4 `AuditEvent` with line numbers and Copy.
 
 A filter that matches nothing says so, with the filters named and a way to
 clear them.
+
+**Delivery** in the Audit log's header shows how the audit records reach
+their sinks ([How a record is delivered](../audit.md#how-a-record-is-delivered);
+`GET {ext}/admin/audit-delivery`): each sink's cursor of each log, how many
+records it has still to deliver and whether the configuration names it, then
+the records a sink parked with their reason. **Retry** offers a parked record
+again, **Dismiss** removes it for good, and **Forget** removes a sink the
+configuration no longer names; each asks for confirmation above the tables
+and needs the CDR's ADMIN role. A CDR that serves no such view answers `404`,
+and the page says so.
+
+![Audit delivery](img/audit/delivery.png)
 
 The audit trail is an operator surface: the screen needs the CDR's ADMIN role,
 and a session without it is refused in the CDR's words. When the CDR's local
