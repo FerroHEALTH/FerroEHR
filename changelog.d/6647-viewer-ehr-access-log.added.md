@@ -1,0 +1,1 @@
+- The viewer shows an EHR's access log on its own tab, filtered by action, outcome, kind of accessor, ground and day, and each entry whole with what the access rested on and the reason stated for a justified or an emergency access; the CDR decides whether the reader sees the person's own view or the full record.
