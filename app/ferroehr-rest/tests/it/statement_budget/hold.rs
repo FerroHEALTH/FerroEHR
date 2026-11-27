@@ -24,7 +24,10 @@ use tracing_subscriber::layer::{Context, SubscriberExt as _};
 use tracing_subscriber::registry::LookupSpan;
 
 use super::drained;
-use super::paths::{REQUESTS, World, exchange, order};
+use super::paths::{World, exchange, order};
+
+/// The measured requests of each path.
+const REQUESTS: u64 = 10;
 
 /// The span each measured request runs in.
 const REQUEST: &str = "hold_ledger_request";

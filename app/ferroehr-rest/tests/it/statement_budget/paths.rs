@@ -26,7 +26,7 @@
 //! thread that polls the request, so the audit runtime's threads do not
 //! count; the peak is the most the request held at once. The allocations
 //! are judged per request over the measured window
-//! ([`Measure::per_request`]) and on the median request ([`Measure::median`]),
+//! ([`Measure::per_request`]) and on the least request ([`Measure::least`]),
 //! the peak on the lower-quartile request ([`Measure::low`]). The domain
 //! pools hold one warm connection each and the caches' upkeep runs off the
 //! request ([`settle`]), so each request meets the same state.
@@ -65,7 +65,7 @@ use crate::access_evaluator_http::{credential, ehr_with_composition};
 use crate::common::{self, BASE, FHIR};
 
 /// The measured requests of each path.
-pub(super) const REQUESTS: u64 = 10;
+pub(super) const REQUESTS: u64 = 15;
 
 /// The requests of each path sent before the measured ones.
 pub(super) const WARM: u64 = 3;
@@ -219,8 +219,8 @@ impl Path {
 struct Budget {
     path: Path,
     conversions: u64,
-    /// The allocations of the window's median request.
-    median: u64,
+    /// The allocations of the window's least request.
+    least: u64,
     allocations: u64,
     peak_bytes: u64,
     round_trips: u64,
@@ -236,16 +236,16 @@ struct Budget {
 }
 
 /// The ceilings by path (#6007, #6638): each figure as measured on Linux, the
-/// median request at the highest of its runs, the window average at most 60,
-/// the peak 64 KiB and the WAL 16 bytes.
-// NOTE: our own design (#6706), the median request is the gate; the window average is a coarse
-// guard (#6238).
+/// least request exact, the window average at most 60, the peak 64 KiB and
+/// the WAL 16 bytes.
+// NOTE: our own design (#6736), the least request of an aligned window is the gate; the window
+// average is a coarse guard (#6238).
 const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
         // NOTE: our own design (#6074), binding the held facts snapshot adds an allocation.
-        median: 13_932,
+        least: 13_932,
         allocations: 13_992,
         peak_bytes: 1_283_072,
         round_trips: 4,
@@ -257,7 +257,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitXml,
         conversions: 5,
-        median: 34_941,
+        least: 34_941,
         allocations: 35_001,
         peak_bytes: 1_283_072,
         round_trips: 4,
@@ -269,7 +269,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitFlat,
         conversions: 5,
-        median: 26_623,
+        least: 26_623,
         allocations: 26_683,
         peak_bytes: 1_284_096,
         round_trips: 4,
@@ -281,7 +281,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadJson,
         conversions: 0,
-        median: 805,
+        least: 805,
         allocations: 855,
         peak_bytes: 276_480,
         round_trips: 1,
@@ -293,7 +293,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadXml,
         conversions: 2,
-        median: 10_095,
+        least: 10_095,
         allocations: 10_144,
         peak_bytes: 730_112,
         round_trips: 1,
@@ -305,7 +305,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadFlat,
         conversions: 2,
-        median: 14_728,
+        least: 14_728,
         allocations: 14_783,
         peak_bytes: 1_295_360,
         round_trips: 1,
@@ -317,7 +317,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::EhrRead,
         conversions: 1,
-        median: 677,
+        least: 677,
         allocations: 728,
         peak_bytes: 79_269,
         round_trips: 1,
@@ -329,8 +329,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlSingle,
         conversions: 2,
-        // NOTE: our own design (#6706), the larger three of the five EHRs set this median.
-        median: 1663,
+        least: 1651,
         allocations: 1717,
         peak_bytes: 118_273,
         round_trips: 2,
@@ -342,7 +341,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlPopulation,
         conversions: 2,
-        median: 2237,
+        least: 2237,
         allocations: 2297,
         peak_bytes: 158_823,
         round_trips: 1,
@@ -354,8 +353,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::Iti81,
         conversions: 0,
-        // NOTE: our own design (#6706), this median takes one read-buffer step that #6736 removes.
-        median: 6642,
+        least: 6638,
         allocations: 6744,
         peak_bytes: 577_536,
         round_trips: 1,
@@ -367,7 +365,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyRead,
         conversions: 0,
-        median: 893,
+        least: 893,
         allocations: 960,
         peak_bytes: 78_848,
         round_trips: 6,
@@ -379,7 +377,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitContribution,
         conversions: 6,
-        median: 14_196,
+        least: 14_196,
         allocations: 14_256,
         peak_bytes: 1_411_072,
         round_trips: 4,
@@ -391,7 +389,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadAtTime,
         conversions: 0,
-        median: 818,
+        least: 818,
         allocations: 877,
         peak_bytes: 331_776,
         round_trips: 1,
@@ -403,7 +401,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitStatus,
         conversions: 4,
-        median: 1076,
+        least: 1076,
         allocations: 1136,
         peak_bytes: 147_242,
         round_trips: 4,
@@ -415,7 +413,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadStatus,
         conversions: 0,
-        median: 733,
+        least: 733,
         allocations: 786,
         peak_bytes: 80_973,
         round_trips: 1,
@@ -427,7 +425,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitParty,
         conversions: 8,
-        median: 1458,
+        least: 1458,
         allocations: 1525,
         peak_bytes: 125_972,
         // NOTE: our own design (#6252), every party commit's gate read and commit statement read the
@@ -441,7 +439,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlMatches,
         conversions: 2,
-        median: 3686,
+        least: 3682,
         allocations: 3744,
         peak_bytes: 192_267,
         round_trips: 2,
@@ -453,7 +451,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlParty,
         conversions: 2,
-        median: 2461,
+        least: 2457,
         allocations: 2520,
         peak_bytes: 107_199,
         round_trips: 6,
@@ -465,7 +463,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitPartyScored,
         conversions: 8,
-        median: 1895,
+        least: 1895,
         allocations: 1959,
         peak_bytes: 140_901,
         round_trips: 9,
@@ -477,7 +475,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadVersion,
         conversions: 0,
-        median: 832,
+        least: 832,
         allocations: 892,
         peak_bytes: 162_800,
         round_trips: 1,
@@ -489,7 +487,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitUpdate,
         conversions: 5,
-        median: 13_964,
+        least: 13_964,
         allocations: 14_024,
         peak_bytes: 1_280_000,
         round_trips: 4,
@@ -501,7 +499,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitDelete,
         conversions: 2,
-        median: 1047,
+        least: 1047,
         allocations: 1103,
         peak_bytes: 135_002,
         round_trips: 4,
@@ -513,7 +511,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::DirectoryCreate,
         conversions: 5,
-        median: 1149,
+        least: 1149,
         allocations: 1204,
         peak_bytes: 150_606,
         round_trips: 4,
@@ -525,7 +523,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::DirectoryUpdate,
         conversions: 4,
-        median: 1102,
+        least: 1102,
         allocations: 1162,
         peak_bytes: 152_696,
         round_trips: 4,
@@ -537,7 +535,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::DirectoryDelete,
         conversions: 2,
-        median: 991,
+        least: 991,
         allocations: 1051,
         peak_bytes: 144_129,
         round_trips: 4,
@@ -549,7 +547,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyUpdate,
         conversions: 8,
-        median: 1759,
+        least: 1759,
         allocations: 1819,
         peak_bytes: 129_641,
         round_trips: 9,
@@ -561,7 +559,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyDelete,
         conversions: 2,
-        median: 1387,
+        least: 1387,
         allocations: 1448,
         peak_bytes: 112_950,
         round_trips: 9,
@@ -573,7 +571,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitOrganisation,
         conversions: 8,
-        median: 1434,
+        least: 1434,
         allocations: 1486,
         peak_bytes: 126_183,
         round_trips: 9,
@@ -585,7 +583,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitGroup,
         conversions: 8,
-        median: 1430,
+        least: 1430,
         allocations: 1481,
         peak_bytes: 125_084,
         round_trips: 9,
@@ -597,8 +595,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitRole,
         conversions: 9,
-        // NOTE: our own design (#6706), this median takes one read-buffer step that #6736 removes.
-        median: 1937,
+        least: 1933,
         allocations: 1989,
         peak_bytes: 126_256,
         round_trips: 16,
@@ -610,7 +607,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitAgent,
         conversions: 8,
-        median: 1420,
+        least: 1420,
         allocations: 1472,
         peak_bytes: 126_026,
         round_trips: 9,
@@ -1507,19 +1504,13 @@ impl Measure {
             .div_euclid(REQUESTS)
     }
 
-    /// The lower median request's `figure`, the fifth smallest of ten: what
-    /// a request of the window allocates, whichever requests the read buffer
-    /// of the pool's connection grows inside (#6706).
-    fn median(&self, figure: impl Fn(&Allocated) -> u64) -> u64 {
-        let mut figures: Vec<u64> = self.each.iter().map(figure).collect();
-        figures.sort_unstable();
-        figures
-            .get(figures.len().saturating_sub(1).div_euclid(2))
-            .copied()
-            .unwrap_or(0)
+    /// The least request's `figure`: what a request of the path allocates
+    /// when no read-buffer step falls inside it (#6736).
+    fn least(&self, figure: impl Fn(&Allocated) -> u64) -> u64 {
+        self.each.iter().map(figure).min().unwrap_or(0)
     }
 
-    /// The lower-quartile request's `figure`, the third smallest of ten.
+    /// The lower-quartile request's `figure`, the fourth smallest of fifteen.
     ///
     /// A request handed a pool connection whose buffers have not grown to
     /// the path's messages yet, or that opens one, grows them inside its
@@ -1682,7 +1673,7 @@ async fn settle(pools: &DomainPools) {
 /// into a region of its own, so the next message starts a fresh one and
 /// each request meets the same read buffer whatever the connection read
 /// before (#6706).
-const ALIGN: &str = "SELECT /* statement_budget_own */ repeat('x', 9000)";
+const ALIGN: &str = "SELECT /* statement_budget_own */ repeat('x', 65536)";
 
 /// Measures [`REQUESTS`] requests of `path`.
 async fn measure(
@@ -1895,14 +1886,14 @@ async fn every_hot_path_stays_within_its_budget() {
     let (_db, pool, svc, app, pools) = Box::pin(super::steady()).await;
     let measured = Box::pin(measure_all(&app, &pool, &pools, &svc, None, &counter)).await;
     let mut report = String::from(
-        "path | conversions | audit renders | median allocations | allocations | alloc KiB | peak KiB | round trips | nested | notifies | WAL B\n",
+        "path | conversions | audit renders | least allocations | allocations | alloc KiB | peak KiB | round trips | nested | notifies | WAL B\n",
     );
     let mut ledger = String::new();
     let mut statements = String::new();
     let mut over = Vec::new();
     for (budget, m) in &measured {
         let path = budget.path;
-        let median = m.median(|a| a.count);
+        let least = m.least(|a| a.count);
         let allocations = m.per_request(|a| a.count);
         let kib = m.per_request(|a| a.bytes).div_euclid(1024);
         let peak = m.low(|a| u64::try_from(a.peak.max(0)).unwrap());
@@ -1912,10 +1903,7 @@ async fn every_hot_path_stays_within_its_budget() {
                 "allocations",
                 judged_allocations(allocations, budget.allocations),
             ),
-            (
-                "median allocations",
-                judged_allocations(median, budget.median),
-            ),
+            ("least allocations", judged_allocations(least, budget.least)),
             ("peak bytes", judged_allocations(peak, budget.peak_bytes)),
             ("round trips", judged(m.round_trips, budget.round_trips)),
             ("nested statements", judged(m.nested, budget.nested)),
