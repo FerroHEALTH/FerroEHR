@@ -47,6 +47,7 @@ pub mod activity;
 pub mod identity;
 pub mod integrity;
 pub mod overview;
+pub mod repository;
 
 /// The id of Apply the log filter's confirmation.
 const APPLY_DIALOG: &str = "apply-log-filter";
@@ -73,13 +74,15 @@ enum ServerTab {
     Activity,
     /// Its stored data checked against itself.
     Integrity,
+    /// The whole repository dumped and loaded.
+    Repository,
     /// Its patient identity feed's refused messages.
     Identity,
 }
 
 impl ServerTab {
     /// Every tab, in order.
-    const ALL: [Self; 9] = [
+    const ALL: [Self; 10] = [
         Self::Overview,
         Self::Health,
         Self::Metrics,
@@ -88,6 +91,7 @@ impl ServerTab {
         Self::Smart,
         Self::Activity,
         Self::Integrity,
+        Self::Repository,
         Self::Identity,
     ];
 
@@ -102,6 +106,7 @@ impl ServerTab {
             Self::Smart => "smart",
             Self::Activity => "activity",
             Self::Integrity => "integrity",
+            Self::Repository => "repository",
             Self::Identity => "identity",
         }
     }
@@ -125,6 +130,10 @@ impl ServerTab {
             Self::Smart => (ConsoleMsg::ServerSmart, ConsoleMsg::ServerSmartLine),
             Self::Activity => (ConsoleMsg::ServerActivity, ConsoleMsg::ServerActivityLine),
             Self::Integrity => (ConsoleMsg::ServerIntegrity, ConsoleMsg::ServerIntegrityLine),
+            Self::Repository => (
+                ConsoleMsg::ServerRepository,
+                ConsoleMsg::ServerRepositoryLine,
+            ),
             Self::Identity => (ConsoleMsg::ServerIdentity, ConsoleMsg::ServerIdentityLine),
         };
         (tr(label), tr(line))
@@ -137,7 +146,10 @@ impl ServerTab {
 
     /// Whether the tab drives the admin group.
     const fn admin(self) -> bool {
-        matches!(self, Self::Activity | Self::Integrity | Self::Identity)
+        matches!(
+            self,
+            Self::Activity | Self::Integrity | Self::Repository | Self::Identity
+        )
     }
 }
 

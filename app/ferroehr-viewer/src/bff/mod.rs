@@ -23,6 +23,7 @@ pub mod demographics;
 pub mod ehr_detail;
 pub mod ehr_tags;
 pub mod ehrs;
+pub mod extract;
 pub mod grants;
 pub mod integrity;
 pub mod item_tags;
