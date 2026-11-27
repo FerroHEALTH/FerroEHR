@@ -29,32 +29,27 @@
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/FerroHEALTH/FerroEHR/codeql.yml?branch=main&logo=github&label=CodeQL)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/codeql.yml)
 [![Signed releases](https://img.shields.io/badge/releases-signed-brightgreen?logo=github)](https://ferroehr.eu/docs/latest/verifying-releases.html)
 [![SLSA Build L3](https://slsa.dev/images/gh-badge-level3.svg)](https://ferroehr.eu/docs/latest/verifying-releases.html#what-slsa-level-each-artifact-reaches)
-[![Post-quantum safe uses](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fpost-quantum.json)](docs/post-quantum.md)
 
-**openEHR conformance**<br>
-<sub>(self-tested and self-assessed counts; none is a certification)</sub><br>
-<sub>The committed record against the released openEHR specifications</sub><br>
+<sub>Self-tested and self-assessed; none is a certification.</sub><br>
+**openEHR**<br>
 [![openEHR BASE released](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-base.json)](docs/conformance/badges.md)
 [![openEHR OPTIONS released](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-options.json)](docs/conformance/badges.md)
-<br>
-<sub>The red BASE rows, here and in the development run, are one deliberate deviation: the server records the authenticated caller as the committer and refuses a stated committer that names someone else, where ITS-REST asks that it be merged. The ground is Regulation (EU) 2025/327 Annex II 3.1 and Art. 13(4), the decision <a href="https://github.com/FerroHEALTH/FerroEHR/issues/5002">#5002</a> and the upstream report <a href="https://github.com/FerroHEALTH/FerroEHR/issues/5019">#5019</a> (<a href="https://ferroehr.eu/docs/latest/conformance.html#known-deviations">Known deviations</a>).</sub><br>
-<sub>The committed record against the development openEHR specifications (master)</sub><br>
 [![openEHR BASE development](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-base-development.json)](docs/conformance/badges.md)
 [![openEHR OPTIONS development](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-options-development.json)](docs/conformance/badges.md)
-<br>
-**Compliance**<br>
-[![EHDS](https://img.shields.io/badge/EHDS-readiness%20statement-blue?logo=europeanunion&labelColor=003399&logoColor=FFCC00)](https://ferrohealth.eu/docs/ehds/readiness.html)
-[![CRA](https://img.shields.io/badge/CRA-risk%20assessment-blue?logo=europeanunion&labelColor=003399&logoColor=FFCC00)](https://ferroehr.eu/docs/latest/compliance/cra-risk-assessment.html)
-<br>
-**EHDS**<br>
-<sub>(self-tested and self-assessed counts; none is a certification)</sub><br>
+
+**EHDS, EEHRxF draft 2026-11-23**<br>
 [![Xt-EHR D8.2 2026-05-19 logging checklist](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Flogging.json)](https://ferroehr.eu/docs/dev/compliance/logging-checklist.html)
 [![EEHRxF 2026-11-23 Annex III from the RM](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Fannex-iii.json)](https://ferroehr.eu/docs/dev/compliance/eehrxf-annex-iii.html)
 [![EEHRxF 2026-11-23 PDF/A originals](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Fpdf-originals.json)](https://ferroehr.eu/docs/dev/compliance/eehrxf-pdf-originals.html)
+
+**IHE**<br>
 [![IHE ATNA interoperability](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fatna-interop.json)](docs/conformance/badges.md)
+
+**Security and compliance**<br>
+[![EHDS](https://img.shields.io/badge/EHDS-readiness%20statement-blue?logo=europeanunion&labelColor=003399&logoColor=FFCC00)](https://ferrohealth.eu/docs/ehds/readiness.html)
+[![CRA](https://img.shields.io/badge/CRA-risk%20assessment-blue?logo=europeanunion&labelColor=003399&logoColor=FFCC00)](https://ferroehr.eu/docs/latest/compliance/cra-risk-assessment.html)
 [![EHDS Art. 28 claims review](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fclaims-review.json)](https://ferroehr.eu/docs/dev/compliance/claims-review.html)
-<br>
-<sub>Annex III: the eight elements the Reference Model holds only in part or not at all are written by FerroBRIDGE, the European interoperability software component, from its template mapping and configuration and by the jurisdiction's rule (<a href="https://ferroehr.eu/docs/dev/compliance/eehrxf-annex-iii.html#what-ferrobridge-takes-from-elsewhere">what FerroBRIDGE takes from elsewhere</a>).</sub>
+[![Post-quantum safe uses](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fpost-quantum.json)](docs/post-quantum.md)
 
 </div>
 

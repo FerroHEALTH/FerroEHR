@@ -18,14 +18,14 @@
 #   deviations; the rows not run are named apart.
 # - atna-interop.json: the newest run under docs/conformance/interop/atna/,
 #   written by hand with scripts/interop/atna.sh: the transactions that
-#   agree of those it compared, and the date it was measured.
+#   agree of those it compared; the page names the date it was measured.
 # - claims-review.json: the newest review of
 #   website/book/src/compliance/claims-review.md, read by hand once per
-#   release: its date.
+#   release: the release it read; the page names its date.
 #
-# A badge shows its count, or the date of a hand measurement, within the
-# family's length limits (owner decision, 2026-11-27); the claims review
-# carries no N/M, so its badge is the informational blue. docs/conformance/badges.md,
+# A badge shows its count, or the release a review read, within the
+# family's length limits and with no date (owner decision, 2026-11-27); the
+# claims review carries no N/M, so its badge is the informational blue. docs/conformance/badges.md,
 # written from the same records, holds the rest: the deviations with their
 # ground, the rows failed beside them and not run, each ATNA transaction
 # and the review's release and texts. No label or message may say
@@ -156,7 +156,7 @@ openehr_badge() {
   fi
   [[ "$other" -gt 0 ]] && rest+="${rest:+; }$other failed beside the deviations"
   [[ "$skipped" -gt 0 ]] && rest+="${rest:+; }$skipped not run"
-  badge "$out" "openEHR $part $record" "$passed/$judged passed" "$(badge_count_color "$passed" "$judged")" award
+  badge "$out" "$part $record" "$passed/$judged passed" "$(badge_count_color "$passed" "$judged")" award
   printf '| openEHR %s %s | %s of %s rows passed | %s | [the %s record](%s), by %s |\n' \
     "$part" "$record" "$passed" "$judged" "${rest:--}" "$record" "$link" "$instrument" >> "$rows"
 }
@@ -188,7 +188,7 @@ atna_badge() {
     echo "measured-badges: $run counts $disagree disagreements over $transactions transactions" >&2
     return 1
   }
-  badge "$out" "IHE ATNA interoperability" "$((transactions - disagree))/$transactions $date" \
+  badge "$out" "ATNA interoperability" "$((transactions - disagree))/$transactions" \
     "$(badge_count_color "$((transactions - disagree))" "$transactions")" exchange
   compared="$(awk -F'|' '
     /^\| Transaction \|/ { on = 1; next }
@@ -216,7 +216,7 @@ claims_badge() {
     END { if (title == "") exit 1; print title "\t" changed + 0 "\t" open + 0 }
   ' "$page")" || { echo "measured-badges: $page holds no review" >&2; return 1; }
   IFS=$'\t' read -r title changed open <<< "$counts"
-  badge "$out" "EHDS Art. 28 claims review" "${title%%,*}" blue magnifier
+  badge "$out" "EHDS Art. 28 claims review" "${title##*, for }" blue magnifier
   printf '| EHDS Art. 28 claims review | %s | %s texts changed, %s left open | [the review](https://ferroehr.eu/docs/dev/compliance/claims-review.html) |\n' \
     "$title" "$changed" "$open" >> "$rows"
 }
@@ -245,6 +245,15 @@ render() {
     printf 'with them.\n\n'
     printf '| Badge | Count | The rest | Record |\n|---|---|---|---|\n'
     cat "$rows"
+    printf '\n## The deviation\n\n'
+    printf 'The red BASE rows, in the released and the development record, are one\n'
+    printf 'deliberate deviation: the server records the authenticated caller as the\n'
+    printf 'committer and refuses a stated committer that names someone else, where\n'
+    printf 'ITS-REST asks that it be merged. The ground is Regulation (EU) 2025/327\n'
+    printf 'Annex II 3.1 and Art. 13(4), the decision\n'
+    printf '[#5002](https://github.com/FerroHEALTH/FerroEHR/issues/5002) and the upstream\n'
+    printf 'report [#5019](https://github.com/FerroHEALTH/FerroEHR/issues/5019)\n'
+    printf '([Known deviations](https://ferroehr.eu/docs/latest/conformance.html#known-deviations)).\n'
   } > "$dir/badges.md"
   rm -f "$rows"
 }
@@ -278,7 +287,7 @@ if [[ "$mode" == self-test ]]; then
     { echo "self-test: the BASE badge says $(jq -r .message "$tmp/base.json")" >&2; exit 1; }
   grep -qxF '| openEHR BASE released | 10 of 12 rows passed | 2 red by deliberate deviation (the authenticated committer, EHDS Annex II 3.1); 3 not run | [the released record](r.md), by veredictum 9.9.9 |' "$tmp/rows" ||
     { echo "self-test: the BASE page row says $(sed -n 1p "$tmp/rows")" >&2; exit 1; }
-  [[ "$(jq -r .label "$tmp/base.json")" == "openEHR BASE released" ]] || { echo "self-test: the BASE label" >&2; exit 1; }
+  [[ "$(jq -r .label "$tmp/base.json")" == "BASE released" ]] || { echo "self-test: the BASE label" >&2; exit 1; }
   [[ "$(jq -r .color "$tmp/base.json")" == yellow ]] || { echo "self-test: a BASE badge with red rows is not yellow" >&2; exit 1; }
   [[ "$(jq -r .message "$tmp/options.json")" == "4/4 passed" ]] ||
     { echo "self-test: the OPTIONS badge says $(jq -r .message "$tmp/options.json")" >&2; exit 1; }
@@ -294,7 +303,7 @@ if [[ "$mode" == self-test ]]; then
     { echo "self-test: the development BASE page row names no deviation" >&2; exit 1; }
   grep -qF '| 1 failed beside the deviations |' "$tmp/rows" ||
     { echo "self-test: the development OPTIONS page row names no other failure" >&2; exit 1; }
-  [[ "$(jq -r .label "$tmp/devoptions.json")" == "openEHR OPTIONS development" ]] || { echo "self-test: the development label" >&2; exit 1; }
+  [[ "$(jq -r .label "$tmp/devoptions.json")" == "OPTIONS development" ]] || { echo "self-test: the development label" >&2; exit 1; }
   printf '{"deviations":[{"case":"a/x","decision":"https://example.org/other"}]}' > "$tmp/other.json"
   if openehr_badge "$tmp/x.json" BASE "$tmp/summary.md" "$tmp/other.json" released "$tmp/rows" r.md 2> /dev/null; then
     echo "self-test: a deviation with an unknown ground passed" >&2
@@ -309,13 +318,13 @@ if [[ "$mode" == self-test ]]; then
   printf 'VERDICT: old\n' > "$tmp/interop/2025-12-31.md"
   : > "$tmp/rows"
   atna_badge "$tmp/atna.json" "$tmp/interop" "$tmp/rows"
-  [[ "$(jq -r '.message + " " + .color' "$tmp/atna.json")" == "2/2 2026-01-02 brightgreen" ]] ||
+  [[ "$(jq -r '.message + " " + .color' "$tmp/atna.json")" == "2/2 brightgreen" ]] ||
     { echo "self-test: the ATNA badge says $(jq -r .message "$tmp/atna.json")" >&2; exit 1; }
   grep -qxF '| IHE ATNA interoperability | 2 of 2 transactions agree, measured 2026-01-02 | no disagreement, a against b: c<br>d against e: f | [the run](interop/atna/2026-01-02.md) |' "$tmp/rows" ||
     { echo "self-test: the ATNA page row says $(cat "$tmp/rows")" >&2; exit 1; }
   sed 's/^VERDICT: no disagreement$/VERDICT: 1 disagreements/' "$tmp/interop/2026-01-02.md" > "$tmp/interop/2026-01-03.md"
   atna_badge "$tmp/atna.json" "$tmp/interop" "$tmp/rows"
-  [[ "$(jq -r '.message + " " + .color' "$tmp/atna.json")" == "1/2 2026-01-03 yellow" ]] ||
+  [[ "$(jq -r '.message + " " + .color' "$tmp/atna.json")" == "1/2 yellow" ]] ||
     { echo "self-test: an ATNA run with a disagreement says $(jq -r '.message + " " + .color' "$tmp/atna.json")" >&2; exit 1; }
   sed 's/^VERDICT: .*/VERDICT: fine/' "$tmp/interop/2026-01-02.md" > "$tmp/interop/2026-01-04.md"
   if atna_badge "$tmp/x.json" "$tmp/interop" "$tmp/rows" 2> /dev/null; then
@@ -327,7 +336,7 @@ if [[ "$mode" == self-test ]]; then
   printf '## The review of 2026-01-01, for 1.0\n\n### Changed on 2026-01-01\n\n| # | a |\n|---|---|\n| 1 | x |\n\n### Left open\n\n- y\n\n## The review of 2026-02-01, for 1.1\n\n### Changed on 2026-02-01\n\n- a\n- b\n\n### Read and kept\n\n- c\n\n### Left open on 2026-02-01\n\n- d\n' > "$tmp/claims.md"
   : > "$tmp/rows"
   claims_badge "$tmp/claims.json" "$tmp/claims.md" "$tmp/rows"
-  [[ "$(jq -r .message "$tmp/claims.json")" == "2026-02-01" ]] ||
+  [[ "$(jq -r .message "$tmp/claims.json")" == "1.1" ]] ||
     { echo "self-test: the claims badge says $(jq -r .message "$tmp/claims.json")" >&2; exit 1; }
   grep -qF '| EHDS Art. 28 claims review | 2026-02-01, for 1.1 | 2 texts changed, 1 left open |' "$tmp/rows" ||
     { echo "self-test: the claims page row says $(cat "$tmp/rows")" >&2; exit 1; }
