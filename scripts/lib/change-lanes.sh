@@ -162,7 +162,7 @@ filler() {
 }
 
 self_test() {
-  local failures=0 big name workflow first last want got
+  local failures=0 cases=0 big name workflow first last want got
   big=$(filler 1999)
   if [[ "${#big}" -le 65536 ]]; then
     echo "self-test: the filler is ${#big} bytes, not past the 64 KiB pipe buffer" >&2
@@ -176,6 +176,7 @@ self_test() {
   fi
   # Each case: a name, the workflow, the path, and the lanes that must be true.
   while IFS='|' read -r name workflow first want; do
+    cases=$((cases + 1))
     for last in true false; do
       if [[ "$last" == true ]]; then
         got=$(classify "$workflow" "$big"$'\n'"$first")
@@ -227,6 +228,10 @@ the pin runs conformance|conformance|scripts/lib/veredictum.sh|conformance
 the recipe runs conformance|conformance|.github/workflows/conformance.yml|conformance
 a viewer source runs no conformance|conformance|app/ferroehr-viewer/src/lib.rs|
 CASES
+  if [[ "$cases" -eq 0 ]]; then
+    echo "self-test: the case list is empty" >&2
+    failures=1
+  fi
   for workflow in ci docs conformance; do
     got=$(classify "$workflow" "" | grep -c '=true$' || true)
     if [[ "$got" != 0 ]]; then
@@ -263,7 +268,7 @@ CASES
     failures=1
   fi
   [[ "$failures" -eq 0 ]] || return 1
-  echo "change-lanes: self-test OK (37 paths classified first and last in a 2000-path list, the pipe form fails on it, and the fuzz closure follows fuzz/Cargo.toml)."
+  echo "change-lanes: self-test OK ($cases paths classified first and last in a 2000-path list, the pipe form fails on it, and the fuzz closure follows fuzz/Cargo.toml)."
 }
 
 case "${1-}" in
