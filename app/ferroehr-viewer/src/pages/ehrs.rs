@@ -21,7 +21,7 @@ use ferrohealth_ui::table::model::{OpenWindow, StateSource};
 use ferrohealth_ui::table::pager::{Listing as PagerListing, PostTo, post_open_pager};
 use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table, title_cell};
 use ferrohealth_ui::view::action::ActionGroup;
-use ferrohealth_ui::view::action_menu::{Act, Action};
+use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu};
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::identifier::{Domain, Masked};
 use ferrohealth_ui::view::surface::{Crumb, Header, page_heading};
@@ -44,7 +44,9 @@ use crate::pages::form::Form;
 use crate::paging::Listing;
 use crate::routes::Drawn;
 
-/// The EHRs list's heading, with New EHR.
+pub mod import;
+
+/// The EHRs list's heading, with New EHR and Import EHR Extract.
 fn heading() -> Html {
     page_heading(
         &current(),
@@ -60,6 +62,15 @@ fn heading() -> Html {
             Some(Glyph::PLUS),
             tr(RecordsMsg::NewEhr),
             Act::Link("/ehrs/new".to_owned()),
+        ))
+        .more(Menu::new(
+            "ehrs-more",
+            tr(RecordsMsg::EhrMore),
+            vec![Item::new(Action::new(
+                Some(Glyph::UPLOAD),
+                tr(crate::locale::operations::OperationsMsg::ImportExtract),
+                Act::Link(import::IMPORT_ROUTE.to_owned()),
+            ))],
         )),
     )
 }
@@ -494,21 +505,26 @@ fn new_view(model: Form<NewEhr>) -> Html {
     opt(top).then(new_form(&draft, ehr_id_error))
 }
 
-/// New EHR.
-pub async fn new_page() -> Drawn {
-    let body = new_view(read_new().await);
-    let heading = page_heading(
+/// The heading of a page under EHRs: `title`, its line and the crumb back.
+fn under_ehrs(title: String, subtitle: String) -> Html {
+    page_heading(
         &current(),
         Header {
-            title: tr(RecordsMsg::NewEhr).into(),
-            subtitle: Some(tr(RecordsMsg::EhrNewSubtitle).into()),
+            title: title.into(),
+            subtitle: Some(subtitle.into()),
             crumbs: vec![Crumb::new(tr(Msg::NavEhrs), "/ehrs")],
             mono: false,
             badge: None,
             subtitle_view: None,
         },
         ActionGroup::default(),
-    );
+    )
+}
+
+/// New EHR.
+pub async fn new_page() -> Drawn {
+    let body = new_view(read_new().await);
+    let heading = under_ehrs(tr(RecordsMsg::NewEhr), tr(RecordsMsg::EhrNewSubtitle));
     Drawn::page(
         tr(RecordsMsg::NewEhr),
         heading.then(h(format!(r#"<div class="fui-stack">{body}</div>"#))),

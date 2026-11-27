@@ -18,6 +18,7 @@
 
 use std::collections::BTreeSet;
 
+mod adl14;
 mod adl2;
 mod delete;
 mod upload;
@@ -44,7 +45,7 @@ use ferrohealth_ui::view::template::list::{
 use ferrohealth_ui::view::tree::{Tree, TreeKind, TreeNode, TreeWords, tree_view};
 
 use crate::adl2::TemplateFamily;
-use crate::bff::template_detail::{TemplateDetail, fetch_example, fetch_template_detail};
+use crate::bff::template_detail::TemplateDetail;
 use crate::bff::templates::{TemplateRow, list_adl2_templates, list_templates};
 use crate::builder::catalog::CatalogNode;
 use crate::components::source_upload;
@@ -59,10 +60,11 @@ use crate::pages::common::{
     EditorDock, card_panel, count, dock_editor, document_section, findings_of, info_note, panel,
     plain_section, refused, section, when,
 };
-use crate::pages::template_releases::{CompareAsk, Releases, lineage_table, read_releases};
+use crate::pages::template_releases::lineage_table;
 use crate::routes::Drawn;
 use crate::template_releases::{Lineage, lineages};
 use adl2::{Adl2Body, Adl2Template, adl2_tabs, read_adl2_template};
+use adl14::{Template, read_template};
 use delete::{delete_dialog, delete_posted, delete_refused, inline_confirm};
 use upload::{Uploaded, read_upload};
 
@@ -353,7 +355,7 @@ pub async fn upload_page() -> Drawn {
         } else {
             DefinitionsMsg::TemplateOptPlaceholder
         }),
-        adl2,
+        family.sources(),
     );
     let form = h(format!(
         r#"<form id="{UPLOAD_FORM}" method="post" action="/templates/upload"><input type="hidden" name="family" value="{}">{}</form>"#,
@@ -384,6 +386,8 @@ pub enum TemplateTab {
     Example,
     /// The comparison of two releases.
     Compare,
+    /// Its ADL 2 conversion, ADL 1.4 only.
+    Converted,
 }
 
 impl TemplateTab {
@@ -396,6 +400,7 @@ impl TemplateTab {
             Some("json") => Self::Json,
             Some("example") => Self::Example,
             Some("compare") => Self::Compare,
+            Some("adl2") => Self::Converted,
             _ => Self::Overview,
         }
     }
@@ -409,6 +414,7 @@ impl TemplateTab {
             Self::Json => "json",
             Self::Example => "example",
             Self::Compare => "compare",
+            Self::Converted => "adl2",
         }
     }
 
@@ -421,6 +427,7 @@ impl TemplateTab {
             Self::Json => tr(DefinitionsMsg::TemplateJson),
             Self::Example => tr(DefinitionsMsg::TemplateExample),
             Self::Compare => tr(DefinitionsMsg::TemplateCompare),
+            Self::Converted => tr(DefinitionsMsg::TemplateConverted),
         }
     }
 }
@@ -726,88 +733,6 @@ fn template_header(
     )
 }
 
-/// What one ADL 1.4 template's page read.
-#[derive(Debug, Clone)]
-pub struct Template {
-    /// The CDR's refusal of the delete posted.
-    acted: Option<ViewerError>,
-    /// The template, carrying only the parts its tab draws.
-    detail: Result<TemplateDetail, ViewerError>,
-    /// The template's download address.
-    download: String,
-    /// Its releases, with what the tab draws of them.
-    releases: Releases,
-    /// The example the CDR built, on the Example tab of a root it builds
-    /// examples for.
-    example: Option<Result<Option<String>, ViewerError>>,
-}
-
-/// Answers a delete posted to the ADL 1.4 template `template_id` and reads
-/// its releases and what its tab `tab` draws, the example as `ask` names it.
-pub async fn read_template(
-    // The template's id.
-    template_id: String,
-    // The tab shown.
-    tab: TemplateTab,
-    // The example options the address names.
-    ask: ExampleAsk,
-) -> Template {
-    let acted = delete_posted("/templates").await;
-    let download = crate::download::template_href(TemplateFamily::Adl14, &template_id);
-    let mut detail = fetch_template_detail(template_id.clone()).await;
-    let releases = read_releases(
-        TemplateFamily::Adl14,
-        list_templates().await,
-        &template_id,
-        tab,
-        CompareAsk::asked(),
-    )
-    .await;
-    let mut example = None;
-    match &mut detail {
-        Err(error) => {
-            if crate::pages::common::is_status(error, http::StatusCode::NOT_FOUND) {
-                crate::request::set_status(http::StatusCode::NOT_FOUND);
-            }
-        }
-        Ok(detail) => {
-            // NOTE: no openEHR spec governs this: our own design; the model keeps
-            // only what the tab draws, so the page carries no unshown source.
-            if tab != TemplateTab::Source {
-                detail.source = String::new();
-            }
-            if tab != TemplateTab::Paths {
-                detail.catalog.children = Vec::new();
-            }
-            match tab {
-                TemplateTab::Example => {
-                    let formats = crate::example_options::example_formats(&detail.catalog.rm_type);
-                    if !formats.is_empty() {
-                        let format = ask.format(formats);
-                        example = Some(
-                            fetch_example(template_id.clone(), format, ask.detail, ask.kind)
-                                .await
-                                .map(|text| Some(crate::bff::pretty_body(&text, format))),
-                        );
-                    }
-                }
-                TemplateTab::Overview
-                | TemplateTab::Paths
-                | TemplateTab::Source
-                | TemplateTab::Json
-                | TemplateTab::Compare => {}
-            }
-        }
-    }
-    Template {
-        acted,
-        detail,
-        download,
-        releases,
-        example,
-    }
-}
-
 /// One ADL 1.4 template.
 #[expect(
     clippy::too_many_lines,
@@ -829,6 +754,7 @@ pub async fn page() -> Drawn {
         download,
         releases,
         example,
+        converted,
     } = read_template(template_id.clone(), tab, ask.clone()).await;
     let acted = delete_refused(acted.as_ref());
     let detail: TemplateDetail = match detail {
@@ -856,6 +782,7 @@ pub async fn page() -> Drawn {
         TemplateTab::Paths,
         TemplateTab::Source,
         TemplateTab::Example,
+        TemplateTab::Converted,
         TemplateTab::Compare,
     ]
     .into_iter()
@@ -864,6 +791,9 @@ pub async fn page() -> Drawn {
     .collect();
     let body = match tab {
         TemplateTab::Compare => releases.compare_panel(TemplateFamily::Adl14, &base),
+        TemplateTab::Converted => {
+            converted.map_or_else(Html::empty, crate::pages::archetypes::conversion_panel)
+        }
         TemplateTab::Paths => paths_panel(&template_id, &base, &detail.catalog, None),
         TemplateTab::Source => panel(document_section(
             tr(DefinitionsMsg::TemplateSourceTitle),
@@ -985,7 +915,10 @@ pub async fn adl2_page() -> Drawn {
     let template = read_adl2_template(
         asked_id.clone(),
         asked_release.clone(),
-        TemplateTab::asked(),
+        match TemplateTab::asked() {
+            TemplateTab::Converted => TemplateTab::Overview,
+            tab => tab,
+        },
         ask.clone(),
     )
     .await;

@@ -4,8 +4,7 @@
 //! The viewer's sign-in and session, which `ferrohealth-session` keeps.
 //!
 //! The crate's `[oidc]` and `[session]` sections configure them, its store
-//! keeps the session (in the process, or in one sealed cookie every
-//! instance opens), its routes run the OpenID Connect sign-in, the sign-out
+//! keeps the session in the viewer's process, its routes run the OpenID Connect sign-in, the sign-out
 //! and the session watch, and its middleware hands every request the
 //! [`Held`] it carries. This module is the viewer's side of that seam: the
 //! cookie names, the pages a stopped sign-in and a sign-out land on, the

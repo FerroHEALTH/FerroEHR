@@ -40,8 +40,7 @@ impl AppState {
         cdr: crate::cdr::CdrClient,
         party: Option<RelyingParty>,
     ) -> Result<Self, crate::config::ConfigError> {
-        let offline_access = config.auth.oidc_enabled && config.oidc.offline_access;
-        let settings = config.session.check_with(offline_access)?;
+        let settings = config.session.check()?;
         let launch = crate::launch::Launcher::from_section(&config.launch)?.map(Arc::new);
         let sessions = Sessions::new(
             settings,

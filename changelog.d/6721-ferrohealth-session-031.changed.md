@@ -1,0 +1,1 @@
+- The viewer runs on `ferrohealth-session` 0.31.0, the release that removes the sealed session store.

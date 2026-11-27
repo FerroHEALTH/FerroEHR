@@ -22,6 +22,7 @@ use ferrohealth_ui::table::model::{Paging, StateSource, Window};
 use ferrohealth_ui::table::pager::{Listing as PagerListing, PostTo, post_pager};
 use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table, title_cell};
 use ferrohealth_ui::view::action::ActionGroup;
+use ferrohealth_ui::view::action_menu::{Act, Action};
 use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::identifier::{Domain, KEEP, Masked};
@@ -42,6 +43,8 @@ use crate::pages::common::{
 };
 use crate::paging::Listing;
 use crate::routes::Drawn;
+
+pub mod delivery;
 
 /// The page sizes the audit log offers: the one the CDR is asked for.
 const SIZES: &[u32] = &[PAGE_SIZE];
@@ -310,7 +313,7 @@ fn table(page: &Listed, filters: &Filters) -> Html {
     data_table(DataTable::new(&caption, &columns, Body::Rows(rows)))
 }
 
-/// The heading of the Audit log.
+/// The heading of the Audit log, with Delivery.
 fn heading() -> Html {
     page_heading(
         &current(),
@@ -322,7 +325,11 @@ fn heading() -> Html {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::default(),
+        ActionGroup::primary(Action::new(
+            Some(Glyph::SEND),
+            tr(ConsoleMsg::DeliveryTitle),
+            Act::Link(delivery::DELIVERY_ROUTE.to_owned()),
+        )),
     )
 }
 

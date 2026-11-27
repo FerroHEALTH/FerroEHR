@@ -1,0 +1,1 @@
+- The viewer's Server has two admin tabs: Activity counts the repository's change history for a service over an interval and lists its contribution ids, and Integrity verifies the stored data against its decomposed rows and rebuilds what the verification finds damaged, behind a confirmation.

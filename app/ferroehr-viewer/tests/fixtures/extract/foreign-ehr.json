@@ -1,0 +1,182 @@
+[
+  {
+    "_type": "EXTRACT",
+    "name": {
+      "_type": "DV_TEXT",
+      "value": "EHR Extract"
+    },
+    "archetype_node_id": "EXTRACT",
+    "chapters": [
+      {
+        "_type": "EXTRACT_CHAPTER",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "openEHR content"
+        },
+        "archetype_node_id": "EXTRACT_CHAPTER",
+        "items": [
+          {
+            "_type": "OPENEHR_CONTENT_ITEM",
+            "name": {
+              "_type": "DV_TEXT",
+              "value": "EHR_STATUS"
+            },
+            "archetype_node_id": "OPENEHR_CONTENT_ITEM",
+            "is_primary": true,
+            "item": {
+              "_type": "X_VERSIONED_EHR_STATUS",
+              "uid": {
+                "_type": "HIER_OBJECT_ID",
+                "value": "5f0b1c2e-8d4a-4c6e-9a7b-3e2d1f0a9b8c"
+              },
+              "owner_id": {
+                "_type": "OBJECT_REF",
+                "namespace": "local",
+                "type": "EHR",
+                "id": {
+                  "_type": "HIER_OBJECT_ID",
+                  "value": "7a3e9d1c-2b4f-4e8a-8c6d-1f0e2a3b4c5d"
+                }
+              },
+              "time_created": {
+                "_type": "DV_DATE_TIME",
+                "value": "2026-01-15T09:30:00Z"
+              },
+              "total_version_count": 1,
+              "extract_version_count": 1,
+              "versions": [
+                {
+                  "_type": "ORIGINAL_VERSION",
+                  "uid": {
+                    "_type": "OBJECT_VERSION_ID",
+                    "value": "5f0b1c2e-8d4a-4c6e-9a7b-3e2d1f0a9b8c::hospital-b.example::1"
+                  },
+                  "contribution": {
+                    "_type": "OBJECT_REF",
+                    "namespace": "local",
+                    "type": "CONTRIBUTION",
+                    "id": {
+                      "_type": "HIER_OBJECT_ID",
+                      "value": "9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d"
+                    }
+                  },
+                  "commit_audit": {
+                    "_type": "AUDIT_DETAILS",
+                    "system_id": "hospital-b.example",
+                    "time_committed": {
+                      "_type": "DV_DATE_TIME",
+                      "value": "2026-01-15T09:30:00Z"
+                    },
+                    "change_type": {
+                      "_type": "DV_CODED_TEXT",
+                      "value": "creation",
+                      "defining_code": {
+                        "_type": "CODE_PHRASE",
+                        "terminology_id": {
+                          "_type": "TERMINOLOGY_ID",
+                          "value": "openehr"
+                        },
+                        "code_string": "249"
+                      }
+                    },
+                    "description": {
+                      "_type": "DV_TEXT",
+                      "value": "EHR creation"
+                    },
+                    "committer": {
+                      "_type": "PARTY_IDENTIFIED",
+                      "name": "Records clerk"
+                    }
+                  },
+                  "lifecycle_state": {
+                    "_type": "DV_CODED_TEXT",
+                    "value": "complete",
+                    "defining_code": {
+                      "_type": "CODE_PHRASE",
+                      "terminology_id": {
+                        "_type": "TERMINOLOGY_ID",
+                        "value": "openehr"
+                      },
+                      "code_string": "532"
+                    }
+                  },
+                  "data": {
+                    "_type": "EHR_STATUS",
+                    "name": {
+                      "_type": "DV_TEXT",
+                      "value": "EHR Status"
+                    },
+                    "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+                    "uid": {
+                      "_type": "OBJECT_VERSION_ID",
+                      "value": "5f0b1c2e-8d4a-4c6e-9a7b-3e2d1f0a9b8c::hospital-b.example::1"
+                    },
+                    "archetype_details": {
+                      "_type": "ARCHETYPED",
+                      "archetype_id": {
+                        "_type": "ARCHETYPE_ID",
+                        "value": "openEHR-EHR-EHR_STATUS.generic.v1"
+                      },
+                      "rm_version": "1.2.0"
+                    },
+                    "subject": {
+                      "_type": "PARTY_SELF"
+                    },
+                    "is_queryable": true,
+                    "is_modifiable": true
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "time_created": {
+      "_type": "DV_DATE_TIME",
+      "value": "2026-01-15T09:30:00Z"
+    },
+    "system_id": {
+      "_type": "HIER_OBJECT_ID",
+      "value": "hospital-b.example"
+    },
+    "sequence_nr": 1,
+    "specification": {
+      "_type": "EXTRACT_SPEC",
+      "version_spec": {
+        "_type": "EXTRACT_VERSION_SPEC",
+        "include_all_versions": false,
+        "include_revision_history": false,
+        "include_data": true
+      },
+      "manifest": {
+        "_type": "EXTRACT_MANIFEST",
+        "entities": [
+          {
+            "_type": "EXTRACT_ENTITY_MANIFEST",
+            "extract_id_key": "7a3e9d1c-2b4f-4e8a-8c6d-1f0e2a3b4c5d",
+            "ehr_id": "7a3e9d1c-2b4f-4e8a-8c6d-1f0e2a3b4c5d",
+            "other_ids": [],
+            "item_list": []
+          }
+        ]
+      },
+      "extract_type": {
+        "_type": "DV_CODED_TEXT",
+        "value": "openehr-ehr",
+        "defining_code": {
+          "_type": "CODE_PHRASE",
+          "terminology_id": {
+            "_type": "TERMINOLOGY_ID",
+            "value": "openehr"
+          },
+          "code_string": "openehr-ehr"
+        }
+      },
+      "include_multimedia": true,
+      "priority": 0,
+      "link_depth": 0,
+      "criteria": []
+    }
+  }
+]
