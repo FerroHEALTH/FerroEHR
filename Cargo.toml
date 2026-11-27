@@ -330,6 +330,7 @@ secrecy = "0.10"                   # wrap secrets, avoid logging
 rustls = "0.23"
 tokio-rustls = "0.26"
 rcgen = { version = "0.14.10", default-features = false, features = ["aws_lc_rs", "pem"] }   # the testkit's syslog listener (#3955) and the server TLS tests (#3963) mint their certificates at run time; aws-lc-rs matches the rustls provider
+aws-lc-rs = { version = "1.19.0", default-features = false, features = ["aws-lc-sys"] }   # the viewer tests generate their ML-DSA keys (RFC 9964) with it; the provider ferrohealth-smart and rustls already build on
 pem = "4.0.0"                      # PEM armour for the DER the server TLS tests build (#3963); rcgen's own copy
 yasna = "0.6.0"                    # DER reading and writing in the server TLS tests (#3963); rcgen's own copy
 # NOTE: `app/ferroehr` deliberately pins rand 0.8 at the crate level instead of

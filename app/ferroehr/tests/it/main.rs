@@ -143,6 +143,7 @@ mod node_transport;
 mod node_version_integrity;
 mod one_schema_per_statement;
 mod opt_resource_meta;
+mod outbound_ml_dsa;
 mod outbox_access;
 mod outbox_feed;
 mod party_binding_adopt;

@@ -130,7 +130,12 @@ async fn serve(config: ViewerConfig, telemetry: &Telemetry) -> Result<(), Failur
             .oidc
             .check_with_tls(&ferrohealth_smart::config::ServerTls)
             .map_err(refused)?;
-        Some(settings.relying_party().await?)
+        Some(
+            settings
+                .relying_party()
+                .await?
+                .with_algorithms(config.auth.id_token_algorithms()),
+        )
     } else {
         None
     };

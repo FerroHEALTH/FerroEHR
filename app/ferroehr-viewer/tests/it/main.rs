@@ -10,6 +10,8 @@ mod common;
 mod config_redaction;
 mod launch;
 mod launch_tasks;
+mod ml_dsa;
+mod sign_in_post_quantum;
 
 mod sandbox_posture;
 mod serving;

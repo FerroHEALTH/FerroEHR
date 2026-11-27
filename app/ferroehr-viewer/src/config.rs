@@ -19,6 +19,7 @@ use ferrohealth_config::tls::TlsVersion;
 use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_server::section::ServerSection;
 use ferrohealth_session::config::{OidcSection, SessionSection};
+use ferrohealth_smart::jws::algorithm::Algorithm;
 use ferrohealth_telemetry::section::TelemetrySection;
 use serde::Deserialize;
 
@@ -213,6 +214,10 @@ pub struct AuthConfig {
     /// post with, and the base of `oidc.redirect_uri` and
     /// `oidc.post_logout_redirect_uri` when they are not set.
     pub public_base_url: String,
+    /// Accept an ID Token signed with ML-DSA alone (RFC 9964 §5): ML-DSA-44,
+    /// ML-DSA-65 or ML-DSA-87. Off, the classical algorithms are accepted
+    /// beside them.
+    pub post_quantum_only: bool,
 }
 
 impl Default for AuthConfig {
@@ -221,7 +226,22 @@ impl Default for AuthConfig {
             basic_enabled: true,
             oidc_enabled: false,
             public_base_url: String::new(),
+            post_quantum_only: false,
         }
+    }
+}
+
+impl AuthConfig {
+    /// The algorithms an ID Token of the sign-in may be signed with: the
+    /// three ML-DSA parameter sets under `post_quantum_only`, else every
+    /// asymmetric algorithm `ferrohealth-smart` verifies, ML-DSA among them.
+    #[must_use]
+    pub fn id_token_algorithms(&self) -> Vec<Algorithm> {
+        Algorithm::all()
+            .iter()
+            .copied()
+            .filter(|algorithm| !self.post_quantum_only || algorithm.is_ml_dsa())
+            .collect()
     }
 }
 

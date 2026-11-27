@@ -61,12 +61,46 @@ offers only that (`app/ferroehr/src/system_log/syslog.rs`,
 
 The key exchange protects what a session carries against an attacker who
 records it now and decrypts it later, the risk the roadmap gives first
-place. The certificate signatures that authenticate a peer stay classical:
-no TLS 1.3 signature scheme for ML-DSA is published as an RFC yet, and the
-operator's certificates decide the algorithm. The JOSE signatures of the
-access tokens, the DPoP proofs, the client assertions and the viewer's
-sign-in stay classical until the issuers FerroEHR works with sign with
-ML-DSA (RFC 9964).
+place. The certificate signatures that authenticate a peer stay classical.
+RFC 9881 (October 2025, Proposed Standard) defines ML-DSA keys and
+signatures in X.509 certificates. The TLS 1.3 signature schemes for ML-DSA
+(`mldsa44` 0x0904, `mldsa65` 0x0905, `mldsa87` 0x0906) are defined by
+draft-ietf-tls-mldsa-06, which the IESG approved and which waits in the RFC
+Editor queue, not yet an RFC
+(<https://datatracker.ietf.org/doc/draft-ietf-tls-mldsa/>, read
+2026-11-27). The row stays `no` while that document is a draft and the
+operator's certificates decide the algorithm.
+
+## JOSE signatures
+
+`ferrohealth-smart` 0.35.0 signs and verifies every JWS in its `jws` module,
+ML-DSA-44, ML-DSA-65 and ML-DSA-87 (RFC 9964, `AKP` keys) among the
+algorithms. What it accepts on a verification is the list it is given:
+
+- **Access tokens and DPoP proofs:** an issuer's `algorithms` and
+  `[auth.dpop] algorithms` default to RS256, RS384, PS256, PS384, ES256 and
+  ES384. An ML-DSA parameter set is accepted where a list names it.
+- **The viewer's sign-in ID Token:** the relying party's default is RS256 to
+  PS512, ES256, ES384 and EdDSA; the viewer adds the three ML-DSA parameter
+  sets to it.
+- **Client assertions:** a key signs with the algorithm of its kind, an
+  ML-DSA key (RFC 9881 §6) with its parameter set and an RSA key with RS384.
+
+`[auth] post_quantum_only = true` in `ferroehr.toml` narrows every
+algorithm list of a JWT issuer and of `[auth.dpop]` left at its default to
+the three ML-DSA parameter sets, and stops the start when a list names
+another algorithm. The viewer's own `[auth] post_quantum_only = true`
+accepts an ID Token signed with ML-DSA alone. Both are off by default, for
+the issuers that still sign classically. The viewer signs its SMART launch
+client assertion with ML-DSA when its key is an ML-DSA key, as the
+FerroSMART overlay's `docker/ferrosmart/secrets.sh` makes it, and the
+outbound client credentials grant does so with an ML-DSA key in
+`private_key_file`.
+
+The badge counts the JOSE rows in that configuration: both
+`post_quantum_only` settings on and ML-DSA keys for the client assertions.
+A deployment that leaves the settings off accepts the classical algorithms
+the rows name, and those rows are then not post-quantum safe for it.
 
 The OpenPGP signatures FerroEHR makes (`VERSION.signature` in `pgp` mode,
 the access-log checkpoints and bundles and the system-log seals) are the
@@ -89,7 +123,7 @@ ML-DSA key.
 | TLS 1.3 key exchange of the family clients: the issuer key sets, the viewer's OpenID Provider, the OTLP export and the FerroPULSE report | X25519MLKEM768 first (rustls prefer-post-quantum); X25519, P-256, P-384 for a peer without it | yes | RFC 10024 | `ferrohealth-smart resource, ferrohealth-smart oidc, ferrohealth-telemetry otlp, ferrohealth-usage-report` |
 | TLS 1.3 key exchange of the PostgreSQL connection | X25519MLKEM768 first (rustls prefer-post-quantum), agreed when the server's TLS library offers it | yes | RFC 10024 | `Cargo.toml (sqlx tls-rustls-aws-lc-rs)` |
 | TLS 1.2 key exchange where min_version lowers the floor | ECDHE over X25519, P-256 or P-384 | no | no standard yet | `ferrohealth-server tls (protocol_versions)` |
-| TLS server and client certificate authentication | ECDSA, RSA or Ed25519, as the operator's certificates hold | no | no standard yet | `ferrohealth-server tls, ferrohealth-server tls_client` |
+| TLS server and client certificate authentication | ECDSA, RSA or Ed25519, as the operator's certificates hold | no | RFC 9881; draft-ietf-tls-mldsa-06 in the RFC Editor queue | `ferrohealth-server tls, ferrohealth-server tls_client` |
 | TLS record protection | AES-128-GCM, AES-256-GCM, ChaCha20-Poly1305 | yes | NIST IR 8547 4.1.3 | `ferrohealth-server tls` |
 | VERSION.signature in digest mode | SHA-256 of the canonical form | yes | NIST IR 8547 4.1.3 | `app/ferroehr/src/versioning/signature/signer.rs` |
 | VERSION.signature in pgp mode, signing | OpenPGP v6 detached signature over SHA2-512, ML-DSA-65+Ed25519 (RFC 9980 algorithm ID 30); a classical signing key is refused at boot | yes | RFC 9980 | `app/ferroehr/src/versioning/signature/key.rs` |
@@ -102,10 +136,10 @@ ML-DSA key.
 | Licence token verification | OpenPGP cleartext signature by the Licensor's key: the Ed25519 anchors in use; ML-DSA-65+Ed25519 anchors verified the same way | no | RFC 9980 | `app/ferroehr/src/licence/verify.rs, app/ferroehr/src/openpgp.rs, app/ferroehr/src/licence/token.rs` |
 | Licence stamp | HMAC-SHA-256 | yes | NIST IR 8547 4.1.3 | `app/ferroehr/src/licence/stamp.rs` |
 | Basic password hashing | Argon2id | yes | NIST IR 8547 4.1.3 | `ferrohealth-smart basic, app/ferroehr-rest/src/extensions/access/authn` |
-| Access token and DPoP proof verification | RS256, RS384, PS256, PS384, ES256, ES384 | no | RFC 9964 | `ferrohealth-smart resource, app/ferroehr-rest/src/extensions/access/authn` |
-| Client assertions of the outbound client credentials grant (private_key_jwt) | RS256, RS384, RS512, PS256, PS384, PS512, ES256, ES384 or EdDSA, as the key holds | no | RFC 9964 | `ferrohealth-smart client assertion, app/ferroehr/src/outbound.rs` |
-| Viewer SMART launch client assertions | RS384 or ES384 | no | RFC 9964 | `app/ferroehr-viewer/src/launch.rs` |
-| Viewer sign-in ID token verification | RS256, RS384, RS512, PS256, PS384, PS512, ES256, ES384, EdDSA | no | RFC 9964 | `ferrohealth-smart oidc, app/ferroehr-viewer/src/cli.rs` |
+| Access token and DPoP proof verification with [auth] post_quantum_only = true | ML-DSA-44, ML-DSA-65 or ML-DSA-87 (AKP) alone; off (the default), RS256, RS384, PS256, PS384, ES256 and ES384, and an ML-DSA parameter set where an algorithms list names it | yes | RFC 9964 | `ferrohealth-smart resource, app/ferroehr/src/config/auth_section.rs, app/ferroehr-rest/src/extensions/access/authn` |
+| Client assertions of the outbound client credentials grant (private_key_jwt) with an ML-DSA key | ML-DSA-44, ML-DSA-65 or ML-DSA-87, the parameter set of the key; with a classical key RS384 (RSA) by default, RS256 to PS512, ES256, ES384 or EdDSA | yes | RFC 9964 | `ferrohealth-smart client assertion, app/ferroehr/src/outbound.rs, app/ferroehr/tests/it/outbound_ml_dsa.rs` |
+| Viewer SMART launch client assertions with an ML-DSA key, as the FerroSMART overlay makes it | ML-DSA-44, ML-DSA-65 or ML-DSA-87, the parameter set of the key (ML-DSA-65 in the overlay); with a classical key RS384 or ES384 | yes | RFC 9964 | `app/ferroehr-viewer/src/launch.rs, docker/ferrosmart/secrets.sh` |
+| Viewer sign-in ID token verification with the viewer's [auth] post_quantum_only = true | ML-DSA-44, ML-DSA-65 or ML-DSA-87 alone; off (the default), those beside RS256, RS384, RS512, PS256, PS384, PS512, ES256, ES384 and EdDSA | yes | RFC 9964 | `ferrohealth-smart oidc, app/ferroehr-viewer/src/config.rs, app/ferroehr-viewer/src/cli.rs` |
 | Helm chart signatures | cosign keyless (Sigstore, ECDSA P-256) | no | no standard yet | `.github/workflows/build-chart.yml` |
 | crates.io publishing | Trusted Publishing (OIDC token from GitHub, RS256) | no | no standard yet | `.github/workflows/publish-crates.yml` |
 | Release, image and chart provenance and SBOM attestations | Sigstore attestation (ECDSA P-256) | no | no standard yet | `.github/workflows/build-image.yml, .github/workflows/release-build.yml, .github/workflows/build-chart.yml` |

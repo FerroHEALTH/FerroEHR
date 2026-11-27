@@ -297,6 +297,18 @@ impl Viewer {
         oidc: ferrohealth_session::config::OidcSection,
         launch: ferroehr_viewer::launch::LaunchSection,
     ) -> Self {
+        let defaults = ferroehr_viewer::config::ViewerConfig::default();
+        Self::start_signing_in_with(oidc, launch, defaults.auth).await
+    }
+
+    /// As [`Self::start_signing_in`], with the sign-in keys of `auth`, its
+    /// ID Token algorithms set on the relying party as the viewer's start
+    /// sets them.
+    pub(crate) async fn start_signing_in_with(
+        oidc: ferrohealth_session::config::OidcSection,
+        launch: ferroehr_viewer::launch::LaunchSection,
+        auth: ferroehr_viewer::config::AuthConfig,
+    ) -> Self {
         let cdr = replayed_cdr_with(Vec::new()).await;
         let defaults = ferroehr_viewer::config::ViewerConfig::default();
         let settings = oidc
@@ -305,7 +317,8 @@ impl Viewer {
         let party = settings
             .relying_party()
             .await
-            .expect("the test provider's endpoints are all given");
+            .expect("the test provider's endpoints are all given")
+            .with_algorithms(auth.id_token_algorithms());
         let config = ferroehr_viewer::config::ViewerConfig {
             cdr: ferroehr_viewer::config::CdrConfig {
                 base_url: cdr.clone(),
@@ -314,7 +327,7 @@ impl Viewer {
             },
             auth: ferroehr_viewer::config::AuthConfig {
                 oidc_enabled: true,
-                ..defaults.auth.clone()
+                ..auth
             },
             oidc,
             // The memory store keeps the refresh token a facade token comes from.

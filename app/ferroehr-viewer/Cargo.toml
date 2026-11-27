@@ -97,6 +97,8 @@ base64.workspace = true
 csv.workspace = true
 
 [dev-dependencies]
+# Generates the ML-DSA keys of the launch and sign-in tests (RFC 9964).
+aws-lc-rs.workspace = true
 # Reads the launch tests' client assertions and mints their ID tokens.
 jsonwebtoken.workspace = true
 indexmap.workspace = true

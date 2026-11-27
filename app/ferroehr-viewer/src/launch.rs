@@ -49,8 +49,9 @@ pub struct LaunchSection {
     /// The viewer's `client_id` at FerroSMART: a `confidential_asymmetric`
     /// client whose scopes list `system/launch.c`.
     pub client_id: String,
-    /// The PEM private key that signs the client assertion, RSA (RS384) or
-    /// P-384 (ES384), the two algorithms SMART has a server support.
+    /// The PEM private key that signs the client assertion: ML-DSA-44,
+    /// ML-DSA-65 or ML-DSA-87 (RFC 9964 §5) with an ML-DSA key, RSA (RS384)
+    /// or P-384 (ES384), the two algorithms SMART has a server support.
     pub private_key_file: Option<PathBuf>,
     /// The `kid` FerroSMART knows the key by; empty: its RFC 7638 thumbprint.
     pub kid: String,
@@ -140,8 +141,8 @@ pub enum LaunchConfigError {
     /// The key is no key the assertion can be signed with.
     #[error("launch.private_key_file holds no key a client assertion is signed with")]
     Key(#[source] AssertionError),
-    /// The key signs with neither RS384 nor ES384.
-    #[error("launch.private_key_file signs with {0}; SMART asks RS384 or ES384")]
+    /// The key signs with none of ML-DSA, RS384 and ES384.
+    #[error("launch.private_key_file signs with {0}; the viewer signs with ML-DSA, RS384 or ES384")]
     Algorithm(Algorithm),
     /// The connection to FerroSMART could not be built.
     #[error("the connection to FerroSMART could not be built")]
@@ -358,7 +359,7 @@ impl Launcher {
     /// [`LaunchConfigError`] for an issuer that is no RFC 8414 issuer, an
     /// empty `client_id`, key file or `resource`, no app, an app with no
     /// name or no absolute launch URL, two apps naming one client, a key
-    /// that does not read or signs with neither RS384 nor ES384, or a
+    /// that does not read or signs with none of ML-DSA, RS384 and ES384, or a
     /// connection that cannot be built.
     pub fn from_section(section: &LaunchSection) -> Result<Option<Self>, LaunchConfigError> {
         if section.issuer.is_empty() {
@@ -412,9 +413,11 @@ impl Launcher {
         })?;
         let kid = (!section.kid.is_empty()).then(|| section.kid.clone());
         let key = AssertionKey::from_pem(&pem, None, kid).map_err(LaunchConfigError::Key)?;
-        // NOTE: SMART App Launch 2.2.0, Client Authentication: Asymmetric: a server
-        // SHALL support RS384 and ES384, so the viewer signs with no other.
-        if !matches!(key.algorithm(), Algorithm::Rs384 | Algorithm::Es384) {
+        // NOTE: SMART App Launch 2.2.0, Client Authentication: Asymmetric: a server SHALL
+        // support RS384 and ES384 and may support others; FerroSMART also takes ML-DSA (RFC 9964).
+        if !(key.algorithm().is_ml_dsa()
+            || matches!(key.algorithm(), Algorithm::Rs384 | Algorithm::Es384))
+        {
             return Err(LaunchConfigError::Algorithm(key.algorithm()));
         }
         let connection = EndpointSection {
