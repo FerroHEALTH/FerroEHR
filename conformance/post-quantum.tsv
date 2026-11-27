@@ -25,7 +25,6 @@ Access token and DPoP proof verification	RS256, RS384, PS256, PS384, ES256, ES38
 Client assertions of the outbound client credentials grant (private_key_jwt)	RS256, RS384, RS512, PS256, PS384, PS512, ES256, ES384 or EdDSA, as the key holds	no	RFC 9964	ferrohealth-smart client assertion, app/ferroehr/src/outbound.rs
 Viewer SMART launch client assertions	RS384 or ES384	no	RFC 9964	app/ferroehr-viewer/src/launch.rs
 Viewer sign-in ID token verification	RS256, RS384, RS512, PS256, PS384, PS512, ES256, ES384, EdDSA	no	RFC 9964	ferrohealth-smart oidc, app/ferroehr-viewer/src/cli.rs
-Viewer session cookie in sealed mode	AES-256-GCM	yes	NIST IR 8547 4.1.3	ferrohealth-session sessions, app/ferroehr-viewer/src/config.rs
 Helm chart signatures	cosign keyless (Sigstore, ECDSA P-256)	no	no standard yet	.github/workflows/build-chart.yml
 crates.io publishing	Trusted Publishing (OIDC token from GitHub, RS256)	no	no standard yet	.github/workflows/publish-crates.yml
 Release, image and chart provenance and SBOM attestations	Sigstore attestation (ECDSA P-256)	no	no standard yet	.github/workflows/build-image.yml, .github/workflows/release-build.yml, .github/workflows/build-chart.yml

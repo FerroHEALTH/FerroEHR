@@ -21,15 +21,15 @@ use crate::common;
 
 use common::{Harness, env, login_basic, wait_css_absent};
 
-/// The sealed session cookie's name (`ferroehr_viewer::session::cookie_names`, without
+/// The session cookie's name (`ferroehr_viewer::session::cookie_names`, without
 /// the `__Host-` prefix a plain-HTTP harness leaves off).
 const SESSION_COOKIE: &str = "ferroehr_viewer_session";
 
 /// The signed-in chrome: the user menu's button and the shell's footer.
 const AUTHED_CHROME: [&str; 2] = ["button[popovertarget='user-menu']", common::SHELL_FOOTER];
 
-/// Replace the sealed session cookie with one no key opens: a revocation the
-/// browser cannot predict, which still sends a session cookie.
+/// Replace the session cookie with an id the store does not hold: a revocation
+/// the browser cannot predict, which still sends a session cookie.
 async fn revoke_session(h: &Harness) {
     h.set_cookie(SESSION_COOKIE, "revoked").await;
 }

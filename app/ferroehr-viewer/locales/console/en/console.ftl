@@ -275,7 +275,5 @@ config-idle = Session idle time
 config-idle-line = A session ends after this long without a request.
 config-lifetime = Session lifetime
 config-lifetime-line = A session ends this long after sign-in, even while it is in use.
-config-session-key = Session key
-config-session-key-line = Seals the session cookie; every replica holds the same key.
 config-language = Language
 config-language-line = Used when the browser asks for a language the viewer does not have.
