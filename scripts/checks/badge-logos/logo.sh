@@ -15,7 +15,10 @@
 #   badge_logo_readme FILE   fails for each static badge without a logo
 #   badge_caption_check FILE fails unless the conformance caption sits on its
 #                            own line directly under a bold badge heading
-#   badge_count_color N M    the message colour of N passing out of M
+#   badge_count_color N M [HELD]
+#                            the message colour of N passing out of M, of
+#                            which HELD failing ones an open upstream report
+#                            holds
 #   badge_color_check FILE...
 #                            fails for each endpoint badge whose colour does
 #                            not follow its count, or, with no count, is not
@@ -24,7 +27,11 @@
 #                            fails for each endpoint badge whose label runs
 #                            past badge_label_max characters or whose
 #                            message runs past badge_message_max
-#   badge_length_self_test   the cases of the one above
+#   badge_length_readme FILE fails for each static shields.io badge of FILE
+#                            whose label or message runs past those limits
+#   badge_length_self_test   the cases of the two above
+#   badge_count_color_self_test
+#                            the cases of badge_count_color
 #   badge_post_quantum TSV   the endpoint JSON of the post-quantum badge of
 #                            the inventory TSV: label post-quantum, message
 #                            <safe>/<total>, coloured by the count
@@ -116,15 +123,32 @@ badge_caption_check() {
   fi
 }
 
-# NOTE: owner decision 2026-11-25; a counted badge is green when all pass, yellow when some do, red when none do.
+# NOTE: owner decisions 2026-11-25 and 2026-11-27; green only when all pass, yellowgreen when every missing one is held upstream.
 badge_count_color() {
-  if [[ "$1" -eq 0 ]]; then
-    echo red
-  elif [[ "$1" -eq "$2" ]]; then
+  local held="${3:-0}"
+  if [[ "$1" -eq "$2" && "$2" -gt 0 ]]; then
     echo brightgreen
+  elif [[ "$held" -gt 0 && $(($1 + held)) -eq "$2" ]]; then
+    echo yellowgreen
+  elif [[ "$1" -eq 0 ]]; then
+    echo red
   else
     echo yellow
   fi
+}
+
+badge_count_color_self_test() {
+  local pair n m held want got
+  for pair in "3 3 0 brightgreen" "2 4 0 yellow" "0 4 0 red" "0 0 0 red" "2 4 2 yellowgreen" \
+    "2 4 1 yellow" "0 2 2 yellowgreen" "0 2 1 red" "4 4 0 brightgreen"; do
+    read -r n m held want <<< "$pair"
+    got="$(badge_count_color "$n" "$m" "$held")"
+    if [[ "$got" != "$want" ]]; then
+      echo "badge colour: self-test FAILED: $n of $m with $held held reads $got, not $want" >&2
+      return 1
+    fi
+  done
+  echo "badge colour: self-test OK"
 }
 
 badge_color_check() {
@@ -166,6 +190,50 @@ badge_length_check() {
   [[ "$failures" -eq 0 ]]
 }
 
+# Prints "<label><TAB><message>" of each static shields.io badge in FILE: the
+# /badge/LABEL-MESSAGE-COLOR path form, with -- for a dash, __ for an
+# underscore, _ for a space and percent-encoding (https://shields.io/badges/static-badge).
+badge_static_texts() {
+  local url path part label message
+  while IFS= read -r url; do
+    path="${url#https://img.shields.io/badge/}"
+    path="${path%%\?*}"
+    path="${path//--/$'\x01'}"
+    path="${path//__/$'\x02'}"
+    IFS='-' read -r -a part <<< "$path"
+    if [[ "${#part[@]}" -ge 3 ]]; then
+      label="${part[0]}"
+      message="${part[1]}"
+    else
+      label=""
+      message="${part[0]:-}"
+    fi
+    for part in label message; do
+      local value="${!part}"
+      value="${value//_/ }"
+      value="${value//$'\x01'/-}"
+      value="${value//$'\x02'/_}"
+      printf -v "$part" '%b' "${value//%/\\x}"
+    done
+    printf '%s\t%s\n' "$label" "$message"
+  done < <(grep -oE 'https://img\.shields\.io/badge/[^)" ]+' "$1" || true)
+}
+
+badge_length_readme() {
+  local label message failures=0
+  while IFS=$'\t' read -r label message; do
+    if [[ "$(jq -rn --arg s "$label" '$s | length')" -gt "$badge_label_max" ]]; then
+      echo "badge length: $1 has a static badge whose label runs past $badge_label_max characters: $label" >&2
+      failures=$((failures + 1))
+    fi
+    if [[ "$(jq -rn --arg s "$message" '$s | length')" -gt "$badge_message_max" ]]; then
+      echo "badge length: $1 has a static badge whose message runs past $badge_message_max characters: $message" >&2
+      failures=$((failures + 1))
+    fi
+  done < <(badge_static_texts "$1")
+  [[ "$failures" -eq 0 ]]
+}
+
 badge_length_self_test() {
   local work
   work="$(mktemp -d)"
@@ -187,7 +255,28 @@ badge_length_self_test() {
   badge_length_case "$(printf 'x%.0s' {1..31})" "1/2" fail || return 1
   badge_length_case "OIDC Core 1.0 OP" "$(printf '9%.0s' {1..21})" fail || return 1
   badge_length_case "OIDC Core 1.0 OP" "3/36 passed, 30 failed; open: #933" fail || return 1
-  rm -f "$work/b.json"
+  printf '[![a](https://img.shields.io/badge/CRA-user%%20information-blue?logo=x)](a)\n' > "$work/r.md"
+  printf '[![b](https://img.shields.io/badge/License-BUSL--1.1-blue?logo=x)](b)\n' >> "$work/r.md"
+  if ! badge_length_readme "$work/r.md" 2> /dev/null; then
+    echo "badge length: self-test FAILED: a short static badge is refused" >&2
+    rm -f "$work/b.json" "$work/r.md"
+    rmdir "$work"
+    return 1
+  fi
+  if [[ "$(badge_static_texts "$work/r.md" | tail -1)" != $'License\tBUSL-1.1' ]]; then
+    echo "badge length: self-test FAILED: a static badge reads $(badge_static_texts "$work/r.md" | tail -1)" >&2
+    rm -f "$work/b.json" "$work/r.md"
+    rmdir "$work"
+    return 1
+  fi
+  printf '[![c](https://img.shields.io/badge/CRA-information_for__all%%20of%%20its%%20users-blue)](c)\n' > "$work/r.md"
+  if badge_length_readme "$work/r.md" 2> /dev/null; then
+    echo "badge length: self-test FAILED: a long static badge message passes" >&2
+    rm -f "$work/b.json" "$work/r.md"
+    rmdir "$work"
+    return 1
+  fi
+  rm -f "$work/b.json" "$work/r.md"
   rmdir "$work"
   echo "badge length: self-test OK"
 }

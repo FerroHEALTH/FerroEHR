@@ -19,7 +19,7 @@
 [![GHCR](https://img.shields.io/badge/ghcr.io-ferroehr-2496ED?logo=docker&logoColor=white)](https://github.com/FerroHEALTH/FerroEHR/pkgs/container/ferroehr)
 [![Image pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2FFerroHEALTH%2FFerroEHR%2Fferroehr&query=downloadCount&label=image%20pulls&logo=github)](https://github.com/FerroHEALTH/FerroEHR/pkgs/container/ferroehr)
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/ferroehr)](https://artifacthub.io/packages/search?repo=ferroehr)
-[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21940279-blue?logo=zenodo&logoColor=white)](https://doi.org/10.5281/zenodo.21940279)
+[![DOI](https://img.shields.io/badge/DOI%2010.5281-zenodo.21940279-blue?logo=zenodo&logoColor=white)](https://doi.org/10.5281/zenodo.21940279)
 
 **Quality and security**<br>
 [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/FerroHEALTH/FerroEHR?label=openssf%20scorecard&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgZD0iTTEyIDJsOCAzdjZjMCA1LTMuNSA5LjUtOCAxMS00LjUtMS41LTgtNi04LTExVjVaTTguNSAxMmwyLjUgMi41IDQuNS01Ii8%2BPC9zdmc%2B)](https://scorecard.dev/viewer/?uri=github.com/FerroHEALTH/FerroEHR)
@@ -33,24 +33,12 @@
 
 **openEHR conformance**<br>
 <sub>(self-tested and self-assessed counts; none is a certification)</sub><br>
-<sub>Against the released openEHR specifications</sub><br>
-[![openEHR BASE · released](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/base.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
-[![openEHR OPTIONS · released](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/options.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
-[![specification · released](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/profile.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
-[![veredictum · released](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/instrument.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
-<br>
-<sub>The committed released record, with its deviation</sub><br>
+<sub>The committed record against the released openEHR specifications</sub><br>
 [![openEHR BASE released](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-base.json)](docs/conformance/badges.md)
 [![openEHR OPTIONS released](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-options.json)](docs/conformance/badges.md)
 <br>
 <sub>The red BASE rows, here and in the development run, are one deliberate deviation: the server records the authenticated caller as the committer and refuses a stated committer that names someone else, where ITS-REST asks that it be merged. The ground is Regulation (EU) 2025/327 Annex II 3.1 and Art. 13(4), the decision <a href="https://github.com/FerroHEALTH/FerroEHR/issues/5002">#5002</a> and the upstream report <a href="https://github.com/FerroHEALTH/FerroEHR/issues/5019">#5019</a> (<a href="https://ferroehr.eu/docs/latest/conformance.html#known-deviations">Known deviations</a>).</sub><br>
-<sub>Against the development openEHR specifications (master)</sub><br>
-[![openEHR BASE · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/base.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
-[![openEHR OPTIONS · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/options.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
-[![specification · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/profile.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
-[![veredictum · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/instrument.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
-<br>
-<sub>The committed development record, with its deviation</sub><br>
+<sub>The committed record against the development openEHR specifications (master)</sub><br>
 [![openEHR BASE development](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-base-development.json)](docs/conformance/badges.md)
 [![openEHR OPTIONS development](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-options-development.json)](docs/conformance/badges.md)
 <br>

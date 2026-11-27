@@ -45,11 +45,9 @@
 # results views of each profile as its own artifact. recording.har holds the
 # server's response bodies and is never uploaded.
 #
-# Each run draws its Veredictum badges and, from a run on main that is not a
-# pull request, pushes them to a branch of its own the README reads: the
-# released run to veredictum-badges, the development run to
-# veredictum-badges-development (Veredictum book, Badges). A caller grants
-# `contents: write` for that push and `packages: read` for the pulls.
+# The README badges come from the committed records
+# (scripts/render/measured-badges.sh), so the Action pushes no badge branch.
+# A caller grants `contents: read` and `packages: read` for the pulls.
 #
 # No openEHR specification governs how CI runs the instrument: our own design.
 name: Conformance
@@ -148,10 +146,7 @@ jobs:
     outputs:
       verdict: ${{ steps.verdict.outputs.verdict }}
     permissions:
-      # Each run pushes its badges to its own branch: veredictum-badges and
-      # veredictum-badges-development.
-      # The Action pushes only from a run on main that is not a pull request.
-      contents: write
+      contents: read
       packages: read # pull the images under test from GHCR
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -341,7 +336,6 @@ jobs:
           admin-auth: basic
           profile: released
           out-dir: conformance-results/released
-          badge-branch: veredictum-badges
           image: ghcr.io/vernum-projecten/veredictum@sha256:4416e6701883fba427a97d05b915ed9552253edf5b010cc30ad9eebd5271687e
       # Fresh volumes again, so the development run starts on the ground the
       # released run had.
@@ -378,7 +372,6 @@ jobs:
           admin-auth: basic
           profile: development
           out-dir: conformance-results/development
-          badge-branch: veredictum-badges-development
           image: ghcr.io/vernum-projecten/veredictum@sha256:4416e6701883fba427a97d05b915ed9552253edf5b010cc30ad9eebd5271687e
       # The views each run's outputs name, one directory per profile, so the
       # two are never mixed. recording.har is never among them.

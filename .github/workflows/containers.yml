@@ -17,8 +17,8 @@
 #      D5). A multi-arch buildx push takes seconds because no code runs inside.
 #   3. The smoke test pulls the pushed image by digest instead of rebuilding.
 #   4. The openEHR conformance run (the reusable conformance.yml) judges the
-#      pushed server and postgres images by digest and publishes the Veredictum
-#      badges, so main compiles no server for conformance (#4539).
+#      pushed server and postgres images by digest, so main compiles no server
+#      for conformance (#4539).
 #
 # DEVELOP PUSHES AND MANUAL DISPATCHES ONLY (#2776). A `v*` tag is owned end to
 # end by release.yml — THE release pipeline — which runs these same lanes with
@@ -512,10 +512,10 @@ jobs:
   # what users pull. An image this push did not rebuild is judged at `:main`,
   # which moves only when a scan passes, so conformance.yml judges it only when
   # its revision label names a commit with this tree's inputs and refuses an
-  # older one (#4547). Every push runs it, the badges included, as
-  # conformance.yml did on main before. A failed or cancelled build sits it out.
-  # While `advisory` is set the job ends green with its verdict in its summary
-  # and the badges, which are the published record: a red row would otherwise
+  # older one (#4547). Every push runs it, as conformance.yml did on main
+  # before. A failed or cancelled build sits it out.
+  # While `advisory` is set the job ends green with its verdict in its summary:
+  # a red row would otherwise
   # mark every push's run failed and hide a failed image or smoke lane (#4605).
   conformance:
     name: conformance
@@ -526,7 +526,7 @@ jobs:
       contains(fromJSON('["success", "skipped"]'), needs.app-image.result) &&
       contains(fromJSON('["success", "skipped"]'), needs.postgres-image.result)
     permissions:
-      contents: write # each run pushes its badges to its own branch, from main only
+      contents: read
       packages: read # pull the digests this run pushed
     uses: ./.github/workflows/conformance.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:

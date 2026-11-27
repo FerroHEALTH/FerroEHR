@@ -121,9 +121,9 @@ spec"; it is the most common real culprit.** Two reflexes are FORBIDDEN:
 6. **At phase close:** the committed `results.json` and `summary.md` under
    `docs/conformance/ferroehr/` are the released-profile run of the current
    release (the `conformance-views-released` artifact of its Conformance
-   run). The Conformance workflow pushes the badges to the
-   `veredictum-badges` and `veredictum-badges-development` branches; they are
-   never committed.
+   run). `scripts/render/measured-badges.sh` draws the README badges and
+   `docs/conformance/badges.md` from those records; commit them with the
+   record.
 
 ## The measured performance stages
 
