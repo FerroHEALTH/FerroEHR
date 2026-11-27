@@ -85,6 +85,9 @@ guarded_handler! {
                                           its ITS-JSON form for a reviewer, or in the \
                                           subject view for the subject of care and their \
                                           representative. No total count.",
+             headers(("FerroEHR-Access-Log-View" = String, description = "`subject` when \
+                      the answer is the subject view, `full` when it is the full view. \
+                      Our own extension.")),
              body = serde_json::Value),
             (status = 400, description = "A parameter the route does not take, or a value \
                                           outside its form.", body = serde_json::Value),
@@ -115,6 +118,9 @@ guarded_handler! {
             (status = 200, description = "The entry, in its ITS-JSON form for a reviewer or \
                                           in the subject view for the subject of care and \
                                           their representative.",
+             headers(("FerroEHR-Access-Log-View" = String, description = "`subject` when \
+                      the answer is the subject view, `full` when it is the full view. \
+                      Our own extension.")),
              body = serde_json::Value),
             (status = 400, description = "The EHR id is not a UUID.", body = serde_json::Value),
             (status = 401, description = "No valid credential.", body = serde_json::Value),
@@ -135,10 +141,12 @@ guarded_handler! {
 /// The `ehr_access_log_list` operation.
 async fn list(state: &AppState, parts: &RequestParts) -> Response {
     let ehr = parts.path.get("ehr_id").map_or("", String::as_str);
+    let mut served = None;
     let answered = async {
         let ehr_id = parse_ehr_id(ehr)?;
         let filter = log_query(parts.query.as_deref(), EHR_PARAMETERS)?;
         let reader = reader(state, ehr)?;
+        served = Some(reader);
         let records = state
             .backend()
             .ehr_access_log(ehr_id, &filter, reader)
@@ -150,22 +158,25 @@ async fn list(state: &AppState, parts: &RequestParts) -> Response {
         ))
     }
     .await;
-    recorded(
+    let resp = recorded(
         &parts.headers,
         answered,
         Some(ehr),
         None,
         parts.query.as_deref(),
-    )
+    );
+    named_view(resp, served)
 }
 
 /// The `ehr_access_log_get` operation.
 async fn get(state: &AppState, parts: &RequestParts) -> Response {
     let ehr = parts.path.get("ehr_id").map_or("", String::as_str);
     let uid = parts.path.get("uid").map_or("", String::as_str);
+    let mut served = None;
     let answered = async {
         let ehr_id = parse_ehr_id(ehr)?;
         let reader = reader(state, ehr)?;
+        served = Some(reader);
         let entry = state
             .backend()
             .ehr_access_log_entry(ehr_id, uid, reader)
@@ -179,7 +190,29 @@ async fn get(state: &AppState, parts: &RequestParts) -> Response {
         Ok((body, Some(1)))
     }
     .await;
-    recorded(&parts.headers, answered, Some(ehr), Some(uid), None)
+    let resp = recorded(&parts.headers, answered, Some(ehr), Some(uid), None);
+    named_view(resp, served)
+}
+
+/// The header naming the view a successful read served: **our own
+/// extension**, since the draft's ITS-REST page names no such header.
+const VIEW_HEADER: &str = "ferroehr-access-log-view";
+
+/// `resp` naming the view `served` when it is a success, so a client tells
+/// the subject view from the full view without knowing the caller's standing.
+fn named_view(mut resp: Response, served: Option<LogReader>) -> Response {
+    let Some(reader) = served.filter(|_| resp.status().is_success()) else {
+        return resp;
+    };
+    let view = match reader {
+        LogReader::Person => "subject",
+        LogReader::Reviewer => "full",
+    };
+    resp.headers_mut().insert(
+        http::HeaderName::from_static(VIEW_HEADER),
+        http::HeaderValue::from_static(view),
+    );
+    resp
 }
 
 /// The EHDS Art. 9(3) restrictions of the subject view in the controller's

@@ -329,6 +329,53 @@ async fn the_subject_reads_only_their_own_log() {
     }
 }
 
+/// The view `GET uri` as `credential` names in its `FerroEHR-Access-Log-View`
+/// header, with the status.
+async fn named_view(app: &Router, uri: &str, credential: &str) -> (StatusCode, Option<String>) {
+    let (status, headers, _) = common::send(
+        app,
+        common::req("GET", uri)
+            .auth(credential)
+            .accept("application/json")
+            .build(),
+    )
+    .await;
+    let view = headers
+        .get("ferroehr-access-log-view")
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned);
+    (status, view)
+}
+
+/// Each read of an EHR's log names the view it served, `subject` for the
+/// subject and their representative and `full` for a reviewer, and a refusal
+/// names none.
+#[tokio::test]
+async fn each_read_names_the_view_it_served() {
+    let fx = fixture().await;
+    let (_, page) = get(&fx.app, &log_of(&fx.ehr, ""), &root()).await;
+    let uid = entries(&page)
+        .first()
+        .and_then(|entry| entry["uid"]["value"].as_str())
+        .expect("an entry")
+        .to_owned();
+    let entry = log_of(&fx.ehr, &format!("/{uid}"));
+    for (who, credential, view) in [
+        ("a reviewer", root(), "full"),
+        ("the subject", patient(&fx.ehr), "subject"),
+        ("a representative", parent(&fx.ehr), "subject"),
+    ] {
+        for uri in [log_of(&fx.ehr, ""), entry.clone()] {
+            let (status, named) = named_view(&fx.app, &uri, &credential).await;
+            assert_eq!(status, StatusCode::OK, "{who}: {uri}");
+            assert_eq!(named.as_deref(), Some(view), "{who}: {uri}");
+        }
+    }
+    let (status, named) = named_view(&fx.app, &log_of(&fx.elsewhere, ""), &patient(&fx.ehr)).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(named, None, "a refusal names no view");
+}
+
 /// The parent reads the subject view of the child's log under their own
 /// login, and nothing of another EHR.
 #[tokio::test]

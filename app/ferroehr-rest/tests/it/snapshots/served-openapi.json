@@ -8272,6 +8272,14 @@
         "responses": {
           "200": {
             "description": "`offset`, `fetch` and `entries`: each entry in its ITS-JSON form for a reviewer, or in the subject view for the subject of care and their representative. No total count.",
+            "headers": {
+              "FerroEHR-Access-Log-View": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "`subject` when the answer is the subject view, `full` when it is the full view. Our own extension."
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {}
@@ -8361,6 +8369,14 @@
         "responses": {
           "200": {
             "description": "The entry, in its ITS-JSON form for a reviewer or in the subject view for the subject of care and their representative.",
+            "headers": {
+              "FerroEHR-Access-Log-View": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "`subject` when the answer is the subject view, `full` when it is the full view. Our own extension."
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {}

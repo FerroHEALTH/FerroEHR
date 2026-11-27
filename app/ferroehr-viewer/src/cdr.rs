@@ -51,6 +51,9 @@ pub struct CdrResponse {
     pub etag: Option<String>,
     /// The `Location` of a newly created resource (`201` answers only).
     pub location: Option<String>,
+    /// The `FerroEHR-Access-Log-View` of a read of an EHR's access log, the
+    /// view the CDR served: `subject` or `full`.
+    pub access_log_view: Option<String>,
     /// The raw body bytes as text (all ITS-REST representations are text).
     pub body: String,
 }
@@ -123,6 +126,7 @@ impl CdrResponse {
             status,
             etag: header_text(headers, http::header::ETAG.as_str()),
             location: header_text(headers, http::header::LOCATION.as_str()),
+            access_log_view: header_text(headers, "ferroehr-access-log-view"),
             body,
         }
     }
@@ -496,6 +500,7 @@ mod tests {
             status,
             etag: None,
             location: None,
+            access_log_view: None,
             body: body.to_owned(),
         }
     }

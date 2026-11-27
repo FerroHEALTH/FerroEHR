@@ -19,9 +19,15 @@ its outcome. Each row opens its entry.
 
 The CDR decides what you read. The person the record is about and their
 representative read their own view, which leaves out what serves review
-alone; a reviewer reads the full record. Any other account sees that it may
-not read the log. The person's own reads of their log are left out until you
-tick **Include the person's own reads of this log**.
+alone; a reviewer reads the full record. When the CDR answers with the
+person's own view, the tab and each entry say so above the list, from the
+view the CDR names in its answer. Any other account sees that it may not read
+the log. The person's own reads of their log are left out until you tick
+**Include the person's own reads of this log**.
+
+The tab stays on every EHR page. If the CDR serves no access log for the
+record, the tab says so. The viewer does not check in advance, because each
+read of the log is itself recorded.
 
 The filters are a plain form whose values stay in the address: the action,
 the outcome, the kind of accessor, the ground (a justification or an
