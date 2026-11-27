@@ -648,6 +648,38 @@ async fn write_policy(
         .expect("the written policy names its version")
 }
 
+/// Sign out through the user menu, back to the sign-in page.
+async fn sign_out(h: &Harness) {
+    h.wait_css("button[popovertarget='user-menu']")
+        .await
+        .click()
+        .await;
+    h.wait_css("#user-menu:popover-open").await;
+    h.wait_css("#user-menu form[action='/logout'] button")
+        .await
+        .click()
+        .await;
+    h.wait_url_contains("/sign-in").await;
+}
+
+/// Capture a patient's access log as their representative reads it: the
+/// subject view the CDR names, with the note saying it is the person's own.
+async fn capture_own_view(h: &Harness, book: &Path) {
+    let (Some(ehr), Some(proxy), Some(proxy_pass)) = (
+        env("UI_E2E_PATIENT_EHR_ID"),
+        env("UI_E2E_PROXY_USER"),
+        env("UI_E2E_PROXY_PASS"),
+    ) else {
+        println!("SKIP the own-view capture: the seeded representative env is unset");
+        return;
+    };
+    sign_out(h).await;
+    login_basic_as(h, &proxy, &proxy_pass).await;
+    h.goto(&format!("/ehrs/{ehr}/access-log")).await;
+    common::wait_main_contains(h, "own view of their access log").await;
+    shot_to(h, book, "access-log/own-view").await;
+}
+
 /// Capture the justification form and its notice, as the clinician who
 /// reads an EHR outside their care relationships.
 ///
@@ -676,16 +708,7 @@ async fn capture_justification(h: &Harness, cdr: &str, admin: (&str, &str), book
         .expect("the policy history holds the seed's first version");
     let applied = write_policy(&http, cdr, admin, &first, &in_force).await;
     let captured = std::panic::AssertUnwindSafe(async {
-        h.wait_css("button[popovertarget='user-menu']")
-            .await
-            .click()
-            .await;
-        h.wait_css("#user-menu:popover-open").await;
-        h.wait_css("#user-menu form[action='/logout'] button")
-            .await
-            .click()
-            .await;
-        h.wait_url_contains("/sign-in").await;
+        sign_out(h).await;
         login_basic_as(h, &clinician, &clinician_pass).await;
         h.goto(&format!("/ehrs/{ehr}/status")).await;
         h.wait_css("#j-reason").await;
@@ -760,6 +783,7 @@ async fn capture_documentation_screenshots() {
     capture_routes(&h, &all, &review, &book).await;
     capture_states(&h, &seeded, &book).await;
     capture_justification(&h, &cdr, (&user, &pass), &book).await;
+    capture_own_view(&h, &book).await;
 
     h.assert_console_clean(&["401", "403", "404", "Failed to load resource"])
         .await;

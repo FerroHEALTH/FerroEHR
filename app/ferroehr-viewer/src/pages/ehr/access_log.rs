@@ -22,7 +22,9 @@ use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::surface::{Crumb, Header, page_heading};
 use ferrohealth_ui::view::template::list::list_empty;
 
-use crate::bff::access_log::{Coded, Entry, LogFilters, ehr_access_log, ehr_access_log_entry};
+use crate::bff::access_log::{
+    Coded, Entry, LogFilters, Served, ehr_access_log, ehr_access_log_entry,
+};
 use crate::bff::access_review::erase;
 use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
@@ -44,7 +46,7 @@ struct Panel {
     /// The filters the address names.
     filters: LogFilters,
     /// The entries of the page, or the CDR's refusal.
-    entries: Result<Vec<Entry>, ViewerError>,
+    entries: Result<Served<Vec<Entry>>, ViewerError>,
     /// Whether the admin group is mounted, which offers the export.
     admin: bool,
 }
@@ -73,6 +75,14 @@ async fn read_page(ehr_id: String) -> EhrModel<Panel> {
     .await
 }
 
+/// The note saying the page is the person's own view of their log, when the
+/// CDR served the subject view.
+fn own_view<T>(served: &Served<T>) -> Option<Html> {
+    served
+        .is_subject_view()
+        .then(|| info_note(t(tr(AccessMsg::OwnView))))
+}
+
 /// The tab's panel.
 fn panel(ehr_id: &str, panel: Panel) -> Html {
     let Panel {
@@ -81,8 +91,8 @@ fn panel(ehr_id: &str, panel: Panel) -> Html {
         admin,
     } = panel;
     let base = tab_href(ehr_id, EhrTab::AccessLog);
-    let entries = match entries {
-        Ok(entries) => entries,
+    let (own, entries) = match entries {
+        Ok(served) => (own_view(&served), served.value),
         Err(error) => {
             return h(format!(
                 r#"<div class="fui-panel"><div class="fui-panel-body fui-stack">{}</div></div>"#,
@@ -126,7 +136,8 @@ fn panel(ehr_id: &str, panel: Panel) -> Html {
         )
     });
     h(format!(
-        r#"<div class="fui-panel"><div class="fui-panel-body fui-stack"><div class="fui-cluster"><p class="fui-small fui-muted">{}</p>{}</div>{}{}</div>{list}{}</div>"#,
+        r#"<div class="fui-panel"><div class="fui-panel-body fui-stack">{}<div class="fui-cluster"><p class="fui-small fui-muted">{}</p>{}</div>{}{}</div>{list}{}</div>"#,
+        opt(own),
         t(tr(AccessMsg::Intro)),
         opt(export),
         toolbar(&base, &filters),
@@ -135,12 +146,43 @@ fn panel(ehr_id: &str, panel: Panel) -> Html {
     ))
 }
 
+/// The log of an EHR the CDR refuses the caller, under its own heading: the
+/// person and their representative read the log of a record they may not
+/// read (book `access-log.md`, the subject view).
+async fn log_alone(ehr_id: &str, title: &str) -> Html {
+    let filters = read_filters();
+    let window = OpenWindow::of(crate::paging::current(Listing::AccessLog), 0);
+    let entries = ehr_access_log(ehr_id, &filters, window.start, window.size).await;
+    let heading = page_heading(
+        &current(),
+        Header {
+            title: title.to_owned().into(),
+            subtitle: None,
+            crumbs: crumbs(ehr_id),
+            mono: false,
+            badge: None,
+            subtitle_view: None,
+        },
+        ActionGroup::default(),
+    );
+    heading.then(panel(
+        ehr_id,
+        Panel {
+            filters,
+            entries,
+            admin: false,
+        },
+    ))
+}
+
 /// An EHR's Access log tab.
 pub async fn page() -> Drawn {
     let ehr_id = ehr_id_param();
     let title = tr_with(AccessMsg::Title, &[("id", shortened(&ehr_id).into())]);
-    let body = {
-        let model = read_page(ehr_id.clone()).await;
+    let model = read_page(ehr_id.clone()).await;
+    let body = if model.ehr_refused() {
+        log_alone(&ehr_id, &title).await
+    } else {
         ehr_view(&ehr_id, EhrTab::AccessLog, model, |found| {
             panel(&ehr_id, found)
         })
@@ -230,10 +272,16 @@ pub async fn entry_page() -> Drawn {
     let mut trail = crumbs(&ehr_id);
     trail.push(Crumb::new(tr(AccessMsg::Tab), back));
     let (title, body, found) = match ehr_access_log_entry(&ehr_id, &uid).await {
-        Ok(entry) => {
+        Ok(served) => {
+            let own = own_view(&served);
+            let entry = served.value;
             let reading = ferrohealth_ui::view::time::reading(&current(), &entry.recorded);
             let title = tr_with(AccessMsg::EntryTitle, &[("when", reading.into())]);
-            (title, card_panel(entry_sections(&entry)), true)
+            (
+                title,
+                opt(own).then(card_panel(entry_sections(&entry))),
+                true,
+            )
         }
         Err(error) if is_status(&error, http::StatusCode::NOT_FOUND) => {
             crate::request::set_status(http::StatusCode::NOT_FOUND);

@@ -226,6 +226,16 @@ pub struct EhrModel<P> {
     tasks: Option<launch_tasks::Panel>,
 }
 
+impl<P> EhrModel<P> {
+    /// Whether the CDR refused the caller the EHR itself (`403`), as it does
+    /// the person and their representative, who read its access log alone.
+    pub fn ehr_refused(&self) -> bool {
+        self.head
+            .as_ref()
+            .is_err_and(|error| is_status(error, http::StatusCode::FORBIDDEN))
+    }
+}
+
 /// The subject line of the EHR `ehr_id` whose status is `status`; a
 /// revealed subject id is written to the log with who revealed it.
 fn subject_facts(ehr_id: &str, status: &EhrStatusState) -> SubjectFacts {
@@ -697,8 +707,19 @@ fn missing(ehr_id: &str, error: &ViewerError) -> Html {
         Some(Glyph::ARROW_LEFT),
         tr(RecordsMsg::EhrBack),
     );
+    // NOTE: our own design, the person and their representative read the log of an EHR
+    // the CDR refuses them, so a 403 offers its Access log tab.
+    let log = is_status(error, http::StatusCode::FORBIDDEN).then(|| {
+        ferrohealth_ui::view::button::link_button(
+            tab_href(ehr_id, EhrTab::AccessLog),
+            ferrohealth_ui::view::button::Variant::Secondary,
+            None,
+            tr(AccessMsg::OpenLog),
+        )
+    });
     heading.then(h(format!(
-        r#"<div class="fui-stack">{}<div class="fui-cluster">{back}</div></div>"#,
-        refused(tr(RecordsMsg::EhrRefused), error, None)
+        r#"<div class="fui-stack">{}<div class="fui-cluster">{back}{}</div></div>"#,
+        refused(tr(RecordsMsg::EhrRefused), error, None),
+        opt(log)
     )))
 }

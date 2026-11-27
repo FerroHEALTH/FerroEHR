@@ -120,6 +120,7 @@ mod tests {
             status,
             etag: None,
             location: None,
+            access_log_view: None,
             body: body.to_owned(),
         }
     }
@@ -131,6 +132,7 @@ mod tests {
             status: http::StatusCode::BAD_REQUEST,
             etag: None,
             location: None,
+            access_log_view: None,
             body: r#"{"resourceType":"OperationOutcome","issue":[
                 {"severity":"error","code":"invalid","diagnostics":"missing field `template_id`"},
                 {"severity":"error","code":"structure"}]}"#

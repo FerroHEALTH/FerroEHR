@@ -250,6 +250,10 @@ SEEDED_VO_ID=$(jq -r '.tokens["__SERIES:minimal-evaluation__"]' "$SEED_IDS")
 # which the docs-shots pass captures the justification form on.
 JUSTIFIED_SLOT=$(jq -r '.world.access_policy.justified[0].ehr' scripts/sandbox/seed/manifest.json)
 JUSTIFIED_EHR_ID=$(jq -r ".ehrs[$JUSTIFIED_SLOT]" "$SEED_IDS")
+# The patient whose access log the representative ferroehr-proxy reads in
+# the subject view, which the docs-shots pass captures.
+PATIENT_SLOT=$(jq -r '.world.logs.patient_ehr' scripts/sandbox/seed/manifest.json)
+PATIENT_EHR_ID=$(jq -r ".ehrs[$PATIENT_SLOT]" "$SEED_IDS")
 echo "   seeded EHR $SEEDED_EHR_ID / composition $SEEDED_VO_ID (2 versions)"
 
 # ── 3. The viewer under test ─────────────────────────────────────────────────
@@ -379,6 +383,9 @@ E2E_ENV=(
   UI_E2E_SEEDED_EHR_ID="$SEEDED_EHR_ID"
   UI_E2E_SEEDED_VO_ID="$SEEDED_VO_ID"
   UI_E2E_JUSTIFIED_EHR_ID="$JUSTIFIED_EHR_ID"
+  UI_E2E_PATIENT_EHR_ID="$PATIENT_EHR_ID"
+  UI_E2E_PROXY_USER="ferroehr-proxy"
+  UI_E2E_PROXY_PASS="ferroehr"
 )
 if [[ -n "${UI_E2E_SHOTS_ONLY:-}" ]]; then
   echo "── journeys skipped (UI_E2E_SHOTS_ONLY)"

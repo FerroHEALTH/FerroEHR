@@ -31,10 +31,11 @@ const CDR_VAR: &str = "FERROEHR_VIEWER_RECORD_CDR";
 const DIR_VAR: &str = "FERROEHR_VIEWER_RECORD_DIR";
 
 /// The response headers a recording keeps: the ones the viewer reads.
-const KEPT_HEADERS: [&str; 5] = [
+const KEPT_HEADERS: [&str; 6] = [
     "allow",
     "content-type",
     "etag",
+    "ferroehr-access-log-view",
     "last-modified",
     "www-authenticate",
 ];
