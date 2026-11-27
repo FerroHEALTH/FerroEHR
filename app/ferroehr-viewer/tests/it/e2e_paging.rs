@@ -231,14 +231,6 @@ async fn first_row(h: &Harness, css: &str) -> String {
     h.wait_css(css).await.attr("href").await
 }
 
-/// The admin credentials the audit log needs.
-fn admin_credentials() -> (String, String) {
-    (
-        env("UI_E2E_ADMIN_USER").unwrap_or_else(|| "ferroehr-admin".to_owned()),
-        env("UI_E2E_ADMIN_PASS").unwrap_or_else(|| "ferroehr".to_owned()),
-    )
-}
-
 /// The audit log's pager: Next moves the window, the address stays the plain
 /// path, a fresh load keeps the page, and First returns.
 #[tokio::test]
@@ -246,7 +238,7 @@ async fn the_audit_log_pages_through_the_post_pager() {
     let Some(h) = Harness::start("audit-paging").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
     let rows = "main table tbody a.fui-row-link";
     h.goto("/audit").await;

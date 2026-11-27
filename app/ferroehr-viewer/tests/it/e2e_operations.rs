@@ -25,21 +25,13 @@
 use crate::common;
 
 use common::{
-    Harness, confirm_in_dialog, count_matching, env, fill, is_present, login_basic, login_basic_as,
+    Harness, confirm_in_dialog, count_matching, fill, is_present, login_basic, login_basic_as,
     main_text, wait_main_contains, wait_text_contains,
 };
 use thirtyfour::prelude::*;
 
 /// A filter distinguishable from any boot filter the stack runs with.
 const TEST_FILTER: &str = "ferroehr=debug,sqlx=warn";
-
-/// The admin credentials the log-filter write needs.
-fn admin_credentials() -> (String, String) {
-    (
-        env("UI_E2E_ADMIN_USER").unwrap_or_else(|| "ferroehr-admin".to_owned()),
-        env("UI_E2E_ADMIN_PASS").unwrap_or_else(|| "ferroehr".to_owned()),
-    )
-}
 
 /// Health lists the CDR's readiness indicators, and Overview reports the
 /// version and the spec pins.
@@ -138,7 +130,7 @@ async fn admin_applies_and_resets_the_live_log_filter() {
     let Some(h) = Harness::start("operations-log-control").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
     h.goto("/server/logging").await;
     wait_main_contains(&h, "At boot").await;

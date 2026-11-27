@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Query › Cohort: AQL run over the EHRs the deployment's demographic
-//! predicates select, as one cohort request ([`crate::bff::cohort`]).
+//! predicates or the subjects a cohort names select, as one cohort request
+//! ([`crate::bff::cohort`]).
 //!
-//! The predicates offered are the keys the deployment binds when the session
-//! may read its configuration, else every bindable key, which the CDR judges.
-//! A deployment that binds none (`404`, or a configuration binding none)
-//! offers no cohort. The results draw as any result set, with the cohort's
+//! The predicates offered are the keys the deployment binds, and the subjects
+//! are offered where it lets a cohort name them, when the session may read its
+//! configuration; else every bindable key and the subjects, which the CDR
+//! judges. A deployment that allows neither (`404`, or a configuration that
+//! binds no key and names no subject) offers no cohort. The results draw as any result set, with the cohort's
 //! size, the EHRs served and the suppression of a small cell. No openEHR spec
 //! governs the viewer: our own design.
 
@@ -22,7 +24,9 @@ use ferrohealth_ui::view::tabs::binder;
 
 use super::aql_input::{grammar, parameters_json, parameters_of, parameters_view};
 use super::{QUERY_FORM, tabs};
-use crate::bff::cohort::{CohortMeta, KEYS, Predicate, bound_keys, run_cohort};
+use crate::bff::cohort::{
+    CohortMeta, Predicate, SUBJECT_IDS_FIELD, SUBJECT_NAMESPACE_FIELD, chosen, offered, run_cohort,
+};
 use crate::components::{EditorField, EditorLanguage, EditorSetup, code_editor};
 use crate::locale::queries::QueriesMsg;
 use crate::locale::{Msg, current, tr};
@@ -56,6 +60,9 @@ struct Cohort {
     aql: String,
     /// The keys offered, each with the value typed.
     predicates: Vec<Predicate>,
+    /// The subjects' namespace and identifiers as typed, `None` when the
+    /// deployment names no subject.
+    subjects: Option<(String, String)>,
     /// Each parameter a run binds.
     rows: Vec<(String, String)>,
     /// The grammar check's findings.
@@ -94,14 +101,16 @@ async fn read_cohort() -> Cohort {
         .as_ref()
         .and_then(|posted| posted.get("aql"))
         .unwrap_or_default();
-    let bound = bound_keys().await;
-    let keys: Vec<String> = match &bound {
-        Ok(Some(bound)) => KEYS
-            .iter()
-            .filter(|key| bound.iter().any(|each| each == *key))
-            .map(|key| (*key).to_owned())
-            .collect(),
-        _ => KEYS.iter().map(|key| (*key).to_owned()).collect(),
+    let offered = offered().await;
+    let (keys, names_subjects) = match offered {
+        Ok(offered) => (offered.keys, offered.subjects),
+        Err(_) => (
+            crate::bff::cohort::KEYS
+                .iter()
+                .map(|key| (*key).to_owned())
+                .collect(),
+            true,
+        ),
     };
     let predicates: Vec<Predicate> = keys
         .into_iter()
@@ -110,17 +119,21 @@ async fn read_cohort() -> Cohort {
             name: key,
         })
         .collect();
+    let subjects = names_subjects.then(|| (text(SUBJECT_NAMESPACE_FIELD), text(SUBJECT_IDS_FIELD)));
     let rows = parameters_of(posted.as_ref(), &aql);
     let findings = (!aql.trim().is_empty()).then(|| grammar(&aql)).flatten();
-    let chosen: Vec<Predicate> = predicates
-        .iter()
-        .filter(|predicate| !predicate.value.is_empty())
-        .cloned()
-        .collect();
+    let selection = chosen(|field| {
+        let offered = predicates
+            .iter()
+            .any(|predicate| field_name(&predicate.name) == field)
+            || (subjects.is_some()
+                && (field == SUBJECT_NAMESPACE_FIELD || field == SUBJECT_IDS_FIELD));
+        if offered { text(field) } else { String::new() }
+    });
     let run = posted
         .as_ref()
         .is_some_and(|posted| posted.intent() == "run");
-    let outcome = if predicates.is_empty() {
+    let outcome = if predicates.is_empty() && subjects.is_none() {
         Outcome::Unbound
     } else if !run {
         Outcome::Waiting
@@ -128,11 +141,11 @@ async fn read_cohort() -> Cohort {
         Outcome::Stopped(Answer::NotRun(tr(QueriesMsg::QueryNothingToRun)))
     } else if findings.is_some() {
         Outcome::Stopped(Answer::NotRun(tr(QueriesMsg::QueryGrammarStops)))
-    } else if chosen.is_empty() {
+    } else if selection.is_empty() {
         Outcome::Stopped(Answer::NotRun(tr(QueriesMsg::CohortNoPredicate)))
     } else {
         let parameters = parameters_json(&rows);
-        match run_cohort(&aql, &parameters, &chosen).await {
+        match run_cohort(&aql, &parameters, &selection).await {
             Ok(Some((page, meta))) => {
                 Outcome::Ran(meta, Answer::of_cohort(Ok(page), &aql, &parameters))
             }
@@ -146,6 +159,7 @@ async fn read_cohort() -> Cohort {
     Cohort {
         aql,
         predicates,
+        subjects,
         rows,
         findings,
         outcome,
@@ -166,6 +180,25 @@ fn predicate_fields(predicates: &[Predicate]) -> Html {
     h(format!(
         r#"<div class="fui-transform-options">{}</div>"#,
         Html::join(fields)
+    ))
+}
+
+/// The subjects' fields: their namespace and their identifiers, one per line.
+fn subject_fields(namespace: &str, ids: &str) -> Html {
+    let namespace_field = Field::new(SUBJECT_NAMESPACE_FIELD, tr(QueriesMsg::CohortSubjectNamespace))
+        .holds_id()
+        .view(h(format!(
+            r#"<input id="{SUBJECT_NAMESPACE_FIELD}" name="{SUBJECT_NAMESPACE_FIELD}" form="{QUERY_FORM}" type="text" class="fui-input fui-mono" value="{}" autocomplete="off" spellcheck="false">"#,
+            t(namespace)
+        )));
+    let ids_field = Field::new(SUBJECT_IDS_FIELD, tr(QueriesMsg::CohortSubjectIds))
+        .holds_id()
+        .view(h(format!(
+            r#"<textarea id="{SUBJECT_IDS_FIELD}" name="{SUBJECT_IDS_FIELD}" form="{QUERY_FORM}" class="fui-textarea fui-mono" rows="3" autocomplete="off" spellcheck="false">{}</textarea>"#,
+            t(ids)
+        )));
+    h(format!(
+        r#"<div class="fui-transform-options">{namespace_field}{ids_field}</div>"#
     ))
 }
 
@@ -197,6 +230,7 @@ fn cohort(model: Cohort) -> Html {
     let Cohort {
         aql,
         predicates,
+        subjects,
         rows,
         findings,
         outcome,
@@ -246,7 +280,12 @@ fn cohort(model: Cohort) -> Html {
                     None,
                     None,
                     ferrohealth_ui::view::surface::section_intro(tr(QueriesMsg::CohortIntro))
-                        .then(predicate_fields(&predicates)),
+                        .then(opt(
+                            (!predicates.is_empty()).then(|| predicate_fields(&predicates))
+                        ))
+                        .then(opt(subjects
+                            .as_ref()
+                            .map(|(namespace, ids)| subject_fields(namespace, ids)))),
                 ),
                 plain_section(editor),
                 section(

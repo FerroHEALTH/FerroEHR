@@ -24,8 +24,8 @@
 use crate::common;
 
 use common::{
-    Harness, confirm_in_dialog, env, fill, is_present, login_basic, login_basic_as,
-    wait_css_absent, wait_main_contains,
+    Harness, confirm_in_dialog, fill, is_present, login_basic, login_basic_as, wait_css_absent,
+    wait_main_contains,
 };
 
 /// The fixture OPT the list-row delete removes, and the template id it
@@ -52,14 +52,6 @@ const AQL: &str = "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c";
 /// The template the seeded compositions use, which the plain user tries to
 /// delete.
 const SHARED_TEMPLATE_ID: &str = "minimal_evaluation.en.v1";
-
-/// The admin dev user (quickstart `docker/ferroehr.dev.toml`).
-fn admin_credentials() -> (String, String) {
-    (
-        env("UI_E2E_ADMIN_USER").unwrap_or_else(|| "ferroehr-admin".to_owned()),
-        env("UI_E2E_ADMIN_PASS").unwrap_or_else(|| "ferroehr".to_owned()),
-    )
-}
 
 /// The absolute path of an SDK fixture OPT.
 fn fixture_opt_path(name: &str) -> String {
@@ -140,7 +132,7 @@ async fn admin_deletes_a_template_from_the_list() {
     let Some(h) = Harness::start("admin-template-delete-list").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
     ensure_template(&h, LIST_FIXTURE, LIST_TEMPLATE_ID).await;
 
@@ -174,7 +166,7 @@ async fn admin_deletes_a_template_from_the_detail_screen() {
     let Some(h) = Harness::start("admin-template-delete-detail").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
     ensure_template(&h, DETAIL_FIXTURE, DETAIL_TEMPLATE_ID).await;
     h.goto(&format!("/templates/{DETAIL_TEMPLATE_ID}")).await;
@@ -205,7 +197,7 @@ async fn admin_saves_a_namespaced_stored_query_and_deletes_it() {
     let Some(h) = Harness::start("admin-stored-query-delete").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
 
     save_query(&h, QUERY_BARE_NAME, "").await;
@@ -246,7 +238,7 @@ async fn admin_versions_a_stored_query() {
     let Some(h) = Harness::start("admin-stored-query-versions").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
 
     save_query(&h, VERSIONED_BARE_NAME, "1.0.0").await;
@@ -306,7 +298,7 @@ async fn admin_deletes_an_ehr() {
     let Some(h) = Harness::start("admin-ehr-delete").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
 
     h.goto("/ehrs/new").await;

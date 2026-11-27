@@ -24,15 +24,7 @@
 
 use crate::common;
 
-use common::{Harness, env, login_basic, login_basic_as, wait_text_contains};
-
-/// The admin dev user (quickstart `docker/ferroehr.dev.toml`).
-fn admin_credentials() -> (String, String) {
-    (
-        env("UI_E2E_ADMIN_USER").unwrap_or_else(|| "ferroehr-admin".to_owned()),
-        env("UI_E2E_ADMIN_PASS").unwrap_or_else(|| "ferroehr".to_owned()),
-    )
-}
+use common::{Harness, login_basic, login_basic_as, wait_text_contains};
 
 /// As the admin: the audit table renders real records (the stack's own
 /// audited activity), a row opens the record as stored, and a nothing-matches
@@ -42,7 +34,7 @@ async fn admin_browses_audit_records_and_the_empty_state() {
     let Some(h) = Harness::start("audit-browse").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
 
     // The viewer's own CDR calls are audited, so loading a screen guarantees

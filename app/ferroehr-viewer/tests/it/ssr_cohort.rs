@@ -167,9 +167,89 @@ async fn a_refused_cohort_is_drawn_in_the_cdrs_words() {
 
 /// A deployment that binds no predicate offers no cohort: by its
 /// configuration, or by the route's `404` when the session may not read it.
+/// A configuration that binds no predicate and lets a cohort name its
+/// subjects.
+fn subjects_only() -> Value {
+    exchange(
+        "GET",
+        "/ferroehr/rest/extensions/v1/admin/config",
+        200,
+        &serde_json::json!({"privacy": {"cohort": {"predicates": {}, "subjects": true}}})
+            .to_string(),
+    )
+}
+
+/// A deployment that names subjects and binds no predicate offers the
+/// subjects alone, and a run sends them as the cohort.
+#[tokio::test]
+async fn a_cohort_of_named_subjects_runs() {
+    let viewer = Viewer::start_with(vec![subjects_only(), answered(false)]).await;
+    let cookie = viewer.sign_in().await;
+    let form = viewer.page(&cookie, "/query/cohort").await;
+    assert!(
+        form.main().contains(r#"name="cohort-subject-ids""#),
+        "{}",
+        form.main()
+    );
+    assert!(
+        !form.main().contains(r#"name="cohort-city""#),
+        "no predicate is offered: {}",
+        form.main()
+    );
+    let page = viewer
+        .send(
+            http::Method::POST,
+            "/query/cohort",
+            Some(&cookie),
+            Some(&[
+                (
+                    "aql",
+                    "SELECT c/uid/value AS uid FROM EHR e CONTAINS COMPOSITION c",
+                ),
+                ("cohort-subject-namespace", "urn:oid:2.999.1.1"),
+                ("cohort-subject-ids", "p-01\np-02"),
+                ("intent", "run"),
+            ]),
+        )
+        .await;
+    assert!(
+        page.main().contains("8849fd1e-0000-4000-8000-000000000001"),
+        "{}",
+        page.main()
+    );
+    let empty = viewer
+        .send(
+            http::Method::POST,
+            "/query/cohort",
+            Some(&cookie),
+            Some(&[
+                (
+                    "aql",
+                    "SELECT c/uid/value AS uid FROM EHR e CONTAINS COMPOSITION c",
+                ),
+                ("intent", "run"),
+            ]),
+        )
+        .await;
+    assert!(
+        empty
+            .main()
+            .contains("Fill a predicate or name a subject to select a cohort."),
+        "{}",
+        empty.main()
+    );
+}
+
 #[tokio::test]
 async fn a_deployment_binding_nothing_offers_no_cohort() {
-    let viewer = Viewer::start().await;
+    let viewer = Viewer::start_with(vec![exchange(
+        "GET",
+        "/ferroehr/rest/extensions/v1/admin/config",
+        200,
+        &serde_json::json!({"privacy": {"cohort": {"predicates": {}, "subjects": false}}})
+            .to_string(),
+    )])
+    .await;
     let cookie = viewer.sign_in().await;
     let page = viewer.page(&cookie, "/query/cohort").await;
     assert!(

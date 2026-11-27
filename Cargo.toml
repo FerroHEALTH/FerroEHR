@@ -228,10 +228,10 @@ ferrohealth-smart = { version = "=0.35.0", default-features = false, features = 
 # The operator consoles' OpenID Connect sign-in and session (FerroSMART, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory store, and the sign-in routes (`axum`), over ferrohealth-smart's
-# relying party; 0.31 removes the sealed store and keeps the justification an
-# operator states for one object (#6689, #6721). Verified on crates.io
-# 2026-11-26.
-ferrohealth-session = { version = "=0.31.0", default-features = false }
+# relying party; 0.32 deletes the sealed store's removal aid, so `store =
+# "sealed"` and `key`/`key_file` are refused as unknown keys (#6721). Verified
+# on crates.io 2026-11-27.
+ferrohealth-session = { version = "=0.32.0", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
@@ -320,7 +320,7 @@ fhir-search = { version = "0.1.131", default-features = false }
 # Subscriber and Consumer (ITI-94, ITI-93) of `[pix]`, which reads every
 # Patient's `active` and links and rebuilds a subscription from its stored
 # Location.
-ihe-iti = { version = "=0.25.0", default-features = false }
+ihe-iti = { version = "=0.26.0", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging

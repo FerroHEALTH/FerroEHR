@@ -76,12 +76,14 @@ gives the identifier and the version.
 | `legalAuthentication` (`legalAuthenticator[x]`, `dateTime`) | 1 | no RM class of its own. The nearest is an `ATTESTATION` with `reason` `240` signed and `is_pending` false; which attestation counts as the legal one is the deployment's rule, which the RM does not state | V, H, Q | Partly sourced |
 | `eventCategory` | 1 | no RM attribute. The archetype ids of the content entries are the key to one | C | No RM source |
 | `serviceSpecialty` | 1 | no RM attribute. `EVENT_CONTEXT.setting` is the openEHR care setting, a different axis from a SNOMED specialty | C | No RM source |
-| `custodian` | 1 | `EHR.system_id` names the system that holds the record. The organisation in charge of it has no RM attribute; FerroEHR names the provider it acts for in the healthcare-provider identifier of a person's `commit_audit.committer` | E, V | Partly sourced |
+| `custodian` | 1 | no RM attribute. The act asks for the organisation "in charge of maintaining the document"; `EHR.system_id` is "the identifier of the logical EHR management system in which this EHR was created", a system, not an organisation. The healthcare-provider identifier on a person's `commit_audit.committer` names who committed a version (EHDS Art. 13(4)), which for a federated write is the external professional's provider | E | No RM source |
 | `clinicalEventTime[x]` | 2 | on the entry: `OBSERVATION.data` (`HISTORY.origin` and each `EVENT.time`), `ACTION.time`. An `EVALUATION`, an `INSTRUCTION` or an `ADMIN_ENTRY` holds a clinical time only in an archetyped element, such as an onset | C | Partly sourced |
 | `lastUpdate` | 2 | `commit_audit.time_committed` of the newest version of the composition. The RM versions a composition whole, so a data group's last update is that of its composition | H, Q | Sourced |
 
-Ten of the eighteen elements are sourced, four partly and four have no RM
-source.
+Ten of the eighteen elements are sourced, three partly and five have no RM
+source. FerroBRIDGE supplies the eight that are not sourced, as the next
+section says: from its mapping of the template and the archetypes, from its
+configuration, or by the rule of the jurisdiction.
 
 ## What FerroBRIDGE takes from elsewhere
 
@@ -95,9 +97,14 @@ source.
   units, or from an archetyped element in `EVENT_CONTEXT.other_context` where
   the template places one.
 - **`custodian`:** the healthcare provider that deploys the EHR system, from
-  FerroBRIDGE's configuration. FerroEHR's `[authz.party_binding] provider`
-  names the same organisation, but no ITS-REST call returns it except as the
-  identifier on a person's committer.
+  FerroBRIDGE's configuration. A FerroEHR instance serves one organisation
+  ([one instance per organisation](../security.md#one-instance-one-organisation)), so that provider maintains every document
+  the instance holds: the custodian belongs to the deployment, and no
+  document or version records it. FerroEHR's `[authz.party_binding.provider]`
+  names the same organisation, and no ITS-REST call returns it; reading it off
+  a committer would name a federated writer's provider for that writer's
+  versions. FerroBRIDGE, deployed for the same data holder, carries it in its
+  own configuration.
 - **`legalAuthentication`:** the rule of the jurisdiction that says which
   attestation authenticates a document legally. FerroBRIDGE applies it to the
   attestations call V returns.

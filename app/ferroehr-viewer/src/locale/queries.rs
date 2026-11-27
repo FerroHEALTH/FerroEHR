@@ -86,7 +86,7 @@ crate::locale::messages! {
         CohortTitle = "cohort-title",
         /// `Cohort`
         CohortPredicates = "cohort-predicates",
-        /// `Fill the predicates that select the cohort; several intersect. The query runs over the EHRs they select, and no party identifier reaches you.`
+        /// `Fill the predicates or name the subjects that select the cohort; several intersect. The query runs over the EHRs they select, and no party identifier reaches you.`
         CohortIntro = "cohort-intro",
         /// `City`
         CohortCity = "cohort-city",
@@ -98,9 +98,13 @@ crate::locale::messages! {
         CohortAgeBand = "cohort-age-band",
         /// `Organisation`
         CohortOrganisation = "cohort-organisation",
-        /// `Fill at least one predicate to select a cohort.`
+        /// `Subject namespace`
+        CohortSubjectNamespace = "cohort-subject-namespace",
+        /// `Subject identifiers, one per line`
+        CohortSubjectIds = "cohort-subject-ids",
+        /// `Fill a predicate or name a subject to select a cohort.`
         CohortNoPredicate = "cohort-no-predicate",
-        /// `This CDR binds no cohort predicate, so it runs no cohort query.`
+        /// `This CDR binds no cohort predicate and takes no named subject, so it runs no cohort query.`
         CohortUnbound = "cohort-unbound",
         /// `Cohort`
         CohortFacts = "cohort-facts",

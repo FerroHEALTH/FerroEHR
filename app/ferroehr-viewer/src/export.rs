@@ -31,8 +31,8 @@ pub struct ExportForm {
     /// `query_parameters` as a JSON object (empty = none).
     #[serde(default)]
     pub parameters_json: String,
-    /// Set when the run selected its EHRs by the cohort predicates the form
-    /// holds; empty for a query over every EHR.
+    /// Set when the run selected its EHRs by the cohort predicates and
+    /// subjects the form holds; empty for a query over every EHR.
     #[serde(default)]
     pub cohort: String,
     /// The cohort predicate `city`.
@@ -50,12 +50,20 @@ pub struct ExportForm {
     /// The cohort predicate `organisation`.
     #[serde(default, rename = "cohort-organisation")]
     pub organisation: String,
+    /// The identifier domain of the cohort's named subjects.
+    #[serde(default, rename = "cohort-subject-namespace")]
+    pub subject_namespace: String,
+    /// The cohort's named subjects, one identifier per line.
+    #[serde(default, rename = "cohort-subject-ids")]
+    pub subject_ids: String,
 }
 
 impl ExportForm {
-    /// The cohort predicate field `field` as posted.
-    fn predicate(&self, field: &str) -> String {
+    /// The cohort field `field` as posted.
+    fn cohort_field(&self, field: &str) -> String {
         match field {
+            crate::bff::cohort::SUBJECT_NAMESPACE_FIELD => self.subject_namespace.clone(),
+            crate::bff::cohort::SUBJECT_IDS_FIELD => self.subject_ids.clone(),
             "cohort-city" => self.city.clone(),
             "cohort-postcode_area" => self.postcode_area.clone(),
             "cohort-sex" => self.sex.clone(),
@@ -117,7 +125,7 @@ async fn run(
             crate::bff::cohort::request_body(
                 &form.q,
                 &parameters,
-                &crate::bff::cohort::chosen(|field| form.predicate(field)),
+                &crate::bff::cohort::chosen(|field| form.cohort_field(field)),
                 None,
             ),
         )
