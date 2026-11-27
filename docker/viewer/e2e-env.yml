@@ -57,6 +57,14 @@ services:
       # docker/signing/, never a production key.
       FERROEHR__RECORD__SIGNING__MODE: pgp
       FERROEHR__RECORD__SIGNING__KEY_FILE: /etc/ferroehr/version-signing-test.key.asc
+      # A cohort predicate the cohort journey selects its EHRs by: the city
+      # ELEMENT of the PERSON archetype it writes.
+      FERROEHR__PRIVACY__COHORT__PREDICATES__CITY__ARCHETYPE: openEHR-DEMOGRAPHIC-PERSON.person.v1
+      FERROEHR__PRIVACY__COHORT__PREDICATES__CITY__NODE: at0012
+      FERROEHR__PRIVACY__COHORT__PREDICATES__CITY__KIND: text
+      # An audit repository that refuses every record (a path the CDR itself
+      # answers 404), so the delivery journey finds parked records to act on.
+      FERROEHR__AUDIT__FHIR_FEED__ENDPOINT__URL: http://127.0.0.1:8080/no-audit-repository
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
     configs:
