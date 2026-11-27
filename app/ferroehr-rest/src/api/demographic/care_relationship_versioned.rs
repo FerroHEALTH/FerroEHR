@@ -97,7 +97,7 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
         .backend()
         .versioned_care_relationship_get(super::object_of(raw)?)
         .await?;
-    let mut out = super::read_versioned(&parts.headers, raw, &read.body.body);
+    let mut out = super::read_versioned(&parts.headers, raw, &read.body.body, super::JSON_ONLY);
     audit_revealed(&mut out, read.revealed);
     Ok(out)
 }
@@ -112,7 +112,7 @@ pub(crate) async fn revision_history(
         .backend()
         .care_relationship_revision_history(super::object_of(raw)?)
         .await?;
-    let mut out = super::read_versioned(&parts.headers, raw, &read.body.body);
+    let mut out = super::read_versioned(&parts.headers, raw, &read.body.body, super::JSON_ONLY);
     audit_revealed(&mut out, read.revealed);
     Ok(out)
 }
@@ -134,7 +134,7 @@ pub(crate) async fn version_get_by_id(
         .backend()
         .care_relationship_version_get_by_id(vo_id, tree)
         .await?;
-    let mut out = super::read_versioned(&parts.headers, raw, &read.body.body);
+    let mut out = super::read_versioned(&parts.headers, raw, &read.body.body, super::JSON_ONLY);
     audit_revealed(&mut out, read.revealed);
     Ok(out)
 }

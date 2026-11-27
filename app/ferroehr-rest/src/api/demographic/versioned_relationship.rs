@@ -320,7 +320,7 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
         .backend()
         .versioned_party_relationship_get(super::object_of(&vo)?)
         .await?;
-    Ok(super::read_versioned(h, &vo, &resp.body))
+    Ok(super::read_versioned(h, &vo, &resp.body, super::JSON_ONLY))
 }
 
 /// The `party_relationship_revision_history` operation.
@@ -338,7 +338,7 @@ pub(crate) async fn revision_history(
         .backend()
         .party_relationship_revision_history(super::object_of(&vo)?)
         .await?;
-    Ok(super::read_versioned(h, &vo, &resp.body))
+    Ok(super::read_versioned(h, &vo, &resp.body, super::JSON_ONLY))
 }
 
 /// The `party_relationship_version_get_at_time` operation.
@@ -358,7 +358,7 @@ pub(crate) async fn version_get_at_time(
             p.version_at_time,
         )
         .await?;
-    Ok(super::respond_versioned(h, &resp))
+    Ok(super::respond_versioned(h, &resp, super::JSON_ONLY))
 }
 
 /// The `party_relationship_version_get_by_id` operation.
@@ -379,5 +379,5 @@ pub(crate) async fn version_get_by_id(
             parse_version_uid(&p.version_uid)?.1,
         )
         .await?;
-    Ok(super::read_versioned(h, &vo, &resp.body))
+    Ok(super::read_versioned(h, &vo, &resp.body, super::JSON_ONLY))
 }

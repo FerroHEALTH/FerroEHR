@@ -128,21 +128,24 @@ the newest, and it is upstream: nothing in a response can work around it.
 The published ITS-XML bundles declare a document element for only a few
 documents: `composition`, `version`, `versioned_object` (typed as the EHR
 Extract's versioned object), `items` (any other `LOCATABLE`), and the
-template, archetype, extract and query documents. Four documents FerroEHR serves
-as XML have no published root: `EHR`, `VERSIONED_COMPOSITION`,
-`VERSIONED_EHR_STATUS` and `REVISION_HISTORY`. None of them is a `LOCATABLE`
-and none is the Extract's versioned object, so no declared element fits.
+template, archetype, extract and query documents. Six documents FerroEHR serves
+as XML have no published root: `EHR`, `CONTRIBUTION`, `VERSIONED_COMPOSITION`,
+`VERSIONED_EHR_STATUS`, `VERSIONED_PARTY` and `REVISION_HISTORY`. None of them
+is a `LOCATABLE` and none is the Extract's versioned object, so no declared
+element fits.
 
 FerroEHR names each root after its class, with no `xsi:type` on it:
 
 | Route | Root element |
 |---|---|
 | `GET /ehr/{ehr_id}`, and an EHR create with `Prefer: return=representation` | `<ehr>` |
+| `GET …/contribution/{contribution_uid}` and `GET /demographic/contribution/{contribution_uid}`, and either create with `Prefer: return=representation` | `<contribution>` |
 | `GET …/versioned_composition/{versioned_object_uid}` | `<versioned_composition>` |
 | `GET …/versioned_ehr_status` | `<versioned_ehr_status>` |
-| `GET …/versioned_composition/{versioned_object_uid}/revision_history` and `GET …/versioned_ehr_status/revision_history` | `<revision_history>` |
+| `GET /demographic/versioned_party/{versioned_object_uid}` | `<versioned_party>` |
+| `GET …/versioned_composition/{versioned_object_uid}/revision_history`, `GET …/versioned_ehr_status/revision_history` and `GET /demographic/versioned_party/{versioned_object_uid}/revision_history` | `<revision_history>` |
 
-No specification governs these four roots: they are FerroEHR's own design, and a
+No specification governs these six roots: they are FerroEHR's own design, and a
 validator working from the published schemas has no element to check them
 against. The gap is reported upstream in #4652; when openEHR publishes an
 element, FerroEHR moves to it and says so here.

@@ -2126,8 +2126,8 @@ guarded_handler! {
     ///
     /// "Retrieves a `VERSIONED_PARTY` identified by `versioned_object_uid`."
     /// (ITS-REST `specifications/operations/versioned_party_get.yaml`). The
-    /// four `versioned_party_*` reads serve canonical JSON only; an XML-only
-    /// `Accept` is `406`.
+    /// four `versioned_party_*` reads serve canonical JSON or XML (`Resources.md`
+    /// §XML Format).
     #[utoipa::path(
         get, path = "/demographic/versioned_party/{versioned_object_uid}", tag = "VERSIONED_PARTY",
         params(
@@ -2142,8 +2142,8 @@ guarded_handler! {
             ("Accept" = Option<String>, Header,
              description = "The canonical response format (ITS-REST \
                             `specifications/parameters/header/Accept_canonical.yaml`). \
-                            This build serves the container as `application/json`; an \
-                            `Accept` that excludes JSON is `406`.",
+                            This build serves the container as `application/json` or \
+                            `application/xml`; any other `Accept` is `406`.",
              example = "application/json")
         ),
         responses(
@@ -2213,9 +2213,10 @@ guarded_handler! {
                                           `specifications/responses/404.yaml`).",
              body = serde_json::Value),
             (status = 406, description = "The `Accept` header cannot be satisfied: \
-                                          this build serves the VERSIONED_PARTY \
-                                          container as canonical JSON only, so an \
-                                          `Accept` that excludes `application/json` is \
+                                          the VERSIONED_PARTY container is served as \
+                                          canonical `application/json` or as \
+                                          `application/xml` under a `versioned_party` \
+                                          root (#4652), so any other `Accept` is \
                                           refused — \"If the service cannot fulfill \
                                           this aspect of the request, it MUST respond \
                                           with HTTP status code `406 Not Acceptable`\" \
@@ -2248,8 +2249,8 @@ guarded_handler! {
             ("Accept" = Option<String>, Header,
              description = "The canonical response format (ITS-REST \
                             `specifications/parameters/header/Accept_canonical.yaml`). \
-                            This build serves the history as `application/json`; an \
-                            `Accept` that excludes JSON is `406`.",
+                            This build serves the history as `application/json` or \
+                            `application/xml`; any other `Accept` is `406`.",
              example = "application/json")
         ),
         responses(
@@ -2304,9 +2305,9 @@ guarded_handler! {
              body = serde_json::Value),
             (status = 406, description = "The `Accept` header cannot be satisfied: the \
                                           REVISION_HISTORY is served as canonical JSON \
-                                          only on this build, so an `Accept` excluding \
-                                          `application/json` MUST be refused \
-                                          (`Resources.md` §\"JSON Format\"). The \
+                                          or as XML under a `revision_history` root \
+                                          (#4652), so any other `Accept` MUST be \
+                                          refused (`Resources.md` §\"XML Format\"). The \
                                           released operation does not enumerate `406`; \
                                           the MUST is cross-cutting.",
              body = serde_json::Value)
@@ -2344,8 +2345,8 @@ guarded_handler! {
             ("Accept" = Option<String>, Header,
              description = "The canonical response format (ITS-REST \
                             `specifications/parameters/header/Accept_canonical.yaml`). \
-                            This build serves the VERSION as `application/json`; an \
-                            `Accept` that excludes JSON is `406`.",
+                            This build serves the VERSION as `application/json` or \
+                            `application/xml`; any other `Accept` is `406`.",
              example = "application/json")
         ),
         responses(
@@ -2396,10 +2397,10 @@ guarded_handler! {
                                           `specifications/responses/404_not_found_or_no_version_at_time.yaml`).",
              body = serde_json::Value),
             (status = 406, description = "The `Accept` header cannot be satisfied: the \
-                                          VERSION is served as canonical JSON only on \
-                                          this build, so an `Accept` excluding \
-                                          `application/json` MUST be refused \
-                                          (`Resources.md` §\"JSON Format\"). The \
+                                          VERSION is served as canonical JSON or as \
+                                          XML under the published `version` root, so \
+                                          any other `Accept` MUST be refused \
+                                          (`Resources.md` §\"XML Format\"). The \
                                           released operation does not enumerate `406`; \
                                           the MUST is cross-cutting.",
              body = serde_json::Value),
@@ -2437,8 +2438,8 @@ guarded_handler! {
             ("Accept" = Option<String>, Header,
              description = "The canonical response format (ITS-REST \
                             `specifications/parameters/header/Accept_canonical.yaml`). \
-                            This build serves the VERSION as `application/json`; an \
-                            `Accept` that excludes JSON is `406`.",
+                            This build serves the VERSION as `application/json` or \
+                            `application/xml`; any other `Accept` is `406`.",
              example = "application/json")
         ),
         responses(
@@ -2493,10 +2494,10 @@ guarded_handler! {
                                           names no version of it.",
              body = serde_json::Value),
             (status = 406, description = "The `Accept` header cannot be satisfied: the \
-                                          VERSION is served as canonical JSON only on \
-                                          this build, so an `Accept` excluding \
-                                          `application/json` MUST be refused \
-                                          (`Resources.md` §\"JSON Format\"). The \
+                                          VERSION is served as canonical JSON or as \
+                                          XML under the published `version` root, so \
+                                          any other `Accept` MUST be refused \
+                                          (`Resources.md` §\"XML Format\"). The \
                                           released operation does not enumerate `406`; \
                                           the MUST is cross-cutting.",
              body = serde_json::Value),
@@ -2522,7 +2523,8 @@ guarded_handler! {
     /// SHOULD additionally accept `_type: \"AUDIT_DETAILS\"` or an omitted `_type`
     /// for this attribute."
     ///
-    /// The commit envelope is canonical JSON only.
+    /// The commit envelope is canonical JSON only; the committed CONTRIBUTION is
+    /// answered in canonical JSON or XML.
     // NOTE: OpenAPI 3.1.0 §4.8.10.1 makes an operationId unique per document and the EHR
     // API serves the released `contribution_create`, so this id follows the released file
     // `operations/demographic_contribution_create.yaml`; the access record keeps the released id.
@@ -2553,8 +2555,8 @@ guarded_handler! {
             ("Accept" = Option<String>, Header,
              description = "The canonical response format (ITS-REST \
                             `specifications/parameters/header/Accept_canonical.yaml`). \
-                            The `201` body is served as `application/json`; an \
-                            `Accept` that excludes JSON is `406`.",
+                            The `201` body is served as `application/json` or \
+                            `application/xml`; any other `Accept` is `406`.",
              example = "application/json")
         ),
         request_body(content = serde_json::Value,
@@ -2762,10 +2764,10 @@ guarded_handler! {
                                           VERSIONED_OBJECT does not exist.",
              body = serde_json::Value),
             (status = 406, description = "The `Accept` header cannot be satisfied: the \
-                                          `201` body is served as canonical JSON only, \
-                                          so an `Accept` excluding `application/json` \
-                                          MUST be refused (`Resources.md` §\"JSON \
-                                          Format\"). The released operation does not \
+                                          `201` body is the CONTRIBUTION in canonical \
+                                          JSON or in XML under a `contribution` root \
+                                          (#4652), so any other `Accept` MUST be \
+                                          refused (`Resources.md` §\"XML Format\"). The released operation does not \
                                           enumerate `406`; the MUST is cross-cutting.",
              body = serde_json::Value),
             (status = 409, description = "The released trigger, verbatim: `409 \
@@ -2861,10 +2863,10 @@ guarded_handler! {
             ("Accept" = Option<String>, Header,
              description = "The canonical response format (ITS-REST \
                             `specifications/parameters/header/Accept_canonical.yaml`). \
-                            This build serves the CONTRIBUTION envelope as \
-                            `application/json`; an `Accept` that excludes JSON — \
-                            including the Simplified types the released `200` \
-                            describes — is `406`.",
+                            This build serves the CONTRIBUTION as \
+                            `application/json` or `application/xml`; any other \
+                            `Accept`, the Simplified types the released `200` \
+                            describes included, is `406`.",
              example = "application/json")
         ),
         responses(
@@ -2944,11 +2946,11 @@ guarded_handler! {
                                           own contribution endpoints.",
              body = serde_json::Value),
             (status = 406, description = "The `Accept` header cannot be satisfied: the \
-                                          CONTRIBUTION envelope is served as canonical \
-                                          JSON only on this build, so an `Accept` \
-                                          excluding `application/json` (XML, or one of \
-                                          the Simplified types the released `200` \
-                                          describes) MUST be refused — \"If the service \
+                                          CONTRIBUTION is served as canonical JSON or \
+                                          as XML under a `contribution` root (#4652), \
+                                          so any other `Accept` (one of the Simplified \
+                                          types the released `200` describes) MUST be \
+                                          refused — \"If the service \
                                           cannot fulfill this aspect of the request, it \
                                           MUST respond with HTTP status code `406 Not \
                                           Acceptable`\" (`Resources.md` §\"JSON \
