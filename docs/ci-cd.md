@@ -57,8 +57,9 @@ is the backstop for a read the literal scan cannot see.
 ## The analyzers
 
 Owner decision of 2026-11-25: "Sonar off PRs, CodeQL kept". SonarQube Cloud
-with its coverage run analyses `main` on each push and weekly, and a newer
-push cancels the older analysis (`sonar.yml`, #6574). CodeQL runs on every
+with its coverage run analyses `main` on each push and weekly. An analysis in
+progress always finishes, and a newer push waits behind it, replacing any
+push already waiting (`sonar.yml`, #6574, #6784). CodeQL runs on every
 pull request that touches Rust sources, Cargo files, workflows or actions,
 and daily on `main` (`codeql.yml`): the actions analysis on each of those
 pull requests, so code scanning finds every configuration `main` carries
