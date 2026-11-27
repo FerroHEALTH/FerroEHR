@@ -279,8 +279,8 @@ documents carry patient data. An asset response that is not a served body
 static files on GitHub Pages, so its policy travels as a `<meta http-equiv>`
 element, which is weaker by specification (`frame-ancestors`, `report-uri` and
 `sandbox` are ignored in meta form). Its `img-src` admits one outside path,
-`https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/`, for the conformance
-badges the Conformance workflow pushes. Anyone re-hosting these docs behind a
+`https://img.shields.io/`, which draws the conformance badges from the
+endpoint documents committed under `conformance/badges/`. Anyone re-hosting these docs behind a
 real web server should send the headers properly instead.
 
 ## Request limits and rate limiting

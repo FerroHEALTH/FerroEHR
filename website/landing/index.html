@@ -11,7 +11,7 @@
        badges are pushed to. The only <script> is an application/ld+json data
        block, which browsers never execute
        (https://html.spec.whatwg.org/multipage/scripting.html#data-block). -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>FerroEHR: a pure-Rust openEHR Clinical Data Repository</title>
   <meta name="description" content="FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0, AQL 1.1 and PostgreSQL 19-native storage, shipped as a single self-contained binary, with its openEHR conformance measured and machine-verified.">
@@ -243,25 +243,6 @@
           <div class="proof-num"><span class="n zero" data-cnf="skipped">—</span><span class="l">skipped</span></div>
         </div>
         <p class="proof-record">The committed record: <span data-cnf="record">—</span>.</p>
-        <!-- The badges are drawn by Veredictum from each run on main and pushed
-             by the Conformance workflow to the veredictum-badges branches;
-             img-src in the policy above admits that repository path. -->
-        <div class="proof-badges">
-          <div class="proof-badge-row">
-            <span class="proof-badge-label">Released specification</span>
-            <a href="https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain" rel="noopener"><img src="https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/base.svg" alt="openEHR BASE · released" height="20"></a>
-            <a href="https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain" rel="noopener"><img src="https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/options.svg" alt="openEHR OPTIONS · released" height="20"></a>
-            <a href="https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain" rel="noopener"><img src="https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/profile.svg" alt="specification · released" height="20"></a>
-            <a href="https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain" rel="noopener"><img src="https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/instrument.svg" alt="veredictum · released" height="20"></a>
-          </div>
-          <div class="proof-badge-row">
-            <span class="proof-badge-label">Development specification, never counted toward the record</span>
-            <a href="https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain" rel="noopener"><img src="https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/base.svg" alt="openEHR BASE · development" height="20"></a>
-            <a href="https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain" rel="noopener"><img src="https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/options.svg" alt="openEHR OPTIONS · development" height="20"></a>
-            <a href="https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain" rel="noopener"><img src="https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/profile.svg" alt="specification · development" height="20"></a>
-            <a href="https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain" rel="noopener"><img src="https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/instrument.svg" alt="veredictum · development" height="20"></a>
-          </div>
-        </div>
         <div class="proof-pills">
           <a class="pill" href="./docs/latest/conformance.html"><span class="dot"></span>How conformance is measured</a>
           <a class="pill" href="https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/conformance/ferroehr/summary.md" rel="noopener"><span class="dot"></span>The run, row by row</a>

@@ -89,6 +89,12 @@ summary_row() {
   ' "$1"
 }
 
+# Prints the instrument the record summary $1 names, its name and version.
+instrument_of() {
+  awk -F'|' '$2 ~ /\*\*Instrument\*\*/ { cell = $3; sub(/,.*/, "", cell); gsub(/^ +| +$/, "", cell); print cell; found = 1; exit }
+    END { if (!found) exit 1 }' "$1"
+}
+
 # Prints the case of each red row the summary $1 details under its heading
 # `## $2`, one per line.
 red_cases() {
@@ -109,7 +115,11 @@ red_cases() {
 openehr_badge() {
   local out="$1" part="$2" summary="$3" deviations="$4" record="$5" rows="$6" link="$7"
   local passed failed warning errored skipped judged red message cases listed deviant=0 other=0 case
-  local decisions decision grounds="" ground
+  local decisions decision grounds="" ground instrument
+  instrument="$(instrument_of "$summary")" || {
+    echo "measured-badges: $summary names no instrument" >&2
+    return 1
+  }
   read -r passed failed warning errored skipped < <(summary_row "$summary" "$part") || {
     echo "measured-badges: $summary has no $part row in its Summary table" >&2
     return 1
@@ -147,8 +157,8 @@ openehr_badge() {
   [[ "$other" -gt 0 ]] && rest+="${rest:+; }$other failed beside the deviations"
   [[ "$skipped" -gt 0 ]] && rest+="${rest:+; }$skipped not run"
   badge "$out" "openEHR $part $record" "$passed/$judged passed" "$(badge_count_color "$passed" "$judged")" award
-  printf '| openEHR %s %s | %s of %s rows passed | %s | [the %s record](%s) |\n' \
-    "$part" "$record" "$passed" "$judged" "${rest:--}" "$record" "$link" >> "$rows"
+  printf '| openEHR %s %s | %s of %s rows passed | %s | [the %s record](%s), by %s |\n' \
+    "$part" "$record" "$passed" "$judged" "${rest:--}" "$record" "$link" "$instrument" >> "$rows"
 }
 
 # Writes the ATNA interoperability badge $1 from the newest run under $2,
@@ -260,19 +270,19 @@ if [[ "$mode" == self-test ]]; then
   tmp=$(mktemp -d)
   trap 'rm -rf "$tmp"' EXIT
   mkdir -p "$tmp/interop"
-  printf '| Part | Passed | Failed | Warning | Errored | Skipped | Total |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n| BASE | 10 | 1 | 0 | 1 | 3 | 15 |\n| OPTIONS | 4 | 0 | 0 | 0 | 0 | 4 |\n\n## BASE\n\n<summary><b>Failed</b>: <code>a/x</code> row 0, BASE</summary>\n<summary><b>Errored</b>: <code>a/x</code> row 1, BASE</summary>\n\n## OPTIONS\n\n## Skipped rows\n' > "$tmp/summary.md"
+  printf '| **Instrument** | veredictum 9.9.9, pre-approval: x |\n\n| Part | Passed | Failed | Warning | Errored | Skipped | Total |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n| BASE | 10 | 1 | 0 | 1 | 3 | 15 |\n| OPTIONS | 4 | 0 | 0 | 0 | 0 | 4 |\n\n## BASE\n\n<summary><b>Failed</b>: <code>a/x</code> row 0, BASE</summary>\n<summary><b>Errored</b>: <code>a/x</code> row 1, BASE</summary>\n\n## OPTIONS\n\n## Skipped rows\n' > "$tmp/summary.md"
   printf '{"deviations":[{"case":"a/x","decision":"https://github.com/FerroHEALTH/FerroEHR/issues/5002"}]}' > "$tmp/deviations.json"
   openehr_badge "$tmp/base.json" BASE "$tmp/summary.md" "$tmp/deviations.json" released "$tmp/rows" r.md
   openehr_badge "$tmp/options.json" OPTIONS "$tmp/summary.md" "$tmp/deviations.json" released "$tmp/rows" r.md
   [[ "$(jq -r .message "$tmp/base.json")" == "10/12 passed" ]] ||
     { echo "self-test: the BASE badge says $(jq -r .message "$tmp/base.json")" >&2; exit 1; }
-  grep -qxF '| openEHR BASE released | 10 of 12 rows passed | 2 red by deliberate deviation (the authenticated committer, EHDS Annex II 3.1); 3 not run | [the released record](r.md) |' "$tmp/rows" ||
+  grep -qxF '| openEHR BASE released | 10 of 12 rows passed | 2 red by deliberate deviation (the authenticated committer, EHDS Annex II 3.1); 3 not run | [the released record](r.md), by veredictum 9.9.9 |' "$tmp/rows" ||
     { echo "self-test: the BASE page row says $(sed -n 1p "$tmp/rows")" >&2; exit 1; }
   [[ "$(jq -r .label "$tmp/base.json")" == "openEHR BASE released" ]] || { echo "self-test: the BASE label" >&2; exit 1; }
   [[ "$(jq -r .color "$tmp/base.json")" == yellow ]] || { echo "self-test: a BASE badge with red rows is not yellow" >&2; exit 1; }
   [[ "$(jq -r .message "$tmp/options.json")" == "4/4 passed" ]] ||
     { echo "self-test: the OPTIONS badge says $(jq -r .message "$tmp/options.json")" >&2; exit 1; }
-  printf '| Part | Passed | Failed | Warning | Errored | Skipped | Total |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n| BASE | 10 | 1 | 0 | 0 | 0 | 11 |\n| OPTIONS | 4 | 1 | 0 | 0 | 0 | 5 |\n\n## BASE\n\n<summary><b>Failed</b>: <code>a/x</code> row 0, BASE</summary>\n\n## OPTIONS\n\n<summary><b>Failed</b>: <code>c/y</code> row 0, option z</summary>\n' > "$tmp/dev.md"
+  printf '| **Instrument** | veredictum 9.9.9 |\n\n| Part | Passed | Failed | Warning | Errored | Skipped | Total |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n| BASE | 10 | 1 | 0 | 0 | 0 | 11 |\n| OPTIONS | 4 | 1 | 0 | 0 | 0 | 5 |\n\n## BASE\n\n<summary><b>Failed</b>: <code>a/x</code> row 0, BASE</summary>\n\n## OPTIONS\n\n<summary><b>Failed</b>: <code>c/y</code> row 0, option z</summary>\n' > "$tmp/dev.md"
   : > "$tmp/rows"
   openehr_badge "$tmp/devbase.json" BASE "$tmp/dev.md" "$tmp/deviations.json" development "$tmp/rows" d.md
   openehr_badge "$tmp/devoptions.json" OPTIONS "$tmp/dev.md" "$tmp/deviations.json" development "$tmp/rows" d.md

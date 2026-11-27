@@ -170,6 +170,9 @@ EOF
   badge "$tmp/long.json" "EEHRxF draft 2026-11-23 · Annex III from the RM" "1/3 sourced" 1 3
   if badge_length_check "$tmp/long.json" 2> /dev/null; then echo "self-test: a label past 30 characters passed" >&2; exit 1; fi
   badge_length_self_test > /dev/null || exit 1
+  printf '[![x](https://img.shields.io/badge/DOI-10.5281%%2Fzenodo.21940279-blue?logo=zenodo)](x)\n' > "$tmp/README.md"
+  if badge_length_readme "$tmp/README.md" 2> /dev/null; then echo "self-test: a static badge past 20 characters passed" >&2; exit 1; fi
+  badge_length_readme README.md || { echo "self-test: a static README badge runs past the length limits" >&2; exit 1; }
   echo "ehds-badges: self-test passed"
   exit 0
 fi
@@ -202,5 +205,6 @@ badge_logo_readme README.md || fail=1
 badge_caption_check README.md || fail=1
 badge_color_check "$OUT"/*.json || fail=1
 badge_length_check "$OUT"/*.json || fail=1
+badge_length_readme README.md || fail=1
 [[ "$fail" -eq 0 ]] && echo "ehds-badges: the badges match their tables, carry their logos and claim no certification"
 exit "$fail"

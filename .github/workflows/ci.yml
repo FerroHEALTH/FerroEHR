@@ -3096,7 +3096,7 @@ jobs:
     needs: [changes, ui-e2e-binary]
     if: github.event_name != 'merge_group' && (needs.changes.outputs.conformance == 'true' && github.event_name != 'push')
     permissions:
-      contents: write # the reusable job's badge push, which never happens off main
+      contents: read
       packages: read # the reusable job's GHCR pulls, unused beside an artifact
     uses: ./.github/workflows/conformance.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:

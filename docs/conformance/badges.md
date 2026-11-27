@@ -11,9 +11,9 @@ with them.
 
 | Badge | Count | The rest | Record |
 |---|---|---|---|
-| openEHR BASE released | 2615 of 2619 rows passed | 4 red by deliberate deviation (the authenticated committer, EHDS Annex II 3.1); 81 not run | [the released record](ferroehr/summary.md) |
-| openEHR OPTIONS released | 256 of 256 rows passed | 118 not run | [the released record](ferroehr/summary.md) |
-| openEHR BASE development | 2583 of 2587 rows passed | 4 red by deliberate deviation (the authenticated committer, EHDS Annex II 3.1); 3 not run | [the development record](ferroehr/development/summary.md) |
-| openEHR OPTIONS development | 364 of 365 rows passed | 1 failed beside the deviations; 119 not run | [the development record](ferroehr/development/summary.md) |
+| openEHR BASE released | 2615 of 2619 rows passed | 4 red by deliberate deviation (the authenticated committer, EHDS Annex II 3.1); 81 not run | [the released record](ferroehr/summary.md), by veredictum 0.4.1 |
+| openEHR OPTIONS released | 256 of 256 rows passed | 118 not run | [the released record](ferroehr/summary.md), by veredictum 0.4.1 |
+| openEHR BASE development | 2583 of 2587 rows passed | 4 red by deliberate deviation (the authenticated committer, EHDS Annex II 3.1); 3 not run | [the development record](ferroehr/development/summary.md), by veredictum 0.4.1 |
+| openEHR OPTIONS development | 364 of 365 rows passed | 1 failed beside the deviations; 119 not run | [the development record](ferroehr/development/summary.md), by veredictum 0.4.1 |
 | IHE ATNA interoperability | 3 of 3 transactions agree, measured 2026-10-29 | no disagreement, ITI-20 FHIR feed against HAPI FHIR `v8.12.0-2`, validator with IHE BALP 1.1.4: 71 of 71 records delivered; 0 failed validation<br>ITI-20 syslog (RFC 5425 TLS, RFC 5424, DICOM PS3.15 A.5) against syslog-ng `4.11.0`, libxml2: 72 messages received; 0 problems<br>ITI-81 retrieval against HAPI FHIR AuditEvent search over the delivered records: 10 searches compared | [the run](interop/atna/2026-10-29.md) |
 | EHDS Art. 28 claims review | 2026-11-13, for 5.7.1-rc1 | 3 texts changed, 4 left open | [the review](https://ferroehr.eu/docs/dev/compliance/claims-review.html) |
