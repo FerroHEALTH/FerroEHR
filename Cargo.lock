@@ -1912,12 +1912,12 @@ dependencies = [
 
 [[package]]
 name = "ehds-logging"
-version = "0.29.0"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "508774fb89a4b12baeee286c02cbd66d56f27ceab722ca8797af0bdc7cf88e1c"
+checksum = "5291ed49a5e7e4d8e918136403c922028facf5b8f48116c5e67a8da56ee942eb"
 dependencies = [
  "async-trait",
- "ihe-atna",
+ "ihe-atna 0.30.0",
  "jiff",
  "schemars 1.2.3",
  "secrecy",
@@ -2125,7 +2125,7 @@ dependencies = [
  "hmac 0.13.0",
  "http",
  "http-body-util",
- "ihe-atna",
+ "ihe-atna 0.30.0",
  "ihe-iti",
  "indexmap 2.14.2",
  "inferno",
@@ -2229,7 +2229,7 @@ dependencies = [
  "futures",
  "http",
  "http-body-util",
- "ihe-atna",
+ "ihe-atna 0.30.0",
  "ihe-iti",
  "indexmap 2.14.2",
  "inferno",
@@ -2436,9 +2436,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-session"
-version = "0.31.0"
+version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4bbc636eb5693ebf9e4a4bb605294a4dfd827ea349d16ccbaeca9153c27fc0bb"
+checksum = "662ac613e786c83f4e2960597af2658c2e6b546ec1e6eef715b78274cba68be7"
 dependencies = [
  "aws-lc-rs",
  "axum",
@@ -3461,6 +3461,16 @@ version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d2336f698e982694f0be37d9930046ecca8578400a8d2a382bbd1d67256a87c"
 dependencies = [
+ "ferrohealth-secret",
+ "url",
+]
+
+[[package]]
+name = "ihe-atna"
+version = "0.30.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d57c37e2a6fc5e4788e031c5fe2e108688ce153d20d345810acfbf78661319ee"
+dependencies = [
  "async-trait",
  "base64 0.23.1",
  "crc32fast",
@@ -3483,15 +3493,15 @@ dependencies = [
 
 [[package]]
 name = "ihe-iti"
-version = "0.25.0"
+version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7136caa6c87ba1ea1ad8e48d0dc31faf5976cf1d4c5d7f02edce4645bb6ece77"
+checksum = "deaa150e4d790b0e184565c928efabba6f1549192fd46a5a8a64c413629e4f8d"
 dependencies = [
  "ferrohealth-smart",
  "fhir-search",
  "fhir-types",
  "http",
- "ihe-atna",
+ "ihe-atna 0.29.0",
  "reqwest",
  "secrecy",
  "serde_json",

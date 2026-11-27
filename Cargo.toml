@@ -231,7 +231,7 @@ ferrohealth-smart = { version = "=0.35.0", default-features = false, features = 
 # relying party; 0.31 removes the sealed store and keeps the justification an
 # operator states for one object (#6689, #6721). Verified on crates.io
 # 2026-11-26.
-ferrohealth-session = { version = "=0.31.0", default-features = false }
+ferrohealth-session = { version = "=0.32.0", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
@@ -298,8 +298,8 @@ ferrobridge-term = { version = "0.22.1", default-features = false, features = ["
 # record, the Art 14(1) categories and their classification map, the Art 9(2)
 # retention floor), and `ihe-atna`'s `retrieve` reads the ITI-81 query and
 # writes its searchset Bundle. Features are chosen per member.
-ihe-atna = { version = "=0.29.0", default-features = false }
-ehds-logging = { version = "=0.29.0", default-features = false }
+ihe-atna = { version = "=0.30.0", default-features = false }
+ehds-logging = { version = "=0.30.0", default-features = false }
 # The generated FHIR R4 model `ihe-atna` builds on, at the version it requires:
 # the CDR's ITI-81 page holds each typed BALP `AuditEvent`, and the viewer reads
 # the searchset, each `AuditEvent` and a refusal's `OperationOutcome` through it. `r4-resources` compiles R4's resources alone;
@@ -320,7 +320,7 @@ fhir-search = { version = "0.1.131", default-features = false }
 # Subscriber and Consumer (ITI-94, ITI-93) of `[pix]`, which reads every
 # Patient's `active` and links and rebuilds a subscription from its stored
 # Location.
-ihe-iti = { version = "=0.25.0", default-features = false }
+ihe-iti = { version = "=0.26.0", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging
