@@ -327,6 +327,9 @@ usageReport:
   enabled: false
 ferropix:
   enabled: false
+# The overlay's only extra variable is the PIXm grant's client secret, which
+# names a Secret no probe creates; with no PIXm endpoint nothing reads it.
+extraEnv: []
 config:
   record:
     subject_index: local
@@ -544,6 +547,10 @@ render_check() {
     grep -qF -- "$want" <<<"$rendered" || { red "  the production install render lacks: ${want}"; failed=1; }
   done
   grep -qF 'subject_index = "local"' <<<"$rendered" || { red "  the production install render does not run the in-instance EHR index"; failed=1; }
+  if grep -qF 'ferroehr-pix-client' <<<"$rendered"; then
+    red "  the production install render still reads the PIXm client Secret, which no probe Secret backs"
+    failed=1
+  fi
   if grep -qE 'name: [a-z0-9-]*ferropix' <<<"$rendered"; then
     red "  the production install render still deploys FerroPIX, which no probe Secret backs"
     failed=1
