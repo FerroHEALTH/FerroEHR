@@ -10,6 +10,9 @@ environment-name grammar, and file discovery are on the
 
 ## The command line
 
+Every command with every option, as `--help` prints it, is on the generated
+[Command-line reference](../reference/cli.md). This section explains them.
+
 Two flags are global: they apply to the server and to every subcommand:
 
 | Flag | Description |
@@ -289,7 +292,7 @@ performs whose capability grants the operation, with one scope element per
 `--element`, whose value is a `DV_TEXT`, and one `provider` element per
 `--provider-issuer` and the `--provider-id` in the same position, whose value
 is a `DV_IDENTIFIER` with that issuer and id, as a `write_care_relationship`
-grant names the providers it writes for. It is the first grant of a new deployment, typically the
+grant names the providers it writes for. It is the first grant of a new deployment, usually the
 `scim_provision` of the client that provisions the administrators, since no
 administrator can log in before their `PERSON` exists; every later grant is
 an administrator's write through the Demographic API. The commits take the

@@ -1,0 +1,1 @@
+- The hosted sandbox viewer keeps its sessions in the memory store, the one that keeps a stated justification on the server; a viewer restart signs visitors out.

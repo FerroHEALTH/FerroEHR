@@ -15,7 +15,7 @@ for. FerroEHR implements whole-EHR export, import into a new or an existing EHR
 > claim. Unlike the admin extensions, they are **not** admin-gated: they carry
 > the same ordinary authentication as the clinical API. The four routes, with
 > their bodies, parameters, and status codes, are in
-> [Admin & messaging APIs](../operations-admin-apis.md#ehr-extract-export-and-import).
+> [Admin & messaging APIs](../storage-admin-apis.md#ehr-extract-export-and-import).
 
 <!-- toc -->
 

@@ -209,9 +209,9 @@ annotation-discovering Prometheus, and neither is needed if you push over OTLP
 instead. **To turn the export off**, drop `telemetry.otlp`; nothing is
 exported without it.
 
-**The default dashboard.** The "FerroEHR — service overview" Grafana
+**The default dashboard.** The "FerroEHR - service overview" Grafana
 dashboard (request rate/errors/latency, AQL rate and phase latency,
-plan-cache hit ratio, database pool, Tokio runtime, audit throughput — every
+plan-cache hit ratio, database pool, Tokio runtime, audit throughput: every
 query written against the served metric names) reaches Grafana three ways:
 
 - **Compose**: the observability overlay provisions it automatically;
@@ -220,7 +220,7 @@ query written against the served metric names) reaches Grafana three ways:
   ships it as a ConfigMap labelled `grafana_dashboard: "1"`, which the
   Grafana Helm chart's dashboard sidecar (kube-prometheus-stack includes it)
   discovers and imports. The sidecar watches its own release namespace by
-  default — install FerroEHR there, or widen the sidecar's
+  default: install FerroEHR there, or widen the sidecar's
   `searchNamespace`. `metrics.grafanaDashboard.folder` sets the
   `grafana_folder` annotation for sidecars with folder routing configured.
 - **Anywhere else**: import

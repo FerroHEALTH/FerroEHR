@@ -5,12 +5,13 @@ system FerroEHR forms with FerroBRIDGE, its European interoperability
 software component (Regulation (EU) 2025/327, the EHDS, Art. 25(1),
 `docs/law/eu/ehds/text.html`), with FerroSMART as its authentication
 component. Bronze is a self-declaration on the "xShare Yellow Button
-Declaration of Conformity" at the EHRxF Hub. Its statements are the
+Declaration of Conformity" at the EHRxF Hub. Its statements draw on the
 Provider conformance statements of the xShare Yellow Button implementation
 guide, `hl7.eu.fhir.xshare-yb` 0.3.0
-(<https://hl7.eu/fhir/ig/xshare-yb/conformance.html>). This page records the
-flow those statements describe, the data protection facts of it, and the
-evidence for each statement. The declaration itself is submitted by
+(<https://hl7.eu/fhir/ig/xshare-yb/conformance.html>), in wording of their
+own. This page records the flow those statements describe, the data
+protection facts of it, and the evidence for each statement of the form.
+The declaration itself is submitted by
 Cadasto B.V.; nothing in this repository submits it.
 
 The system is offered as an API for patient-facing apps: there is no patient
@@ -80,33 +81,67 @@ flowchart TB
 
 ## The Bronze evidence
 
-The statements below are the Provider statements of the guide's Conformance
-page, Download (D) and One-time Share (S). Before the form is submitted, its
-live wording is compared with this table (FerroHEALTH/FerroEHR#6419). The
-Consumer statements are not declared: the system is a Provider.
+The table is keyed to the live form, the "xShare Yellow Button Declaration
+of Conformity" on Microsoft Forms
+(<https://forms.office.com/e/QBHxdknvEm>, linked from
+<https://ehr-exchange-format.eu/adopting-ehrxf/industry-label/>), in the
+version last modified on 2026-11-23 at 12:55 UTC and read on 2026-11-26. Its
+statements are copied as the form words them, spelling included. The form
+has 10 Download statements and 6 One-time Share statements, and they do not
+follow the guide's Provider statements one to one: the IG column names the
+guide's Download (D1 to D5) or One-time Share (S1 to S6) statement each one
+matches, or says there is none. The Consumer statements are not declared:
+the system is a Provider. A change of the form's modified date means the
+table is compared with the form again before it is submitted.
 
-| # | Statement | Evidence |
-|---|---|---|
-| D1, S1 | Only authenticated natural persons access the function. | FerroBRIDGE: `tests/it/facade/summary.rs` `a_patient_token_for_another_patient_answers_404`, `tests/it/facade/shl.rs` `a_create_outside_the_limits_or_without_a_person_is_refused`. FerroEHR: `app/ferroehr-rest/tests/it/exchanged_patient_token_http.rs` `the_exchanged_token_reads_its_own_ehr_and_no_other`. |
-| D2, S2 | User authentication conforms to the European regulations. | FerroSMART writes the eIDAS level into `acr` and holds each client to a minimum (FerroHEALTH/FerroSMART#784). FerroBRIDGE checks the level of every access token on its facade against its `[assurance]` floor (FerroHEALTH/FerroBRIDGE#2137). FerroEHR refuses a level below substantial with the step-up challenge: `exchanged_patient_token_http.rs` `the_exchanged_token_below_the_floor_gets_the_step_up_challenge`; book page [The xShare Yellow Button](../../website/book/src/xshare-yellow-button.md). |
-| D3, S3 | Only the authenticated person searches for and selects their own data. | FerroEHR holds the token to the person's own EHR and to the access delay: `exchanged_patient_token_http.rs` `the_exchanged_token_reads_its_own_ehr_and_no_other`, `the_access_delay_withholds_from_the_exchanged_token`; FerroBRIDGE `the_person_lists_and_revokes_only_their_own_links`. |
-| D4 | The download passes validation for each declared content specification. | Declared: IPS 2.0.1. FerroBRIDGE validates each document before it serves it (`a_document_that_breaks_its_profile_is_refused_with_422`) and its CI holds the served summaries to the HL7 FHIR Validator, attaching the reports to every release (FerroHEALTH/FerroBRIDGE#2015). The same run validates each summary a second time with the xShare Yellow Button package `hl7.eu.fhir.xshare-yb` 0.3.0 loaded (FerroHEALTH/FerroBRIDGE#2029). |
-| D5 | The download is available in the selected target format. | `GET /fhir/Patient/{id}/$summary` answers an IPS 2.0.1 document `Bundle` as `application/fhir+json`: `a_patient_s_summary_is_an_ips_document_with_coded_entries`. |
-| S4 | A valid SMART Health Link is generated. | FerroBRIDGE `tests/it/facade/shl.rs` `a_link_with_a_passcode_opens_once_in_a_receiver_and_yields_the_summary`, `a_link_without_a_passcode_is_u_and_answers_one_direct_request`. |
-| S5 | The receiver gets the authorised content, the SHL manifest, in the selected format. | Same tests: the receiver opens the manifest's file with the link's key and reads the IPS `Bundle`. |
-| S6 | The manifest's content passes validation for each declared content specification. | The decrypted file of a link is written by `a_link_with_a_passcode_opens_once_in_a_receiver_and_yields_the_summary` (`server-shl-ips`) and by the end-to-end API journey `a_patient_downloads_shares_and_revokes_their_summary_through_ferrosmart` (`journey-shl-ips`, FerroHEALTH/FerroBRIDGE#2018). FerroBRIDGE's CI holds both to the HL7 FHIR Validator against IPS 2.0.1, with and without the xShare 0.3.0 package, on every push to main (FerroHEALTH/FerroBRIDGE#2243). |
-| Form 1 | The organisation is legally established and the data is authentic and based on real medical data. | Owner's statement. Unticked until a deployment holds real records; the conformance evidence uses synthetic test records. |
+The form is submitted only once FerroEHR 6.0.0 and FerroBRIDGE v0.0.30 are
+released, the two versions the declaration names.
+
+FerroBRIDGE tests are under `app/ferrobridge-server/tests/it/` in
+FerroHEALTH/FerroBRIDGE; the FerroEHR tests are in
+`app/ferroehr-rest/tests/it/exchanged_patient_token_http.rs`. The CI
+evidence is FerroBRIDGE's run 45860946294 on main `5988ea6`: the job
+`e2e (containers)` writes the documents, and the job
+`fhir-validator (eehrxf documents)` validates them with the HL7 FHIR
+Validator against IPS 2.0.1, and again with `hl7.eu.fhir.xshare-yb` 0.3.0
+loaded, with no fatal or error result.
+
+| Form line | Statement (form wording) | IG | Answer | Evidence or reason |
+|---|---|---|---|---|
+| Download a | I declare that the applying entity is a legally established organisation and that all data provided in the context of the labelling process is authentic and based on real medical data. | no IG match | Unticked | Decision 10 on FerroHEALTH/FerroEHR#6419: Cadasto B.V. is legally established, but the conformance evidence uses synthetic test records (patient `SYN-PAT-2014` in `facade/summary.rs`), so the real-medical-data half does not hold. Ticked once a deployment holds real records. |
+| Download b | I declare that my solution ensures individuals are authenticated and can access the xShare Yellow Button Download feature. | D1 | Ticked | FerroBRIDGE `facade/summary.rs` `a_patient_token_for_another_patient_answers_404`; the journey `yellow_button_e2e/mod.rs` `a_patient_downloads_shares_and_revokes_their_summary_through_ferrosmart`. FerroEHR `the_exchanged_token_reads_its_own_ehr_and_no_other`. |
+| Download c | I declare that user authentication in my solution complies with applicable European regulations, including eIDAS and GDPR. | D2 | Ticked | FerroSMART writes the eIDAS level into `acr` and holds each client to a minimum (FerroHEALTH/FerroSMART#784). FerroBRIDGE checks the level of every access token on its facade against its `[assurance]` floor (FerroHEALTH/FerroBRIDGE#2137). FerroEHR `the_exchanged_token_below_the_floor_gets_the_step_up_challenge`, `the_access_record_names_the_patient_the_client_and_the_level`. GDPR: [Data protection](#data-protection). The deployer connects an eIDAS-recognised eID at substantial or high; book page [The xShare Yellow Button](../../website/book/src/xshare-yellow-button.md). |
+| Download d | I declare that only authenticated individuals can search for and select the documents or health data to download. | D3 | Ticked | FerroEHR `the_exchanged_token_reads_its_own_ehr_and_no_other`, `the_access_delay_withholds_from_the_exchanged_token`; FerroBRIDGE `a_patient_token_for_another_patient_answers_404`. |
+| Download e | I declare that individuals are enabled to receive and access health information through SMART Health Links | no IG match | Unticked | No SMART Health Link viewer ships with the system. It creates links and serves their manifests, which One-time Share c to e declare (`facade/shl.rs` `a_link_with_a_passcode_opens_once_in_a_receiver_and_yields_the_summary`). |
+| Download f | I declare that my system passes automated validation tests for each selected Priority categories of health data under the EEHRxF (e.g., Patient Summaries, Electronic Prescriptions and Dispensations, Medical Imaging Studies and Related Imaging Reports, Medical Test Results, Discharge Reports). | D4 | Ticked (Patient Summaries) | Declared content specification: IPS 2.0.1, the Patient Summary xBundle of the guide. FerroBRIDGE validates each document before it serves it (`a_document_that_breaks_its_profile_is_refused_with_422`). The validator job checks `server-summary-ips` and `journey-summary-ips` against IPS 2.0.1 and with the xShare 0.3.0 package (FerroHEALTH/FerroBRIDGE#2015, FerroHEALTH/FerroBRIDGE#2029), and its reports are attached to every release. |
+| Download g | I declare that my solution supports the Download of at least one of the Priority categories of health data under the EEHRxF defined in the EHDS (e.g., Patient Summaries, Electronic Prescriptions and Dispensations, Medical Imaging Studies and Related Imaging Reports, Medical Test Results, Discharge Reports). | D5 | Ticked (Patient Summaries) | `GET /fhir/Patient/{id}/$summary` answers an IPS 2.0.1 document `Bundle` as `application/fhir+json`: `a_patient_s_summary_is_an_ips_document_with_coded_entries`. |
+| Download h | I declare that the downloaded health data is encoded using HL7 FHIR implementable specifications and follows the data structure and constraints defined for the selected xBundle(s), including required and optional sections. | D4 and D5 | Ticked | An IPS 2.0.1 FHIR R4 document `Bundle` in JSON, the Patient Summary xBundle. `a_patient_s_summary_is_an_ips_document_with_coded_entries` checks the Composition (LOINC 60591-5) and its medication, problem, allergy and procedure sections; the validator job reports no error. |
+| Download i | I declare that the provided  data includes all required coded elements such as SNOMED CT, LOINC, or ATC, where applicable, for key clinical concepts like Bundle  conditions, medications, and observations. | no IG match | Ticked | `a_patient_s_summary_is_an_ips_document_with_coded_entries`: SNOMED CT on the Condition, AllergyIntolerance and Procedure, LOINC on the document and its sections, and ATC added to the medication by FerroTERM's `ConceptMap/$translate`. The required bindings pass the validator job. FerroBRIDGE carries the code the record holds and adds the translation. |
+| Download j | I declare that the downloaded data bundle is not empty, and it includes patient metadata, including identifiers and demographic data, as required for the selected priority category. | no IG match | Ticked | `a_patient_s_summary_is_an_ips_document_with_coded_entries`: one Patient with an identifier (value, assigner, type), name, birth date and gender, and the custodian Organization. |
+| One-time Share a | I declare that only authenticated Individuals can act as Authorised Data Recipients. | no IG match; S1 covers the person using the feature | Unticked | The receiver of a SMART Health Link is not authenticated: anyone with the link, and its passcode when one is set, opens it, and the receiver only names itself in the manifest request's `recipient` (SMART Health Cards and Links 1.0.0). `facade/shl.rs` `a_link_without_a_passcode_is_u_and_answers_one_direct_request`. The person using the feature is authenticated (S1): `a_create_outside_the_limits_or_without_a_person_is_refused`. |
+| One-time Share b | I declare that user authentication in my solution complies with applicable European regulations, including eIDAS and GDPR. | S2 | Ticked | As Download c. |
+| One-time Share c | I declare that users can generate SMART Health Links that allow secure access to selected health data for a limited time or specific purpose. | S4 | Ticked | `facade/shl.rs` `a_link_with_a_passcode_opens_once_in_a_receiver_and_yields_the_summary`, `a_link_gives_the_answers_it_was_created_with`, `an_expired_link_and_a_lapsed_location_answer_inactive`, `a_create_outside_the_limits_or_without_a_person_is_refused`. A link expires 24 hours after creation by default and 7 days at most, and answers once by default. |
+| One-time Share d | I declare that each SMART Health Link corresponds to a valid, standards-compliant FHIR document, based on HL7 FHIR implementable specifications from a supported priority category of health data under the EEHRxF. | S6 | Ticked | The decrypted file of a link is written by `a_link_with_a_passcode_opens_once_in_a_receiver_and_yields_the_summary` (`server-shl-ips`) and by the journey (`journey-shl-ips`, FerroHEALTH/FerroBRIDGE#2018). The validator job holds both to IPS 2.0.1, with and without the xShare 0.3.0 package (FerroHEALTH/FerroBRIDGE#2243). |
+| One-time Share e | I declare that retrieved health data shared through the link can be properly displayed, parsed, or integrated by recipient systems. | S5 | Ticked | The receiver in `a_link_with_a_passcode_opens_once_in_a_receiver_and_yields_the_summary` decrypts the manifest's file with the link's key and parses the IPS `Bundle`; the journey checks the same. The document passes the HL7 FHIR Validator (One-time Share d). |
+| One-time Share f | I declare that users can control or revoke shared access through available options (e.g., link expiration, token revocation). | no IG match | Ticked | `GET /shl` and `DELETE /shl/{handle}`: `facade/shl.rs` `the_person_lists_and_revokes_only_their_own_links`, `an_expired_link_and_a_lapsed_location_answer_inactive`, `wrong_passcodes_count_down_and_the_fifth_disables_the_link`; the journey's revoke step. |
 
 ### Answers for the self-assessment
 
-| # | English | Nederlands |
+| Form line | English | Nederlands |
 |---|---|---|
-| D1, S1 | Yes. Every Yellow Button endpoint requires a SMART access token of the person; FerroEHR serves the person's own record only. | Ja. Elk Gele Knop-endpoint vereist een SMART-toegangstoken van de persoon; FerroEHR levert alleen het eigen dossier van de persoon. |
-| D2, S2 | Yes. The person signs in with an eIDAS-recognised eID; the level of assurance is checked on every request, at substantial at least. | Ja. De persoon logt in met een eIDAS-erkend eID; het betrouwbaarheidsniveau wordt bij elk verzoek gecontroleerd, minimaal substantieel. |
-| D3, S3 | Yes. The person selects their patient summary and manages only their own links; another person's record is refused. | Ja. De persoon kiest de eigen patiëntsamenvatting en beheert alleen de eigen links; het dossier van een ander wordt geweigerd. |
-| D4 | Yes. The patient summary is validated against IPS 2.0.1 before it is served and by the HL7 FHIR Validator in every release. | Ja. De patiëntsamenvatting wordt vóór levering gevalideerd tegen IPS 2.0.1 en bij elke release door de HL7 FHIR Validator. |
-| D5 | Yes. HL7 IPS 2.0.1 as a FHIR R4 document Bundle in JSON. | Ja. HL7 IPS 2.0.1 als FHIR R4-documentbundel in JSON. |
-| S4 | Yes. A SMART Health Link per SMART Health Cards and Links 1.0.0, with or without a passcode, expiring within 7 days. | Ja. Een SMART Health Link volgens SMART Health Cards and Links 1.0.0, met of zonder toegangscode, die binnen 7 dagen verloopt. |
-| S5 | Yes. The receiver opens the manifest and decrypts the IPS document with the link's key. | Ja. De ontvanger opent het manifest en ontsleutelt het IPS-document met de sleutel uit de link. |
-| S6 | Yes. The shared document is the validated IPS 2.0.1 document. | Ja. Het gedeelde document is het gevalideerde IPS 2.0.1-document. |
-| Form 1 | Not ticked until a deployment holds real records. | Niet aangevinkt zolang geen installatie echte gegevens bevat. |
+| Download a | Not ticked. Cadasto B.V. is legally established, but the evidence uses synthetic test records. It is ticked once a deployment holds real records. | Niet aangevinkt. Cadasto B.V. is rechtsgeldig gevestigd, maar het bewijs gebruikt synthetische testgegevens. Dit wordt aangevinkt zodra een installatie echte gegevens bevat. |
+| Download b | Yes. Every Yellow Button endpoint requires the person's SMART access token, and FerroEHR serves the person's own record only. | Ja. Elk Gele Knop-endpoint vereist het SMART-toegangstoken van de persoon, en FerroEHR levert alleen het eigen dossier van de persoon. |
+| Download c | Yes. The person signs in with an eIDAS-recognised eID, and the level of assurance is checked on every request, at substantial at least. The processing follows the GDPR as the data protection section sets out. | Ja. De persoon logt in met een door eIDAS erkend eID, en het betrouwbaarheidsniveau wordt bij elk verzoek gecontroleerd, minimaal substantieel. De verwerking volgt de AVG, zoals het onderdeel over gegevensbescherming beschrijft. |
+| Download d | Yes. Only the signed-in person selects their patient summary; another person's record is refused. | Ja. Alleen de ingelogde persoon kiest de eigen patiëntsamenvatting; het dossier van een ander wordt geweigerd. |
+| Download e | Not ticked. No viewer for SMART Health Links ships with the system. It creates links and serves them, which is declared under One-time Share. | Niet aangevinkt. Het systeem levert geen viewer voor SMART Health Links. Het maakt links aan en levert ze uit, en dat staat onder One-time Share. |
+| Download f | Yes, for Patient Summaries. The patient summary is validated against IPS 2.0.1 before it is served, and CI checks it with the HL7 FHIR Validator, with and without the xShare package. | Ja, voor patiëntsamenvattingen. De patiëntsamenvatting wordt vóór levering gevalideerd tegen IPS 2.0.1, en de CI controleert haar met de HL7 FHIR Validator, met en zonder het xShare-pakket. |
+| Download g | Yes, for Patient Summaries. The person downloads their patient summary. | Ja, voor patiëntsamenvattingen. De persoon downloadt de eigen patiëntsamenvatting. |
+| Download h | Yes. HL7 IPS 2.0.1 as a FHIR R4 document Bundle in JSON, in the structure of the Patient Summary xBundle; the validator reports no errors. | Ja. HL7 IPS 2.0.1 als FHIR R4-documentbundel in JSON, in de structuur van de xBundle voor de patiëntsamenvatting; de validator meldt geen fouten. |
+| Download i | Yes. Conditions, allergies and procedures carry SNOMED CT codes, the document and its sections LOINC codes, and the medication gets its ATC code from FerroTERM, where the record holds a code. | Ja. Aandoeningen, allergieën en verrichtingen hebben SNOMED CT-codes, het document en de secties LOINC-codes, en de medicatie krijgt haar ATC-code van FerroTERM, voor zover het dossier een code bevat. |
+| Download j | Yes. The Bundle holds the patient with an identifier, name, date of birth and gender, and the custodian organisation. | Ja. De bundel bevat de patiënt met een identificatie, naam, geboortedatum en geslacht, en de beherende organisatie. |
+| One-time Share a | Not ticked. The receiver of a link is not authenticated: anyone with the link, and its passcode when one is set, can open it. The person who creates the link is authenticated. | Niet aangevinkt. De ontvanger van een link wordt niet geauthenticeerd: iedereen met de link, en de toegangscode als die is ingesteld, kan hem openen. De persoon die de link maakt is wel geauthenticeerd. |
+| One-time Share b | Yes, as Download c. | Ja, zoals bij Download c. |
+| One-time Share c | Yes. The person creates a SMART Health Link (SMART Health Cards and Links 1.0.0) that expires after 24 hours by default and after 7 days at most, and opens once by default. | Ja. De persoon maakt een SMART Health Link (SMART Health Cards and Links 1.0.0) die standaard na 24 uur verloopt en uiterlijk na 7 dagen, en standaard één keer te openen is. |
+| One-time Share d | Yes. The link serves the validated IPS 2.0.1 document. | Ja. De link levert het gevalideerde IPS 2.0.1-document. |
+| One-time Share e | Yes. The receiver decrypts the file in the manifest with the key from the link and reads a valid IPS document, which any system that supports IPS can process. | Ja. De ontvanger ontsleutelt het bestand uit het manifest met de sleutel uit de link en leest een geldig IPS-document, dat elk systeem met IPS-ondersteuning kan verwerken. |
+| One-time Share f | Yes. The person lists and revokes their own links, and a link also ends at its expiry, after its last answer or after five wrong passcodes. | Ja. De persoon ziet de eigen links en kan ze intrekken, en een link vervalt ook als hij verloopt, na het laatste antwoord of na vijf foute toegangscodes. |

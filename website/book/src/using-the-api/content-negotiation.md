@@ -157,8 +157,8 @@ types:
 
 | Media type | Meaning |
 |---|---|
-| `application/openehr.wt.flat+json` | FLAT — one flat JSON object of `path: value` pairs |
-| `application/openehr.wt.structured+json` | STRUCTURED — the same data as nested JSON |
+| `application/openehr.wt.flat+json` | FLAT: one flat JSON object of `path: value` pairs |
+| `application/openehr.wt.structured+json` | STRUCTURED: the same data as nested JSON |
 | `application/openehr.wt+json` | A template rendered as Web Template JSON (template endpoints only) |
 
 Where they work:
@@ -238,7 +238,7 @@ response body. Its default is `return=minimal`:
 |---|---|
 | `return=minimal` (default) | Empty body; the identifier is in `ETag`/`Location`. Status **204** on update, **201** on create. |
 | `return=representation` | The full created/updated resource in the body, status **200**/**201**. |
-| `return=identifier` | Just the resource identifier object — `{"uid": "…"}` (templates: `{"template_id": "…"}`). Status **200**/**201**, never 204. |
+| `return=identifier` | Just the resource identifier object: `{"uid": "…"}` (templates: `{"template_id": "…"}`). Status **200**/**201**, never 204. |
 
 Use `return=representation` when you want the server-completed object back (with
 its assigned version id and any server-set audit fields); use `return=minimal`
@@ -268,7 +268,7 @@ version created here resolves to an `ORIGINAL_VERSION`; one this server received
 from another system resolves to the `IMPORTED_VERSION` that wraps it (see
 [Imported versions](#imported-versions)).
 
-## `ETag` and `If-Match` — optimistic concurrency
+## `ETag` and `If-Match`: optimistic concurrency
 
 openEHR objects are versioned, and updates use HTTP preconditions to prevent
 lost updates:
@@ -292,7 +292,7 @@ A **`Location`** header is emitted only when a resource is **created**. Reads
 and deletes identify the version through `ETag` alone, so do not expect
 `Location` on them; the `ETag` is the authoritative identifier.
 
-## `Last-Modified` — when the version was committed
+## `Last-Modified`: when the version was committed
 
 Alongside the `ETag`, versioned responses carry a **`Last-Modified`** header in
 the standard HTTP-date form (`Wed, 22 Jul 2009 19:15:56 GMT`). Its value is the
