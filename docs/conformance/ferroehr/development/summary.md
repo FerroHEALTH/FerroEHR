@@ -96,9 +96,9 @@ Rows to look at (open one for its explanation):
 | **What was checked** | Delete the COMPOSITION with a description in openehr-audit-details. |
 | **Expected** | status 204 |
 | **Received** | status 403 |
-| **Exchange** | `DELETE http://127.0.0.1:8080/ferroehr/rest/openehr/v1/ehr/ddafa1e2-4811-4df8-b34a-6b55339ae84b/composition/01a21d3d-2813-7245-ab7c-c5667070e116%3A%3Alocalhost%3A%3A1` answered 403, recording entry 277 |
+| **Exchange** | `DELETE http://127.0.0.1:8080/ferroehr/rest/openehr/v1/ehr/66d3415b-3511-4a2b-806c-1f49ae2bb0df/composition/01a21d7d-fb19-73f9-a3b3-8f39bacebe48%3A%3Alocalhost%3A%3A1` answered 403, recording entry 277 |
 | **Whose problem** | The server. A failed row counts against the claimed capability. |
-| **Inputs** | `ehr_id` = `"ddafa1e2-4811-4df8-b34a-6b55339ae84b"` (generated) |
+| **Inputs** | `ehr_id` = `"66d3415b-3511-4a2b-806c-1f49ae2bb0df"` (generated) |
 
 **Why it is required:** [specs/openehr/ITS-REST/specifications/responses/204\_version\_deleted.yaml, description](https://github.com/openEHR/specifications-ITS-REST/blob/9d25ea783f790512e05f908ef743626b4f7e8d2c/specifications/responses/204_version_deleted.yaml)
 
@@ -135,9 +135,9 @@ Rows to look at (open one for its explanation):
 | **What was checked** | Commit a CONTRIBUTION whose member committer is a PARTY\_RELATED, and keep its version\_uid. |
 | **Expected** | status 201 |
 | **Received** | status 403 |
-| **Exchange** | `POST http://127.0.0.1:8080/ferroehr/rest/openehr/v1/ehr/ae7e6295-4365-472d-a9dc-04c447574a39/contribution` answered 403, recording entry 5525 |
+| **Exchange** | `POST http://127.0.0.1:8080/ferroehr/rest/openehr/v1/ehr/3ef68c76-dcd0-4296-85ef-1e24d8d7bc57/contribution` answered 403, recording entry 5525 |
 | **Whose problem** | The server. A failed row counts against the claimed capability. |
-| **Inputs** | `ehr_id` = `"ae7e6295-4365-472d-a9dc-04c447574a39"` (generated) |
+| **Inputs** | `ehr_id` = `"3ef68c76-dcd0-4296-85ef-1e24d8d7bc57"` (generated) |
 
 **Why it is required:** [specs/openehr/ITS-REST/specifications/responses/201\_CONTRIBUTION.yaml, description](https://github.com/openEHR/specifications-ITS-REST/blob/9d25ea783f790512e05f908ef743626b4f7e8d2c/specifications/responses/201_CONTRIBUTION.yaml)
 
@@ -155,7 +155,7 @@ Rows to look at (open one for its explanation):
 | **Expected** | the control \`contribution\_create/commit\_contribution-committer\_related\` accepted |
 | **Received** | not judged: the control \`contribution\_create/commit\_contribution-committer\_related\` ended FAILED |
 | **Whose problem** | The instrument could not judge it. The row does not count against the server. |
-| **Inputs** | `ehr_id` = `"e92ee99a-6f4a-47c5-8989-8d6ab836ded0"` (generated) |
+| **Inputs** | `ehr_id` = `"a7c61866-f275-4759-9ea7-bee9b23b0ee2"` (generated) |
 
 **Why it is required:** no citation resolved.
 
@@ -374,7 +374,7 @@ What the statement selected. Each option is labelled with its kind: **Recommende
 
 | Option | Kind | Selected arm | Passed | Failed | Warning | Errored | Skipped |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| `contribution-xml-read` | Optional (MAY) | `contribution-xml-unsupported` | 2 | 0 | 0 | 0 | 2 |
+| `contribution-xml-read` | Optional (MAY) | `contribution-xml-supported` | 2 | 0 | 0 | 0 | 2 |
 | `contribution-xml-write` | Optional (MAY) | `contribution-xml-write-refused` | 1 | 0 | 0 | 0 | 0 |
 
 <details>
@@ -423,7 +423,7 @@ Rows to look at (open one for its explanation):
 | **Received** | status 201 |
 | **Exchange** | `POST http://127.0.0.1:8080/ferroehr/rest/openehr/v1/definition/template/adl1.4` answered 201, recording entry 5760 |
 | **Whose problem** | The server. A failed row counts against the claimed capability. |
-| **Inputs** | `run` = `"c8e47360-4a00-4245-93b1-fff3c745063b"` (generated), `uid` = `"0a8de519-fb6b-4022-82fd-7807f2988030"` (generated) |
+| **Inputs** | `run` = `"652ac200-0475-4740-ab1b-90d370483c9c"` (generated), `uid` = `"a30930b0-ad13-47d2-bf07-cd3b72c658d1"` (generated) |
 
 **Why it is required:** [specs/openehr/ITS-REST/specifications/responses/400.yaml, description](https://github.com/openEHR/specifications-ITS-REST/blob/9d25ea783f790512e05f908ef743626b4f7e8d2c/specifications/responses/400.yaml)
 
@@ -456,11 +456,11 @@ Rows to look at (open one for its explanation):
 
 | Option | Kind | Selected arm | Passed | Failed | Warning | Errored | Skipped |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| `demographic-contribution-xml-read` | Optional (MAY) | `demographic-contribution-xml-unsupported` | 2 | 0 | 0 | 0 | 2 |
+| `demographic-contribution-xml-read` | Optional (MAY) | `demographic-contribution-xml-supported` | 2 | 0 | 0 | 0 | 2 |
 | `demographic-contribution-xml-write` | Optional (MAY) | `demographic-contribution-xml-write-refused` | 1 | 0 | 0 | 0 | 0 |
 | `party-xml-read` | Optional (MAY) | `party-xml-supported` | 15 | 0 | 0 | 0 | 15 |
 | `party-xml-write` | Optional (MAY) | `party-xml-write-accepted` | 10 | 0 | 0 | 0 | 10 |
-| `versioned-party-xml-read` | Optional (MAY) | `versioned-party-xml-unsupported` | 4 | 0 | 0 | 0 | 4 |
+| `versioned-party-xml-read` | Optional (MAY) | `versioned-party-xml-supported` | 4 | 0 | 0 | 0 | 4 |
 
 <details>
 <summary>What these options decide</summary>
@@ -637,8 +637,8 @@ A skipped row was not run, for the reason given. It never counts for or against 
 | `composition_write_xml_not_acceptable/update_composition-accept_xml row 0` | option-not-selected |
 | `composition_xml_write_refused/create_composition-xml_unsupported_media row 0` | option-not-selected |
 | `content_item_unmatched_accepted/item-unmatched_member_accepted-accepted row 0` | option-not-selected |
-| `contribution_read_xml/get_contribution-xml row 0` | option-not-selected |
-| `contribution_write_xml_accept/commit_contribution-accept_xml row 0` | option-not-selected |
+| `contribution_read_xml_not_acceptable/get_contribution-xml_not_acceptable row 0` | option-not-selected |
+| `contribution_write_xml_not_acceptable/commit_contribution-accept_xml row 0` | option-not-selected |
 | `template_adl14_web_template_not_acceptable/upload_template-web_template_not_acceptable row 0` | option-not-selected |
 | `template_adl14_web_template_not_acceptable/get_template-web_template_not_acceptable row 0` | option-not-selected |
 | `template_adl14_web_template_not_acceptable/get_template-web_template_warning row 0` | option-not-selected |
@@ -657,8 +657,8 @@ A skipped row was not run, for the reason given. It never counts for or against 
 | `template_example_xml_adl2/get_template_adl2_example-xml row 0` | option-not-selected |
 | `template_example_xml_not_acceptable/get_template_adl14_example-xml_not_acceptable row 0` | option-not-selected |
 | `template_example_xml_not_acceptable_adl2/get_template_adl2_example-xml_not_acceptable row 0` | option-not-selected |
-| `demographic_contribution_read_xml/commit_demographic_contribution-accept_xml row 0` | option-not-selected |
-| `demographic_contribution_read_xml/get_demographic_contribution-accept_xml row 0` | option-not-selected |
+| `demographic_contribution_read_xml_not_acceptable/commit_demographic_contribution-accept_xml row 0` | option-not-selected |
+| `demographic_contribution_read_xml_not_acceptable/get_demographic_contribution-accept_xml row 0` | option-not-selected |
 | `party_read_xml_not_acceptable/get_person-xml_not_acceptable row 0` | option-not-selected |
 | `party_read_xml_not_acceptable/get_agent-xml_not_acceptable row 0` | option-not-selected |
 | `party_read_xml_not_acceptable/get_group-xml_not_acceptable row 0` | option-not-selected |
@@ -685,10 +685,10 @@ A skipped row was not run, for the reason given. It never counts for or against 
 | `party_xml_write_refused/create_role-xml_refused row 0` | option-not-selected |
 | `party_xml_write_refused/update_role-xml_refused row 0` | option-not-selected |
 | `person/update_person-relationship_target_reverse row 0` | cited-text-absent |
-| `versioned_party_read_xml/get_versioned_party-xml row 0` | option-not-selected |
-| `versioned_party_read_xml/get_versioned_party_version-xml row 0` | option-not-selected |
-| `versioned_party_read_xml/get_versioned_party_version_by_id-xml row 0` | option-not-selected |
-| `versioned_party_read_xml/get_versioned_party_revision_history-xml row 0` | option-not-selected |
+| `versioned_party_read_xml_not_acceptable/get_versioned_party-xml_not_acceptable row 0` | option-not-selected |
+| `versioned_party_read_xml_not_acceptable/get_versioned_party_version-xml_not_acceptable row 0` | option-not-selected |
+| `versioned_party_read_xml_not_acceptable/get_versioned_party_version_by_id-xml_not_acceptable row 0` | option-not-selected |
+| `versioned_party_read_xml_not_acceptable/get_versioned_party_revision_history-xml_not_acceptable row 0` | option-not-selected |
 | `directory_read_xml_not_acceptable/get_directory-xml_not_acceptable row 0` | option-not-selected |
 | `directory_read_xml_not_acceptable/get_directory_version-xml_not_acceptable row 0` | option-not-selected |
 | `directory_write_xml_not_acceptable/create_directory-accept_xml row 0` | option-not-selected |
