@@ -119,12 +119,36 @@ fn panel(ehr_id: &str, panel: Panel) -> Html {
     ))
 }
 
+/// The log of an EHR the CDR refuses the caller, under its own heading: the
+/// person and their representative read the log of a record they may not
+/// read (book `access-log.md`, the subject view).
+async fn log_alone(ehr_id: &str, title: &str) -> Html {
+    let filters = read_filters();
+    let window = OpenWindow::of(crate::paging::current(Listing::AccessLog), 0);
+    let entries = ehr_access_log(ehr_id, &filters, window.start, window.size).await;
+    let heading = page_heading(
+        &current(),
+        Header {
+            title: title.to_owned().into(),
+            subtitle: None,
+            crumbs: crumbs(ehr_id),
+            mono: false,
+            badge: None,
+            subtitle_view: None,
+        },
+        ActionGroup::default(),
+    );
+    heading.then(panel(ehr_id, Panel { filters, entries }))
+}
+
 /// An EHR's Access log tab.
 pub async fn page() -> Drawn {
     let ehr_id = ehr_id_param();
     let title = tr_with(AccessMsg::Title, &[("id", shortened(&ehr_id).into())]);
-    let body = {
-        let model = read_page(ehr_id.clone()).await;
+    let model = read_page(ehr_id.clone()).await;
+    let body = if model.ehr_refused() {
+        log_alone(&ehr_id, &title).await
+    } else {
         ehr_view(&ehr_id, EhrTab::AccessLog, model, |found| {
             panel(&ehr_id, found)
         })

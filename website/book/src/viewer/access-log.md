@@ -21,7 +21,9 @@ The CDR decides what you read. The person the record is about and their
 representative read their own view, which leaves out what serves review
 alone; a reviewer reads the full record. When the CDR answers with the
 person's own view, the tab and each entry say so above the list, from the
-view the CDR names in its answer. Any other account sees that it may not read
+view the CDR names in its answer. The CDR refuses them the record itself, so
+an EHR page that answers `403` offers **Read its access log**, and the tab
+opens on the log alone. Any other account sees that it may not read
 the log. The person's own reads of their log are left out until you tick
 **Include the person's own reads of this log**.
 

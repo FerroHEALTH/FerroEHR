@@ -84,3 +84,37 @@ async fn the_subject_view_says_it_is_the_persons_own_log() {
     assert_eq!(one.status, http::StatusCode::OK, "{}", one.body);
     assert!(one.main().contains(OWN_VIEW), "{}", one.main());
 }
+
+#[tokio::test]
+async fn a_refused_record_still_opens_its_access_log_for_the_person() {
+    let ehr = id("ehr");
+    let log = format!("/ferroehr/rest/extensions/v1/ehr/{ehr}/access_log");
+    let refused = json!({
+        "method": "GET",
+        "path": format!("/ferroehr/rest/openehr/v1/ehr/{ehr}"),
+        "body": "",
+        "status": 403,
+        "headers": { "content-type": "application/json" },
+        "response": json!({ "status": 403, "detail": "the credential does not permit this request" })
+            .to_string(),
+    });
+    let page = json!({"offset": 0, "fetch": 25, "entries": [subject_entry()]});
+    let viewer = Viewer::start_with(vec![
+        refused,
+        subject_view(&format!("{log}?offset=0&fetch=25"), &page),
+    ])
+    .await;
+    let cookie = viewer.sign_in().await;
+    let record = viewer.page(&cookie, &format!("/ehrs/{ehr}")).await;
+    assert!(
+        record.main().contains(&format!("/ehrs/{ehr}/access-log")),
+        "a refused record offers its access log: {}",
+        record.main()
+    );
+    let tab = viewer
+        .page(&cookie, &format!("/ehrs/{ehr}/access-log"))
+        .await;
+    assert_eq!(tab.status, http::StatusCode::OK, "{}", tab.body);
+    assert!(tab.main().contains(OWN_VIEW), "{}", tab.main());
+    assert!(tab.main().contains(UID), "{}", tab.main());
+}
