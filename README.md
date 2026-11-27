@@ -39,6 +39,10 @@
 [![specification · released](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/profile.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
 [![veredictum · released](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/instrument.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
 <br>
+<sub>The committed released record, with its deviation</sub><br>
+[![openEHR BASE · released record](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-base.json)](docs/conformance/ferroehr/summary.md)
+[![openEHR OPTIONS · released record](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-options.json)](docs/conformance/ferroehr/summary.md)
+<br>
 <sub>The red BASE rows, here and in the development run, are one deliberate deviation: the server records the authenticated caller as the committer and refuses a stated committer that names someone else, where ITS-REST asks that it be merged. The ground is Regulation (EU) 2025/327 Annex II 3.1 and Art. 13(4), the decision <a href="https://github.com/FerroHEALTH/FerroEHR/issues/5002">#5002</a> and the upstream report <a href="https://github.com/FerroHEALTH/FerroEHR/issues/5019">#5019</a> (<a href="https://ferroehr.eu/docs/latest/conformance.html#known-deviations">Known deviations</a>).</sub><br>
 <sub>Against the development openEHR specifications (master)</sub><br>
 [![openEHR BASE · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/base.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
@@ -55,6 +59,8 @@
 [![EHDS logging checklist · Xt-EHR D8.2](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Flogging.json)](https://ferroehr.eu/docs/dev/compliance/logging-checklist.html)
 [![EEHRxF draft · Annex III from the RM](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Fannex-iii.json)](https://ferroehr.eu/docs/dev/compliance/eehrxf-annex-iii.html)
 [![EEHRxF draft · PDF/A originals](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fehds%2Fpdf-originals.json)](https://ferroehr.eu/docs/dev/compliance/eehrxf-pdf-originals.html)
+[![IHE ATNA interoperability · HAPI FHIR, syslog-ng](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fatna-interop.json)](docs/conformance/interop/atna/)
+[![EHDS Art. 28 claims review](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fclaims-review.json)](https://ferroehr.eu/docs/dev/compliance/claims-review.html)
 
 </div>
 

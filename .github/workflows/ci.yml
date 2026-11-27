@@ -1256,6 +1256,17 @@ jobs:
         if: ${{ !cancelled() }}
         run: bash scripts/render/ehds-badges.sh --check
 
+      # ---- measured-badges ---------------------------------------------
+      # The README's badges of the committed openEHR record, the ATNA
+      # interoperability run and the claims review (#6763): a record that
+      # moves without its document, or a deviation with no ground, fails here.
+      - name: measured-badges / The counting holds on its fixtures
+        if: ${{ !cancelled() }}
+        run: bash scripts/render/measured-badges.sh --self-test
+      - name: measured-badges / Each badge matches its record
+        if: ${{ !cancelled() }}
+        run: bash scripts/render/measured-badges.sh --check
+
       # ---- post-quantum ------------------------------------------------
       # The post-quantum inventory (#6602): conformance/post-quantum.tsv in its
       # five columns with every location it names in the tree, the table of
