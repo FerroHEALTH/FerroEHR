@@ -65,6 +65,22 @@ the opened one as its `If-Match`, so a party someone else changed meanwhile is
 refused with the CDR's `412`. **Delete party…** marks it deleted; its versions
 stay readable.
 
+### Binding keys
+
+A `PERSON`'s Overview lists its **binding keys**: each identifier it carries
+with an issuer, by issuer and id. The binding key is the one whose issuer a
+login issuer names (`[auth.issuer.<name>.party] identifier_issuer`, see
+[the party mapping](../installation/config-authz.md#the-party-mapping)); a
+login binds to the `PERSON` that carries it. A binding key never changes on an
+ordinary edit. While the CDR's admin API is on, **Re-key…** on a key's row
+asks for the new id and confirms
+(`POST {ext}/admin/party/binding-key`, see [Admin & messaging APIs →
+Re-keying](../operations-admin-apis.md#re-keying-a-professionals-binding-key)):
+the `PERSON` gets a new version with the new key and the old one stops
+binding in the same commit. The CDR refuses, in its words, a new key that is
+your own login (`403`), an unknown or deleted person (`404`), and a key no
+identifier of that issuer carries or one bound to another party (`409`).
+
 ### Archiving a party
 
 While the CDR's admin API is on, a party's More menu offers **Archive…** and

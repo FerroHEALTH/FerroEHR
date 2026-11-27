@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! A template's or an archetype's Download: the source the CDR stores, as a
-//! file.
+//! A template's, an archetype's or an EHR Extract's Download: what the CDR
+//! serves, as a file.
 //!
 //! The browser holds no CDR credential, so it cannot link to the CDR's
 //! `definition/template` resources itself. This route reads the template
@@ -118,14 +118,13 @@ pub async fn download_template(
     };
     let (accept, extension) = served_as(family);
     let url = state.cdr.rest_v1(&path);
-    attachment(
-        &state,
-        &viewer,
-        &url,
-        accept,
-        file_name(&template_id, extension),
-    )
-    .await
+    let answer = state
+        .cdr
+        .call(http::Method::GET, &url, viewer.credential())
+        .accept(accept)
+        .ok()
+        .await;
+    attachment(answer, accept, &file_name(&template_id, extension))
 }
 
 /// `GET /download/archetype/{family}/{id}`: the archetype as the CDR stores
@@ -156,14 +155,13 @@ pub async fn download_archetype(
         ),
         _ => return StatusCode::NOT_FOUND.into_response(),
     };
-    attachment(
-        &state,
-        &viewer,
-        &url,
-        "text/plain",
-        file_name(id, extension),
-    )
-    .await
+    let answer = state
+        .cdr
+        .call(http::Method::GET, &url, viewer.credential())
+        .accept("text/plain")
+        .ok()
+        .await;
+    attachment(answer, "text/plain", &file_name(id, extension))
 }
 
 /// The route an EHR's Export as EHR Extract reads from, followed by the
@@ -193,52 +191,92 @@ pub async fn download_extract(
     let url = state
         .cdr
         .extensions_v1(&crate::bff::extract::export_path(id));
-    attachment(
-        &state,
-        &viewer,
-        &url,
-        "application/json",
-        file_name(&format!("ehr-extract-{id}"), "json"),
-    )
-    .await
-}
-
-/// The CDR's answer to a read of `url` as `accept`, as the attachment `name`.
-async fn attachment(
-    state: &crate::state::AppState,
-    viewer: &ferrohealth_session::record::Session,
-    url: &str,
-    accept: &'static str,
-    name: String,
-) -> Response {
     let answer = state
         .cdr
-        .call(http::Method::GET, url, viewer.credential())
-        .accept(accept)
+        .call(http::Method::GET, &url, viewer.credential())
+        .accept("application/json")
         .ok()
         .await;
+    attachment(
+        answer,
+        "application/json",
+        &file_name(&format!("ehr-extract-{id}"), "json"),
+    )
+}
+
+/// The CDR's `answer` as a file named `name` of the media type
+/// `content_type`; a refusal answers `502` with the CDR's words.
+fn attachment(
+    answer: Result<crate::cdr::CdrResponse, crate::error::ViewerError>,
+    content_type: &'static str,
+    name: &str,
+) -> Response {
     match answer {
-        Ok(response) => {
-            let disposition = format!("attachment; filename=\"{name}\"");
-            match HeaderValue::from_str(&disposition) {
-                Ok(disposition) => (
-                    [
-                        (header::CONTENT_TYPE, HeaderValue::from_static(accept)),
-                        (header::CONTENT_DISPOSITION, disposition),
-                    ],
-                    response.body,
-                )
-                    .into_response(),
-                Err(_invalid) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-            }
-        }
+        Ok(response) => match HeaderValue::from_str(&format!("attachment; filename=\"{name}\"")) {
+            Ok(disposition) => (
+                [
+                    (header::CONTENT_TYPE, HeaderValue::from_static(content_type)),
+                    (header::CONTENT_DISPOSITION, disposition),
+                ],
+                response.body,
+            )
+                .into_response(),
+            Err(_invalid) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
         Err(error) => (StatusCode::BAD_GATEWAY, crate::error::error_chain(&error)).into_response(),
     }
 }
 
+/// The route an EHR's access-log export reads from, followed by the EHR id.
+pub const ACCESS_LOG_EXPORT_ROUTE: &str = "/download/access-log";
+
+/// The address of the export of the EHR `ehr_id`'s access log.
+#[must_use]
+pub fn access_log_href(ehr_id: &str) -> String {
+    format!("{ACCESS_LOG_EXPORT_ROUTE}/{}", urlencoding::encode(ehr_id))
+}
+
+/// `GET /download/access-log/{ehr_id}`: the EHR's access log with its
+/// links and the checkpoint that covers them, as the CDR exports it to a
+/// reviewer (`GET {ext}/admin/access-log/export`), as a file.
+///
+/// A refusal of the CDR, such as the `409` of a log no checkpoint covers,
+/// answers `502` with the CDR's words.
+pub async fn download_access_log(
+    axum::Extension(state): axum::Extension<crate::state::AppState>,
+    axum::Extension(viewer): axum::Extension<ferrohealth_session::record::Session>,
+    axum::extract::Path(ehr_id): axum::extract::Path<String>,
+) -> Response {
+    if !crate::bff::ehrs::is_uuid(&ehr_id) {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    let url = state
+        .cdr
+        .extensions_v1(&crate::bff::access_review::export_path(&ehr_id));
+    let answer = state
+        .cdr
+        .call(http::Method::GET, &url, viewer.credential())
+        .accept("application/json")
+        .ok()
+        .await;
+    attachment(
+        answer,
+        "application/json",
+        &file_name(&format!("access-log-{ehr_id}"), "json"),
+    )
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{cdr_path, file_name, template_href};
+    use super::{access_log_href, cdr_path, file_name, template_href};
+
+    #[test]
+    fn an_access_log_export_is_addressed_by_its_ehr() {
+        assert_eq!(
+            access_log_href("01a21787-73be-737b-b686-5b8bb8462c2c"),
+            "/download/access-log/01a21787-73be-737b-b686-5b8bb8462c2c"
+        );
+    }
     use crate::adl2::TemplateFamily;
 
     #[test]

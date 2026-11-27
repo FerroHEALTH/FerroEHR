@@ -347,6 +347,7 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         review(format!("{ehr}/contributions"), "ehrs/contributions"),
         review(format!("{ehr}/contribution/new"), "ehrs/contribution-new"),
         review(format!("{ehr}/tags"), "ehrs/tags"),
+        review(format!("{ehr}/care"), "ehrs/care"),
         light(format!("{ehr}/access-log"), "access-log/access-log"),
         review(format!("{ehr}/compositions/new"), "compositions/new"),
         both(composition.clone(), "compositions/reading"),
@@ -435,6 +436,8 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         review("/access-policy/edit", "access-policy/edit"),
         light("/grants", "grants/grants"),
         both("/audit", "audit/audit"),
+        light("/access-log", "access-log/review"),
+        light("/access-log/integrity", "access-log/integrity"),
         review("/audit?patient=no-such-patient", "audit/audit-empty"),
         review("/configuration", "configuration/configuration"),
         light("/preferences", "preferences/preferences"),
@@ -457,6 +460,7 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
             "parties/party-versions",
         ));
         all.push(review(format!("{party}/edit"), "parties/party-edit"));
+        all.push(light(format!("{party}/care"), "parties/party-care"));
     }
     all
 }

@@ -12,8 +12,10 @@
 
 pub mod access_log;
 pub mod access_policy;
+pub mod access_review;
 pub mod archetypes;
 pub mod audit;
+pub mod care;
 pub mod cohort;
 pub mod composition;
 pub mod dashboard;

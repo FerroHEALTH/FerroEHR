@@ -1,0 +1,1 @@
+- The viewer reviews the access log across EHRs for a reviewer, with its tombstones and filters, erases an entry on the grounds a law gives, exports an EHR's log, and shows the log's integrity: the newest signed checkpoint, a verification with its findings, and the seal of each window.

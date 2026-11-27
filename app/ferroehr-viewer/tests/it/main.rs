@@ -19,6 +19,7 @@ mod ssr_archive;
 mod ssr_assets;
 mod ssr_cohort;
 mod ssr_extract;
+mod ssr_rekey;
 mod ssr_server_operations;
 mod ssr_server_status;
 
@@ -30,6 +31,7 @@ mod e2e_archetypes;
 mod e2e_archive;
 mod e2e_audit;
 mod e2e_browse;
+mod e2e_care;
 mod e2e_chart;
 mod e2e_composition;
 mod e2e_compositions_filters;
