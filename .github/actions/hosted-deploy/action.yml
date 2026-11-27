@@ -13,7 +13,9 @@
 #   - `.github/workflows/hosted-deploy.yml` — a manual redeploy; no expected
 #     version, so the expectation is derived from `:latest`'s own label.
 #   - `.github/workflows/release.yml`, the `sandbox` job — a real release,
-#     after scan-and-tag moved `:latest`, with the tag's version supplied.
+#     after scan-and-tag moved `:latest`, with the tag's version supplied, as
+#     verb `release`, which moves a candidate pin in the box's `.env` back to
+#     `:latest` first (#6717).
 #   - `.github/workflows/sandbox-reseed.yml`: verb `wipe`, then verb
 #     `deploy` with `same-release`: the deploy brings the CDR up after the
 #     wipe (#5406).
@@ -37,7 +39,9 @@ inputs:
   verb:
     description: >-
       What the restricted key is asked to run: `deploy` (pull + install the
-      posture + recreate) or `wipe` (drop the CDR's schemas on the private
+      posture + recreate), `release` (move the image lines of the box's `.env`
+      to the `:latest` release pointer, then deploy: a release's deploy,
+      #6717) or `wipe` (drop the CDR's schemas on the private
       database box, using the DSN the app box already holds, the reseed's
       first step; #3015). The box's `restart` verb starts the CDR alone, and
       no caller names it (#5406).
@@ -103,7 +107,7 @@ runs:
     # because `:latest` is what the box pulls. A stale tag fails here, before
     # any deploy. Anonymous registry reads: the image is public.
     - name: The :latest tag is the release image
-      if: inputs.verb == 'deploy' && inputs.expected-version != '' && inputs.same-release != 'true'
+      if: (inputs.verb == 'deploy' || inputs.verb == 'release') && inputs.expected-version != '' && inputs.same-release != 'true'
       shell: bash
       env:
         IMAGE: ${{ inputs.image }}
@@ -132,7 +136,7 @@ runs:
     # which is what makes the cutover safe: an older release, or a rollback to
     # one, fails here instead of on the box.
     - name: The image carries the sandbox posture
-      if: inputs.verb == 'deploy'
+      if: inputs.verb == 'deploy' || inputs.verb == 'release'
       shell: bash
       env:
         IMAGE: ${{ inputs.image }}
@@ -163,7 +167,7 @@ runs:
     # deployment being replaced answers 200 too (measured at 4.0.4 and
     # 4.0.10 on the Vercel posture).
     - name: What the sandbox must serve
-      if: inputs.verb == 'deploy'
+      if: inputs.verb == 'deploy' || inputs.verb == 'release'
       id: expect
       shell: bash
       env:
@@ -197,14 +201,14 @@ runs:
     # is asked, and SSH_ORIGINAL_COMMAND selects the verb — then fetches the
     # public status document from THIS runner and requires the served version.
     - name: Deploy to the box and verify it serves the release
-      if: inputs.verb == 'deploy'
+      if: inputs.verb == 'deploy' || inputs.verb == 'release'
       uses: rubentalstra/hetzner-deploy-action@23e875e1249a2fe2a27107291a638ab40da0172b # v1.0.1
       with:
         host: ${{ inputs.host }}
         user: deploy
         ssh-key: ${{ inputs.ssh-key }}
         known-hosts: ${{ inputs.known-hosts }}
-        remote-command: deploy
+        remote-command: ${{ inputs.verb }}
         verify-url: ${{ inputs.verify-base }}/ferroehr/rest/status
         verify-contains: '"server_version":"${{ steps.expect.outputs.version }}"'
         verify-timeout: "600"
@@ -212,7 +216,7 @@ runs:
     # The viewer is the landing surface; a deploy that left it dead would
     # still pass the CDR check above. Served markup, not a bare 200.
     - name: The viewer serves its sign-in surface
-      if: inputs.verb == 'deploy'
+      if: inputs.verb == 'deploy' || inputs.verb == 'release'
       shell: bash
       env:
         BASE: ${{ inputs.verify-base }}
