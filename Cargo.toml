@@ -287,7 +287,7 @@ ferrohealth-usage-report = { version = "=0.5.0", features = ["telemetry"] }
 # by a caret range (The Cargo Book, "Specifying Dependencies"). `smart` builds
 # its client from ferrohealth-smart's outbound client, and `r4b` the one wire
 # release the terminology client speaks.
-ferrobridge-term = { version = "0.22.1", default-features = false, features = ["r4b", "smart"] }
+ferrobridge-term = { version = "0.24.0", default-features = false, features = ["r4b", "smart"] }
 
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family

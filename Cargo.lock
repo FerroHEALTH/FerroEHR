@@ -2080,14 +2080,14 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "ferrobridge-term"
-version = "0.22.1"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b95aecb2c98c01c62bc16f4de30cd3baff2f4558dd0c4d47a278e0322a41ac0"
+checksum = "910bf88cd98ee4fd87a2964d8aa6cc60263bdd3cc8adea9b203a8eb2fe71a2b4"
 dependencies = [
  "async-trait",
  "backon",
- "ferrohealth-smart 0.35.0",
- "fhir-types 0.3.0",
+ "ferrohealth-smart",
+ "fhir-types",
  "http",
  "reqwest",
  "secrecy",
@@ -2117,10 +2117,10 @@ dependencies = [
  "ferrohealth-openpgp-pq",
  "ferrohealth-secret",
  "ferrohealth-server",
- "ferrohealth-smart 0.36.0",
+ "ferrohealth-smart",
  "ferrohealth-telemetry",
  "ferrohealth-usage-report",
- "fhir-types 0.4.0",
+ "fhir-types",
  "futures",
  "hmac 0.13.0",
  "http",
@@ -2222,10 +2222,10 @@ dependencies = [
  "ferrohealth-openpgp-pq",
  "ferrohealth-secret",
  "ferrohealth-server",
- "ferrohealth-smart 0.36.0",
+ "ferrohealth-smart",
  "ferrohealth-telemetry",
  "fhir-search",
- "fhir-types 0.4.0",
+ "fhir-types",
  "futures",
  "http",
  "http-body-util",
@@ -2316,10 +2316,10 @@ dependencies = [
  "ferrohealth-secret",
  "ferrohealth-server",
  "ferrohealth-session",
- "ferrohealth-smart 0.36.0",
+ "ferrohealth-smart",
  "ferrohealth-telemetry",
  "ferrohealth-ui",
- "fhir-types 0.4.0",
+ "fhir-types",
  "fluent-templates",
  "futures",
  "http",
@@ -2446,7 +2446,7 @@ dependencies = [
  "cookie",
  "ferrohealth-config",
  "ferrohealth-secret",
- "ferrohealth-smart 0.36.0",
+ "ferrohealth-smart",
  "ferrohealth-ui",
  "http",
  "jiff",
@@ -2455,31 +2455,6 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
- "tracing",
- "url",
-]
-
-[[package]]
-name = "ferrohealth-smart"
-version = "0.35.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef02d962a9ff0f8f9b21d9ba8e6a4dadd252e81eb49248e9ac6c96e68b19f215"
-dependencies = [
- "argon2 0.6.0",
- "aws-lc-rs",
- "base64 0.23.1",
- "ferrohealth-config",
- "ferrohealth-secret",
- "http",
- "jiff",
- "reqwest",
- "rustls",
- "secrecy",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "toml",
  "tracing",
  "url",
 ]
@@ -2614,18 +2589,6 @@ dependencies = [
  "jiff",
  "thiserror",
  "unicode-normalization",
-]
-
-[[package]]
-name = "fhir-types"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fb0d50e751cfb35de7aaf6f4a7652488faf6f2511b9c22c2f92831571060eb1"
-dependencies = [
- "quick-xml 0.42.0",
- "regex",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -3503,7 +3466,7 @@ dependencies = [
  "crc32fast",
  "ferrohealth-secret",
  "fhir-search",
- "fhir-types 0.4.0",
+ "fhir-types",
  "http",
  "jiff",
  "percent-encoding",
@@ -3524,9 +3487,9 @@ version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07c94f430f2b76c1313c1042dd6a25a8051ce99a0327f5e8de702b53e03d3932"
 dependencies = [
- "ferrohealth-smart 0.36.0",
+ "ferrohealth-smart",
  "fhir-search",
- "fhir-types 0.4.0",
+ "fhir-types",
  "http",
  "ihe-atna",
  "reqwest",
@@ -6082,7 +6045,7 @@ dependencies = [
  "clap",
  "ferroehr",
  "ferrohealth-config",
- "ferrohealth-smart 0.36.0",
+ "ferrohealth-smart",
  "futures",
  "jiff",
  "openehr-its",
