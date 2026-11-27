@@ -43,6 +43,9 @@ use crate::pages::common::{
 };
 use crate::routes::Drawn;
 
+pub mod activity;
+pub mod identity;
+pub mod integrity;
 pub mod overview;
 
 /// The id of Apply the log filter's confirmation.
@@ -66,17 +69,26 @@ enum ServerTab {
     Api,
     /// Its SMART discovery document.
     Smart,
+    /// Its change history counted.
+    Activity,
+    /// Its stored data checked against itself.
+    Integrity,
+    /// Its patient identity feed's refused messages.
+    Identity,
 }
 
 impl ServerTab {
     /// Every tab, in order.
-    const ALL: [Self; 6] = [
+    const ALL: [Self; 9] = [
         Self::Overview,
         Self::Health,
         Self::Metrics,
         Self::Logging,
         Self::Api,
         Self::Smart,
+        Self::Activity,
+        Self::Integrity,
+        Self::Identity,
     ];
 
     /// The tab's key.
@@ -88,6 +100,9 @@ impl ServerTab {
             Self::Logging => "logging",
             Self::Api => "api",
             Self::Smart => "smart",
+            Self::Activity => "activity",
+            Self::Integrity => "integrity",
+            Self::Identity => "identity",
         }
     }
 
@@ -108,6 +123,9 @@ impl ServerTab {
             Self::Logging => (ConsoleMsg::ServerLogging, ConsoleMsg::ServerLoggingLine),
             Self::Api => (ConsoleMsg::ServerApi, ConsoleMsg::ServerApiLine),
             Self::Smart => (ConsoleMsg::ServerSmart, ConsoleMsg::ServerSmartLine),
+            Self::Activity => (ConsoleMsg::ServerActivity, ConsoleMsg::ServerActivityLine),
+            Self::Integrity => (ConsoleMsg::ServerIntegrity, ConsoleMsg::ServerIntegrityLine),
+            Self::Identity => (ConsoleMsg::ServerIdentity, ConsoleMsg::ServerIdentityLine),
         };
         (tr(label), tr(line))
     }
@@ -116,44 +134,69 @@ impl ServerTab {
     const fn managed(self) -> bool {
         matches!(self, Self::Health | Self::Metrics | Self::Logging)
     }
+
+    /// Whether the tab drives the admin group.
+    const fn admin(self) -> bool {
+        matches!(self, Self::Activity | Self::Integrity | Self::Identity)
+    }
 }
 
-/// A tab's model: whether the CDR serves the management surface, and the
-/// tab's own model, absent on a management tab the CDR does not serve.
+/// A tab's model: whether the CDR serves the management surface and the
+/// admin group, and the tab's own model, absent on a tab whose surface the
+/// CDR does not serve.
 #[derive(Debug, Clone, PartialEq)]
 struct Tabbed<T> {
     /// Whether the management surface answers.
     managed: bool,
+    /// Whether the admin group is mounted.
+    admin: bool,
     /// The tab's own model.
     body: Option<T>,
 }
 
-/// Loads a tab of Server: probes the management surface, then loads `body`
-/// unless the tab reads the surface and the CDR does not serve it.
+/// Loads a tab of Server: probes the management surface and the admin group,
+/// then loads `body` unless the tab reads a surface the CDR does not serve.
 async fn load_tab<T, F, Fut>(tab: ServerTab, body: F) -> Tabbed<T>
 where
     F: FnOnce() -> Fut,
     Fut: Future<Output = T>,
 {
-    let managed = crate::management::renders_management_ops(&probe_management_api().await);
-    let body = if tab.managed() && !managed {
+    let (managed, admin) =
+        Box::pin(async { futures::join!(probe_management_api(), crate::admin::probe_admin_api()) })
+            .await;
+    let managed = crate::management::renders_management_ops(&managed);
+    let admin = crate::admin::renders_admin_ops(&admin);
+    let body = if (tab.managed() && !managed) || (tab.admin() && !admin) {
         None
     } else {
         Some(body().await)
     };
-    Tabbed { managed, body }
+    Tabbed {
+        managed,
+        admin,
+        body,
+    }
 }
 
-/// A tab of Server over the view `draw` makes of its model; a management tab
-/// on a CDR without the management surface says so.
+/// A tab of Server over the view `draw` makes of its model; a tab whose
+/// surface the CDR does not serve says so.
 fn server_page<T>(tab: ServerTab, tabbed: Tabbed<T>, draw: impl FnOnce(T) -> Html) -> Html {
-    let Tabbed { managed, body } = tabbed;
+    let Tabbed {
+        managed,
+        admin,
+        body,
+    } = tabbed;
     let tabs = ServerTab::ALL
         .into_iter()
-        .filter(|each| managed || !each.managed())
+        .filter(|each| (managed || !each.managed()) && (admin || !each.admin()))
         .map(|each| Tab::new(each.key(), each.href(), each.words().0))
         .collect();
-    let content = body.map_or_else(|| info_note(t(tr(ConsoleMsg::ServerNoManagement))), draw);
+    let absent = if tab.admin() {
+        ConsoleMsg::ServerNoAdmin
+    } else {
+        ConsoleMsg::ServerNoManagement
+    };
+    let content = body.map_or_else(|| info_note(t(tr(absent))), draw);
     let heading = page_heading(
         &current(),
         Header {

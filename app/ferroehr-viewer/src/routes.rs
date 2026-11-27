@@ -155,8 +155,16 @@ pub enum Page {
     Api,
     /// `/server/smart`.
     Smart,
+    /// `/server/activity`.
+    Activity,
+    /// `/server/integrity`.
+    Integrity,
+    /// `/server/identity`.
+    Identity,
     /// `/audit`.
     Audit,
+    /// `/audit/delivery`.
+    Delivery,
     /// `/audit/:id`.
     AuditRecord,
     /// `/access-log`.
@@ -248,7 +256,11 @@ impl Page {
             "/server/logging" => Self::Logging,
             "/server/api" => Self::Api,
             "/server/smart" => Self::Smart,
+            "/server/activity" => Self::Activity,
+            "/server/integrity" => Self::Integrity,
+            "/server/identity" => Self::Identity,
             "/audit" => Self::Audit,
+            "/audit/delivery" => Self::Delivery,
             "/audit/:id" => Self::AuditRecord,
             "/access-log" => Self::AccessReview,
             "/access-log/integrity" => Self::AccessIntegrity,
@@ -404,7 +416,11 @@ pub static ROUTES: &[&str] = &[
     "/server/logging",
     "/server/api",
     "/server/smart",
+    "/server/activity",
+    "/server/integrity",
+    "/server/identity",
     "/audit",
+    "/audit/delivery",
     "/audit/:id",
     "/access-log",
     "/access-log/integrity",
@@ -482,7 +498,11 @@ pub async fn draw() -> Drawn {
         Page::Logging => pages::server::logging_page().await,
         Page::Api => pages::server::api_page().await,
         Page::Smart => pages::server::smart_page().await,
+        Page::Activity => pages::server::activity::page().await,
+        Page::Integrity => pages::server::integrity::page().await,
+        Page::Identity => pages::server::identity::page().await,
         Page::Audit => pages::audit::page().await,
+        Page::Delivery => pages::audit::delivery::page().await,
         Page::AuditRecord => pages::audit::record_page().await,
         Page::AccessReview => pages::access_review::page().await,
         Page::AccessIntegrity => pages::access_review::integrity_page().await,

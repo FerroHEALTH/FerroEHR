@@ -70,6 +70,12 @@ crate::locale::messages! {
         ArchetypeListJson = "archetype-list-json",
         /// `ADL 2 conversion JSON`
         ConversionJson = "conversion-json",
+        /// `queue JSON`
+        QueueJson = "queue-json",
+        /// `activity report JSON`
+        ActivityReportJson = "activity-report-json",
+        /// `integrity report JSON`
+        IntegrityReportJson = "integrity-report-json",
         /// `cohort result JSON`
         CohortResultJson = "cohort-result-json",
         /// `no subject pseudonym namespace is declared, so an EHR subject may carry a real identifier`

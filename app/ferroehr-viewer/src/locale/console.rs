@@ -488,6 +488,120 @@ crate::locale::messages! {
         ServerSmart = "server-smart",
         /// `The scopes the CDR supports; Your access shows the ones you hold.`
         ServerSmartLine = "server-smart-line",
+        /// `Activity`
+        ServerActivity = "server-activity",
+        /// `The repository's change history, counted for one service over an interval.`
+        ServerActivityLine = "server-activity-line",
+        /// `Integrity`
+        ServerIntegrity = "server-integrity",
+        /// `Checks every stored version against the rows the query engine reads, and repairs what it finds.`
+        ServerIntegrityLine = "server-integrity-line",
+        /// `The CDR has its admin API turned off, so Activity, Integrity and Identity feed are not offered.`
+        ServerNoAdmin = "server-no-admin",
+        /// `Report`
+        ActivityAsk = "activity-ask",
+        /// `Service`
+        ActivityService = "activity-service",
+        /// `EHR`
+        ActivityServiceEhr = "activity-service-ehr",
+        /// `Demographic`
+        ActivityServiceDemographic = "activity-service-demographic",
+        /// `Definitions`
+        ActivityServiceDefinitions = "activity-service-definitions",
+        /// `Query`
+        ActivityServiceQuery = "activity-service-query",
+        /// `Admin`
+        ActivityServiceAdmin = "activity-service-admin",
+        /// `EHR index`
+        ActivityServiceEhrIndex = "activity-service-ehr-index",
+        /// `Message`
+        ActivityServiceMessage = "activity-service-message",
+        /// `System log`
+        ActivityServiceSystemLog = "activity-service-system-log",
+        /// `Committed`
+        ActivityInterval = "activity-interval",
+        /// `Count`
+        ActivityCount = "activity-count",
+        /// `Pick a service and, if you like, an interval, then Count.`
+        ActivityPick = "activity-pick",
+        /// `The activity report could not be read.`
+        ActivityRefused = "activity-refused",
+        /// `Counts`
+        ActivityCounts = "activity-counts",
+        /// `Contributions`
+        ActivityContributions = "activity-contributions",
+        /// `Contribution ids listed`
+        ActivityListed = "activity-listed",
+        /// `Compositions changed`
+        ActivityCompositions = "activity-compositions",
+        /// `Composition versions`
+        ActivityVersions = "activity-versions",
+        /// `Contribution`
+        ActivityContribution = "activity-contribution",
+        /// `Contribution ids`
+        ActivityContributionIds = "activity-contribution-ids",
+        /// `No contribution was committed to this service in the interval.`
+        ActivityNone = "activity-none",
+        /// `Scope`
+        IntegrityScope = "integrity-scope",
+        /// `Leave every field empty to check the whole repository. The check reads without locking, so it is safe on a live server.`
+        IntegrityScopeIntro = "integrity-scope-intro",
+        /// `EHR id`
+        IntegrityEhr = "integrity-ehr",
+        /// `Versioned object`
+        IntegrityObject = "integrity-object",
+        /// `Version`
+        IntegrityVersion = "integrity-version",
+        /// `Committed since`
+        IntegritySince = "integrity-since",
+        /// `Verify`
+        IntegrityVerify = "integrity-verify",
+        /// `The verification could not run.`
+        IntegrityVerifyRefused = "integrity-verify-refused",
+        /// `The rebuild could not run.`
+        IntegrityRebuildRefused = "integrity-rebuild-refused",
+        /// `Verification`
+        IntegrityReport = "integrity-report",
+        /// `Versions checked`
+        IntegrityChecked = "integrity-checked",
+        /// `Findings`
+        IntegrityFindings = "integrity-findings",
+        /// `Took`
+        IntegrityElapsed = "integrity-elapsed",
+        /// `{ $ms } ms`
+        IntegrityMilliseconds = "integrity-milliseconds",
+        /// `Every stored version agrees with its rows.`
+        IntegrityClean = "integrity-clean",
+        /// `Domain`
+        IntegrityDomain = "integrity-domain",
+        /// `Kind`
+        IntegrityKind = "integrity-kind",
+        /// `Defect`
+        IntegrityDefect = "integrity-defect",
+        /// `The CDR lists only the first findings; the count covers them all, and its log names every one.`
+        IntegrityTruncated = "integrity-truncated",
+        /// `Rebuild…`
+        IntegrityRebuild = "integrity-rebuild",
+        /// `Rebuild the damaged rows?`
+        IntegrityRebuildTitle = "integrity-rebuild-title",
+        /// `The CDR checks the same scope again and rewrites the rows of each damaged version from its stored document. A version whose document is the damaged copy is refused and left as it was.`
+        IntegrityRebuildMessage = "integrity-rebuild-message",
+        /// `Rebuild`
+        IntegrityRebuildConfirm = "integrity-rebuild-confirm",
+        /// `Rebuild`
+        IntegrityRebuildReport = "integrity-rebuild-report",
+        /// `Damaged`
+        IntegrityDamaged = "integrity-damaged",
+        /// `Rebuilt`
+        IntegrityRebuiltCount = "integrity-rebuilt-count",
+        /// `Refused`
+        IntegrityRefusedCount = "integrity-refused-count",
+        /// `Versions`
+        IntegrityRecords = "integrity-records",
+        /// `Outcome`
+        IntegrityOutcome = "integrity-outcome",
+        /// `Reason`
+        IntegrityReason = "integrity-reason",
         /// `The SMART discovery document could not be read.`
         ServerSmartRefused = "server-smart-refused",
         /// `State`
@@ -506,5 +620,127 @@ crate::locale::messages! {
         ServerUp = "server-up",
         /// `Version`
         ServerVersion = "server-version",
+        /// `Identity feed`
+        ServerIdentity = "server-identity",
+        /// `The patient identity feed's messages the CDR refused, retried once their cause is fixed or settled without applying them.`
+        ServerIdentityLine = "server-identity-line",
+        /// `Refused messages`
+        IdentityRefusedMessages = "identity-refused-messages",
+        /// `Message`
+        IdentityMessage = "identity-message",
+        /// `Refusal`
+        IdentityRefusal = "identity-refusal",
+        /// `Refused`
+        IdentityRefusedAt = "identity-refused-at",
+        /// `Attempts`
+        IdentityAttempts = "identity-attempts",
+        /// `Kept split`
+        IdentitySplits = "identity-splits",
+        /// `Retry`
+        IdentityRetry = "identity-retry",
+        /// `Settle`
+        IdentitySettle = "identity-settle",
+        /// `Retry the message`
+        IdentityRetryTitle = "identity-retry-title",
+        /// `It goes back to its arrival position, and the CDR applies it next under the configuration and grants in force.`
+        IdentityRetryMessage = "identity-retry-message",
+        /// `Settle the message`
+        IdentitySettleTitle = "identity-settle-title",
+        /// `without applying it. The decision and its reason are recorded.`
+        IdentitySettleMessage = "identity-settle-message",
+        /// `Decision`
+        IdentityDecision = "identity-decision",
+        /// `Discard: keep its splits`
+        IdentityDiscard = "identity-discard",
+        /// `Lift the splits: identifiers and subjects resolve as before it`
+        IdentityLiftSplits = "identity-lift-splits",
+        /// `Reason (names no identifier)`
+        IdentityReason = "identity-reason",
+        /// `Message queued to apply again`
+        IdentityRetried = "identity-retried",
+        /// `Message settled`
+        IdentitySettled = "identity-settled",
+        /// `The CDR did not retry the message.`
+        IdentityRetryRefused = "identity-retry-refused",
+        /// `The CDR did not settle the message.`
+        IdentitySettleRefused = "identity-settle-refused",
+        /// `The refused messages could not be read.`
+        IdentityListRefused = "identity-list-refused",
+        /// `The identity feed has no refused message.`
+        IdentityNoneRefused = "identity-none-refused",
+        /// `This CDR runs no patient identity feed.`
+        IdentityAbsent = "identity-absent",
+        /// `Delivery`
+        DeliveryTitle = "delivery-title",
+        /// `How far each sink has delivered each audit log, and the records it parked.`
+        DeliverySubtitle = "delivery-subtitle",
+        /// `Cursors`
+        DeliveryCursors = "delivery-cursors",
+        /// `Sink`
+        DeliverySink = "delivery-sink",
+        /// `Log`
+        DeliveryLog = "delivery-log",
+        /// `Delivered through`
+        DeliveryThrough = "delivery-through",
+        /// `Behind`
+        DeliveryBehind = "delivery-behind",
+        /// `Configured`
+        DeliveryConfigured = "delivery-configured",
+        /// `Configured`
+        DeliveryInConfiguration = "delivery-in-configuration",
+        /// `Not configured`
+        DeliveryNotConfigured = "delivery-not-configured",
+        /// `No sink delivers the audit logs.`
+        DeliveryNoSink = "delivery-no-sink",
+        /// `Parked records`
+        DeliveryParked = "delivery-parked",
+        /// `Record`
+        DeliveryRecord = "delivery-record",
+        /// `Reason`
+        DeliveryReason = "delivery-reason",
+        /// `Parked`
+        DeliveryParkedAt = "delivery-parked-at",
+        /// `No record is parked.`
+        DeliveryNoneParked = "delivery-none-parked",
+        /// `Retry`
+        DeliveryRetry = "delivery-retry",
+        /// `Dismiss`
+        DeliveryDismiss = "delivery-dismiss",
+        /// `Forget`
+        DeliveryForget = "delivery-forget",
+        /// `Retry asked`
+        DeliveryRetryAsked = "delivery-retry-asked",
+        /// `Confirm`
+        DeliveryConfirm = "delivery-confirm",
+        /// `Retry the parked record`
+        DeliveryRetryTitle = "delivery-retry-title",
+        /// `The sink offers it again before its next record.`
+        DeliveryRetryMessage = "delivery-retry-message",
+        /// `Dismiss the parked record`
+        DeliveryDismissTitle = "delivery-dismiss-title",
+        /// `The sink never delivers it. This is not undone.`
+        DeliveryDismissMessage = "delivery-dismiss-message",
+        /// `Forget the sink`
+        DeliveryForgetTitle = "delivery-forget-title",
+        /// `Its cursors and parked records are removed. This is not undone.`
+        DeliveryForgetMessage = "delivery-forget-message",
+        /// `Record queued to deliver again`
+        DeliveryRetried = "delivery-retried",
+        /// `Record dismissed`
+        DeliveryDismissed = "delivery-dismissed",
+        /// `Sink forgotten`
+        DeliveryForgotten = "delivery-forgotten",
+        /// `The CDR did not retry the record.`
+        DeliveryRetryRefused = "delivery-retry-refused",
+        /// `The CDR did not dismiss the record.`
+        DeliveryDismissRefused = "delivery-dismiss-refused",
+        /// `The CDR did not forget the sink.`
+        DeliveryForgetRefused = "delivery-forget-refused",
+        /// `The delivery of the audit records could not be read.`
+        DeliveryRefused = "delivery-refused",
+        /// `This CDR serves no view of its audit delivery.`
+        DeliveryAbsent = "delivery-absent",
+        /// `The CDR has its admin API turned off, so the delivery of the audit records is not shown.`
+        DeliveryNoAdmin = "delivery-no-admin",
     }
 }
