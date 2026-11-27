@@ -17,13 +17,17 @@
 # Docs: https://docs.github.com/en/code-security/code-scanning
 name: CodeQL
 
-# Pull-request runs are path-filtered to what the two analyzers read, and each
-# matrix leg is then scoped by the in-workflow `changes` gate (#2798): the rust
-# leg runs when Rust inputs changed, the actions leg when workflow or action
-# files changed. The daily run on main analyses both, so main's alert set is at
-# most a day old; a push to main starts nothing, because the pull request was
-# analysed (#6515). CodeQL is not a required check, so a skipped leg blocks no
-# merge.
+# Pull-request runs are path-filtered to what the two analyzers read. The rust
+# leg is then scoped by the in-workflow `changes` gate (#2798) and runs only
+# when Rust inputs changed. The actions leg, about a minute long, runs on every
+# pull request this workflow runs for: code scanning compares a pull request
+# with every configuration main carries, and a missing `/language:actions`
+# analysis marks the check "configuration not found" (#6783). A pull request
+# that changes only workflows still has no rust analysis, which the same check
+# reports; that leg takes about twenty minutes. The daily run on main analyses
+# both, so main's alert set is at most a day old; a push to main starts
+# nothing, because the pull request was analysed (#6515). CodeQL is not a
+# required check, so a skipped leg blocks no merge.
 on:
   pull_request:
     branches: [main]
@@ -81,7 +85,7 @@ jobs:
           fi
           langs=()
           grep -qE '(\.rs$|(^|/)Cargo\.(toml|lock)$)' <<<"$changed" && langs+=('"rust"')
-          grep -qE '^\.github/(workflows|actions)/' <<<"$changed" && langs+=('"actions"')
+          langs+=('"actions"')
           joined=$(IFS=,; printf '%s' "${langs[*]-}")
           echo "languages=[${joined}]" >> "$GITHUB_OUTPUT"
           echo "languages=[${joined}]"
@@ -89,10 +93,6 @@ jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
     needs: changes
-    # The workflow-level paths filter already required SOME relevant change, so
-    # an empty language list happens only in corner diffs (e.g. a delete-only
-    # rename the filters no longer match) — skipping is correct there.
-    if: needs.changes.outputs.languages != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
