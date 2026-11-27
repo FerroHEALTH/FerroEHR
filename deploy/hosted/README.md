@@ -108,7 +108,7 @@ That leaves about 1.1 GiB for the OS, Docker and the page cache. The one-shots
 | `ferropix.sandbox.toml` | FerroPIX's sandbox posture: the loopback base, the development issuer, the synthetic identifier domain `urn:oid:2.999.1.1` fed by `sandbox-source`, and the pseudonymisation domain `urn:oid:2.999.7.1` whose consumer is the CDR (`ferroehr`) | the same way |
 | `ferropix-seed.sh` | The one-shot that registers the demo patients with FerroPIX (ITI-104) and answers their pseudonyms (ITI-83); the deploy script's `identities` verb runs it | baked into the image; the compose file mounts the image into the one-shot, so `deploy.sh` never handles it |
 | `sandbox-ferropix-rollout.sh` | The operator's script for the FerroPIX rollout on both boxes (below) | never. The operator runs it from a checkout of the tag the sandbox serves |
-| `env.example` | A copy-to-`.env` template: the DB box's private-network DSNs, FerroPIX's sealing key, the image references and the FerroTERM index list | never. `.env` is the operator's file, written by hand on the box (the rollout script writes the FerroPIX lines) |
+| `env.example` | A copy-to-`.env` template: the DB box's private-network DSNs, FerroPIX's sealing key, the image references and the FerroTERM index list | never. `.env` is the operator's file, written by hand on the box (the rollout script writes the FerroPIX lines, and the `release` verb moves the two image lines to `:latest`) |
 | `cloud-init-postgres.yaml` | The DATABASE box, fresh to serving state: the `deploy` user, key-only SSH, both firewalls, Docker, and the `ferroehr-postgres` compose posture bound to the private address | the DB server's user data at creation, once |
 | `ferroterm-index.env` | The record of the terminology index the box carries: its artifact layout, the `ferroterm-build` version and the editions. `scripts/checks/ferroterm-index-layout.sh` refuses a FerroTERM pin in `docker-compose.yml` whose layout differs | never. The index is built off-box and copied by the operator (below), and this file changes in the same pull request as the pin |
 | `docker/terminology/seed/` (in the repository) | The licence-free shaped code systems FerroTERM serves on the box | baked into the ferroehr image at `/opt/sandbox-posture/terminology/`; the compose file mounts it into FerroTERM straight from the image, so `deploy.sh` never handles it |
@@ -149,7 +149,9 @@ every step. Three callers:
 
 1. **A real release** — the `sandbox` job in `release.yml`, after scan-and-tag
    moves `:latest`. A prerelease moves no `:latest`, so it deploys nothing.
-   The job wipes the schemas FIRST (verb `wipe`), then deploys: the recreate
+   The job wipes the schemas FIRST (verb `wipe`), then deploys with verb
+   `release`, which first moves the two image lines of the box's `.env` to
+   the `:latest` release pointer (below): the recreate
    is the fresh boot that migrates the empty database, so a release that
    changes the storage generation lands too (the v4.3.1 image refused the
    first-generation database it found, #3467). The `sandbox-reseed` leg then
@@ -166,7 +168,7 @@ every step. Three callers:
 
 The deploy key is restricted on the box to `deploy.sh` (`command=` in
 `cloud-init.yaml`), which reads `SSH_ORIGINAL_COMMAND` and accepts exactly
-`deploy`, `restart`, `wipe`, `identities` and `verbs` (the list of the verbs
+`deploy`, `release`, `restart`, `wipe`, `identities` and `verbs` (the list of the verbs
 the copy offers, which each caller reads first). The lane builds nothing; it asserts by digest that
 `:latest` is the tagged image, refuses an image that does not declare
 `eu.ferroehr.image.carries-sandbox-posture=true`, deploys through
@@ -192,16 +194,21 @@ During the v6 candidates the box runs each candidate instead (owner decision,
 
 1. **When a candidate is cut** (`v6.0.0-rcN`), whoever cuts it moves both
    lines in the box's `.env` to that candidate's tag and keeps the previous
-   file as `.env.prev`. Then they run the full reseed on it
-   (`sandbox-reseed.yml`, #6694). A prerelease moves no `:latest`, so no
-   release leg does this step.
-2. **Before the v6.0.0 release's `sandbox` leg runs**, whoever cuts the
-   release moves both lines back to the `:latest` release pointer. A pinned
-   line left behind deploys the last candidate again, and the leg's version
-   check then fails against the release.
+   file as `.env.prev`. In the same visit they install the candidate's
+   `deploy.sh` (`sandbox-ferropix-rollout.sh --step 3`, run from the
+   candidate's tag), so the box offers the `release` verb the next release
+   needs. Then they run the full reseed on it (`sandbox-reseed.yml`, #6694).
+   A prerelease moves no `:latest`, so no release leg does this step.
+2. **The release moves the lines back.** The `sandbox` leg of the v6.0.0
+   release, and of every release after it, deploys with the `release` verb:
+   `deploy.sh` moves both lines to the `:latest` pointer of the repository
+   each names, keeps the previous file as `.env.prev`, prints the two lines
+   it wrote, and then deploys. Nobody moves them by hand. A box whose
+   `deploy.sh` lacks the verb fails the leg before anything is deployed, and
+   names the install step above.
 
 Read the two lines on the box with `grep -E '^FERROEHR(_VIEWER)?_IMAGE=' /opt/ferroehr-sandbox/.env`
-before a release's `sandbox` leg, and after each candidate.
+after each candidate, and in the `sandbox` leg's log after a release.
 
 ## The demo dataset
 

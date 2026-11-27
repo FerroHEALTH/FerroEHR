@@ -1327,9 +1327,12 @@ jobs:
           verb: wipe
           ssh-key: ${{ secrets.HOSTED_SSH_KEY }}
           known-hosts: ${{ secrets.HOSTED_KNOWN_HOSTS }}
+      # Verb `release` moves an image line the box's `.env` pins to a
+      # candidate back to `:latest` before it deploys (#6717).
       - name: Deploy the hosted sandbox
         uses: ./.github/actions/hosted-deploy # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
+          verb: release
           expected-version: ${{ needs.plan.outputs.version }}
           ssh-key: ${{ secrets.HOSTED_SSH_KEY }}
           known-hosts: ${{ secrets.HOSTED_KNOWN_HOSTS }}
