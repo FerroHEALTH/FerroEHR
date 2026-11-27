@@ -299,10 +299,12 @@ async fn composition_filters_travel_in_the_url_and_narrow_the_rows() {
     );
     h.shot(3, "composer-filtered").await;
 
-    h.wait_css(&format!("main a[href='/ehrs/{ehr_id}']"))
-        .await
-        .click()
-        .await;
+    h.wait_css(&format!(
+        "main .fui-filter-chips a.fui-button[href='/ehrs/{ehr_id}']"
+    ))
+    .await
+    .click()
+    .await;
     wait_rows(&h, &[COMPOSER_B, COMPOSER_A]).await;
     for field in ["#f-template", "#f-start-from", "#f-start-to", "#f-composer"] {
         let value = h.wait_css(field).await.prop("value").await;
