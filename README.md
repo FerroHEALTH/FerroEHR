@@ -50,6 +50,10 @@
 [![specification · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/profile.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
 [![veredictum · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/instrument.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
 <br>
+<sub>The committed development record, with its deviation</sub><br>
+[![openEHR BASE · development record](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-base-development.json)](docs/conformance/ferroehr/development/summary.md)
+[![openEHR OPTIONS · development record](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-options-development.json)](docs/conformance/ferroehr/development/summary.md)
+<br>
 **Compliance**<br>
 [![EHDS](https://img.shields.io/badge/EHDS-readiness%20statement-blue?logo=europeanunion&labelColor=003399&logoColor=FFCC00)](https://ferrohealth.eu/docs/ehds/readiness.html)
 [![CRA](https://img.shields.io/badge/CRA-risk%20assessment-blue?logo=europeanunion&labelColor=003399&logoColor=FFCC00)](https://ferroehr.eu/docs/latest/compliance/cra-risk-assessment.html)
