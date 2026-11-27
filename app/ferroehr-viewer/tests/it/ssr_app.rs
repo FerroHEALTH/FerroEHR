@@ -1001,8 +1001,8 @@ async fn an_ehr_shows_its_subject_masked_until_the_reader_asks() {
 async fn a_run_draws_the_rows_and_the_exports_post_the_query_again() {
     let viewer = Viewer::start().await;
     let cookie = viewer.sign_in().await;
-    let aql =
-        "SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c";
+    let aql = "SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c \
+               ORDER BY e/ehr_id/value ASC, c/uid/value ASC";
     let answer = viewer
         .send(
             http::Method::POST,

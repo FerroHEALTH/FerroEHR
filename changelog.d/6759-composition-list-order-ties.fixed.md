@@ -1,0 +1,1 @@
+- The viewer's list of an EHR's compositions orders compositions with the same start time by their id, so a page no longer repeats or skips one of them.

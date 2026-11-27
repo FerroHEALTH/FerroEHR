@@ -44,6 +44,14 @@ const KEPT_HEADERS: [&str; 6] = [
 /// in their order, and every instant of the reads is this one plus an hour.
 const STAND_IN_EPOCH: &str = "2026-10-01T09:00:00Z";
 
+/// How far after the run an instant the CDR counted from its clock is still
+/// taken for one, such as the end of an access delay.
+const LATER: jiff::SignedDuration = jiff::SignedDuration::from_hours(24 * 400);
+
+/// The seconds of a day: an instant after the run takes the reads' stand-in
+/// plus the whole days it lies after the seed, so a run's length moves none.
+const DAY_SECONDS: i64 = 86_400;
+
 /// What the checkout's own path becomes, so a recording names no machine.
 const STAND_IN_CHECKOUT: &str = "/ferroehr";
 
@@ -185,7 +193,9 @@ pub(crate) fn respond(exchange: &Value) -> http::Response<axum::body::Body> {
 ///
 /// Every UUID, digest and run instant becomes a numbered stand-in, and every
 /// date the seed counted from the day it ran moves with the epoch, so a second
-/// recording of the same screens writes the same bytes.
+/// recording of the same screens differs only where the CDR's timing decides
+/// (its seal windows, and the order its logs list one screen's concurrent
+/// reads in).
 #[tokio::test]
 #[ignore = "the recorder's last step: scripts/viewer-record.sh runs it after a recording run"]
 async fn write_the_recording() {
@@ -304,8 +314,8 @@ fn shift_strings(value: &mut Value, shift: &impl Fn(&str) -> String) {
     }
 }
 
-/// The spans of `text` shaped as a calendar date, alone or opening an
-/// instant.
+/// The spans of `text` shaped as a calendar date, alone or opening a
+/// midnight instant (the shape a seed body builds from a date).
 fn dates(text: &str) -> Vec<(usize, usize)> {
     const SHAPE: &[u8] = b"9999-99-99";
     let bytes = text.as_bytes();
@@ -317,7 +327,8 @@ fn dates(text: &str) -> Vec<(usize, usize)> {
     let mut at = 0;
     while at + SHAPE.len() <= bytes.len() {
         let end = at + SHAPE.len();
-        if shaped(bytes, at, SHAPE) && !digit(at.checked_sub(1)) && !digit(Some(end)) {
+        let alone = bytes.get(end) != Some(&b'T') || shaped(bytes, end, b"T00:00:00");
+        if shaped(bytes, at, SHAPE) && !digit(at.checked_sub(1)) && !digit(Some(end)) && alone {
             found.push((at, end));
             at = end;
         } else {
@@ -344,12 +355,18 @@ struct StandIns {
     ids: Vec<String>,
     /// Every instant the run stamped.
     instants: Vec<jiff::Timestamp>,
+    /// Every instant after the run the CDR counted from its clock, such as the
+    /// end of an access delay.
+    later: Vec<jiff::Timestamp>,
     /// Every HTTP date (`Last-Modified`) the run stamped. A whole second is
     /// no rank among the instants, so these all take the reads' stand-in.
     dates: Vec<jiff::Timestamp>,
     /// Every base64 SHA-256 digest (a version signature), in order of first
     /// appearance.
     digests: Vec<String>,
+    /// Every hex SHA-256 digest (an access-log seal), in order of first
+    /// appearance.
+    hex_digests: Vec<String>,
 }
 
 /// The stand-ins once gathered: what replaces what.
@@ -379,9 +396,16 @@ impl StandIns {
                     self.digests.push(digest.to_owned());
                 }
             }
+            for digest in hex_digests(text) {
+                if !self.hex_digests.iter().any(|known| known == digest) {
+                    self.hex_digests.push(digest.to_owned());
+                }
+            }
             for (_, _, instant) in instants(text) {
                 if instant >= window.0 && instant <= window.1 {
                     self.instants.push(instant);
+                } else if instant > window.1 && instant <= window.1 + LATER {
+                    self.later.push(instant);
                 }
             }
             if let Some(instant) = http_date(text)
@@ -406,26 +430,37 @@ impl StandIns {
         let epoch: jiff::Timestamp = STAND_IN_EPOCH
             .parse()
             .expect("the stand-in epoch is an RFC 3339 instant");
+        let read = epoch + jiff::SignedDuration::from_hours(1);
         let instants = self
             .instants
             .iter()
             .zip(0_i64..)
             .map(|(instant, n)| {
                 let stand_in = if *instant > seeded {
-                    epoch + jiff::SignedDuration::from_hours(1)
+                    read
                 } else {
                     epoch + jiff::SignedDuration::from_secs(n)
                 };
                 (*instant, stand_in)
             })
+            .chain(self.later.iter().map(|instant| {
+                let seconds = instant.duration_since(seeded).as_secs();
+                let days = (seconds + DAY_SECONDS.div_euclid(2)).div_euclid(DAY_SECONDS);
+                (*instant, read + jiff::SignedDuration::from_hours(24 * days))
+            }))
             .collect();
         let digests = self
             .digests
             .iter()
             .zip(1_u64..)
             .map(|(digest, n)| (digest.clone(), format!("sha256:{n:0>43}=")))
+            .chain(
+                self.hex_digests
+                    .iter()
+                    .zip(1_u64..)
+                    .map(|(digest, n)| (digest.clone(), format!("{n:0>64x}"))),
+            )
             .collect();
-        let read = epoch + jiff::SignedDuration::from_hours(1);
         let dates = self.dates.iter().map(|date| (*date, read)).collect();
         Replacements {
             ids,
@@ -611,6 +646,29 @@ fn rewrite(written: &str, stand_in: jiff::Timestamp) -> String {
     out.push_str(".000000");
     out.push_str(suffix);
     out
+}
+
+/// The hex SHA-256 digests (64 lowercase hex digits, no more) in `text`.
+fn hex_digests(text: &str) -> Vec<&str> {
+    const LENGTH: usize = 64;
+    let bytes = text.as_bytes();
+    let hex = |at: usize| {
+        bytes
+            .get(at)
+            .is_some_and(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(b))
+    };
+    let mut found = Vec::new();
+    let mut at = 0;
+    while at + LENGTH <= bytes.len() {
+        let end = at + LENGTH;
+        if (at..end).all(hex) && !at.checked_sub(1).is_some_and(hex) && !hex(end) {
+            found.extend(text.get(at..end));
+            at = end;
+        } else {
+            at += 1;
+        }
+    }
+    found
 }
 
 /// The base64 SHA-256 digests (`sha256:` and 44 base64 characters) in `text`.
