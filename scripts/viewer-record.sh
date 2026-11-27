@@ -308,6 +308,26 @@ quiet "${AUTH[@]}" -X POST "$EXT/admin/access-delay" "${JSON[@]}" \
 quiet "${AUTH[@]}" -X POST "$EXT/admin/retention/hold" "${JSON[@]}" \
   -d "{\"vo_id\": \"$COMPOSITION_FLAT\", \"held\": true}"
 
+# The EHR's access settings, committed on the person's instruction over the
+# version the EHR was created with: open by default, with one consent.
+ACCESS_VUID=$(ask "${AUTH[@]}" "$EXT/admin/ehr-access?ehr_id=$EHR" "${ACCEPT[@]}" \
+  | jq -r '.versions[0].version_uid')
+jq -nc --arg e "$EHR" --arg v "$ACCESS_VUID" --arg p "$PARTY" '
+  def access($c): {"_type": "DV_CODED_TEXT", "value": $c, "defining_code": {"_type": "CODE_PHRASE",
+    "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr_access"}, "code_string": $c}};
+  {"ehr_id": $e, "preceding_version_uid": $v, "settings": {
+    "_type": "ACCESS_DIRECTIVE_SETTINGS", "default_access": access("open"),
+    "directives": [{"_type": "ACCESS_DIRECTIVE",
+      "name": {"_type": "DV_TEXT", "value": "Consent for the family doctor"},
+      "archetype_node_id": "at0001", "kind": access("consent"),
+      "effect": {"_type": "DV_CODED_TEXT", "value": "permit", "defining_code": {"_type": "CODE_PHRASE",
+        "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "HL7_ConsentProvisionType"},
+        "code_string": "permit"}},
+      "applies_to": [{"_type": "ACCESS_ACTOR_SCOPE", "party": {"_type": "PARTY_REF",
+        "namespace": "demographic", "type": "PERSON", "id": {"_type": "HIER_OBJECT_ID", "value": $p}}}],
+      "emergency_override": false}]}}' \
+  | quiet "${AUTH[@]}" -X POST "$EXT/admin/ehr-access" "${JSON[@]}" --data-binary @-
+
 QUERY="org.example.cardio::latest"
 quiet "${AUTH[@]}" -X PUT "$V1/definition/query/$QUERY" \
   -H "Content-Type: text/plain" \

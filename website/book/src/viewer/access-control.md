@@ -152,6 +152,27 @@ binds.
 
 ![A party's care relationships](img/parties/party-care.png)
 
+## An EHR's access settings
+
+An EHR's **Access settings** tab shows its `EHR_ACCESS` settings
+(`GET {ext}/ehr/{ehr_id}/ehr_access`): the person's consents and opt-outs,
+their restrictions of access by health professionals (EHDS Art. 8) and the
+directives they accepted. Each directive is drawn with its kind, its effect,
+what it covers, whom it names, its period and whether an emergency overrides
+it. With no settings the tab says the policy's defaults apply.
+
+The tab lists every version (`/versioned_ehr_access/revision_history`) with
+its committer and time, and opens any one read-only.
+
+An administrator commits new settings on the person's instruction
+(`POST {ext}/admin/ehr-access`): the whole `ACCESS_DIRECTIVE_SETTINGS` in the
+code editor, saved over the version you opened, so settings another
+administrator changed meanwhile are refused (`412`). **Repair** replaces
+settings that do not parse (`POST {ext}/admin/ehr-access/repair`). Each
+refusal is shown in the CDR's words; a `403` follows the CDR's decision.
+
+![An EHR's access settings](img/ehrs/access.png)
+
 ## Legal marks
 
 An EHR's **Legal marks** tab shows the four marks the law asks a repository to
