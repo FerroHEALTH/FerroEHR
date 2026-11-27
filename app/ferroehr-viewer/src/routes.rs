@@ -181,10 +181,16 @@ pub enum Page {
     AccessPolicyVersions,
     /// `/access-policy/edit`.
     EditAccessPolicy,
+    /// `/access-policy/registers/:register`.
+    Register,
+    /// `/access-policy/registers/:register/edit`.
+    EditRegister,
     /// `/grants`.
     Grants,
     /// `/ehrs/:ehr_id/care`.
     EhrCare,
+    /// `/ehrs/:ehr_id/marks`.
+    EhrMarks,
     /// `/parties/:kind/:uid/care`.
     PartyCare,
     /// `/care/:uid`.
@@ -273,8 +279,11 @@ impl Page {
             "/access-policy" => Self::AccessPolicy,
             "/access-policy/versions" => Self::AccessPolicyVersions,
             "/access-policy/edit" => Self::EditAccessPolicy,
+            "/access-policy/registers/:register" => Self::Register,
+            "/access-policy/registers/:register/edit" => Self::EditRegister,
             "/grants" => Self::Grants,
             "/ehrs/:ehr_id/care" => Self::EhrCare,
+            "/ehrs/:ehr_id/marks" => Self::EhrMarks,
             "/parties/:kind/:uid/care" => Self::PartyCare,
             "/care/:uid" => Self::CareRelationship,
             "/configuration" | "/configuration/:section" => Self::Configuration,
@@ -382,6 +391,7 @@ pub static ROUTES: &[&str] = &[
     "/ehrs/:ehr_id/contribution/new",
     "/ehrs/:ehr_id/tags",
     "/ehrs/:ehr_id/care",
+    "/ehrs/:ehr_id/marks",
     "/ehrs/:ehr_id/access-log",
     "/ehrs/:ehr_id/access-log/:uid",
     "/ehrs/:ehr_id/compositions/new",
@@ -435,6 +445,8 @@ pub static ROUTES: &[&str] = &[
     "/access-policy",
     "/access-policy/versions",
     "/access-policy/edit",
+    "/access-policy/registers/:register",
+    "/access-policy/registers/:register/edit",
     "/grants",
     "/care/:uid",
     "/configuration",
@@ -519,8 +531,11 @@ pub async fn draw() -> Drawn {
         Page::AccessPolicy => pages::policy::page().await,
         Page::AccessPolicyVersions => pages::policy::versions_page().await,
         Page::EditAccessPolicy => pages::policy::edit::page().await,
+        Page::Register => pages::policy::registers::page().await,
+        Page::EditRegister => pages::policy::registers::edit_page().await,
         Page::Grants => pages::policy::grants::page().await,
         Page::EhrCare => pages::ehr::care::page().await,
+        Page::EhrMarks => pages::ehr::marks::page().await,
         Page::PartyCare => pages::care::party::page().await,
         Page::CareRelationship => pages::care::relationship::page().await,
         Page::Configuration => pages::configuration::page().await,

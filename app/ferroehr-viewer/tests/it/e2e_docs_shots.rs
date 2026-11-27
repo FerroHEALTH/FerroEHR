@@ -348,6 +348,7 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         review(format!("{ehr}/contribution/new"), "ehrs/contribution-new"),
         review(format!("{ehr}/tags"), "ehrs/tags"),
         review(format!("{ehr}/care"), "ehrs/care"),
+        light(format!("{ehr}/marks"), "ehrs/marks"),
         light(format!("{ehr}/access-log"), "access-log/access-log"),
         review(format!("{ehr}/compositions/new"), "compositions/new"),
         both(composition.clone(), "compositions/reading"),
@@ -437,6 +438,18 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         light("/access-policy/versions", "access-policy/versions"),
         review("/access-policy/edit", "access-policy/edit"),
         light("/grants", "grants/grants"),
+        light(
+            "/access-policy/registers/access-delay",
+            "access-policy/access-delay",
+        ),
+        review(
+            "/access-policy/registers/audit-categories",
+            "access-policy/audit-categories",
+        ),
+        review(
+            "/access-policy/registers/access-delay/edit",
+            "access-policy/access-delay-edit",
+        ),
         both("/audit", "audit/audit"),
         light("/access-log", "access-log/review"),
         light("/access-log/integrity", "access-log/integrity"),

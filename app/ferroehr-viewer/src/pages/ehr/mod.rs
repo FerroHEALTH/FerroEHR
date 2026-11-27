@@ -19,6 +19,7 @@ pub mod compositions;
 pub mod contribution;
 pub mod directory;
 pub mod launch_tasks;
+pub mod marks;
 pub mod status;
 pub mod tags;
 
@@ -63,6 +64,8 @@ pub enum EhrTab {
     Tags,
     /// Its subject's care relationships.
     Care,
+    /// Its legal marks.
+    Marks,
     /// Its access log.
     AccessLog,
 }
@@ -77,6 +80,7 @@ impl EhrTab {
             Self::Contributions => "contributions",
             Self::Tags => "tags",
             Self::Care => "care",
+            Self::Marks => "marks",
             Self::AccessLog => "access-log",
         }
     }
@@ -546,6 +550,11 @@ fn tabs(ehr_id: &str, facts: &EhrHead) -> Vec<Tab> {
             EhrTab::Care.key(),
             tab_href(ehr_id, EhrTab::Care),
             tr(crate::locale::policy::PolicyMsg::CareTab),
+        ),
+        Tab::new(
+            EhrTab::Marks.key(),
+            tab_href(ehr_id, EhrTab::Marks),
+            tr(crate::locale::policy::PolicyMsg::MarksTab),
         ),
         Tab::new(
             EhrTab::AccessLog.key(),

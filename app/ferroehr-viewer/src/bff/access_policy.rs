@@ -179,7 +179,7 @@ impl Shown {
         reason = "the viewer reads the CDR's canonical-JSON ACCESS_POLICY of the draft access \
                   control package, which no openehr-* crate generates"
     )]
-    fn of(value: &serde_json::Value) -> Self {
+    pub fn of(value: &serde_json::Value) -> Self {
         use serde_json::Value;
         let text = |value: &Value, pointer: &str| {
             value
