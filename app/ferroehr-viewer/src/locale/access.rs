@@ -146,6 +146,130 @@ crate::locale::messages! {
         ColumnObject = "access-column-object",
         /// `Categories`
         ColumnCategories = "access-column-categories",
+        /// `Access log`
+        ReviewTitle = "access-review-title",
+        /// `Every access to EHR data across the records, and the evidence that the log i`
+        ReviewSubtitle = "access-review-subtitle",
+        /// `Access log views`
+        ReviewViews = "access-review-views",
+        /// `Records`
+        ReviewTabRecords = "access-review-tab-records",
+        /// `Integrity`
+        ReviewTabIntegrity = "access-review-tab-integrity",
+        /// `The full record of each access, and the tombstone of each entry a law ordere`
+        ReviewIntro = "access-review-intro",
+        /// `Your account is no reviewer of the access log. An account the admin role adm`
+        ReviewNotReviewer = "access-review-not-reviewer",
+        /// `The CDR's admin API is off, so the review of the access log is not served.`
+        ReviewAdminOff = "access-review-admin-off",
+        /// `EHR id`
+        ReviewFilterEhr = "access-review-filter-ehr",
+        /// `Accessing party id`
+        ReviewFilterParty = "access-review-filter-party",
+        /// `Credential issuer`
+        ReviewFilterIssuer = "access-review-filter-issuer",
+        /// `Credential subject`
+        ReviewFilterSubject = "access-review-filter-subject",
+        /// `Request id`
+        ReviewFilterRequest = "access-review-filter-request",
+        /// `{ $name }: { $value }`
+        ReviewChip = "access-review-chip",
+        /// `EHR`
+        ColumnEhr = "access-column-ehr",
+        /// `Removed { $when }`
+        TombstoneRow = "access-tombstone-row",
+        /// `Grounds: { $grounds }`
+        TombstoneGrounds = "access-tombstone-grounds",
+        /// `Each window of entries is sealed by a digest that follows the seal before it`
+        IntegrityIntro = "access-integrity-intro",
+        /// `The newest checkpoint`
+        CheckpointTitle = "access-checkpoint-title",
+        /// `No checkpoint is stored yet. A checkpoint is signed with the OpenPGP key of `
+        CheckpointNone = "access-checkpoint-none",
+        /// `Covers the log up to entry`
+        CheckpointSequence = "access-checkpoint-sequence",
+        /// `Digest`
+        CheckpointDigest = "access-checkpoint-digest",
+        /// `Algorithm`
+        CheckpointAlgorithm = "access-checkpoint-algorithm",
+        /// `Sealed`
+        CheckpointSealed = "access-checkpoint-sealed",
+        /// `Signed by`
+        CheckpointSigner = "access-checkpoint-signer",
+        /// `Signature`
+        CheckpointProof = "access-checkpoint-proof",
+        /// `Sign a checkpoint now`
+        CheckpointSign = "access-checkpoint-sign",
+        /// `Checkpoint signed`
+        CheckpointSigned = "access-checkpoint-signed",
+        /// `The CDR signed no checkpoint.`
+        CheckpointSignRefused = "access-checkpoint-sign-refused",
+        /// `The checkpoint could not be read.`
+        CheckpointRefused = "access-checkpoint-refused",
+        /// `Verification`
+        VerifyTitle = "access-verify-title",
+        /// `Verify the log`
+        VerifyRun = "access-verify-run",
+        /// `The log is intact against the checkpoint at entry { $sequence }.`
+        VerifyIntact = "access-verify-intact",
+        /// `No checkpoint was there to verify against, so the log is not shown intact.`
+        VerifyNoCheckpoint = "access-verify-no-checkpoint",
+        /// `{ $count ->`
+        VerifyFindings = "access-verify-findings",
+        /// `The verification did not run.`
+        VerifyRefused = "access-verify-refused",
+        /// `Seals`
+        SealsTitle = "access-seals-title",
+        /// `First entry id`
+        SealsFrom = "access-seals-from",
+        /// `Last entry id`
+        SealsTo = "access-seals-to",
+        /// `Show seals`
+        SealsShow = "access-seals-show",
+        /// `No window seals an entry of this span yet.`
+        SealsNone = "access-seals-none",
+        /// `The seals could not be read.`
+        SealsRefused = "access-seals-refused",
+        /// `Seals of the windows that cover the span`
+        SealsCaption = "access-seals-caption",
+        /// `Window`
+        ColumnWindow = "access-column-window",
+        /// `Entries`
+        ColumnSpan = "access-column-span",
+        /// `Count`
+        ColumnCount = "access-column-count",
+        /// `Digest`
+        ColumnDigest = "access-column-digest",
+        /// `Follows`
+        ColumnPrevious = "access-column-previous",
+        /// `Folded`
+        ColumnFolded = "access-column-folded",
+        /// `{ $first } to { $last }`
+        SealSpan = "access-seal-span",
+        /// `Erase`
+        EraseAction = "access-erase-action",
+        /// `More actions`
+        EntryMore = "access-entry-more",
+        /// `Erase this entry?`
+        EraseTitle = "access-erase-title",
+        /// `Erase an entry only on an order of the law before its retention ends. A tomb`
+        EraseBody = "access-erase-body",
+        /// `Grounds: terminology id`
+        EraseTerminology = "access-erase-terminology",
+        /// `Grounds: code`
+        EraseCode = "access-erase-code",
+        /// `Grounds: in words`
+        EraseWords = "access-erase-words",
+        /// `Erase the entry`
+        EraseConfirm = "access-erase-confirm",
+        /// `Entry erased`
+        ErasedToast = "access-erased-toast",
+        /// `The CDR erased nothing.`
+        EraseRefused = "access-erase-refused",
+        /// `Give the grounds as a terminology id and a code.`
+        EraseNeedsGrounds = "access-erase-needs-grounds",
+        /// `Export the log`
+        ExportAction = "access-export-action",
         /// `Open this record on a justification`
         JustifyTitle = "access-justify-title",
         /// `The CDR asks why you open this record: no care relationship of yours covers  …`

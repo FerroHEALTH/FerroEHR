@@ -413,6 +413,8 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
             "access-policy/access-delay-edit",
         ),
         both("/audit", "audit/audit"),
+        light("/access-log", "access-log/review"),
+        light("/access-log/integrity", "access-log/integrity"),
         review("/audit?patient=no-such-patient", "audit/audit-empty"),
         review("/configuration", "configuration/configuration"),
         light("/preferences", "preferences/preferences"),
