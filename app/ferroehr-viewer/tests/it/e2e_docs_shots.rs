@@ -42,6 +42,9 @@ const ADL2_STEM: &str = "openEHR-EHR-COMPOSITION.cnf_adl2_versioned";
 /// The stored query the capture seeds.
 const QUERY_NAME: &str = "org.example.vitals::latest-weights";
 
+/// The ADL 1.4 archetype the capture seeds.
+const ARCHETYPE_ID: &str = "openEHR-EHR-INSTRUCTION.medication.v1";
+
 /// The REST root of the CDR.
 fn v1(cdr: &str) -> String {
     format!("{cdr}/ferroehr/rest/openehr/v1")
@@ -134,6 +137,27 @@ fn directory(composition: &str) -> serde_json::Value {
             }]
         }]
     })
+}
+
+/// Stores the ADL 1.4 archetype the Archetypes captures show.
+async fn seed_archetype(cdr: &str, user: &str, pass: &str) {
+    let http = reqwest::Client::new();
+    let archetype = std::fs::read_to_string(format!(
+        "{}/../../corpus/fixtures/archetypes/adl14.medication.v1.adl",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .expect("the ADL 1.4 archetype fixture exists");
+    let (status, _) = send(
+        http.post(format!(
+            "{cdr}/ferroehr/rest/extensions/v1/definition/archetype/adl1.4"
+        ))
+        .header("Content-Type", "text/plain")
+        .body(archetype),
+        user,
+        pass,
+    )
+    .await;
+    println!("archetype seed -> {status}");
 }
 
 /// Seed the fixtures the captures show: the OPT and the ADL2 releases, a
@@ -323,6 +347,7 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         review(format!("{ehr}/contributions"), "ehrs/contributions"),
         review(format!("{ehr}/contribution/new"), "ehrs/contribution-new"),
         review(format!("{ehr}/tags"), "ehrs/tags"),
+        review(format!("{ehr}/care"), "ehrs/care"),
         light(format!("{ehr}/access-log"), "access-log/access-log"),
         review(format!("{ehr}/compositions/new"), "compositions/new"),
         both(composition.clone(), "compositions/reading"),
@@ -341,6 +366,16 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         both("/templates", "templates/templates"),
         review("/templates?family=adl2", "templates/templates-adl2"),
         light("/templates/upload", "templates/upload"),
+        light("/archetypes", "templates/archetypes"),
+        review(format!("/archetypes/{ARCHETYPE_ID}"), "templates/archetype"),
+        light(
+            format!("/archetypes/{ARCHETYPE_ID}?tab=adl2"),
+            "templates/archetype-adl2",
+        ),
+        light(
+            format!("{template}?tab=adl2"),
+            "templates/template-adl2-conversion",
+        ),
         light(template.clone(), "templates/template"),
         light(format!("{template}?tab=paths"), "templates/template-paths"),
         review(
@@ -392,13 +427,22 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         review("/server/logging", "server/logging"),
         review("/server/api", "server/api"),
         review("/server/smart", "server/smart"),
+        light("/server/activity?a_service=EHR", "server/activity"),
+        light("/server/repository", "server/repository"),
+        light("/ehrs/import", "ehrs/import"),
+        light("/server/identity", "server/identity"),
+        light("/audit/delivery", "audit/delivery"),
+        review("/server/integrity", "server/integrity"),
         light("/access-policy", "access-policy/policy"),
         light("/access-policy/versions", "access-policy/versions"),
         review("/access-policy/edit", "access-policy/edit"),
         light("/grants", "grants/grants"),
         both("/audit", "audit/audit"),
+        light("/access-log", "access-log/review"),
+        light("/access-log/integrity", "access-log/integrity"),
         review("/audit?patient=no-such-patient", "audit/audit-empty"),
         review("/configuration", "configuration/configuration"),
+        light("/configuration/viewer", "configuration/viewer"),
         light("/preferences", "preferences/preferences"),
         light("/preferences/reading", "preferences/reading"),
         review("/preferences/keyboard", "preferences/keyboard"),
@@ -419,6 +463,7 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
             "parties/party-versions",
         ));
         all.push(review(format!("{party}/edit"), "parties/party-edit"));
+        all.push(light(format!("{party}/care"), "parties/party-care"));
     }
     all
 }
@@ -515,6 +560,11 @@ async fn capture_states(h: &Harness, seeded: &Seeded, book: &Path) {
         .await;
     h.wait_css("#audit-record-text").await;
     shot_to(h, book, "audit/audit-record").await;
+
+    h.goto("/server/integrity").await;
+    common::submit(h, "main button[name='intent'][value='verify']").await;
+    common::wait_main_contains(h, "Versions checked").await;
+    shot_to(h, book, "server/integrity").await;
 }
 
 /// The access policy route of the CDR at `cdr`, or its history.
@@ -700,6 +750,7 @@ async fn capture_documentation_screenshots() {
     let user = env("UI_E2E_ADMIN_USER").unwrap_or_else(|| "ferroehr-admin".to_owned());
     let pass = env("UI_E2E_ADMIN_PASS").unwrap_or_else(|| "ferroehr".to_owned());
     let seeded = seed(&cdr, &user, &pass, ehr, composition).await;
+    seed_archetype(&cdr, &user, &pass).await;
     let book = book_img_dir();
     let review = PathBuf::from(
         env("UI_E2E_SHOTS_DIR").unwrap_or_else(|| "target/ui-e2e/screenshots".to_owned()),

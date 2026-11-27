@@ -66,11 +66,11 @@ and a Secret holding its client secret. **To turn the viewer off**, set
 CDR is untouched.
 
 > [!NOTE]
-> To scale the viewer past one replica, set `session.store = "sealed"` and the
-> same `session.key` (or `session.key_file`) on every replica: the session is
-> then a sealed cookie any key-holding replica can serve. The default `memory`
-> store keeps sessions in one process, which is right for exactly one
-> replica. A sealed store with no key refuses the start.
+> The viewer is a demonstration of the CDR, not an EHR for production use:
+> you build your own EHR on the CDR. It runs as one instance and keeps its
+> sessions in that process, so a restart signs everyone out. If you run more
+> than one replica anyway, route each visitor to the same replica (sticky
+> sessions at the ingress), or a reroute signs the visitor out.
 
 ## Signing in
 
@@ -201,11 +201,10 @@ override, because the viewer's variables share its prefix:
 | `oidc.tls.trust_roots_file` / `client_identity` (`_file`) / `min_version` | unset / unset / `"1.3"` | The family's outbound TLS table for the provider: a PEM bundle of certificate authorities trusted beside the platform's roots, for a provider behind a private PKI; the client certificate chain and its private key in one PEM, for mutual TLS (RFC 8705 §2); and the oldest TLS version of the provider connection (`"1.2"` lowers it). |
 | `login.notice` | empty | Informational text on the sign-in card, line breaks preserved. A demo or evaluation deployment states its public credentials and usage expectations here. |
 | `login.links` | empty | Links under the sign-in card, each `{ label, href }` — an API reference, a documentation page. |
-| `session.store` | `memory` | Where sessions are kept (`ferrohealth-session`'s `[session]`): `memory` in the one viewer process, or `sealed` in one AES-256-GCM cookie every replica holding the key opens. |
+| `session.store` | `memory` | Where sessions are kept (`ferrohealth-session`'s `[session]`): `memory`, in the one viewer process, is the only store. `sealed`, `session.key` and `session.key_file` are removed and refuse the start. |
 | `session.idle_timeout` | `"1h"` | Session idle expiry: the window slides on each page or post the browser asks for and on **Stay signed in**, never on the session watch's own reads. |
 | `session.absolute_timeout` | `"12h"` | The session's lifetime from sign-in, which no activity extends. Zero, or a value below `session.idle_timeout`, is a startup error. |
 | `session.secure_cookie` | `true` | The cookies carry `Secure` and with it the `__Host-` prefix; set `false` only for plain-HTTP local development. |
-| `session.key` / `session.key_file` | unset | The sealing key of a `sealed` store: base64 of at least 64 bytes (`openssl rand -base64 64`), the same on every replica. A sealed store without one, or a key beside a `memory` store, is a startup error. |
 | `launch.issuer` | empty | FerroSMART's issuer identifier. Set, an EHR's More menu offers a **Launch** item per `[[launch.app]]` ([Launching a SMART app](../smart-app-launch.md#launching-an-app-from-the-viewer)); empty, it offers none. An issuer that is not `https` off loopback is a startup error. |
 | `launch.client_id` / `private_key_file` / `kid` | — / — / empty | The viewer's client at FerroSMART, registered with `private_key_jwt` and `system/launch.c` in its `scope`, and the PEM private key its client assertion is signed with: RSA (signed RS384) or P-384 (signed ES384), the two algorithms SMART App Launch 2.2.0 has a server support. `kid` is the key id FerroSMART's registered JWK Set names; empty, the key's RFC 7638 thumbprint. Required when `launch.issuer` is set. |
 | `launch.resource` | — | The base an app receives as `iss`: the CDR's public openEHR REST base, one of FerroSMART's `[[ferrosmart.resource]]` tables. Required when `launch.issuer` is set. |
@@ -255,14 +254,12 @@ that header its `Origin` or `Referer` must name `auth.public_base_url`.
 The viewer is **stateless**: it has no database and keeps no local files of
 its own. Everything it shows, including how stored queries are grouped,
 which is derived from the namespace in each query's qualified name, lives in
-the CDR and is read over ITS-REST, so nothing here needs backing up and
-every replica shows the same repository. The sign-in and the session are
-`ferrohealth-session`'s: with `session.store = "sealed"` the session is a
-**sealed cookie** (AES-256-GCM, keyed by `session.key`), so any replica holding
-the key can serve any signed-in visitor.
+the CDR and is read over ITS-REST, so nothing here needs backing up. The
+sign-in and the session are `ferrohealth-session`'s, kept in the viewer's
+process: a restart signs everyone out.
 
 Sign-in and sessions live in the viewer's server; the browser stores only
-the session cookie, an opaque id or ciphertext: CDR credentials and bearer
+the session cookie, an opaque id: CDR credentials and bearer
 tokens never reach it in readable form. The sign-in page is `/sign-in`, and
 the sign-in routes are `/login` (which begins the OpenID Connect sign-in),
 `/auth/callback`, `/logout` and `/session`.
@@ -289,7 +286,7 @@ behind the menu button.
 - **Dashboard:** record counts, the compositions committed per day, and the
   stored queries by namespace. See [Queries](queries.md).
 - **EHRs:** find, create and delete EHRs; each EHR's compositions, directory,
-  status, contributions and tags. See [Templates and EHRs](browsing.md).
+  status, contributions, tags and care relationships. See [Templates and EHRs](browsing.md).
 - **Parties:** the demographic parties, their versions, relationships and
   tags. See [Parties](parties.md).
 - **Templates:** upload and read ADL 1.4 and ADL 2 operational templates. See

@@ -7,8 +7,8 @@
 //!
 //! Every page handler draws the shell around its page, with the page at the
 //! request's path marked (FerroUI `docs/consoles.md`, "How a console
-//! builds", step 2). The session is read from the sealed cookie with no CDR
-//! request; the session guard ([`crate::server::login_guard`]) has already
+//! builds", step 2). The session is read from the viewer's own store with no
+//! CDR request; the session guard ([`crate::server::login_guard`]) has already
 //! sent a request without one to the sign-in page. The status pill reads the
 //! CDR's status document once per page ([`status`]): the viewer polls
 //! nothing in the background, so an open tab's idle window measures what the
@@ -120,6 +120,7 @@ fn groups() -> Vec<Group> {
     let console = vec![
         entry(SERVER_ROUTE, Msg::NavServer, Glyph::SERVER, false),
         entry("/audit", Msg::NavAudit, Glyph::SHIELD_CHECK, false),
+        entry("/access-log", Msg::NavAccessLog, Glyph::SCROLL_TEXT, false),
         entry(
             crate::pages::policy::POLICY_ROUTE,
             Msg::NavAccessPolicy,
@@ -159,6 +160,12 @@ fn groups() -> Vec<Group> {
             title: tr(Msg::NavGroupDefinitions).into(),
             entries: vec![
                 entry("/templates", Msg::NavTemplates, Glyph::FILE_CODE, false),
+                entry(
+                    crate::pages::archetypes::ARCHETYPES_ROUTE,
+                    Msg::NavArchetypes,
+                    Glyph::LAYERS,
+                    false,
+                ),
                 entry("/terminology", Msg::NavTerminology, Glyph::BOOK_OPEN, false),
             ],
         },

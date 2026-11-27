@@ -87,6 +87,73 @@ access-column-type = Type
 access-column-object = Object
 access-column-categories = Categories
 
+## The review across EHRs and the log's integrity
+
+access-review-title = Access log
+access-review-subtitle = Every access to EHR data across the records, and the evidence that the log is whole.
+access-review-views = Access log views
+access-review-tab-records = Records
+access-review-tab-integrity = Integrity
+access-review-intro = The full record of each access, and the tombstone of each entry a law ordered removed. Open an entry from its EHR's access log.
+access-review-not-reviewer = Your account is no reviewer of the access log. An account the admin role admits reads it.
+access-review-admin-off = The CDR's admin API is off, so the review of the access log is not served.
+access-review-filter-ehr = EHR id
+access-review-filter-party = Accessing party id
+access-review-filter-issuer = Credential issuer
+access-review-filter-subject = Credential subject
+access-review-filter-request = Request id
+access-review-chip = { $name }: { $value }
+access-column-ehr = EHR
+access-tombstone-row = Removed { $when }
+access-tombstone-grounds = Grounds: { $grounds }
+access-integrity-intro = Each window of entries is sealed by a digest that follows the seal before it, and a signed checkpoint covers the log up to an entry. A verification recomputes them all.
+access-checkpoint-title = The newest checkpoint
+access-checkpoint-none = No checkpoint is stored yet. A checkpoint is signed with the OpenPGP key of the version-signing keyring.
+access-checkpoint-sequence = Covers the log up to entry
+access-checkpoint-digest = Digest
+access-checkpoint-algorithm = Algorithm
+access-checkpoint-sealed = Sealed
+access-checkpoint-signer = Signed by
+access-checkpoint-proof = Signature
+access-checkpoint-sign = Sign a checkpoint now
+access-checkpoint-signed = Checkpoint signed
+access-checkpoint-sign-refused = The CDR signed no checkpoint.
+access-checkpoint-refused = The checkpoint could not be read.
+access-verify-title = Verification
+access-verify-run = Verify the log
+access-verify-intact = The log is intact against the checkpoint at entry { $sequence }.
+access-verify-no-checkpoint = No checkpoint was there to verify against, so the log is not shown intact.
+access-verify-findings = { $count ->
+    [one] The verification found one failure.
+   *[other] The verification found { $count } failures.
+}
+access-verify-refused = The verification did not run.
+access-seals-title = Seals
+access-seals-from = First entry id
+access-seals-to = Last entry id
+access-seals-show = Show seals
+access-seals-none = No window seals an entry of this span yet.
+access-seals-refused = The seals could not be read.
+access-seals-caption = Seals of the windows that cover the span
+access-column-window = Window
+access-column-span = Entries
+access-column-count = Count
+access-column-digest = Digest
+access-column-previous = Follows
+access-column-folded = Folded
+access-seal-span = { $first } to { $last }
+access-erase-action = Erase
+access-entry-more = More actions
+access-erase-title = Erase this entry?
+access-erase-body = Erase an entry only on an order of the law before its retention ends. A tombstone replaces it and keeps the grounds you give; the entry cannot be read again.
+access-erase-terminology = Grounds: terminology id
+access-erase-code = Grounds: code
+access-erase-words = Grounds: in words
+access-erase-confirm = Erase the entry
+access-erased-toast = Entry erased
+access-erase-refused = The CDR erased nothing.
+access-erase-needs-grounds = Give the grounds as a terminology id and a code.
+access-export-action = Export the log
 ## Justified and emergency access
 
 access-justify-title = Open this record on a justification

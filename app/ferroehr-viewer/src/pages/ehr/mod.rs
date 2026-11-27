@@ -14,6 +14,7 @@
 //! design.
 
 pub mod access_log;
+pub mod care;
 pub mod compositions;
 pub mod contribution;
 pub mod directory;
@@ -37,6 +38,7 @@ use crate::bff::ehr_detail::status::EhrStatusState;
 use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
 use crate::locale::access::AccessMsg;
+use crate::locale::operations::OperationsMsg;
 use crate::locale::records::RecordsMsg;
 use crate::locale::server::ServerMsg;
 use crate::locale::{Msg, current, tr, tr_with};
@@ -59,6 +61,8 @@ pub enum EhrTab {
     Contributions,
     /// Its tags.
     Tags,
+    /// Its subject's care relationships.
+    Care,
     /// Its access log.
     AccessLog,
 }
@@ -72,6 +76,7 @@ impl EhrTab {
             Self::Status => "status",
             Self::Contributions => "contributions",
             Self::Tags => "tags",
+            Self::Care => "care",
             Self::AccessLog => "access-log",
         }
     }
@@ -306,6 +311,8 @@ where
 }
 
 /// The More menu of an EHR: Commit several changes, Create the directory
+/// when it has none, Copy EHR id, Export as EHR Extract, and while the
+/// admin group is mounted Archive… and Restore…, then Delete EHR… last.
 /// when it has none, Copy EHR id, and while the admin group is mounted
 /// Archive… and Restore…, then Delete EHR… last.
 fn more(ehr_id: &str, facts: &EhrHead) -> Menu {
@@ -328,6 +335,11 @@ fn more(ehr_id: &str, facts: &EhrHead) -> Menu {
         Some(Glyph::COPY),
         tr(RecordsMsg::EhrCopyId),
         Act::Copy(ehr_id.to_owned()),
+    )));
+    items.push(Item::new(Action::new(
+        Some(Glyph::DOWNLOAD),
+        tr(OperationsMsg::ExportExtract),
+        Act::Download(crate::download::extract_href(ehr_id)),
     )));
     items.extend(launch_items(ehr_id));
     if facts.admin {
@@ -539,6 +551,11 @@ fn tabs(ehr_id: &str, facts: &EhrHead) -> Vec<Tab> {
             EhrTab::Tags.key(),
             tab_href(ehr_id, EhrTab::Tags),
             tr(RecordsMsg::EhrTabTags),
+        ),
+        Tab::new(
+            EhrTab::Care.key(),
+            tab_href(ehr_id, EhrTab::Care),
+            tr(crate::locale::policy::PolicyMsg::CareTab),
         ),
         Tab::new(
             EhrTab::AccessLog.key(),

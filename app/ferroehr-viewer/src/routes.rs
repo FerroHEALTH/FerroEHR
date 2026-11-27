@@ -59,6 +59,8 @@ pub enum Page {
     Ehrs,
     /// `/ehrs/new`.
     NewEhr,
+    /// `/ehrs/import`.
+    ImportExtract,
     /// `/ehrs/:ehr_id`, the EHR's compositions.
     Compositions,
     /// `/ehrs/:ehr_id/directory`.
@@ -111,6 +113,14 @@ pub enum Page {
     Adl2Template,
     /// `/templates/:template_id`.
     Template,
+    /// `/archetypes`.
+    Archetypes,
+    /// `/archetypes/upload`.
+    UploadArchetype,
+    /// `/archetypes/adl2/:archetype_id`.
+    Adl2Archetype,
+    /// `/archetypes/:archetype_id`.
+    Archetype,
     /// `/terminology`.
     Terminologies,
     /// `/terminology/lookup`.
@@ -147,10 +157,24 @@ pub enum Page {
     Api,
     /// `/server/smart`.
     Smart,
+    /// `/server/activity`.
+    Activity,
+    /// `/server/integrity`.
+    Integrity,
+    /// `/server/repository`.
+    Repository,
+    /// `/server/identity`.
+    Identity,
     /// `/audit`.
     Audit,
+    /// `/audit/delivery`.
+    Delivery,
     /// `/audit/:id`.
     AuditRecord,
+    /// `/access-log`.
+    AccessReview,
+    /// `/access-log/integrity`.
+    AccessIntegrity,
     /// `/access-policy`.
     AccessPolicy,
     /// `/access-policy/versions`.
@@ -159,6 +183,12 @@ pub enum Page {
     EditAccessPolicy,
     /// `/grants`.
     Grants,
+    /// `/ehrs/:ehr_id/care`.
+    EhrCare,
+    /// `/parties/:kind/:uid/care`.
+    PartyCare,
+    /// `/care/:uid`.
+    CareRelationship,
     /// `/configuration` and its sections.
     Configuration,
     /// `/preferences` and its sections.
@@ -180,6 +210,7 @@ impl Page {
             "/find" => Self::Find,
             "/ehrs" => Self::Ehrs,
             "/ehrs/new" => Self::NewEhr,
+            "/ehrs/import" => Self::ImportExtract,
             "/ehrs/:ehr_id" => Self::Compositions,
             "/ehrs/:ehr_id/directory" => Self::Directory,
             "/ehrs/:ehr_id/directory/edit" => Self::EditDirectory,
@@ -208,6 +239,10 @@ impl Page {
                 Self::Adl2Template
             }
             "/templates/:template_id" => Self::Template,
+            "/archetypes" => Self::Archetypes,
+            "/archetypes/upload" => Self::UploadArchetype,
+            "/archetypes/adl2/:archetype_id" => Self::Adl2Archetype,
+            "/archetypes/:archetype_id" => Self::Archetype,
             "/terminology" => Self::Terminologies,
             "/terminology/lookup" => Self::Lookup,
             "/terminology/valuesets" => Self::ValueSets,
@@ -226,12 +261,22 @@ impl Page {
             "/server/logging" => Self::Logging,
             "/server/api" => Self::Api,
             "/server/smart" => Self::Smart,
+            "/server/activity" => Self::Activity,
+            "/server/integrity" => Self::Integrity,
+            "/server/repository" => Self::Repository,
+            "/server/identity" => Self::Identity,
             "/audit" => Self::Audit,
+            "/audit/delivery" => Self::Delivery,
             "/audit/:id" => Self::AuditRecord,
+            "/access-log" => Self::AccessReview,
+            "/access-log/integrity" => Self::AccessIntegrity,
             "/access-policy" => Self::AccessPolicy,
             "/access-policy/versions" => Self::AccessPolicyVersions,
             "/access-policy/edit" => Self::EditAccessPolicy,
             "/grants" => Self::Grants,
+            "/ehrs/:ehr_id/care" => Self::EhrCare,
+            "/parties/:kind/:uid/care" => Self::PartyCare,
+            "/care/:uid" => Self::CareRelationship,
             "/configuration" | "/configuration/:section" => Self::Configuration,
             "/preferences" | "/preferences/:section" => Self::Preferences,
             "/access" => Self::Access,
@@ -326,6 +371,7 @@ pub static ROUTES: &[&str] = &[
     "/find",
     "/ehrs",
     "/ehrs/new",
+    "/ehrs/import",
     "/ehrs/:ehr_id",
     "/ehrs/:ehr_id/directory",
     "/ehrs/:ehr_id/directory/edit",
@@ -335,6 +381,7 @@ pub static ROUTES: &[&str] = &[
     "/ehrs/:ehr_id/contributions/:uid",
     "/ehrs/:ehr_id/contribution/new",
     "/ehrs/:ehr_id/tags",
+    "/ehrs/:ehr_id/care",
     "/ehrs/:ehr_id/access-log",
     "/ehrs/:ehr_id/access-log/:uid",
     "/ehrs/:ehr_id/compositions/new",
@@ -348,11 +395,16 @@ pub static ROUTES: &[&str] = &[
     "/parties/contributions/:uid",
     "/parties/:kind/:uid",
     "/parties/:kind/:uid/edit",
+    "/parties/:kind/:uid/care",
     "/templates",
     "/templates/upload",
     "/templates/adl2/:template_id",
     "/templates/adl2/:template_id/:release",
     "/templates/:template_id",
+    "/archetypes",
+    "/archetypes/upload",
+    "/archetypes/adl2/:archetype_id",
+    "/archetypes/:archetype_id",
     "/terminology",
     "/terminology/lookup",
     "/terminology/valuesets",
@@ -371,12 +423,20 @@ pub static ROUTES: &[&str] = &[
     "/server/logging",
     "/server/api",
     "/server/smart",
+    "/server/activity",
+    "/server/integrity",
+    "/server/repository",
+    "/server/identity",
     "/audit",
+    "/audit/delivery",
     "/audit/:id",
+    "/access-log",
+    "/access-log/integrity",
     "/access-policy",
     "/access-policy/versions",
     "/access-policy/edit",
     "/grants",
+    "/care/:uid",
     "/configuration",
     "/configuration/:section",
     "/preferences",
@@ -398,6 +458,7 @@ pub async fn draw() -> Drawn {
         Page::Find => pages::find::page().await,
         Page::Ehrs => pages::ehrs::list_page().await,
         Page::NewEhr => pages::ehrs::new_page().await,
+        Page::ImportExtract => pages::ehrs::import::page().await,
         Page::Compositions => pages::ehr::compositions::page().await,
         Page::Directory => pages::ehr::directory::page().await,
         Page::EditDirectory => pages::ehr::directory::edit_page().await,
@@ -424,6 +485,10 @@ pub async fn draw() -> Drawn {
         Page::UploadTemplate => pages::templates::upload_page().await,
         Page::Adl2Template => pages::templates::adl2_page().await,
         Page::Template => pages::templates::page().await,
+        Page::Archetypes => pages::archetypes::list_page().await,
+        Page::UploadArchetype => pages::archetypes::upload_page().await,
+        Page::Adl2Archetype => pages::archetypes::adl2_page().await,
+        Page::Archetype => pages::archetypes::page().await,
         Page::Terminologies => pages::terminology::terminologies_page().await,
         Page::Lookup => pages::terminology::lookup_page().await,
         Page::ValueSets => pages::terminology::value_sets_page().await,
@@ -442,12 +507,22 @@ pub async fn draw() -> Drawn {
         Page::Logging => pages::server::logging_page().await,
         Page::Api => pages::server::api_page().await,
         Page::Smart => pages::server::smart_page().await,
+        Page::Activity => pages::server::activity::page().await,
+        Page::Integrity => pages::server::integrity::page().await,
+        Page::Repository => pages::server::repository::page().await,
+        Page::Identity => pages::server::identity::page().await,
         Page::Audit => pages::audit::page().await,
+        Page::Delivery => pages::audit::delivery::page().await,
         Page::AuditRecord => pages::audit::record_page().await,
+        Page::AccessReview => pages::access_review::page().await,
+        Page::AccessIntegrity => pages::access_review::integrity_page().await,
         Page::AccessPolicy => pages::policy::page().await,
         Page::AccessPolicyVersions => pages::policy::versions_page().await,
         Page::EditAccessPolicy => pages::policy::edit::page().await,
         Page::Grants => pages::policy::grants::page().await,
+        Page::EhrCare => pages::ehr::care::page().await,
+        Page::PartyCare => pages::care::party::page().await,
+        Page::CareRelationship => pages::care::relationship::page().await,
         Page::Configuration => pages::configuration::page().await,
         Page::Preferences => pages::preferences::page(),
         Page::Access => pages::access::page(),

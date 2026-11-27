@@ -1,0 +1,125 @@
+{
+  "_type": "ROLE",
+  "archetype_node_id": "eu.ferroehr.sandbox::openEHR-DEMOGRAPHIC-ROLE.records_migration.v1",
+  "archetype_details": {
+    "_type": "ARCHETYPED",
+    "archetype_id": {
+      "_type": "ARCHETYPE_ID",
+      "value": "eu.ferroehr.sandbox::openEHR-DEMOGRAPHIC-ROLE.records_migration.v1"
+    },
+    "rm_version": "1.2.0"
+  },
+  "name": {
+    "_type": "DV_TEXT",
+    "value": "Records migration"
+  },
+  "identities": [
+    {
+      "_type": "PARTY_IDENTITY",
+      "archetype_node_id": "at0001",
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "name"
+      },
+      "details": {
+        "_type": "ITEM_TREE",
+        "archetype_node_id": "at0002",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "details"
+        },
+        "items": [
+          {
+            "_type": "ELEMENT",
+            "archetype_node_id": "at0003",
+            "name": {
+              "_type": "DV_TEXT",
+              "value": "name"
+            },
+            "value": {
+              "_type": "DV_TEXT",
+              "value": "Records migration"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "performer": {
+    "_type": "PARTY_REF",
+    "namespace": "demographic",
+    "type": "PERSON",
+    "id": {
+      "_type": "HIER_OBJECT_ID",
+      "value": "__ID:seed-admin__"
+    }
+  },
+  "capabilities": [
+    {
+      "_type": "CAPABILITY",
+      "archetype_node_id": "at0020",
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "grant"
+      },
+      "credentials": {
+        "_type": "ITEM_TREE",
+        "archetype_node_id": "at0022",
+        "name": {
+          "_type": "DV_TEXT",
+          "value": "terms"
+        },
+        "items": [
+          {
+            "_type": "ELEMENT",
+            "archetype_node_id": "at0021",
+            "name": {
+              "_type": "DV_TEXT",
+              "value": "operation"
+            },
+            "value": {
+              "_type": "DV_CODED_TEXT",
+              "value": "import_ehr",
+              "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": {
+                  "_type": "TERMINOLOGY_ID",
+                  "value": "openehr_access"
+                },
+                "code_string": "import_ehr"
+              }
+            }
+          },
+          {
+            "_type": "ELEMENT",
+            "archetype_node_id": "at0031",
+            "name": {
+              "_type": "DV_CODED_TEXT",
+              "value": "subject_namespace",
+              "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": {
+                  "_type": "TERMINOLOGY_ID",
+                  "value": "openehr_access"
+                },
+                "code_string": "subject_namespace"
+              }
+            },
+            "value": {
+              "_type": "DV_CODED_TEXT",
+              "value": "no_subject_namespace",
+              "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": {
+                  "_type": "TERMINOLOGY_ID",
+                  "value": "openehr_access"
+                },
+                "code_string": "no_subject_namespace"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

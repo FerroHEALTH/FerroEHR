@@ -32,7 +32,7 @@ openehr-query = { path = "../../crates/openehr-query" }
 # enforces. Its outbound client (`fetch`) builds the CDR client.
 ferrohealth-smart = { workspace = true, features = ["fetch", "openehr-scopes", "server-tls"] }
 # The console sign-in and session: the `[oidc]` and `[session]` sections, the
-# sealed store the multi-instance viewer runs on, and the four sign-in routes
+# memory store the one viewer instance runs on, and the four sign-in routes
 # with the middleware every page sits behind (`axum`).
 ferrohealth-session = { workspace = true, features = ["axum"] }
 # The full ITS surface (OPT parsing + WebTemplate building) and the Simplified
@@ -48,6 +48,9 @@ openehr-base = { path = "../../crates/openehr-base" }
 # The AOM2 operational-template type the ADL2 detail screen's path catalog is
 # built from (`OperationalTemplateV2` canonical JSON in, Web Template out).
 openehr-am = { path = "../../crates/openehr-am" }
+# The draft access control package's terminology ids, such as the care role
+# terminology a care relationship form defaults to.
+openehr-rm = { path = "../../crates/openehr-rm", features = ["draft"] }
 
 # The shared FerroHEALTH console components, tokens, stylesheet, script
 # modules, highlighters and table model, with its asset router (`axum`).
