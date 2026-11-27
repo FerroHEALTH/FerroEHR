@@ -112,6 +112,12 @@ parsed grants, the grant types and PKCE methods, and the document itself.
 configuration by section, each key with what it means; secrets show as their
 reference, never their value.
 
+The **Viewer** tab shows the viewer's own settings from
+`ferroehr-viewer.toml`: the CDR it reaches, its sign-in methods, the session
+lifetimes and its language.
+
+![The viewer's own settings](img/configuration/viewer.png)
+
 ## Audit log
 
 The **Audit log** browses the CDR's security audit trail (who accessed what,
