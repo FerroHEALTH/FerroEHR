@@ -334,8 +334,12 @@ config:
   record:
     subject_index: local
   pixm: null
+  # The overlay names its identity provider by URL; the probe hands that issuer
+  # its key set as a file, so no boot reads a provider it cannot reach.
   auth:
-    jwks_file: /etc/ferroehr/probe-jwks.json
+    issuer:
+      idp:
+        jwks_file: /etc/ferroehr/probe-jwks.json
   files:
     probe-jwks.json: |
 $(sed 's/^/      /' docs/conformance/party/smart/jwks.json)
