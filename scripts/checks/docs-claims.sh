@@ -66,7 +66,7 @@ VALUES=deploy/helm/ferroehr/values.yaml
 # went silently stale when the hardening chapter split into sub-pages (#2348),
 # leaving five chart pages unchecked while the gate reported OK.
 CHART_PAGES=$(printf '%s ' "$BOOK"/installation/kubernetes*.md "$BOOK"/installation/hardening-*.md \
-  "$BOOK"/operations.md "$BOOK"/database-operations.md "$BOOK"/upgrades.md "$BOOK"/operations-admin-apis.md)
+  "$BOOK"/operations.md "$BOOK"/database-operations.md "$BOOK"/upgrades.md "$BOOK"/operations-admin-apis.md "$BOOK"/storage-admin-apis.md "$BOOK"/installation/compose*.md)
 
 for required in "$TOML" "$VALUES"; do
   [[ -f "$required" ]] || { echo "docs-claims: missing authority file $required" >&2; exit 1; }

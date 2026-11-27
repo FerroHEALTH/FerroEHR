@@ -29,12 +29,10 @@ you can judge the exposure rather than reading "secrets" generically.
 | S3 credentials | `secrets.multimediaSecretAccessKey` (with `secrets.multimediaAccessKeyId`) | offloaded `DV_MULTIMEDIA` blobs, which **are PHI** |
 | The viewer's OIDC client secret | `viewer.existingSecret`, when the viewer is enabled | the ability to impersonate the viewer at your identity provider |
 
-The rendered `ferroehr.toml` itself is **not** in that list, and that is worth
-stating because it used to be: while a Basic user's hash had nowhere secure to go,
-configuring one moved the whole configuration file into a Secret. Every credential
-the server models now has either a `*_file` sibling or a Secret-borne environment
-route, so no key takes that branch today; the chart keeps it only so that a
-secret key added upstream tomorrow fails safe instead of landing in a ConfigMap.
+The rendered `ferroehr.toml` itself is **not** in that list. Every credential
+the server models has either a `*_file` sibling or a Secret-borne environment
+route. The chart can still move the file into a Secret, so that a secret key
+added upstream fails safe instead of landing in a ConfigMap.
 
 The first row is the one that matters most, and it has a property worth naming:
 **the DSN is a bearer credential.** Any process that can read it can use it, from
@@ -357,7 +355,7 @@ reach), and any read of Secrets in this namespace by a principal that is not the
 kubelet, since that is what reading the DSN looks like from the API side.
 
 **Kubernetes `Events` are a third source**, and distinct from both: they are the
-cluster's account of what happened to your objects, they expire (typically an
+cluster's account of what happened to your objects, they expire (often an
 hour), and they are where this chart's failures show up first:
 `Readiness probe failed: HTTP probe failed with statuscode: 503` when a dependency
 is down, `FailedCreate … violates PodSecurity "restricted:latest"` when a pod spec

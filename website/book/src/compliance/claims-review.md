@@ -248,7 +248,7 @@ the dump and load archive on zip 9.0.4 (#3798).
   and the [server configuration](../installation/config-server.md#usage_report)
   table states the two variables.
 - **The dump and load archive**: the
-  [admin APIs](../operations-admin-apis.md#dump-and-load) page names no zip
+  [admin APIs](../storage-admin-apis.md#dump-and-load) page names no zip
   library and its `compression_format` values are unchanged.
 - **The README, `SECURITY.md`, the crate READMEs, the image labels and the Helm
   chart's description**: unchanged by this release, and none names the usage

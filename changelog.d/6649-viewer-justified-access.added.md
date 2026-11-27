@@ -1,0 +1,1 @@
+- The viewer opens a record on a justification when FerroEHR asks for a reason: the clinician chooses a purpose of use and gives a reason, which the viewer keeps in its server-side session for that one EHR for 15 minutes and states on each call drawing it, with a notice and End now while it holds. `GET {ext}/access/purposes` names the reason header beside the purpose header.

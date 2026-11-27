@@ -157,7 +157,7 @@ continues from here.
 
 - [Docker Compose](https://ferroehr.eu/docs/latest/installation/compose.html) and a [Helm chart](https://ferroehr.eu/docs/latest/installation/kubernetes.html), with multi-arch images (amd64, arm64)
 - [Observability](https://ferroehr.eu/docs/latest/operations.html#observability): Prometheus metrics, OpenTelemetry traces, health probes
-- [Backup and point-in-time recovery](https://ferroehr.eu/docs/latest/operations.html#backup-and-point-in-time-recovery) on PostgreSQL
+- [Backup and point-in-time recovery](https://ferroehr.eu/docs/latest/database-operations.html#backup-and-point-in-time-recovery) on PostgreSQL
 - [Measured conformance](https://ferroehr.eu/docs/latest/conformance.html) and [performance](https://ferroehr.eu/docs/latest/performance.html)
 - [Verifiable releases](https://ferroehr.eu/docs/latest/verifying-releases.html): signed, with provenance and a software bill of materials
 

@@ -152,3 +152,21 @@ access-erased-toast = Entry erased
 access-erase-refused = The CDR erased nothing.
 access-erase-needs-grounds = Give the grounds as a terminology id and a code.
 access-export-action = Export the log
+## Justified and emergency access
+
+access-justify-title = Open this record on a justification
+access-justify-intro = The CDR refused this record: no care relationship of yours covers it. If the access policy lets you, open it on a justification. The purpose you choose decides, as the policy says, whether this is a justified or an emergency access.
+access-justify-purpose = Purpose of use
+access-justify-reason = Why you open this record
+access-justify-reason-help = Your own words, 1 to 1000 characters. The person reads them in their access log.
+access-justify-submit = Open on this justification
+access-justify-holds = It holds for this record for 15 minutes, until you end it, or until you sign out.
+access-justify-kept = Justification stated
+access-justify-ended = Justification ended
+access-justify-store-refused = The session store could not keep the justification.
+access-justify-unoffered = The CDR asks for a reason but names no header to state it in, so the viewer cannot offer a justification.
+access-justify-purpose-missing = Choose a purpose of use.
+access-justify-reason-length = Give a reason of 1 to 1000 characters.
+access-justify-reason-control = A reason holds no control characters.
+access-justify-banner = You opened this record on a justification ({ $purpose }) until { $until }. Your reason: { $reason }
+access-justify-end = End now

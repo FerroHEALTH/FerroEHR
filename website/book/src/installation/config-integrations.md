@@ -473,18 +473,11 @@ read back from it.
 The server takes S3 credentials from this table only. It reads no `AWS_*`
 environment variable, no profile file and no instance metadata.
 
-Since 6.0.0 the S3 keys live in their own table. A configuration from an
-earlier release that sets `url`, `bucket`, `region`, `access_key_id` or
-`secret_access_key` directly under `[record.multimedia]` is refused at boot as
-an unknown key; move those keys to `[record.multimedia.s3]`, and their
-environment variables from `FERROEHR__RECORD__MULTIMEDIA__<KEY>` to
-`FERROEHR__RECORD__MULTIMEDIA__S3__<KEY>`.
-
 An enabled integration whose `url` is set but blank, not an absolute URL,
 or carries a scheme other than `http`/`https` is a **boot error**. That case is
 easy to reach by accident (an unset Compose variable expanding to nothing, or
-an empty Helm value) and used to boot cleanly and then fail on the first
-multimedia commit, so it is refused where an operator can still act on it.
+an empty Helm value), so it is refused at boot, where an operator can still
+act on it.
 
 > [!WARNING]
 > Offloaded blobs are PHI. The bucket must be private and encrypted, and reached

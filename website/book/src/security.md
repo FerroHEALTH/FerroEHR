@@ -74,7 +74,6 @@ honour **refuses to boot** rather than degrading at the first request:
 | a `password_hash` below `m=19456,t=2,p=1` argon2id | error: the OWASP Argon2id floor |
 | `[authz.assurance] minimum` with an empty `levels` map, or with no mapped value at or above it | error: every patient-data request would be refused |
 | an `[authz.assurance] levels` value that is blank or carries whitespace, a quote or a backslash | error: the step-up challenge names the values in one quoted `acr_values` parameter (RFC 9470 §3) |
-| `[authz.professional]` | error: removed; the token's `fhirUser` classifies the caller |
 | two issuers sharing an audience, or no `[authz.party_binding] provider` | error: every person is bound to a party, under the provider the deployment acts for |
 | a Basic user with no `[[authz.party_binding.basic_user]]` mapping | error: a Basic user is a person, bound by its key |
 | an `[authz.rbac] role_issuers` entry that names a `federation` issuer | error: only the deployment's own people hold an administrator role |
@@ -446,8 +445,8 @@ to the layer that hosts several systems, not inside one of them.
 
 So several organisations are served by several instances: one instance, one
 database, one set of domain roles each. That is a stronger boundary than a row
-predicate — a defect in a query cannot cross it, because there is nothing to
-cross — and it is what the §System Identity rule needs, since `system_id`
+predicate: a defect in a query cannot cross it, because there is nothing to
+cross, and it is what the §System Identity rule needs, since `system_id`
 "becomes embedded in the version identifiers of committed -- and possibly
 signed -- content" and "cannot easily be changed afterwards". One `system_id`
 shared across organisations mints version identifiers that cannot tell the
