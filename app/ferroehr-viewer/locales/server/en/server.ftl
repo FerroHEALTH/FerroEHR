@@ -40,6 +40,7 @@ import-answer-json = import answer JSON
 repository-report-json = dump or load report JSON
 archetype-list-json = archetype list JSON
 conversion-json = ADL 2 conversion JSON
+queue-json = queue JSON
 activity-report-json = activity report JSON
 integrity-report-json = integrity report JSON
 cohort-result-json = cohort result JSON

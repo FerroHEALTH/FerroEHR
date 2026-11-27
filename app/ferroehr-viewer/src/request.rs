@@ -242,7 +242,7 @@ mod tests {
 
     #[test]
     fn a_page_reads_only_the_display_cookies() {
-        let header = "ferroehr_viewer_session=sealed; ferroehr-viewer-theme=dark; \
+        let header = "ferroehr_viewer_session=opaque; ferroehr-viewer-theme=dark; \
                       other=1; ferroehr-viewer-flash=toast; ferroehr-viewer-paging-ehrs=2.25";
         assert_eq!(
             "ferroehr-viewer-theme=dark; ferroehr-viewer-paging-ehrs=2.25",

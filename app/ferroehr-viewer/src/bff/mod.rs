@@ -28,6 +28,7 @@ pub mod grants;
 pub mod integrity;
 pub mod item_tags;
 pub mod login;
+pub mod queues;
 pub mod report;
 pub mod signature;
 pub mod system;

@@ -20,9 +20,8 @@ base_url = "https://sandbox.ferroehr.eu"
 basic_issuer = "sandbox.ferroehr.eu"
 
 [session]
-# The sessions live in the viewer's process, the one store that keeps a
-# clinician's stated justification on the server (#6649); a restart signs
-# visitors out.
+# The sessions live in the viewer's process, the one store the viewer has:
+# one instance, and a restart signs visitors out (#6721).
 store = "memory"
 # TLS terminates at Caddy on the same box.
 secure_cookie = true

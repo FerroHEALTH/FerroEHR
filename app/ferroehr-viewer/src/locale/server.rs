@@ -74,6 +74,8 @@ crate::locale::messages! {
         ArchetypeListJson = "archetype-list-json",
         /// `ADL 2 conversion JSON`
         ConversionJson = "conversion-json",
+        /// `queue JSON`
+        QueueJson = "queue-json",
         /// `activity report JSON`
         ActivityReportJson = "activity-report-json",
         /// `integrity report JSON`

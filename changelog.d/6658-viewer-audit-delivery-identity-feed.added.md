@@ -1,0 +1,1 @@
+- The viewer shows the delivery of audit records to their sinks, each sink's cursors and the records it parked, from the Audit log, and the patient identity feed's refused messages on Server's Identity feed tab; an administrator retries or dismisses a parked record, forgets a sink no longer configured, and retries or settles a refused message, each behind a confirmation.

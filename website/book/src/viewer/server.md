@@ -1,7 +1,7 @@
 # Server & audit log
 
 **Server** says what the CDR this viewer reads is, how it runs and what it
-serves, as up to nine tabs, and the **Audit log** browses its security audit trail.
+serves, as up to ten tabs, and the **Audit log** browses its security audit trail.
 Everything on them comes from the CDR's own endpoints over HTTP; the viewer
 has no privileged channel.
 
@@ -160,11 +160,34 @@ is shown in the CDR's words.
 
 ![Repository](img/server/repository.png)
 
+## Identity feed
+
+**Identity feed**, an admin tab shown while the CDR mounts its admin API,
+lists the patient identity feed's messages the CDR refused (IHE PMIR,
+ITI-93; `GET {ext}/admin/pmir/messages`): each message's id, refusal code,
+when it was refused, its apply attempts and how many identifiers and record
+subjects it keeps split, never an identifier value. **Retry** puts a message
+back at its arrival position once its cause is fixed, and **Settle** closes it
+without applying it, as **Discard** (its splits stay) or **Lift the splits**
+(its identifiers and subjects resolve as before it), with a reason the CDR
+records. Each asks for confirmation above the list. A CDR that runs no
+identity feed answers `404`, and the tab says so; see [Integrations → the
+patient identity
+feed](../installation/config-integrations.md).
+
+![Identity feed](img/server/identity.png)
+
 ## Configuration
 
 **Configuration** in the sidebar shows the CDR's redacted running
 configuration by section, each key with what it means; secrets show as their
 reference, never their value.
+
+The **Viewer** tab shows the viewer's own settings from
+`ferroehr-viewer.toml`: the CDR it reaches, its sign-in methods, the session
+lifetimes and its language.
+
+![The viewer's own settings](img/configuration/viewer.png)
 
 ## Audit log
 
@@ -184,6 +207,18 @@ outcome, and the stored FHIR R4 `AuditEvent` with line numbers and Copy.
 
 A filter that matches nothing says so, with the filters named and a way to
 clear them.
+
+**Delivery** in the Audit log's header shows how the audit records reach
+their sinks ([How a record is delivered](../audit.md#how-a-record-is-delivered);
+`GET {ext}/admin/audit-delivery`): each sink's cursor of each log, how many
+records it has still to deliver and whether the configuration names it, then
+the records a sink parked with their reason. **Retry** offers a parked record
+again, **Dismiss** removes it for good, and **Forget** removes a sink the
+configuration no longer names; each asks for confirmation above the tables
+and needs the CDR's ADMIN role. A CDR that serves no such view answers `404`,
+and the page says so.
+
+![Audit delivery](img/audit/delivery.png)
 
 The audit trail is an operator surface: the screen needs the CDR's ADMIN role,
 and a session without it is refused in the CDR's words. When the CDR's local

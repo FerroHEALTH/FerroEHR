@@ -60,7 +60,12 @@ struct Integrity {
 async fn read_integrity() -> Tabbed<Integrity> {
     load_tab(ServerTab::Integrity, || async {
         let posted = crate::posted::posted();
-        let text = crate::posted::text;
+        let text = |key: &str| {
+            posted
+                .as_ref()
+                .map(|posted| posted.text(key))
+                .unwrap_or_default()
+        };
         let scope = Scope {
             ehr_id: text("ehr_id"),
             vo_id: text("vo_id"),

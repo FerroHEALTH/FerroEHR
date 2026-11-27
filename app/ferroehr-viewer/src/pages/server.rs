@@ -44,6 +44,7 @@ use crate::pages::common::{
 use crate::routes::Drawn;
 
 pub mod activity;
+pub mod identity;
 pub mod integrity;
 pub mod overview;
 pub mod repository;
@@ -75,11 +76,13 @@ enum ServerTab {
     Integrity,
     /// The whole repository dumped and loaded.
     Repository,
+    /// Its patient identity feed's refused messages.
+    Identity,
 }
 
 impl ServerTab {
     /// Every tab, in order.
-    const ALL: [Self; 9] = [
+    const ALL: [Self; 10] = [
         Self::Overview,
         Self::Health,
         Self::Metrics,
@@ -89,6 +92,7 @@ impl ServerTab {
         Self::Activity,
         Self::Integrity,
         Self::Repository,
+        Self::Identity,
     ];
 
     /// The tab's key.
@@ -103,6 +107,7 @@ impl ServerTab {
             Self::Activity => "activity",
             Self::Integrity => "integrity",
             Self::Repository => "repository",
+            Self::Identity => "identity",
         }
     }
 
@@ -129,6 +134,7 @@ impl ServerTab {
                 ConsoleMsg::ServerRepository,
                 ConsoleMsg::ServerRepositoryLine,
             ),
+            Self::Identity => (ConsoleMsg::ServerIdentity, ConsoleMsg::ServerIdentityLine),
         };
         (tr(label), tr(line))
     }
@@ -140,7 +146,10 @@ impl ServerTab {
 
     /// Whether the tab drives the admin group.
     const fn admin(self) -> bool {
-        matches!(self, Self::Activity | Self::Integrity | Self::Repository)
+        matches!(
+            self,
+            Self::Activity | Self::Integrity | Self::Repository | Self::Identity
+        )
     }
 }
 

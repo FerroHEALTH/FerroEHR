@@ -19,6 +19,7 @@ mod ssr_archive;
 mod ssr_assets;
 mod ssr_cohort;
 mod ssr_extract;
+mod ssr_queues;
 mod ssr_rekey;
 mod ssr_server_operations;
 mod ssr_server_status;
