@@ -13,6 +13,7 @@
 //! path compiles out of the shipped defaults.
 
 mod authz_wiring;
+mod cli_reference;
 mod definitions;
 mod exit_status;
 mod wiring;
