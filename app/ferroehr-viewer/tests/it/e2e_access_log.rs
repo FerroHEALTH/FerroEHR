@@ -41,21 +41,13 @@ fn cdr_url() -> Option<String> {
     }
 }
 
-/// The administrator the composed stack provisions, a reviewer of the log.
-fn admin_credentials() -> (String, String) {
-    (
-        env("UI_E2E_ADMIN_USER").unwrap_or_else(|| "ferroehr-admin".to_owned()),
-        env("UI_E2E_ADMIN_PASS").unwrap_or_else(|| "ferroehr".to_owned()),
-    )
-}
-
 /// Create a fresh EHR over ITS-REST as the administrator and return its
 /// `ehr_id`.
 ///
 /// # Panics
 /// When the CDR refuses the create (a broken stack, not a skip).
 async fn create_ehr(cdr: &str) -> String {
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     let body: serde_json::Value = reqwest::Client::new()
         .post(format!("{cdr}/ferroehr/rest/openehr/v1/ehr"))
         .basic_auth(user, Some(pass))
@@ -86,7 +78,7 @@ async fn a_reviewer_reads_filters_and_opens_an_access_log_entry() {
         return;
     };
     let ehr = create_ehr(&cdr).await;
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
     // Reading the EHR's page writes the entries the tab then lists.
     h.goto(&format!("/ehrs/{ehr}")).await;
@@ -146,7 +138,7 @@ async fn a_reviewer_reviews_the_log_and_verifies_it() {
     let Some(h) = Harness::start("access-log-integrity").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
     h.goto("/access-log").await;
     wait_main_contains(&h, "Entries of the access log").await;

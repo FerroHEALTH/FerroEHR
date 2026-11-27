@@ -52,16 +52,6 @@ const CONSTITUENT: &str = "openEHR-EHR-OBSERVATION.cnf_constituent.v1.0.0";
 /// The ADL2 listing, as URL state.
 const LIST_URL: &str = "/templates?family=adl2";
 
-/// The admin dev user (quickstart `docker/ferroehr.dev.toml`): the artefact
-/// delete is Admin-classed, so both the delete scene and every scene-end
-/// cleanup run as this session.
-fn admin_credentials() -> (String, String) {
-    (
-        env("UI_E2E_ADMIN_USER").unwrap_or_else(|| "ferroehr-admin".to_owned()),
-        env("UI_E2E_ADMIN_PASS").unwrap_or_else(|| "ferroehr".to_owned()),
-    )
-}
-
 /// Remove the artefacts a scene seeded, over the same route the viewer's
 /// delete affordance drives (`204` deleted, `404` already gone).
 ///
@@ -73,7 +63,7 @@ async fn remove_adl2_artefacts(hrids: &[&str]) {
         return;
     };
     let http = reqwest::Client::new();
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     for hrid in hrids {
         let status = http
             .delete(format!(
@@ -176,7 +166,7 @@ async fn adl2_upload_lists_and_serves_source_and_json() {
     let Some(h) = Harness::start("adl2-upload").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
     remove_adl2_artefacts(&[VERSIONED_V100, VERSIONED_V110]).await;
     h.goto("/templates").await;
@@ -216,7 +206,7 @@ async fn adl2_versioned_get_reaches_both_stored_versions() {
     let Some(h) = Harness::start("adl2-versions").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
     ensure_adl2_template_present(&h, "versioned.v1_0_0.adls", VERSIONED_V100).await;
     ensure_adl2_template_present(&h, "versioned.v1_1_0.adls", VERSIONED_V110).await;
@@ -267,7 +257,7 @@ async fn adl2_example_composition_renders() {
     let Some(h) = Harness::start("adl2-example").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
     ensure_adl2_template_present(&h, "versioned.v1_0_0.adls", VERSIONED_V100).await;
     let page = format!("/templates/adl2/{}?tab=example", stem(VERSIONED_V100));
@@ -320,7 +310,7 @@ async fn an_adl2_artefact_is_deleted_from_the_listing() {
     let Some(h) = Harness::start("adl2-delete").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
     ensure_adl2_template_present(&h, "minimal_h.adls", DELETABLE).await;
     h.shot(1, "adl2-delete-listed").await;
@@ -359,7 +349,7 @@ async fn a_template_missing_a_constituent_says_so_on_every_tab() {
     let Some(h) = Harness::start("adl2-missing-constituent").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
     remove_adl2_artefacts(&[NEEDS_CONSTITUENT, CONSTITUENT]).await;
 

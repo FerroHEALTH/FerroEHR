@@ -20,22 +20,14 @@
 
 use crate::common;
 
-use common::{Harness, env, fill, login_basic_as, main_text, submit, wait_main_contains};
-
-/// The admin dev user (quickstart `docker/ferroehr.dev.toml`).
-fn admin_credentials() -> (String, String) {
-    (
-        env("UI_E2E_ADMIN_USER").unwrap_or_else(|| "ferroehr-admin".to_owned()),
-        env("UI_E2E_ADMIN_PASS").unwrap_or_else(|| "ferroehr".to_owned()),
-    )
-}
+use common::{Harness, fill, login_basic_as, main_text, submit, wait_main_contains};
 
 #[tokio::test]
 async fn admin_declares_a_period_and_reads_what_is_due() {
     let Some(h) = Harness::start("retention").await else {
         return;
     };
-    let (user, pass) = admin_credentials();
+    let (user, pass) = common::admin_credentials();
     login_basic_as(&h, &user, &pass).await;
 
     common::follow_nav(&h, "/retention").await;
