@@ -9,6 +9,8 @@
 
 use std::convert::Infallible;
 
+use ferrohealth_ui::html::Html;
+
 use crate::pages::common::Refused;
 
 /// The model of a form page holding `T`, with `Why` the page's own reasons
@@ -23,4 +25,16 @@ pub enum Form<T, Why = Infallible> {
     Refused(Refused),
     /// The post redirected.
     Left,
+}
+
+impl<T> Form<T> {
+    /// The page body: the form `shown` draws, the CDR's refusal, or nothing
+    /// once the post redirected.
+    pub fn view(self, shown: impl FnOnce(T) -> Html) -> Html {
+        match self {
+            Self::Shown(form) => shown(*form),
+            Self::Refused(refusal) => refusal.view(),
+            Self::Left => Html::empty(),
+        }
+    }
 }
