@@ -23,6 +23,11 @@
 #   scripts/deploy-probe-k8s.sh --bridge-only  # the release and the P-K8S-BRIDGE-* family
 #   scripts/deploy-probe-k8s.sh --ehr-index-only  # the release and the P-K8S-INDEX-* family
 #   scripts/deploy-probe-k8s.sh --lifecycle-only  # the release and the P-K8S-LIFE-* family
+#   scripts/deploy-probe-k8s.sh --posture-only  # the release and the families only the
+#                                               # full run holds: runtime posture, pod
+#                                               # security, service links, secrets,
+#                                               # readiness, viewer, terminology and the
+#                                               # original state
 #   scripts/deploy-probe-k8s.sh --render-check # no cluster: render the production
 #                                              # install this harness performs and
 #                                              # assert it wires the three domains
@@ -76,6 +81,7 @@ PRODUCTION_ONLY=0
 BRIDGE_ONLY=0
 EHR_INDEX_ONLY=0
 LIFECYCLE_ONLY=0
+POSTURE_ONLY=0
 for arg in "$@"; do
   case "$arg" in
     --keep-up) KEEP_UP=1 ;;
@@ -84,7 +90,8 @@ for arg in "$@"; do
     --bridge-only) BRIDGE_ONLY=1 ;;
     --ehr-index-only) EHR_INDEX_ONLY=1 ;;
     --lifecycle-only) LIFECYCLE_ONLY=1 ;;
-    *) echo "usage: $0 [--keep-up] [--production-only | --bridge-only | --ehr-index-only | --lifecycle-only] | --render-check" >&2; exit 2 ;;
+    --posture-only) POSTURE_ONLY=1 ;;
+    *) echo "usage: $0 [--keep-up] [--production-only | --bridge-only | --ehr-index-only | --lifecycle-only | --posture-only] | --render-check" >&2; exit 2 ;;
   esac
 done
 
@@ -677,6 +684,23 @@ if [[ "$EHR_INDEX_ONLY" -eq 1 ]]; then
     probes_k8s_ehr_index
   else
     uncovered "every EHR-index probe" "the release did not come up, so no mode could be installed over it"
+  fi
+  probe_report "$PROBE_OUT" "kubernetes"
+  exit $?
+fi
+if [[ "$POSTURE_ONLY" -eq 1 ]]; then
+  if probes_k8s_boot; then
+    k8s_record_host_users "$K8S_NS" "$K8S_RELEASE"
+    probes_k8s_runtime_posture
+    probes_k8s_psa
+    probes_k8s_service_links
+    probes_k8s_secrets
+    probes_k8s_readiness
+    probes_k8s_viewer
+    probes_k8s_terminology
+    probes_k8s_original_state
+  else
+    uncovered "every posture probe" "the release did not come up, so no posture could be observed"
   fi
   probe_report "$PROBE_OUT" "kubernetes"
   exit $?
