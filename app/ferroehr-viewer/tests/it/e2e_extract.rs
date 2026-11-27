@@ -57,7 +57,7 @@ async fn an_exported_extract_imports_as_a_new_ehr() {
     h.wait_css(&format!("a[href='/download/extract/{ehr_id}']"))
         .await;
 
-    let extract = reqwest::Client::new()
+    let exported = reqwest::Client::new()
         .get(format!(
             "{cdr}/ferroehr/rest/extensions/v1/message/export/{ehr_id}"
         ))
@@ -65,10 +65,13 @@ async fn an_exported_extract_imports_as_a_new_ehr() {
         .header("Accept", "application/json")
         .send()
         .await
-        .expect("the CDR answers")
-        .text()
-        .await
-        .expect("the extract reads");
+        .expect("the CDR answers");
+    let status = exported.status();
+    let extract = exported.text().await.expect("the extract reads");
+    assert!(
+        status.is_success(),
+        "the export answered {status}: {extract}"
+    );
 
     let clone = generated_uuid();
     h.goto("/ehrs/import").await;
