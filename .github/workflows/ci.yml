@@ -1412,6 +1412,11 @@ jobs:
       - name: vex / The applied-judgement detector names a judgement trivy left in place
         if: ${{ !cancelled() }}
         run: bash scripts/security/vex-applied.sh --self-test
+      # One Trivy for every lane and the local rerun, its tarball pinned for each
+      # platform a contributor scans on (#6743).
+      - name: vex / Every workflow pins one Trivy, pinned for Linux x86_64, Linux arm64 and macOS arm64
+        if: ${{ !cancelled() }}
+        run: bash scripts/security/install-trivy.sh --check
 
   # ── Always required: supply-chain policy ────────────────────────────────────
   # cargo-deny alone: `cargo deny check` reads the SAME RustSec advisory DB as

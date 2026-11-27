@@ -28,7 +28,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-command -v trivy >/dev/null || { echo "trivy is required (brew install trivy)" >&2; exit 2; }
+command -v trivy >/dev/null || { echo "trivy is required: scripts/security/install-trivy.sh <version> <bindir>, with the TRIVY_VERSION the workflows pin" >&2; exit 2; }
 command -v jq >/dev/null || { echo "jq is required" >&2; exit 2; }
 
 SCAN_TAG=${SCAN_TAG:-latest}
