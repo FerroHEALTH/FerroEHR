@@ -8,7 +8,7 @@
 //! no cross-domain cohort query: AQL runs over the clinical domain and knows
 //! nothing of the demographic one.
 //! What this section states is which demographic leaves a deployment is willing
-//! to have a cohort selected on, named by the archetype and at-code that carry
+//! to have a cohort selected on, named by the archetype and node code that carry
 //! them — because that is a deployment fact about the archetypes in use, never
 //! something a server can infer.
 //!
@@ -34,7 +34,7 @@ pub const PREDICATE_KEYS: &[&str] = &["age_band", "city", "organisation", "postc
 /// [`PredicateKind::BirthDate`].
 pub const BIRTH_DATE_KEY: &str = "age_band";
 
-/// One bound predicate: the archetype and at-code whose ELEMENT carries the
+/// One bound predicate: the archetype and node code whose ELEMENT carries the
 /// value, and how to match it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
@@ -46,7 +46,8 @@ pub struct PredicateBinding {
     /// `master05-identification_package.adoc` §"Composite Identifiers and
     /// Case").
     pub archetype: String,
-    /// The ELEMENT's `archetype_node_id` at-code (`at0012`).
+    /// The ELEMENT's `archetype_node_id`: an ADL 1.4 at-code (`at0012`) or an
+    /// ADL 2 id-code (`id5`).
     pub node: String,
     /// How the caller's value is matched against the leaf.
     pub kind: PredicateKind,
@@ -133,18 +134,21 @@ pub fn is_demographic_archetype_hrid(value: &str) -> bool {
         && version.chars().all(|c| c.is_ascii_digit())
 }
 
-/// Whether `value` reads as an at-code (`at0012`, `at0012.1`).
+/// Whether `value` reads as the code of an archetype node.
+///
+/// An ADL 1.4 at-code (`at0012`, `at0012.1`) or an ADL 2 id-code (`id5`,
+/// `id5.1`): the leaders AOM2 names (`org.openehr.am.aom2.adl_code_definitions.adoc`
+/// `At_code_leader`, `Id_code_leader`) followed by dot-separated digits.
 #[must_use]
-pub fn is_at_code(value: &str) -> bool {
-    let Some(rest) = value.strip_prefix("at") else {
+pub fn is_node_code(value: &str) -> bool {
+    let Some(rest) = value
+        .strip_prefix("at")
+        .or_else(|| value.strip_prefix("id"))
+    else {
         return false;
     };
-    let mut segments = rest.split('.');
-    segments
-        .next()
-        .is_some_and(|first| !first.is_empty() && first.chars().all(|c| c.is_ascii_digit()))
-        && segments
-            .all(|segment| !segment.is_empty() && segment.chars().all(|c| c.is_ascii_digit()))
+    rest.split('.')
+        .all(|segment| !segment.is_empty() && segment.chars().all(|c| c.is_ascii_digit()))
 }
 
 #[cfg(test)]
@@ -182,13 +186,17 @@ mod tests {
     }
 
     #[test]
-    fn at_codes_are_recognized() {
-        assert!(is_at_code("at0012"));
-        assert!(is_at_code("at0012.1.3"));
-        assert!(!is_at_code("at"));
-        assert!(!is_at_code("at0012."));
-        assert!(!is_at_code("id12"));
-        assert!(!is_at_code("openEHR-DEMOGRAPHIC-ADDRESS.address.v1"));
+    fn at_codes_and_id_codes_are_node_codes() {
+        assert!(is_node_code("at0012"));
+        assert!(is_node_code("at0012.1.3"));
+        assert!(is_node_code("id5"));
+        assert!(is_node_code("id5.1"));
+        assert!(!is_node_code("at"));
+        assert!(!is_node_code("id"));
+        assert!(!is_node_code("at0012."));
+        assert!(!is_node_code("ac12"));
+        assert!(!is_node_code("idx5"));
+        assert!(!is_node_code("openEHR-DEMOGRAPHIC-ADDRESS.address.v1"));
     }
 
     #[test]
