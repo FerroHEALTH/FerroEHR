@@ -6,7 +6,7 @@
 //!
 //! **No openEHR spec governs this — our own design/extension.** Four statement
 //! shapes, one per [`PredicateKind`], each a `&'static str` chosen by the
-//! kind and never assembled from a caller's value; the archetype, the at-code
+//! kind and never assembled from a caller's value; the archetype, the node code
 //! and the value are all positional binds. The statement selects `vo_id` — a
 //! party identifier — and no other column, so the crossing that follows
 //! carries identifiers only.
@@ -106,7 +106,7 @@ impl PredicateMatch<'_> {
 /// spliced with its value clause at compile time so each statement stays one
 /// `&'static str`.
 ///
-/// `$1` is the ELEMENT at-code (case-folded), `$2` the archetype HRID of the
+/// `$1` is the ELEMENT node code (case-folded), `$2` the archetype HRID of the
 /// archetyped ancestor (case-folded), matched through the nested-set interval
 /// that contains the element. The version predicate is the object's current
 /// trunk version — the head row's own answer — the same currency rule every

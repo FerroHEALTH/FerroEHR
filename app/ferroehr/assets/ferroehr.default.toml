@@ -1573,8 +1573,8 @@ subject_namespaces = []
 # `master05-identification_package.adoc` §"Composite Identifiers and Case").
 # Required in its table (trust).
 # archetype = ""
-# The ELEMENT's `archetype_node_id` at-code (`at0012`). Required in its table
-# (trust).
+# The ELEMENT's `archetype_node_id`: an ADL 1.4 at-code (`at0012`) or an ADL 2
+# id-code (`id5`). Required in its table (trust).
 # node = ""
 # How the caller's value is matched against the leaf. Required in its table
 # (trust).
