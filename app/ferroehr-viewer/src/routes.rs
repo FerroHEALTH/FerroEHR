@@ -111,6 +111,14 @@ pub enum Page {
     Adl2Template,
     /// `/templates/:template_id`.
     Template,
+    /// `/archetypes`.
+    Archetypes,
+    /// `/archetypes/upload`.
+    UploadArchetype,
+    /// `/archetypes/adl2/:archetype_id`.
+    Adl2Archetype,
+    /// `/archetypes/:archetype_id`.
+    Archetype,
     /// `/terminology`.
     Terminologies,
     /// `/terminology/lookup`.
@@ -218,6 +226,10 @@ impl Page {
                 Self::Adl2Template
             }
             "/templates/:template_id" => Self::Template,
+            "/archetypes" => Self::Archetypes,
+            "/archetypes/upload" => Self::UploadArchetype,
+            "/archetypes/adl2/:archetype_id" => Self::Adl2Archetype,
+            "/archetypes/:archetype_id" => Self::Archetype,
             "/terminology" => Self::Terminologies,
             "/terminology/lookup" => Self::Lookup,
             "/terminology/valuesets" => Self::ValueSets,
@@ -370,6 +382,10 @@ pub static ROUTES: &[&str] = &[
     "/templates/adl2/:template_id",
     "/templates/adl2/:template_id/:release",
     "/templates/:template_id",
+    "/archetypes",
+    "/archetypes/upload",
+    "/archetypes/adl2/:archetype_id",
+    "/archetypes/:archetype_id",
     "/terminology",
     "/terminology/lookup",
     "/terminology/valuesets",
@@ -444,6 +460,10 @@ pub async fn draw() -> Drawn {
         Page::UploadTemplate => pages::templates::upload_page().await,
         Page::Adl2Template => pages::templates::adl2_page().await,
         Page::Template => pages::templates::page().await,
+        Page::Archetypes => pages::archetypes::list_page().await,
+        Page::UploadArchetype => pages::archetypes::upload_page().await,
+        Page::Adl2Archetype => pages::archetypes::adl2_page().await,
+        Page::Archetype => pages::archetypes::page().await,
         Page::Terminologies => pages::terminology::terminologies_page().await,
         Page::Lookup => pages::terminology::lookup_page().await,
         Page::ValueSets => pages::terminology::value_sets_page().await,

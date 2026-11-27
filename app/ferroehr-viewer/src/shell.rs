@@ -160,6 +160,12 @@ fn groups() -> Vec<Group> {
             title: tr(Msg::NavGroupDefinitions).into(),
             entries: vec![
                 entry("/templates", Msg::NavTemplates, Glyph::FILE_CODE, false),
+                entry(
+                    crate::pages::archetypes::ARCHETYPES_ROUTE,
+                    Msg::NavArchetypes,
+                    Glyph::LAYERS,
+                    false,
+                ),
                 entry("/terminology", Msg::NavTerminology, Glyph::BOOK_OPEN, false),
             ],
         },

@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! A template's Download: the source the CDR stores, as a file.
+//! A template's or an archetype's Download: the source the CDR stores, as a
+//! file.
 //!
 //! The browser holds no CDR credential, so it cannot link to the CDR's
 //! `definition/template` resources itself. This route reads the template
@@ -20,6 +21,20 @@ use crate::adl2::TemplateFamily;
 /// The route a template's Download reads from, followed by the family and
 /// the template id: `/download/template/adl14/{id}`.
 pub const TEMPLATE_DOWNLOAD_ROUTE: &str = "/download/template";
+
+/// The route an archetype's Download reads from, followed by the family and
+/// the archetype id: `/download/archetype/adl14/{id}`.
+pub const ARCHETYPE_DOWNLOAD_ROUTE: &str = "/download/archetype";
+
+/// The address of the Download of the archetype `archetype_id` of `family`.
+#[must_use]
+pub fn archetype_href(family: crate::pages::archetypes::Family, archetype_id: &str) -> String {
+    format!(
+        "{ARCHETYPE_DOWNLOAD_ROUTE}/{}/{}",
+        family.key(),
+        urlencoding::encode(archetype_id)
+    )
+}
 
 /// The address of the Download of the template `template_id` of `family`.
 #[must_use]
@@ -110,6 +125,43 @@ pub async fn download_template(
         .ok()
         .await;
     attachment(answer, accept, &file_name(&template_id, extension))
+}
+
+/// `GET /download/archetype/{family}/{id}`: the archetype as the CDR stores
+/// it, as a file: an ADL 1.4 archetype from the extensions root, an ADL 2 one
+/// where the openEHR API serves every ADL 2 artefact.
+///
+/// The session guard runs first, as for [`download_template`]; a family or
+/// an id that names no archetype is a `404` before any CDR call, and a CDR
+/// refusal answers `502` with the CDR's words.
+pub async fn download_archetype(
+    axum::Extension(state): axum::Extension<crate::state::AppState>,
+    axum::Extension(viewer): axum::Extension<ferrohealth_session::record::Session>,
+    axum::extract::Path((family, archetype_id)): axum::extract::Path<(String, String)>,
+) -> Response {
+    let Some(id) = template_id(&archetype_id) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let (url, extension) = match family.as_str() {
+        "adl14" => (
+            state
+                .cdr
+                .extensions_v1(&crate::bff::archetypes::adl14_path(id)),
+            "adl",
+        ),
+        "adl2" => (
+            state.cdr.rest_v1(&crate::adl2::template_path(id, None)),
+            "adls",
+        ),
+        _ => return StatusCode::NOT_FOUND.into_response(),
+    };
+    let answer = state
+        .cdr
+        .call(http::Method::GET, &url, viewer.credential())
+        .accept("text/plain")
+        .ok()
+        .await;
+    attachment(answer, "text/plain", &file_name(id, extension))
 }
 
 /// The CDR's `answer` as a file named `name` of the media type

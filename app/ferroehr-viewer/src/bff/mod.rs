@@ -13,6 +13,7 @@
 pub mod access_log;
 pub mod access_policy;
 pub mod access_review;
+pub mod archetypes;
 pub mod audit;
 pub mod care;
 pub mod cohort;
@@ -104,6 +105,20 @@ impl std::ops::Deref for Cdr {
     fn deref(&self) -> &Self::Target {
         &self.client
     }
+}
+
+/// Refuses an uploaded or pasted source that holds nothing, before any
+/// CDR call.
+///
+/// # Errors
+/// [`ViewerError::Invalid`] for an empty source.
+pub fn refuse_empty(source: &str) -> Result<(), ViewerError> {
+    if source.trim().is_empty() {
+        return Err(ViewerError::Invalid(crate::locale::tr_served(
+            crate::locale::Msg::SelectedFileWasEmpty,
+        )));
+    }
+    Ok(())
 }
 
 /// The rows one page of a listing holds: FerroUI's default page size.

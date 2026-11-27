@@ -161,22 +161,26 @@ pub fn code_editor(setup: EditorSetup) -> Html {
 /// The largest template source the upload field reads, in bytes.
 pub const SOURCE_MAX_BYTES: u64 = 16 * 1024 * 1024;
 
-/// The upload field of a template source: the file chosen or dropped is
-/// read into the text area the form posts as `source-text`, and a source can
-/// be pasted there with no script.
+/// The files an operational template upload takes.
+pub const OPT_SOURCES: &[&str] = &[".opt", ".xml"];
+
+/// The files an ADL 2 template upload takes.
+pub const ADL2_SOURCES: &[&str] = &[".adl", ".adls", ".adlt", ".adl2", ".txt"];
+
+/// The files an ADL 1.4 archetype upload takes.
+pub const ADL14_SOURCES: &[&str] = &[".adl", ".txt"];
+
+/// The upload field of a definition source: the file chosen or dropped,
+/// one of `accept`, is read into the text area the form posts as
+/// `source-text`, and a source can be pasted there with no script.
 #[must_use]
 pub fn source_upload(
     source: &str,
     label: String,
     choose: String,
     placeholder: String,
-    adl2: bool,
+    accept: &'static [&'static str],
 ) -> Html {
-    let accept: &'static [&'static str] = if adl2 {
-        &[".adl", ".adls", ".adlt", ".adl2", ".txt"]
-    } else {
-        &[".opt", ".xml"]
-    };
     upload_field(
         &Upload {
             id: "source",
