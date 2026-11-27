@@ -16,6 +16,10 @@ crate::locale::messages! {
         Title = "access-title",
         /// `Who accessed this record, when, what they reached and what the access rested …`
         Intro = "access-intro",
+        /// `This is the person's own view of their access log, as the CDR serves it to them and their representative.`
+        OwnView = "access-own-view",
+        /// `Read its access log`
+        OpenLog = "access-open-log",
         /// `Entries of the access log`
         Caption = "access-caption",
         /// `Pages of the access log`

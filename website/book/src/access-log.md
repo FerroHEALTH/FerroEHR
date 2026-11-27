@@ -286,6 +286,12 @@ value outside its form, is a `400`.
   control: a clinical grant such as `patient/composition-*.r` or
   `user/composition-*.r` reaches none of it.
 
+A successful read of `GET /ehr/{ehr_id}/access_log` or of one entry names the
+view it served in the `FerroEHR-Access-Log-View` response header: `subject`
+or `full`. A client such as the viewer reads it to tell the person they are
+looking at their own view, since it cannot see the caller's standing. The
+header is FerroEHR's own extension, and a refusal carries none.
+
 The person's own reads of their log are recorded like every other read and
 are left out of their default view; `include_self=true` adds them. Every read
 of these resources, refused and failed ones included, writes an access-log
