@@ -82,7 +82,8 @@ fn party_words(party: &PartyRef) -> Html {
 }
 
 /// The cell of a row's link to `party`, beside the row's own link.
-fn party_action(party: Option<&PartyRef>, words: PolicyMsg) -> Html {
+#[must_use]
+pub fn party_action(party: Option<&PartyRef>, words: PolicyMsg) -> Html {
     let link = party.and_then(party_href).map_or_else(Html::empty, |href| {
         ferrohealth_ui::view::button::link_button(
             href,

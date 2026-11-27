@@ -296,13 +296,97 @@ quiet "${AUTH[@]}" -X PUT "$V1/definition/query/$QUERY" \
   -H "Content-Type: text/plain" \
   --data-binary "SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c"
 
+# The EHR's subject declares its record subject on a PERSON of its own, so
+# its care relationships resolve; the provider ORGANISATION carries the
+# identifier the dev configuration's party binding names.
+access() {
+  jq -nc --arg c "$1" '{"_type": "DV_CODED_TEXT", "value": $c, "defining_code": {"_type": "CODE_PHRASE",
+    "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr_access"}, "code_string": $c}}'
+}
+PATIENT=$(jq -nc --argjson n "$(access record_subject)" '{
+    "_type": "PERSON", "name": {"_type": "DV_TEXT", "value": "PERSON"},
+    "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
+    "archetype_details": {"_type": "ARCHETYPED", "rm_version": "1.1.0",
+      "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-DEMOGRAPHIC-PERSON.person.v1"}},
+    "identities": [{"_type": "PARTY_IDENTITY", "name": {"_type": "DV_TEXT", "value": "legal name"},
+      "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v1",
+      "details": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "Details"},
+        "archetype_node_id": "at0001", "items": [{"_type": "ELEMENT",
+          "name": {"_type": "DV_TEXT", "value": "Given name"}, "archetype_node_id": "at0002",
+          "value": {"_type": "DV_TEXT", "value": "Patient 0417"}}]}}],
+    "details": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "details"},
+      "archetype_node_id": "at0010", "items": [{"_type": "ELEMENT", "archetype_node_id": "at0011",
+        "name": $n, "value": {"_type": "DV_IDENTIFIER", "issuer": "demo.hospital.mrn",
+          "id": "p-0417", "type": "MR"}}]}}' \
+  | ask "${AUTH[@]}" -X POST "$V1/demographic/person" "${JSON[@]}" "${ACCEPT[@]}" \
+    -H "Prefer: return=representation" --data-binary @- \
+  | jq -r '.uid.value | split("::")[0]')
+jq -nc '{
+    "_type": "ORGANISATION", "name": {"_type": "DV_TEXT", "value": "ORGANISATION"},
+    "archetype_node_id": "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v1",
+    "archetype_details": {"_type": "ARCHETYPED", "rm_version": "1.1.0",
+      "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v1"}},
+    "identities": [{"_type": "PARTY_IDENTITY", "name": {"_type": "DV_TEXT", "value": "legal name"},
+      "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_IDENTITY.organisation_name.v1",
+      "details": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "Details"},
+        "archetype_node_id": "at0001", "items": [{"_type": "ELEMENT",
+          "name": {"_type": "DV_TEXT", "value": "Name"}, "archetype_node_id": "at0002",
+          "value": {"_type": "DV_TEXT", "value": "Demo Hospital"}}]}}],
+    "details": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "details"},
+      "archetype_node_id": "at0010", "items": [{"_type": "ELEMENT", "archetype_node_id": "at0011",
+        "name": {"_type": "DV_TEXT", "value": "Identifier"},
+        "value": {"_type": "DV_IDENTIFIER", "issuer": "urn:oid:2.999.7.9", "id": "dev",
+          "type": "ORGANISATION"}}]}}' \
+  | quiet "${AUTH[@]}" -X POST "$V1/demographic/organisation" "${JSON[@]}" --data-binary @-
+# care CODE RUBRIC FROM TO: a care relationship of the patient to the demo
+# person.
+care() {
+  jq -nc --arg p "$PATIENT" --arg d "$PARTY" --arg code "$1" --arg rubric "$2" \
+    --arg from "$3" --arg to "$4" \
+    --argjson n "$(access under_care_of)" --argjson r "$(access care_role)" \
+    --argjson pv "$(access provider)" '{
+      "_type": "PARTY_RELATIONSHIP", "name": $n,
+      "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v2",
+      "details": {"_type": "ITEM_TREE", "archetype_node_id": "at0001",
+        "name": {"_type": "DV_TEXT", "value": "details"}, "items": [
+          {"_type": "ELEMENT", "archetype_node_id": "at0002", "name": $r,
+           "value": {"_type": "DV_CODED_TEXT", "value": $rubric, "defining_code": {"_type": "CODE_PHRASE",
+             "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "HL7_ParticipationType"},
+             "code_string": $code}}},
+          {"_type": "ELEMENT", "archetype_node_id": "at0003", "name": $pv,
+           "value": {"_type": "DV_IDENTIFIER", "issuer": "urn:oid:2.999.7.9", "id": "dev",
+             "type": "ORGANISATION"}}]},
+      "time_validity": {"_type": "DV_INTERVAL", "lower": {"_type": "DV_DATE", "value": $from},
+        "upper": {"_type": "DV_DATE", "value": $to}, "lower_unbounded": false, "upper_unbounded": false},
+      "source": {"_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+        "id": {"_type": "HIER_OBJECT_ID", "value": $p}},
+      "target": {"_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+        "id": {"_type": "HIER_OBJECT_ID", "value": $d}}}'
+}
+# The live relationship, its role changed once so it has two versions; one
+# ended last year; and one the in-process screens end.
+CARE_VUID=$(care ATND attender 2026-01-01 2027-12-31 | curl -sS --fail-with-body -D - -o /dev/null \
+  "${AUTH[@]}" -X POST "$EXT/demographic/person/$PATIENT/care_relationship" "${JSON[@]}" \
+  --data-binary @- | etag_of)
+CARE="${CARE_VUID%%::*}"
+care RESP "responsible party" 2026-01-01 2027-12-31 | quiet "${AUTH[@]}" -X PUT "$EXT/care_relationship/$CARE" \
+  "${JSON[@]}" -H "If-Match: \"$CARE_VUID\"" --data-binary @-
+care CON consultant 2025-01-01 2025-06-30 | quiet "${AUTH[@]}" -X POST \
+  "$EXT/demographic/person/$PATIENT/care_relationship" "${JSON[@]}" --data-binary @-
+CARE_END=$(care PART participation 2026-02-01 2027-06-30 | curl -sS --fail-with-body -D - -o /dev/null \
+  "${AUTH[@]}" -X POST "$EXT/demographic/person/$PATIENT/care_relationship" "${JSON[@]}" \
+  --data-binary @- | etag_of)
+CARE_END="${CARE_END%%::*}"
+
 jq -nc --arg ehr "$EHR" --arg composition "$COMPOSITION" \
   --arg composition_flat "$COMPOSITION_FLAT" --arg party "$PARTY" \
   --arg organisation "$ORGANISATION" --arg relationship "$RELATIONSHIP" \
-  --arg template "$TEMPLATE" --arg query "$QUERY" \
+  --arg template "$TEMPLATE" --arg query "$QUERY" --arg patient "$PATIENT" \
+  --arg care "$CARE" --arg care_end "$CARE_END" \
   '{$ehr, $composition, $composition_flat, $party, $organisation, $relationship,
-    $template, $query, "query_version": "1.0.0"}' >"$WORK/manifest.json"
-for id in "$EHR" "$COMPOSITION" "$COMPOSITION_FLAT" "$PARTY" "$ORGANISATION" "$RELATIONSHIP"; do
+    $template, $query, "query_version": "1.0.0", $patient, $care, $care_end}' >"$WORK/manifest.json"
+for id in "$EHR" "$COMPOSITION" "$COMPOSITION_FLAT" "$PARTY" "$ORGANISATION" "$RELATIONSHIP" \
+  "$PATIENT" "$CARE" "$CARE_END"; do
   if [[ -z "$id" || "$id" == null ]]; then
     echo "FATAL: the seed is incomplete: $(cat "$WORK/manifest.json")" >&2
     exit 1

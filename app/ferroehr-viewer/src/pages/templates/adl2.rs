@@ -152,7 +152,7 @@ pub(super) async fn read_adl2_template(
                     .map(|text| text.map(|text| crate::bff::pretty_body(&text, format))),
             )
         }
-        TemplateTab::Overview | TemplateTab::Compare => Adl2Body::Overview,
+        TemplateTab::Overview | TemplateTab::Compare | TemplateTab::Converted => Adl2Body::Overview,
     };
     let download = crate::download::template_href(TemplateFamily::Adl2, &hrid);
     Adl2Template {

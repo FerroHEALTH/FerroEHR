@@ -1,0 +1,1 @@
+- The viewer has an Archetypes page under Definitions: it lists the ADL 1.4 and ADL 2 archetypes the CDR keeps, opens each on its source with its download and, for ADL 1.4, its ADL 2 conversion, and uploads an ADL 1.4 archetype; an ADL 1.4 template's page gains an ADL 2 tab with the template's conversion.
