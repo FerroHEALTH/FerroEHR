@@ -126,33 +126,29 @@ pub struct Rebuild {
     pub truncated: bool,
 }
 
-/// Posts to one integrity route over `scope` and reads its report.
-async fn run<T: serde::de::DeserializeOwned>(route: &str, scope: &Scope) -> Result<T, ViewerError> {
-    let cdr = crate::bff::cdr()?;
-    let url = cdr.extensions_v1(&format!("admin/integrity/{route}{}", scope.query()));
-    let body = cdr.post(&url).ok().await?.body;
-    serde_json::from_str(&body)
-        .map_err(|error| ViewerError::failed(tr_served(ServerMsg::IntegrityReportJson), error))
-}
+/// The sweep: verifies every version in the scope against its stored body.
+pub const VERIFY: &str = "verify";
 
-/// Runs the sweep over `scope`.
+/// The repair: rebuilds the decomposed rows of every damaged version.
+pub const REBUILD: &str = "rebuild-nodes";
+
+/// Posts to the integrity route `route` ([`VERIFY`] or [`REBUILD`]) over
+/// `scope` and reads its report.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)); [`ViewerError::Cdr`]
 /// with the CDR's words for a `400` (a malformed scope) and a `405` (the
 /// admin group is off); [`ViewerError::Failed`] for a report that does not
 /// read.
-pub async fn verify(scope: &Scope) -> Result<Verification, ViewerError> {
-    run("verify", scope).await
-}
-
-/// Rebuilds the decomposed rows of every version the sweep over `scope`
-/// finds damaged.
-///
-/// # Errors
-/// The errors of [`verify`].
-pub async fn rebuild(scope: &Scope) -> Result<Rebuild, ViewerError> {
-    run("rebuild-nodes", scope).await
+pub async fn run<T: serde::de::DeserializeOwned>(
+    route: &str,
+    scope: &Scope,
+) -> Result<T, ViewerError> {
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.extensions_v1(&format!("admin/integrity/{route}{}", scope.query()));
+    let body = cdr.post(&url).ok().await?.body;
+    serde_json::from_str(&body)
+        .map_err(|error| ViewerError::failed(tr_served(ServerMsg::IntegrityReportJson), error))
 }
 
 #[cfg(test)]
