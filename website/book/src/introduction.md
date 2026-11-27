@@ -12,7 +12,7 @@ the parts fit. Start from what you are here to do.
 
 | You are | Start with | Then |
 |---|---|---|
-| **An integrator** building on the API | [Getting started](getting-started.md) | [Using the API](using-the-api/index.md), [Querying with AQL](querying-aql.md), [Templates & validation](templates-validation.md), [Problem types](using-the-api/problems.md) |
+| **An integrator** building on the API | [Getting started](getting-started.md), then [Your first integration](tutorials/first-integration.md) | [Using the API](using-the-api/index.md), [Querying with AQL](querying-aql.md), [Templates & validation](templates-validation.md), [Problem types](using-the-api/problems.md) |
 | **A clinician-facing app builder** launching apps for patients and professionals | [SMART App Launch](smart-app-launch.md) | [How FerroEHR decides access](explanation/access-model.md), [Behind FerroSMART](behind-ferrosmart.md), [The xShare Yellow Button](xshare-yellow-button.md) |
 | **An operator** running it in production | [Installation](installation/index.md) | [Configuration reference](installation/configuration.md), [Operations](operations.md), [Go-live checklist](security/go-live-checklist.md), [Operational policy](operational-policy.md) |
 | **A decision maker** evaluating it | [Why FerroEHR exists](why-ferroehr.md) | [System architecture](concepts/architecture.md), [How FerroEHR decides access](explanation/access-model.md), [Conformance](conformance.md), [Compliance overview](compliance/index.md) |
