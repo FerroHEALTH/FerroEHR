@@ -60,7 +60,9 @@ Owner decision of 2026-11-25: "Sonar off PRs, CodeQL kept". SonarQube Cloud
 with its coverage run analyses `main` on each push and weekly, and a newer
 push cancels the older analysis (`sonar.yml`, #6574). CodeQL runs on every
 pull request that touches Rust sources, Cargo files, workflows or actions,
-and daily on `main` (`codeql.yml`). Both are advisory
+and daily on `main` (`codeql.yml`): the actions analysis on each of those
+pull requests, so code scanning finds every configuration `main` carries
+(#6783), and the rust analysis when Rust inputs changed. Both are advisory
 (`.claude/rules/ai-code-review.md`).
 
 ## The nightly tier
