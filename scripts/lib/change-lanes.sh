@@ -71,7 +71,7 @@ ci|vex|^(security/vex/|scripts/checks/(vex-reachability|advisory-exceptions|vex-
 ci|cache|(^|/)Cargo\.(toml|lock)$|^rust-toolchain\.toml$|^\.cargo/config\.toml$|^\.github/workflows/ci\.yml$
 ci|instructions|^(perf/instructions\.ceilings|scripts/perf/instructions\.sh)$
 ci|semver|^(crates/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|docs/VERSIONS\.md$|scripts/checks/semver\.sh$|scripts/lib/public-deps\.sh$|\.github/workflows/ci\.yml$)
-docs|docs|^(website/|docs/conformance/|docs/benchmarks/|scripts/(render|site)/|scripts/lib/veredictum\.sh$|scripts/checks/(docs-claims|conformance-numbers)\.sh$|\.github/workflows/docs\.yml$|\.github/actions/docs-toolchain/)
+docs|docs|^(website/|docs/conformance/|docs/benchmarks/|scripts/(render|site)/|scripts/lib/veredictum\.sh$|scripts/checks/(docs-claims|conformance-numbers)\.sh$|\.github/workflows/docs(-build)?\.yml$|\.github/actions/docs-toolchain/)
 conformance|conformance|^(app/ferroehr(-rest|-server|-ext)?/|crates/|tools/|\.cargo/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|\.dockerignore$|docker/Dockerfile$|docker/sut-[^/]+\.yml$|docker/ferroehr\.dev\.toml$|docker/postgres/|docker/terminology/|docs/conformance/party/|scripts/conformance\.sh$|scripts/lib/(veredictum|cnf-compose)\.sh$|\.github/workflows/conformance\.yml$)'
 
 # path_dependencies <manifest>: the `path =` value of every normal and build

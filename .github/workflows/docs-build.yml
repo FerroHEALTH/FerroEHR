@@ -1,0 +1,89 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# .github/workflows/docs-build.yml: build the documentation site and gate it,
+# without deploying (#6733). The stale-numbers gate, the generated includes and
+# their drift gate, the Markdown lint gate and the internal link check run here.
+#
+# Two callers: ci.yml on a pull request that changes a site input, where
+# `conclusion` counts it, so a broken book build blocks the merge; and
+# docs.yml on a push to main or a dispatch, before it deploys.
+name: Docs build
+
+on:
+  workflow_call:
+
+permissions: {}
+
+env:
+  # Custom domain (ferroehr.eu): the site is served at the apex root, so the
+  # base path is empty. Set explicitly so CI and scripts/site/build.sh agree.
+  SITE_ORIGIN: "https://ferroehr.eu"
+  SITE_BASE: ""
+
+jobs:
+  # ── Build + verify (no deploy) ──────────────────────────────────────────────
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Full history: conformance-stats.sh dates the record by the AUTHOR
+          # date of results.json. On a shallow checkout that git log is empty
+          # and the date falls back to the CHECKOUT day (#2402).
+          fetch-depth: 0
+      # The deployed site is rebuilt in the deploy job, which restores no build
+      # cache; this job publishes only a pull-request diagnostic artifact. It
+      # compiles docs-meta alone, which has no dependency, so it keeps no cache
+      # (#6388).
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          cache: false
+      - uses: ./.github/actions/docs-toolchain # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+      - name: Stale-numbers gate (no hand-typed conformance claims in site sources)
+        run: bash scripts/checks/conformance-numbers.sh
+      - name: Render conformance stats + perf assets (the generated includes must exist before lint)
+        run: |
+          bash scripts/render/conformance-stats.sh includes
+          bash scripts/render/perf-assets.sh
+          bash scripts/render/cohort-bench.sh
+          bash scripts/render/storage-bench.sh
+          bash scripts/render/access-index-bench.sh
+          bash scripts/render/access-path-bench.sh
+          bash scripts/render/care-caseload-bench.sh
+      - name: Perf-assets drift gate (regenerated SVGs match the committed assets)
+        run: git diff --exit-code -- website/book/src/perf-assets
+      - name: Markdown lint gate
+        run: mdbook-lint lint website/book/src
+      - name: Assemble _site (landing + /docs/dev/)
+        run: bash scripts/site/build.sh --dev-only       # writes ./_site
+      - name: Link-check gate (internal links only — blocking)
+        # `--offline` blocks network requests, so this checks exactly the
+        # property this repository controls: that every relative and absolute
+        # in-site link resolves inside the built tree. A broken cross-reference
+        # is a real defect and this is the only thing that catches it.
+        #
+        # External reachability is NOT checked here, deliberately. A remote host
+        # rate-limiting or resetting a CI runner's connection says nothing about
+        # the change under review, and it failed two consecutive unrelated pull
+        # requests on links that return 200 when fetched directly (#2287). A
+        # gate that goes red for reasons the author cannot fix or influence
+        # teaches people to merge past red, which costs more than the check is
+        # worth. External links move to link-check-external.yml, which reports
+        # somewhere a human reads instead of blocking a merge.
+        #
+        # The deployed site is served at the ferroehr.eu apex ROOT, so absolute
+        # /docs/... links resolve against _site itself — no prefixed check tree
+        # is needed.
+        run: |
+          lychee --offline --no-progress --exclude-loopback \
+            --root-dir "$PWD/_site" \
+            './_site/**/*.html'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site
+          path: _site

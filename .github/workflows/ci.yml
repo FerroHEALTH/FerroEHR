@@ -168,6 +168,7 @@ jobs:
       workflows: ${{ steps.filter.outputs.workflows }}
       vex: ${{ steps.filter.outputs.vex }}
       conformance: ${{ steps.filter.outputs.conformance }}
+      docs: ${{ steps.filter.outputs.docs }}
       fuzz: ${{ steps.filter.outputs.fuzz }}
       semver: ${{ steps.filter.outputs.semver }}
       queue_verified: ${{ steps.push.outputs.queue_verified }}
@@ -259,6 +260,7 @@ jobs:
               echo "vex=true"
               echo "cache=true"
               echo "conformance=true"
+              echo "docs=true"
               echo "fuzz=true"
               echo "semver=true"
               echo "instructions=true"
@@ -283,6 +285,9 @@ jobs:
             # The conformance lane (#4539): the catalogue runs in this workflow
             # on a pull request.
             bash scripts/lib/change-lanes.sh conformance <<<"$runs"
+            # The book build (#6733): its sources and its gates' inputs, a
+            # comment included, since the book renders what it reads.
+            bash scripts/lib/change-lanes.sh docs <<<"$changed"
           } | tee -a "$GITHUB_OUTPUT"
       # A push to main whose tree the merge queue already passed (#4546). The
       # commit GitHub lands on main carries the tree the `merge_group` run checked
@@ -3088,6 +3093,18 @@ jobs:
       contents: read
     uses: ./.github/workflows/fuzz.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
 
+  # The documentation site builds and passes its gates (#6733): docs-build.yml,
+  # on a pull request that changes a site input, counted by `conclusion`, so a
+  # broken link or a book lint error blocks the merge. docs.yml runs the same
+  # build on the push to main before it deploys.
+  docs:
+    name: docs
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.docs == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/docs-build.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+
   # The release's vulnerability record, before the tag (#4795). release.yml
   # refuses a finding without an OpenVEX judgement only after the tag, and a
   # tag cannot move, so each such finding cost a release candidate. A pull
@@ -3207,6 +3224,7 @@ jobs:
       - quickstart-config
       - shipped-viewer-configs
       - harnesses
+      - docs
       - vulnerability-record
       - conformance
       - crate-version
