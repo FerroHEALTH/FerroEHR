@@ -45,14 +45,22 @@ A failed call prints the lines both instances logged for its request id, and
 the instances log `ferrohealth_smart` at `debug`, so a `401` shows the reason
 its body leaves out.
 
-The Kubernetes harness runs its **EHR-index** family in CI on a one-node kind
-cluster (`deploy-probe-k8s.yml`, #5813): every six hours, on a dispatch, and on
-a pull request that changes the harness. It probes the server and database
-images built from the tree it checks out, loaded into the kind node, with the
-chart's default two replicas, and `P-K8S-INDEX-LOCAL` runs `helm upgrade` with
-no changed value before it creates an EHR, the sequence that once answered
-`POST /ehr` with 500 (#5109). Every run uploads `kubernetes.json` and the log
-of every server pod. The other Kubernetes families run by hand.
+The Kubernetes harness runs its **lifecycle** and **EHR-index** families in CI
+on a one-node kind cluster (`deploy-probe-k8s.yml`, #5813): every six hours, on
+a dispatch, and on a pull request that changes the chart or the harness. It
+probes the server and database images built from the tree it checks out,
+loaded into the kind node, with the chart's default two replicas. The
+lifecycle family (#6744) checks that the replicas apply the migrations once
+against an empty database with neither restarting, then runs the openEHR round
+trip, deletes every pod, restarts the Deployment while a client in the cluster
+commits, and runs `helm upgrade` with a changed value, and after each the
+records are all there. `P-K8S-INDEX-LOCAL` runs `helm upgrade` with no changed
+value before it creates an EHR, the sequence that once answered `POST /ehr`
+with 500 (#5109). Every run uploads `kubernetes-lifecycle.json`,
+`kubernetes.json` and the log of every server pod. The other Kubernetes
+families run by hand: `scripts/deploy-probe-k8s.sh` with no flag runs them all,
+on a kind cluster on podman too (`KIND_EXPERIMENTAL_PROVIDER=podman`, with
+`PROBE_K8S_VALUES` layering `hostUsers: true`).
 
 The **terminology** family does not run there. It needs a licensed SNOMED
 release that may not be fetched onto a shared runner, and it is opt-in locally.

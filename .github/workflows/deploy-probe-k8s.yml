@@ -3,21 +3,24 @@
 
 # The Kubernetes deployment probe on kind (#5813).
 #
-# It runs scripts/deploy-probe-k8s.sh --ehr-index-only on a one-node kind
-# cluster: the chart installs with its default two replicas (P-K8S-BOOT), and
-# P-K8S-INDEX-LOCAL then runs `helm upgrade` with no changed value and creates
-# an EHR on the local index. That is the sequence that once answered
-# `POST /ehr` with 500 (#5109); the probe ran by hand only, so a recurrence
-# could not be seen.
+# It runs scripts/deploy-probe-k8s.sh twice on a one-node kind cluster.
+# --lifecycle-only installs the chart with its default two replicas against an
+# empty database (P-K8S-BOOT) and observes what an operator does to a release
+# (#6744): the migrations applied once with no replica restarting, the openEHR
+# round trip, every pod deleted, a rolling restart under commits, and
+# `helm upgrade` with a changed value, each keeping the records.
+# --ehr-index-only then runs P-K8S-INDEX-LOCAL, a `helm upgrade` with no changed
+# value that creates an EHR on the local index: the sequence that once
+# answered `POST /ehr` with 500 (#5109).
 #
 # WHAT IT PROBES. The server and database images built from the tree it checks
 # out, packaged the way ci.yml's deploy-probe job packages them and loaded into
 # the kind node, so the scripts, the chart and the images are one generation.
 #
-# EVIDENCE. Every run uploads the probe record and the log of every server
+# EVIDENCE. Every run uploads both probe records and the log of every server
 # pod, read before the cluster goes away; a failing P-K8S-INDEX-LOCAL row also
 # quotes the status, the problem body and the server's first ERROR or WARN
-# lines in the record.
+# lines in the record, and a replica that restarted quotes its last error.
 #
 # RUN COLOUR. Red when a probe fails. It gates nothing.
 name: deploy-probe (kubernetes)
@@ -25,6 +28,7 @@ name: deploy-probe (kubernetes)
 on:
   pull_request:
     paths:
+      - deploy/helm/ferroehr/**
       - scripts/deploy-probe-k8s.sh
       - scripts/deploy-probes/kubernetes*.sh
       - scripts/deploy-probes/lib.sh
@@ -117,8 +121,25 @@ jobs:
       # runner cannot start the user-namespaced pods `hostUsers: false` asks
       # for (runc cannot mount sysfs in the pod's user namespace), so the run
       # layers `hostUsers: true` through the harness's PROBE_K8S_VALUES, which
-      # the record names; the posture probes are not in this family.
+      # the record names; the posture probes are not in these families.
+      - name: Probe the release's lifecycle on two replicas
+        env:
+          PROBE_K8S_IMAGE: ferroehr:deploy-probe
+          FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:deploy-probe
+          FERROEHR__USAGE_REPORT__ENABLED: "false"
+          PROBE_OUT: docs/conformance/deployment/kubernetes-lifecycle.json
+        run: |
+          set -euo pipefail
+          gateway="$(docker network inspect kind \
+            | jq -r '[.[0].IPAM.Config[].Gateway | select(test("^[0-9.]+$"))][0] // empty')"
+          [[ -n "$gateway" ]] || { echo "::error::the kind network has no IPv4 gateway"; exit 1; }
+          printf 'hostUsers: true\nferropix:\n  hostUsers: true\n' > "$RUNNER_TEMP/kind-values.yaml"
+          PROBE_K8S_DB_HOST="$gateway" PROBE_K8S_VALUES="$RUNNER_TEMP/kind-values.yaml" \
+            bash scripts/deploy-probe-k8s.sh --lifecycle-only --keep-up
+      # It runs whatever the lifecycle step found, over the release that step
+      # left installed.
       - name: Probe the EHR index on two replicas
+        if: ${{ !cancelled() }}
         env:
           PROBE_K8S_IMAGE: ferroehr:deploy-probe
           FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:deploy-probe
@@ -149,5 +170,6 @@ jobs:
           name: deploy-probe-k8s-record
           path: |
             docs/conformance/deployment/kubernetes.json
+            docs/conformance/deployment/kubernetes-lifecycle.json
             probe-logs/
           if-no-files-found: warn
