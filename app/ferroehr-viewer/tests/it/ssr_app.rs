@@ -30,7 +30,9 @@ use tower::util::ServiceExt;
 mod access_log;
 mod care;
 mod grants;
+mod marks;
 mod policy;
+mod registers;
 
 /// The recorded exchanges, read once.
 fn recording() -> Arc<[Value]> {

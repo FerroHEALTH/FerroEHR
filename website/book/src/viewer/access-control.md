@@ -70,6 +70,29 @@ alone changes no policy ([The policy
 parties](../operational-policy.md#the-policy-parties)). The new version applies
 on every replica from its next request.
 
+## The admin registers
+
+The Access policy area has a tab for each [admin
+register](../access-policy.md#the-admin-registers): **Audit categories**,
+the EHDS category map every access is classified through, and **Access
+delay**, the EHDS Art. 3(3) delay of the person's own access. Each reads
+`GET {ext}/admin/registers/{register}` and shows the version in force, who
+committed it and when, and its document drawn by its members: the access
+delay's `enabled`, `categories` and `max_delay`, and the category map's
+`shipped_map`, `national`, `templates` and `archetypes`.
+
+The history (`/history`) lists every version, newest first, ending with
+version 0, the default no one committed. Open a version to read it; an older
+version offers no edit.
+
+**Edit the register** replaces its whole document in the code editor. The save
+names the version you opened in `If-Match`; a document the CDR refuses
+(`400`) or a version another administrator replaced first (`412`) is shown in
+the CDR's words, with your document kept. A `403` says your account may not
+read the register, and with the admin API off the tab says so.
+
+![The access delay register](img/access-policy/access-delay.png)
+
 ## Roles and grants
 
 **Roles and grants**, in the console group, lists what the CDR's policy
@@ -128,3 +151,37 @@ the period. The CDR checks the role against the value set the access policy
 binds.
 
 ![A party's care relationships](img/parties/party-care.png)
+
+## Legal marks
+
+An EHR's **Legal marks** tab shows the four marks the law asks a repository to
+hold beside its content, so you can see why a record answers `403` or why the
+person does not see a composition. Each comes from the CDR's admin marks API
+([Admin & messaging APIs](../operations-admin-apis.md#legal-marks-restriction-objection-and-retention)):
+
+- **Restriction of processing** (GDPR Art. 18,
+  `GET {ext}/admin/restriction?ehr_id=`): every request, newest first, with
+  its ground, the object it covers or the whole EHR, when it was placed and
+  when it was lifted. A lift keeps the request.
+- **Objection to research processing** (GDPR Art. 21(6),
+  `GET {ext}/admin/research-objection?ehr_id=`): whether the person's
+  objection stands, when they objected, and any public-interest override.
+- **Access delay** (EHDS Art. 3(3), `GET {ext}/admin/access-delay?ehr_id=`):
+  the compositions held from the person, each with its basis, its end and its
+  release.
+- **Retention** (`GET {ext}/admin/retention/anchor` and `/hold`): the EHR's
+  jurisdiction, anchor and any EHR-wide hold, and the objects held from
+  disposal.
+
+An administrator places and lifts a restriction (for the whole EHR, or one
+object by its id), records an objection, its override or its withdrawal,
+holds a composition from the person or releases it, records the retention
+anchor, and holds an object from disposal or releases it. Each write that
+changes what others may read waits behind a confirmation, and a refusal is
+shown in the CDR's words.
+
+A composition held from the person shows the hold on its own page, and the
+treating professional releases it there
+(`POST {ext}/ehr/{ehr_id}/versioned_composition/{uid}/access-delay/release`).
+
+![An EHR's legal marks](img/ehrs/marks.png)

@@ -433,6 +433,9 @@ async fn act(
     let Some(posted) = crate::posted::posted() else {
         return (None, None);
     };
+    if posted.intent() == "release-access-delay" {
+        return (crate::pages::ehr::marks::release(ehr_id, uid).await, None);
+    }
     if posted.intent() == "delete-composition" {
         return match delete_composition(ehr_id.to_owned(), posted.text("version")).await {
             Ok(()) => {
@@ -957,7 +960,8 @@ pub async fn page() -> Drawn {
     match read_page(ehr_id.clone(), uid.clone()).await {
         CompositionModel::Shown(composition) => {
             let (title, body) = composition_view(&ehr_id, &uid, *composition);
-            Drawn::page(title, body)
+            let hold = crate::pages::ehr::marks::hold_section(&ehr_id, &uid).await;
+            Drawn::page(title, body.then(hold))
         }
         CompositionModel::Missing(refusal) => {
             let (title, body) = missing(&ehr_id, &uid, &refusal);
