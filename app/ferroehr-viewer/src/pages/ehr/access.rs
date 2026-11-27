@@ -400,12 +400,9 @@ fn edit_form(ehr_id: &str, editor: Editor) -> Html {
 /// Commit an EHR's access settings.
 pub async fn edit_page() -> Drawn {
     let ehr_id = ehr_id_param();
-    let body = match read_edit(ehr_id.clone()).await {
-        Form::Shown(editor) => edit_form(&ehr_id, *editor),
-        Form::Refused(refusal) => refusal.view(),
-        Form::Not(never) => match never {},
-        Form::Left => Html::empty(),
-    };
+    let body = read_edit(ehr_id.clone())
+        .await
+        .view(|editor| edit_form(&ehr_id, editor));
     let mut trail = crumbs(&ehr_id);
     trail.push(Crumb::new(
         tr(PolicyMsg::AccessTab),
