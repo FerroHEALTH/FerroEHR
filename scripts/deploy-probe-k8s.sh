@@ -592,7 +592,8 @@ for tool in kubectl helm docker jq; do
 done
 # The FerroPIX dependency the chart declares, fetched into charts/ once, as CI
 # does before it calls this script: without it every render is refused.
-if helm dependency list deploy/helm/ferroehr 2>/dev/null | grep -q 'missing'; then
+chart_deps="$(helm dependency list deploy/helm/ferroehr 2>/dev/null)"
+if grep -q 'missing' <<<"$chart_deps"; then
   helm dependency build deploy/helm/ferroehr >/dev/null || { red "helm dependency build failed"; exit 1; }
 fi
 kubectl cluster-info >/dev/null 2>&1 || {
