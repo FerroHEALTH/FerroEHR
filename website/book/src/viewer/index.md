@@ -85,6 +85,24 @@ brings you back to the sign-in card with the refusal under the password.
 
 ![Sign in](img/login/sign-in.png)
 
+The sign-in form posts to `/sign-in`, and like every post to the viewer it
+must show that it comes from the viewer's own pages, the defence against
+cross-site request forgery (OWASP Cross-Site Request Forgery Prevention Cheat
+Sheet). A browser shows it with `Sec-Fetch-Site: same-origin` (W3C Fetch
+Metadata Request Headers §2.4). The viewer answers with
+`Referrer-Policy: no-referrer`, so a browser's plain form post carries
+`Origin: null` and no `Referer`, and `Sec-Fetch-Site` is what lets it pass.
+A scripted client, such as a deployment test or a probe, sends no fetch
+metadata of its own, so it must send the header itself, or an `Origin` that
+names `auth.public_base_url` when that is set. A post that shows neither is
+refused `403` before the sign-in runs:
+
+```sh
+curl -c jar -b jar -H 'Sec-Fetch-Site: same-origin' \
+  --data-urlencode username=alice --data-urlencode password=secret \
+  --data-urlencode next=/ https://viewer.example.org/sign-in
+```
+
 The viewer verifies the CDR and the OIDC issuer against the platform trust
 store and the extra certificate authorities its configuration names: a CDR or
 an identity provider whose certificate comes from a private CA is trusted once
