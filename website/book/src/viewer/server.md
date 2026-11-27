@@ -127,7 +127,7 @@ reported beside the fields.
 ![Activity](img/server/activity.png)
 
 **Integrity** checks every stored version against the rows the query engine
-reads ([storage integrity](../operations-admin-apis.md#storage-integrity)).
+reads ([storage integrity](../storage-admin-apis.md#storage-integrity)).
 Leave the scope empty to check the whole repository, or narrow it to an EHR,
 a versioned object, one of its versions, or what was committed since an
 instant, then **Verify**. The report gives the versions checked and each
@@ -143,7 +143,7 @@ request timeout, use the streamed sweep the operations page describes.
 
 **Repository**, the third admin tab, dumps the whole repository to an archive
 and loads one ([dump and
-load](../operations-admin-apis.md#dump-and-load)). The archive lives on the
+load](../storage-admin-apis.md#dump-and-load)). The archive lives on the
 CDR's own file system, so both name a location there and nothing passes
 through your browser.
 
