@@ -22,7 +22,10 @@
 //! End-to-end journeys over Query › Cohort: the administrator runs AQL over
 //! the EHRs a bound predicate selects, reads the rows of a cohort as large as
 //! the CDR's small-cell threshold, and finds the rows of a smaller one
-//! withheld; and runs AQL over the demo seed's patients named as subjects.
+//! withheld; runs AQL over the demo seed's patients named as subjects; and
+//! selects the seed's female patients by the sex predicate the development
+//! posture binds to their ADL 2 template, whose EHRs the CDR reaches through
+//! each patient's record subject.
 //!
 //! The journeys' posture binds the `city` predicate to the `at0012` ELEMENT
 //! of `openEHR-DEMOGRAPHIC-PERSON.person.v1` (`docker/viewer/e2e-env.yml`)
@@ -178,6 +181,33 @@ async fn admin_runs_a_cohort_of_the_seeds_named_patients() {
         "six named patients reach the threshold: {text}"
     );
     h.shot(2, "cohort-subjects-rows").await;
+
+    h.assert_console_clean(&["Failed to load resource"]).await;
+    h.finish().await;
+}
+
+#[tokio::test]
+async fn admin_selects_the_seeds_patients_by_their_sex() {
+    let Some(h) = Harness::start("cohort-sex").await else {
+        return;
+    };
+    let (user, pass) = common::admin_credentials();
+    login_basic_as(&h, &user, &pass).await;
+
+    common::follow_nav(&h, "/query").await;
+    common::open_tab(&h, "cohort").await;
+    wait_main_contains(&h, "Sex").await;
+    // The seed's patients code their sex in id5 (at11 female); three are.
+    fill(&h, "#cohort-sex", "at11").await;
+    fill(&h, "#aql", AQL).await;
+    submit(&h, "header.fui-page-header button[form='query-form']").await;
+    wait_main_contains(&h, "EHRs in the cohort").await;
+    let text = main_text(&h).await;
+    assert!(
+        text.contains("The rows are withheld"),
+        "the three female patients' EHRs are reached and fall under the threshold: {text}"
+    );
+    h.shot(1, "cohort-sex").await;
 
     h.assert_console_clean(&["Failed to load resource"]).await;
     h.finish().await;

@@ -437,10 +437,15 @@ query and nothing else.
 1. A predicate from the deployment's allow-list selects **parties** in the
    demographic domain. It reads one archetype leaf and returns identifiers,
    nothing else: no name, address or national identifier leaves that domain.
-2. Those parties resolve to the **EHRs** whose `EHR_STATUS.subject` names
-   them: the `external_ref` whose `id.value` is the party's uid without
-   `::<system>::<version>`, the reference `POST /ehr` stores. Identifiers in,
-   identifiers out.
+2. Those parties resolve to **EHRs** two ways, and an EHR reached both ways
+   counts once. One is the EHR whose `EHR_STATUS.subject` names the party:
+   the `external_ref` whose `id.value` is the party's uid without
+   `::<system>::<version>`, the reference `POST /ehr` stores. The other is
+   the EHR of each record subject a selected `PERSON` declares (an `ELEMENT`
+   in its `details` named `openehr_access::record_subject` whose value is a
+   `DV_IDENTIFIER`), which the `[pixm]` provider resolves as it resolves a
+   named subject, below. Identifiers in, identifiers out: a record subject
+   reaches the provider and never you.
 3. Your AQL runs on the clinical pool, scoped to exactly those EHRs.
 
 The demographic and the clinical statements never meet. With
@@ -453,7 +458,8 @@ declared, under `[privacy.cohort.predicates]`; the surface is off until at least
 bound, and the route answers `404` until then. Five keys are bindable:
 `city`, `postcode_area`, `sex`, `age_band` and `organisation`. Each binding
 names the archetype of the leaf's nearest archetyped ancestor, the leaf's
-at-code, and how a value is matched. See
+node code (an ADL 1.4 at-code such as `at0012`, or an ADL 2 id-code such as
+`id5`), and how a value is matched. See
 [Privacy & data minimisation](installation/config-privacy.md#privacycohort) for the
 keys and their defaults.
 
@@ -471,14 +477,15 @@ domain (ITI-83 with `targetSystem` set to that domain) and finds the EHR whose
 that cannot be resolved, because the identity source fails or no provider is
 installed, fails the whole query rather than shrinking the cohort.
 
-**Under an IHE patient identity source, cohorts name their subjects.** There an
-`EHR_STATUS` names its patient by the clinical pseudonym, never by a party of
-this server, and FerroEHR never asks the source to translate a pseudonym back
-into another domain (openEHR RM `EHR_STATUS.subject`; GDPR
-Art. 4(5) and Art. 25). A demographic predicate would need that,
-so a request with a non-empty `cohort` is refused `400` there, before any
-domain or the PIX Manager is asked. The cohort digest takes each subject by
-its namespace alone, so the access record carries no identifier value.
+**Under an IHE patient identity source** an `EHR_STATUS` names its patient
+by the clinical pseudonym, never by a party of this server, and FerroEHR never
+asks the source to translate a pseudonym back into another domain (openEHR RM
+`EHR_STATUS.subject`; GDPR Art. 4(5) and Art. 25). So a predicate reaches
+EHRs there only through the record subjects of the `PERSON`s it selects: a
+record subject already in the clinical domain names its EHR, and any other is
+translated forward by the PIX Manager, as a named subject is. A `PERSON` that
+declares no record subject adds no EHR. The cohort digest takes each subject
+by its namespace alone, so the access record carries no identifier value.
 
 **Running one.**
 
@@ -540,8 +547,9 @@ carrying them would be a second copy of it.
 cohort is a wrong denominator with nothing on the wire to say so. More named
 subjects than that ceiling are refused the same way. An unbound predicate
 name, a malformed age band (the form is `<min>-<max>` whole years, both
-inclusive), a predicate under an IHE identity source, or a request with
-neither a predicate nor a subject is a `400`. An empty
+inclusive), or a request with neither a predicate nor a subject is a `400`.
+A record subject the provider cannot resolve fails the query, as a named
+subject does. An empty
 cohort runs no AQL and answers an empty result set.
 
 **Measured.** The committed record `docs/benchmarks/cohort/record.json`

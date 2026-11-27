@@ -1033,6 +1033,24 @@ while read -r entry; do
     exit 1
   fi
   echo "query $name -> $rows rows"
+
+  # A cohort the demographic predicates select runs the same text, and must
+  # reach at least the EHRs the manifest pins, whose rows the small-cell floor
+  # may withhold.
+  predicates=$(printf '%s' "$entry" | jq -c '.cohort_predicates // empty')
+  if [[ -n "$predicates" ]]; then
+    jq -n --rawfile q "$aql" --argjson p "$predicates" \
+      '{q: $q, purpose: "secondary-use", cohort: $p.cohort}' > "$WORK/cohort.json"
+    code=$(request "predicate cohort $name" POST "$EXT/query/cohort" -H "$CT_JSON" --data-binary @"$WORK/cohort.json")
+    expect "predicate cohort $name" "$code" 200
+    size=$(jq '.meta.cohort.size' "$BODY")
+    min_size=$(printf '%s' "$predicates" | jq '.min_size')
+    if [[ "$size" -lt "$min_size" ]]; then
+      echo "::error::the predicate cohort of $name reached $size EHRs, below the $min_size the manifest pins" >&2
+      exit 1
+    fi
+    echo "query $name over its predicate cohort -> $size EHRs"
+  fi
   queries=$((queries + 1))
 done < <(jq -c '.stored_queries[]' "$MANIFEST")
 echo "==> $queries stored AQL queries, each answering rows"

@@ -193,7 +193,7 @@ three fields:
 | Field | Description |
 |---|---|
 | `archetype` | The archetype HRID of the leaf ELEMENT's nearest archetyped ancestor, e.g. `openEHR-DEMOGRAPHIC-PERSON.person.v1`. Must be a demographic HRID; anything else is a boot error. |
-| `node` | The ELEMENT's `archetype_node_id` at-code, e.g. `at0012`. |
+| `node` | The ELEMENT's `archetype_node_id`: an ADL 1.4 at-code such as `at0012`, or an ADL 2 id-code such as `id5`. |
 | `kind` | How a caller's value is matched: `text` (exact, against `value/value`), `text_prefix` (prefix, `LIKE`-escaped), `coded` (exact, against `value/defining_code/code_string`), or `birth_date` (an inclusive age band in whole years, `40-49`). |
 
 `age_band` must be bound `birth_date`, and no other key may be: both halves are

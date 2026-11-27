@@ -332,6 +332,76 @@ async fn a_city_predicate_selects_only_the_linked_ehrs() {
     );
 }
 
+/// A predicate reaches a selected `PERSON`'s EHRs both ways: the EHR whose
+/// `EHR_STATUS` names the party, and the EHR of each record subject it
+/// declares, which the local provider resolves to the EHR naming it.
+#[tokio::test]
+async fn a_predicate_reaches_the_ehrs_of_a_persons_record_subjects() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
+        .with_ehr_index(ferroehr::service::ehr_index::provider::EhrIndexProvider::Local)
+        .with_cohort(cohort_config(0));
+    let city = format!("Zwolle-{}", Uuid::now_v7());
+    let record = ferroehr::service::ehr_index::types::SubjectRef::person(
+        format!("mrn-{}", Uuid::now_v7()),
+        "urn:oid:2.999.1.4115",
+    );
+    let mut body = person("Lotte", &city, "8011AB", "F", "1988-04-04");
+    body["details"]["items"]
+        .as_array_mut()
+        .expect("details items")
+        .push(json!({
+            "_type": "ELEMENT",
+            "archetype_node_id": "at0011",
+            "name": { "_type": "DV_CODED_TEXT", "value": "record_subject",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
+                    "code_string": "record_subject" } },
+            "value": { "_type": "DV_IDENTIFIER", "issuer": record.namespace,
+                "id": record.id, "type": "MR" }
+        }));
+    let party = crate::fixtures::create_party(&svc, uv(&body, "249", None))
+        .await
+        .expect("the person is written");
+    let by_party = crate::fixtures::create_ehr_for_party(&svc, party).await;
+    let by_record = crate::fixtures::create_ehr_subject(&svc, &record).await;
+    for ehr in [by_party, by_record] {
+        svc.create_composition(ehr, uv(&composition("Lotte"), "249", None))
+            .await
+            .expect("a composition in each EHR");
+    }
+
+    let outcome = svc
+        .execute_cohort_query(request(&[("city", city.as_str())]))
+        .await
+        .expect("the cohort query runs");
+
+    assert_eq!(
+        outcome.cohort_size, 2,
+        "one EHR each way, each counted once"
+    );
+    let mut served: Vec<String> = outcome
+        .query
+        .served_ehrs
+        .iter()
+        .map(|(ehr, _rows)| ehr.clone())
+        .collect();
+    served.sort();
+    let mut expected = vec![by_party.to_string(), by_record.to_string()];
+    expected.sort();
+    assert_eq!(served, expected);
+    assert!(
+        !outcome
+            .query
+            .result_set
+            .to_value()
+            .unwrap()
+            .to_string()
+            .contains(&record.id),
+        "the record subject never reaches the served document"
+    );
+}
+
 /// The ADL 2 patient archetype whose id-coded ELEMENT the id-code case binds.
 const ADL2_PATIENT_ARCHETYPE: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v3";
 

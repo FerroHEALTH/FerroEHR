@@ -19,7 +19,8 @@
     "policy in 2 versions with a justified and an emergency read between them, 2 EHR access",
     "settings, the legal marks (a restriction of processing, a research objection, an access",
     "delay, retention periods with something due and holds), 2 attested versions, a",
-    "composition's and a person's tags, 6 stored AQL queries (one run as a cohort), the subject",
+    "composition's and a person's tags, 6 stored AQL queries (one also run over a cohort of",
+    "named patients and over one the sex predicate selects), the subject",
     "view of a patient's access log and, where the server signs with an OpenPGP key, a signed",
     "access-log checkpoint that verifies. One marker EHR records completion, so a second run",
     "exits immediately and the instance data is never doubled.",
@@ -295,7 +296,8 @@
       "version": "1.0.0",
       "file": "queries/cohort_compositions.aql",
       "min_rows": 20,
-      "cohort_subjects": [0, 1, 2, 3, 4, 5]
+      "cohort_subjects": [0, 1, 2, 3, 4, 5],
+      "cohort_predicates": { "cohort": [{ "name": "sex", "value": "at11" }], "min_size": 3 }
     }
   ]
 }

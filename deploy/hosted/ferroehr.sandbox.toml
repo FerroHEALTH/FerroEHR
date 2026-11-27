@@ -171,6 +171,15 @@ scope = "system/Patient.rs"
 [privacy.cohort]
 subjects = true
 
+# The demo seed's patients (scripts/sandbox/seed/world/patient-*.json) carry
+# their sex in the id-coded ELEMENT id5 of the ADL 2 patient archetype, so a
+# cohort selects them by it (at10 male, at11 female) and reaches their EHRs
+# through the record subject each one declares.
+[privacy.cohort.predicates.sex]
+archetype = "openEHR-DEMOGRAPHIC-PERSON.patient.v3"
+node = "id5"
+kind = "coded"
+
 # The sandbox signs with an ML-DSA-65+Ed25519 key of its own (RFC 9980
 # algorithm ID 30), generated on the box and held there alone: the key and its
 # passphrase are compose secrets beside the box's `.env`, which the compose

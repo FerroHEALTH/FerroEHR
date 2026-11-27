@@ -158,6 +158,15 @@ allowed = ["commit_composition", "read_change_feed", "scim_provision", "hold_rol
 [privacy.cohort]
 subjects = true
 
+# The demo seed's patients (scripts/sandbox/seed/world/patient-*.json) carry
+# their sex in the id-coded ELEMENT id5 of the ADL 2 patient archetype, so a
+# cohort selects them by it (at10 male, at11 female) and reaches their EHRs
+# through the record subject each one declares.
+[privacy.cohort.predicates.sex]
+archetype = "openEHR-DEMOGRAPHIC-PERSON.patient.v3"
+node = "id5"
+kind = "coded"
+
 # The healthcare provider the dev lanes act for (an example id under the OID
 # arc 2.999), and the binding key of each Basic user.
 [authz.party_binding]
