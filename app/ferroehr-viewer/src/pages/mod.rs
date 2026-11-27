@@ -10,6 +10,7 @@
 pub mod about;
 pub mod access;
 pub mod access_log;
+pub mod access_review;
 pub mod archetypes;
 pub mod archive;
 pub mod audit;

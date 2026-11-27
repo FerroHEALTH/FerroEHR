@@ -69,6 +69,11 @@ pub fn router(app_state: AppState) -> axum::Router {
             "/download/template/{family}/{id}",
             axum::routing::get(crate::download::download_template),
         )
+        // An EHR's access-log export, read with the session's credential.
+        .route(
+            "/download/access-log/{ehr_id}",
+            axum::routing::get(crate::download::download_access_log),
+        )
         .route(
             "/download/archetype/{family}/{id}",
             axum::routing::get(crate::download::download_archetype),
