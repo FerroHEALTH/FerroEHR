@@ -36,5 +36,27 @@ crate::locale::messages! {
         ArchiveRefused = "archive-refused",
         /// `The CDR did not restore the record.`
         RestoreRefused = "restore-refused",
+        /// `Binding keys`
+        BindingKeys = "binding-keys",
+        /// `This person carries no identifier with an issuer, so no login binds to it.`
+        NoBindingKey = "no-binding-key",
+        /// `Issuer`
+        KeyIssuer = "key-issuer",
+        /// `Id`
+        KeyId = "key-id",
+        /// `Re-key…`
+        RekeyAsk = "rekey-ask",
+        /// `Re-key the binding key under`
+        RekeyTitle = "rekey-title",
+        /// `The person gets a new version carrying the new key, and the old key stops binding in the same commit. One access record carries both keys.`
+        RekeyMessage = "rekey-message",
+        /// `New id`
+        RekeyNewId = "rekey-new-id",
+        /// `Re-key`
+        Rekey = "rekey",
+        /// `Binding key changed`
+        Rekeyed = "rekeyed",
+        /// `The CDR did not change the binding key.`
+        RekeyRefused = "rekey-refused",
     }
 }
