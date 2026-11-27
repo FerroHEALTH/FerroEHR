@@ -116,7 +116,8 @@ atna_badge() {
   run="$(find "$dir" -maxdepth 1 -name '20[0-9][0-9]-[0-9][0-9]-[0-9][0-9].md' | LC_ALL=C sort | tail -1)"
   [[ -n "$run" ]] || { echo "measured-badges: $dir holds no dated run" >&2; return 1; }
   date="$(basename "$run" .md)"
-  verdict="$(sed -n 's/^VERDICT: //p' "$run" | head -1)"
+  verdict="$(sed -n 's/^VERDICT: //p' "$run")"
+  verdict="$(sed -n 1p <<< "$verdict")"
   [[ -n "$verdict" ]] || { echo "measured-badges: $run has no VERDICT line" >&2; return 1; }
   transactions="$(awk '
     /^\| Transaction \|/ { on = 1; next }
@@ -161,9 +162,10 @@ render() {
 # Fails for each rendered badge that says certified, compliant or conformant,
 # carries no logo, or has a colour its message does not ask for.
 guards() {
-  local dir="$1" fail=0 name
+  local dir="$1" fail=0 name words
   for name in $NAMES; do
-    if jq -r '.label, .message' "$dir/$name" | grep -qiE "$FORBIDDEN"; then
+    words="$(jq -r '.label, .message' "$dir/$name")"
+    if grep -qiE "$FORBIDDEN" <<< "$words"; then
       echo "::error::$dir/$name says certified, compliant or conformant" >&2
       fail=1
     fi
