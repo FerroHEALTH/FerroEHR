@@ -385,6 +385,8 @@ tooling at them (`trivy --vex`, and most SCA platforms take an OpenVEX feed).
 | `rust-advisories.openvex.json` | the Rust dependency advisories: the ones the advisory gate accepts, plus one that only a `Cargo.lock`-reading scanner reports |
 | `ferroehr-os.openvex.json` | the Debian packages the `ferroehr` and `ferroehr-viewer` images inherit from their distroless base (glibc, the GCC runtime libraries, zlib) |
 | `postgres-os.openvex.json` | the Debian packages of the `ferroehr-postgres` image, one statement per finding |
+| `rust-releases.openvex.json` | a Rust dependency vulnerability that an earlier release carries and a later release fixes, with the release to upgrade to |
+| `postgres-releases.openvex.json` | a Debian package finding that the `ferroehr-postgres` image of an earlier release carries and a later release fixes, with the release to upgrade to |
 
 A statement with status `affected` names a finding that applies to you, with
 an action statement saying what to do until the fix ships. `trivy --vex`

@@ -1,0 +1,917 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://ferroehr.eu/vex/postgres-os-packages-of-published-releases",
+  "author": "Cadasto B.V.",
+  "role": "vendor",
+  "timestamp": "2026-11-27T00:00:00Z",
+  "version": 1,
+  "tooling": "hand-authored; see security/vex/README.md",
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-107364"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-107884"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-111423"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112314"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112315"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112316"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112317"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112318"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112319"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112320"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112321"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112322"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112323"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-118380"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-11850"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119079"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-124851"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libzstd1@1.5.7%2Bdfsg-1"
+            },
+            {
+              "@id": "pkg:deb/debian/zstd@1.5.7%2Bdfsg-1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the libzstd packages libzstd1 and zstd at 1.5.7+dfsg-1, and earlier releases carry older versions of them. Debian fixes the finding in libzstd 1.5.7+dfsg-1+deb13u1 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.5.7+dfsg-1+deb13u1, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries libzstd 1.5.7+dfsg-1+deb13u1 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-135901"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/login.defs@4.17.4-2?epoch=1"
+            },
+            {
+              "@id": "pkg:deb/debian/passwd@4.17.4-2?epoch=1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the shadow packages login.defs and passwd at 1:4.17.4-2, and earlier releases carry older versions of them. Debian fixes the finding in shadow 1:4.17.4-2+deb13u1 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1:4.17.4-2+deb13u1, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries shadow 1:4.17.4-2+deb13u1 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-18374"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/locales@2.41-12%2Bdeb13u4"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the glibc packages libc-bin, libc-l10n, libc6 and locales at 2.41-12+deb13u4, and earlier releases carry older versions of them. Debian fixes the finding in glibc 2.41-12+deb13u5 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 2.41-12+deb13u5, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries glibc 2.41-12+deb13u5 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-19499"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/locales@2.41-12%2Bdeb13u4"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the glibc packages libc-bin, libc-l10n, libc6 and locales at 2.41-12+deb13u4, and earlier releases carry older versions of them. Debian fixes the finding in glibc 2.41-12+deb13u5 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 2.41-12+deb13u5, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries glibc 2.41-12+deb13u5 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-19542"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/locales@2.41-12%2Bdeb13u4"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the glibc packages libc-bin, libc-l10n, libc6 and locales at 2.41-12+deb13u4, and earlier releases carry older versions of them. Debian fixes the finding in glibc 2.41-12+deb13u5 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 2.41-12+deb13u5, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries glibc 2.41-12+deb13u5 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-5435"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/locales@2.41-12%2Bdeb13u4"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the glibc packages libc-bin, libc-l10n, libc6 and locales at 2.41-12+deb13u4, and earlier releases carry older versions of them. Debian fixes the finding in glibc 2.41-12+deb13u5 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 2.41-12+deb13u5, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries glibc 2.41-12+deb13u5 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-6238"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/locales@2.41-12%2Bdeb13u4"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the glibc packages libc-bin, libc-l10n, libc6 and locales at 2.41-12+deb13u4, and earlier releases carry older versions of them. Debian fixes the finding in glibc 2.41-12+deb13u5 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 2.41-12+deb13u5, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries glibc 2.41-12+deb13u5 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-6368"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/locales@2.41-12%2Bdeb13u4"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the glibc packages libc-bin, libc-l10n, libc6 and locales at 2.41-12+deb13u4, and earlier releases carry older versions of them. Debian fixes the finding in glibc 2.41-12+deb13u5 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 2.41-12+deb13u5, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries glibc 2.41-12+deb13u5 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-6791"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/locales@2.41-12%2Bdeb13u4"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the glibc packages libc-bin, libc-l10n, libc6 and locales at 2.41-12+deb13u4, and earlier releases carry older versions of them. Debian fixes the finding in glibc 2.41-12+deb13u5 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 2.41-12+deb13u5, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries glibc 2.41-12+deb13u5 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-71199"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-71200"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the krb5 packages libgssapi-krb5-2, libk5crypto3, libkrb5-3 and libkrb5support0 at 1.21.3-5+deb13u1, and earlier releases carry older versions of them. Debian fixes the finding in krb5 1.21.3-5+deb13u2 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 1.21.3-5+deb13u2, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries krb5 1.21.3-5+deb13u2 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-77117"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/locales@2.41-12%2Bdeb13u4"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the glibc packages libc-bin, libc-l10n, libc6 and locales at 2.41-12+deb13u4, and earlier releases carry older versions of them. Debian fixes the finding in glibc 2.41-12+deb13u5 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 2.41-12+deb13u5, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries glibc 2.41-12+deb13u5 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-80489"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/locales@2.41-12%2Bdeb13u4"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the glibc packages libc-bin, libc-l10n, libc6 and locales at 2.41-12+deb13u4, and earlier releases carry older versions of them. Debian fixes the finding in glibc 2.41-12+deb13u5 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 2.41-12+deb13u5, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries glibc 2.41-12+deb13u5 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-8674"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/locales@2.41-12%2Bdeb13u4"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the glibc packages libc-bin, libc-l10n, libc6 and locales at 2.41-12+deb13u4, and earlier releases carry older versions of them. Debian fixes the finding in glibc 2.41-12+deb13u5 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 2.41-12+deb13u5, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries glibc 2.41-12+deb13u5 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-86805"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/locales@2.41-12%2Bdeb13u4"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the glibc packages libc-bin, libc-l10n, libc6 and locales at 2.41-12+deb13u4, and earlier releases carry older versions of them. Debian fixes the finding in glibc 2.41-12+deb13u5 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 2.41-12+deb13u5, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries glibc 2.41-12+deb13u5 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-89092"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/locales@2.41-12%2Bdeb13u4"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the glibc packages libc-bin, libc-l10n, libc6 and locales at 2.41-12+deb13u4, and earlier releases carry older versions of them. Debian fixes the finding in glibc 2.41-12+deb13u5 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 2.41-12+deb13u5, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries glibc 2.41-12+deb13u5 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-95818"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/locales@2.41-12%2Bdeb13u4"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the glibc packages libc-bin, libc-l10n, libc6 and locales at 2.41-12+deb13u4, and earlier releases carry older versions of them. Debian fixes the finding in glibc 2.41-12+deb13u5 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 2.41-12+deb13u5, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries glibc 2.41-12+deb13u5 or later."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97399"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6@2.41-12%2Bdeb13u4"
+            },
+            {
+              "@id": "pkg:deb/debian/locales@2.41-12%2Bdeb13u4"
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.7.0, the latest published release, carries the glibc packages libc-bin, libc-l10n, libc6 and locales at 2.41-12+deb13u4, and earlier releases carry older versions of them. Debian fixes the finding in glibc 2.41-12+deb13u5 for trixie. This statement records that those images ship the vulnerable version and does not argue the finding away. The image built from main carries 2.41-12+deb13u5, so its packages no longer report the finding.",
+      "action_statement": "Upgrade to FerroEHR 6.0.0 or later. Its ferroehr-postgres image installs the Debian updates for trixie at build time and carries glibc 2.41-12+deb13u5 or later."
+    }
+  ]
+}
