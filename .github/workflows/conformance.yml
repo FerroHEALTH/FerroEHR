@@ -444,6 +444,9 @@ jobs:
           # A released run whose only red rows are the deviations FerroEHR carries on
           # purpose passes; each stays red in the results (deviations.json).
           bash scripts/conformance-deviations.sh --self-test
+          # The committed record must hold this run's statuses, so a change
+          # that moves a row commits the record of its own run (#6747).
+          bash scripts/conformance-record.sh --self-test
           case "$RELEASED_EXIT" in
             0 | 1)
               status=0
@@ -453,6 +456,8 @@ jobs:
               else
                 judged="$(bash scripts/conformance-deviations.sh "$RELEASED_RESULTS" \
                   docs/conformance/party/ferroehr/deviations.json "$GITHUB_STEP_SUMMARY" 2>&1)" || status=$?
+                compared="$(bash scripts/conformance-record.sh compare "$RELEASED_RESULTS" 2>&1)" || status=$?
+                printf -v judged '%s\n%s' "$judged" "$compared"
               fi
               grep -v '^::error::' <<<"$judged" || true
               if [ "$status" != 0 ]; then

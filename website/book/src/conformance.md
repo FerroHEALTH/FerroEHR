@@ -76,6 +76,12 @@ generation set that release defines; the development run keeps the default
 [![specification · released][profile-rel]][runs]
 [![veredictum · released][instrument-rel]][runs]
 
+The red BASE rows are the committer deviation FerroEHR carries on purpose
+([Known deviations](#known-deviations), decision
+[#5002](https://github.com/FerroHEALTH/FerroEHR/issues/5002), upstream report
+[#5019](https://github.com/FerroHEALTH/FerroEHR/issues/5019)); the same rows
+are red in the development run.
+
 The development profile reads the same catalogue against the pinned `master`
 of each openEHR repository, the text FerroEHR builds on. It is shown beside the
 record and never counted toward it:
@@ -92,6 +98,11 @@ released-profile run. Its counts:
      scripts/render/conformance-stats.sh. Never hand-type numbers here (CI:
      scripts/checks/conformance-numbers.sh). -->
 {{#include ../generated/conformance-stats.md}}
+
+Every failed or errored row in it is a listed deviation: the guard
+`scripts/conformance-record.sh` fails the build when the record holds any other
+red row, when a listed row passes in it, or when the conformance run of a
+change gives a row another status than the record does.
 
 [`summary.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/conformance/ferroehr/summary.md)
 beside it breaks the same run down by chapter, band and section, and lists
@@ -255,7 +266,10 @@ it: `junit.xml`, `ctrf.json` and `summary.md`. Each view is a pure function of
 `results.json` and `summary.md` of one released-profile run are committed under
 `docs/conformance/ferroehr/`. The website and this page read their numbers from
 that record at build time, and the build fails when `summary.md` and
-`results.json` disagree.
+`results.json` disagree. The Conformance workflow fails a change whose released
+run gives any row another status than the record, so a change that moves a row
+commits the views of its own run: `scripts/conformance-record.sh refresh <run id>`
+writes the `conformance-views-released` artifact of that run into the record.
 
 ## What conformance does not cover
 

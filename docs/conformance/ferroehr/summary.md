@@ -10,9 +10,9 @@
 
 | Part | Passed | Failed | Warning | Errored | Skipped | Total |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| BASE | 2619 | 0 | 0 | 0 | 81 | 2700 |
+| BASE | 2615 | 3 | 0 | 1 | 81 | 2700 |
 | OPTIONS | 256 | 0 | 0 | 0 | 118 | 374 |
-| **Every row** | **2875** | **0** | **0** | **0** | **199** | **3074** |
+| **Every row** | **2871** | **3** | **0** | **1** | **199** | **3074** |
 
 > [!NOTE]
 > A **failed** row counts against the server. A **warning** row is a SHOULD the server did not follow, and it never counts against the server. An **errored** row is inconclusive when its record names the instrument, which could not judge it, and counts against the server when its record names the server or no one. A **skipped** row was not run.
@@ -25,11 +25,11 @@ What every claimant of a capability must do. A case no option arm names is BASE.
 
 | Band | Passed | Failed | Warning | Errored | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| EHR | 75 | 0 | 0 | 0 | 0 |
+| EHR | 74 | 1 | 0 | 0 | 0 |
 | EHR\_STATUS | 57 | 0 | 0 | 0 | 3 |
-| COMPOSITION | 156 | 0 | 0 | 0 | 14 |
+| COMPOSITION | 155 | 1 | 0 | 0 | 14 |
 | DIRECTORY | 75 | 0 | 0 | 0 | 0 |
-| CONTRIBUTION | 64 | 0 | 0 | 0 | 2 |
+| CONTRIBUTION | 62 | 1 | 0 | 1 | 2 |
 | Item tags | 71 | 0 | 0 | 0 | 7 |
 
 #### EHR
@@ -37,8 +37,28 @@ What every claimant of a capability must do. A case no option arm names is BASE.
 | Section | Passed | Failed | Warning | Errored | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Create and read | 66 | 0 | 0 | 0 | 0 |
-| Committal headers | 1 | 0 | 0 | 0 | 0 |
+| Committal headers | 0 | 1 | 0 | 0 | 0 |
 | Bulk load | 8 | 0 | 0 | 0 | 0 |
+
+Rows to look at (open one for its explanation):
+
+<details>
+<summary><b>Failed</b>: <code>ehr_committal/create_ehr-committal_headers</code> row 0, BASE, Committal headers</summary>
+
+| | |
+| --- | --- |
+| **Step** | `create` |
+| **What was checked** | Create an EHR with a description and a committer in openehr-audit-details. |
+| **Expected** | status 201 |
+| **Received** | status 403 |
+| **Exchange** | `POST http://127.0.0.1:8080/ferroehr/rest/openehr/v1/ehr` answered 403, recording entry 6937 |
+| **Whose problem** | The server. A failed row counts against the claimed capability. |
+
+**Why it is required:** [specs/openehr/ITS-REST/specifications/responses/201\_EHR.yaml, description](https://github.com/openEHR/specifications-ITS-REST/blob/24058992d5fa96e8dfbd855d9c133f328387fc09/specifications/responses/201_EHR.yaml)
+
+> \`201 Created\` is returned when the EHR has been successfully created,
+
+</details>
 
 #### EHR\_STATUS
 
@@ -56,10 +76,31 @@ What every claimant of a capability must do. A case no option arm names is BASE.
 | Create | 27 | 0 | 0 | 0 | 0 |
 | Read | 21 | 0 | 0 | 0 | 0 |
 | Update | 25 | 0 | 0 | 0 | 7 |
-| Delete | 19 | 0 | 0 | 0 | 0 |
+| Delete | 18 | 1 | 0 | 0 | 0 |
 | Committal headers | 0 | 0 | 0 | 0 | 6 |
 | Versioning and history | 20 | 0 | 0 | 0 | 0 |
 | Refusals | 44 | 0 | 0 | 0 | 1 |
+
+Rows to look at (open one for its explanation):
+
+<details>
+<summary><b>Failed</b>: <code>composition_delete/delete_composition-audit_details</code> row 0, BASE, Delete</summary>
+
+| | |
+| --- | --- |
+| **Step** | `delete` |
+| **What was checked** | Delete the COMPOSITION with a description in openehr-audit-details. |
+| **Expected** | status 204 |
+| **Received** | status 403 |
+| **Exchange** | `DELETE http://127.0.0.1:8080/ferroehr/rest/openehr/v1/ehr/935302f1-ca71-42b5-a8d5-2c67d9d7e462/composition/01a21c4a-e7d5-7726-87ca-2a043c4e9527%3A%3Alocalhost%3A%3A1` answered 403, recording entry 282 |
+| **Whose problem** | The server. A failed row counts against the claimed capability. |
+| **Inputs** | `ehr_id` = `"935302f1-ca71-42b5-a8d5-2c67d9d7e462"` (generated) |
+
+**Why it is required:** [specs/openehr/ITS-REST/specifications/responses/204\_version\_deleted.yaml, description](https://github.com/openEHR/specifications-ITS-REST/blob/24058992d5fa96e8dfbd855d9c133f328387fc09/specifications/responses/204_version_deleted.yaml)
+
+> \`204 No Content\` is returned for a successful delete operation.
+
+</details>
 
 #### DIRECTORY
 
@@ -75,9 +116,46 @@ What every claimant of a capability must do. A case no option arm names is BASE.
 
 | Section | Passed | Failed | Warning | Errored | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Create | 29 | 0 | 0 | 0 | 2 |
+| Create | 28 | 1 | 0 | 0 | 2 |
 | Read | 11 | 0 | 0 | 0 | 0 |
-| Refusals | 24 | 0 | 0 | 0 | 0 |
+| Refusals | 23 | 0 | 0 | 1 | 0 |
+
+Rows to look at (open one for its explanation):
+
+<details>
+<summary><b>Failed</b>: <code>contribution_create/commit_contribution-committer_related</code> row 0, BASE, Create</summary>
+
+| | |
+| --- | --- |
+| **Step** | `commit` |
+| **What was checked** | Commit a CONTRIBUTION whose member committer is a PARTY\_RELATED, and keep its version\_uid. |
+| **Expected** | status 201 |
+| **Received** | status 403 |
+| **Exchange** | `POST http://127.0.0.1:8080/ferroehr/rest/openehr/v1/ehr/b43989d8-1069-444d-8d91-be2b55065d9e/contribution` answered 403, recording entry 5460 |
+| **Whose problem** | The server. A failed row counts against the claimed capability. |
+| **Inputs** | `ehr_id` = `"b43989d8-1069-444d-8d91-be2b55065d9e"` (generated) |
+
+**Why it is required:** [specs/openehr/ITS-REST/specifications/responses/201\_CONTRIBUTION.yaml, description](https://github.com/openEHR/specifications-ITS-REST/blob/24058992d5fa96e8dfbd855d9c133f328387fc09/specifications/responses/201_CONTRIBUTION.yaml)
+
+> \`201 Created\` is returned when the CONTRIBUTION is successfully created.
+
+</details>
+
+<details>
+<summary><b>Errored</b>: <code>contribution_create_refused/commit_contribution-committer_related_out_of_group</code> row 0, BASE, Refusals</summary>
+
+| | |
+| --- | --- |
+| **Step** | `control` |
+| **What was checked** | The control \`contribution\_create/commit\_contribution-committer\_related\`, the same request without the defect, is accepted in the same run. |
+| **Expected** | the control \`contribution\_create/commit\_contribution-committer\_related\` accepted |
+| **Received** | not judged: the control \`contribution\_create/commit\_contribution-committer\_related\` ended FAILED |
+| **Whose problem** | The instrument could not judge it. The row does not count against the server. |
+| **Inputs** | `ehr_id` = `"4a9c419c-ba05-4715-ac6f-757cbe6367d9"` (generated) |
+
+**Why it is required:** no citation resolved.
+
+</details>
 
 #### Item tags
 

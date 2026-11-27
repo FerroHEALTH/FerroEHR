@@ -39,6 +39,7 @@
 [![specification · released](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/profile.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
 [![veredictum · released](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/instrument.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
 <br>
+<sub>The red BASE rows, here and in the development run, are one deliberate deviation: the server records the authenticated caller as the committer and refuses a stated committer that names someone else, where ITS-REST asks that it be merged. The ground is Regulation (EU) 2025/327 Annex II 3.1 and Art. 13(4), the decision <a href="https://github.com/FerroHEALTH/FerroEHR/issues/5002">#5002</a> and the upstream report <a href="https://github.com/FerroHEALTH/FerroEHR/issues/5019">#5019</a> (<a href="https://ferroehr.eu/docs/latest/conformance.html#known-deviations">Known deviations</a>).</sub><br>
 <sub>Against the development openEHR specifications (master)</sub><br>
 [![openEHR BASE · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/base.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
 [![openEHR OPTIONS · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/options.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain)
