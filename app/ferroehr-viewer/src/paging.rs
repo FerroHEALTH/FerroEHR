@@ -37,18 +37,21 @@ pub enum Listing {
     Audit,
     /// An EHR's access log.
     AccessLog,
+    /// The review of the access log across EHRs.
+    AccessReview,
     /// The parties list.
     Parties,
 }
 
 impl Listing {
     /// Every listing.
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 7] = [
         Self::Ehrs,
         Self::Compositions,
         Self::Contributions,
         Self::Audit,
         Self::AccessLog,
+        Self::AccessReview,
         Self::Parties,
     ];
 
@@ -61,6 +64,7 @@ impl Listing {
             Self::Contributions => "contributions",
             Self::Audit => "audit",
             Self::AccessLog => "access-log",
+            Self::AccessReview => "access-review",
             Self::Parties => "parties",
         }
     }
