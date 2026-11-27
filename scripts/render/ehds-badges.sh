@@ -7,7 +7,8 @@
 # - logging.json: the rows of compliance/logging-checklist.md whose state is
 #   Evidenced and whose every cited test function exists.
 # - annex-iii.json: the elements of compliance/eehrxf-annex-iii.md whose state
-#   is Sourced.
+#   is Sourced, beside the counts of those Partly sourced and of those with No
+#   RM source, which FerroBRIDGE supplies (#6750).
 # - pdf-originals.json: the round trips of compliance/eehrxf-pdf-originals.md
 #   whose state is Byte-identical and whose test function exists.
 #
@@ -89,12 +90,15 @@ badge() {
 # Writes the three documents into the directory $1 from the tree in the
 # current directory.
 render() {
-  local dir="$1" total counted
+  local dir="$1" total counted partly none
   mkdir -p "$dir"
   read -r total counted < <(count_rows "$BOOK/logging-checklist.md" Evidenced)
   badge "$dir/logging.json" "EHDS logging checklist · Xt-EHR D8.2 2026-05-19" "$counted/$total evidenced" "$counted" "$total"
   read -r total counted < <(count_rows "$BOOK/eehrxf-annex-iii.md" Sourced)
-  badge "$dir/annex-iii.json" "EEHRxF draft 2026-11-23 · Annex III from the RM" "$counted/$total elements sourced" "$counted" "$total"
+  read -r _ partly < <(count_rows "$BOOK/eehrxf-annex-iii.md" "Partly sourced")
+  read -r _ none < <(count_rows "$BOOK/eehrxf-annex-iii.md" "No RM source")
+  badge "$dir/annex-iii.json" "EEHRxF draft 2026-11-23 · Annex III from the RM" \
+    "$counted/$total sourced · $partly partly · $none no RM source" "$counted" "$total"
   read -r total counted < <(count_rows "$BOOK/eehrxf-pdf-originals.md" Byte-identical \
     app/ferroehr-rest/tests/it/pdf_original_http.rs)
   badge "$dir/pdf-originals.json" "EEHRxF draft 2026-11-23 · PDF/A originals" "byte-identical $counted/$total" "$counted" "$total"
@@ -126,13 +130,14 @@ EOF
 | C | `GET` | not an element row, its first cell is no code |
 | `subject` | 1 | x | C | Sourced |
 | `period` | 1 | x | C | Partly sourced |
+| `custodian` | 1 | x | E | No RM source |
 EOF
   cat > "$tmp/$BOOK/eehrxf-pdf-originals.md" <<'EOF'
 | `inline` | `kept_round_trip` | Byte-identical |
 | `xml` | `gone_round_trip` | Byte-identical |
 EOF
   (cd "$tmp" && BOOK="$BOOK" render out)
-  for want in 'logging.json 1/3 evidenced' 'annex-iii.json 1/2 elements sourced' \
+  for want in 'logging.json 1/3 evidenced' 'annex-iii.json 1/3 sourced · 1 partly · 1 no RM source' \
     'pdf-originals.json byte-identical 1/2'; do
     got=$(jq -r .message "$tmp/out/${want%% *}")
     [[ "$got" == "${want#* }" ]] || { echo "self-test: ${want%% *} says '$got', want '${want#* }'" >&2; exit 1; }
