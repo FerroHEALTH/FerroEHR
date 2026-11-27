@@ -287,6 +287,8 @@ messages! {
         NavAccessPolicy = "nav-access-policy",
         /// `Audit log`
         NavAudit = "nav-audit",
+        /// `Access log`
+        NavAccessLog = "nav-access-log",
         /// `Roles and grants`
         NavGrants = "nav-grants",
         /// `Retention`
