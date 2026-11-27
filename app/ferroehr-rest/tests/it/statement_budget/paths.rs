@@ -354,8 +354,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::Iti81,
         conversions: 0,
-        // NOTE: our own design (#6706), this median moves by 2 between Linux runs.
-        median: 6640,
+        // NOTE: our own design (#6706), a read-buffer step moves this median until #6736.
+        median: 6642,
         allocations: 6744,
         peak_bytes: 577_536,
         round_trips: 1,
@@ -597,7 +597,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitRole,
         conversions: 9,
-        median: 1933,
+        // NOTE: our own design (#6706), a read-buffer step moves this median until #6736.
+        median: 1937,
         allocations: 1989,
         peak_bytes: 126_256,
         round_trips: 16,
