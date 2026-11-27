@@ -61,7 +61,10 @@ spec"; it is the most common real culprit.** Two reflexes are FORBIDDEN:
   each openEHR repository, which FerroEHR builds on. It is published beside
   the record (its own job-summary heading, artifact and badge branch, and
   `docs/conformance/ferroehr-development/` locally) and never counted toward
-  it. It fails the job only when it could not run at all.
+  it. Its committed record, `docs/conformance/ferroehr/development/`, holds
+  every listed deviation red and may hold other red rows, which its README
+  badges name; the job fails when the run could not run at all or when its
+  statuses differ from that record (`scripts/conformance-record.sh`).
 
 ## Steps
 
