@@ -290,7 +290,7 @@ impl FerroEhrService {
         if let Some(committer) = crate::versioning::committer::current_committer() {
             event.user_id = committer.subject;
         }
-        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
+        event.legal_basis = self.audit_legal_basis();
     }
 
     /// Stamp `event` as one act on one object of the current request: one
@@ -303,7 +303,7 @@ impl FerroEhrService {
         event.client_ip = origin.client_address;
         event.purpose = access_context::current_purpose();
         event.permit = access_context::current_permit();
-        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
+        event.legal_basis = self.audit_legal_basis();
         stamp_caller(event);
     }
 
@@ -364,9 +364,9 @@ impl FerroEhrService {
     }
 
     /// The legal basis recorded on every access event
-    /// ([`config::AuditConfig::legal_basis`]).
+    /// ([`config::AuditConfig::regulatory`]).
     #[must_use]
-    pub fn audit_legal_basis(&self) -> Option<&str> {
+    pub fn audit_legal_basis(&self) -> Option<ehds_logging::regulatory::LegalBasis> {
         self.audit.as_ref().and_then(AuditSender::legal_basis)
     }
 

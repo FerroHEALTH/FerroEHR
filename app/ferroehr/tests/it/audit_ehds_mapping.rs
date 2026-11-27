@@ -62,7 +62,10 @@ fn access_event() -> AuditEvent {
     e.event_type = Some(EventType::rest("composition_get"));
     e.token_id = Some("jti-1".to_owned());
     e.purpose = Some("TREAT".to_owned());
-    e.legal_basis = Some("gdpr-9-2-h".to_owned());
+    e.legal_basis = Some(ehds_logging::regulatory::LegalBasis {
+        lawfulness: ehds_logging::regulatory::Lawfulness::PublicTask,
+        condition: Some(ehds_logging::regulatory::Condition::HealthOrSocialCare),
+    });
     e.result_count = Some(1);
     e.timestamp = "2026-07-10T08:30:00Z".parse().expect("a fixed instant");
     e.issuer = Some("https://idp.example".to_owned());
@@ -313,9 +316,15 @@ fn element_a_the_accessing_organisation_is_recorded_and_rendered_in_fhir() {
                 && agent["who"]["identifier"]["value"] == "zh-noordwest"
         })
         .expect("the organisation reaches the FHIR rendering as an Organization agent");
-    assert!(
-        organisation.get("type").is_none(),
-        "the organisation agent must claim no participation code: {organisation}"
+    // NOTE: BALP 1.1.4 slices the organisation a user acts for as `agent:userorg`, typed `PROV` of v3-RoleClass.
+    let coding = &organisation["type"]["coding"][0];
+    assert_eq!(
+        (coding["system"].as_str(), coding["code"].as_str()),
+        (
+            Some("http://terminology.hl7.org/CodeSystem/v3-RoleClass"),
+            Some("PROV")
+        ),
+        "the organisation agent is BALP's agent:userorg: {organisation}"
     );
     assert_eq!(
         organisation["requestor"], false,
@@ -519,5 +528,63 @@ fn art_11_5_the_emergency_mark_reaches_the_fhir_rendering_only() {
     assert!(
         !xml.contains("ETREAT") && !xml.contains("PurposeOfUse") && !xml.contains("Emergency"),
         "the DICOM schema defines no purpose element: {xml}"
+    );
+}
+
+/// The `detail` values of `kind` on every entity of the FHIR rendering.
+fn entity_details(rendered: &serde_json::Value, kind: &str) -> Vec<String> {
+    rendered["entity"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .flat_map(|entity| entity["detail"].as_array().into_iter().flatten())
+        .filter(|detail| detail["type"] == kind)
+        .filter_map(|detail| detail["valueString"].as_str().map(str::to_owned))
+        .collect()
+}
+
+/// Xt-EHR D5.2 §7.2.7: the legal basis the access recorded, and the
+/// controllers and processors `[audit.regulatory]` declares, reach the
+/// record.
+#[test]
+fn d5_2_the_legal_basis_and_the_controller_roles_reach_the_fhir_rendering() {
+    let mut context = ctx();
+    context.recording.regulatory = ehds_logging::regulatory::Regulatory {
+        legal_basis: Some(ehds_logging::regulatory::LegalBasis {
+            lawfulness: ehds_logging::regulatory::Lawfulness::LegalObligation,
+            condition: None,
+        }),
+        controllers: vec!["urn:oid:2.16.528.1.1007.3.3:zh-noordwest".to_owned()],
+        processors: vec!["urn:oid:2.16.528.1.1007.3.3:hosting".to_owned()],
+    };
+    let event = access_event();
+    let rendered =
+        fhir::to_fhir(&event, &context, Some("patient-42")).expect("the FHIR rendering builds");
+    assert_eq!(
+        entity_details(&rendered, "ehds-legal-basis"),
+        ["gdpr-art-6-1-e"],
+        "the basis the access recorded takes the declared one's place: {rendered}"
+    );
+    assert_eq!(
+        entity_details(&rendered, "ehds-legal-condition"),
+        ["gdpr-art-9-2-h"]
+    );
+    assert_eq!(
+        entity_details(&rendered, "ehds-controller"),
+        ["urn:oid:2.16.528.1.1007.3.3:zh-noordwest"]
+    );
+    assert_eq!(
+        entity_details(&rendered, "ehds-processor"),
+        ["urn:oid:2.16.528.1.1007.3.3:hosting"]
+    );
+
+    let mut undeclared = access_event();
+    undeclared.legal_basis = None;
+    let rendered = fhir::to_fhir(&undeclared, &context, Some("patient-42"))
+        .expect("the FHIR rendering builds");
+    assert_eq!(
+        entity_details(&rendered, "ehds-legal-basis"),
+        ["gdpr-art-6-1-c"],
+        "an access that recorded no basis states the declared one: {rendered}"
     );
 }

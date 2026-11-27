@@ -476,7 +476,7 @@ impl FerroEhrService {
         event.user_id = committer
             .map(|committer| committer.subject)
             .unwrap_or_default();
-        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
+        event.legal_basis = self.audit_legal_basis();
         event
     }
 }

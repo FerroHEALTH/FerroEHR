@@ -429,7 +429,7 @@ impl FerroEhrService {
         event.object_id = Some("party-query".to_owned());
         event.result_count = Some(parties);
         crate::service::linkage::stamp_requester(&mut event);
-        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
+        event.legal_basis = self.audit_legal_basis();
         self.record_access(event).await
     }
 }

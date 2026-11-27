@@ -72,7 +72,7 @@ impl FerroEhrService {
         event.ehr_id = ehr_id.map(|id| id.to_string());
         event.result_count = Some(result_count);
         stamp_requester(&mut event);
-        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
+        event.legal_basis = self.audit_legal_basis();
         self.record_access(event).await
     }
 }

@@ -274,6 +274,14 @@
           {
             "type": "ehds-retention-floor",
             "valueString": "eu-2025-327-art-9-2"
+          },
+          {
+            "type": "ehds-legal-basis",
+            "valueString": "gdpr-art-6-1-e"
+          },
+          {
+            "type": "ehds-legal-condition",
+            "valueString": "gdpr-art-9-2-h"
           }
         ],
         "name": "ehds-categories",

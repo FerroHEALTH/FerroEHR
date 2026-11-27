@@ -75,7 +75,10 @@ pub(super) fn classified_read(policy: &CompiledPolicy) -> AuditEvent {
     event.subject_namespace = Some("urn:oid:2.16.840.1.113883.2.4.6.3".to_owned());
     event.object_id = Some(VERSION.to_owned());
     event.purpose = Some("TREAT".to_owned());
-    event.legal_basis = Some("GDPR-9-2-h".to_owned());
+    event.legal_basis = Some(ehds_logging::regulatory::LegalBasis {
+        lawfulness: ehds_logging::regulatory::Lawfulness::PublicTask,
+        condition: Some(ehds_logging::regulatory::Condition::HealthOrSocialCare),
+    });
     event.result_count = Some(1);
     event.origins = vec!["cdr.example.org".to_owned(), "lab.example.org".to_owned()];
     event.origin_count = Some(3);

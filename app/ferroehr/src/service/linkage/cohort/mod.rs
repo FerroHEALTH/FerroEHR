@@ -503,7 +503,7 @@ impl FerroEhrService {
         super::stamp_requester(&mut event);
         event.purpose = purpose;
         event.permit = crate::system_log::access_context::current_permit();
-        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
+        event.legal_basis = self.audit_legal_basis();
         self.record_access(event)
             .await
             .map_err(CohortError::Unrecorded)

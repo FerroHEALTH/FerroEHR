@@ -115,7 +115,8 @@ struct SenderInner {
     purpose_codes: Vec<String>,
     /// The code system the purpose codes belong to.
     purpose_system: String,
-    legal_basis: Option<String>,
+    /// The legal basis every access event records (`[audit.regulatory]`).
+    legal_basis: Option<ehds_logging::regulatory::LegalBasis>,
     /// The compiled category register every record is classified through.
     categories: Arc<Classifiers>,
     /// The render policy and context records are written under.
@@ -211,8 +212,8 @@ impl AuditSender {
 
     /// The legal basis this deployment records on every access event.
     #[must_use]
-    pub fn legal_basis(&self) -> Option<&str> {
-        self.inner.legal_basis.as_deref()
+    pub fn legal_basis(&self) -> Option<ehds_logging::regulatory::LegalBasis> {
+        self.inner.legal_basis
     }
 
     /// The local Audit Record Repository the records are written to.
@@ -700,7 +701,7 @@ pub async fn start(
             reason_header: config.reason_header.to_ascii_lowercase(),
             purpose_codes: config.purpose_codes.clone(),
             purpose_system: config.purpose_system.clone(),
-            legal_basis: config.legal_basis.clone(),
+            legal_basis: config.regulatory.legal_basis,
             categories: Arc::new(Classifiers::new(categories)),
             context: live,
             store,

@@ -303,7 +303,7 @@ impl FerroEhrService {
             adopted.party, adopted.role
         ));
         event.user_id = admin.to_string();
-        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
+        event.legal_basis = self.audit_legal_basis();
         event
     }
 }
