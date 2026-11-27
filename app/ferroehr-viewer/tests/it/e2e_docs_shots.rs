@@ -440,6 +440,7 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         light("/access-policy/versions", "access-policy/versions"),
         review("/access-policy/edit", "access-policy/edit"),
         light("/grants", "grants/grants"),
+        light("/retention", "retention/retention"),
         light(
             "/access-policy/registers/access-delay",
             "access-policy/access-delay",

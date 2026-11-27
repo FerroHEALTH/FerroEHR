@@ -33,6 +33,7 @@ pub mod preferences;
 pub mod queries;
 pub mod query;
 pub mod results;
+pub mod retention;
 pub mod server;
 pub mod template_releases;
 pub mod templates;

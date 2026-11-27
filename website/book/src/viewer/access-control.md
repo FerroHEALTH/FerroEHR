@@ -5,7 +5,8 @@ For operators: the pages that show how this FerroEHR decides each request.
 The **Access policy** page shows the rules your FerroEHR decides every request
 by, and lets an administrator change them. Everything on it comes from the
 CDR's admin extension over HTTP, so it shows only what the CDR lets your
-account read.
+account read. [The access model](../explanation/access-model.md) explains
+the concepts these pages show.
 
 <!-- toc -->
 
@@ -206,3 +207,21 @@ treating professional releases it there
 (`POST {ext}/ehr/{ehr_id}/versioned_composition/{uid}/access-delay/release`).
 
 ![An EHR's legal marks](img/ehrs/marks.png)
+
+## Retention
+
+**Retention**, in the console group, reads the CDR's retention register
+(`GET {ext}/admin/retention/policy`, [Retention](../compliance/retention.md)):
+every declared period with the kind of record it covers, its jurisdiction,
+the EHDS category and the origin it is keyed on, the period, what it runs
+from and the citation it rests on. An administrator declares a period, or
+changes one by declaring its key again (`PUT {ext}/admin/retention/policy`);
+a refusal is shown in the CDR's words, with the fields kept.
+
+**What is due** (`GET {ext}/admin/retention/due`) lists the EHRs whose period
+has run, oldest first, with the objects due and the objects held. The CDR
+deletes nothing on a timer, and neither does the page: acting on a row is your
+decision, through the physical delete. A `403` says your account may not read
+the register, and with the admin API off the page says so.
+
+![Retention](img/retention/retention.png)

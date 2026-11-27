@@ -291,6 +291,8 @@ messages! {
         NavAccessLog = "nav-access-log",
         /// `Roles and grants`
         NavGrants = "nav-grants",
+        /// `Retention`
+        NavRetention = "nav-retention",
         /// `None`
         VersionSignatureNone = "version-signature-none",
         /// `A SHA-256 digest`

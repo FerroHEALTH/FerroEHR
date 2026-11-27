@@ -33,6 +33,7 @@ pub mod marks;
 pub mod queues;
 pub mod registers;
 pub mod report;
+pub mod retention;
 pub mod signature;
 pub mod system;
 pub mod template_adl2;

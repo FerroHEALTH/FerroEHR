@@ -134,6 +134,12 @@ fn groups() -> Vec<Group> {
             false,
         ),
         entry(
+            crate::pages::retention::RETENTION_ROUTE,
+            Msg::NavRetention,
+            Glyph::FILE_CLOCK,
+            false,
+        ),
+        entry(
             "/configuration",
             Msg::NavConfiguration,
             Glyph::FILE_TEXT,

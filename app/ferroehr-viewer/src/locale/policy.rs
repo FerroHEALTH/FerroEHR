@@ -573,5 +573,69 @@ crate::locale::messages! {
         AccessEditSubtitle = "access-edit-subtitle",
         /// `Commit access settings`
         AccessEditTitle = "access-edit-title",
+        /// `The CDR's retention register is not JSON`
+        RetentionJson = "retention-json",
+        /// `Your account may not read the retention register.`
+        RetentionForbidden = "retention-forbidden",
+        /// `The retention register could not be read.`
+        RetentionRefused = "retention-refused",
+        /// `Retention period declared`
+        RetentionDeclared = "retention-declared",
+        /// `The CDR did not declare the retention period.`
+        RetentionDeclareRefused = "retention-declare-refused",
+        /// `every`
+        RetentionEvery = "retention-every",
+        /// `Kind`
+        RetentionKind = "retention-kind",
+        /// `Category`
+        RetentionCategory = "retention-category",
+        /// `Origin`
+        RetentionOrigin = "retention-origin",
+        /// `Runs from`
+        RetentionAnchor = "retention-anchor",
+        /// `Source`
+        RetentionSource = "retention-source",
+        /// `Declared periods`
+        RetentionPeriods = "retention-periods",
+        /// `EHR`
+        RetentionEhr = "retention-ehr",
+        /// `Due since`
+        RetentionDueAt = "retention-due-at",
+        /// `Objects due`
+        RetentionObjectsDue = "retention-objects-due",
+        /// `Objects held`
+        RetentionObjectsHeld = "retention-objects-held",
+        /// `What is due`
+        RetentionDue = "retention-due",
+        /// `The ISO 3166-1 alpha-2 code of the jurisdiction whose rule it is, such as CH.`
+        RetentionJurisdictionHelp = "retention-jurisdiction-help",
+        /// `An EHDS priority category, such as Laboratory-Reports, or system|code; empty for every category.`
+        RetentionCategoryHelp = "retention-category-help",
+        /// `The id of an origin a data_origin grant names; empty for every origin.`
+        RetentionOriginHelp = "retention-origin-help",
+        /// `A PostgreSQL interval, such as 20 years.`
+        RetentionPeriodHelp = "retention-period-help",
+        /// `The legal citation the period rests on.`
+        RetentionSourceHelp = "retention-source-help",
+        /// `Declare`
+        RetentionDeclare = "retention-declare",
+        /// `No retention period is declared`
+        RetentionNone = "retention-none",
+        /// `Until one is, nothing ever falls due.`
+        RetentionNoneLine = "retention-none-line",
+        /// `Nothing is due`
+        RetentionNothingDue = "retention-nothing-due",
+        /// `No EHR's period has run, or every one is held.`
+        RetentionNothingDueLine = "retention-nothing-due-line",
+        /// `Declare or change a period`
+        RetentionDeclareTitle = "retention-declare-title",
+        /// `A period is keyed on its kind, jurisdiction, category and origin; declaring the same key again changes it.`
+        RetentionDeclareIntro = "retention-declare-intro",
+        /// `How long each kind of record is kept, and which EHRs' periods have run. The CDR deletes nothing on a timer.`
+        RetentionSubtitle = "retention-subtitle",
+        /// `Every period the register declares (GDPR Art. 5(1)(e) and Art. 30(1)(f), EHDS Annex II 3.4).`
+        RetentionPeriodsIntro = "retention-periods-intro",
+        /// `The EHRs whose period has run, oldest first, with the objects due and the objects held. Acting on a row is the controller's decision, through the physical delete.`
+        RetentionDueIntro = "retention-due-intro",
     }
 }

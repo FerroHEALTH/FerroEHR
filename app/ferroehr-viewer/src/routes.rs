@@ -187,6 +187,8 @@ pub enum Page {
     EditRegister,
     /// `/grants`.
     Grants,
+    /// `/retention`.
+    Retention,
     /// `/ehrs/:ehr_id/care`.
     EhrCare,
     /// `/ehrs/:ehr_id/marks`.
@@ -286,6 +288,7 @@ impl Page {
             "/access-policy/registers/:register" => Self::Register,
             "/access-policy/registers/:register/edit" => Self::EditRegister,
             "/grants" => Self::Grants,
+            "/retention" => Self::Retention,
             "/ehrs/:ehr_id/care" => Self::EhrCare,
             "/ehrs/:ehr_id/marks" => Self::EhrMarks,
             "/ehrs/:ehr_id/access" => Self::EhrAccess,
@@ -456,6 +459,7 @@ pub static ROUTES: &[&str] = &[
     "/access-policy/registers/:register",
     "/access-policy/registers/:register/edit",
     "/grants",
+    "/retention",
     "/care/:uid",
     "/configuration",
     "/configuration/:section",
@@ -542,6 +546,7 @@ pub async fn draw() -> Drawn {
         Page::Register => pages::policy::registers::page().await,
         Page::EditRegister => pages::policy::registers::edit_page().await,
         Page::Grants => pages::policy::grants::page().await,
+        Page::Retention => pages::retention::page().await,
         Page::EhrCare => pages::ehr::care::page().await,
         Page::EhrMarks => pages::ehr::marks::page().await,
         Page::EhrAccess => pages::ehr::access::page().await,

@@ -301,6 +301,8 @@ behind the menu button.
   and its editor. See [Access control](access-control.md).
 - **Roles and grants:** the roles holding an `openehr_access` grant and the
   system clients. See [Access control](access-control.md#roles-and-grants).
+- **Retention:** the declared retention periods and what is due. See
+  [Access control](access-control.md#retention).
 - **Configuration:** the CDR's redacted running configuration, by section.
 - **About:** the viewer, the CDR and their versions, the manufacturer and
   the CDR's conformance manifest.

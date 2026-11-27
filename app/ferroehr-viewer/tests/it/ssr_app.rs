@@ -34,6 +34,7 @@ mod grants;
 mod marks;
 mod policy;
 mod registers;
+mod retention;
 
 /// The recorded exchanges, read once.
 fn recording() -> Arc<[Value]> {
