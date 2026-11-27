@@ -26,7 +26,10 @@ reads a request the recording lacks fails there, naming the request.
 `ferroehr` over a throwaway PostgreSQL, seeds it with the one demo seed
 (`scripts/sandbox/reseed.sh`, as `scripts/ui-e2e.sh` runs it), runs the
 `ssr_app` tests with the recorder of `tests/it/cdr_record.rs` forwarding to
-it, and writes both files. Every id,
-version signature and instant the run stamped is replaced by a stand-in, so a
-second recording of the same checkout writes the same bytes. Never edit the
-recording by hand: record it again.
+it one screen at a time, and writes both files. Every id, digest and instant
+the run stamped, and every date the seed counted from the day it ran, is
+replaced by a stand-in, so a second recording of the same checkout writes the
+same bytes in all but two places the CDR's own timing decides: the windows it
+seals the access log in, and the order in which its access log and system
+records list the reads one screen makes at once. Never edit the recording by
+hand: record it again.

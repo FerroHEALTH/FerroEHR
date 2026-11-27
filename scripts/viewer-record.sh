@@ -15,9 +15,8 @@
 # 3. Runs the `ssr_app` tests with the recorder on, each forwarding to the
 #    CDR as ferroehr-admin and writing the exchanges it made.
 # 4. Runs the recorder's last step, which merges them into recording.json and
-#    manifest.json with stand-ins for every id and instant the run stamped and
-#    for the dates the seed counted from the day it ran, so a second run
-#    writes the same bytes.
+#    manifest.json with stand-ins for every id, digest and instant the run
+#    stamped and for the dates the seed counted from the day it ran.
 #
 # Usage:
 #   scripts/viewer-record.sh
@@ -111,6 +110,9 @@ else
   SERVER_PID=$!
 fi
 wait_for "$CDR_URL/health/readiness" 120
+# From here on every instant the CDR stamps is the run's, the logins' binding
+# included.
+date -u +%Y-%m-%dT%H:%M:%SZ >"$WORK/started"
 if [[ -z "${VIEWER_RECORD_CDR:-}" ]]; then
   echo "── binding the Basic users to PERSONs through SCIM"
   SCIM_GRANT="env ${SERVER_ENV[*]} $ROOT/target/debug/ferroehr" bash scripts/scim-provision.sh \
@@ -127,11 +129,14 @@ if [[ "$ehrs" != "0" ]]; then
 fi
 
 # ── 2. The seed ─────────────────────────────────────────────────────────────
-date -u +%Y-%m-%dT%H:%M:%SZ >"$WORK/started"
-# The days from the run its bodies' `__DATE:<days>__` tokens name, which the
-# last step moves with the stand-in epoch.
-grep -rhoE '__DATE:[+-]?[0-9]+__' scripts/sandbox/seed \
-  | sed -E 's/__DATE:\+?(-?[0-9]+)__/\1/' | sort -un >"$WORK/seed-days"
+# The days from the run its bodies' `__DATE:<days>__` tokens name, and the
+# run's own day, which a scene that ends a relationship today sends; the last
+# step moves each with the stand-in epoch.
+{
+  echo 0
+  grep -rhoE '__DATE:[+-]?[0-9]+__' scripts/sandbox/seed \
+    | sed -E 's/__DATE:\+?(-?[0-9]+)__/\1/'
+} | sort -un >"$WORK/seed-days"
 echo "── seeding the demo dataset"
 SANDBOX_BASE="$CDR_URL" SANDBOX_USER=ferroehr-admin SANDBOX_CLINICIAN=ferroehr \
   SANDBOX_TERMINOLOGY=without-loinc \
@@ -177,7 +182,9 @@ date -u +%Y-%m-%dT%H:%M:%SZ >"$WORK/seeded"
 export FERROEHR_VIEWER_RECORD_CDR="$CDR_URL"
 export FERROEHR_VIEWER_RECORD_DIR="$WORK"
 echo "── recording the ssr_app screens"
-cargo nextest run --locked -p ferroehr-viewer -E 'test(/^ssr_app::/)'
+# One at a time: a screen's writes then reach the CDR in the same order on
+# every run, so every later read answers the same.
+cargo nextest run --locked -p ferroehr-viewer -j 1 -E 'test(/^ssr_app::/)'
 echo "── writing the recording"
 cargo nextest run --locked -p ferroehr-viewer --run-ignored only \
   -E 'test(=cdr_record::write_the_recording)'
