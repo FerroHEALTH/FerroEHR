@@ -18,9 +18,10 @@
 #               on the runner, the shared-cluster refusal included.
 # A seconds-long render check of the production install runs beside them.
 #
-# WHAT IT PROBES. The server and database images built from the tree it checks
-# out, packaged the way ci.yml's deploy-probe job packages them and loaded into
-# the kind node, so the scripts, the chart and the images are one generation.
+# WHAT IT PROBES. The server, viewer and database images built from the tree it
+# checks out, packaged the way ci.yml's deploy-probe jobs package them and
+# loaded into the kind node, so the scripts, the chart and the images are one
+# generation.
 #
 # EVIDENCE. Every family uploads its probe record and the log of every server
 # pod, read before the cluster goes away; a failing P-K8S-INDEX-LOCAL row also
@@ -38,6 +39,7 @@ on:
       - scripts/deploy-probes/kubernetes*.sh
       - scripts/deploy-probes/lib.sh
       - .github/workflows/deploy-probe-k8s.yml
+      - app/ferroehr-viewer/**
   schedule:
     # Every six hours at 41 minutes past. Off the hour: GitHub documents that
     # runs scheduled on the hour are delayed by load spikes
@@ -72,6 +74,51 @@ jobs:
         with:
           artifact-name: k8s-server-binary
 
+  # The viewer binary of the tree under probe: ci.yml's ui-e2e-viewer output,
+  # restored by its exact key when that job built this tree on main, and
+  # built otherwise. Nothing here writes that cache, whose entry also holds the
+  # e2e test archive.
+  viewer-binary:
+    name: kubernetes viewer binary
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: viewer-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ui-e2e-console-stage
+          key: ui-e2e-console-1.99.1-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', '.cargo/**', 'crates/**', 'app/ferroehr-viewer/**') }}
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        if: steps.viewer-cache.outputs.cache-hit != 'true'
+        with:
+          cache-targets: false
+          cache-save-if: false
+      - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+        if: steps.viewer-cache.outputs.cache-hit != 'true'
+      - name: Build the viewer
+        if: steps.viewer-cache.outputs.cache-hit != 'true'
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          SCCACHE_GHA_RW_MODE: READ_ONLY
+          RUSTC_WRAPPER: sccache
+          CARGO_INCREMENTAL: "0"
+          SCCACHE_SKIP_CACHE_CHECK: "true"
+        run: |
+          set -euo pipefail
+          cargo build --locked -p ferroehr-viewer --bin ferroehr-viewer
+          mkdir -p ui-e2e-console-stage
+          cp target/debug/ferroehr-viewer ui-e2e-console-stage/
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: k8s-viewer-binary
+          path: ui-e2e-console-stage/ferroehr-viewer
+          if-no-files-found: error
+
   # The production install, rendered and not installed: the probe's overrides
   # and the overlay agree on every credential the render consumes. Seconds, no
   # cluster.
@@ -96,7 +143,7 @@ jobs:
   # the job's 60 minutes per family; they run side by side.
   kubernetes:
     name: deploy-probe (kubernetes) ${{ matrix.family }}
-    needs: binary
+    needs: [binary, viewer-binary]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -116,6 +163,13 @@ jobs:
         with:
           name: k8s-server-binary
           path: bin/amd64
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: k8s-viewer-binary
+          path: k8s-viewer-stage
+      # GitHub artifacts do not keep the executable bit.
+      - name: Place the viewer in the image context
+        run: install -m0755 k8s-viewer-stage/ferroehr-viewer bin/amd64/ferroehr-viewer
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Package the app image (COPY-only, seconds)
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -125,6 +179,14 @@ jobs:
           target: runtime-prebuilt
           load: true
           tags: ferroehr:deploy-probe
+      - name: Package the viewer image (COPY-only, seconds)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/viewer/Dockerfile
+          target: runtime-prebuilt
+          load: true
+          tags: ferroehr-viewer:deploy-probe
       # The database image of the tree checked out, since its initdb
       # provisions the roles the tree expects.
       - name: Package the postgres image (base + security updates)
@@ -147,6 +209,7 @@ jobs:
           kind version
           kind create cluster --name "$KIND_CLUSTER" --wait 120s
           kind load docker-image ferroehr:deploy-probe --name "$KIND_CLUSTER"
+          kind load docker-image ferroehr-viewer:deploy-probe --name "$KIND_CLUSTER"
           kubectl cluster-info
       # A pod reaches the host databases through the gateway of the kind
       # network, where compose publishes them on 0.0.0.0. A kind node on the
@@ -158,6 +221,7 @@ jobs:
       - name: Probe the family
         env:
           PROBE_K8S_IMAGE: ferroehr:deploy-probe
+          PROBE_K8S_VIEWER_IMAGE: ferroehr-viewer:deploy-probe
           FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:deploy-probe
           FERROEHR__USAGE_REPORT__ENABLED: "false"
           PROBE_OUT: docs/conformance/deployment/kubernetes-${{ matrix.family }}.json

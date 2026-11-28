@@ -61,8 +61,9 @@ K8S_UI_LABEL="app.kubernetes.io/name=$K8S_UI"
 # viewer NetworkPolicy's `from` selector then names.
 K8S_UI_CLIENT_LABEL="ferroehr.probe/client=viewer"
 # The viewer image under probe. Empty means the chart's own default, which is
-# what an operator installing this chart gets; set PROBE_K8S_VIEWER_IMAGE to
-# probe a locally built viewer instead.
+# what an operator installing this chart gets; PROBE_K8S_VIEWER_IMAGE names a
+# viewer built from the tree, as .github/workflows/deploy-probe-k8s.yml does, so
+# the chart and the viewer it configures are one generation.
 K8S_UI_IMAGE="${PROBE_K8S_VIEWER_IMAGE:-}"
 
 # The FerroTERM workload the chart renders behind `terminology.enabled` (#3305,
