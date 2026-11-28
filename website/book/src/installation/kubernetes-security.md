@@ -152,7 +152,11 @@ CA in `viewer.auth.oidc.caExistingSecret` (key `viewer.auth.oidc.caExistingSecre
 `[oidc.tls] trust_roots_file` at it. For the server's own `[auth]`
 issuer behind a private CA, name the Secret in `auth.caExistingSecret` (key
 `auth.caExistingSecretKey`, `ca.crt` by default): the chart mounts it and points
-the server's `[auth.tls] trust_roots_file` at it. The ServiceMonitor reads the Secret from its own namespace, and
+the server's `[auth.tls] trust_roots_file` at it. Each of these three CAs is
+named in `trust_roots_file`, so each must publish a CRL or an OCSP responder
+the pods can reach: a connection to a chain no revocation check cleared fails
+closed ([How an outbound TLS table verifies a peer](config-integrations.md#how-an-outbound-tls-table-verifies-a-peer)).
+The ServiceMonitor reads the Secret from its own namespace, and
 the `prometheus.io/scheme: https` pod annotation follows the listener when
 `metrics.enabled` is set. With `config.server.tls.client_auth: required` the
 kubelet probes cannot present a client certificate, so the chart refuses to

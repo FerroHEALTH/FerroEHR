@@ -70,8 +70,16 @@ signatures in X.509 certificates. The TLS 1.3 signature schemes for ML-DSA
 draft-ietf-tls-mldsa-06, which the IESG approved and which waits in the RFC
 Editor queue, not yet an RFC
 (<https://datatracker.ietf.org/doc/draft-ietf-tls-mldsa/>, read
-2026-11-27). The row stays `no` while that document is a draft and the
+2026-11-27). The rows stay `no` while that document is a draft and the
 operator's certificates decide the algorithm.
+
+An outbound connection verifies the peer's chain by the root it ends at
+(`ferrohealth-server` 0.14 `PlatformTls`). A chain to a root of
+`trust_roots_file` or `trust_roots_without_revocation_file` is verified by
+webpki on every operating system, so it can carry ML-DSA certificates. A
+chain to a platform root goes to the platform's verifier, and the macOS
+verifier refuses ML-DSA (FerroHEALTH/FerroSYS#470), so the inventory scores
+the two apart.
 
 ## JOSE signatures
 
@@ -125,7 +133,9 @@ ML-DSA key.
 | TLS 1.3 key exchange of the family clients: the issuer key sets, the viewer's OpenID Provider, the OTLP export and the FerroPULSE report | X25519MLKEM768 first (rustls prefer-post-quantum); X25519, P-256, P-384 for a peer without it | yes | RFC 10024 | `ferrohealth-smart resource, ferrohealth-smart oidc, ferrohealth-telemetry otlp, ferrohealth-usage-report` |
 | TLS 1.3 key exchange of the PostgreSQL connection | X25519MLKEM768 first (rustls prefer-post-quantum), agreed when the server's TLS library offers it | yes | RFC 10024 | `Cargo.toml (sqlx tls-rustls-aws-lc-rs)` |
 | TLS 1.2 key exchange where min_version lowers the floor | ECDHE over X25519, P-256 or P-384 | no | no standard yet | `ferrohealth-server tls (protocol_versions)` |
-| TLS server and client certificate authentication | ECDSA, RSA or Ed25519, as the operator's certificates hold | no | RFC 9881; draft-ietf-tls-mldsa-06 in the RFC Editor queue | `ferrohealth-server tls, ferrohealth-server tls_client` |
+| TLS certificate authentication of the listeners and of the client certificates FerroEHR presents | ECDSA, RSA or Ed25519, as the operator's certificates hold | no | RFC 9881; draft-ietf-tls-mldsa-06 in the RFC Editor queue | `ferrohealth-server tls, ferrohealth-server tls_client` |
+| Outbound TLS certificate verification, a chain to a root of trust_roots_file or trust_roots_without_revocation_file | ML-DSA (RFC 9881), ECDSA, RSA or Ed25519 certificates, verified by webpki on every operating system, the first with a revocation check | no | RFC 9881; draft-ietf-tls-mldsa-06 in the RFC Editor queue | `ferrohealth-server tls_client (PlatformTls), ferrohealth-smart client outbound, app/ferroehr/src/system_log/syslog.rs, app/ferroehr/src/outbound.rs` |
+| Outbound TLS certificate verification, a chain to a platform root | ECDSA, RSA or Ed25519, or ML-DSA where the platform's verifier takes it; the macOS verifier refuses ML-DSA (FerroHEALTH/FerroSYS#470) | no | no standard yet | `ferrohealth-server tls_client (PlatformTls), ferrohealth-smart client outbound, app/ferroehr/src/system_log/syslog.rs` |
 | TLS record protection | AES-128-GCM, AES-256-GCM, ChaCha20-Poly1305 | yes | NIST IR 8547 4.1.3 | `ferrohealth-server tls` |
 | VERSION.signature in digest mode | SHA-256 of the canonical form | yes | NIST IR 8547 4.1.3 | `app/ferroehr/src/versioning/signature/signer.rs` |
 | VERSION.signature in pgp mode, signing | OpenPGP v6 detached signature over SHA2-512, ML-DSA-65+Ed25519 (RFC 9980 algorithm ID 30); a classical signing key is refused at boot | yes | RFC 9980 | `app/ferroehr/src/versioning/signature/key.rs` |

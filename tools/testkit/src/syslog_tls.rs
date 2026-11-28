@@ -10,14 +10,16 @@
 //! `127.0.0.1`, `serverAuth`) it signed, each valid from yesterday to
 //! 30 days from today. A platform verifier refuses a TLS server
 //! certificate valid for years (macOS caps it at 825 days), and nothing
-//! committed can expire. No openEHR spec governs test infrastructure: our own
-//! design/extension.
+//! committed can expire. [`SyslogTlsListener::bind_with_crl`] also serves the
+//! CA's empty CRL over HTTP and names it in the leaf's CRL distribution point
+//! (RFC 5280 §4.2.1.13), so a revocation check can clear the leaf. No openEHR
+//! spec governs test infrastructure: our own design/extension.
 
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use tokio::io::AsyncReadExt as _;
+use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
 use tokio::net::TcpListener;
 use tokio::sync::mpsc;
 use tokio_rustls::TlsAcceptor;
@@ -42,7 +44,8 @@ pub struct SyslogTlsListener {
     /// The port it listens on.
     pub port: u16,
     /// A file holding the minted CA certificate, PEM, for
-    /// `[audit.syslog.tls] trust_roots_file`.
+    /// `[audit.syslog.tls] trust_roots_without_revocation_file`, or
+    /// `trust_roots_file` when the listener serves the CA's CRL.
     pub ca_file: PathBuf,
     frames: mpsc::UnboundedReceiver<Vec<u8>>,
     endings: mpsc::UnboundedReceiver<Ending>,
@@ -52,12 +55,35 @@ impl SyslogTlsListener {
     /// Binds a listener on a free port and starts accepting connections. It
     /// drops its first `refused` connections before any TLS handshake, as a
     /// repository that is going down does, and accepts every one after them.
+    /// Its CA publishes no revocation service.
     ///
     /// # Errors
     /// [`ListenerError`] when the PKI is unusable, the port cannot be bound or
     /// the CA file cannot be written.
     pub async fn bind(refused: usize) -> Result<Self, ListenerError> {
-        let pki = Pki::mint()?;
+        Self::start(refused, Pki::mint()?).await
+    }
+
+    /// Binds a listener like [`Self::bind`] whose leaf names the CA's CRL,
+    /// which revokes nothing and which the listener serves over HTTP.
+    ///
+    /// # Errors
+    /// [`ListenerError`] when the PKI is unusable, a port cannot be bound or
+    /// the CA file cannot be written.
+    pub async fn bind_with_crl(refused: usize) -> Result<Self, ListenerError> {
+        let crl_listener = TcpListener::bind(("127.0.0.1", 0)).await?;
+        let crl_url = format!(
+            "http://127.0.0.1:{}/ca.crl",
+            crl_listener.local_addr()?.port()
+        );
+        let (pki, crl) = Pki::mint_with_crl(&crl_url)?;
+        drop(tokio::spawn(serve_crl(crl_listener, crl)));
+        Self::start(refused, pki).await
+    }
+
+    /// Starts the listener over `pki`, dropping its first `refused`
+    /// connections.
+    async fn start(refused: usize, pki: Pki) -> Result<Self, ListenerError> {
         let acceptor = TlsAcceptor::from(pki.server_config()?);
         let listener = TcpListener::bind(("127.0.0.1", 0)).await?;
         let port = listener.local_addr()?.port();
@@ -123,6 +149,35 @@ impl SyslogTlsListener {
     }
 }
 
+/// Answers every HTTP request on `listener` with `crl`, DER, as
+/// `application/pkix-crl` (RFC 5280 §4.2.1.13, RFC 2585 §4.2).
+async fn serve_crl(listener: TcpListener, crl: Vec<u8>) {
+    let mut response = format!(
+        "HTTP/1.1 200 OK\r\ncontent-type: application/pkix-crl\r\ncontent-length: {}\r\n\
+         connection: close\r\n\r\n",
+        crl.len()
+    )
+    .into_bytes();
+    response.extend_from_slice(&crl);
+    let response = Arc::new(response);
+    while let Ok((mut tcp, _peer)) = listener.accept().await {
+        let response = Arc::clone(&response);
+        drop(tokio::spawn(async move {
+            let mut request: Vec<u8> = Vec::new();
+            let mut chunk = [0_u8; 1024];
+            while !request.windows(4).any(|end| end == b"\r\n\r\n") && request.len() < 16 * 1024 {
+                match tcp.read(&mut chunk).await {
+                    Ok(0) | Err(_) => return,
+                    Ok(read) => request.extend(chunk.iter().take(read)),
+                }
+            }
+            if let Err(e) = tcp.write_all(&response).await {
+                tracing::debug!("syslog test CRL server: the answer was not written: {e}");
+            }
+        }));
+    }
+}
+
 /// How a sender ended its connection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Ending {
@@ -184,9 +239,24 @@ impl Pki {
     /// Mints the CA and the leaf, valid from yesterday to [`VALIDITY_DAYS`]
     /// from today.
     pub(crate) fn mint() -> Result<Self, ListenerError> {
+        Self::minted(None).map(|(pki, _crl)| pki)
+    }
+
+    /// Mints the CA and a leaf naming `crl_url` as its CRL distribution
+    /// point, with the CA's CRL, DER, which revokes nothing.
+    fn mint_with_crl(crl_url: &str) -> Result<(Self, Vec<u8>), ListenerError> {
+        let (pki, crl) = Self::minted(Some(crl_url))?;
+        let crl = crl.ok_or_else(|| ListenerError::Pki("no CRL was signed".into()))?;
+        Ok((pki, crl))
+    }
+
+    /// Mints the CA and the leaf, and with `crl_url` the CA's CRL the leaf
+    /// names there.
+    fn minted(crl_url: Option<&str>) -> Result<(Self, Option<Vec<u8>>), ListenerError> {
         use rcgen::{
-            BasicConstraints, CertificateParams, DnType, ExtendedKeyUsagePurpose, IsCa, Issuer,
-            KeyPair, KeyUsagePurpose,
+            BasicConstraints, CertificateParams, CertificateRevocationListParams,
+            CrlDistributionPoint, DnType, ExtendedKeyUsagePurpose, IsCa, Issuer, KeyIdMethod,
+            KeyPair, KeyUsagePurpose, SerialNumber,
         };
         let pki = |e: rcgen::Error| ListenerError::Pki(Box::new(e));
         let stamp = |date: jiff::civil::Date| -> Result<_, ListenerError> {
@@ -221,14 +291,39 @@ impl Pki {
         leaf.extended_key_usages = vec![ExtendedKeyUsagePurpose::ServerAuth];
         leaf.not_before = not_before;
         leaf.not_after = not_after;
+        if let Some(url) = crl_url {
+            leaf.crl_distribution_points = vec![CrlDistributionPoint {
+                uris: vec![url.to_owned()],
+            }];
+        }
         let leaf_key = KeyPair::generate().map_err(pki)?;
         let issuer = Issuer::new(ca, ca_key);
         let leaf = leaf.signed_by(&leaf_key, &issuer).map_err(pki)?;
-        Ok(Self {
-            ca_pem,
-            leaf: leaf.der().clone(),
-            leaf_key: leaf_key.serialize_der(),
-        })
+        let crl = match crl_url {
+            Some(_) => Some(
+                CertificateRevocationListParams {
+                    this_update: not_before,
+                    next_update: not_after,
+                    crl_number: SerialNumber::from(1_u64),
+                    issuing_distribution_point: None,
+                    revoked_certs: Vec::new(),
+                    key_identifier_method: KeyIdMethod::Sha256,
+                }
+                .signed_by(&issuer)
+                .map_err(pki)?
+                .der()
+                .to_vec(),
+            ),
+            None => None,
+        };
+        Ok((
+            Self {
+                ca_pem,
+                leaf: leaf.der().clone(),
+                leaf_key: leaf_key.serialize_der(),
+            },
+            crl,
+        ))
     }
 
     /// The server configuration presenting the leaf.

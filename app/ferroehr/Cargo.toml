@@ -45,7 +45,7 @@ schema = [
 futures.workspace = true
 ferrohealth-secret = { workspace = true }
 schemars = { workspace = true, optional = true }
-ferrohealth-server = { workspace = true, features = ["otlp", "platform-verifier", "reqwest"] }
+ferrohealth-server = { workspace = true, features = ["otlp", "platform-verifier"] }
 ferrohealth-health = { workspace = true, features = ["registry"] }
 ferroehr-ext = { path = "../ferroehr-ext", optional = true }
 # A stored body and an archived blob travel as shared slices.

@@ -107,8 +107,12 @@ The viewer verifies the CDR and the OIDC issuer against the platform trust
 store and the extra certificate authorities its configuration names: a CDR or
 an identity provider whose certificate comes from a private CA is trusted once
 `cdr.tls.trust_roots_file` or `oidc.tls.trust_roots_file` names a PEM bundle holding that
-CA, on Linux and macOS alike. A file that cannot be read,
-or holds no certificate, refuses the start.
+CA, on Linux and macOS alike, and a connection opens only once a revocation
+check of the chain's CRL or OCSP sources cleared it. A private CA that
+publishes no revocation service goes in `cdr.tls.trust_roots_without_revocation_file`
+or `oidc.tls.trust_roots_without_revocation_file`, trusted with no check and
+named at the start. A file that cannot be read, or holds no certificate,
+refuses the start ([How an outbound TLS table verifies a peer](../installation/config-integrations.md#how-an-outbound-tls-table-verifies-a-peer)).
 
 The viewer manages no accounts of its own: it authenticates you against the
 CDR (Basic) or your identity provider (OIDC), and there are no user, role, or
@@ -207,7 +211,8 @@ override, because the viewer's variables share its prefix:
 | `cdr.timeout` | `"30s"` | How long one request to the CDR may take. |
 | `cdr.purpose_of_use` | unset | The purpose of use the viewer declares when the reader chose none on [Preferences](preferences.md#reading). It must be a code the CDR's `GET {extensions}/access/purposes` lists: an unlisted code stops the first request after sign-in with an error naming it, and is never sent. Unset declares nothing until the reader chooses. |
 | `cdr.basic_issuer` | `localhost` | The issuer the CDR names a Basic user's login by, its `[api] basic_issuer` (which defaults to its `[api] system_id`). The viewer names a Basic session's user under it in the placeholder committer of every commit, so set it to the CDR's value; `localhost` is the CDR's own in a sandbox with neither `system_id` nor `public_base_url`. |
-| `cdr.tls.trust_roots_file` | unset | A PEM bundle of certificate authorities trusted for the CDR beside the platform's roots, for a CDR behind a private PKI. |
+| `cdr.tls.trust_roots_file` | unset | A PEM bundle of certificate authorities trusted for the CDR beside the platform's roots, for a CDR behind a private PKI; the CDR's chain must be cleared by a revocation check. |
+| `cdr.tls.trust_roots_without_revocation_file` | unset | The same for a private PKI that publishes no revocation service, trusted with no revocation check. |
 | `cdr.tls.client_identity` (`_file`) | unset | The client certificate chain and its private key, in one PEM, presented to a CDR that asks for mutual TLS. |
 | `cdr.tls.min_version` | `"1.3"` | The oldest TLS version the CDR client speaks; `"1.2"` lowers it. |
 | `cdr.management_base_url` | derived from `cdr.base_url` | The CDR's management surface, base path included; set it when the CDR serves management on its own internal listener (`management.listen`) or under a renamed base path. Drives Server's [management tabs](server.md#health-metrics-and-logging). |
@@ -217,7 +222,7 @@ override, because the viewer's variables share its prefix:
 | `auth.public_base_url` | — | The viewer's externally visible origin: the origin the same-origin check compares a post with, the base of `oidc.redirect_uri` (`<public_base_url>/auth/callback`) when that is not set, and the base of `oidc.post_logout_redirect_uri` (`<public_base_url>/sign-in?signed-out=1`, the signed-out page) when that is not set. |
 | `oidc.issuer` / `client_id` / `client_secret` (`_file`) / `redirect_uri` / `post_logout_redirect_uri` / `scopes` | — | The viewer's client at its OpenID Provider (`ferrohealth-session`'s `[oidc]`). The provider must allow the redirect URI `<public_base_url>/auth/callback` and the post-logout redirect URI `<public_base_url>/sign-in?signed-out=1` (OpenID Connect RP-Initiated Logout 1.0 §3). With `auth.oidc_enabled`, an issuer that is not `https` off loopback, a missing client id or redirect URI, and `scopes` without `openid` are startup errors, and the provider's metadata is discovered at the start. |
 | `oidc.resolve` | empty | `host=ip:port` entries for split-horizon DNS: the viewer reaches each provider host at its address, while browsers and tokens keep the canonical URL. |
-| `oidc.tls.trust_roots_file` / `client_identity` (`_file`) / `min_version` | unset / unset / `"1.3"` | The family's outbound TLS table for the provider: a PEM bundle of certificate authorities trusted beside the platform's roots, for a provider behind a private PKI; the client certificate chain and its private key in one PEM, for mutual TLS (RFC 8705 §2); and the oldest TLS version of the provider connection (`"1.2"` lowers it). |
+| `oidc.tls.trust_roots_file` / `trust_roots_without_revocation_file` / `client_identity` (`_file`) / `min_version` | unset / unset / unset / `"1.3"` | The family's outbound TLS table for the provider: a PEM bundle of certificate authorities trusted beside the platform's roots, for a provider behind a private PKI, checked for revocation; the same for a private PKI that publishes no revocation service, with no check; the client certificate chain and its private key in one PEM, for mutual TLS (RFC 8705 §2); and the oldest TLS version of the provider connection (`"1.2"` lowers it). |
 | `login.notice` | empty | Informational text on the sign-in card, line breaks preserved. A demo or evaluation deployment states its public credentials and usage expectations here. |
 | `login.links` | empty | Links under the sign-in card, each `{ label, href }` — an API reference, a documentation page. |
 | `session.store` | `memory` | Where sessions are kept (`ferrohealth-session`'s `[session]`): `memory`, in the one viewer process, is the only store. `sealed`, `session.key` and `session.key_file` are removed and refuse the start. |

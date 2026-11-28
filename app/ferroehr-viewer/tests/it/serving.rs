@@ -160,9 +160,10 @@ async fn an_unknown_address_without_a_session_meets_the_sign_in_through_the_stac
     assert_eq!(http::StatusCode::OK, answer.status());
 }
 
-/// A CDR behind a private CA answers the client that names the CA in
-/// `[cdr.tls] trust_roots_file`, and refuses the handshake of one that does
-/// not. The stub serves `status` at the product root of the default base
+/// A CDR behind a private CA that publishes no revocation service answers
+/// the client that names the CA in `[cdr.tls]
+/// trust_roots_without_revocation_file`, and refuses the handshake of one
+/// that does not. The stub serves `status` at the product root of the default base
 /// path, where the client addresses it.
 #[tokio::test]
 async fn the_cdr_client_trusts_the_ca_its_tls_table_names() {
@@ -188,7 +189,7 @@ async fn the_cdr_client_trusts_the_ca_its_tls_table_names() {
     };
 
     let trusting = ferroehr_viewer::cdr::CdrClient::new(&config(TlsClientSection {
-        trust_roots_file: Some(dir.join("ca.pem")),
+        trust_roots_without_revocation_file: Some(dir.join("ca.pem")),
         ..TlsClientSection::default()
     }))
     .expect("the client builds over the CA file");
@@ -211,9 +212,9 @@ async fn the_cdr_client_trusts_the_ca_its_tls_table_names() {
     );
 }
 
-/// The provider client takes `[oidc] ca_file` the same way: the relying
-/// party discovers a provider behind the private CA it names, and not one
-/// the platform's roots alone cannot reach.
+/// The provider client takes `[oidc.tls] trust_roots_without_revocation_file`
+/// the same way: the relying party discovers a provider behind the private CA
+/// it names, and not one the platform's roots alone cannot reach.
 #[tokio::test]
 async fn the_provider_client_trusts_the_ca_its_section_names() {
     let dir = scratch("issuer");
@@ -245,14 +246,14 @@ async fn the_provider_client_trusts_the_ca_its_section_names() {
     .await;
     let url = format!("https://localhost:{}", address.port());
     issuer.set(url.clone()).expect("set once");
-    let section = |trust_roots_file: Option<PathBuf>| OidcSection {
+    let section = |roots: Option<PathBuf>| OidcSection {
         issuer: ferrohealth_secret::secret_url::SecretUrl::new(url.clone()),
         client_id: "ferroehr-viewer".to_owned(),
         redirect_uri: ferrohealth_secret::secret_url::SecretUrl::new(
             "http://localhost:3000/auth/callback".to_owned(),
         ),
         tls: TlsClientSection {
-            trust_roots_file,
+            trust_roots_without_revocation_file: roots,
             ..TlsClientSection::default()
         },
         ..OidcSection::default()
