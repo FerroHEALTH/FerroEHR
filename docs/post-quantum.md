@@ -36,7 +36,9 @@ file disagrees with the tree.
 A row is `safe` when every key it depends on is established or verified by
 a post-quantum or hybrid mechanism, or when it is a symmetric primitive at
 128 bits or more. A row whose post-quantum form has no standard yet counts
-as not safe, and the badge counts the safe rows of all rows.
+as not safe and stays out of the badge, which counts the safe rows of the
+rows a post-quantum standard covers; the `no standard yet` rows of the table
+below are the rest.
 
 ## What FerroEHR does
 
