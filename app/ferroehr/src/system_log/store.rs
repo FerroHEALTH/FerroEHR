@@ -382,7 +382,7 @@ impl AuditStore {
     /// the batched insert resolves into `search_tokens` (#6633).
     ///
     /// # Errors
-    /// The [`RenderPolicy::compile`] errors, and [`AuditError::SearchToken`]
+    /// The [`RenderPolicy::compile`] errors, and [`AuditError::TokenCount`]
     /// when the batch holds more records than an `integer` counts.
     #[cfg(feature = "fhir")]
     async fn batch_tokens(

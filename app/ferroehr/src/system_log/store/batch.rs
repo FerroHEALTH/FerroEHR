@@ -300,13 +300,13 @@ impl TokenArgs {
     /// The arrays of the tokens of `records`, in their order.
     ///
     /// # Errors
-    /// [`AuditError::SearchToken`] when the write holds more records than an
+    /// [`AuditError::TokenCount`] when the write holds more records than an
     /// `integer` counts.
     pub(crate) fn of(
         records: Vec<std::collections::BTreeSet<crate::system_log::search::SearchToken>>,
     ) -> Result<Self, AuditError> {
         let mut args = Self {
-            count: i32::try_from(records.len()).map_err(|_| AuditError::SearchToken)?,
+            count: i32::try_from(records.len()).map_err(AuditError::TokenCount)?,
             ..Self::default()
         };
         for (record, tokens) in (1..).zip(records) {
@@ -330,11 +330,11 @@ impl TokenArgs {
     /// The arrays of `count` records that name no token.
     ///
     /// # Errors
-    /// [`AuditError::SearchToken`] when `count` exceeds what an `integer`
+    /// [`AuditError::TokenCount`] when `count` exceeds what an `integer`
     /// counts.
     pub(crate) fn none(count: usize) -> Result<Self, AuditError> {
         Ok(Self {
-            count: i32::try_from(count).map_err(|_| AuditError::SearchToken)?,
+            count: i32::try_from(count).map_err(AuditError::TokenCount)?,
             ..Self::default()
         })
     }

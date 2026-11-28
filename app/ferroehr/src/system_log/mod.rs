@@ -182,6 +182,10 @@ pub enum AuditError {
     /// store after it was stored.
     #[error("an audit search token cannot be read back from the store")]
     SearchToken,
+    /// A write holds more records than the token statement's `integer`
+    /// record count takes.
+    #[error("an audit write holds more records than its search tokens can count")]
+    TokenCount(#[source] std::num::TryFromIntError),
     /// The audit subsystem's own runtime could not start.
     #[error("the audit runtime could not start")]
     Runtime(#[source] std::io::Error),

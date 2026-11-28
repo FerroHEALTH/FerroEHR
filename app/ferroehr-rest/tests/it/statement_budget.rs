@@ -175,6 +175,18 @@ const OWN: &str = "statement_budget_own";
 /// committed writes held (#5762, #6242): the removal of the access log's
 /// holds and of the system records' holds.
 const CHAINER_RELEASE: u64 = 2;
+
+/// The nested statements of a frontier round's token resolution (#6633): the
+/// writers' hold on the search tokens and the token statement.
+const FRONTIER_TOKENS: u64 = 2;
+
+/// The nested statements the background rounds ran in a window, which no
+/// request sends: the chainer's releases and the frontier round's token
+/// resolutions.
+fn background(statements: &[Counted]) -> u64 {
+    calls(statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE
+        + calls(statements, "SELECT t.tokens FROM audit.search_tokens_of") * FRONTIER_TOKENS
+}
 /// The budget of one kind of request: its round trips, and the statements
 /// nested in them.
 struct Budget {

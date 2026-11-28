@@ -314,7 +314,7 @@ const RESOLVE: &str = "SELECT t.tokens FROM audit.search_tokens_of($1::integer[]
 /// an `integer[]`, storing every token and set the store does not hold yet.
 ///
 /// # Errors
-/// [`AuditError::SearchToken`] when the write holds more records than an
+/// [`AuditError::TokenCount`] when the write holds more records than an
 /// `integer` counts, and [`AuditError::Store`] when the statement fails.
 pub(crate) async fn record_tokens(
     conn: &mut PgConnection,
