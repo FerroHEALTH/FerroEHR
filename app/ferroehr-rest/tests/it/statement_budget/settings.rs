@@ -116,12 +116,14 @@ async fn measure(
         .expect("the statement counts reset");
     let from = super::wal::insert_lsn(pool).await;
     let sent_before = round_trips.0.load(Ordering::Relaxed);
+    let resolves_before = round_trips.1.load(Ordering::Relaxed);
     for (k, ehr) in ehrs.iter().enumerate() {
         common::commit_access_settings(svc, *ehr, settings(k + 1))
             .instrument(tracing::info_span!(REQUEST_SPAN))
             .await;
     }
     let sent = round_trips.0.load(Ordering::Relaxed) - sent_before;
+    let requested = round_trips.1.load(Ordering::Relaxed) - resolves_before;
     drained(pool).await;
     indexed(pool).await;
     let to = super::wal::insert_lsn(pool).await;
@@ -135,7 +137,7 @@ async fn measure(
         .filter(|s| !s.toplevel)
         .map(|s| s.calls)
         .sum();
-    let background = background(&statements);
+    let background = background(&statements, requested);
     let mut out = Measured {
         round_trips: sent.div_euclid(WRITES),
         nested: nested.saturating_sub(background).div_euclid(WRITES),

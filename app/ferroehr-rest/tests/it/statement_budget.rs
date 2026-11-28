@@ -37,6 +37,7 @@ use crate::common::BASE;
 use ferroehr::db::pool::SESSION_SETUP_SPAN;
 
 mod care;
+mod catch_up;
 mod cpu;
 mod entry;
 mod hold;
@@ -180,12 +181,38 @@ const CHAINER_RELEASE: u64 = 2;
 /// writers' hold on the search tokens and the token statement.
 const FRONTIER_TOKENS: u64 = 2;
 
-/// The nested statements the background rounds ran in a window, which no
-/// request sends: the chainer's releases and the frontier round's token
-/// resolutions.
-fn background(statements: &[Counted]) -> u64 {
+/// The opening of the token resolution a frontier round sends, and an
+/// ITI-81 search's catch-up on the request path.
+const RESOLVE: &str = "SELECT t.tokens FROM audit.search_tokens_of";
+
+/// The nested statements the background rounds ran in a window: the
+/// chainer's releases, and the token resolutions beyond the `requested` ones
+/// the window's requests sent themselves (#6819).
+fn background(statements: &[Counted], requested: u64) -> u64 {
     calls(statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE
-        + calls(statements, "SELECT t.tokens FROM audit.search_tokens_of") * FRONTIER_TOKENS
+        + calls(statements, RESOLVE).saturating_sub(requested) * FRONTIER_TOKENS
+}
+
+/// Whether a `sqlx::query` event sent a token resolution, read without an
+/// allocation on the measured thread.
+#[derive(Default)]
+struct Resolves(bool);
+
+impl tracing::field::Visit for Resolves {
+    fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
+        if field.name() == "db.statement" {
+            self.0 |= value.trim_start().starts_with(RESOLVE);
+        }
+    }
+
+    fn record_debug(&mut self, _: &tracing::field::Field, _: &dyn std::fmt::Debug) {}
+}
+
+/// Whether `event` sent a token resolution.
+fn resolves(event: &tracing::Event<'_>) -> bool {
+    let mut seen = Resolves::default();
+    event.record(&mut seen);
+    seen.0
 }
 /// The budget of one kind of request: its round trips, and the statements
 /// nested in them.
@@ -235,9 +262,10 @@ fn population(_: &str) -> String {
 }
 
 /// Counts the `sqlx::query` events sent inside a [`REQUEST_SPAN`] span and
-/// outside a connection's session setup.
+/// outside a connection's session setup, and the token resolutions among
+/// them.
 #[derive(Clone, Default)]
-struct RoundTrips(Arc<AtomicU64>);
+struct RoundTrips(Arc<AtomicU64>, Arc<AtomicU64>);
 
 impl<S> tracing_subscriber::Layer<S> for RoundTrips
 where
@@ -254,6 +282,9 @@ where
         // A new connection's session setup is the pool's work (#5899).
         if names.contains(&REQUEST_SPAN) && !names.contains(&SESSION_SETUP_SPAN) {
             self.0.fetch_add(1, Ordering::Relaxed);
+            if resolves(event) {
+                self.1.fetch_add(1, Ordering::Relaxed);
+            }
         }
     }
 }
