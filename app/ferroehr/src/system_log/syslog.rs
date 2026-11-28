@@ -14,6 +14,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use ferrohealth_server::revocation::Clearing;
 use ferrohealth_server::tls_client::TlsClient;
 use ihe_atna::atna::forwarder::Forwarder;
 use ihe_atna::atna::repository::{Repository, Timeouts};
@@ -41,10 +42,15 @@ const IDLE: Duration = Duration::from_secs(2);
 /// The RFC 5424 `PROCID`, the NILVALUE: the process id names no audited fact.
 const PROCID: &str = "-";
 
+/// How long one revocation check of the repository may take; no
+/// specification governs the bound: our own design.
+const CLEAR_WITHIN: Duration = Duration::from_secs(10);
+
 /// The forwarder of the syslog route `config` names, writing as `hostname`
 /// (the server's `NetworkAccessPointID`, `-` when unknown) and `app_name`
 /// (the audit source id), delivering from `store`'s syslog outbox and woken
-/// by `notify`.
+/// by `notify`, with the clearing that keeps the repository cleared for
+/// revocation while the caller holds it.
 ///
 /// # Errors
 /// [`AuditError::Transport`] when a header field is not printable US-ASCII
@@ -56,26 +62,24 @@ pub(super) async fn forwarder(
     app_name: &str,
     store: AuditStore,
     notify: Arc<Notify>,
-) -> Result<Arc<Forwarder<StoreOutbox>>, AuditError> {
+) -> Result<(Arc<Forwarder<StoreOutbox>>, Option<Clearing>), AuditError> {
     let hostname = if hostname.is_empty() { "-" } else { hostname };
     let framer =
         Sender::new(hostname, app_name, PROCID).map_err(|e| AuditError::Transport(Box::new(e)))?;
-    let repository = repository(config).await?;
+    let (repository, clearing) = repository(config).await?;
     let outbox = StoreOutbox::syslog(store, framer, notify, IDLE);
-    Ok(Forwarder::syslog_from(
-        outbox,
-        repository,
-        config.retry.max_backoff.get(),
-    ))
+    let forwarder = Forwarder::syslog_from(outbox, repository, config.retry.max_backoff.get());
+    Ok((forwarder, clearing))
 }
 
 /// The Audit Record Repository `config` names, reached over TLS with the
-/// `[audit.syslog.tls]` material.
+/// `[audit.syslog.tls]` material, and, when that table names
+/// `trust_roots_file`, the clearing that admits the repository's chain.
 ///
 /// # Errors
 /// [`AuditError::Transport`] when the address is no `tls://host:port` URL or
 /// the TLS material cannot be read or is refused.
-async fn repository(config: &SyslogConfig) -> Result<Repository, AuditError> {
+async fn repository(config: &SyslogConfig) -> Result<(Repository, Option<Clearing>), AuditError> {
     let address = config
         .address()
         .map_err(|e| AuditError::Transport(e.into()))?;
@@ -86,7 +90,31 @@ async fn repository(config: &SyslogConfig) -> Result<Repository, AuditError> {
     .await
     .map_err(|e| AuditError::Transport(Box::new(e)))?
     .map_err(|e| AuditError::Transport(Box::new(e)))?;
-    Repository::tls(&address, Arc::new(tls), TIMEOUTS)
+    let clearing = match tls.check() {
+        Some(check) => Some(Clearing::spawn(
+            check.clone(),
+            vec![handshake_endpoint(&address)?],
+            CLEAR_WITHIN,
+        )),
+        None => None,
+    };
+    let repository = Repository::tls(&address, Arc::new(tls.into_config()), TIMEOUTS)
+        .map_err(|e| AuditError::Transport(Box::new(e)))?;
+    Ok((repository, clearing))
+}
+
+/// The `https` URL of the host and port of `address`, the form the
+/// revocation check takes for the TLS handshake it reads the chain from.
+///
+/// # Errors
+/// [`AuditError::Transport`] when `address` names no host or port.
+fn handshake_endpoint(address: &url::Url) -> Result<url::Url, AuditError> {
+    let (Some(host), Some(port)) = (address.host_str(), address.port()) else {
+        return Err(AuditError::Transport(
+            "audit.syslog.url names no host and port".into(),
+        ));
+    };
+    url::Url::parse(&format!("https://{host}:{port}"))
         .map_err(|e| AuditError::Transport(Box::new(e)))
 }
 
@@ -140,7 +168,8 @@ mod tests {
             )),
             ..SyslogConfig::default()
         };
-        let repository = repository(&config).await.expect("the repository builds");
+        let (repository, clearing) = repository(&config).await.expect("the repository builds");
+        assert!(clearing.is_none(), "no trust_roots_file, so no clearing");
         assert!(
             repository.connect().await.is_err(),
             "the peer's certificate is trusted by no root"

@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 659 keys. A deployment that holds real data sets the 8 below,
+# This file lists 672 keys. A deployment that holds real data sets the 8 below,
 # the only live lines; every other key is optional and runs on the built-in
 # default its `#?` line shows, or stays unset where its note says so.
 #
@@ -208,9 +208,15 @@ profile = "sandbox"
 # A file holding `client_identity`. Optional, unset by default
 # (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's. Optional, unset by default
-# (infrastructure).
+# A PEM bundle of trust roots beside the platform's. A chain to one of them
+# must clear a revocation check before a connection over it. Optional, unset by
+# default (infrastructure).
 #? trust_roots_file = ""
+# A PEM bundle of trust roots beside the platform's whose PKI publishes no CRL
+# and no OCSP responder. A chain to one of them is trusted with no revocation
+# check, which the product names at its start and logs at each connection.
+# Optional, unset by default (infrastructure).
+#? trust_roots_without_revocation_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
 # as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
@@ -380,9 +386,15 @@ profile = "sandbox"
 # client_identity = ""
 # A file holding `client_identity`. Optional, unset by default (trust).
 # client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's. Optional, unset by default
-# (trust).
+# A PEM bundle of trust roots beside the platform's. A chain to one of them
+# must clear a revocation check before a connection over it. Optional, unset by
+# default (trust).
 # trust_roots_file = ""
+# A PEM bundle of trust roots beside the platform's whose PKI publishes no CRL
+# and no OCSP responder. A chain to one of them is trusted with no revocation
+# check, which the product names at its start and logs at each connection.
+# Optional, unset by default (trust).
+# trust_roots_without_revocation_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
 # as for the listener. Optional (trust).
 # min_version = "1.3"
@@ -460,9 +472,15 @@ profile = "sandbox"
 # client_identity = ""
 # A file holding `client_identity`. Optional, unset by default (trust).
 # client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's. Optional, unset by default
-# (trust).
+# A PEM bundle of trust roots beside the platform's. A chain to one of them
+# must clear a revocation check before a connection over it. Optional, unset by
+# default (trust).
 # trust_roots_file = ""
+# A PEM bundle of trust roots beside the platform's whose PKI publishes no CRL
+# and no OCSP responder. A chain to one of them is trusted with no revocation
+# check, which the product names at its start and logs at each connection.
+# Optional, unset by default (trust).
+# trust_roots_without_revocation_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
 # as for the listener. Optional (trust).
 # min_version = "1.3"
@@ -620,9 +638,15 @@ profile = "sandbox"
 #? client_identity = ""
 # A file holding `client_identity`. Optional, unset by default (trust).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's. Optional, unset by default
-# (trust).
+# A PEM bundle of trust roots beside the platform's. A chain to one of them
+# must clear a revocation check before a connection over it. Optional, unset by
+# default (trust).
 #? trust_roots_file = ""
+# A PEM bundle of trust roots beside the platform's whose PKI publishes no CRL
+# and no OCSP responder. A chain to one of them is trusted with no revocation
+# check, which the product names at its start and logs at each connection.
+# Optional, unset by default (trust).
+#? trust_roots_without_revocation_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
 # as for the listener. Optional (trust).
 #? min_version = "1.3"
@@ -1236,9 +1260,15 @@ profile = "sandbox"
 # A file holding `client_identity`. Optional, unset by default
 # (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's. Optional, unset by default
-# (infrastructure).
+# A PEM bundle of trust roots beside the platform's. A chain to one of them
+# must clear a revocation check before a connection over it. Optional, unset by
+# default (infrastructure).
 #? trust_roots_file = ""
+# A PEM bundle of trust roots beside the platform's whose PKI publishes no CRL
+# and no OCSP responder. A chain to one of them is trusted with no revocation
+# check, which the product names at its start and logs at each connection.
+# Optional, unset by default (infrastructure).
+#? trust_roots_without_revocation_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
 # as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
@@ -1288,9 +1318,15 @@ profile = "sandbox"
 # A file holding `client_identity`. Optional, unset by default
 # (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's. Optional, unset by default
-# (infrastructure).
+# A PEM bundle of trust roots beside the platform's. A chain to one of them
+# must clear a revocation check before a connection over it. Optional, unset by
+# default (infrastructure).
 #? trust_roots_file = ""
+# A PEM bundle of trust roots beside the platform's whose PKI publishes no CRL
+# and no OCSP responder. A chain to one of them is trusted with no revocation
+# check, which the product names at its start and logs at each connection.
+# Optional, unset by default (infrastructure).
+#? trust_roots_without_revocation_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
 # as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
@@ -1385,9 +1421,15 @@ profile = "sandbox"
 # A file holding `client_identity`. Optional, unset by default
 # (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's. Optional, unset by default
-# (infrastructure).
+# A PEM bundle of trust roots beside the platform's. A chain to one of them
+# must clear a revocation check before a connection over it. Optional, unset by
+# default (infrastructure).
 #? trust_roots_file = ""
+# A PEM bundle of trust roots beside the platform's whose PKI publishes no CRL
+# and no OCSP responder. A chain to one of them is trusted with no revocation
+# check, which the product names at its start and logs at each connection.
+# Optional, unset by default (infrastructure).
+#? trust_roots_without_revocation_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
 # as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
@@ -1747,9 +1789,15 @@ subject_namespaces = []
 # A file holding `client_identity`. Optional, unset by default
 # (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's. Optional, unset by default
-# (infrastructure).
+# A PEM bundle of trust roots beside the platform's. A chain to one of them
+# must clear a revocation check before a connection over it. Optional, unset by
+# default (infrastructure).
 #? trust_roots_file = ""
+# A PEM bundle of trust roots beside the platform's whose PKI publishes no CRL
+# and no OCSP responder. A chain to one of them is trusted with no revocation
+# check, which the product names at its start and logs at each connection.
+# Optional, unset by default (infrastructure).
+#? trust_roots_without_revocation_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
 # as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
@@ -1844,9 +1892,15 @@ subject_namespaces = []
 # A file holding `client_identity`. Optional, unset by default
 # (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's. Optional, unset by default
-# (infrastructure).
+# A PEM bundle of trust roots beside the platform's. A chain to one of them
+# must clear a revocation check before a connection over it. Optional, unset by
+# default (infrastructure).
 #? trust_roots_file = ""
+# A PEM bundle of trust roots beside the platform's whose PKI publishes no CRL
+# and no OCSP responder. A chain to one of them is trusted with no revocation
+# check, which the product names at its start and logs at each connection.
+# Optional, unset by default (infrastructure).
+#? trust_roots_without_revocation_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
 # as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
@@ -2025,9 +2079,15 @@ subject_namespaces = []
 # A file holding `client_identity`. Optional, unset by default
 # (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's. Optional, unset by default
-# (infrastructure).
+# A PEM bundle of trust roots beside the platform's. A chain to one of them
+# must clear a revocation check before a connection over it. Optional, unset by
+# default (infrastructure).
 #? trust_roots_file = ""
+# A PEM bundle of trust roots beside the platform's whose PKI publishes no CRL
+# and no OCSP responder. A chain to one of them is trusted with no revocation
+# check, which the product names at its start and logs at each connection.
+# Optional, unset by default (infrastructure).
+#? trust_roots_without_revocation_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
 # as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
@@ -2122,9 +2182,15 @@ subject_namespaces = []
 # A file holding `client_identity`. Optional, unset by default
 # (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's. Optional, unset by default
-# (infrastructure).
+# A PEM bundle of trust roots beside the platform's. A chain to one of them
+# must clear a revocation check before a connection over it. Optional, unset by
+# default (infrastructure).
 #? trust_roots_file = ""
+# A PEM bundle of trust roots beside the platform's whose PKI publishes no CRL
+# and no OCSP responder. A chain to one of them is trusted with no revocation
+# check, which the product names at its start and logs at each connection.
+# Optional, unset by default (infrastructure).
+#? trust_roots_without_revocation_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
 # as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
@@ -2305,9 +2371,15 @@ subject_namespaces = []
 # A file holding `client_identity`. Optional, unset by default
 # (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's. Optional, unset by default
-# (infrastructure).
+# A PEM bundle of trust roots beside the platform's. A chain to one of them
+# must clear a revocation check before a connection over it. Optional, unset by
+# default (infrastructure).
 #? trust_roots_file = ""
+# A PEM bundle of trust roots beside the platform's whose PKI publishes no CRL
+# and no OCSP responder. A chain to one of them is trusted with no revocation
+# check, which the product names at its start and logs at each connection.
+# Optional, unset by default (infrastructure).
+#? trust_roots_without_revocation_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
 # as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
@@ -2402,9 +2474,15 @@ subject_namespaces = []
 # A file holding `client_identity`. Optional, unset by default
 # (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's. Optional, unset by default
-# (infrastructure).
+# A PEM bundle of trust roots beside the platform's. A chain to one of them
+# must clear a revocation check before a connection over it. Optional, unset by
+# default (infrastructure).
 #? trust_roots_file = ""
+# A PEM bundle of trust roots beside the platform's whose PKI publishes no CRL
+# and no OCSP responder. A chain to one of them is trusted with no revocation
+# check, which the product names at its start and logs at each connection.
+# Optional, unset by default (infrastructure).
+#? trust_roots_without_revocation_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
 # as for the listener. Optional (infrastructure).
 #? min_version = "1.3"

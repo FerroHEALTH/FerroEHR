@@ -22,6 +22,7 @@ use ferrohealth_server::healthcheck::{Outcome, check, check_tls, target};
 use ferrohealth_server::run::{EXIT_CONFIG, Failure, Run};
 use ferrohealth_server::section::ServerSection;
 use ferrohealth_server::tls::{HealthcheckTls, TlsKeys};
+use ferrohealth_server::tls_client::{TlsClient, TlsClientError};
 use ferrohealth_telemetry::telemetry::Telemetry;
 
 use crate::config::ViewerConfig;
@@ -62,7 +63,7 @@ pub async fn run(cli: Cli) -> Result<ExitCode, Failure> {
     let config = crate::config::load(path, sets).map_err(refused)?;
     match cli.command.unwrap_or(Common::Serve) {
         Common::Healthcheck => {
-            crate::telemetry::init_console(&config.telemetry)?;
+            let _console = crate::telemetry::init_console(&config.telemetry)?;
             let outcome = healthcheck(&config.server).await;
             if outcome.exit_code() == 0 {
                 Ok(ExitCode::SUCCESS)
@@ -78,13 +79,13 @@ pub async fn run(cli: Cli) -> Result<ExitCode, Failure> {
             if outcome.is_ok() {
                 tracing::info!("the configuration is valid");
             }
-            crate::telemetry::shutdown(&telemetry);
+            telemetry.shutdown();
             outcome.map(|()| ExitCode::SUCCESS)
         }
         Common::Serve => {
             let telemetry = crate::telemetry::init(&config.telemetry)?;
-            let outcome = serve(config, &telemetry).await;
-            crate::telemetry::shutdown(&telemetry);
+            let outcome = serve(config, telemetry.telemetry()).await;
+            telemetry.shutdown();
             outcome.map(|()| ExitCode::SUCCESS)
         }
     }
@@ -121,6 +122,7 @@ fn check_clients(config: &ViewerConfig) -> Result<(), Failure> {
 /// Serves the viewer until `SIGTERM` or `SIGINT`, then drains within
 /// `server.shutdown_timeout`, with the request log on `telemetry`.
 async fn serve(config: ViewerConfig, telemetry: &Telemetry) -> Result<(), Failure> {
+    name_unchecked_roots(&config).map_err(refused)?;
     let policy = crate::telemetry::stack_policy(&config, telemetry);
     let cdr = crate::cdr::CdrClient::new(&config.cdr).map_err(refused)?;
     // NOTE: ferrohealth-session 0.2.1 `config::OidcSettings::relying_party`: the provider's
@@ -158,6 +160,33 @@ async fn serve(config: ViewerConfig, telemetry: &Telemetry) -> Result<(), Failur
     )
     .await?;
     tracing::info!(?drained, "ferroehr-viewer stopped");
+    Ok(())
+}
+
+/// Names at the start the roots each outbound TLS table of `config` trusts
+/// with no revocation check (`trust_roots_without_revocation_file`).
+///
+/// # Errors
+/// The [`TlsClientError`] of such a table whose material cannot be read or
+/// is refused.
+fn name_unchecked_roots(config: &ViewerConfig) -> Result<(), TlsClientError> {
+    let mut tables = vec![
+        ("cdr.tls", &config.cdr.tls),
+        ("oidc.tls", &config.oidc.tls),
+        ("launch.tls", &config.launch.tls),
+    ];
+    if let Some(otlp) = &config.telemetry.otlp {
+        tables.push(("telemetry.otlp.tls", &otlp.tls));
+    }
+    for (key, section) in tables {
+        if section.trust_roots_without_revocation_file.is_some()
+            && let Some(roots) = TlsClient::read(key, section)?
+                .platform_config()?
+                .unchecked_roots()
+        {
+            tracing::warn!(roots = %roots, "an outbound TLS table trusts roots with no revocation check");
+        }
+    }
     Ok(())
 }
 

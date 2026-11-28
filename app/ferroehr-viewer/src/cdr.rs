@@ -156,6 +156,9 @@ pub enum CdrClientError {
 #[derive(Debug, Clone)]
 pub struct CdrClient {
     http: reqwest::Client,
+    /// The client `http` comes from, held so that under `trust_roots_file`
+    /// the CDR stays cleared for revocation while this client lives.
+    _outbound: OutboundClient,
     /// scheme://host:port — no trailing slash.
     origin: String,
     /// The CDR's ITS-REST base path — leading slash, no trailing slash
@@ -195,9 +198,8 @@ impl CdrClient {
             tls: cfg.tls.clone(),
             ..EndpointSection::default()
         };
-        let http = OutboundClient::build(&endpoint, "cdr", &ServerTls)?
-            .http()
-            .clone();
+        let outbound = OutboundClient::build(&endpoint, "cdr", &ServerTls)?;
+        let http = outbound.http().clone();
         let origin = cfg.base_url.trim_end_matches('/').to_owned();
         let rest_root = cfg.rest_root().to_owned();
         let management_base = cfg.management_base();
@@ -213,6 +215,7 @@ impl CdrClient {
         );
         Ok(Self {
             http,
+            _outbound: outbound,
             origin,
             base_path: cfg.rest_base_path().to_owned(),
             rest_root,

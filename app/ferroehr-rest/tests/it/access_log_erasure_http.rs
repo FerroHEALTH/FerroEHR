@@ -284,7 +284,7 @@ fn every_sink(syslog: &SyslogTlsListener, arr: &MockServer) -> AuditConfig {
                 syslog.port
             )),
             tls: ferrohealth_config::tls::TlsClientSection {
-                trust_roots_file: Some(syslog.ca_file.clone()),
+                trust_roots_without_revocation_file: Some(syslog.ca_file.clone()),
                 ..ferrohealth_config::tls::TlsClientSection::default()
             },
             ..SyslogConfig::default()

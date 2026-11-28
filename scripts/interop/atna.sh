@@ -119,7 +119,7 @@ services:
       FERROEHR__AUDIT__FHIR_FEED__ENDPOINT__URL: http://atna-hapi:8080/fhir
       FERROEHR__AUDIT__FHIR_FEED__POLL_INTERVAL: "500ms"
       FERROEHR__AUDIT__SYSLOG__URL: tls://atna-syslog:6514
-      FERROEHR__AUDIT__SYSLOG__TLS__TRUST_ROOTS_FILE: /etc/atna/ca.pem
+      FERROEHR__AUDIT__SYSLOG__TLS__TRUST_ROOTS_WITHOUT_REVOCATION_FILE: /etc/atna/ca.pem
       FERROEHR__AUDIT__SYSLOG__TLS__MIN_VERSION: "1.2"
     volumes:
       - $out/tls/ca.pem:/etc/atna/ca.pem:ro

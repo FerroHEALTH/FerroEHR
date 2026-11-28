@@ -184,14 +184,16 @@ audit message names a patient (ITI TF-2 §3.20.4.1.2.1.1).
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `url` | string | `tls://localhost:6514` | The repository, `tls://host:port`; RFC 5425 §4.1 names port 6514. The table's presence ships records; absent, nothing is sent. |
-| `tls.trust_roots_file` | path | unset | PEM bundle of trust roots for the repository, beside the platform's. |
+| `tls.trust_roots_file` | path | unset | PEM bundle of trust roots for the repository, beside the platform's; a chain to one of them is sent nothing until a revocation check cleared it. |
+| `tls.trust_roots_without_revocation_file` | path | unset | PEM bundle of trust roots for a private PKI that publishes no revocation service, trusted with no revocation check. |
 | `tls.client_identity_file` | path | unset | The client certificate chain and its private key in one PEM, for mutual TLS. |
 | `tls.client_identity` | secret | unset | The same PEM inline, in place of `client_identity_file`. |
 | `tls.min_version` | string | `"1.3"` | The oldest TLS version the client speaks; set `"1.2"` for a repository that offers no TLS 1.3. |
 | `retry.max_backoff` | duration | `"1min"` | The longest wait between two delivery attempts after a failure. |
 
 `[audit.syslog.tls]` is the outbound TLS table every FerroHEALTH product
-takes, as `[pixm.endpoint.tls]` is. Concatenate the certificate chain and the private
+takes, as `[pixm.endpoint.tls]` is, verified by the root a chain ends at
+([How an outbound TLS table verifies a peer](config-integrations.md#how-an-outbound-tls-table-verifies-a-peer)). Concatenate the certificate chain and the private
 key into the one PEM `client_identity_file` names.
 
 `ihe-atna`'s forwarder delivers from the local store by the syslog

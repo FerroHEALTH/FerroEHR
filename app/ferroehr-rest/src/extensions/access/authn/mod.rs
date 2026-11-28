@@ -743,7 +743,8 @@ mod tests {
 
     /// The configuration of an issuer at `issuer` checked by introspection,
     /// authenticating with a client grant or, with `bearer`, a bearer grant,
-    /// and trusting `ca_file` beside the platform roots when given.
+    /// and trusting `ca_file`, with no revocation check, beside the platform
+    /// roots when given.
     fn introspecting_through(
         issuer: &str,
         bearer: bool,
@@ -756,7 +757,7 @@ mod tests {
             client_id: "ferroehr".to_owned(),
             client_secret: Some(SecretString::from("synthetic-secret")),
             tls: ferrohealth_config::tls::TlsClientSection {
-                trust_roots_file: ca_file.clone(),
+                trust_roots_without_revocation_file: ca_file.clone(),
                 ..ferrohealth_config::tls::TlsClientSection::default()
             },
             ..ferrohealth_smart::config::credentials::OauthSection::default()
@@ -778,17 +779,18 @@ mod tests {
             }),
             ..test_support::entry(issuer)
         });
-        auth.shared.tls.trust_roots_file = ca_file;
+        auth.shared.tls.trust_roots_without_revocation_file = ca_file;
         AppConfig {
             auth,
             ..AppConfig::default()
         }
     }
 
-    /// `[auth.tls] trust_roots_file`: an issuer whose TLS certificate a private
-    /// certificate authority signed is read at boot trusting that authority
-    /// beside the platform roots, under either introspection credential, and
-    /// refused without it; a file that holds no certificate refuses the start.
+    /// `[auth.tls] trust_roots_without_revocation_file`: an issuer whose TLS
+    /// certificate a private certificate authority with no revocation service
+    /// signed is read at boot trusting that authority beside the platform
+    /// roots, under either introspection credential, and refused without it;
+    /// a file that holds no certificate refuses the start.
     /// No openEHR spec governs trust configuration: our own design.
     #[tokio::test]
     async fn an_issuer_behind_a_private_authority_is_read_with_auth_tls() {

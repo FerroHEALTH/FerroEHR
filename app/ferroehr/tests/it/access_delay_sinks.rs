@@ -55,7 +55,7 @@ async fn service(
                 listener.port
             )),
             tls: ferrohealth_config::tls::TlsClientSection {
-                trust_roots_file: Some(listener.ca_file.clone()),
+                trust_roots_without_revocation_file: Some(listener.ca_file.clone()),
                 ..ferrohealth_config::tls::TlsClientSection::default()
             },
             ..SyslogConfig::default()
