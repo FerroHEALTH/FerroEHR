@@ -334,9 +334,9 @@ async fn the_probe_reads_the_capability_statement() {
     );
 }
 
-/// A PIX Manager behind a private CA is reached with `[pixm.tls]
-/// trust_roots_file` naming that CA, beside the platform roots, and not
-/// without it.
+/// A PIX Manager behind a private CA that publishes no revocation service is
+/// reached with `[pixm.tls] trust_roots_without_revocation_file` naming that
+/// CA, beside the platform roots, and not without it.
 #[tokio::test]
 async fn a_private_ca_is_trusted_through_the_tls_roots() {
     let body = serde_json::to_string(&ig("CapabilityStatement-IHE.PIXm.Manager.json"))
@@ -346,7 +346,7 @@ async fn a_private_ca_is_trusted_through_the_tls_roots() {
         .expect("the HTTPS stub starts");
 
     let mut trusting = config(&server.base_url);
-    trusting.endpoint.tls.trust_roots_file = Some(server.ca_file.clone());
+    trusting.endpoint.tls.trust_roots_without_revocation_file = Some(server.ca_file.clone());
     IheIdentitySource::new(&trusting)
         .expect("builds with the test CA")
         .probe()
@@ -367,7 +367,8 @@ async fn a_private_ca_is_trusted_through_the_tls_roots() {
     );
 
     let mut missing = config(&server.base_url);
-    missing.endpoint.tls.trust_roots_file = Some(server.ca_file.with_extension("absent"));
+    missing.endpoint.tls.trust_roots_without_revocation_file =
+        Some(server.ca_file.with_extension("absent"));
     assert!(matches!(
         IheIdentitySource::new(&missing),
         Err(IdentitySourceError::Endpoint(

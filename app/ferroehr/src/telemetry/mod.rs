@@ -25,6 +25,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use build_info::BuildInfo;
+use ferrohealth_server::revocation::Clearing;
 use ferrohealth_telemetry::section::{Filter, TelemetrySection};
 use ferrohealth_telemetry::telemetry::{Console, FilterHandle, Layers, Service, Telemetry};
 use opentelemetry::metrics::Meter;
@@ -74,10 +75,8 @@ pub fn init(
     flame_file: Option<&Path>,
     build: &BuildInfo,
 ) -> Result<TelemetryGuard, TelemetryError> {
-    let telemetry = Arc::new(ferrohealth_server::telemetry::build(
-        section,
-        service(build),
-    )?);
+    let (telemetry, clearing) = ferrohealth_server::telemetry::build(section, service(build))?;
+    let telemetry = Arc::new(telemetry);
     let Layers { mut layers, filter } =
         telemetry.layers::<Registry, _>(section, &Console::detect(), std::io::stdout)?;
     let mut flame = None;
@@ -101,10 +100,12 @@ pub fn init(
         meter,
         flame,
         sampler: None,
+        clearing,
     })
 }
 
-/// The running telemetry: the provider, the console filter and the samplers.
+/// The running telemetry: the provider, the console filter, the samplers and
+/// the clearing that keeps an `https` collector cleared for revocation.
 pub struct TelemetryGuard {
     telemetry: Arc<Telemetry>,
     filter: FilterHandle,
@@ -112,6 +113,7 @@ pub struct TelemetryGuard {
     meter: Meter,
     flame: Option<FlameFlush>,
     sampler: Option<JoinHandle<()>>,
+    clearing: Option<Clearing>,
 }
 
 impl std::fmt::Debug for TelemetryGuard {
@@ -120,6 +122,7 @@ impl std::fmt::Debug for TelemetryGuard {
             .field("telemetry", &self.telemetry)
             .field("flame_capture", &self.flame.is_some())
             .field("sampler_running", &self.sampler.is_some())
+            .field("clearing", &self.clearing)
             .finish_non_exhaustive()
     }
 }

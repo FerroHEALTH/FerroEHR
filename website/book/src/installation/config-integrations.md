@@ -381,7 +381,7 @@ outbound client, the one every product of the family uses.
 | `timeout` | duration | `"10s"` | How long one whole call may take; never zero. |
 | `connect_timeout` | duration | unset | How long opening the connection may take; unset, only `timeout` bounds it. |
 | `retry` | table | three attempts, a fifth of a second doubling to five seconds | How a call that got no answer, or a `5xx`, is tried again: `max_attempts` (`3`) counts the first try, so `1` never retries; the wait starts at `initial_backoff` and doubles up to `max_backoff` (`"5s"`). A refusal the service answered on purpose is never retried. |
-| `tls` | table | platform roots | The family's outbound TLS table: `trust_roots_file`, a PEM bundle trusted beside the platform's roots for a service behind a private PKI; `client_identity_file` (or `client_identity` inline), one PEM holding the client certificate chain and its key for mutual TLS; and `min_version` (`"1.3"`, or `"1.2"`). |
+| `tls` | table | platform roots | The family's outbound TLS table: `trust_roots_file`, a PEM bundle trusted beside the platform's roots for a service behind a private PKI whose chains are checked for revocation; `trust_roots_without_revocation_file`, the same for a private PKI that publishes no revocation service; `client_identity_file` (or `client_identity` inline), one PEM holding the client certificate chain and its key for mutual TLS; and `min_version` (`"1.3"`, or `"1.2"`). [How an outbound TLS table verifies a peer](#how-an-outbound-tls-table-verifies-a-peer) says how each is verified. |
 | `credentials` | table | none | What every call carries: HTTP Basic (`user` with `password` or `password_file`) or the OAuth2 client-credentials grant `[...credentials.oauth]`, never both. |
 
 The grant's access token is cached and re-requested shortly before it
@@ -402,7 +402,7 @@ new token. Its keys:
 | `kid` | string | the RFC 7638 thumbprint | The `kid` the client assertion names. |
 | `assertion_alg` | string | by key type | The algorithm the client assertion is signed with. |
 | `security_profile` | enum{oauth2,fapi2} | `oauth2` | The security profile the grant is held to. Under `oauth2` a `private_key_jwt` client assertion names the token endpoint as `aud` under `typ` `JWT` (SMART App Launch 2.2.0, Client Authentication: Asymmetric); under `fapi2` it names the issuer under `typ` `client-authentication+jwt` (FAPI 2.0 Security Profile §5.3.3.1), which needs `issuer` set. |
-| `tls` | table | platform roots | The token endpoint's own TLS table, with the keys above. |
+| `tls` | table | platform roots | The token endpoint's own TLS table, with the keys above and the same [verification by root](#how-an-outbound-tls-table-verifies-a-peer). |
 | `refresh_margin` | duration | `"30s"` | How long before the token expires a new one is fetched. |
 | `timeout` | duration | `"10s"` | How long one call to the authorization server may take. |
 
@@ -413,6 +413,25 @@ client_id = "ferroehr-cdr"
 client_secret_file = "/run/secrets/ts-client"
 scope = "system/*.read"
 ```
+
+### How an outbound TLS table verifies a peer
+
+Every outbound `tls` table verifies the peer's certificate chain by the root
+the chain ends at. The tables are `[auth.tls]`, `[telemetry.otlp.tls]`,
+`[audit.syslog.tls]`, each `[<integration>.endpoint.tls]` with its token
+endpoint's `[<integration>.endpoint.credentials.oauth.tls]`, and the viewer's
+`[cdr.tls]`, `[oidc.tls]` and `[launch.tls]`.
+
+| The chain ends at | Verified by | Revocation |
+|---|---|---|
+| a root of `trust_roots_file` | webpki, on every operating system, ML-DSA certificates (RFC 9881) included | Required. A connection opens only once a check of the chain's CRL or OCSP sources cleared it. The check runs at start and every 4 minutes, and it fails closed when no source answers. |
+| a root of `trust_roots_without_revocation_file` | webpki, the same way | None, for a private PKI that publishes no CRL and no OCSP responder. The start names these roots in the banner and in a `WARN` line, and each connection logs them. |
+| any other root | the platform's verifier, over the platform's roots | The platform's own policy. |
+
+A CA named in `trust_roots_file` that publishes no revocation service refuses
+every connection: name it in `trust_roots_without_revocation_file`. A file
+that cannot be read, holds no certificate, or does not parse refuses the
+start.
 
 ### Archetype value-set bindings at commit
 

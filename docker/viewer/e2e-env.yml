@@ -12,12 +12,13 @@
 #
 # The CDR trusts the dev realm here, in both modes: Keycloak serves the issuer
 # over TLS with the development CA `keycloak-tls` generates
-# (docker-compose.dev.yml), and the CDR and the viewer add that CA beside
-# their own trust store (the CDR through `[auth.tls] trust_roots_file`, the viewer through
-# `[oidc.tls] trust_roots_file`). The CDR reads the issuer's metadata at
-# boot, so it waits for Keycloak. Keycloak's access tokens carry `typ: JWT`,
-# outside the RFC 9068 profile the CDR expects by default, which the
-# `keycloak` profile admits.
+# (docker-compose.dev.yml), which publishes no revocation service, and the CDR
+# and the viewer add that CA beside their own trust store with no revocation
+# check (the CDR through `[auth.tls] trust_roots_without_revocation_file`, the
+# viewer through `[oidc.tls] trust_roots_without_revocation_file`). The CDR
+# reads the issuer's metadata at boot, so it waits for Keycloak. Keycloak's
+# access tokens carry `typ: JWT`, outside the RFC 9068 profile the CDR expects
+# by default, which the `keycloak` profile admits.
 #
 # The CDR block turns the terminology surface (`[terminology] api_enabled`) on
 # for the run; it answers `404` as if unmounted while it is off, so the
@@ -51,7 +52,7 @@ services:
       # The test-only grant ceiling: the dev set of docker/ferroehr.dev.toml,
       # which admits every operation the demo seed's roles grant.
       FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,read_change_feed,scim_provision,hold_roles,hold_scopes,write_access_policy,write_care_relationship,write_representation,access_service,import_ehr
-      FERROEHR__AUTH__TLS__TRUST_ROOTS_FILE: /run/ferroehr-dev-tls/ca/ca.crt
+      FERROEHR__AUTH__TLS__TRUST_ROOTS_WITHOUT_REVOCATION_FILE: /run/ferroehr-dev-tls/ca/ca.crt
       # Versions and access-log checkpoints signed with ML-DSA-65+Ed25519, so
       # the viewer draws a real signature: the committed TEST key of
       # docker/signing/, never a production key.
@@ -82,7 +83,7 @@ services:
       FERROEHR_VIEWER__OIDC__CLIENT_ID: ferroehr-viewer
       FERROEHR_VIEWER__OIDC__CLIENT_SECRET: dev-viewer-Qm7xT2vK9pLw4sNc
       FERROEHR_VIEWER__AUTH__PUBLIC_BASE_URL: http://127.0.0.1:3000
-      FERROEHR_VIEWER__OIDC__TLS__TRUST_ROOTS_FILE: /run/ferroehr-dev-tls/ca/ca.crt
+      FERROEHR_VIEWER__OIDC__TLS__TRUST_ROOTS_WITHOUT_REVOCATION_FILE: /run/ferroehr-dev-tls/ca/ca.crt
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 

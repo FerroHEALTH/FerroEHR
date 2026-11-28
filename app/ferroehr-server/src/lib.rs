@@ -575,8 +575,11 @@ async fn stamp_subject_posture(
     Ok(())
 }
 
-fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
+fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig, unchecked_roots: &[String]) {
     ferroehr::config::binding::BindingPosture::of(config).log();
+    for roots in unchecked_roots {
+        tracing::warn!(roots = %roots, "an outbound TLS table trusts roots with no revocation check");
+    }
     if config.database.is_dev_default() {
         tracing::warn!(
             url = db::DEFAULT_URL,
@@ -735,10 +738,14 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     // posture is the one the configuration alone shows; the cluster check needs
     // the pools and follows in the boot log.
     let declared = DeploymentPosture::evaluate(&config, &DatabaseFacts::default());
+    let unchecked_roots = ferroehr::outbound::unchecked_roots(&config)?;
     ferroehr::banner::print(
         &telemetry::build_info::build(),
-        config.deployment.spec_profile,
-        &declared,
+        ferroehr::banner::Posture {
+            profile: config.deployment.spec_profile,
+            deployment: &declared,
+            unchecked_roots: &unchecked_roots,
+        },
         config
             .telemetry
             .format
@@ -753,7 +760,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     )
     .context("initialising telemetry")?;
 
-    warn_boot_postures(&config);
+    warn_boot_postures(&config, &unchecked_roots);
     // The support statement at boot, and a WARN at boot and daily once the
     // period has ended (CRA Art. 13(19)).
     let support_watch = tokio::spawn(ferroehr::support::watch(SupportPeriod::current()));

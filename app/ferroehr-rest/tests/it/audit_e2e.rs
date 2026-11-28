@@ -132,7 +132,7 @@ async fn audit_capture(suppress_login: bool) -> (testkit::TestDb, SyslogTlsListe
         syslog: Some(SyslogConfig {
             url: ferrohealth_secret::secret_url::SecretUrl::new(format!("tls://127.0.0.1:{port}")),
             tls: ferrohealth_config::tls::TlsClientSection {
-                trust_roots_file: Some(socket.ca_file.clone()),
+                trust_roots_without_revocation_file: Some(socket.ca_file.clone()),
                 ..ferrohealth_config::tls::TlsClientSection::default()
             },
             ..SyslogConfig::default()

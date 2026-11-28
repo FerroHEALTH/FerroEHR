@@ -89,7 +89,7 @@ ferrohealth-secret.workspace = true
 # drain, `cli::Common` and the healthcheck, the console's browser security
 # headers and same-origin check (`console`), and the outbound TLS of the OIDC
 # and CDR clients (`reqwest`).
-ferrohealth-server = { workspace = true, features = ["console", "otlp", "reqwest"] }
+ferrohealth-server = { workspace = true, features = ["console", "otlp"] }
 clap.workspace = true
 # The public URL the same-origin check compares `Origin` with.
 url.workspace = true

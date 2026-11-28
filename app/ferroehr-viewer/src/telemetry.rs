@@ -7,13 +7,11 @@
 //! No specification governs the console, the request log or the panic line:
 //! our own design.
 
-use std::sync::Arc;
-
 use ferrohealth_server::stack::StackPolicy;
-use ferrohealth_server::telemetry::TelemetryBuildError;
+use ferrohealth_server::telemetry::{Installed, TelemetryBuildError};
 use ferrohealth_telemetry::request_log::RequestLog;
 use ferrohealth_telemetry::section::TelemetrySection;
-use ferrohealth_telemetry::telemetry::{Console, Service, Telemetry};
+use ferrohealth_telemetry::telemetry::{Service, Telemetry};
 
 use crate::config::ViewerConfig;
 
@@ -34,20 +32,18 @@ pub fn service() -> Service {
 /// Builds the provider `section` asks for, installs the process subscriber on
 /// stdout and the family's panic hook.
 ///
+/// The returned [`Installed`] holds the clearing that keeps an `https`
+/// collector cleared for revocation, so the caller keeps it for as long as
+/// the job runs.
+///
 /// # Errors
 ///
 /// Returns the [`TelemetryBuildError`] of a provider that cannot be built (an
 /// OTLP table this build cannot honour, a collector TLS table it cannot read,
 /// an exporter that cannot start) or of a process that already has a
 /// subscriber.
-pub fn init(section: &TelemetrySection) -> Result<Arc<Telemetry>, TelemetryBuildError> {
-    let telemetry = Arc::new(ferrohealth_server::telemetry::build(section, service())?);
-    // The viewer serves no logger route, so the filter handle is not kept.
-    telemetry
-        .install(section, &Console::detect())
-        .map_err(TelemetryBuildError::Init)?;
-    ferrohealth_telemetry::panic::install_hook();
-    Ok(telemetry)
+pub fn init(section: &TelemetrySection) -> Result<Installed, TelemetryBuildError> {
+    ferrohealth_server::telemetry::install(section, service())
 }
 
 /// Installs the console of `section` alone, exporting nothing: the short-lived
@@ -56,7 +52,7 @@ pub fn init(section: &TelemetrySection) -> Result<Arc<Telemetry>, TelemetryBuild
 /// # Errors
 ///
 /// Returns every error of [`init`].
-pub fn init_console(section: &TelemetrySection) -> Result<Arc<Telemetry>, TelemetryBuildError> {
+pub fn init_console(section: &TelemetrySection) -> Result<Installed, TelemetryBuildError> {
     init(&TelemetrySection {
         otlp: None,
         ..section.clone()
@@ -73,14 +69,6 @@ pub fn stack_policy(config: &ViewerConfig, telemetry: &Telemetry) -> StackPolicy
             .serving_tls(config.server.tls.is_some()),
         meter: Some(meter),
         ..StackPolicy::default()
-    }
-}
-
-/// Flushes and stops the exporters of `telemetry`, logging a failure: the job
-/// has already ended, so a lost flush changes nothing it answers.
-pub fn shutdown(telemetry: &Telemetry) {
-    if let Err(error) = telemetry.shutdown() {
-        tracing::warn!(error = %error, "the telemetry did not flush");
     }
 }
 

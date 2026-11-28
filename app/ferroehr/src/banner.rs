@@ -35,17 +35,33 @@ const WORDMARK: &str = r"
 /// The project's public repository.
 const PROJECT_URL: &str = "https://github.com/FerroHEALTH/FerroEHR";
 
-/// Renders the banner of `build` for the ACTIVE generation set, or `None` when
-/// the console does not render `pretty`.
+/// The state of the deployment the banner reports beside the build.
+#[derive(Debug, Clone, Copy)]
+pub struct Posture<'a> {
+    /// The ACTIVE generation set.
+    pub profile: crate::config::profile::SpecProfile,
+    /// The declared deployment posture and its open gaps.
+    pub deployment: &'a crate::config::deployment::DeploymentPosture,
+    /// One line per outbound TLS table that trusts roots with no revocation
+    /// check ([`crate::outbound::unchecked_roots`]).
+    pub unchecked_roots: &'a [String],
+}
+
+/// Renders the banner of `build` for `posture`, or `None` when the console
+/// does not render `pretty`.
 #[must_use]
 pub fn render(
     build: &BuildInfo,
-    profile: crate::config::profile::SpecProfile,
-    deployment: &crate::config::deployment::DeploymentPosture,
+    posture: Posture<'_>,
     support: &str,
     rendering: Rendering,
     colour: bool,
 ) -> Option<String> {
+    let Posture {
+        profile,
+        deployment,
+        unchecked_roots,
+    } = posture;
     let facts = [
         (
             "Product",
@@ -78,6 +94,16 @@ pub fn render(
         ("Deployment", deployment.profile.to_string()),
     ];
     let mut out = banner(build, WORDMARK, &facts, rendering)?;
+    if !unchecked_roots.is_empty() {
+        let _ = writeln!(out);
+        let _ = writeln!(out, "  TLS roots trusted with no revocation check:");
+        for roots in unchecked_roots {
+            for (index, line) in wrap(roots, 86).iter().enumerate() {
+                let bullet = if index == 0 { "-" } else { " " };
+                let _ = writeln!(out, "  {bullet} {line}");
+            }
+        }
+    }
     // The sandbox notice: red where a terminal shows colour, and the same
     // words where it does not, because colour is the first thing a scraped
     // log loses (#3226).
@@ -132,14 +158,9 @@ fn wrap(text: &str, width: usize) -> Vec<String> {
     reason = "the boot banner IS console output, and it prints before any \
               tracing subscriber exists"
 )]
-pub fn print(
-    build: &BuildInfo,
-    profile: crate::config::profile::SpecProfile,
-    deployment: &crate::config::deployment::DeploymentPosture,
-    rendering: Rendering,
-) {
+pub fn print(build: &BuildInfo, posture: Posture<'_>, rendering: Rendering) {
     let support = crate::support::SupportPeriod::current().describe_on(crate::support::today_utc());
-    if let Some(text) = render(build, profile, deployment, &support, rendering, true) {
+    if let Some(text) = render(build, posture, &support, rendering, true) {
         println!("{text}");
     }
 }
@@ -171,8 +192,11 @@ mod tests {
     ) -> String {
         render(
             &build(version),
-            profile,
-            deployment,
+            Posture {
+                profile,
+                deployment,
+                unchecked_roots: &[],
+            },
             SUPPORT,
             Rendering::Pretty,
             colour,
@@ -187,8 +211,11 @@ mod tests {
         assert!(
             render(
                 &build("1.0.0"),
-                crate::config::profile::SpecProfile::Development,
-                &sandbox(),
+                Posture {
+                    profile: crate::config::profile::SpecProfile::Development,
+                    deployment: &sandbox(),
+                    unchecked_roots: &[],
+                },
                 SUPPORT,
                 Rendering::Json,
                 false,
@@ -283,8 +310,11 @@ mod tests {
             crate::support::SupportPeriod::current().describe_on(crate::support::today_utc());
         let text = render(
             &crate::telemetry::build_info::build(),
-            crate::config::profile::SpecProfile::default(),
-            &sandbox(),
+            Posture {
+                profile: crate::config::profile::SpecProfile::default(),
+                deployment: &sandbox(),
+                unchecked_roots: &[],
+            },
             &support,
             Rendering::Pretty,
             false,
@@ -303,8 +333,11 @@ mod tests {
     fn banner_uses_real_package_version() {
         let text = render(
             &crate::telemetry::build_info::build(),
-            crate::config::profile::SpecProfile::default(),
-            &sandbox(),
+            Posture {
+                profile: crate::config::profile::SpecProfile::default(),
+                deployment: &sandbox(),
+                unchecked_roots: &[],
+            },
             SUPPORT,
             Rendering::Pretty,
             false,
@@ -323,5 +356,46 @@ mod tests {
             false,
         );
         assert!(b.contains(&format!("  Support       {SUPPORT}\n")), "{b}");
+    }
+
+    /// The banner names the roots an outbound TLS table trusts with no
+    /// revocation check, wrapped to the banner's width.
+    #[test]
+    fn banner_names_the_roots_trusted_with_no_revocation_check() {
+        let roots = format!(
+            "audit.syslog.tls: no revocation check for CN={}",
+            "Private Audit Root ".repeat(6)
+        );
+        let text = render(
+            &build("9.9.9"),
+            Posture {
+                profile: crate::config::profile::SpecProfile::Development,
+                deployment: &sandbox(),
+                unchecked_roots: std::slice::from_ref(&roots),
+            },
+            SUPPORT,
+            Rendering::Pretty,
+            false,
+        )
+        .expect("a pretty console prints the banner");
+        assert!(
+            text.contains("TLS roots trusted with no revocation check"),
+            "{text}"
+        );
+        assert!(
+            text.contains("  - audit.syslog.tls: no revocation check for"),
+            "{text}"
+        );
+        assert!(
+            text.lines().all(|line| line.chars().count() <= 100),
+            "{text}"
+        );
+        let quiet = rendered(
+            "9.9.9",
+            crate::config::profile::SpecProfile::Development,
+            &sandbox(),
+            false,
+        );
+        assert!(!quiet.contains("revocation"), "{quiet}");
     }
 }

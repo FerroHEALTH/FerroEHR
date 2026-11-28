@@ -258,15 +258,18 @@ fn a_base_path_or_a_caller_rate_is_refused() {
 }
 
 /// The CDR's outbound TLS table is the family's, and the provider's is
-/// `ferrohealth-session`'s: its trust roots, its address overrides and
-/// `[oidc.tls]` with the client certificate and the TLS floor.
+/// `ferrohealth-session`'s: its trust roots with and without a revocation
+/// check, its address overrides and `[oidc.tls]` with the client certificate
+/// and the TLS floor.
 #[test]
 fn the_cdr_and_provider_tls_tables_parse() {
     let parsed = load_sources(
         Some(
-            "[cdr.tls]\ntrust_roots_file = \"/run/cdr-ca.pem\"\nmin_version = \"1.2\"\n\n\
+            "[cdr.tls]\ntrust_roots_file = \"/run/cdr-ca.pem\"\n\
+             trust_roots_without_revocation_file = \"/run/cdr-private-ca.pem\"\n\
+             min_version = \"1.2\"\n\n\
              [oidc]\nresolve = [\"keycloak=127.0.0.1:8443\"]\n\n\
-             [oidc.tls]\ntrust_roots_file = \"/run/issuer-ca.pem\"\n\
+             [oidc.tls]\ntrust_roots_without_revocation_file = \"/run/issuer-ca.pem\"\n\
              client_identity_file = \"/run/viewer.pem\"\nmin_version = \"1.3\"\n",
         ),
         &BTreeMap::new(),
@@ -277,8 +280,12 @@ fn the_cdr_and_provider_tls_tables_parse() {
         parsed.cdr.tls.trust_roots_file
     );
     assert_eq!(
+        Some(std::path::PathBuf::from("/run/cdr-private-ca.pem")),
+        parsed.cdr.tls.trust_roots_without_revocation_file
+    );
+    assert_eq!(
         Some(std::path::PathBuf::from("/run/issuer-ca.pem")),
-        parsed.oidc.tls.trust_roots_file
+        parsed.oidc.tls.trust_roots_without_revocation_file
     );
     assert_eq!(parsed.oidc.resolve, ["keycloak=127.0.0.1:8443"]);
     assert_eq!(

@@ -565,7 +565,8 @@ logged_query_parameters = []
 | `otlp.traces` | bool | `true` | Export FerroEHR's spans. |
 | `otlp.metrics` | bool | `true` | Push the metrics over OTLP beside the Prometheus pull surface. One meter provider feeds both. |
 | `otlp.sample_ratio` | float | `1.0` | The share of traces sampled (`0.1` is a common production start). A client's `traceparent` is never read: every request starts a trace of the server's own. |
-| `otlp.trust_roots_file` | path | unset | PEM trust roots the collector's certificate may chain to, beside the platform's. Refused at boot beside an endpoint that is not `https://`, and when the file holds no PEM certificate. |
+| `otlp.trust_roots_file` | path | unset | PEM trust roots the collector's certificate may chain to, beside the platform's; the export reaches the collector only while a revocation check clears its chain ([verification by root](config-integrations.md#how-an-outbound-tls-table-verifies-a-peer)). Refused at boot beside an endpoint that is not `https://`, and when the file holds no PEM certificate. |
+| `otlp.trust_roots_without_revocation_file` | path | unset | PEM trust roots of a private PKI that publishes no revocation service, trusted for the collector with no revocation check and named at start. Refused at boot beside an endpoint that is not `https://`, and when the file holds no PEM certificate. |
 | `otlp.client_identity_file` | path | unset | PEM client certificate chain and key, for mutual TLS with the collector. Refused at boot beside an endpoint that is not `https://`, and when the file lacks a PEM certificate or a PEM private key. |
 
 The `service.name` of every span and metric is `ferroehr`, and

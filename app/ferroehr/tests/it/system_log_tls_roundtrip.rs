@@ -5,7 +5,9 @@
 //! stored record from the store's syslog outbox as an octet-counted syslog
 //! record over a real TLS connection to an in-process rustls listener that
 //! presents a leaf the test CA signed, the route trusting that CA, and the
-//! framed bytes arrive.
+//! framed bytes arrive. A CA named in `trust_roots_file` admits the leaf only
+//! once its CRL cleared it, and a CA with no revocation service is named in
+//! `trust_roots_without_revocation_file`.
 
 use std::time::Duration;
 
@@ -14,13 +16,35 @@ use ferroehr::system_log::event::{AuditEvent, EventActionCode, EventOutcome, Obj
 use ferroehr::system_log::sender::{AuditHandle, AuditSender, start};
 use testkit::syslog_tls::{Ending, SyslogTlsListener};
 
+/// How the route names the listener's CA.
+#[derive(Clone, Copy)]
+enum Roots {
+    /// In `trust_roots_file`, so the leaf is cleared for revocation.
+    Checked,
+    /// In `trust_roots_without_revocation_file`.
+    Unchecked,
+}
+
 /// An audit subsystem over `pool` whose syslog route sends to `listener` as
-/// `cdr-01`, retrying after at most `max_backoff` milliseconds.
+/// `cdr-01`, retrying after at most `max_backoff` milliseconds, with the
+/// listener's CA named as `roots` says.
 async fn audited(
     pool: &sqlx::PgPool,
     listener: &SyslogTlsListener,
     max_backoff: u64,
+    roots: Roots,
 ) -> (AuditSender, AuditHandle) {
+    let ca = Some(listener.ca_file.clone());
+    let tls = match roots {
+        Roots::Checked => ferrohealth_config::tls::TlsClientSection {
+            trust_roots_file: ca,
+            ..ferrohealth_config::tls::TlsClientSection::default()
+        },
+        Roots::Unchecked => ferrohealth_config::tls::TlsClientSection {
+            trust_roots_without_revocation_file: ca,
+            ..ferrohealth_config::tls::TlsClientSection::default()
+        },
+    };
     let config = AuditConfig {
         enabled: true,
         server_host: Some("cdr-01".to_owned()),
@@ -35,10 +59,7 @@ async fn audited(
                 "tls://localhost:{}",
                 listener.port
             )),
-            tls: ferrohealth_config::tls::TlsClientSection {
-                trust_roots_file: Some(listener.ca_file.clone()),
-                ..ferrohealth_config::tls::TlsClientSection::default()
-            },
+            tls,
             retry: ferroehr::system_log::config::SinkRetry {
                 max_backoff: ferrohealth_config::units::Duration::from_millis(max_backoff),
             },
@@ -85,7 +106,7 @@ fn assert_framed(frame: Vec<u8>) {
 async fn tls_octet_counted_frame_round_trips() {
     let db = testkit::db().await.expect("testkit database");
     let mut listener = SyslogTlsListener::bind(0).await.expect("listener");
-    let (sender, handle) = audited(&db.pool(), &listener, 1000).await;
+    let (sender, handle) = audited(&db.pool(), &listener, 1000, Roots::Unchecked).await;
     sender
         .record(vec![event(), event()], None)
         .await
@@ -107,7 +128,7 @@ async fn tls_octet_counted_frame_round_trips() {
 async fn a_record_whose_send_fails_is_delivered_later() {
     let db = testkit::db().await.expect("testkit database");
     let mut listener = SyslogTlsListener::bind(1).await.expect("listener");
-    let (sender, handle) = audited(&db.pool(), &listener, 500).await;
+    let (sender, handle) = audited(&db.pool(), &listener, 500, Roots::Unchecked).await;
     sender
         .record(vec![event()], None)
         .await
@@ -144,7 +165,7 @@ async fn a_record_whose_send_fails_is_delivered_later() {
 async fn the_route_closes_its_connection_with_close_notify_when_it_stops() {
     let db = testkit::db().await.expect("testkit database");
     let mut listener = SyslogTlsListener::bind(0).await.expect("listener");
-    let (sender, handle) = audited(&db.pool(), &listener, 1000).await;
+    let (sender, handle) = audited(&db.pool(), &listener, 1000, Roots::Unchecked).await;
     sender
         .record(vec![event()], None)
         .await
@@ -160,4 +181,41 @@ async fn the_route_closes_its_connection_with_close_notify_when_it_stops() {
         Some(Ending::CloseNotify),
         "the route ended its connection without a close_notify"
     );
+}
+
+/// A repository whose CA is named in `trust_roots_file` receives the records
+/// once the CA's CRL cleared its leaf (RFC 5280 §6.3).
+#[tokio::test]
+async fn a_repository_cleared_by_its_crl_receives_the_records() {
+    let db = testkit::db().await.expect("testkit database");
+    let mut listener = SyslogTlsListener::bind_with_crl(0).await.expect("listener");
+    let (sender, handle) = audited(&db.pool(), &listener, 500, Roots::Checked).await;
+    sender
+        .record(vec![event()], None)
+        .await
+        .expect("the record is written");
+    let received = listener
+        .recv(Duration::from_secs(15))
+        .await
+        .expect("the record arrives once the leaf is cleared");
+    assert_framed(received);
+    handle.shutdown(Duration::from_secs(5)).await;
+}
+
+/// A repository whose CA is named in `trust_roots_file` but publishes no
+/// revocation service is never sent a record: the check fails closed.
+#[tokio::test]
+async fn a_repository_no_revocation_source_clears_is_sent_nothing() {
+    let db = testkit::db().await.expect("testkit database");
+    let mut listener = SyslogTlsListener::bind(0).await.expect("listener");
+    let (sender, handle) = audited(&db.pool(), &listener, 500, Roots::Checked).await;
+    sender
+        .record(vec![event()], None)
+        .await
+        .expect("the record is written");
+    assert!(
+        listener.recv(Duration::from_secs(3)).await.is_none(),
+        "a leaf no CRL or OCSP source cleared must not be sent the record"
+    );
+    handle.shutdown(Duration::from_secs(5)).await;
 }

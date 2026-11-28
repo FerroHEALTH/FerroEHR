@@ -304,6 +304,9 @@ pub struct Context<'a> {
 pub struct Launcher {
     /// The connection to FerroSMART.
     http: reqwest::Client,
+    /// The client `http` comes from, held so that under `trust_roots_file`
+    /// FerroSMART stays cleared for revocation while the launcher lives.
+    _outbound: OutboundClient,
     /// The key that signs the client assertion.
     key: AssertionKey,
     /// The issuer identifier, the assertion's `aud`.
@@ -426,12 +429,12 @@ impl Launcher {
             tls: section.tls.clone(),
             ..EndpointSection::default()
         };
-        let http = OutboundClient::build(&connection, "launch", &ServerTls)
-            .map_err(LaunchConfigError::Client)?
-            .http()
-            .clone();
+        let outbound = OutboundClient::build(&connection, "launch", &ServerTls)
+            .map_err(LaunchConfigError::Client)?;
+        let http = outbound.http().clone();
         Ok(Some(Self {
             http,
+            _outbound: outbound,
             key,
             issuer: section.issuer.clone(),
             discovery,

@@ -425,6 +425,9 @@ pub struct AuditHandle {
     behind: AuditStore,
     /// The result of the scheduled hash-chain verification, when it runs.
     chain_check: Option<ChainCheck>,
+    /// The clearings that keep the sinks under `trust_roots_file` cleared
+    /// for revocation; dropping one stops it.
+    clearings: Vec<ferrohealth_server::revocation::Clearing>,
 }
 
 impl AuditHandle {
@@ -471,9 +474,9 @@ impl AuditHandle {
         );
     }
 
-    /// Stop the chainer, bounded by `timeout`, then the workers and the
-    /// forwarders. A record the chainer did not link waits in the intake for
-    /// the next chainer, of this replica or another.
+    /// Stop the chainer, bounded by `timeout`, then the workers, the
+    /// forwarders and their clearings. A record the chainer did not link waits
+    /// in the intake for the next chainer, of this replica or another.
     pub async fn shutdown(self, timeout: Duration) {
         self.chainer.stop(timeout).await;
         for worker in self.workers {
@@ -488,6 +491,7 @@ impl AuditHandle {
                 );
             }
         }
+        drop(self.clearings);
         self.background.stop();
     }
 }
@@ -652,10 +656,15 @@ pub async fn start(
         expect(unused_mut, reason = "a slim build has no sink")
     )]
     let mut woken = Vec::new();
+    #[cfg_attr(
+        not(feature = "fhir"),
+        expect(unused_mut, reason = "a slim build has no sink")
+    )]
+    let mut clearings = Vec::new();
     #[cfg(feature = "fhir")]
     if let Some(syslog) = &config.syslog {
         let notify = Arc::new(Notify::new());
-        let forwarder = crate::system_log::syslog::forwarder(
+        let (forwarder, clearing) = crate::system_log::syslog::forwarder(
             syslog,
             config.server_host.as_deref().unwrap_or_default(),
             config.source_id(),
@@ -664,6 +673,7 @@ pub async fn start(
         )
         .await?;
         deliveries.push(deliver(&background, "syslog", &forwarder));
+        clearings.extend(clearing);
         woken.push(notify);
     }
     #[cfg(feature = "fhir")]
@@ -722,6 +732,7 @@ pub async fn start(
             background,
             behind,
             chain_check,
+            clearings,
         },
     ))
 }
