@@ -660,6 +660,11 @@
           "description": "Key within caExistingSecret carrying the PEM bundle.",
           "type": "string",
           "minLength": 1
+        },
+        "caRevocation": {
+          "description": "required names the CA in trust_roots_file, so a chain to it connects only once a CRL or OCSP check cleared it; none names it in trust_roots_without_revocation_file, for a CA that publishes no revocation service.",
+          "type": "string",
+          "enum": ["required", "none"]
         }
       }
     },
@@ -729,6 +734,11 @@
               "type": "string",
               "minLength": 1,
               "description": "The key in caExistingSecret holding the CA."
+            },
+            "caRevocation": {
+              "description": "How the viewer's CDR client checks the CA: required names it in trust_roots_file, so a chain to it connects only once a CRL or OCSP check cleared it; none names it in trust_roots_without_revocation_file, for a CA that publishes no revocation service, as a cert-manager CA issuer.",
+              "type": "string",
+              "enum": ["required", "none"]
             }
           }
         }
@@ -1146,6 +1156,11 @@
                   "description": "Key within caExistingSecret carrying the PEM bundle.",
                   "type": "string",
                   "minLength": 1
+                },
+                "caRevocation": {
+                  "description": "required names the CA in trust_roots_file, so a chain to it connects only once a CRL or OCSP check cleared it; none names it in trust_roots_without_revocation_file, for a CA that publishes no revocation service.",
+                  "type": "string",
+                  "enum": ["required", "none"]
                 }
               }
             }

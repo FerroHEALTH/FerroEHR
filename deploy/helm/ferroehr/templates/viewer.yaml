@@ -106,8 +106,8 @@ spec:
             {{- end }}
             {{- if eq (include "ferroehr.serverTls" .) "true" }}
             # The CA that signed the server's certificate, beside the image's
-            # own roots (`[cdr.tls] trust_roots_file`).
-            - name: FERROEHR_VIEWER__CDR__TLS__TRUST_ROOTS_FILE
+            # own roots, in the `[cdr.tls]` key service.tls.caRevocation names.
+            - name: FERROEHR_VIEWER__CDR__TLS__{{ include "ferroehr.trustRootsKey" .Values.service.tls.caRevocation }}
               value: {{ printf "%s/ca.crt" (include "ferroehr.cdrCaDir" .) | quote }}
             {{- end }}
             {{- if .Values.config.management.enabled }}
@@ -140,8 +140,9 @@ spec:
               value: /etc/ferroehr-viewer-secrets/client_secret
             {{- end }}
             {{- if .Values.viewer.auth.oidc.caExistingSecret }}
-            # The provider's CA, beside the image's own roots (`[oidc.tls] trust_roots_file`).
-            - name: FERROEHR_VIEWER__OIDC__TLS__TRUST_ROOTS_FILE
+            # The provider's CA, beside the image's own roots, in the `[oidc.tls]`
+            # key viewer.auth.oidc.caRevocation names.
+            - name: FERROEHR_VIEWER__OIDC__TLS__{{ include "ferroehr.trustRootsKey" .Values.viewer.auth.oidc.caRevocation }}
               value: /etc/ferroehr-viewer-oidc-ca/ca.crt
             {{- end }}
             {{- end }}

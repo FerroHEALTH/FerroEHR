@@ -760,6 +760,7 @@ probes_k8s_viewer() {
   probes_k8s_ui_psa
   probes_k8s_ui_serve
   probes_k8s_ui_netpol
+  probes_k8s_ui_ca_trust
 }
 
 # The viewer's applied posture, read from the container runtime for the same
@@ -819,8 +820,8 @@ probes_k8s_ui_serve() {
   # What a served login page does NOT prove, said here rather than left to the
   # reader: login_modes falls back to the viewer's own configuration when the
   # CDR is unreachable, so the form renders either way.
-  uncovered "the viewer reaching the CDR over the in-cluster Service" \
-    "the login page renders from the viewer configuration alone when the CDR is unreachable, so serving it is not evidence of the REST hop"
+  # The REST hop itself is P-K8S-UI-CA-NONE (kubernetes_ca_trust.sh): a
+  # served login page renders from the viewer configuration alone.
   uncovered "the viewer screens behind a session, and its OIDC sign-in path" \
     "scripts/ui-e2e.sh drives the browser journeys against compose, and OIDC needs an identity provider plus a client secret this harness does not run"
 }

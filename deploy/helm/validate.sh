@@ -1206,8 +1206,8 @@ tls_client_facts() { # <rendered>: one "<fact> <value>" line per client fact
 }
 server_tls_gate() {
   bold "── server TLS: the in-chart clients follow the listener ─"
-  local on off facts missing=0 want got
-  on="$(mktemp)"; off="$(mktemp)"
+  local on off unchecked facts missing=0 want got
+  on="$(mktemp)"; off="$(mktemp)"; unchecked="$(mktemp)"
   helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "${CI_DIR}/server-tls-values.yaml" > "$on"
   helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "${CI_DIR}/server-tls-values.yaml" \
     --set config.server.tls=null > "$off"
@@ -1237,6 +1237,18 @@ CLAIMS
     || { red "  TLS on: the server's three probes do not all use scheme HTTPS"; missing=1; }
   ! grep -qE '^(viewer|viewer-management|bridge)-url http://' <<<"$facts" \
     || { red "  TLS on: a client still calls the CDR over http://"; missing=1; }
+  ! grep -q '^viewer-trust-roots-unchecked ' <<<"$facts" \
+    || { red "  TLS on: caRevocation=required names the CA in trust_roots_without_revocation_file"; missing=1; }
+  # service.tls.caRevocation=none moves the viewer's CA to the key with no
+  # revocation check, for a CA that publishes none (a cert-manager CA issuer).
+  helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "${CI_DIR}/server-tls-values.yaml" \
+    --set service.tls.caRevocation=none > "$unchecked"
+  facts="$(tls_client_facts "$unchecked")"
+  if ! grep -qxF "viewer-trust-roots-unchecked /etc/ferroehr-cdr-ca/ca.crt" <<<"$facts" \
+     || grep -q '^viewer-trust-roots ' <<<"$facts"; then
+    red "  TLS on, caRevocation=none: the viewer's CA is not in trust_roots_without_revocation_file alone"
+    missing=1
+  fi
   facts="$(tls_client_facts "$off")"
   while IFS='|' read -r want got; do
     [[ -n "$want" ]] || continue
@@ -1253,9 +1265,9 @@ ingress-backend-protocol|absent
 CLAIMS
   [[ "$(grep -c -xF "probe-scheme HTTP" <<<"$facts")" -eq 3 ]] \
     || { red "  TLS off: the server's three probes do not all use scheme HTTP"; missing=1; }
-  ! grep -qE '^(viewer|bridge)-(certdir|trust-roots|ca-secret|ca-mount) ' <<<"$facts" \
+  ! grep -qE '^(viewer|bridge)-(certdir|trust-roots|trust-roots-unchecked|ca-secret|ca-mount) ' <<<"$facts" \
     || { red "  TLS off: a client still mounts or names the CDR CA"; missing=1; }
-  rm -f "$on" "$off"
+  rm -f "$on" "$off" "$unchecked"
   if [[ "$missing" -eq 0 ]]; then
     echo "  TLS on: viewer, FerroBRIDGE and the scrape call https and trust the named CA; the probes use HTTPS. TLS off: all http, no CA"
   else
@@ -1307,18 +1319,23 @@ viewer_management_gate
 
 # ── The viewer trusts a private issuer CA only when one is named ────────────
 # viewer.auth.oidc.caExistingSecret mounts the Secret's key as a file and names
-# it in `[oidc.tls] trust_roots_file`; unset, neither the variable nor the
-# volume renders. Both halves are read from the render.
+# it in `[oidc.tls] trust_roots_file`, or in `trust_roots_without_revocation_file`
+# under caRevocation=none; unset, neither variable nor the volume renders. Both
+# halves are read from the render.
 viewer_oidc_ca_gate() {
   bold "── viewer: the issuer's CA when one is named ───────────"
-  local viewer="${CI_DIR}/viewer-values.yaml" render wrong=0 roots volume secret
+  local viewer="${CI_DIR}/viewer-values.yaml" render wrong=0 roots unchecked volume secret revocation case
   local -a oidc=(--set viewer.auth.oidc.enabled=true
                  --set viewer.auth.oidc.issuer=https://issuer.example/realms/ferroehr
                  --set viewer.auth.oidc.clientId=ferroehr
                  --set viewer.auth.oidc.publicBaseUrl=https://viewer.example)
-  for secret in "" issuer-ca; do
+  for case in "" issuer-ca issuer-ca:none; do
+    secret="${case%%:*}"
+    revocation="${case#*:}"
+    [[ "$revocation" != "$case" ]] || revocation=""
     local -a extra=("${oidc[@]}")
     [[ -z "$secret" ]] || extra+=(--set "viewer.auth.oidc.caExistingSecret=${secret}")
+    [[ -z "$revocation" ]] || extra+=(--set "viewer.auth.oidc.caRevocation=${revocation}")
     if ! render="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$viewer" \
                    "${extra[@]}" -s templates/viewer.yaml 2>&1)"; then
       red "  viewer: the OIDC overlay no longer renders${secret:+ with caExistingSecret=$secret}:"
@@ -1327,19 +1344,25 @@ viewer_oidc_ca_gate() {
       return
     fi
     roots="$(printf '%s' "$render" | yq -r 'select(.kind == "Deployment") | .spec.template.spec.containers[0].env[] | select(.name == "FERROEHR_VIEWER__OIDC__TLS__TRUST_ROOTS_FILE") | .value')"
+    unchecked="$(printf '%s' "$render" | yq -r 'select(.kind == "Deployment") | .spec.template.spec.containers[0].env[] | select(.name == "FERROEHR_VIEWER__OIDC__TLS__TRUST_ROOTS_WITHOUT_REVOCATION_FILE") | .value')"
     volume="$(printf '%s' "$render" | yq -r 'select(.kind == "Deployment") | .spec.template.spec.volumes[] | select(.name == "oidc-ca") | .secret.secretName')"
     if [[ -z "$secret" ]]; then
-      [[ -z "$roots" && -z "$volume" ]] \
-        || { red "  viewer, no CA named: the issuer CA still renders ('${roots}', '${volume}')"; wrong=1; }
+      [[ -z "$roots" && -z "$unchecked" && -z "$volume" ]] \
+        || { red "  viewer, no CA named: the issuer CA still renders ('${roots}', '${unchecked}', '${volume}')"; wrong=1; }
+    elif [[ "$revocation" == none ]]; then
+      [[ -z "$roots" && "$unchecked" == "/etc/ferroehr-viewer-oidc-ca/ca.crt" ]] \
+        || { red "  viewer, caRevocation=none: trust_roots_file is '${roots}' and trust_roots_without_revocation_file '${unchecked}'"; wrong=1; }
+      [[ "$volume" == "$secret" ]] \
+        || { red "  viewer, CA named: the oidc-ca volume reads '${volume}', not ${secret}"; wrong=1; }
     else
-      [[ "$roots" == "/etc/ferroehr-viewer-oidc-ca/ca.crt" ]] \
+      [[ "$roots" == "/etc/ferroehr-viewer-oidc-ca/ca.crt" && -z "$unchecked" ]] \
         || { red "  viewer, CA named: trust_roots_file is '${roots}', not /etc/ferroehr-viewer-oidc-ca/ca.crt"; wrong=1; }
       [[ "$volume" == "$secret" ]] \
         || { red "  viewer, CA named: the oidc-ca volume reads '${volume}', not ${secret}"; wrong=1; }
     fi
   done
   if [[ "$wrong" -eq 0 ]]; then
-    echo "  viewer: the issuer's CA is mounted and named only when viewer.auth.oidc.caExistingSecret is set"
+    echo "  viewer: the issuer's CA is mounted only when viewer.auth.oidc.caExistingSecret is set, in the key caRevocation names"
   else
     FAIL=1
   fi
@@ -1348,13 +1371,18 @@ viewer_oidc_ca_gate
 
 # ── The server trusts a private issuer CA only when one is named ────────────
 # auth.caExistingSecret mounts the Secret's key as a file and names it in
-# `[auth.tls] trust_roots_file`; unset, neither the variable nor the volume renders.
+# `[auth.tls] trust_roots_file`, or in `trust_roots_without_revocation_file`
+# under caRevocation=none; unset, neither variable nor the volume renders.
 server_issuer_ca_gate() {
   bold "── server: the issuer's CA when one is named ───────────"
-  local render wrong=0 ca_file volume secret
-  for secret in "" issuer-ca; do
+  local render wrong=0 ca_file unchecked volume secret revocation case
+  for case in "" issuer-ca issuer-ca:none; do
+    secret="${case%%:*}"
+    revocation="${case#*:}"
+    [[ "$revocation" != "$case" ]] || revocation=""
     local -a extra=()
     [[ -z "$secret" ]] || extra+=(--set "auth.caExistingSecret=${secret}")
+    [[ -z "$revocation" ]] || extra+=(--set "auth.caRevocation=${revocation}")
     if ! render="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" \
                    -f "${CI_DIR}/default-values.yaml" ${extra[@]+"${extra[@]}"} \
                    -s templates/deployment.yaml 2>&1)"; then
@@ -1364,19 +1392,25 @@ server_issuer_ca_gate() {
       return
     fi
     ca_file="$(printf '%s' "$render" | yq -r '.spec.template.spec.containers[0].env[] | select(.name == "FERROEHR__AUTH__TLS__TRUST_ROOTS_FILE") | .value')"
+    unchecked="$(printf '%s' "$render" | yq -r '.spec.template.spec.containers[0].env[] | select(.name == "FERROEHR__AUTH__TLS__TRUST_ROOTS_WITHOUT_REVOCATION_FILE") | .value')"
     volume="$(printf '%s' "$render" | yq -r '.spec.template.spec.volumes[] | select(.name == "issuer-ca") | .secret.secretName')"
     if [[ -z "$secret" ]]; then
-      [[ -z "$ca_file" && -z "$volume" ]] \
-        || { red "  server, no CA named: the issuer CA still renders ('${ca_file}', '${volume}')"; wrong=1; }
+      [[ -z "$ca_file" && -z "$unchecked" && -z "$volume" ]] \
+        || { red "  server, no CA named: the issuer CA still renders ('${ca_file}', '${unchecked}', '${volume}')"; wrong=1; }
+    elif [[ "$revocation" == none ]]; then
+      [[ -z "$ca_file" && "$unchecked" == "/etc/ferroehr-issuer-ca/ca.crt" ]] \
+        || { red "  server, caRevocation=none: trust_roots_file is '${ca_file}' and trust_roots_without_revocation_file '${unchecked}'"; wrong=1; }
+      [[ "$volume" == "$secret" ]] \
+        || { red "  server, CA named: the issuer-ca volume reads '${volume}', not ${secret}"; wrong=1; }
     else
-      [[ "$ca_file" == "/etc/ferroehr-issuer-ca/ca.crt" ]] \
+      [[ "$ca_file" == "/etc/ferroehr-issuer-ca/ca.crt" && -z "$unchecked" ]] \
         || { red "  server, CA named: ca_file is '${ca_file}', not /etc/ferroehr-issuer-ca/ca.crt"; wrong=1; }
       [[ "$volume" == "$secret" ]] \
         || { red "  server, CA named: the issuer-ca volume reads '${volume}', not ${secret}"; wrong=1; }
     fi
   done
   if [[ "$wrong" -eq 0 ]]; then
-    echo "  server: the issuer's CA is mounted and named only when auth.caExistingSecret is set"
+    echo "  server: the issuer's CA is mounted only when auth.caExistingSecret is set, in the key caRevocation names"
   else
     FAIL=1
   fi

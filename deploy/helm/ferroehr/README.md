@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 19 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). The chart refuses to render until config.deployment.profile names the posture: sandbox, which must not hold real patient data, or production (start from values-production.yaml).
 
-![Version: 43.0.2](https://img.shields.io/badge/Version-43.0.2-informational?style=flat-square&logo=helm) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square&logo=helm) ![AppVersion: 5.7.1-rc1](https://img.shields.io/badge/AppVersion-5.7.1--rc1-informational?style=flat-square&logo=helm)
+![Version: 43.1.0](https://img.shields.io/badge/Version-43.1.0-informational?style=flat-square&logo=helm) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square&logo=helm) ![AppVersion: 5.7.1-rc1](https://img.shields.io/badge/AppVersion-5.7.1--rc1-informational?style=flat-square&logo=helm)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 19-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 43.0.2 \
+  --version 43.1.0 \
   --namespace ferroehr --create-namespace \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
@@ -62,7 +62,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `43.0.2` |
+| the **chart** (templates, defaults, this document) | `--version` | `43.1.0` |
 | the **server image** | `image.tag` | `5.7.1-rc1` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -74,7 +74,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:43.0.2 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:43.1.0 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -82,7 +82,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:43.0.2 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:43.0.2 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:43.1.0 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.7.1-rc1 \
   -R FerroHEALTH/FerroEHR
@@ -248,8 +248,9 @@ each one holds.
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` | Pod affinity/anti-affinity rules. Empty = none. |
-| auth.caExistingSecret | string | `""` | Name of an existing Secret holding a PEM bundle of the certificate authorities the server trusts for its `[auth]` issuer (the metadata and the key set), beside the image's own roots: for an issuer behind a private PKI. The chart mounts the key as a file and points `[auth.tls] trust_roots_file` at it. Empty trusts the image's roots alone. |
+| auth.caExistingSecret | string | `""` | Name of an existing Secret holding a PEM bundle of the certificate authorities the server trusts for its `[auth]` issuer (the metadata and the key set), beside the image's own roots: for an issuer behind a private PKI. The chart mounts the key as a file and names it in `[auth.tls]` as `caRevocation` says. Empty trusts the image's roots alone. |
 | auth.caExistingSecretKey | string | `"ca.crt"` | Key within `caExistingSecret` carrying the PEM bundle. |
+| auth.caRevocation | string | `"required"` | How the server checks a chain to that CA: `required` names it in `trust_roots_file`, so a connection opens only once a CRL or OCSP check cleared the chain and fails closed when no source answers; `none` names it in `trust_roots_without_revocation_file`, for a CA that publishes no revocation service, which the server names at its start. |
 | autoscaling.behavior | object | `{}` | Scaling behaviour, passed through verbatim to `spec.behavior`. Empty leaves the documented defaults, which are already asymmetric in the right direction for a clinical API: scale-up is immediate, scale-down waits out a 300-second stabilization window so a traffic trough cannot tear down capacity that is about to be needed. Set this only to make it MORE conservative — e.g. a `scaleDown.policies` entry capping how many pods may go per minute (https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#configurable-scaling-behavior). |
 | autoscaling.enabled | bool | `false` | Horizontal pod autoscaling. When on, the chart omits replicas and the HPA owns the count. |
 | autoscaling.maxReplicas | int | `6` | Upper bound the HPA may scale to. |
@@ -451,6 +452,7 @@ each one holds.
 | service.port | int | `8080` | Public API port. |
 | service.tls.caExistingSecret | string | `""` | Name of an EXISTING Secret holding the CA that signed the server's certificate, in PEM. Give it a Secret that holds the CA certificate ALONE: every pod and the ServiceMonitor that reads it then reads no private key, and a ServiceMonitor in another namespace needs its own copy there. A cert-manager Certificate's Secret also carries `ca.crt`, but beside the server's private key; copy the CA out of it (trust-manager's Bundle, or by hand) rather than naming it here. |
 | service.tls.caExistingSecretKey | string | `"ca.crt"` | The key in `caExistingSecret` holding the CA. |
+| service.tls.caRevocation | string | `"required"` | How the viewer's CDR client checks a chain to that CA: `required` names it in `[cdr.tls] trust_roots_file`, so a connection opens only once a CRL or OCSP check cleared the chain; `none` names it in `trust_roots_without_revocation_file`. A cert-manager CA issuer publishes no CRL, so an in-cluster CA from it needs `none`. |
 | service.trafficDistribution | string | `""` | Topology preference for how the Service picks an endpoint (KEP-4444, stable v1.33). Empty leaves the API default: spread across every ready endpoint cluster-wide. `PreferSameZone` (`PreferClose` is its older spelling) keeps traffic inside the client's zone while endpoints there are ready, which cuts cross-zone latency and inter-zone egress billing; `PreferSameNode` is stricter still. Both trade EVENNESS for locality — a zone with one replica and most of the callers will take most of the load — so it is off unless you have measured that you want it (https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution). |
 | service.type | string | `"ClusterIP"` | Service type. ClusterIP + an Ingress/gateway in front is the norm. |
 | serviceAccount.annotations | object | `{}` | Extra annotations (e.g. IRSA/Workload-Identity role bindings for S3). |
@@ -497,8 +499,9 @@ each one holds.
 | topologySpreadConstraints | list | `[]` | Spread replicas across nodes. Empty does NOT mean "no spreading": it means the chart's own default constraint applies — one soft `maxSkew: 1` over `kubernetes.io/hostname`, so two replicas prefer two nodes and a node failure does not take the whole CDR with it. It is `ScheduleAnyway`, not `DoNotSchedule`, so a single-node or capacity-constrained cluster still schedules rather than leaving a pod Pending forever.  A non-empty list REPLACES that default entirely — give the full constraint, including its own `labelSelector`. Add a `topology.kubernetes.io/zone` constraint here if your cluster spans zones; the chart does not assume one (https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/). |
 | usageReport.enabled | bool | `true` | Send the usage report (on by default). false sends nothing. |
 | viewer.affinity | object | `{}` | Affinity. |
-| viewer.auth.oidc.caExistingSecret | string | `""` | Name of an existing Secret holding a PEM bundle of the certificate authorities the viewer trusts for the issuer, beside the image's own roots: for an issuer behind a private PKI. The chart mounts the key as a file and points `[oidc.tls] trust_roots_file` at it. Empty trusts the image's roots alone. |
+| viewer.auth.oidc.caExistingSecret | string | `""` | Name of an existing Secret holding a PEM bundle of the certificate authorities the viewer trusts for the issuer, beside the image's own roots: for an issuer behind a private PKI. The chart mounts the key as a file and names it in `[oidc.tls]` as `caRevocation` says. Empty trusts the image's roots alone. |
 | viewer.auth.oidc.caExistingSecretKey | string | `"ca.crt"` | Key within `caExistingSecret` carrying the PEM bundle. |
+| viewer.auth.oidc.caRevocation | string | `"required"` | How the viewer checks a chain to that CA: `required` names it in `trust_roots_file`, so a connection opens only once a CRL or OCSP check cleared the chain; `none` names it in `trust_roots_without_revocation_file`, for a CA that publishes no revocation service. |
 | viewer.auth.oidc.clientId | string | `""` | OAuth2 client id. |
 | viewer.auth.oidc.enabled | bool | `false` | Authenticate viewer users through OIDC. Off means the viewer's own session auth is whatever its defaults provide — acceptable for a private cluster, not for anything reachable by a person who should not see PHI. |
 | viewer.auth.oidc.issuer | string | `""` | Issuer URL (must be https for anything but local development). |

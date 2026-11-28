@@ -821,11 +821,17 @@ auth:
   # -- Name of an existing Secret holding a PEM bundle of the certificate
   # authorities the server trusts for its `[auth]` issuer (the metadata and
   # the key set), beside the image's own roots: for an issuer behind a private
-  # PKI. The chart mounts the key as a file and points
-  # `[auth.tls] trust_roots_file` at it. Empty trusts the image's roots alone.
+  # PKI. The chart mounts the key as a file and names it in `[auth.tls]` as
+  # `caRevocation` says. Empty trusts the image's roots alone.
   caExistingSecret: ""
   # -- Key within `caExistingSecret` carrying the PEM bundle.
   caExistingSecretKey: ca.crt
+  # -- How the server checks a chain to that CA: `required` names it in
+  # `trust_roots_file`, so a connection opens only once a CRL or OCSP check
+  # cleared the chain and fails closed when no source answers; `none` names it
+  # in `trust_roots_without_revocation_file`, for a CA that publishes no
+  # revocation service, which the server names at its start.
+  caRevocation: required
 
 # -- Extra raw env vars (list of {name,value} or {name,valueFrom}). Escape hatch
 # for anything not surfaced above (array-valued keys via comma-separated values,
@@ -873,6 +879,12 @@ service:
     caExistingSecret: ""
     # -- The key in `caExistingSecret` holding the CA.
     caExistingSecretKey: ca.crt
+    # -- How the viewer's CDR client checks a chain to that CA: `required`
+    # names it in `[cdr.tls] trust_roots_file`, so a connection opens only
+    # once a CRL or OCSP check cleared the chain; `none` names it in
+    # `trust_roots_without_revocation_file`. A cert-manager CA issuer
+    # publishes no CRL, so an in-cluster CA from it needs `none`.
+    caRevocation: required
 
 ingress:
   # -- Create an Ingress. TLS termination belongs here (or at a gateway).
@@ -1240,11 +1252,17 @@ viewer:
       # -- Name of an existing Secret holding a PEM bundle of the certificate
       # authorities the viewer trusts for the issuer, beside the image's own
       # roots: for an issuer behind a private PKI. The chart mounts the key as
-      # a file and points `[oidc.tls] trust_roots_file` at it. Empty
+      # a file and names it in `[oidc.tls]` as `caRevocation` says. Empty
       # trusts the image's roots alone.
       caExistingSecret: ""
       # -- Key within `caExistingSecret` carrying the PEM bundle.
       caExistingSecretKey: ca.crt
+      # -- How the viewer checks a chain to that CA: `required` names it in
+      # `trust_roots_file`, so a connection opens only once a CRL or OCSP
+      # check cleared the chain; `none` names it in
+      # `trust_roots_without_revocation_file`, for a CA that publishes no
+      # revocation service.
+      caRevocation: required
   # -- Name of an existing Secret holding the viewer's OIDC client secret. The
   # chart mounts that key as a FILE and passes only its path, so the credential
   # never enters the pod's environment — the same discipline the server's DSN

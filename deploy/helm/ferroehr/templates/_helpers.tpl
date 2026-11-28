@@ -997,8 +997,8 @@ issues, so the image's system roots cannot vouch for it.
 {{/*
 The trust an in-chart client places in the server's own TLS listener, as an
 env entry, a volume mount and a volume, each included only while that listener
-speaks TLS. The viewer mounts the volume and names the CA file in its own
-`[cdr.tls] trust_roots_file`. FerroBRIDGE verifies through
+speaks TLS. The viewer mounts the volume and names the CA file in the
+`[cdr.tls]` key service.tls.caRevocation names. FerroBRIDGE verifies through
 rustls-platform-verifier, which on Linux loads its roots with
 rustls-native-certs, and that crate reads ONLY the named directories once
 SSL_CERT_DIR is set
@@ -1162,5 +1162,19 @@ is left as it is: neither server has a key that takes a list of integers.
 {{- range $value := $node -}}
 {{- if kindIs "map" $value -}}{{- include "ferroehr.integers" $value -}}{{- end -}}
 {{- end -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+The environment suffix of the outbound TLS key a mounted CA goes in, from its
+`caRevocation` value: `required` is `trust_roots_file`, whose chains connect
+only once a revocation check cleared them, and `none` is
+`trust_roots_without_revocation_file`. The values schema admits only those two.
+*/}}
+{{- define "ferroehr.trustRootsKey" -}}
+{{- if eq (toString .) "none" -}}
+TRUST_ROOTS_WITHOUT_REVOCATION_FILE
+{{- else -}}
+TRUST_ROOTS_FILE
 {{- end -}}
 {{- end }}
