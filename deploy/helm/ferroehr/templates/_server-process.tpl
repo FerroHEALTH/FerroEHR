@@ -9,8 +9,9 @@ the same configuration (`ferroehr definitions load`).
 - name: FERROEHR_CONFIG
   value: /etc/ferroehr/ferroehr.toml
 {{- if .Values.auth.caExistingSecret }}
-# The issuer's CA, beside the image's own roots (`[auth.tls] trust_roots_file`).
-- name: FERROEHR__AUTH__TLS__TRUST_ROOTS_FILE
+# The issuer's CA, beside the image's own roots, in the `[auth.tls]` key
+# auth.caRevocation names.
+- name: FERROEHR__AUTH__TLS__{{ include "ferroehr.trustRootsKey" .Values.auth.caRevocation }}
   value: /etc/ferroehr-issuer-ca/ca.crt
 {{- end }}
 {{- if or .Values.database.existingSecret .Values.database.url }}

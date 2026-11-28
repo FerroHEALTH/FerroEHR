@@ -109,6 +109,8 @@ COMPOSE_PROJECT="ferroehr-probe-k8s"
 . scripts/deploy-probes/kubernetes_ehr_index.sh
 # shellcheck source=scripts/deploy-probes/kubernetes_lifecycle.sh
 . scripts/deploy-probes/kubernetes_lifecycle.sh
+# shellcheck source=scripts/deploy-probes/kubernetes_ca_trust.sh
+. scripts/deploy-probes/kubernetes_ca_trust.sh
 
 # ── The production overlay against three database clusters ────────────────────
 # deploy/helm/ci/boot-check.sh has the server judge values-production.yaml from

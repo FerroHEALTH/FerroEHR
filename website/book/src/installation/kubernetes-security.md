@@ -142,8 +142,8 @@ service. A rotated client CA (`client_ca_file`, for `client_auth`) is picked up
 on the same interval, and the connections already open keep the trust anchor
 they were verified against.
 
-The viewer reads the mounted CA through its own `cdr.tls.trust_roots_file`,
-beside the image's roots. FerroBRIDGE reads it through `SSL_CERT_DIR`, which
+The viewer reads the mounted CA through its own `[cdr.tls]` table, beside the
+image's roots, in the key `service.tls.caRevocation` names (below). FerroBRIDGE reads it through `SSL_CERT_DIR`, which
 the chart sets to the image's system roots plus the mounted CA, so its other
 peers that verify through the platform verifier stay trusted. For an OIDC
 issuer whose certificate comes from a private CA, name a Secret holding that
@@ -152,10 +152,16 @@ CA in `viewer.auth.oidc.caExistingSecret` (key `viewer.auth.oidc.caExistingSecre
 `[oidc.tls] trust_roots_file` at it. For the server's own `[auth]`
 issuer behind a private CA, name the Secret in `auth.caExistingSecret` (key
 `auth.caExistingSecretKey`, `ca.crt` by default): the chart mounts it and points
-the server's `[auth.tls] trust_roots_file` at it. Each of these three CAs is
-named in `trust_roots_file`, so each must publish a CRL or an OCSP responder
-the pods can reach: a connection to a chain no revocation check cleared fails
-closed ([How an outbound TLS table verifies a peer](config-integrations.md#how-an-outbound-tls-table-verifies-a-peer)).
+the server's `[auth.tls] trust_roots_file` at it.
+
+Each of these three CAs takes a sibling `caRevocation` (`service.tls.caRevocation`,
+`viewer.auth.oidc.caRevocation`, `auth.caRevocation`). The default, `required`,
+names the CA in `trust_roots_file`: a connection opens only once a check of
+the chain's CRL or OCSP sources cleared it, so the CA must publish one the
+pods can reach. `none` names the CA in `trust_roots_without_revocation_file`,
+trusted with no revocation check and named at the start. A cert-manager CA
+issuer publishes no CRL, so an in-cluster CA from it needs `none`
+([How an outbound TLS table verifies a peer](config-integrations.md#how-an-outbound-tls-table-verifies-a-peer)).
 The ServiceMonitor reads the Secret from its own namespace, and
 the `prometheus.io/scheme: https` pod annotation follows the listener when
 `metrics.enabled` is set. With `config.server.tls.client_auth: required` the
