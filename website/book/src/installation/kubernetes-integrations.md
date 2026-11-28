@@ -24,7 +24,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 43.0.2 -n ferroehr --reuse-values \
+  --version 43.1.0 -n ferroehr --reuse-values \
   --set config.record.query.plan_cache_capacity=512
 ```
 
@@ -205,7 +205,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 43.0.2 -n ferroehr --reuse-values \
+  --version 43.1.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
