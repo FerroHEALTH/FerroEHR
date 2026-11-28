@@ -420,7 +420,8 @@ impl AuditStore {
     /// the record's id: the entry's uid, or the system record's own.
     ///
     /// # Errors
-    /// As [`Self::insert_batch`].
+    /// As [`Self::insert_batch`], and [`AuditError::NoRecordId`] when the
+    /// write returned no id.
     pub async fn insert(
         &self,
         event: &AuditEvent,
@@ -433,7 +434,7 @@ impl AuditStore {
         };
         let (taken, wrote) = self.take_in_own(vec![record], &[], None).await?;
         self.settle(wrote).await?;
-        taken.first().copied().ok_or(AuditError::SearchToken)
+        taken.first().copied().ok_or(AuditError::NoRecordId)
     }
 
     /// Store a batch of records and seal them before this returns, each

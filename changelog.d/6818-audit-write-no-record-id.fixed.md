@@ -1,0 +1,1 @@
+- A system audit write that returns no record id now reports that (`AuditError::NoRecordId`), where it reported an unreadable search token.
