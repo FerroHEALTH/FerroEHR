@@ -60,7 +60,7 @@ use tracing_subscriber::registry::LookupSpan;
 
 use ferroehr::db::domain::{Domain, DomainPools};
 
-use super::{CHAINER_RELEASE, calls, counted, drained};
+use super::{background, counted, drained};
 use crate::access_evaluator_http::{credential, ehr_with_composition};
 use crate::common::{self, BASE, FHIR};
 
@@ -397,8 +397,8 @@ const BUDGETS: [Budget; 31] = [
         least: 893,
         allocations: 960,
         peak_bytes: 78_848,
-        round_trips: 6,
-        nested: 1,
+        round_trips: 3,
+        nested: 3,
         notifies: 0,
         wal: 1035,
         wire: 5291,
@@ -459,8 +459,8 @@ const BUDGETS: [Budget; 31] = [
         peak_bytes: 125_972,
         // NOTE: our own design (#6252), every party commit's gate read and commit statement read the
         // policy revisions through #6320's clinical door, two nested calls for one round trip.
-        round_trips: 9,
-        nested: 5,
+        round_trips: 6,
+        nested: 7,
         notifies: 1,
         wal: 5987,
         wire: 7594,
@@ -483,8 +483,8 @@ const BUDGETS: [Budget; 31] = [
         least: 2457,
         allocations: 2520,
         peak_bytes: 107_199,
-        round_trips: 6,
-        nested: 1,
+        round_trips: 3,
+        nested: 3,
         notifies: 0,
         wal: 1027,
         wire: 11_339,
@@ -495,8 +495,8 @@ const BUDGETS: [Budget; 31] = [
         least: 1895,
         allocations: 1959,
         peak_bytes: 140_901,
-        round_trips: 9,
-        nested: 5,
+        round_trips: 6,
+        nested: 7,
         notifies: 1,
         wal: 8450,
         wire: 9946,
@@ -579,8 +579,8 @@ const BUDGETS: [Budget; 31] = [
         least: 1759,
         allocations: 1819,
         peak_bytes: 129_641,
-        round_trips: 9,
-        nested: 5,
+        round_trips: 6,
+        nested: 7,
         notifies: 1,
         wal: 5887,
         wire: 8529,
@@ -591,8 +591,8 @@ const BUDGETS: [Budget; 31] = [
         least: 1387,
         allocations: 1448,
         peak_bytes: 112_950,
-        round_trips: 9,
-        nested: 5,
+        round_trips: 6,
+        nested: 7,
         notifies: 1,
         wal: 3751,
         wire: 7080,
@@ -603,8 +603,8 @@ const BUDGETS: [Budget; 31] = [
         least: 1434,
         allocations: 1486,
         peak_bytes: 126_183,
-        round_trips: 9,
-        nested: 2,
+        round_trips: 6,
+        nested: 4,
         notifies: 0,
         wal: 6175,
         wire: 7245,
@@ -615,8 +615,8 @@ const BUDGETS: [Budget; 31] = [
         least: 1430,
         allocations: 1481,
         peak_bytes: 125_084,
-        round_trips: 9,
-        nested: 2,
+        round_trips: 6,
+        nested: 4,
         notifies: 0,
         wal: 5971,
         wire: 7074,
@@ -627,8 +627,8 @@ const BUDGETS: [Budget; 31] = [
         least: 1933,
         allocations: 1989,
         peak_bytes: 126_256,
-        round_trips: 16,
-        nested: 7,
+        round_trips: 13,
+        nested: 9,
         notifies: 0,
         wal: 6292,
         wire: 10_536,
@@ -639,8 +639,8 @@ const BUDGETS: [Budget; 31] = [
         least: 1420,
         allocations: 1472,
         peak_bytes: 126_026,
-        round_trips: 9,
-        nested: 2,
+        round_trips: 6,
+        nested: 4,
         notifies: 0,
         wal: 5971,
         wire: 7054,
@@ -1515,7 +1515,7 @@ struct Measure {
     /// The row records of each request and of the window by relation, with
     /// the chain heads' the figure leaves out.
     wal_ledger: String,
-    /// The statements `PostgreSQL` ran nested, and the chainer's rounds the
+    /// The statements `PostgreSQL` ran nested, and the background rounds the
     /// count leaves out.
     statements: String,
     /// The bytes each request moved over the database wire.
@@ -1774,14 +1774,14 @@ async fn measure(
         .filter(|s| s.query.contains("pg_notify"))
         .map(|s| s.calls)
         .sum();
-    let chainer = calls(&statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE;
+    let background = background(&statements);
     let counts = std::mem::take(&mut *counter.0.lock().unwrap());
     out.conversions = counts.conversions;
     out.round_trips = counts.round_trips.div_euclid(requests);
-    out.nested = nested.saturating_sub(chainer).div_euclid(requests);
+    out.nested = nested.saturating_sub(background).div_euclid(requests);
     out.notifies = notifies.div_euclid(requests);
     out.statements =
-        sent_ledger(&counts.sent, requests) + &nested_ledger(&statements, nested, chainer);
+        sent_ledger(&counts.sent, requests) + &nested_ledger(&statements, nested, background);
     (out.wal, out.wal_ledger) = row_records(pool, &marks).await;
     testkit::statements::assert_statements_kept(pool, evicted)
         .await
@@ -1798,10 +1798,10 @@ fn sent_ledger(sent: &BTreeMap<String, u64>, requests: u64) -> String {
     out
 }
 
-/// The nested statements of a window, and what the chainer's rounds take
+/// The nested statements of a window, and what the background rounds take
 /// out of their count.
-fn nested_ledger(statements: &[super::Counted], nested: u64, chainer: u64) -> String {
-    let mut out = format!("{nested} nested, {chainer} of them the chainer's\n");
+fn nested_ledger(statements: &[super::Counted], nested: u64, background: u64) -> String {
+    let mut out = format!("{nested} nested, {background} of them the background rounds'\n");
     for s in statements {
         let chain = s.toplevel && s.query.contains("_chain_");
         if !s.toplevel || chain {

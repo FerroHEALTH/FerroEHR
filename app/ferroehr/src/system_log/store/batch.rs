@@ -197,18 +197,13 @@ impl<'a> BatchColumns<'a> {
 
 impl BatchColumns<'_> {
     /// The content digest of each record ([`content_digest`]), every one
-    /// rendered under the policy `policy` names and naming the search tokens
-    /// whose array text `tokens` holds, one per record.
+    /// rendered under the policy `policy` names.
     ///
     /// # Errors
     /// [`AuditError::Digest`] when a record has no RFC 8785 form.
-    pub(super) fn content_digests(
-        &self,
-        policy: &[u8],
-        tokens: &[String],
-    ) -> Result<Vec<Vec<u8>>, AuditError> {
+    pub(super) fn content_digests(&self, policy: &[u8]) -> Result<Vec<Vec<u8>>, AuditError> {
         let digests = (0..self.ids.len()).map(|i| {
-            let record = self.record(i, policy, tokens.get(i).map_or("{}", String::as_str));
+            let record = self.record(i, policy);
             content_digest::of(&record)
                 .map(|digest| digest.to_vec())
                 .map_err(AuditError::Digest)
@@ -221,7 +216,7 @@ impl BatchColumns<'_> {
         clippy::indexing_slicing,
         reason = "i is below self.ids.len(), and push appends one entry to every column together"
     )]
-    fn record<'b>(&'b self, i: usize, policy: &'b [u8], tokens: &'b str) -> Record<'b> {
+    fn record<'b>(&'b self, i: usize, policy: &'b [u8]) -> Record<'b> {
         Record {
             id: self.ids[i],
             recorded_at: self.recorded_at[i].to_jiff(),
@@ -264,7 +259,6 @@ impl BatchColumns<'_> {
             review: self.reviews[i],
             category_content: self.contents[i].as_ref(),
             render_policy: policy,
-            search_tokens: tokens,
             binding: self.bindings[i],
             party: self.parties[i].as_ref(),
             party_groups: self.groups[i].as_ref(),
@@ -279,5 +273,69 @@ impl BatchColumns<'_> {
             digest_version: content_digest::VERSION,
             token_attributes: self.token_attributes[i].as_ref(),
         }
+    }
+}
+
+/// The tokens of a write's records, flattened into the arrays
+/// `audit.search_tokens_of` takes: each token with its record's 1-based
+/// position and whether it belongs to the record's shared set.
+#[derive(Debug, Default)]
+pub(crate) struct TokenArgs {
+    /// The 1-based position of each token's record.
+    pub(crate) records: Vec<i32>,
+    /// Each token's ITI-81 parameter.
+    pub(crate) parameters: Vec<&'static str>,
+    /// Each token's system.
+    pub(crate) systems: Vec<Option<String>>,
+    /// Each token's code.
+    pub(crate) codes: Vec<Option<String>>,
+    /// Whether each token belongs to its record's shared set.
+    pub(crate) shared: Vec<bool>,
+    /// How many records the write holds.
+    pub(crate) count: i32,
+}
+
+#[cfg(feature = "fhir")]
+impl TokenArgs {
+    /// The arrays of the tokens of `records`, in their order.
+    ///
+    /// # Errors
+    /// [`AuditError::TokenCount`] when the write holds more records than an
+    /// `integer` counts.
+    pub(crate) fn of(
+        records: Vec<std::collections::BTreeSet<crate::system_log::search::SearchToken>>,
+    ) -> Result<Self, AuditError> {
+        let mut args = Self {
+            count: i32::try_from(records.len()).map_err(AuditError::TokenCount)?,
+            ..Self::default()
+        };
+        for (record, tokens) in (1..).zip(records) {
+            for token in tokens {
+                args.records.push(record);
+                args.shared
+                    .push(crate::system_log::store::AuditElement::shares(
+                        token.parameter,
+                    ));
+                args.parameters.push(token.parameter);
+                args.systems.push(token.system);
+                args.codes.push(token.code);
+            }
+        }
+        Ok(args)
+    }
+}
+
+#[cfg(not(feature = "fhir"))]
+impl TokenArgs {
+    /// The arrays of `count` records that name no token.
+    ///
+    /// # Errors
+    /// [`AuditError::TokenCount`] when `count` exceeds what an `integer`
+    /// counts.
+    pub(crate) fn none(count: usize) -> Result<Self, AuditError> {
+        Ok(Self {
+            count: i32::try_from(count).map_err(AuditError::TokenCount)?,
+            ..Self::default()
+        })
     }
 }

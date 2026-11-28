@@ -198,7 +198,7 @@ async fn until_waiting(pool: &PgPool) {
 
 /// A token another writer stores while this writer stores it too, committed
 /// once this writer's insert waits on it, is answered with that writer's row
-/// by the one statement (#6222).
+/// by the one statement (#6222, #6633).
 #[tokio::test]
 async fn a_token_stored_by_another_writer_at_once_is_its_row() {
     let db = testkit::db().await.expect("testkit database");
@@ -219,65 +219,72 @@ async fn a_token_stored_by_another_writer_at_once_is_its_row() {
         let pool = pool.clone();
         async move {
             let mut conn = acquire(&pool).await.expect("the second writer");
-            let records = [BTreeSet::from([SearchToken {
+            let records = vec![BTreeSet::from([SearchToken {
                 parameter: "purpose",
                 system: Some("urn:example:race".to_owned()),
                 code: Some("one".to_owned()),
             }])];
-            token_ids(&mut conn, &records).await
+            record_tokens(&mut conn, records).await
         }
     });
     until_waiting(&pool).await;
     // NOTE: our own design (#5762), a test's writer of the audit store, which no request makes.
     first.commit().await.expect("the first writer commits");
-    let ids = second
+    let texts = second
         .await
         .expect("the second writer settles")
         .expect("the second writer reads the token");
-    let key = (
-        "purpose".to_owned(),
-        Some("urn:example:race".to_owned()),
-        Some("one".to_owned()),
+    assert_eq!(
+        texts,
+        vec![format!("{{{stored}}}")],
+        "the first writer's row"
     );
-    assert_eq!(ids.get(&key), Some(&stored), "the first writer's row");
 }
 
 /// A shared set another writer stores while this writer stores it too is
-/// answered with that writer's row by the one statement (#6222).
+/// answered with that writer's row by the one statement (#6222, #6633).
 #[tokio::test]
 async fn a_set_stored_by_another_writer_at_once_is_its_row() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let tokens = vec![7, 11];
+    let records = || {
+        vec![BTreeSet::from([
+            SearchToken {
+                parameter: "type",
+                system: Some("urn:example:race".to_owned()),
+                code: Some("rest".to_owned()),
+            },
+            SearchToken {
+                parameter: "subtype",
+                system: Some("urn:example:race".to_owned()),
+                code: Some("read".to_owned()),
+            },
+        ])]
+    };
     let mut held = acquire(&pool).await.expect("the first writer");
     let mut first = sqlx::Connection::begin(&mut *held)
         .await
         .expect("the first writer's transaction");
-    let stored: i32 = sqlx::query_scalar(
-        "INSERT INTO audit.audit_search_set (tokens, digest) \
-         VALUES ($1, audit.search_set_digest($1)) RETURNING id",
-    )
-    .bind(&tokens)
-    .fetch_one(&mut *first)
-    .await
-    .expect("the first writer stores the set");
+    let stored = record_tokens(&mut first, records())
+        .await
+        .expect("the first writer stores the set");
     let second = tokio::spawn({
         let pool = pool.clone();
-        let tokens = tokens.clone();
         async move {
             let mut conn = acquire(&pool).await.expect("the second writer");
-            let mut learned = LearnedSets::default();
-            TokenRegistry::default()
-                .set_id(&mut conn, tokens, &mut learned)
-                .await
+            record_tokens(&mut conn, records()).await
         }
     });
     until_waiting(&pool).await;
     // NOTE: our own design (#5762), a test's writer of the audit store, which no request makes.
     first.commit().await.expect("the first writer commits");
-    let id = second
+    let texts = second
         .await
         .expect("the second writer settles")
         .expect("the second writer reads the set");
-    assert_eq!(id, stored, "the first writer's row");
+    assert!(
+        stored.first().is_some_and(|text| text.starts_with("{-")),
+        "a shared set: {stored:?}"
+    );
+    assert_eq!(texts, stored, "the first writer's row");
 }

@@ -179,9 +179,8 @@ impl AuditStore {
             ids.push(chain_seq);
             tokens.push(entry_tokens(&entry, chain_seq, policy));
         }
-        let (values, learned) = self.tokens.record_tokens(conn, &tokens).await?;
-        self.tokens.remember(learned);
-        Ok(Some((ids, super::entries::token_texts(&values))))
+        let texts = crate::system_log::search::record_tokens(conn, tokens).await?;
+        Ok(Some((ids, texts)))
     }
 
     /// A slim build renders no projection, so it indexes no search token.

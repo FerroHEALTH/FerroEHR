@@ -20,7 +20,7 @@ REVOKE ALL ON FUNCTION
     delivery_park_undelivered(p_chain text, p_records bigint[], p_reason text),
     register_render_policy(p_policy jsonb),
     lock_search_tokens(),
-    hold_search_tokens(),
+    search_tokens_of(integer[], text[], text[], text[], boolean[], integer),
     release_search_tokens(p_tokens integer[]),
     reap_audit_events_due(p_today date, p_unstated_cutoff timestamp with time zone),
     seal_reject_change(),
@@ -90,7 +90,7 @@ BEGIN
             TO ferroehr_clinical;
         GRANT EXECUTE ON FUNCTION
             register_render_policy(p_policy jsonb),
-            hold_search_tokens(),
+            search_tokens_of(integer[], text[], text[], text[], boolean[], integer),
             reap_audit_events_due(p_today date, p_unstated_cutoff timestamp with time zone),
             fold_audit_event_reaped(p_now timestamp with time zone, p_limit integer),
             access_log_shared_collect(p_today date, p_limit integer),

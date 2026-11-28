@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The content digest of a system audit record (`audit.audit_event`), form 6
-//! (#6242).
+//! The content digest of a system audit record (`audit.audit_event`), form 8
+//! (#6242, #6633).
 //!
 //! The writer computes it when it writes the record and stores it in
 //! `content_digest`; the seal of the record's window covers it
@@ -10,18 +10,18 @@
 //! stored columns. An auditor recomputes it from a row alone:
 //!
 //! ```text
-//! SHA-256( RFC 8785 ( ["ferroehr.audit_event.v7", { <column>: <value>, ... }] ) )
+//! SHA-256( RFC 8785 ( ["ferroehr.audit_event.v8", { <column>: <value>, ... }] ) )
 //! ```
 //!
 //! The object holds every column of `audit.audit_event` except `seq` (the
-//! seal names it beside the digest) and `content_digest`, under its column
-//! name. Each value is written by its type:
+//! seal names it beside the digest), `content_digest` and `search_tokens` (a
+//! search aid of store-internal ids), under its column name. Each value is
+//! written by its type:
 //!
 //! - SQL `NULL` as JSON `null`, and a `boolean` as JSON `true` or `false`;
 //! - `text` as a JSON string, and a `uuid` in its lower-case hyphenated form;
 //! - `smallint` and `bigint` as their decimal text in a JSON string, so a
 //!   64-bit value stays exact under RFC 8785's numbers;
-//! - `integer[]` (`search_tokens`) as a JSON array of decimal strings;
 //! - `timestamptz` as `YYYY-MM-DDTHH:MM:SS.ffffffZ`, UTC with exactly six
 //!   fractional digits;
 //! - `date` as `YYYY-MM-DD`, and `bytea` as lower-case hexadecimal;
@@ -44,10 +44,10 @@ use openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_jso
 use openehr_rm::v1_2::common::change_control::canonical_serializer_impl::canonical_to_string;
 
 /// The tag the digested array starts with.
-pub const TAG: &str = "ferroehr.audit_event.v7";
+pub const TAG: &str = "ferroehr.audit_event.v8";
 
 /// The `digest_version` of a record whose digest has this form.
-pub const VERSION: i16 = 7;
+pub const VERSION: i16 = 8;
 
 /// An instant as the digest writes it: UTC, six fractional digits, `Z`.
 #[must_use]
@@ -146,8 +146,6 @@ pub struct Record<'a> {
     pub category_content: Option<&'a Value>,
     /// `render_policy`, its bytes.
     pub render_policy: &'a [u8],
-    /// `search_tokens`, as its array text `{1,2,-3}`.
-    pub search_tokens: &'a str,
     /// `binding`.
     pub binding: Option<&'a str>,
     /// `party`.
@@ -174,15 +172,6 @@ pub struct Record<'a> {
     pub digest_version: i16,
     /// `token_attributes`.
     pub token_attributes: Option<&'a Value>,
-}
-
-/// The ids of an `integer[]` written as its text, `{1,2,-3}`, each as its
-/// decimal text.
-pub fn token_ids(text: &str) -> impl Iterator<Item = &str> {
-    text.trim_start_matches('{')
-        .trim_end_matches('}')
-        .split(',')
-        .filter(|id| !id.is_empty())
 }
 
 /// Why a content digest could not be computed.
@@ -247,7 +236,6 @@ pub fn of(record: &Record<'_>) -> Result<[u8; 32], Unwritable> {
     w.boolean("retention_stated", record.retention_stated);
     w.optional_text("review", record.review);
     w.json("roles", record.roles)?;
-    w.tokens("search_tokens", record.search_tokens);
     w.instant("stored_at", record.stored_at);
     w.boolean("subject_lookup_failed", record.subject_lookup_failed);
     w.optional_text("subject_namespace", record.subject_namespace);
@@ -392,19 +380,6 @@ impl Members {
         self.put(b"\"");
     }
 
-    /// An `integer[]` written as its text, as an array of decimal strings.
-    fn tokens(&mut self, name: &str, value: &str) {
-        self.name(name);
-        self.put(b"[");
-        for (index, id) in token_ids(value).enumerate() {
-            if index > 0 {
-                self.put(b",");
-            }
-            self.string(id);
-        }
-        self.put(b"]");
-    }
-
     /// A JSON value in its RFC 8785 form.
     fn json(&mut self, name: &str, value: Option<&Value>) -> Result<(), Unwritable> {
         self.name(name);
@@ -483,7 +458,6 @@ pub const STORED: &str = "jsonb_build_object(\
      'subject_lookup_failed', e.subject_lookup_failed, 'review', e.review, \
      'category_content', e.category_content, \
      'render_policy', encode(e.render_policy, 'hex'), \
-     'search_tokens', to_jsonb(e.search_tokens::text[]), \
      'binding', e.binding) \
      || jsonb_build_object(\
      'party', e.party, 'party_groups', e.party_groups, 'provider', e.provider, \
@@ -545,7 +519,6 @@ mod tests {
             review: None,
             category_content: None,
             render_policy: &[0x00, 0xff],
-            search_tokens: "{3,-1}",
             binding: None,
             party: None,
             party_groups: None,
@@ -607,7 +580,6 @@ mod tests {
             ("review", Value::Null),
             ("category_content", Value::Null),
             ("render_policy", text("00ff")),
-            ("search_tokens", serde_json::json!(["3", "-1"])),
             ("binding", Value::Null),
             ("party", Value::Null),
             ("party_groups", Value::Null),
@@ -619,10 +591,14 @@ mod tests {
             ("facilities", Value::Null),
             ("binding_detail", Value::Null),
             ("summary", Value::Null),
-            ("digest_version", text("7")),
+            ("digest_version", text("8")),
             ("token_attributes", Value::Null),
         ];
-        assert_eq!(members.len(), 55, "every column but seq and content_digest");
+        assert_eq!(
+            members.len(),
+            54,
+            "every column but seq, content_digest and search_tokens"
+        );
         Value::Object(
             members
                 .into_iter()
@@ -639,7 +615,7 @@ mod tests {
         let digest = of(&record(&roles, "2026-11-22T04:31:28.2Z")).expect("a digest");
         assert_eq!(
             crate::digest::hex(&digest),
-            "af9baeda2e3e9c7ad5aec32726c7904a10fc08a369618f7aeffe98f6715c2b94"
+            "5571a2745b73257d1ce8cfb1b6e6459b66fb282ff6197d589ab4d157a0e3e8a3"
         );
     }
 
@@ -681,14 +657,5 @@ mod tests {
         assert_eq!(instant(to_microsecond(at)), "2026-11-22T04:31:28.123456Z");
         let whole: jiff::Timestamp = "2026-11-22T04:31:28Z".parse().expect("an instant");
         assert_eq!(instant(whole), "2026-11-22T04:31:28.000000Z");
-    }
-
-    #[test]
-    fn the_token_ids_are_read_from_the_array_text() {
-        assert_eq!(
-            token_ids("{1,22,-3}").collect::<Vec<_>>(),
-            vec!["1", "22", "-3"]
-        );
-        assert_eq!(token_ids("{}").count(), 0);
     }
 }

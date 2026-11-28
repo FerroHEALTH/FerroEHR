@@ -685,8 +685,9 @@ async fn audit_event_columns(pool: &PgPool) -> Vec<(String, String)> {
 }
 
 /// The columns of a record its content digest leaves out: its position,
-/// which the seal names beside the digest, and the digest itself.
-const UNDIGESTED: [&str; 2] = ["seq", "content_digest"];
+/// which the seal names beside the digest, the digest itself, and its search
+/// tokens, ids internal to the store (#6633).
+const UNDIGESTED: [&str; 3] = ["seq", "content_digest", "search_tokens"];
 
 /// Run `statements` with the user triggers off inside a transaction, read
 /// the verifier's findings over both logs' windows in it as
@@ -858,7 +859,11 @@ async fn every_hashed_column_is_tamper_evident() {
     .await
     .expect("the CHECK constraints");
 
-    for (column, data_type) in audit_event_columns(&pool).await {
+    let hashed = audit_event_columns(&pool)
+        .await
+        .into_iter()
+        .filter(|(column, _)| column != "search_tokens");
+    for (column, data_type) in hashed {
         let mut statements: Vec<String> = checks
             .iter()
             .map(|name| format!("ALTER TABLE audit.audit_event DROP CONSTRAINT \"{name}\""))

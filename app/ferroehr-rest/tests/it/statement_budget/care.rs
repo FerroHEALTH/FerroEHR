@@ -14,7 +14,7 @@ use serde_json::json;
 use tracing::Instrument as _;
 use tracing_subscriber::layer::SubscriberExt as _;
 
-use super::{CHAINER_RELEASE, REQUEST_SPAN, RoundTrips, calls, counted, ledger};
+use super::{REQUEST_SPAN, RoundTrips, background, counted, ledger};
 use crate::common::{self, BASE, EXT};
 use crate::hospital::world::{PURPOSE, World, care, credential, day};
 
@@ -25,7 +25,7 @@ const WARM: u64 = 3;
 const REQUESTS: u64 = 10;
 
 /// What one request of a kind may cost: its round trips, the statements
-/// nested in them (the chainer's rounds left out), the statements that
+/// nested in them (the background rounds left out), the statements that
 /// name `pg_notify`, top-level or nested, and the bytes of row records it
 /// writes outside the audit and access-log relations and outside every TOAST
 /// table, where the access-log entry's record goes.
@@ -70,15 +70,15 @@ const EPISODE_CASELOAD: Ceiling = CASELOAD;
 
 /// A care relationship's commit (#6074).
 const COMMIT: Ceiling = Ceiling {
-    round_trips: 25,
-    nested: 2,
+    round_trips: 22,
+    nested: 4,
     notifies: 0,
     wal: 7354,
 };
 
 /// A care relationship's commit, then the caseload query that reads the copy it kept (#6074).
 const RECARE: Ceiling = Ceiling {
-    round_trips: 32,
+    round_trips: 27,
     nested: COMMIT.nested + CASELOAD.nested,
     notifies: COMMIT.notifies + CASELOAD.notifies,
     wal: COMMIT.wal + CASELOAD.wal,
@@ -344,7 +344,7 @@ async fn measured(kind: Kind) -> (String, bool) {
         .filter(|s| s.query.contains("pg_notify"))
         .map(|s| s.calls)
         .sum();
-    let chainer = calls(&statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE;
+    let background = background(&statements);
     let wal: u64 = relations
         .iter()
         .filter(|(name, ..)| owned(name))
@@ -353,13 +353,13 @@ async fn measured(kind: Kind) -> (String, bool) {
     let ceiling = kind.ceiling();
     let cost = Ceiling {
         round_trips: sent.div_euclid(REQUESTS),
-        nested: nested.saturating_sub(chainer).div_euclid(REQUESTS),
+        nested: nested.saturating_sub(background).div_euclid(REQUESTS),
         notifies: notifies.div_euclid(REQUESTS),
         wal: wal.div_euclid(REQUESTS),
     };
     let mut report = format!(
-        "{}: per request {cost:?} (ceiling {ceiling:?}), {chainer} nested statements of the \
-         chainer\n",
+        "{}: per request {cost:?} (ceiling {ceiling:?}), {background} nested statements of the \
+         background rounds\n",
         kind.name()
     );
     for (name, bytes, records) in relations.iter().filter(|(name, ..)| owned(name)).take(16) {

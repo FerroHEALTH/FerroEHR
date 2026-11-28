@@ -18,7 +18,7 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use super::writers::Pinned;
-use super::{AuditRecord, AuditStore, LearnedSets, RecordEnd};
+use super::{AuditRecord, AuditStore, RecordEnd};
 use crate::access_log::store::AccessLogStore;
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
@@ -71,8 +71,8 @@ impl Releases {
 impl AuditStore {
     /// Write `records` into the intake on `conn`, each with its retention end
     /// (`ends`, one per record, or empty); returns each record's id, the
-    /// entry's uid for an access the log covers, and the shared token sets
-    /// learned. The caller's transaction commits them.
+    /// entry's uid for an access the log covers. The caller's transaction,
+    /// or a lone system statement's own, commits them.
     ///
     /// # Errors
     /// [`AuditError::RetentionEnds`] when `ends` is neither empty nor one end
@@ -85,7 +85,7 @@ impl AuditStore {
         records: Vec<AuditRecord>,
         ends: &[RecordEnd],
         reserved_by: Option<Uuid>,
-    ) -> Result<(Vec<Uuid>, LearnedSets, Chains), AuditError> {
+    ) -> Result<(Vec<Uuid>, Chains), AuditError> {
         if !ends.is_empty() && ends.len() != records.len() {
             return Err(AuditError::RetentionEnds {
                 ends: ends.len(),
@@ -115,23 +115,20 @@ impl AuditStore {
             .map(|(policy, _, _)| Self::registered_digest(policy))
             .collect::<Result<Vec<_>, _>>()?;
         let mut ids = Vec::with_capacity(records.len());
-        let mut learned_all = Vec::with_capacity(runs.len());
         for ((under, start, end), policy) in runs.iter().zip(digests) {
             let run = records.get(*start..*end).unwrap_or_default();
             let run_ends = ends.get(*start..*end).unwrap_or_default();
-            let (tokens, learned) = Self::batch_tokens(self, under, conn, run).await?;
+            let tokens = Self::batch_tokens(under, run).await?;
             ids.extend(Self::insert_rows(conn, run, run_ends, policy, tokens, reserved_by).await?);
-            learned_all.push(learned);
         }
         #[cfg(feature = "fhir")]
         {
-            let (uids, learned) = self
-                .intake_entries(conn, writing, entries, reserved_by)
-                .await?;
-            ids.extend(uids);
-            learned_all.push(learned);
+            ids.extend(
+                self.intake_entries(conn, writing, entries, reserved_by)
+                    .await?,
+            );
         }
-        Ok((ids, merged(learned_all), wrote))
+        Ok((ids, wrote))
     }
 
     /// The access-log store the sealer seals through: the one the server
@@ -191,18 +188,6 @@ impl AuditStore {
         Ok(())
     }
 }
-
-/// The shared sets of every part of one write.
-#[cfg(feature = "fhir")]
-fn merged(parts: Vec<LearnedSets>) -> LearnedSets {
-    parts
-        .into_iter()
-        .fold(LearnedSets::default(), LearnedSets::merge)
-}
-
-/// A slim build learns no set.
-#[cfg(not(feature = "fhir"))]
-fn merged(_parts: Vec<LearnedSets>) -> LearnedSets {}
 
 impl AuditStore {
     /// How long the oldest record of either log that no write holds has

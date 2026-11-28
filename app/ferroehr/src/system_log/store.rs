@@ -43,7 +43,7 @@ use uuid::Uuid;
 
 pub mod access_index;
 mod access_log;
-mod batch;
+pub(crate) mod batch;
 #[cfg(feature = "fhir")]
 pub mod carried;
 pub mod chain_walk;
@@ -94,10 +94,13 @@ use ferrohealth_smart::assurance::AssuranceLevel;
 /// `audit.audit_event_hold` (#6203, #6242). The transaction takes its xid in
 /// the materialized `own_xid` every row joins, before any row draws its
 /// position, which the frontier proof rests on ([`crate::access_log::frontier`]).
-/// Each record's search tokens arrive as the text of an `integer[]` in `$39`,
-/// since an array of arrays unnests element by element, and its id in `$52`;
-/// `$54` is the level each record is recorded for review at.
+/// Each record's search tokens arrive as its tokens in `$39` (the record's
+/// 1-based position), `$57` to `$60`, and `audit.search_tokens_of` resolves
+/// them into its `search_tokens` in the same statement (#6633); its id is in
+/// `$52`, and `$54` is the level each record is recorded for review at.
 const INSERT_BATCH: &str = "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_current_xact_id() AS taken), \
+     tok AS MATERIALIZED (SELECT t.record, t.tokens FROM audit.search_tokens_of($39::integer[], \
+     $57::text[], $58::text[], $59::text[], $60::boolean[], $61::integer) t), \
      written AS (INSERT INTO audit.audit_event (id, recorded_at, action, outcome, \
      event_code, operation, principal, patient_id, resource_class, resource_id, \
      client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, roles, \
@@ -110,7 +113,7 @@ const INSERT_BATCH: &str = "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_c
      SELECT u.id, u.c1, u.c2, u.c3, u.c4, u.c5, u.c6, u.c7, u.c8, u.c9, u.c10, u.c11, u.c12, \
      u.c13, u.c14, u.c15, u.c16, u.c17, u.c18, u.c19, u.c20, u.c21, u.c22, u.c23, u.c24, u.c25, \
      u.c26, u.c27, u.c28, u.c29, u.c30, u.c31, u.c32, u.c33, u.c34, u.c35, u.c36, u.c37, \
-     $38::bytea, u.tokens::integer[], u.c40, u.c42, u.c43, u.c44, u.c45, u.c46, u.c47, \
+     $38::bytea, tok.tokens::integer[], u.c40, u.c42, u.c43, u.c44, u.c45, u.c46, u.c47, \
      u.c48, u.c49, u.c50, u.c51, u.c52, u.review, u.stored_at, u.content_digest \
      FROM own_xid CROSS JOIN UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
      $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], \
@@ -118,14 +121,15 @@ const INSERT_BATCH: &str = "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_c
      $17::jsonb[], $18::jsonb[], $19::bigint[], $20::jsonb[], $21::text[], \
      $22::jsonb[], $23::text[], $24::text[], $25::text[], $26::text[], $27::text[], \
      $28::jsonb[], $29::text[]::date[], $30::boolean[], $31::text[], $32::text[], \
-     $33::text[], $34::text[], $35::text[], $36::boolean[], $37::jsonb[], $39::text[], \
+     $33::text[], $34::text[], $35::text[], $36::boolean[], $37::jsonb[], \
      $40::text[], $41::jsonb[], $42::jsonb[], $43::jsonb[], $44::jsonb[], \
      $45::jsonb[], $46::jsonb[], $47::jsonb[], $48::jsonb[], $49::jsonb[], $50::jsonb[], \
      $51::jsonb[], $52::uuid[], $54::text[], $55::timestamptz[], $56::bytea[]) \
-     AS u(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, \
+     WITH ORDINALITY AS u(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, \
      c19, c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32, c33, c34, c35, c36, \
-     c37, tokens, c40, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52, id, review, \
-     stored_at, content_digest) \
+     c37, c40, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52, id, review, \
+     stored_at, content_digest, ord) \
+     JOIN tok ON tok.record = u.ord \
      RETURNING seq) \
      INSERT INTO audit.audit_event_hold (seq, reserved_by) \
      SELECT w.seq, $53::uuid FROM written w WHERE $53::uuid IS NOT NULL";
@@ -208,13 +212,6 @@ pub struct AuditRecord {
 #[cfg(feature = "fhir")]
 type PolicyCache = Arc<Mutex<BTreeMap<Vec<u8>, Arc<CompiledPolicy>>>>;
 
-/// The shared sets a write learned, held once it commits.
-#[cfg(feature = "fhir")]
-type LearnedSets = crate::system_log::search::LearnedSets;
-/// A slim build stores no search tokens, so a write learns nothing.
-#[cfg(not(feature = "fhir"))]
-type LearnedSets = ();
-
 /// The PG-backed Audit Record Repository (the `store` sink).
 #[derive(Debug, Clone)]
 pub struct AuditStore {
@@ -227,9 +224,6 @@ pub struct AuditStore {
     /// The policies of the records this store has read.
     #[cfg(feature = "fhir")]
     policies: PolicyCache,
-    /// The search tokens and sets this store has written.
-    #[cfg(feature = "fhir")]
-    tokens: Arc<crate::system_log::search::TokenRegistry>,
     /// The access-log store the records' entries are appended through, which
     /// signs their links as `[audit.access_log]` asks once the server installs
     /// it ([`Self::use_access_log`]); an unsigning one until then.
@@ -261,8 +255,6 @@ impl AuditStore {
             writing: Arc::new(Writers::new(RenderPolicy::default())),
             #[cfg(feature = "fhir")]
             policies: Arc::new(Mutex::new(BTreeMap::new())),
-            #[cfg(feature = "fhir")]
-            tokens: Arc::new(crate::system_log::search::TokenRegistry::default()),
             access_log: Arc::default(),
             releases: Arc::default(),
             #[cfg(feature = "fhir")]
@@ -385,65 +377,31 @@ impl AuditStore {
             .ok_or(AuditError::PolicyUnregistered)
     }
 
-    /// The `search_tokens` value of each record: the ITI-81 search tokens of
-    /// the document it renders under the store's policy, stored on `conn`, with
-    /// the shared sets learned. A record whose document cannot be rendered is
-    /// stored without tokens, metered and logged, since its document cannot be
-    /// served either.
+    /// The search tokens of each record of a batch: the ITI-81 search tokens
+    /// of the document it renders under the store's policy, as the arrays
+    /// the batched insert resolves into `search_tokens` (#6633).
     ///
     /// # Errors
-    /// The [`RenderPolicy::compile`] errors, [`AuditError::Store`] when a
-    /// token cannot be stored, and [`AuditError::SearchToken`] when one cannot
-    /// be read back.
-    #[cfg(feature = "fhir")]
-    async fn search_tokens<'a>(
-        &self,
-        writing: &WritePolicy,
-        conn: &mut PgConnection,
-        records: impl Iterator<Item = (&'a AuditEvent, Option<&'a str>)>,
-    ) -> Result<(Vec<Vec<i32>>, LearnedSets), AuditError> {
-        let compiled = writing.compiled().await?;
-        let tokens: Vec<_> = records
-            .map(|(event, subject)| {
-                let resource =
-                    crate::system_log::fhir::to_resource(event, &compiled.context, subject);
-                entries::tokens_of(resource, event)
-            })
-            .collect();
-        self.tokens.record_tokens(conn, &tokens).await
-    }
-
-    /// Holds the shared sets of a committed write; a slim build stores no
-    /// search tokens, so it learns no set.
-    fn remember(&self, learned: LearnedSets) {
-        #[cfg(feature = "fhir")]
-        self.tokens.remember(learned);
-        #[cfg(not(feature = "fhir"))]
-        let _: (LearnedSets, &Self) = (learned, self);
-    }
-
-    /// The `search_tokens` of each record of a batch, as the text of an
-    /// `integer[]` the batched insert casts, with the shared sets learned.
-    ///
-    /// # Errors
-    /// As [`Self::search_tokens`].
+    /// The [`RenderPolicy::compile`] errors, and [`AuditError::TokenCount`]
+    /// when the batch holds more records than an `integer` counts.
     #[cfg(feature = "fhir")]
     async fn batch_tokens(
-        store: &Self,
         writing: &WritePolicy,
-        conn: &mut PgConnection,
         records: &[AuditRecord],
-    ) -> Result<(Vec<String>, LearnedSets), AuditError> {
-        let (ids, learned) = store
-            .search_tokens(
-                writing,
-                conn,
-                records
-                    .iter()
-                    .map(|record| (&record.event, record.subject.as_deref())),
-            )
-            .await?;
-        Ok((entries::token_texts(&ids), learned))
+    ) -> Result<batch::TokenArgs, AuditError> {
+        let compiled = writing.compiled().await?;
+        let tokens = records
+            .iter()
+            .map(|record| {
+                let resource = crate::system_log::fhir::to_resource(
+                    &record.event,
+                    &compiled.context,
+                    record.subject.as_deref(),
+                );
+                entries::tokens_of(resource, &record.event)
+            })
+            .collect();
+        batch::TokenArgs::of(tokens)
     }
 
     /// A slim build refuses the store at start
@@ -451,12 +409,10 @@ impl AuditStore {
     /// searched: every record carries no search tokens.
     #[cfg(not(feature = "fhir"))]
     fn batch_tokens(
-        _store: &Self,
         _writing: &WritePolicy,
-        _conn: &mut PgConnection,
         records: &[AuditRecord],
-    ) -> std::future::Ready<Result<(Vec<String>, LearnedSets), AuditError>> {
-        std::future::ready(Ok((records.iter().map(|_| "{}".to_owned()).collect(), ())))
+    ) -> std::future::Ready<Result<batch::TokenArgs, AuditError>> {
+        std::future::ready(batch::TokenArgs::none(records.len()))
     }
 
     /// Store one audit record and seal it before this returns: an access
@@ -557,14 +513,17 @@ impl AuditStore {
                 .held_entries_on(conn, &writing, records, reservation)
                 .await;
         }
+        if Self::one_statement(&writing, &records) {
+            self.take_in(conn, &writing, records, ends, Some(reservation))
+                .await?;
+            return Ok(());
+        }
         let mut tx = conn.begin().await?;
-        let (_, learned, _) = self
-            .take_in(&mut tx, &writing, records, ends, Some(reservation))
+        self.take_in(&mut tx, &writing, records, ends, Some(reservation))
             .await?;
         // NOTE: our own design (#5762), the audit domain's own store, whose records are this
         // transaction's rows; a held row waits for its release, which marks it.
         tx.commit().await?;
-        self.remember(learned);
         Ok(())
     }
 
@@ -593,14 +552,18 @@ impl AuditStore {
             return Ok((uids, wrote));
         }
         let mut conn = acquire(&self.pool).await?;
+        if Self::one_statement(&writing, &records) {
+            return self
+                .take_in(&mut conn, &writing, records, ends, reserved_by)
+                .await;
+        }
         let mut tx = conn.begin().await?;
-        let (ids, learned, wrote) = self
+        let (ids, wrote) = self
             .take_in(&mut tx, &writing, records, ends, reserved_by)
             .await?;
         // NOTE: our own design (#5762), the audit domain's own store, whose records are this
         // transaction's rows.
         tx.commit().await?;
-        self.remember(learned);
         Ok((ids, wrote))
     }
 
@@ -609,6 +572,19 @@ impl AuditStore {
     #[cfg(feature = "fhir")]
     fn group(&self) -> &crate::access_log::intake::GroupWriter {
         self.group.writer(&self.pool)
+    }
+
+    /// Whether `records` are system records under one policy, written by the
+    /// one batched insert, which is atomic and durable on its own with
+    /// `synchronous_commit` on, so they need no transaction (#6633).
+    fn one_statement(writing: &Pinned, records: &[AuditRecord]) -> bool {
+        #[cfg(feature = "fhir")]
+        let entries = records.iter().any(|record| {
+            record.entry.is_some() || crate::access_log::entry::writes_entry(&record.event)
+        });
+        #[cfg(not(feature = "fhir"))]
+        let entries = false;
+        !entries && writing.runs(records).len() == 1
     }
 
     /// Whether every one of `records` is written as its access-log entry, so
@@ -620,8 +596,9 @@ impl AuditStore {
         })
     }
 
-    /// The `INSERT` of the system intake on `conn`, each record with its
-    /// `search_tokens` text in `tokens`; returns each record's id.
+    /// The `INSERT` of the system intake on `conn`, each record's
+    /// `search_tokens` resolved from `tokens` in the same statement; returns
+    /// each record's id.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the INSERT fails.
@@ -630,7 +607,7 @@ impl AuditStore {
         records: &[AuditRecord],
         ends: &[RecordEnd],
         policy: Vec<u8>,
-        tokens: Vec<String>,
+        tokens: batch::TokenArgs,
         reserved_by: Option<Uuid>,
     ) -> Result<Vec<Uuid>, AuditError> {
         let mut c = BatchColumns::with_capacity(records.len());
@@ -639,7 +616,7 @@ impl AuditStore {
             c.push(record, ends.get(index), stored_at)?;
         }
         let ids = c.ids.clone();
-        let digests = c.content_digests(&policy, &tokens)?;
+        let digests = c.content_digests(&policy)?;
         sqlx::query(INSERT_BATCH)
             .bind(c.recorded_at)
             .bind(c.actions)
@@ -679,7 +656,7 @@ impl AuditStore {
             .bind(c.lookups_failed)
             .bind(c.contents)
             .bind(policy)
-            .bind(tokens)
+            .bind(tokens.records)
             .bind(c.bindings)
             .bind(c.parties)
             .bind(c.groups)
@@ -697,6 +674,11 @@ impl AuditStore {
             .bind(c.reviews)
             .bind(c.stored_at)
             .bind(digests)
+            .bind(tokens.parameters)
+            .bind(tokens.systems)
+            .bind(tokens.codes)
+            .bind(tokens.shared)
+            .bind(tokens.count)
             .execute(&mut *conn)
             .await?;
         Ok(ids)
