@@ -178,10 +178,9 @@ pub enum AuditError {
         /// What could not be read.
         reason: &'static str,
     },
-    /// A search token or shared set of a record cannot be read back from the
-    /// store after it was stored.
-    #[error("an audit search token cannot be read back from the store")]
-    SearchToken,
+    /// A write of one record returned no record id.
+    #[error("an audit write returned no record id")]
+    NoRecordId,
     /// A write holds more records than the token statement's `integer`
     /// record count takes.
     #[error("an audit write holds more records than its search tokens can count")]
