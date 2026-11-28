@@ -23,7 +23,7 @@
 2 app/ferroehr-viewer/src/pages/parties.rs
 2 app/ferroehr-viewer/src/pages/queries.rs
 1 app/ferroehr-viewer/src/paging.rs
-5 app/ferroehr-viewer/src/prefs.rs
+4 app/ferroehr-viewer/src/prefs.rs
 2 app/ferroehr-viewer/src/query_namespace.rs
 1 app/ferroehr-viewer/src/server.rs
 1 app/ferroehr-viewer/src/session.rs
