@@ -10,11 +10,11 @@
 # docs/post-quantum.md and the shields.io endpoint document
 # conformance/badges/post-quantum.json from it.
 #
-# A row counts as safe when its safe column is yes and its pq_standard names
-# a standard; a `no standard yet` row counts as not safe. The badge colour is
-# the shared count rule of scripts/checks/badge-logos/logo.sh, its logo the
-# key pictogram there, and neither its label nor the README badge may say
-# certified, compliant or conformant.
+# The badge is the shared helper's badge_post_quantum
+# (scripts/checks/badge-logos/logo.sh): the safe rows out of the rows whose
+# post-quantum form a standard defines, so a `no standard yet` row stays out
+# of the fraction and the colour, and the table names it. Neither the label
+# nor the README badge may say certified, compliant or conformant.
 #
 # Usage: scripts/render/post-quantum.sh              rewrite the table and the badge
 #        scripts/render/post-quantum.sh --check      fail on a defect or a stale table or badge
@@ -42,8 +42,6 @@ INVENTORY=conformance/post-quantum.tsv
 PAGE=docs/post-quantum.md
 BADGE=conformance/badges/post-quantum.json
 HEADER=$'use\talgorithm\tsafe\tpq_standard\tlocation'
-LABEL="post-quantum safe uses"
-NO_STANDARD="no standard yet"
 FORBIDDEN='certif|complian|conforman'
 
 # Prints each defect of inventory $1 under the tree $2; status 1 when any.
@@ -81,24 +79,6 @@ shape_of() {
     failed=1
   fi
   return "$failed"
-}
-
-# The rows of inventory $1 that count as safe, and all its rows: "N M".
-count_of() {
-  awk -F'\t' -v none="$NO_STANDARD" '
-    /^#/ { next }
-    seen++ { total++; if ($3 == "yes" && $4 != none) safe++ }
-    END { printf "%d %d\n", safe, total }
-  ' "$1"
-}
-
-# The endpoint document inventory $1 implies.
-badge_of() {
-  local safe total
-  read -r safe total < <(count_of "$1")
-  jq -cn --arg label "$LABEL" --arg message "$safe/$total" \
-    --arg color "$(badge_count_color "$safe" "$total")" --argjson logo "$(badge_logo_fields key)" \
-    '{schemaVersion: 1, label: $label, message: $message, color: $color} + $logo'
 }
 
 # The markdown table inventory $1 implies.
@@ -146,7 +126,7 @@ check() {
     echo "::error::the $page table is not what $inventory says: run scripts/render/post-quantum.sh and commit it" >&2
     failed=1
   fi
-  if [[ ! -f "$badge" ]] || [[ "$(cat "$badge")" != "$(badge_of "$inventory")" ]]; then
+  if [[ ! -f "$badge" ]] || [[ "$(cat "$badge")" != "$(badge_post_quantum "$inventory")" ]]; then
     echo "::error::$badge is not what $inventory counts: run scripts/render/post-quantum.sh and commit it" >&2
     failed=1
   else
@@ -178,7 +158,7 @@ if [[ "$mode" == self-test ]]; then
     printf '%s\n' "$HEADER"
     printf 'Key exchange\tX25519MLKEM768\tyes\tRFC 10024\tsrc/kx.rs (provider), a-crate tls\n'
     printf 'Record protection\tAES-256-GCM\tyes\tNIST IR 8547 4.1.3\ta-crate tls\n'
-    printf 'Certificates\tECDSA\tyes\t%s\ta-crate tls\n' "$NO_STANDARD"
+    printf 'Certificates\tECDSA\tyes\tno standard yet\ta-crate tls\n'
     printf 'Tokens\tES256\tno\tRFC 9964\ta-crate resource\n'
   } > "$tmp/inventory.tsv"
   shape_of "$tmp/inventory.tsv" "$tmp/tree" || fail "a well formed inventory was refused"
@@ -190,10 +170,10 @@ if [[ "$mode" == self-test ]]; then
   if shape_of "$tmp/short.tsv" "$tmp/tree" 2> /dev/null; then fail "a row of four columns passed"; fi
   sed '2s#^use#purpose#' "$tmp/inventory.tsv" > "$tmp/header.tsv"
   if shape_of "$tmp/header.tsv" "$tmp/tree" 2> /dev/null; then fail "a file without the header passed"; fi
-  [[ "$(count_of "$tmp/inventory.tsv")" == "2 4" ]] || fail "a 'no standard yet' row counted as safe"
-  badge_of "$tmp/inventory.tsv" > "$tmp/badge.json"
-  [[ "$(jq -c 'del(.logoSvg)' "$tmp/badge.json")" == "{\"schemaVersion\":1,\"label\":\"$LABEL\",\"message\":\"2/4\",\"color\":\"yellow\"}" ]] \
-    || fail "the badge of two safe rows of four is $(cat "$tmp/badge.json")"
+  [[ "$(badge_post_quantum_count "$tmp/inventory.tsv")" == "2 3 4" ]] || fail "a 'no standard yet' row counted as safe or with a standard"
+  badge_post_quantum "$tmp/inventory.tsv" > "$tmp/badge.json"
+  [[ "$(jq -c 'del(.logoSvg)' "$tmp/badge.json")" == "{\"schemaVersion\":1,\"label\":\"post-quantum\",\"message\":\"2/3\",\"color\":\"yellow\"}" ]] \
+    || fail "the badge of two safe rows of the three a standard covers is $(cat "$tmp/badge.json")"
   badge_logo_check "$tmp/badge.json" || fail "the badge carries no logo"
   badge_color_check "$tmp/badge.json" || fail "the badge colour does not follow its count"
   badge_length_check "$tmp/badge.json" || fail "the badge runs past the length limits"
@@ -201,10 +181,10 @@ if [[ "$mode" == self-test ]]; then
   if badge_length_check "$tmp/long.json" 2> /dev/null; then fail "a label past 30 characters passes"; fi
   printf '%s\n' "$HEADER" > "$tmp/none.tsv"
   awk -F'\t' '$3 == "no"' "$tmp/inventory.tsv" >> "$tmp/none.tsv"
-  [[ "$(badge_of "$tmp/none.tsv" | jq -r .color)" == red ]] || fail "an inventory with no safe row is not red"
+  [[ "$(badge_post_quantum "$tmp/none.tsv" | jq -r .color)" == red ]] || fail "an inventory with no safe row is not red"
   printf '%s\n' "$HEADER" > "$tmp/all.tsv"
   sed -n '3p' "$tmp/inventory.tsv" >> "$tmp/all.tsv"
-  [[ "$(badge_of "$tmp/all.tsv" | jq -r .color)" == brightgreen ]] || fail "an inventory of safe rows only is not green"
+  [[ "$(badge_post_quantum "$tmp/all.tsv" | jq -r .color)" == brightgreen ]] || fail "an inventory of safe rows only is not green"
   printf '# Page\n\nintro\n\n| Use | Algorithm | Safe | Post-quantum standard | Location |\n|---|---|---|---|---|\n| stale | x | no | y | z |\n\nrest\n' > "$tmp/page.md"
   printf '[![Post-quantum safe uses](https://img.shields.io/endpoint?url=x%%2Fconformance%%2Fbadges%%2Fpost-quantum.json)](docs/post-quantum.md)\n' > "$tmp/README.md"
   if check "$tmp/inventory.tsv" "$tmp/tree" "$tmp/page.md" "$tmp/badge.json" "$tmp/README.md" 2> /dev/null; then
@@ -242,11 +222,11 @@ if [[ "$mode" == write ]]; then
   fresh="$(page_with_table "$PAGE" "$INVENTORY")"
   printf '%s\n' "$fresh" > "$PAGE"
   mkdir -p "$(dirname "$BADGE")"
-  badge_of "$INVENTORY" > "$BADGE"
+  badge_post_quantum "$INVENTORY" > "$BADGE"
   echo "post-quantum: wrote the $PAGE table and $BADGE"
   exit 0
 fi
 
 check "$INVENTORY" . "$PAGE" "$BADGE" README.md
-read -r safe total < <(count_of "$INVENTORY")
-echo "post-quantum: $safe of $total uses safe; the table and the badge match the inventory"
+read -r safe standard total < <(badge_post_quantum_count "$INVENTORY")
+echo "post-quantum: $safe of the $standard uses a standard covers safe, of $total; the table and the badge match the inventory"
