@@ -665,6 +665,8 @@ struct Counts {
     conversions: BTreeMap<String, u64>,
     /// The round trips by the opening words of their statement.
     sent: BTreeMap<String, u64>,
+    /// The token resolutions among the round trips.
+    resolves: u64,
 }
 
 /// Reads the `op` field of a conversion event, and the statement of a
@@ -735,6 +737,9 @@ where
             *counts.conversions.entry(op.0).or_default() += 1;
         } else if !names.contains(&ferroehr::db::pool::SESSION_SETUP_SPAN) {
             counts.round_trips += 1;
+            if super::resolves(event) {
+                counts.resolves += 1;
+            }
             // The statements are read only on request: reading them allocates on
             // the measured thread.
             if LIST_SENT {
@@ -1774,8 +1779,8 @@ async fn measure(
         .filter(|s| s.query.contains("pg_notify"))
         .map(|s| s.calls)
         .sum();
-    let background = background(&statements);
     let counts = std::mem::take(&mut *counter.0.lock().unwrap());
+    let background = background(&statements, counts.resolves);
     out.conversions = counts.conversions;
     out.round_trips = counts.round_trips.div_euclid(requests);
     out.nested = nested.saturating_sub(background).div_euclid(requests);

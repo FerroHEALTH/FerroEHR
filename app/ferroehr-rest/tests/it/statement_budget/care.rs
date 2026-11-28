@@ -321,6 +321,7 @@ async fn measured(kind: Kind) -> (String, bool) {
         kind.send(&world, None).await;
     }
     let sent_before = round_trips.0.load(Ordering::Relaxed);
+    let resolves_before = round_trips.1.load(Ordering::Relaxed);
     let (relations, evicted) = super::wal::commit_window(&world.pool, async {
         for _ in 0..REQUESTS {
             kind.send(&world, Some(tracing::info_span!(REQUEST_SPAN)))
@@ -330,6 +331,7 @@ async fn measured(kind: Kind) -> (String, bool) {
     })
     .await;
     let sent = round_trips.0.load(Ordering::Relaxed) - sent_before;
+    let requested = round_trips.1.load(Ordering::Relaxed) - resolves_before;
     let statements = counted(&world.pool).await;
     testkit::statements::assert_statements_kept(&world.pool, evicted)
         .await
@@ -344,7 +346,7 @@ async fn measured(kind: Kind) -> (String, bool) {
         .filter(|s| s.query.contains("pg_notify"))
         .map(|s| s.calls)
         .sum();
-    let background = background(&statements);
+    let background = background(&statements, requested);
     let wal: u64 = relations
         .iter()
         .filter(|(name, ..)| owned(name))
