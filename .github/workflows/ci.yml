@@ -168,6 +168,7 @@ jobs:
       workflows: ${{ steps.filter.outputs.workflows }}
       vex: ${{ steps.filter.outputs.vex }}
       conformance: ${{ steps.filter.outputs.conformance }}
+      docs: ${{ steps.filter.outputs.docs }}
       fuzz: ${{ steps.filter.outputs.fuzz }}
       semver: ${{ steps.filter.outputs.semver }}
       queue_verified: ${{ steps.push.outputs.queue_verified }}
@@ -259,6 +260,7 @@ jobs:
               echo "vex=true"
               echo "cache=true"
               echo "conformance=true"
+              echo "docs=true"
               echo "fuzz=true"
               echo "semver=true"
               echo "instructions=true"
@@ -283,6 +285,9 @@ jobs:
             # The conformance lane (#4539): the catalogue runs in this workflow
             # on a pull request.
             bash scripts/lib/change-lanes.sh conformance <<<"$runs"
+            # The book build (#6733): its sources and its gates' inputs, a
+            # comment included, since the book renders what it reads.
+            bash scripts/lib/change-lanes.sh docs <<<"$changed"
           } | tee -a "$GITHUB_OUTPUT"
       # A push to main whose tree the merge queue already passed (#4546). The
       # commit GitHub lands on main carries the tree the `merge_group` run checked
@@ -597,6 +602,13 @@ jobs:
         if: ${{ !cancelled() }}
         run: bash scripts/checks/file-size.sh
 
+      # ---- trivy-pins --------------------------------------------------
+      # Every workflow pins one Trivy version, and install-trivy.sh pins its
+      # tarball by sha256 for Linux and macOS on x86_64 and arm64 (#6743).
+      - name: trivy-pins / One Trivy version, pinned for every platform
+        if: ${{ !cancelled() }}
+        run: bash scripts/security/install-trivy.sh --check
+
       # ---- forwarders --------------------------------------------------
       # No function only forwards to another (.claude/rules/rust-style.md,
       # #4663): the forwarders tools/forwarders finds in app/*/src, crates/*/src
@@ -677,6 +689,16 @@ jobs:
       - name: citation-guard / The ferroehr party statement's product version matches the workspace
         if: ${{ !cancelled() }}
         run: bash scripts/checks/statement-version.sh
+      # The committed conformance record said every judged row passed for three
+      # weeks while every run on main failed the committer deviations (#6747):
+      # it must be a released run of the pinned Veredictum, red exactly on the
+      # rows deviations.json lists. conformance.yml compares it with each run.
+      - name: citation-guard / The conformance record guard refuses a stale record
+        if: ${{ !cancelled() }}
+        run: bash scripts/conformance-record.sh --self-test
+      - name: citation-guard / The committed conformance record carries the listed deviations at the pinned Veredictum
+        if: ${{ !cancelled() }}
+        run: bash scripts/conformance-record.sh check
       - name: citation-guard / CITATION.cff version matches the workspace version
         if: ${{ !cancelled() }}
         run: |
@@ -1241,6 +1263,17 @@ jobs:
         if: ${{ !cancelled() }}
         run: bash scripts/render/ehds-badges.sh --check
 
+      # ---- measured-badges ---------------------------------------------
+      # The README's badges of the committed openEHR record, the ATNA
+      # interoperability run and the claims review (#6763): a record that
+      # moves without its document, or a deviation with no ground, fails here.
+      - name: measured-badges / The counting holds on its fixtures
+        if: ${{ !cancelled() }}
+        run: bash scripts/render/measured-badges.sh --self-test
+      - name: measured-badges / Each badge matches its record
+        if: ${{ !cancelled() }}
+        run: bash scripts/render/measured-badges.sh --check
+
       # ---- post-quantum ------------------------------------------------
       # The post-quantum inventory (#6602): conformance/post-quantum.tsv in its
       # five columns with every location it names in the tree, the table of
@@ -1693,7 +1726,7 @@ jobs:
           persist-credentials: false
       # xmllint is what the C14N XML parity gate shells out to (serialization.md).
       - name: xmllint
-        run: command -v xmllint >/dev/null || { sudo apt-get update && sudo apt-get install -y libxml2-utils; }
+        run: command -v xmllint >/dev/null || bash scripts/lib/apt-install.sh libxml2-utils
       # The toolchain without a cache: the codegen drift tests run rustfmt.
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
@@ -1755,7 +1788,7 @@ jobs:
           persist-credentials: false
       # xmllint is what the C14N XML parity gate shells out to (serialization.md).
       - name: xmllint
-        run: command -v xmllint >/dev/null || { sudo apt-get update && sudo apt-get install -y libxml2-utils; }
+        run: command -v xmllint >/dev/null || bash scripts/lib/apt-install.sh libxml2-utils
       # The toolchain without a cache: the codegen drift tests run rustfmt.
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
@@ -1841,7 +1874,7 @@ jobs:
           secret-access-key: ${{ github.event_name == 'pull_request' && secrets.SCCACHE_RO_SECRET_ACCESS_KEY || secrets.SCCACHE_RW_SECRET_ACCESS_KEY }}
           read-only: ${{ github.event_name == 'pull_request' }}
       - name: Install valgrind
-        run: sudo apt-get update && sudo apt-get install -y valgrind
+        run: bash scripts/lib/apt-install.sh valgrind
       - run: bash scripts/perf/instructions.sh
 
   # ── The viewer's own build + unit tests ────────────────────────────────────
@@ -3070,7 +3103,7 @@ jobs:
     needs: [changes, ui-e2e-binary]
     if: github.event_name != 'merge_group' && (needs.changes.outputs.conformance == 'true' && github.event_name != 'push')
     permissions:
-      contents: write # the reusable job's badge push, which never happens off main
+      contents: read
       packages: read # the reusable job's GHCR pulls, unused beside an artifact
     uses: ./.github/workflows/conformance.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
@@ -3087,6 +3120,18 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/fuzz.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+
+  # The documentation site builds and passes its gates (#6733): docs-build.yml,
+  # on a pull request that changes a site input, counted by `conclusion`, so a
+  # broken link or a book lint error blocks the merge. docs.yml runs the same
+  # build on the push to main before it deploys.
+  docs:
+    name: docs
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.docs == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/docs-build.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
 
   # The release's vulnerability record, before the tag (#4795). release.yml
   # refuses a finding without an OpenVEX judgement only after the tag, and a
@@ -3207,6 +3252,7 @@ jobs:
       - quickstart-config
       - shipped-viewer-configs
       - harnesses
+      - docs
       - vulnerability-record
       - conformance
       - crate-version

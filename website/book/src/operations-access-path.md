@@ -102,7 +102,7 @@ store holds.
 
 The `ehr_access` copy holds at most 4096 EHRs' settings, and beside them the
 settings classes a query is judged over
-([the bound](security.md#per-ehr-access-control-ehr_access)). The `copy` label is `ehr` or `classes`.
+([the bound](access-control.md#per-ehr-access-control-ehr_access)). The `copy` label is `ehr` or `classes`.
 
 The care relationships of the EHRs' subjects sit beside the grants, in two
 caches with fixed defaults: the care relationships of at most 4096 subjects,
@@ -139,7 +139,7 @@ these lookups are not counted: each request reads the database and counts in
 | Metric | Type | Labels | What it tells you |
 |---|---|---|---|
 | `access_decisions_total` | counter | `outcome`, `code` | One decision per EHR a request reached: `outcome` is `admitted` or `refused`, and `code` is the `refused-*` code of the refusal (`none` for an admitted access). |
-| `access_emergency_overrides_total` | counter | `lifted` | What an emergency lifted: `opt_out` (EHDS Art. 10(2)), `restriction` (EHDS Art. 11(5)), `consent` (a consent deny), `rule` (a deny rule of the access policy) or `policy` (steps 6 to 8, by the break-glass role). |
+| `access_emergency_overrides_total` | counter | `lifted` | What an emergency lifted: `opt_out` (EHDS Art. 10(2)), `restriction` (EHDS Art. 11(5)), `consent` (a consent deny), `rule` (a deny rule of the access policy) or `policy` (steps 6 to 8, by an emergency justification of the access policy). |
 
 The `refused-*` codes are the evaluator's own (`refused-opt-out`,
 `refused-restricted`, `refused-consent-denied`, `refused-policy-denied`,
@@ -326,7 +326,7 @@ recording while you investigate.
      and `ferroehr access-log verify --checkpoint <file>` with the newest
      checkpoint published outside the database.
   3. Compare the findings with a checkpoint kept outside the database
-     ([Seals, checkpoints and the transfer of a log](audit.md#seals-checkpoints-and-the-transfer-of-a-log)).
+     ([Seals, checkpoints and the transfer of a log](audit-integrity.md#seals-checkpoints-and-the-transfer-of-a-log)).
      A record changed or deleted outside retention is a security incident:
      follow [complaints, incidents and
      vulnerabilities](compliance/post-market.md).
@@ -421,4 +421,4 @@ recording while you investigate.
      in batches of 500 and folds tombstones in batches of 5000, each in its
      own transaction.
   3. Size the audit store for the access rate
-     ([Storage sizing](operations.md#storage-sizing)).
+     ([Storage sizing](storage-sizing.md)).

@@ -3,21 +3,29 @@
 
 # The Kubernetes deployment probe on kind (#5813).
 #
-# It runs scripts/deploy-probe-k8s.sh --ehr-index-only on a one-node kind
-# cluster: the chart installs with its default two replicas (P-K8S-BOOT), and
-# P-K8S-INDEX-LOCAL then runs `helm upgrade` with no changed value and creates
-# an EHR on the local index. That is the sequence that once answered
-# `POST /ehr` with 500 (#5109); the probe ran by hand only, so a recurrence
-# could not be seen.
+# It runs every family of scripts/deploy-probe-k8s.sh, each on a one-node kind
+# cluster of its own, so no family runs only by hand (#6761):
+#   lifecycle   the chart's default two replicas against an empty database
+#               (P-K8S-BOOT) and what an operator does to a release (#6744): the
+#               migrations applied once, the openEHR round trip, every pod
+#               deleted, a rolling restart under commits, `helm upgrade`.
+#   ehr-index   P-K8S-INDEX-LOCAL, the `helm upgrade` that once answered
+#               `POST /ehr` with 500 (#5109), and the other index modes.
+#   bridge      the P-K8S-BRIDGE-* family.
+#   posture     runtime posture, pod security, service links, secrets,
+#               readiness, the viewer, terminology and the original state.
+#   production  the production overlay against three TLS PostgreSQL clusters
+#               on the runner, the shared-cluster refusal included.
+# A seconds-long render check of the production install runs beside them.
 #
 # WHAT IT PROBES. The server and database images built from the tree it checks
 # out, packaged the way ci.yml's deploy-probe job packages them and loaded into
 # the kind node, so the scripts, the chart and the images are one generation.
 #
-# EVIDENCE. Every run uploads the probe record and the log of every server
+# EVIDENCE. Every family uploads its probe record and the log of every server
 # pod, read before the cluster goes away; a failing P-K8S-INDEX-LOCAL row also
 # quotes the status, the problem body and the server's first ERROR or WARN
-# lines in the record.
+# lines in the record, and a replica that restarted quotes its last error.
 #
 # RUN COLOUR. Red when a probe fails. It gates nothing.
 name: deploy-probe (kubernetes)
@@ -25,6 +33,7 @@ name: deploy-probe (kubernetes)
 on:
   pull_request:
     paths:
+      - deploy/helm/ferroehr/**
       - scripts/deploy-probe-k8s.sh
       - scripts/deploy-probes/kubernetes*.sh
       - scripts/deploy-probes/lib.sh
@@ -63,15 +72,42 @@ jobs:
         with:
           artifact-name: k8s-server-binary
 
+  # The production install, rendered and not installed: the probe's overrides
+  # and the overlay agree on every credential the render consumes. Seconds, no
+  # cluster.
+  render-check:
+    name: deploy-probe (kubernetes) render check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/helm-pinned # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+      - name: Build the chart's dependencies
+        run: helm dependency build deploy/helm/ferroehr
+      - name: Render the production install
+        run: bash scripts/deploy-probe-k8s.sh --render-check
+
+  # Every family of the harness, each on a kind cluster of its own, so one
+  # family's failure or cleanup never decides another's (#6761). The budget is
+  # the job's 60 minutes per family; they run side by side.
   kubernetes:
-    name: deploy-probe (kubernetes)
+    name: deploy-probe (kubernetes) ${{ matrix.family }}
     needs: binary
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        family: [lifecycle, ehr-index, bridge, posture, production]
     env:
       KIND_CLUSTER: ferroehr-probe
+      FAMILY: ${{ matrix.family }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -112,18 +148,19 @@ jobs:
           kind create cluster --name "$KIND_CLUSTER" --wait 120s
           kind load docker-image ferroehr:deploy-probe --name "$KIND_CLUSTER"
           kubectl cluster-info
-      # A pod reaches the host database through the gateway of the kind
-      # network, where compose publishes it on 0.0.0.0. A kind node on the
+      # A pod reaches the host databases through the gateway of the kind
+      # network, where compose publishes them on 0.0.0.0. A kind node on the
       # runner cannot start the user-namespaced pods `hostUsers: false` asks
       # for (runc cannot mount sysfs in the pod's user namespace), so the run
       # layers `hostUsers: true` through the harness's PROBE_K8S_VALUES, which
-      # the record names; the posture probes are not in this family.
-      - name: Probe the EHR index on two replicas
+      # the record names, and the posture family records that probe as not
+      # exercised by name.
+      - name: Probe the family
         env:
           PROBE_K8S_IMAGE: ferroehr:deploy-probe
           FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:deploy-probe
           FERROEHR__USAGE_REPORT__ENABLED: "false"
-          PROBE_OUT: docs/conformance/deployment/kubernetes.json
+          PROBE_OUT: docs/conformance/deployment/kubernetes-${{ matrix.family }}.json
         run: |
           set -euo pipefail
           gateway="$(docker network inspect kind \
@@ -131,23 +168,25 @@ jobs:
           [[ -n "$gateway" ]] || { echo "::error::the kind network has no IPv4 gateway"; exit 1; }
           printf 'hostUsers: true\nferropix:\n  hostUsers: true\n' > "$RUNNER_TEMP/kind-values.yaml"
           PROBE_K8S_DB_HOST="$gateway" PROBE_K8S_VALUES="$RUNNER_TEMP/kind-values.yaml" \
-            bash scripts/deploy-probe-k8s.sh --ehr-index-only --keep-up
+            bash scripts/deploy-probe-k8s.sh "--${FAMILY}-only" --keep-up
       - name: Read every server pod's log
         if: always()
         run: |
           mkdir -p probe-logs
-          kubectl -n ferroehr-probe get pods -o wide > probe-logs/pods.txt 2>&1 || true
-          for pod in $(kubectl -n ferroehr-probe get pods -l app.kubernetes.io/name=ferroehr -o name 2>/dev/null); do
-            name="${pod#pod/}"
-            kubectl -n ferroehr-probe logs "$pod" --all-containers --timestamps > "probe-logs/$name.log" 2>&1 || true
-            kubectl -n ferroehr-probe logs "$pod" --all-containers --timestamps --previous > "probe-logs/$name.previous.log" 2>/dev/null || true
+          for ns in ferroehr-probe ferroehr-probe-production; do
+            kubectl -n "$ns" get pods -o wide > "probe-logs/$ns-pods.txt" 2>&1 || true
+            for pod in $(kubectl -n "$ns" get pods -l app.kubernetes.io/name=ferroehr -o name 2>/dev/null); do
+              name="${pod#pod/}"
+              kubectl -n "$ns" logs "$pod" --all-containers --timestamps > "probe-logs/$ns-$name.log" 2>&1 || true
+              kubectl -n "$ns" logs "$pod" --all-containers --timestamps --previous > "probe-logs/$ns-$name.previous.log" 2>/dev/null || true
+            done
+            kubectl -n "$ns" get events --sort-by=.lastTimestamp > "probe-logs/$ns-events.txt" 2>&1 || true
           done
-          kubectl -n ferroehr-probe get events --sort-by=.lastTimestamp > probe-logs/events.txt 2>&1 || true
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: deploy-probe-k8s-record
+          name: deploy-probe-k8s-${{ matrix.family }}
           path: |
-            docs/conformance/deployment/kubernetes.json
+            docs/conformance/deployment/kubernetes-${{ matrix.family }}.json
             probe-logs/
           if-no-files-found: warn

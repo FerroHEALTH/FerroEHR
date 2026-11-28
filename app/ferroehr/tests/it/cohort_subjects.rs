@@ -9,9 +9,9 @@
 //!
 //! Under the identity source the server holds only the pseudonym `EHR_STATUS`
 //! carries in its own clinical domain (RM ehr master04 §EHR Status,
-//! `EHR_STATUS.subject`), so a named subject is translated forward into that
-//! domain and a demographic predicate, which would need the reverse
-//! translation, is refused. No openEHR spec governs the cohort surface: our own design.
+//! `EHR_STATUS.subject`), so a named subject, and the record subject of a
+//! `PERSON` a demographic predicate selects, are translated forward into that
+//! domain. No openEHR spec governs the cohort surface: our own design.
 
 use ferroehr::service::version_update::WriteRequest;
 use std::collections::BTreeMap;
@@ -21,7 +21,6 @@ use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use ferroehr::error::ServiceError;
-use ferroehr::error::refusal::Malformed;
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::ehr_index::IndexError;
@@ -190,42 +189,98 @@ async fn a_named_subject_is_translated_forward_under_an_identity_source() {
     );
 }
 
-/// A demographic predicate under an identity source is refused before any
-/// domain or the PIX Manager is asked: the server holds no party-to-EHR map
-/// and never translates a pseudonym back.
+/// A `PERSON` living in `city` that declares `subject` as its record subject
+/// (`openehr_access::record_subject`), the identifier the identity source
+/// translates forward.
+fn resident(city: &str, subject: &SubjectRef) -> serde_json::Value {
+    let address = "openEHR-DEMOGRAPHIC-ADDRESS.address.v1";
+    let person = "openEHR-DEMOGRAPHIC-PERSON.person.v1";
+    serde_json::json!({
+        "_type": "PERSON",
+        "archetype_node_id": person,
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": person }, "rm_version": "1.1.0" },
+        "name": { "_type": "DV_TEXT", "value": "Resident" },
+        "identities": [{ "_type": "PARTY_IDENTITY", "archetype_node_id": "at0002",
+            "name": { "_type": "DV_TEXT", "value": "legal name" },
+            "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0003",
+                "name": { "_type": "DV_TEXT", "value": "structure" },
+                "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0004",
+                    "name": { "_type": "DV_TEXT", "value": "family" },
+                    "value": { "_type": "DV_TEXT", "value": "Resident" } }] } }],
+        "contacts": [{ "_type": "CONTACT", "archetype_node_id": "at0005",
+            "name": { "_type": "DV_TEXT", "value": "home" },
+            "addresses": [{ "_type": "ADDRESS", "archetype_node_id": address,
+                "archetype_details": { "_type": "ARCHETYPED",
+                    "archetype_id": { "_type": "ARCHETYPE_ID", "value": address },
+                    "rm_version": "1.1.0" },
+                "name": { "_type": "DV_TEXT", "value": "postal" },
+                "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0006",
+                    "name": { "_type": "DV_TEXT", "value": "address" },
+                    "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0012",
+                        "name": { "_type": "DV_TEXT", "value": "city" },
+                        "value": { "_type": "DV_TEXT", "value": city } }] } }] }],
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0001",
+            "name": { "_type": "DV_TEXT", "value": "structure" },
+            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0011",
+                "name": { "_type": "DV_CODED_TEXT", "value": "record_subject",
+                    "defining_code": { "_type": "CODE_PHRASE",
+                        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
+                        "code_string": "record_subject" } },
+                "value": { "_type": "DV_IDENTIFIER", "issuer": subject.namespace,
+                    "id": subject.id, "type": "PI" } }] }
+    })
+}
+
+/// Under an identity source a demographic predicate selects its `PERSON`s,
+/// and each record subject they declare is translated forward into the
+/// clinical domain, so the EHR its pseudonym names is in the cohort and the
+/// pseudonym is never translated back.
 #[tokio::test]
-async fn a_predicate_is_refused_under_an_identity_source() {
+async fn a_predicate_reaches_the_record_subjects_ehrs_under_an_identity_source() {
     let pix = MockServer::start().await;
+    let pseudonym = Uuid::now_v7().to_string();
+    Mock::given(method("POST"))
+        .and(path(OPERATION))
+        .respond_with(answer(200, &red_to_blue(&pseudonym)))
+        .mount(&pix)
+        .await;
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &pix.uri()).with_cohort(cohort_config());
-    let mut predicated = request(vec![red_subject()]);
+    let city = format!("Groningen-{}", Uuid::now_v7());
+    crate::fixtures::create_party(&svc, uv(&resident(&city, &red_subject()), "249", None))
+        .await
+        .expect("the resident is written");
+    let ehr =
+        crate::fixtures::create_ehr_subject(&svc, &SubjectRef::person(&pseudonym, CLINICAL)).await;
+    commit(&svc, ehr, "resident").await;
+
+    let mut predicated = request(Vec::new());
     predicated.predicates = vec![CohortPredicate {
         name: "city".to_owned(),
-        value: "Groningen".to_owned(),
+        value: city,
     }];
-
-    let refused = svc
+    let outcome = svc
         .execute_cohort_query(predicated)
         .await
-        .expect_err("a predicate needs the reverse translation");
+        .expect("the cohort query runs");
+
+    assert_eq!(outcome.cohort_size, 1);
+    assert_eq!(served(&outcome), vec![ehr.to_string()]);
     assert!(
-        matches!(refused, CohortError::IdentityNotHeld),
-        "{refused:?}"
+        !pix.received_requests().await.expect("recorded").is_empty(),
+        "the record subject is translated forward by the identity source"
     );
-    assert!(matches!(
-        ServiceError::from(refused),
-        ServiceError::BadRequest(r) if r.kind == Malformed::Precondition
-    ));
+    let document = outcome.query.result_set.to_value().unwrap().to_string();
     assert!(
-        pix.received_requests().await.expect("recorded").is_empty(),
-        "a refused cohort asks the source nothing"
+        !document.contains(RED_ID) && !document.contains(&pseudonym),
+        "neither identifier reaches the served document"
     );
 }
 
-/// The refusal above rests on the one subject source (#4684): under an
-/// identity source an `EHR_STATUS` subject is a pseudonym of the declared
-/// clinical namespace, so no EHR can name a party, and a predicate, which
-/// selects parties, could only ever match nothing.
+/// Under an identity source an `EHR_STATUS` subject is a pseudonym of the
+/// declared clinical namespace (#4684), so no EHR can name a party, and a
+/// predicate reaches EHRs only through the record subjects above.
 #[tokio::test]
 async fn under_an_identity_source_no_ehr_names_a_party() {
     let pix = MockServer::start().await;

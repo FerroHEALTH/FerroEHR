@@ -17,8 +17,10 @@ use http::StatusCode;
 
 use openehr_its::rest::generated::ehr::{ContributionCreateParams, ContributionGetParams};
 use openehr_its::rest::runtime::ApiError;
+use openehr_rm::prelude::Contribution;
 
 use crate::api::RequestParts;
+use crate::api::ehr::CONTRIBUTION_ROOT_TAG;
 use crate::negotiate::WireFormat;
 use crate::negotiate::prefer::AppliedPreference;
 use crate::overview::error::RestError;
@@ -29,14 +31,14 @@ use crate::{negotiate, params};
 
 /// The representations a CONTRIBUTION endpoint negotiates.
 ///
-/// The envelope is always canonical JSON and the Simplified types select the
-/// inner `versions[i].data` form ("the CONTRIBUTION envelope itself remains
-/// canonical JSON", `contribution_create.yaml` §Simplified Formats). XML is not
-/// offered: the published XSDs declare no global CONTRIBUTION document element,
-/// so an XML `Accept` "cannot fulfill this aspect of the request" and takes the
-/// 406 MUST of overview `Resources.md` §XML Format.
+/// The canonical representations are the CONTRIBUTION itself in JSON or in
+/// the XML of the ITS-XML `CONTRIBUTION` type (`Resources.md` §XML Format),
+/// and the Simplified types keep the envelope canonical JSON and select only
+/// the inner `versions[i].data` form ("the CONTRIBUTION envelope itself
+/// remains canonical JSON", `contribution_create.yaml` §Simplified Formats).
 const CONTRIBUTION_FORMATS: &[WireFormat] = &[
     WireFormat::CanonicalJson,
+    WireFormat::CanonicalXml,
     WireFormat::Flat,
     WireFormat::Structured,
 ];
@@ -101,13 +103,14 @@ pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Respo
             negotiate::prefer::set_preference_applied(&mut out, AppliedPreference::Representation);
             Ok(out)
         }
-        _ => Ok(negotiate::resource::write_json(
+        _ => Ok(negotiate::resource::write_rm::<Contribution>(
             h,
             &base,
             created,
             created,
             Some("contribution"),
             &resp,
+            CONTRIBUTION_ROOT_TAG,
         )),
     }
 }
@@ -151,16 +154,19 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
         m = m.with_content(state.backend().audit_content_of_contribution(cid).await?);
         if read.redacted { m.redacted() } else { m }
     };
-    // The envelope stays canonical JSON; a Simplified `Accept`
-    // serializes each `versions[i].data` COMPOSITION into the requested
-    // inner form (`contribution_get.yaml` §Simplified Formats), and a
-    // non-COMPOSITION inner payload is a 406.
+    // A Simplified `Accept` serializes each `versions[i].data`
+    // COMPOSITION into the requested inner form of a JSON envelope
+    // (`contribution_get.yaml` §Simplified Formats), and a
+    // non-COMPOSITION inner payload is a 406. Resolved versions are no
+    // `OBJECT_REF`s, so that body is no ITS-XML `CONTRIBUTION` and is
+    // served as JSON only.
     let mut out =
         match negotiate::resolve_accept(h, CONTRIBUTION_FORMATS, WireFormat::CanonicalJson) {
             Some(fmt @ (WireFormat::Flat | WireFormat::Structured)) => {
                 crate::formats::dispatch::contribution_to_simplified(&state, ok, &body, fmt).await?
             }
-            _ => negotiate::body::respond(h, ok, &body),
+            _ if resolve => negotiate::body::respond(h, ok, &body),
+            _ => negotiate::body::respond_rm::<Contribution>(h, ok, &body, CONTRIBUTION_ROOT_TAG),
         };
     negotiate::resource::set_versioning_headers(&mut out, &meta, Tree::Ehr);
     Ok(out)

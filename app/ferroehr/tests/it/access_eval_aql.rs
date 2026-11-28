@@ -413,6 +413,10 @@ async fn project_in(
         .await
         .expect("the digests are written");
     tx.commit().await.expect("the projection commits");
+    drop(conn);
+    access_care::settle(&pool, rows.len())
+        .await
+        .expect("the projection's statistics are refreshed");
 }
 
 /// The projected care probe of the caller on `day` with `grace`.
@@ -912,6 +916,65 @@ async fn a_large_care_census_reads_exactly_the_ehrs_in_care() {
     .await;
     ask.cared.push(world.subject(1));
     assert_reads(&world, &ask, &world.every(), "every subject in care").await;
+}
+
+/// The buffers the statements of `aql` that probe the care projection read
+/// over `runs` runs as `ask` under the projected care, and the
+/// milliseconds they took.
+async fn projected_cost(world: &World, ask: &Ask, aql: &str, runs: usize) -> (i64, f64) {
+    let pool = world.db.pool();
+    sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
+        .execute(&pool)
+        .await
+        .expect("the statement statistics are kept");
+    sqlx::query(
+        "SELECT pg_stat_statements_reset(0, (SELECT oid FROM pg_database \
+         WHERE datname = current_database()), 0)",
+    )
+    .execute(&pool)
+    .await
+    .expect("the statement statistics reset");
+    let access = request_of(ask);
+    for _ in 0..runs {
+        run_query_as(world, ask, &access, aql, None, CareForm::Projected).await;
+    }
+    sqlx::query_as(
+        "SELECT COALESCE(sum(shared_blks_hit + shared_blks_read), 0)::bigint, \
+             COALESCE(sum(total_exec_time), 0)::float8 \
+         FROM pg_stat_statements \
+         WHERE toplevel AND query LIKE '%access_care%' \
+           AND dbid = (SELECT oid FROM pg_database WHERE datname = current_database())",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the statement statistics read")
+}
+
+/// A caseload written in bulk is analyzed by the projection's own write, so
+/// a query right after it plans on the caseload's real size: five thousand
+/// relationships read in one pass, never once per candidate row (#6630).
+#[tokio::test]
+async fn a_bulk_caseload_write_leaves_statistics_the_query_plans_on() {
+    // NOTE: our own design (#6630), the measured buffers with the projection analyzed, plus 5%.
+    const COUNT_BUFFERS: i64 = 640;
+    const ROWS_BUFFERS: i64 = 370;
+    let world = Box::pin(World::new()).await;
+    world.settings(1, &settings("open", &[], &[])).await;
+    let mut ask = Ask::professional(&world);
+    ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
+    ask.cared = (0..5000)
+        .map(|_| EhrSubject::new(own(), uuid::Uuid::now_v7().to_string()))
+        .collect();
+    ask.cared.push(world.subject(0));
+    let cared: Vec<_> = ask.cared.iter().map(|s| (s.clone(), None, None)).collect();
+    project(&world, &cared).await;
+    let (count, count_ms) = projected_cost(&world, &ask, COUNT, 6).await;
+    let (rows, rows_ms) = projected_cost(&world, &ask, COMPOSITIONS, 6).await;
+    eprintln!(
+        "caseload of 5,001: COUNT {count} buffers in {count_ms:.1} ms, rows {rows} buffers in {rows_ms:.1} ms over 6 runs each"
+    );
+    assert!(count <= COUNT_BUFFERS, "the count reads {count} buffers");
+    assert!(rows <= ROWS_BUFFERS, "the row read reads {rows} buffers");
 }
 
 /// Step 4: where the policy requires a purpose, a query without one reads

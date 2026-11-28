@@ -48,9 +48,28 @@ services:
       FERROEHR__AUTH__ISSUER__KEYCLOAK__PARTY__GROUP_CLAIM: groups
       FERROEHR__AUTH__ISSUER__KEYCLOAK__PARTY__GROUP_IDENTIFIER_ISSUER: urn:example:keycloak-dev-groups
       FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: keycloak
+      # The test-only grant ceiling: the dev set of docker/ferroehr.dev.toml,
+      # which admits every operation the demo seed's roles grant.
+      FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,read_change_feed,scim_provision,hold_roles,hold_scopes,write_access_policy,write_care_relationship,write_representation,access_service,import_ehr
       FERROEHR__AUTH__TLS__TRUST_ROOTS_FILE: /run/ferroehr-dev-tls/ca/ca.crt
+      # Versions and access-log checkpoints signed with ML-DSA-65+Ed25519, so
+      # the viewer draws a real signature: the committed TEST key of
+      # docker/signing/, never a production key.
+      FERROEHR__RECORD__SIGNING__MODE: pgp
+      FERROEHR__RECORD__SIGNING__KEY_FILE: /etc/ferroehr/version-signing-test.key.asc
+      # A cohort predicate the cohort journey selects its EHRs by: the city
+      # ELEMENT of the PERSON archetype it writes.
+      FERROEHR__PRIVACY__COHORT__PREDICATES__CITY__ARCHETYPE: openEHR-DEMOGRAPHIC-PERSON.person.v1
+      FERROEHR__PRIVACY__COHORT__PREDICATES__CITY__NODE: at0012
+      FERROEHR__PRIVACY__COHORT__PREDICATES__CITY__KIND: text
+      # An audit repository that refuses every record (a path the CDR itself
+      # answers 404), so the delivery journey finds parked records to act on.
+      FERROEHR__AUDIT__FHIR_FEED__ENDPOINT__URL: http://127.0.0.1:8080/no-audit-repository
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
+    configs:
+      - source: ferroehr-version-signing-test-key
+        target: /etc/ferroehr/version-signing-test.key.asc
 
   ferroehr-viewer:
     environment:
@@ -66,3 +85,7 @@ services:
       FERROEHR_VIEWER__OIDC__TLS__TRUST_ROOTS_FILE: /run/ferroehr-dev-tls/ca/ca.crt
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
+
+configs:
+  ferroehr-version-signing-test-key:
+    file: ./docker/signing/version-signing-test.key.asc

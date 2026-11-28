@@ -400,6 +400,7 @@ mod tests {
             status,
             etag: etag.map(str::to_owned),
             location: location.map(str::to_owned),
+            access_log_view: None,
             body: body.to_owned(),
         }
     }

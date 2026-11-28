@@ -34,7 +34,7 @@ use crate::system_log::binding::BindingRecord;
 use crate::system_log::categories::{ClassifiedContent, MapDigest};
 use crate::system_log::event::{
     AccessDecision, AccessDomain, ActingMode, AuditEvent, EntryScope, EventActionCode,
-    EventOutcome, EventType, QueryNaming, TokenAttributes,
+    EventOutcome, EventType, QueryNaming, TokenAttributes, legal_basis_of, legal_basis_text,
 };
 use crate::system_log::render::StoredRecord;
 use crate::system_log::store::{access_domain, object_class, resource_class};
@@ -67,6 +67,11 @@ pub enum RecordedError {
     /// recording path, such as an entry imported from another system.
     #[error("the entry holds no access log details")]
     NoDetails,
+}
+
+/// The stored form of the legal basis `event` recorded, when it recorded one.
+fn stored_basis(event: &AuditEvent) -> Option<String> {
+    event.legal_basis.map(legal_basis_text)
 }
 
 /// The details tree of the access `event` records in the entry whose core is
@@ -132,7 +137,7 @@ pub fn details(
     if core.purpose(token_purposes) != event.purpose {
         tree.text(Detail::Purpose, event.purpose.as_deref());
     }
-    tree.text(Detail::LegalBasis, event.legal_basis.as_deref());
+    tree.text(Detail::LegalBasis, stored_basis(event).as_deref());
     if core.result_count() != event.result_count {
         tree.count(Detail::ResultCount, event.result_count);
     }
@@ -377,7 +382,10 @@ fn accessor_and_access(
     event.review = details.level(Detail::Review)?;
     event.object_id = text(Detail::ObjectId)?.or_else(|| core.object_id().map(str::to_owned));
     event.purpose = text(Detail::Purpose)?.or_else(|| core.purpose(token_purposes));
-    event.legal_basis = text(Detail::LegalBasis)?;
+    event.legal_basis = text(Detail::LegalBasis)?
+        .map(|basis| legal_basis_of(&basis))
+        .transpose()
+        .map_err(|_unreadable| RecordedError::Value(Detail::LegalBasis))?;
     event.result_count = details
         .count(Detail::ResultCount)?
         .or_else(|| core.result_count());

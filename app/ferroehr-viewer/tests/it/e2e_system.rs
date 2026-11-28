@@ -26,8 +26,8 @@ use crate::common;
 use common::{Harness, login_basic, main_text, wait_main_contains};
 
 /// About shows what the CDR advertises through `OPTIONS {base_path}`: its
-/// product identity, its claimed conformance profile, and the API groups it
-/// mounts (the composed stack runs the standard groups plus the admin group).
+/// product identity, the conformance profile when its record earns one, and the
+/// API groups it mounts (the composed stack runs the standard groups plus the admin group).
 #[tokio::test]
 async fn system_panel_shows_the_conformance_manifest() {
     let Some(h) = Harness::start("system-conformance-manifest").await else {
@@ -36,7 +36,7 @@ async fn system_panel_shows_the_conformance_manifest() {
     login_basic(&h).await;
     h.goto("/about").await;
 
-    wait_main_contains(&h, "conformance_profile").await;
+    wait_main_contains(&h, "restapi_specs_version").await;
     let text = main_text(&h).await;
     for endpoint in ["\"/ehr\"", "\"/query\"", "\"/admin\""] {
         assert!(

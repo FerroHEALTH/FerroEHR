@@ -51,6 +51,9 @@ pub struct CdrResponse {
     pub etag: Option<String>,
     /// The `Location` of a newly created resource (`201` answers only).
     pub location: Option<String>,
+    /// The `FerroEHR-Access-Log-View` of a read of an EHR's access log, the
+    /// view the CDR served: `subject` or `full`.
+    pub access_log_view: Option<String>,
     /// The raw body bytes as text (all ITS-REST representations are text).
     pub body: String,
 }
@@ -123,6 +126,7 @@ impl CdrResponse {
             status,
             etag: header_text(headers, http::header::ETAG.as_str()),
             location: header_text(headers, http::header::LOCATION.as_str()),
+            access_log_view: header_text(headers, "ferroehr-access-log-view"),
             body,
         }
     }
@@ -306,6 +310,7 @@ impl CdrClient {
             Some(credential.clone()),
         );
         call.purposes = Some(self.purposes.clone());
+        call.justifiable = url.starts_with(&self.rest_root_url(""));
         call
     }
 
@@ -380,6 +385,9 @@ pub struct CdrCall {
     body: Option<(String, String)>,
     /// The purposes of use a credentialed call declares one of.
     purposes: Option<crate::purpose::Purposes>,
+    /// Whether the call reaches the CDR's REST root, where it carries the
+    /// justification of the EHR the page draws.
+    justifiable: bool,
 }
 
 impl CdrCall {
@@ -398,6 +406,7 @@ impl CdrCall {
             headers: Vec::new(),
             body: None,
             purposes: None,
+            justifiable: false,
         }
     }
 
@@ -439,10 +448,18 @@ impl CdrCall {
         for (name, value) in &self.headers {
             request = request.header(name, value);
         }
-        if let (Some(purposes), Some(credential)) = (&self.purposes, &self.credential)
-            && let Some((header, code)) = purposes.declared(credential).await?
-        {
-            request = request.header(header, code);
+        if let (Some(purposes), Some(credential)) = (&self.purposes, &self.credential) {
+            let justified = match self.justifiable.then(crate::justified::of_page).flatten() {
+                Some(justification) => purposes.justified(credential, &justification).await?,
+                None => None,
+            };
+            if let Some(headers) = justified {
+                for (name, value) in headers {
+                    request = request.header(name, value);
+                }
+            } else if let Some((header, code)) = purposes.declared(credential).await? {
+                request = request.header(header, code);
+            }
         }
         if let Some((content_type, body)) = self.body {
             request = request
@@ -457,6 +474,21 @@ impl CdrCall {
         let headers = response.headers().clone();
         let body = response.text().await.map_err(ViewerError::unreachable)?;
         Ok(CdrResponse::from_parts(status, &headers, body))
+    }
+
+    /// Sends the request and returns the body of a `2xx` answer, or `None`
+    /// when the CDR answers `404`: a resource or an extension that is not
+    /// there.
+    ///
+    /// # Errors
+    /// The errors of [`Self::send`], and any other answer normalized by
+    /// [`CdrResponse::ok`].
+    pub async fn body_or_absent(self) -> Result<Option<String>, ViewerError> {
+        let response = self.send().await?;
+        if response.is(http::StatusCode::NOT_FOUND) {
+            return Ok(None);
+        }
+        Ok(Some(response.ok()?.body))
     }
 
     /// Sends the request and returns a `2xx` answer.
@@ -483,6 +515,7 @@ mod tests {
             status,
             etag: None,
             location: None,
+            access_log_view: None,
             body: body.to_owned(),
         }
     }

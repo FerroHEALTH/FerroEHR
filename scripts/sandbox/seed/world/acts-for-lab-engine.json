@@ -1,0 +1,34 @@
+{
+  "_type": "PARTY_RELATIONSHIP",
+  "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1",
+  "name": {
+    "_type": "DV_CODED_TEXT",
+    "value": "acts_for",
+    "defining_code": {
+      "_type": "CODE_PHRASE",
+      "terminology_id": {
+        "_type": "TERMINOLOGY_ID",
+        "value": "openehr_access"
+      },
+      "code_string": "acts_for"
+    }
+  },
+  "source": {
+    "_type": "PARTY_REF",
+    "namespace": "demographic",
+    "type": "AGENT",
+    "id": {
+      "_type": "HIER_OBJECT_ID",
+      "value": "__ID:agent-lab-engine__"
+    }
+  },
+  "target": {
+    "_type": "PARTY_REF",
+    "namespace": "demographic",
+    "type": "ORGANISATION",
+    "id": {
+      "_type": "HIER_OBJECT_ID",
+      "value": "__ID:organisation-hospital__"
+    }
+  }
+}

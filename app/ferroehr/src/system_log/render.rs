@@ -56,6 +56,16 @@ pub struct RenderPolicy {
     /// The audit category register version every access is classified
     /// through.
     pub categories: CategoryMapConfig,
+    /// `[audit.regulatory]`: the controllers and processors every access
+    /// record names, and the legal basis it states when the event records
+    /// none. Left out when the deployment declares none.
+    #[serde(default, skip_serializing_if = "undeclared")]
+    pub regulatory: ehds_logging::regulatory::Regulatory,
+}
+
+/// Whether `regulatory` declares nothing, the form a policy leaves out.
+fn undeclared(regulatory: &ehds_logging::regulatory::Regulatory) -> bool {
+    *regulatory == ehds_logging::regulatory::Regulatory::default()
 }
 
 impl RenderPolicy {
@@ -71,6 +81,7 @@ impl RenderPolicy {
             value_if_missing: config.value_if_missing.clone(),
             retention: LogRetention::default(),
             categories: categories.clone(),
+            regulatory: config.regulatory.clone(),
         }
     }
 
@@ -89,7 +100,7 @@ impl RenderPolicy {
             server_ip: self.server_host.clone(),
             value_if_missing: self.value_if_missing.clone(),
             #[cfg(feature = "fhir")]
-            recording: recording(&self.retention, &categories)?,
+            recording: recording(&self.retention, &categories, &self.regulatory)?,
         };
         Ok(CompiledPolicy {
             context,
@@ -124,6 +135,7 @@ pub struct CompiledPolicy {
 fn recording(
     log: &LogRetention,
     categories: &Classifier,
+    regulatory: &ehds_logging::regulatory::Regulatory,
 ) -> Result<crate::system_log::fhir::Recording, AuditError> {
     let retention = log.policy().map_err(|e| AuditError::Policy(Box::new(e)))?;
     let unlabelled = std::collections::BTreeMap::new();
@@ -134,6 +146,7 @@ fn recording(
         retention,
         labels,
         log: log.clone(),
+        regulatory: regulatory.clone(),
     })
 }
 

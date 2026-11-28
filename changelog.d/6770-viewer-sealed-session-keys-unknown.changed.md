@@ -1,0 +1,1 @@
+- The viewer takes ferrohealth-session 0.32, which deletes the sealed store's removal aid: a `[session]` section with `store = "sealed"`, `key` or `key_file` is refused as an unknown key, where 0.31 named the removed sealed store. Delete those keys from the viewer's configuration; the memory store is the one store.

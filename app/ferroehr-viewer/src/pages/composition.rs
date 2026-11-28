@@ -54,6 +54,7 @@ use crate::pages::common::{
     info_note, is_status, marks_of, panel, plain_section, section, short, shortened, state_mark,
     when,
 };
+use crate::pages::editor::{Unsaved, editor_line, reload_words, save_as_words};
 use crate::pages::ehr::{crumbs, ehr_href, ehr_id_param};
 use crate::pages::form::Form;
 use crate::pages::item_tags::{TagAct, TagPanel, tag_act, tag_done, tag_panel};
@@ -432,6 +433,9 @@ async fn act(
     let Some(posted) = crate::posted::posted() else {
         return (None, None);
     };
+    if posted.intent() == "release-access-delay" {
+        return (crate::pages::ehr::marks::release(ehr_id, uid).await, None);
+    }
     if posted.intent() == "delete-composition" {
         return match delete_composition(ehr_id.to_owned(), posted.text("version")).await {
             Ok(()) => {
@@ -956,7 +960,8 @@ pub async fn page() -> Drawn {
     match read_page(ehr_id.clone(), uid.clone()).await {
         CompositionModel::Shown(composition) => {
             let (title, body) = composition_view(&ehr_id, &uid, *composition);
-            Drawn::page(title, body)
+            let hold = crate::pages::ehr::marks::hold_section(&ehr_id, &uid).await;
+            Drawn::page(title, body.then(hold))
         }
         CompositionModel::Missing(refusal) => {
             let (title, body) = missing(&ehr_id, &uid, &refusal);
@@ -995,15 +1000,6 @@ fn document_editor(
         facts: vec![tr(Msg::EditorUtf8)],
         findings,
     })
-}
-
-/// A save the CDR refused.
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct Unsaved {
-    /// The refusal.
-    refusal: Refused,
-    /// Whether another client changed the composition meanwhile (`412`).
-    conflict: bool,
 }
 
 /// What Edit as a new version's form holds.
@@ -1082,10 +1078,7 @@ async fn read_edit(ehr_id: String, uid: String) -> Form<Editor, ()> {
                 return Form::Left;
             }
             Err(error) => {
-                unsaved = Some(Unsaved {
-                    conflict: is_status(&error, http::StatusCode::PRECONDITION_FAILED),
-                    refusal: Refused::new(tr(RecordsMsg::CompositionSaveRefused), error),
-                });
+                unsaved = Some(Unsaved::new(tr(RecordsMsg::CompositionSaveRefused), error));
             }
         }
     }
@@ -1114,38 +1107,14 @@ fn edit_page(ehr_id: &str, uid: &str, editor: Editor) -> (String, Html) {
         .as_ref()
         .and_then(|unsaved| findings_of(&unsaved.refusal.error, &text, &field));
     let conflict = unsaved.as_ref().is_some_and(|unsaved| unsaved.conflict);
-    let line = if unsaved.is_some() {
-        (Glyph::CIRCLE_X, tr(RecordsMsg::EditorNotSaved))
-    } else {
-        (Glyph::PENCIL, tr(RecordsMsg::EditorOpened))
-    };
+    let line = editor_line(unsaved.is_some());
     let top = unsaved.map(|unsaved| {
-        let reload = unsaved.conflict.then(|| {
-            h(format!(
-                r#"<div class="fui-cluster">{}<span class="fui-small fui-muted">{}</span></div>"#,
-                ferrohealth_ui::view::button::link_button(
-                    format!("{}/edit", composition_href(ehr_id, uid)),
-                    ferrohealth_ui::view::button::Variant::Secondary,
-                    Some(Glyph::REFRESH_CW),
-                    tr_with(
-                        RecordsMsg::EditorReloadVersion,
-                        &[("version", version_number(&latest).into())],
-                    ),
-                ),
-                t(tr(RecordsMsg::EditorReloadReplaces))
-            ))
-        });
-        unsaved.refusal.view().then(opt(reload))
+        unsaved.view(
+            &format!("{}/edit", composition_href(ehr_id, uid)),
+            reload_words(&latest),
+        )
     });
-    let save = version_number(&opened).parse::<u32>().map_or_else(
-        |_| tr(Msg::EditorSave),
-        |number| {
-            tr_with(
-                RecordsMsg::EditorSaveAsVersion,
-                &[("version", number.saturating_add(1).into())],
-            )
-        },
-    );
+    let save = save_as_words(&opened);
     dock_editor(EditorDock {
         form: EDIT_FORM.to_owned(),
         line: line.1,

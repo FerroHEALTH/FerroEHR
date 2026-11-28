@@ -199,8 +199,8 @@ pub struct AuditEvent {
     /// care relationship written to a record marked above `N` (draft access
     /// control, The Decision Procedure, Writing Relationships, item 2).
     pub review: Option<openehr_rm::draft::access_control::terminology::Confidentiality>,
-    /// The legal-basis code the deployment attributes to this access.
-    pub legal_basis: Option<String>,
+    /// The legal basis the deployment attributes to this access.
+    pub legal_basis: Option<ehds_logging::regulatory::LegalBasis>,
     /// How many records the operation served: AQL result rows, search entries.
     /// `None` for an operation that serves no countable set.
     pub result_count: Option<u64>,
@@ -258,6 +258,32 @@ pub struct AuditEvent {
     pub decided: Option<Box<crate::access_eval::record::Decision>>,
     /// The event time.
     pub timestamp: Timestamp,
+}
+
+/// The stored form of a legal basis, as the `legal_basis` column, the access
+/// log detail and the content digest hold it: its JSON, so it reads back as
+/// the same typed value.
+///
+/// # Panics
+/// Never: a legal basis is two unit enums and an `Option`, which
+/// `serde_json` always serializes.
+#[must_use]
+#[expect(
+    clippy::expect_used,
+    reason = "a LegalBasis is two unit enums and an Option, which serde_json always serializes"
+)]
+pub fn legal_basis_text(basis: ehds_logging::regulatory::LegalBasis) -> String {
+    serde_json::to_string(&basis).expect("a legal basis should always serialize")
+}
+
+/// The legal basis a stored form holds ([`legal_basis_text`]).
+///
+/// # Errors
+/// The `serde_json` error when the text is no legal basis this build writes.
+pub fn legal_basis_of(
+    text: &str,
+) -> Result<ehds_logging::regulatory::LegalBasis, serde_json::Error> {
+    serde_json::from_str(text)
 }
 
 /// One coded value the access token states, a FHIR `Coding` reduced to its

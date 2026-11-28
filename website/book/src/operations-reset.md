@@ -18,7 +18,7 @@ the next boot starts as a fresh install.
 > EU Member State, five in the Netherlands, one in Switzerland; see
 > [Audit](installation/config-audit.md)), and your duty to keep it does not end
 > when the instance does. Take a backup of every domain first, the audit trail
-> included ([Backup and point-in-time recovery](operations.md#backup-and-point-in-time-recovery)),
+> included ([Backup and point-in-time recovery](database-operations.md#backup-and-point-in-time-recovery)),
 > and keep it for that horizon.
 
 A reset does not reach anything outside the instance. Your logical dumps, WAL
@@ -35,7 +35,7 @@ The reset has two halves, and you need both:
   state is the release's own file and no overrides.
 - **Database:** drop the database and let the release's migrations build it
   again. Drop the whole database, never single schemas
-  ([Recovering a partially wiped database](operations.md#recovering-a-partially-wiped-database)
+  ([Recovering a partially wiped database](database-operations.md#recovering-a-partially-wiped-database)
   explains why).
 
 The `deployment.profile` the release ships is `sandbox`, so a reset instance
@@ -108,7 +108,7 @@ The chart deploys no database, so the two halves are separate operations.
    ```
 
    `WITH (FORCE)` terminates the sessions still connected
-   ([DROP DATABASE](https://www.postgresql.org/docs/18/sql-dropdatabase.html)).
+   ([DROP DATABASE](https://www.postgresql.org/docs/19/sql-dropdatabase.html)).
    Use the owner your deployment provisioned the database with. If
    `[database.party]` or `[database.audit]` name databases
    of their own, drop and recreate each of those too. The domain roles are

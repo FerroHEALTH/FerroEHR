@@ -27,6 +27,15 @@ use ferrohealth_session::cookies::CookieNames;
 use serde_json::Value;
 use tower::util::ServiceExt;
 
+mod access;
+mod access_log;
+mod care;
+mod grants;
+mod marks;
+mod policy;
+mod registers;
+mod retention;
+
 /// The recorded exchanges, read once.
 fn recording() -> Arc<[Value]> {
     let path =
@@ -63,6 +72,10 @@ pub(crate) fn id(key: &str) -> String {
         .to_owned()
 }
 
+/// The login the recording signs in as: the administrator who reads every
+/// screen the viewer draws.
+pub(crate) const RECORDED_USER: &str = "ferroehr-admin";
+
 /// The access token the test OpenID Provider issues for the CDR, which the
 /// replayed CDR accepts as it accepts the recording's own credential.
 pub(crate) const CDR_BEARER: &str = "synthetic-cdr-access";
@@ -72,7 +85,7 @@ pub(crate) const CDR_BEARER: &str = "synthetic-cdr-access";
 fn signed(headers: &http::HeaderMap) -> bool {
     let expected = format!(
         "Basic {}",
-        base64::engine::general_purpose::STANDARD.encode("ferroehr:ferroehr")
+        base64::engine::general_purpose::STANDARD.encode(format!("{RECORDED_USER}:ferroehr"))
     );
     let bearer = format!("Bearer {CDR_BEARER}");
     headers
@@ -174,7 +187,7 @@ async fn replayed_cdr_with(stubs: Vec<Value>) -> String {
     format!("http://{addr}")
 }
 
-/// The viewer's state, pointed at `cdr`, with a sealed session store.
+/// The viewer's state, pointed at `cdr`, with the memory session store.
 fn app_state(cdr: &str) -> ferroehr_viewer::state::AppState {
     app_state_launching(cdr, ferroehr_viewer::launch::LaunchSection::default())
 }
@@ -191,10 +204,8 @@ fn app_state_launching(
             management_base_url: format!("{cdr}/management"),
             ..Default::default()
         },
-        // The sealed store a scaled deployment runs, with a synthetic key.
         session: ferrohealth_session::config::SessionSection {
-            store: ferrohealth_session::config::StoreKind::Sealed,
-            key: Some(ferrohealth_secret::secret::Secret::new(SESSION_KEY)),
+            store: ferrohealth_session::config::StoreKind::Memory,
             ..defaults.session.clone()
         },
         launch,
@@ -205,10 +216,6 @@ fn app_state_launching(
     ferroehr_viewer::state::AppState::new(config, cdr, None)
         .expect("the default session store should build")
 }
-
-/// The sealing key of the test viewer's store: base64 of 64 synthetic bytes.
-const SESSION_KEY: &str =
-    "c3ludGhldGljLXZpZXdlci1zZXNzaW9uLWtleS1mb3ItdGVzdHMtb25seS0wMTIzNDU2Nzg5YWJjZGVmZ2hpag==";
 
 /// Whether `cookie` is the viewer's session cookie, `__Host-` prefixed as a
 /// `Secure` one is.
@@ -266,12 +273,12 @@ impl Answer {
 
 impl Viewer {
     /// The viewer over a fresh replayed CDR.
-    async fn start() -> Self {
+    pub(crate) async fn start() -> Self {
         Self::start_with(Vec::new()).await
     }
 
     /// The viewer over a fresh replayed CDR answering `stubs` first.
-    async fn start_with(stubs: Vec<Value>) -> Self {
+    pub(crate) async fn start_with(stubs: Vec<Value>) -> Self {
         let cdr = replayed_cdr_with(stubs).await;
         Self {
             service: ferroehr_viewer::server::router(app_state(&cdr)),
@@ -294,6 +301,18 @@ impl Viewer {
         oidc: ferrohealth_session::config::OidcSection,
         launch: ferroehr_viewer::launch::LaunchSection,
     ) -> Self {
+        let defaults = ferroehr_viewer::config::ViewerConfig::default();
+        Self::start_signing_in_with(oidc, launch, defaults.auth).await
+    }
+
+    /// As [`Self::start_signing_in`], with the sign-in keys of `auth`, its
+    /// ID Token algorithms set on the relying party as the viewer's start
+    /// sets them.
+    pub(crate) async fn start_signing_in_with(
+        oidc: ferrohealth_session::config::OidcSection,
+        launch: ferroehr_viewer::launch::LaunchSection,
+        auth: ferroehr_viewer::config::AuthConfig,
+    ) -> Self {
         let cdr = replayed_cdr_with(Vec::new()).await;
         let defaults = ferroehr_viewer::config::ViewerConfig::default();
         let settings = oidc
@@ -302,7 +321,8 @@ impl Viewer {
         let party = settings
             .relying_party()
             .await
-            .expect("the test provider's endpoints are all given");
+            .expect("the test provider's endpoints are all given")
+            .with_algorithms(auth.id_token_algorithms());
         let config = ferroehr_viewer::config::ViewerConfig {
             cdr: ferroehr_viewer::config::CdrConfig {
                 base_url: cdr.clone(),
@@ -311,7 +331,7 @@ impl Viewer {
             },
             auth: ferroehr_viewer::config::AuthConfig {
                 oidc_enabled: true,
-                ..defaults.auth.clone()
+                ..auth
             },
             oidc,
             // The memory store keeps the refresh token a facade token comes from.
@@ -414,7 +434,7 @@ impl Viewer {
                 "/sign-in",
                 None,
                 Some(&[
-                    ("username", "ferroehr"),
+                    ("username", RECORDED_USER),
                     ("password", "ferroehr"),
                     ("next", "/"),
                 ]),
@@ -454,7 +474,7 @@ async fn a_wrong_password_draws_the_refusal_and_sets_no_session() {
             "/sign-in",
             None,
             Some(&[
-                ("username", "ferroehr"),
+                ("username", RECORDED_USER),
                 ("password", "wrong"),
                 ("next", "/ehrs"),
             ]),
@@ -476,7 +496,7 @@ async fn a_wrong_password_draws_the_refusal_and_sets_no_session() {
         "a refused sign-in sets no session"
     );
     assert!(
-        answer.body.contains(r#"value="ferroehr""#),
+        answer.body.contains(&format!(r#"value="{RECORDED_USER}""#)),
         "the username is kept"
     );
 }
@@ -490,7 +510,7 @@ async fn an_accepted_sign_in_lands_on_a_same_origin_destination_only() {
             "/sign-in",
             None,
             Some(&[
-                ("username", "ferroehr"),
+                ("username", RECORDED_USER),
                 ("password", "ferroehr"),
                 ("next", "/ehrs?x=1"),
             ]),
@@ -503,7 +523,7 @@ async fn an_accepted_sign_in_lands_on_a_same_origin_destination_only() {
             "/sign-in",
             None,
             Some(&[
-                ("username", "ferroehr"),
+                ("username", RECORDED_USER),
                 ("password", "ferroehr"),
                 ("next", "https://evil.example/"),
             ]),
@@ -698,7 +718,7 @@ async fn every_screen_draws_its_heading_and_its_reading() {
         ),
         (
             format!("/ehrs/{ehr}/directory"),
-            vec!["Episodes", "Versions"],
+            vec!["episodes", "Versions"],
         ),
         (
             format!("/ehrs/{ehr}/contributions"),
@@ -709,12 +729,29 @@ async fn every_screen_draws_its_heading_and_its_reading() {
             vec!["reviewed", "Tags in this EHR"],
         ),
         (
+            format!("/ehrs/{ehr}/access-log"),
+            vec!["Entries of the access log", "Include the person"],
+        ),
+        (
+            "/access-log".to_owned(),
+            vec!["Entries of the access log", "Credential issuer"],
+        ),
+        (
+            "/access-log/integrity".to_owned(),
+            vec!["The newest checkpoint", "Show seals"],
+        ),
+        (
             format!("/ehrs/{ehr}/compositions/{composition}"),
             vec!["Edit as a new version", "minimal_evaluation.en.v1"],
         ),
         (
             format!("/ehrs/{ehr}/compositions/{composition}?tab=versions"),
-            vec!["The versioned composition", "Version 2"],
+            vec![
+                "The versioned composition",
+                "Version 2",
+                "A SHA-256 digest",
+                "sha256:",
+            ],
         ),
         (
             format!("/ehrs/{ehr}/compositions/{composition}?tab=tags"),
@@ -722,15 +759,25 @@ async fn every_screen_draws_its_heading_and_its_reading() {
         ),
         (
             "/parties".to_owned(),
-            vec!["The demographic tag index", "follow-up"],
+            vec![
+                "Last committed",
+                "FerroEHR Demo Hospital",
+                "Alice Bloom",
+                "The demographic tag index",
+                "follow-up",
+            ],
+        ),
+        (
+            "/parties?list=organisation".to_owned(),
+            vec!["FerroEHR Demo Hospital", "Organisation"],
         ),
         (
             format!("/parties/person/{party}"),
-            vec!["Demo Person 0417", "Identities"],
+            vec!["Alice Bloom", "Identities"],
         ),
         (
             format!("/parties/relationships/{relationship}"),
-            vec!["employment", "Organisation"],
+            vec!["represents", "Person"],
         ),
         (
             "/templates".to_owned(),
@@ -740,10 +787,16 @@ async fn every_screen_draws_its_heading_and_its_reading() {
             "/templates/minimal_evaluation.en.v1".to_owned(),
             vec!["Minimal evaluation", "Identity"],
         ),
-        ("/queries".to_owned(), vec!["org.example.cardio", "latest"]),
         (
-            "/queries/org.example.cardio::latest/1.0.0".to_owned(),
-            vec!["org.example.cardio::latest · version 1.0.0", "Definition"],
+            "/queries".to_owned(),
+            vec!["eu.ferroehr.sandbox", "composition_index"],
+        ),
+        (
+            "/queries/eu.ferroehr.sandbox::composition_index/1.0.0".to_owned(),
+            vec![
+                "eu.ferroehr.sandbox::composition_index · version 1.0.0",
+                "Definition",
+            ],
         ),
         (
             "/query/aql".to_owned(),
@@ -757,7 +810,7 @@ async fn every_screen_draws_its_heading_and_its_reading() {
             "/about".to_owned(),
             vec!["ferrohealth-ui 0.6.11", "The conformance manifest"],
         ),
-        ("/access".to_owned(), vec!["Signed in as", "ferroehr"]),
+        ("/access".to_owned(), vec!["Signed in as", RECORDED_USER]),
         (
             "/preferences".to_owned(),
             vec!["Only for you, in this browser.", "Theme"],
@@ -932,20 +985,24 @@ async fn an_ehr_shows_its_subject_masked_until_the_reader_asks() {
     let ehr = id("ehr");
     let masked = viewer.page(&cookie, &format!("/ehrs/{ehr}")).await;
     assert!(
-        !masked.main().contains("p-0417"),
+        !masked.main().contains("sandbox-patient-01"),
         "the subject id is masked"
     );
-    assert!(masked.main().contains("417"), "its tail is shown");
+    assert!(masked.main().contains("ends in 01"), "its tail is shown");
     let revealed = viewer.page(&cookie, &format!("/ehrs/{ehr}?reveal=1")).await;
-    assert!(revealed.main().contains("p-0417"), "{}", revealed.main());
+    assert!(
+        revealed.main().contains("sandbox-patient-01"),
+        "{}",
+        revealed.main()
+    );
 }
 
 #[tokio::test]
 async fn a_run_draws_the_rows_and_the_exports_post_the_query_again() {
     let viewer = Viewer::start().await;
     let cookie = viewer.sign_in().await;
-    let aql =
-        "SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c";
+    let aql = "SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c \
+               ORDER BY e/ehr_id/value ASC, c/uid/value ASC";
     let answer = viewer
         .send(
             http::Method::POST,
@@ -975,6 +1032,93 @@ async fn a_run_draws_the_rows_and_the_exports_post_the_query_again() {
     assert!(
         !main.contains(r#"name="shown""#),
         "a result with no numeric column offers no chart: {main}"
+    );
+}
+
+#[tokio::test]
+async fn an_access_log_row_opens_its_entry_with_what_it_rested_on() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let ehr = id("ehr");
+    let tab = viewer
+        .page(
+            &cookie,
+            &format!("/ehrs/{ehr}/access-log?outcome=openehr_access%7Cgranted"),
+        )
+        .await;
+    assert_eq!(tab.status, http::StatusCode::OK, "{}", tab.body);
+    let main = tab.main();
+    assert!(main.contains("Outcome: Granted"), "{main}");
+    let prefix = format!("/ehrs/{ehr}/access-log/");
+    let href: String = main.split(&format!("href=\"{prefix}")).nth(1).map_or_else(
+        || panic!("a row links its entry: {main}"),
+        |rest| {
+            let entry: String = rest.chars().take_while(|c| *c != '"').collect();
+            format!("{prefix}{entry}")
+        },
+    );
+    let entry = viewer.page(&cookie, &href).await;
+    assert_eq!(entry.status, http::StatusCode::OK, "{}", entry.body);
+    for words in [
+        "What it rested on",
+        "What it reached",
+        "As the CDR served it",
+        "ACCESS_LOG_ENTRY",
+    ] {
+        assert!(
+            entry.main().contains(words),
+            "the entry's page says {words:?}: {}",
+            entry.main()
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_party_find_lists_the_parties_whose_identities_hold_the_text() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let answer = viewer
+        .send(
+            http::Method::POST,
+            "/parties?list=person",
+            Some(&cookie),
+            Some(&[("intent", "find"), ("find", "Bloom")]),
+        )
+        .await;
+    assert_eq!(answer.status, http::StatusCode::OK, "{}", answer.body);
+    let main = answer.main();
+    assert!(main.contains("Holding “Bloom”"), "{main}");
+    let party = format!("/parties/person/{}", id("party"));
+    assert!(main.contains(&party), "the row opens its party: {main}");
+    assert!(
+        !main.contains("FerroEHR Demo Hospital"),
+        "an organisation is no person: {main}"
+    );
+    assert!(
+        !answer.headers.contains_key(http::header::LOCATION),
+        "the find stays out of the address: {main}"
+    );
+}
+
+#[tokio::test]
+async fn a_verification_of_the_access_log_says_what_it_found() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let answer = viewer
+        .send(
+            http::Method::POST,
+            "/access-log/integrity",
+            Some(&cookie),
+            Some(&[("intent", "verify")]),
+        )
+        .await;
+    assert_eq!(answer.status, http::StatusCode::OK, "{}", answer.body);
+    let main = answer.main();
+    assert!(
+        main.contains("No checkpoint was there to verify against")
+            || main.contains("The log is intact")
+            || main.contains("The verification found"),
+        "{main}"
     );
 }
 
@@ -1074,7 +1218,7 @@ async fn a_preference_is_kept_in_its_own_cookie() {
 }
 
 /// A signed-in page carries FerroUI's session watch over the viewer's
-/// session route, with what the session has left once the page re-seals it:
+/// session route, with what the session has left once the page extends it:
 /// the whole idle hour, inside the twelve-hour lifetime.
 #[tokio::test]
 async fn a_signed_in_page_carries_the_session_watch() {
@@ -1132,7 +1276,7 @@ async fn the_session_route_reads_extends_and_refuses() {
     assert!(left.idle <= 3601 && left.idle <= left.absolute, "{left:?}");
     assert!(
         read.cookies().is_empty(),
-        "a read never re-seals the session: {:?}",
+        "a read writes no cookie: {:?}",
         read.cookies()
     );
 
@@ -1150,11 +1294,28 @@ async fn the_session_route_reads_extends_and_refuses() {
         serde_json::from_str(&extended.body).expect("the route answers what is left");
     assert_eq!(3600, left.idle, "an extend starts the idle window again");
     assert!(
-        extended
+        !extended
             .cookies()
             .iter()
             .any(|cookie| is_session_cookie(cookie)),
-        "an extend re-seals the session"
+        "the memory store extends the session under the same cookie: {:?}",
+        extended.cookies()
+    );
+    let after = viewer
+        .send_accepting(
+            http::Method::GET,
+            route,
+            Some(&cookie),
+            None,
+            "application/json",
+        )
+        .await;
+    assert_eq!(after.status, http::StatusCode::OK, "{}", after.body);
+    let left: ferrohealth_ui::view::session::Left =
+        serde_json::from_str(&after.body).expect("the route answers what is left");
+    assert!(
+        left.idle >= 3599,
+        "the store keeps the extension for the same cookie: {left:?}"
     );
 
     for method in [http::Method::GET, http::Method::POST] {
@@ -1230,7 +1391,7 @@ async fn an_unknown_address_answers_404_with_the_way_back() {
 }
 
 /// A stubbed CDR exchange: a `GET` of `path` answered `200` with `content_type`.
-fn stub(path: &str, content_type: &str, response: &str) -> Value {
+pub(crate) fn stub(path: &str, content_type: &str, response: &str) -> Value {
     serde_json::json!({
         "method": "GET",
         "path": path,
@@ -1547,6 +1708,130 @@ async fn compare_names_the_paths_one_release_adds_to_another() {
         same.main().contains("Both sides name the same release"),
         "{}",
         same.main()
+    );
+}
+
+/// A refusal a justification answers offers the justification form, a
+/// stated justification shows its notice with End now, and End now ends it
+/// (#6649).
+#[tokio::test]
+async fn a_refused_record_offers_a_justification_that_holds_until_ended() {
+    let listed = r#"{"header":"x-purpose-of-use","reason_header":"x-access-reason","system":"http://terminology.hl7.org/CodeSystem/v3-ActReason","codes":[{"code":"TREAT","display":"treatment"},{"code":"ETREAT"}]}"#;
+    let ehr = id("ehr");
+    let composition = id("composition");
+    let refused = serde_json::json!({
+        "method": "GET",
+        "path": format!("/ferroehr/rest/openehr/v1/ehr/{ehr}/composition/{composition}"),
+        "body": "",
+        "status": 403,
+        "headers": { "content-type": "application/problem+json" },
+        "response": r#"{"type":"about:blank","title":"Forbidden","status":403,"detail":"access denied: refused-no-care-relationship: the access policy requires a care relationship to the subject and the caller has none","refusal":"refused-no-care-relationship"}"#,
+    });
+    let viewer = Viewer::start_with(vec![
+        stub(
+            "/ferroehr/rest/extensions/v1/access/purposes",
+            "application/json",
+            listed,
+        ),
+        refused,
+    ])
+    .await;
+    let cookie = viewer.sign_in().await;
+    let path = format!("/ehrs/{ehr}/compositions/{composition}");
+    let page = viewer.page(&cookie, &path).await;
+    let main = page.main();
+    assert!(
+        main.contains("Open this record on a justification"),
+        "{main}"
+    );
+    assert!(
+        main.contains("<option value=\"TREAT\">treatment (TREAT)</option>"),
+        "{main}"
+    );
+    assert!(main.contains(r#"name="reason""#), "{main}");
+
+    let stated = viewer
+        .send(
+            http::Method::POST,
+            &path,
+            Some(&cookie),
+            Some(&[
+                ("intent", "justify"),
+                ("purpose", "TREAT"),
+                ("reason", "Consultation requested"),
+            ]),
+        )
+        .await;
+    assert_eq!(stated.status, http::StatusCode::FOUND, "{}", stated.body);
+    assert_eq!(stated.location(), path);
+    let held = viewer.page(&cookie, &path).await;
+    assert!(
+        held.body
+            .contains("You opened this record on a justification (TREAT)"),
+        "{}",
+        held.body
+    );
+    assert!(
+        held.body.contains("Consultation requested"),
+        "{}",
+        held.body
+    );
+    assert!(
+        !held
+            .headers
+            .get_all(http::header::SET_COOKIE)
+            .iter()
+            .any(|cookie| cookie
+                .to_str()
+                .is_ok_and(|text| text.contains("Consultation"))),
+        "the reason never reaches a cookie"
+    );
+
+    let ended = viewer
+        .send(
+            http::Method::POST,
+            &path,
+            Some(&cookie),
+            Some(&[("intent", "end-justification")]),
+        )
+        .await;
+    assert_eq!(ended.status, http::StatusCode::FOUND, "{}", ended.body);
+    let after = viewer.page(&cookie, &path).await;
+    assert!(
+        !after
+            .body
+            .contains("You opened this record on a justification"),
+        "{}",
+        after.body
+    );
+}
+
+/// A reason the CDR would refuse is never kept: the toast says why.
+#[tokio::test]
+async fn an_empty_reason_keeps_no_justification() {
+    let viewer = Viewer::start_with(Vec::new()).await;
+    let cookie = viewer.sign_in().await;
+    let path = format!("/ehrs/{}", id("ehr"));
+    let answer = viewer
+        .send(
+            http::Method::POST,
+            &path,
+            Some(&cookie),
+            Some(&[
+                ("intent", "justify"),
+                ("purpose", "TREAT"),
+                ("reason", "  "),
+            ]),
+        )
+        .await;
+    assert_eq!(answer.status, http::StatusCode::FOUND, "{}", answer.body);
+    let page = viewer.page(&cookie, &path).await;
+    assert!(
+        !page
+            .body
+            .contains("You opened this record on a justification"),
+        "{}",
+        page.body
     );
 }
 

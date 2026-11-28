@@ -22,6 +22,12 @@
 #   scripts/deploy-probe-k8s.sh --production-only  # only the P-K8S-PROD-* family
 #   scripts/deploy-probe-k8s.sh --bridge-only  # the release and the P-K8S-BRIDGE-* family
 #   scripts/deploy-probe-k8s.sh --ehr-index-only  # the release and the P-K8S-INDEX-* family
+#   scripts/deploy-probe-k8s.sh --lifecycle-only  # the release and the P-K8S-LIFE-* family
+#   scripts/deploy-probe-k8s.sh --posture-only  # the release and the families only the
+#                                               # full run holds: runtime posture, pod
+#                                               # security, service links, secrets,
+#                                               # readiness, viewer, terminology and the
+#                                               # original state
 #   scripts/deploy-probe-k8s.sh --render-check # no cluster: render the production
 #                                              # install this harness performs and
 #                                              # assert it wires the three domains
@@ -44,6 +50,10 @@
 #                     a licence for. Unset, the three P-K8S-TERM-INDEX-* probes
 #                     are declared not exercised by name rather than run against
 #                     an empty directory, which is not an index.
+#   PROBE_K8S_UPGRADE_IMAGE
+#                     repo:tag of a second server image P-K8S-LIFE-UPGRADE
+#                     upgrades the release to. Unset, the upgrade changes a
+#                     value and keeps the image, and the record says so.
 #   PROBE_K8S_NS      namespace (default ferroehr-probe; created and deleted).
 #   PROBE_K8S_VALUES  an extra values file layered over every install, for a
 #                     cluster that cannot run a chart default (a kind node in a
@@ -70,6 +80,8 @@ RENDER_CHECK=0
 PRODUCTION_ONLY=0
 BRIDGE_ONLY=0
 EHR_INDEX_ONLY=0
+LIFECYCLE_ONLY=0
+POSTURE_ONLY=0
 for arg in "$@"; do
   case "$arg" in
     --keep-up) KEEP_UP=1 ;;
@@ -77,7 +89,9 @@ for arg in "$@"; do
     --production-only) PRODUCTION_ONLY=1 ;;
     --bridge-only) BRIDGE_ONLY=1 ;;
     --ehr-index-only) EHR_INDEX_ONLY=1 ;;
-    *) echo "usage: $0 [--keep-up] [--production-only | --bridge-only | --ehr-index-only] | --render-check" >&2; exit 2 ;;
+    --lifecycle-only) LIFECYCLE_ONLY=1 ;;
+    --posture-only) POSTURE_ONLY=1 ;;
+    *) echo "usage: $0 [--keep-up] [--production-only | --bridge-only | --ehr-index-only | --lifecycle-only | --posture-only] | --render-check" >&2; exit 2 ;;
   esac
 done
 
@@ -93,6 +107,8 @@ COMPOSE_PROJECT="ferroehr-probe-k8s"
 . scripts/deploy-probes/kubernetes.sh
 # shellcheck source=scripts/deploy-probes/kubernetes_ehr_index.sh
 . scripts/deploy-probes/kubernetes_ehr_index.sh
+# shellcheck source=scripts/deploy-probes/kubernetes_lifecycle.sh
+. scripts/deploy-probes/kubernetes_lifecycle.sh
 
 # ── The production overlay against three database clusters ────────────────────
 # deploy/helm/ci/boot-check.sh has the server judge values-production.yaml from
@@ -311,12 +327,19 @@ usageReport:
   enabled: false
 ferropix:
   enabled: false
+# The overlay's only extra variable is the PIXm grant's client secret, which
+# names a Secret no probe creates; with no PIXm endpoint nothing reads it.
+extraEnv: []
 config:
   record:
     subject_index: local
   pixm: null
+  # The overlay names its identity provider by URL; the probe hands that issuer
+  # its key set as a file, so no boot reads a provider it cannot reach.
   auth:
-    jwks_file: /etc/ferroehr/probe-jwks.json
+    issuer:
+      idp:
+        jwks_file: /etc/ferroehr/probe-jwks.json
   files:
     probe-jwks.json: |
 $(sed 's/^/      /' docs/conformance/party/smart/jwks.json)
@@ -376,7 +399,7 @@ probes_k8s_production() {
   ids="$(for domain in "${K8S_PROD_DOMAINS[@]}"; do
     k8s_prod_psql "$domain" "SELECT system_identifier FROM pg_control_system()"
   done | sort -u | grep -c .)"
-  if [[ "$ids" -ne 4 ]] || ! k8s_prod_roles; then
+  if [[ "$ids" -ne "${#K8S_PROD_DOMAINS[@]}" ]] || ! k8s_prod_roles; then
     uncovered "P-K8S-PROD-BOOT and P-K8S-PROD-SHARED" \
       "the harness could not stand up three clusters with three system identifiers and the domain login roles (identifiers seen: ${ids})"
     return 0
@@ -528,6 +551,10 @@ render_check() {
     grep -qF -- "$want" <<<"$rendered" || { red "  the production install render lacks: ${want}"; failed=1; }
   done
   grep -qF 'subject_index = "local"' <<<"$rendered" || { red "  the production install render does not run the in-instance EHR index"; failed=1; }
+  if grep -qF 'ferroehr-pix-client' <<<"$rendered"; then
+    red "  the production install render still reads the PIXm client Secret, which no probe Secret backs"
+    failed=1
+  fi
   if grep -qE 'name: [a-z0-9-]*ferropix' <<<"$rendered"; then
     red "  the production install render still deploys FerroPIX, which no probe Secret backs"
     failed=1
@@ -581,6 +608,12 @@ fi
 for tool in kubectl helm docker jq; do
   command -v "$tool" >/dev/null || { red "$tool not found on PATH"; exit 1; }
 done
+# The FerroPIX dependency the chart declares, fetched into charts/ once, as CI
+# does before it calls this script: without it every render is refused.
+chart_deps="$(helm dependency list deploy/helm/ferroehr 2>/dev/null)"
+if grep -q 'missing' <<<"$chart_deps"; then
+  helm dependency build deploy/helm/ferroehr >/dev/null || { red "helm dependency build failed"; exit 1; }
+fi
 kubectl cluster-info >/dev/null 2>&1 || {
   red "no reachable cluster — this harness needs one (Docker Desktop Kubernetes is enough)"
   exit 1
@@ -648,6 +681,15 @@ if [[ "$BRIDGE_ONLY" -eq 1 ]]; then
   probe_report "$PROBE_OUT" "kubernetes"
   exit $?
 fi
+if [[ "$LIFECYCLE_ONLY" -eq 1 ]]; then
+  if probes_k8s_boot; then
+    probes_k8s_lifecycle
+  else
+    uncovered "every lifecycle probe" "the release did not come up, so there was nothing to restart or upgrade"
+  fi
+  probe_report "$PROBE_OUT" "kubernetes"
+  exit $?
+fi
 if [[ "$EHR_INDEX_ONLY" -eq 1 ]]; then
   if probes_k8s_boot; then
     probes_k8s_ehr_index
@@ -657,7 +699,27 @@ if [[ "$EHR_INDEX_ONLY" -eq 1 ]]; then
   probe_report "$PROBE_OUT" "kubernetes"
   exit $?
 fi
+if [[ "$POSTURE_ONLY" -eq 1 ]]; then
+  if probes_k8s_boot; then
+    k8s_record_host_users "$K8S_NS" "$K8S_RELEASE"
+    probes_k8s_runtime_posture
+    probes_k8s_psa
+    probes_k8s_service_links
+    probes_k8s_secrets
+    probes_k8s_readiness
+    probes_k8s_viewer
+    probes_k8s_terminology
+    probes_k8s_original_state
+  else
+    uncovered "every posture probe" "the release did not come up, so no posture could be observed"
+  fi
+  probe_report "$PROBE_OUT" "kubernetes"
+  exit $?
+fi
 if probes_k8s_boot; then
+  # First: P-K8S-LIFE-MIGRATE-ONCE reads the pods of the install that met the
+  # empty database.
+  probes_k8s_lifecycle
   k8s_record_host_users "$K8S_NS" "$K8S_RELEASE"
   probes_k8s_runtime_posture
   probes_k8s_psa

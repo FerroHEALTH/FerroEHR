@@ -7,6 +7,9 @@
 //! `versioned_party_version_get_by_id.yaml`. Canonical content negotiation
 //! (`Accept_canonical`/`ContentType_canonical`).
 //!
+//! Each read serves its RM class in canonical JSON or in the XML of its ITS-XML
+//! type (`Resources.md` §XML Format).
+//!
 //! Every read here is a `GET` on a `VERSION` / `VERSIONED_OBJECT` resource, so
 //! each carries the weak `ETag` (and `Last-Modified` where the served body
 //! exposes a commit audit) the ITS-REST overview
@@ -21,12 +24,16 @@ use openehr_its::rest::generated::demographic::{
     VersionedPartyVersionGetByIdParams,
 };
 
+use openehr_rm::prelude::{Party, RevisionHistory, Version, VersionedParty};
+
 use ferroehr::config::profile::SpecProfile;
 use ferroehr::ids::VoId;
 use ferroehr::versioning::object_version_id::parse_version_uid;
 
 use crate::api::RequestParts;
+use crate::api::ehr::{REVISION_HISTORY_ROOT_TAG, VERSION_ROOT_TAG, VERSIONED_PARTY_ROOT_TAG};
 use crate::overview::error::RestError;
+use crate::overview::negotiate::body::respond_rm;
 use crate::state::AppState;
 
 /// The `versioned_party_get` operation.
@@ -46,7 +53,9 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     // named outright; the instant is the version spine's, never
     // scraped from the container body, which exposes no commit
     // audit — the EHR-side container reads' pattern).
-    Ok(super::respond_versioned(h, &resp))
+    Ok(super::respond_versioned(h, &resp, |h, status, value| {
+        respond_rm::<VersionedParty>(h, status, value, VERSIONED_PARTY_ROOT_TAG)
+    }))
 }
 
 /// The `versioned_party_revision_history` operation.
@@ -66,7 +75,14 @@ pub(crate) async fn revision_history(
         .await?;
     // ETag from the addressed VERSIONED_OBJECT (a REVISION_HISTORY has
     // no uid of its own); Last-Modified from the most recent item.
-    Ok(super::read_versioned(h, &vo, &resp.body))
+    Ok(super::read_versioned(
+        h,
+        &vo,
+        &resp.body,
+        |h, status, value| {
+            respond_rm::<RevisionHistory>(h, status, value, REVISION_HISTORY_ROOT_TAG)
+        },
+    ))
 }
 
 /// The `versioned_party_version_get_at_time` operation.
@@ -87,7 +103,7 @@ pub(crate) async fn version_get_at_time(
         .versioned_party_version_get_at_time(vo_id, p.version_at_time)
         .await?;
     let served = version_reverse_relationships(&state, vo_id, &mut resp.body).await?;
-    let mut out = super::respond_versioned(h, &resp);
+    let mut out = super::respond_versioned(h, &resp, version_render(&state));
     super::party::audit_served(&mut out, served);
     Ok(out)
 }
@@ -112,7 +128,7 @@ pub(crate) async fn version_get_by_id(
     let served = version_reverse_relationships(&state, vo_id, &mut resp.body).await?;
     // ETag from VERSION.uid.value; Last-Modified from the served
     // ORIGINAL_VERSION's commit_audit.time_committed.
-    let mut out = super::read_versioned(h, &vo, &resp.body);
+    let mut out = super::read_versioned(h, &vo, &resp.body, version_render(&state));
     super::party::audit_served(&mut out, served);
     Ok(out)
 }
@@ -139,5 +155,20 @@ async fn version_reverse_relationships(
             super::party::add_reverse_relationships(state, vo_id, at, data).await
         }
         _ => Ok(Vec::new()),
+    }
+}
+
+/// How a `VERSION<PARTY>` read renders: re-typed for XML through the RM
+/// generation the active profile serves, so a stable-profile version keeps
+/// the `reverse_relationships` element of the RM 1.1.0 `PARTY` the ITS-XML
+/// RM Release-1.1.0 `Demographic.xsd` carries.
+fn version_render(state: &AppState) -> super::Render {
+    use openehr_rm::v1_1::{common::change_control::version, demographic::party};
+    if state.config().spec_profile == SpecProfile::Stable {
+        |h, status, value| {
+            respond_rm::<version::Version<party::Party>>(h, status, value, VERSION_ROOT_TAG)
+        }
+    } else {
+        |h, status, value| respond_rm::<Version<Party>>(h, status, value, VERSION_ROOT_TAG)
     }
 }

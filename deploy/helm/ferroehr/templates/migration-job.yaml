@@ -7,7 +7,7 @@
 # Migrations are DDL, so whoever applies them can rewrite the schema. Running
 # them here — as `ferroehr_migrator`, in a pod that exits — lets the SERVER run
 # as `ferroehr_clinical` with no DDL rights at all, which is what
-# config.db.migrate=verify then enforces (it refuses to boot against a database
+# config.database.migrations=verify then enforces (it refuses to boot against a database
 # this job has not migrated, rather than migrating it itself).
 #
 # As a hook, Helm creates it before the Deployment and WAITS for it: a failed

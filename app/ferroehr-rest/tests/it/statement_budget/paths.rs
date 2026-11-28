@@ -64,8 +64,13 @@ use super::{CHAINER_RELEASE, calls, counted, drained};
 use crate::access_evaluator_http::{credential, ehr_with_composition};
 use crate::common::{self, BASE, FHIR};
 
-/// The measured requests of each path.
+/// The measured requests of each path that writes.
 pub(super) const REQUESTS: u64 = 10;
+
+/// The measured requests of each path that only reads: it writes no
+/// fixture, so a longer window leaves every other path's data as it is, and
+/// it holds enough requests that one meets no read-buffer step (#6736).
+const READS: u64 = 15;
 
 /// The requests of each path sent before the measured ones.
 pub(super) const WARM: u64 = 3;
@@ -176,6 +181,27 @@ impl Path {
         Self::CommitAgent,
     ];
 
+    /// The measured requests of the path: [`READS`] for a read, else
+    /// [`REQUESTS`].
+    fn requests(self) -> u64 {
+        match self {
+            Self::ReadJson
+            | Self::ReadXml
+            | Self::ReadFlat
+            | Self::EhrRead
+            | Self::AqlSingle
+            | Self::AqlPopulation
+            | Self::AqlMatches
+            | Self::AqlParty
+            | Self::Iti81
+            | Self::PartyRead
+            | Self::ReadAtTime
+            | Self::ReadStatus
+            | Self::ReadVersion => READS,
+            _ => REQUESTS,
+        }
+    }
+
     pub(super) fn name(self) -> &'static str {
         match self {
             Self::CommitJson => "commit JSON",
@@ -235,53 +261,56 @@ struct Budget {
     wire: u64,
 }
 
-/// The ceilings by path (#6007): each figure as measured, plus a small margin.
-// NOTE: our own design (#6434), the least request is exact; the window average is a coarse
-// guard, since a pool connection grows its buffers inside a request (#6238).
+/// The ceilings by path (#6007, #6638): each figure as measured on Linux, the
+/// least request exact, the window average at most 60, the peak 64 KiB and
+/// the WAL 16 bytes.
+// NOTE: our own design (#6736), the least request of an aligned window is the gate; the window
+// average is a coarse guard (#6238).
 const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
         // NOTE: our own design (#6074), binding the held facts snapshot adds an allocation.
-        least: 14_016,
-        allocations: 16_950,
-        peak_bytes: 1_530_778,
+        least: 13_932,
+        allocations: 13_992,
+        peak_bytes: 1_283_072,
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 186_814,
+        wal: 176_605,
         wire: 201_274,
     },
     Budget {
         path: Path::CommitXml,
         conversions: 5,
-        least: 35_025,
-        allocations: 39_033,
-        peak_bytes: 1_533_031,
+        least: 34_941,
+        allocations: 35_001,
+        peak_bytes: 1_283_072,
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 187_141,
+        wal: 176_617,
         wire: 201_274,
     },
     Budget {
         path: Path::CommitFlat,
         conversions: 5,
-        least: 28_313,
-        allocations: 31_247,
-        peak_bytes: 1_528_525,
+        least: 26_623,
+        allocations: 26_683,
+        peak_bytes: 1_284_096,
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 187_608,
+        wal: 176_500,
         wire: 201_270,
     },
     Budget {
         path: Path::ReadJson,
         conversions: 0,
-        least: 830,
+        least: 805,
         allocations: 855,
-        peak_bytes: 617_268,
+        // NOTE: our own design (#6736), the aligned read buffer holds 64 KiB regions.
+        peak_bytes: 364_544,
         round_trips: 1,
         nested: 1,
         notifies: 0,
@@ -291,9 +320,10 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadXml,
         conversions: 2,
-        least: 10_120,
+        least: 10_095,
         allocations: 10_144,
-        peak_bytes: 1_017_140,
+        // NOTE: our own design (#6736), the aligned read buffer holds 64 KiB regions.
+        peak_bytes: 808_960,
         round_trips: 1,
         nested: 1,
         notifies: 0,
@@ -303,9 +333,10 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadFlat,
         conversions: 2,
-        least: 14_753,
+        least: 14_728,
         allocations: 14_783,
-        peak_bytes: 1_634_407,
+        // NOTE: our own design (#6736), the aligned read buffer holds 64 KiB regions.
+        peak_bytes: 1_378_304,
         round_trips: 1,
         nested: 1,
         notifies: 0,
@@ -315,7 +346,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::EhrRead,
         conversions: 1,
-        least: 703,
+        least: 677,
         allocations: 728,
         peak_bytes: 79_269,
         round_trips: 1,
@@ -327,8 +358,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlSingle,
         conversions: 2,
-        least: 1675,
-        allocations: 1734,
+        least: 1651,
+        allocations: 1717,
         peak_bytes: 118_273,
         round_trips: 2,
         nested: 1,
@@ -339,8 +370,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlPopulation,
         conversions: 2,
-        least: 2264,
-        allocations: 2377,
+        least: 2237,
+        allocations: 2297,
         peak_bytes: 158_823,
         round_trips: 1,
         nested: 1,
@@ -351,9 +382,9 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::Iti81,
         conversions: 0,
-        least: 6665,
-        allocations: 7379,
-        peak_bytes: 624_026,
+        least: 6638,
+        allocations: 6744,
+        peak_bytes: 577_536,
         round_trips: 1,
         nested: 1,
         notifies: 0,
@@ -363,8 +394,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyRead,
         conversions: 0,
-        least: 920,
-        allocations: 1003,
+        least: 893,
+        allocations: 960,
         peak_bytes: 78_848,
         round_trips: 6,
         nested: 1,
@@ -375,21 +406,21 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitContribution,
         conversions: 6,
-        least: 14_278,
-        allocations: 17_212,
-        peak_bytes: 1_509_372,
+        least: 14_196,
+        allocations: 14_256,
+        peak_bytes: 1_411_072,
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 187_918,
+        wal: 176_992,
         wire: 201_500,
     },
     Budget {
         path: Path::ReadAtTime,
         conversions: 0,
-        least: 843,
-        allocations: 947,
-        peak_bytes: 701_748,
+        least: 818,
+        allocations: 877,
+        peak_bytes: 331_776,
         round_trips: 1,
         nested: 1,
         notifies: 0,
@@ -399,19 +430,19 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitStatus,
         conversions: 4,
-        least: 1103,
-        allocations: 1146,
+        least: 1076,
+        allocations: 1136,
         peak_bytes: 147_242,
         round_trips: 4,
         nested: 0,
         notifies: 1,
-        wal: 4285,
+        wal: 4186,
         wire: 4171,
     },
     Budget {
         path: Path::ReadStatus,
         conversions: 0,
-        least: 760,
+        least: 733,
         allocations: 786,
         peak_bytes: 80_973,
         round_trips: 1,
@@ -423,22 +454,22 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitParty,
         conversions: 8,
-        least: 1485,
-        allocations: 1558,
+        least: 1458,
+        allocations: 1525,
         peak_bytes: 125_972,
         // NOTE: our own design (#6252), every party commit's gate read and commit statement read the
         // policy revisions through #6320's clinical door, two nested calls for one round trip.
         round_trips: 9,
         nested: 5,
         notifies: 1,
-        wal: 6067,
+        wal: 5987,
         wire: 7594,
     },
     Budget {
         path: Path::AqlMatches,
         conversions: 2,
-        least: 3708,
-        allocations: 3807,
+        least: 3682,
+        allocations: 3744,
         peak_bytes: 192_267,
         round_trips: 2,
         nested: 1,
@@ -449,8 +480,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlParty,
         conversions: 2,
-        least: 2486,
-        allocations: 2571,
+        least: 2457,
+        allocations: 2520,
         peak_bytes: 107_199,
         round_trips: 6,
         nested: 1,
@@ -461,20 +492,20 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitPartyScored,
         conversions: 8,
-        least: 1922,
-        allocations: 2043,
+        least: 1895,
+        allocations: 1959,
         peak_bytes: 140_901,
         round_trips: 9,
         nested: 5,
         notifies: 1,
-        wal: 8618,
+        wal: 8450,
         wire: 9946,
     },
     Budget {
         path: Path::ReadVersion,
         conversions: 0,
-        least: 859,
-        allocations: 934,
+        least: 832,
+        allocations: 892,
         peak_bytes: 162_800,
         round_trips: 1,
         nested: 1,
@@ -485,31 +516,31 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitUpdate,
         conversions: 5,
-        least: 14_048,
-        allocations: 16_990,
-        peak_bytes: 1_525_458,
+        least: 13_964,
+        allocations: 14_024,
+        peak_bytes: 1_280_000,
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 186_331,
+        wal: 176_429,
         wire: 201_557,
     },
     Budget {
         path: Path::CommitDelete,
         conversions: 2,
-        least: 1074,
+        least: 1047,
         allocations: 1103,
         peak_bytes: 135_002,
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 3757,
+        wal: 3613,
         wire: 3748,
     },
     Budget {
         path: Path::DirectoryCreate,
         conversions: 5,
-        least: 1176,
+        least: 1149,
         allocations: 1204,
         peak_bytes: 150_606,
         round_trips: 4,
@@ -521,19 +552,19 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::DirectoryUpdate,
         conversions: 4,
-        least: 1129,
-        allocations: 1167,
+        least: 1102,
+        allocations: 1162,
         peak_bytes: 152_696,
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 4297,
+        wal: 4155,
         wire: 4268,
     },
     Budget {
         path: Path::DirectoryDelete,
         conversions: 2,
-        least: 1018,
+        least: 991,
         allocations: 1051,
         peak_bytes: 144_129,
         round_trips: 4,
@@ -545,20 +576,20 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyUpdate,
         conversions: 8,
-        least: 1786,
+        least: 1759,
         allocations: 1819,
         peak_bytes: 129_641,
         round_trips: 9,
         nested: 5,
         notifies: 1,
-        wal: 5967,
+        wal: 5887,
         wire: 8529,
     },
     Budget {
         path: Path::PartyDelete,
         conversions: 2,
-        least: 1414,
-        allocations: 1452,
+        least: 1387,
+        allocations: 1448,
         peak_bytes: 112_950,
         round_trips: 9,
         nested: 5,
@@ -569,49 +600,49 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitOrganisation,
         conversions: 8,
-        least: 1461,
+        least: 1434,
         allocations: 1486,
         peak_bytes: 126_183,
         round_trips: 9,
         nested: 2,
         notifies: 0,
-        wal: 6247,
+        wal: 6175,
         wire: 7245,
     },
     Budget {
         path: Path::CommitGroup,
         conversions: 8,
-        least: 1457,
+        least: 1430,
         allocations: 1481,
         peak_bytes: 125_084,
         round_trips: 9,
         nested: 2,
         notifies: 0,
-        wal: 6051,
+        wal: 5971,
         wire: 7074,
     },
     Budget {
         path: Path::CommitRole,
         conversions: 9,
-        least: 1960,
+        least: 1933,
         allocations: 1989,
         peak_bytes: 126_256,
         round_trips: 16,
         nested: 7,
         notifies: 0,
-        wal: 6364,
+        wal: 6292,
         wire: 10_536,
     },
     Budget {
         path: Path::CommitAgent,
         conversions: 8,
-        least: 1447,
+        least: 1420,
         allocations: 1472,
         peak_bytes: 126_026,
         round_trips: 9,
         nested: 2,
         notifies: 0,
-        wal: 6138,
+        wal: 5971,
         wire: 7054,
     },
 ];
@@ -1468,9 +1499,11 @@ fn episode_ips(terminology: &str) -> Value {
     body
 }
 
-/// What one path measured over [`REQUESTS`] requests.
+/// What one path measured over its window of [`Path::requests`].
 #[derive(Default)]
 struct Measure {
+    /// The requests of the window.
+    requests: u64,
     conversions: BTreeMap<String, u64>,
     /// The allocations, the bytes allocated and the peak of each request.
     each: Vec<Allocated>,
@@ -1499,16 +1532,17 @@ impl Measure {
             .iter()
             .map(figure)
             .sum::<u64>()
-            .div_euclid(REQUESTS)
+            .div_euclid(self.requests)
     }
 
-    /// The least request's `figure`: what every request of the window
-    /// allocates, with none of the occasional work of the crates beneath it.
+    /// The least request's `figure`: what a request of the path allocates
+    /// when no read-buffer step falls inside it (#6736).
     fn least(&self, figure: impl Fn(&Allocated) -> u64) -> u64 {
         self.each.iter().map(figure).min().unwrap_or(0)
     }
 
-    /// The lower-quartile request's `figure`, the third smallest of ten.
+    /// The lower-quartile request's `figure`, the third smallest of ten or the
+    /// fourth of fifteen.
     ///
     /// A request handed a pool connection whose buffers have not grown to
     /// the path's messages yet, or that opens one, grows them inside its
@@ -1555,7 +1589,7 @@ impl Measure {
             .filter(|(op, _)| keep(op))
             .map(|(_, n)| n)
             .sum::<u64>()
-            .div_euclid(REQUESTS)
+            .div_euclid(self.requests)
     }
 }
 
@@ -1652,19 +1686,28 @@ async fn updates_in_place(pool: &PgPool, from: &str, to: &str) -> u64 {
 /// Waits [`SETTLE`], then takes and returns the connection of each domain
 /// pool, so the measured request meets it idle for less than the pool's
 /// idle probe (`ferroehr::db::pool::IDLE_PROBE`) and sends no probe of its
-/// own.
+/// own, and with its read buffer at the start of a fresh region ([`ALIGN`]).
 async fn settle(pools: &DomainPools) {
     tokio::time::sleep(SETTLE).await;
     for domain in Domain::ALL {
-        drop(
-            ferroehr::db::acquire::acquire(pools.get(domain))
-                .await
-                .expect("the kept connection"),
-        );
+        let mut conn = ferroehr::db::acquire::acquire(pools.get(domain))
+            .await
+            .expect("the kept connection");
+        sqlx::query(ALIGN)
+            .execute(&mut *conn)
+            .await
+            .expect("the aligning read");
+        drop(conn);
     }
 }
 
-/// Measures [`REQUESTS`] requests of `path`.
+/// A row longer than sqlx's 8 KiB read region, which the connection reads
+/// into a region of its own, so the next message starts a fresh one and
+/// each request meets the same read buffer whatever the connection read
+/// before (#6706).
+const ALIGN: &str = "SELECT /* statement_budget_own */ repeat('x', 65536)";
+
+/// Measures the [`Path::requests`] of `path`.
 async fn measure(
     app: &Router,
     pool: &PgPool,
@@ -1681,14 +1724,21 @@ async fn measure(
         .expect("the statement counts reset");
     *counter.0.lock().unwrap() = Counts::default();
     let mut marks = vec![super::wal::insert_lsn(pool).await];
-    let mut out = Measure::default();
+    let requests = path.requests();
+    let mut out = Measure {
+        requests,
+        ..Measure::default()
+    };
     if let Some(wire) = wire {
         drop(wire.take());
     }
-    for n in 0..REQUESTS {
+    for n in 0..requests {
         let n = usize::try_from(WARM + n).unwrap();
         let call = world.call(path, n);
         settle(pools).await;
+        if let Some(wire) = wire {
+            drop(wire.take());
+        }
         let mut allocated = Allocated::default();
         let (status, headers, body) = Measured {
             inner: Box::pin(
@@ -1727,10 +1777,11 @@ async fn measure(
     let chainer = calls(&statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE;
     let counts = std::mem::take(&mut *counter.0.lock().unwrap());
     out.conversions = counts.conversions;
-    out.round_trips = counts.round_trips.div_euclid(REQUESTS);
-    out.nested = nested.saturating_sub(chainer).div_euclid(REQUESTS);
-    out.notifies = notifies.div_euclid(REQUESTS);
-    out.statements = sent_ledger(&counts.sent) + &nested_ledger(&statements, nested, chainer);
+    out.round_trips = counts.round_trips.div_euclid(requests);
+    out.nested = nested.saturating_sub(chainer).div_euclid(requests);
+    out.notifies = notifies.div_euclid(requests);
+    out.statements =
+        sent_ledger(&counts.sent, requests) + &nested_ledger(&statements, nested, chainer);
     (out.wal, out.wal_ledger) = row_records(pool, &marks).await;
     testkit::statements::assert_statements_kept(pool, evicted)
         .await
@@ -1739,8 +1790,8 @@ async fn measure(
 }
 
 /// The round trips of a window by their statement, per request.
-fn sent_ledger(sent: &BTreeMap<String, u64>) -> String {
-    let mut out = format!("round trips by statement over {REQUESTS} requests:\n");
+fn sent_ledger(sent: &BTreeMap<String, u64>, requests: u64) -> String {
+    let mut out = format!("round trips by statement over {requests} requests:\n");
     for (statement, n) in sent {
         writeln!(out, "  {n:>5}  {statement}").unwrap();
     }
@@ -1778,10 +1829,11 @@ fn wire_ledger(m: &Measure) -> String {
     let total = m.wire.total();
     let mut out = format!(
         "database wire per request (each request {:?}): {} sent, {} received; \
-         by statement, the calls over {REQUESTS} requests and the bytes per request:\n",
+         by statement, the calls over {} requests and the bytes per request:\n",
         m.wire_each,
-        total.sent.div_euclid(REQUESTS),
-        total.received.div_euclid(REQUESTS),
+        m.requests,
+        total.sent.div_euclid(m.requests),
+        total.received.div_euclid(m.requests),
     );
     let mut lines: Vec<_> = m
         .wire
@@ -1797,8 +1849,8 @@ fn wire_ledger(m: &Measure) -> String {
             out,
             "  {:>5} calls {:>8} B sent {:>8} B received  {text}",
             tally.calls,
-            tally.sent.div_euclid(REQUESTS),
-            tally.received.div_euclid(REQUESTS),
+            tally.sent.div_euclid(m.requests),
+            tally.received.div_euclid(m.requests),
         )
         .unwrap();
     }
@@ -1919,7 +1971,7 @@ async fn every_hot_path_stays_within_its_budget() {
         let ops: Vec<String> = m
             .conversions
             .iter()
-            .map(|(op, n)| format!("{op}={}", n.div_euclid(REQUESTS)))
+            .map(|(op, n)| format!("{op}={}", n.div_euclid(m.requests)))
             .collect();
         writeln!(ledger, "{}: {}", path.name(), ops.join(", ")).unwrap();
         writeln!(
@@ -1933,8 +1985,8 @@ async fn every_hot_path_stays_within_its_budget() {
         .unwrap();
     }
     eprintln!(
-        "{report}\nconversions per request by op:\n{ledger}\nnested statements over {REQUESTS} \
-         requests:\n{statements}"
+        "{report}\nconversions per request by op:\n{ledger}\nnested statements over each path's \
+         window:\n{statements}"
     );
     assert!(
         over.is_empty(),
@@ -1981,8 +2033,8 @@ async fn every_hot_path_stays_within_its_wire_budget() {
             report,
             "{} | {cell} | {} | {}",
             path.name(),
-            total.sent.div_euclid(REQUESTS),
-            total.received.div_euclid(REQUESTS),
+            total.sent.div_euclid(m.requests),
+            total.received.div_euclid(m.requests),
         )
         .unwrap();
         writeln!(ledgers, "{}: {}", path.name(), wire_ledger(m)).unwrap();

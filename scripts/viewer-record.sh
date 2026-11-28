@@ -5,27 +5,28 @@
 # against the FerroEHR of this checkout.
 #
 # 1. Starts a throwaway PostgreSQL (the published ferroehr-postgres image) and
-#    the checkout's own `ferroehr` binary over docker/ferroehr.dev.toml, with
-#    the quickstart's posture of no role gate so the one user ferroehr /
-#    ferroehr reads every surface the viewer draws. The professional templates
-#    are loaded before serve, and ferroehr is bound to a PERSON through SCIM.
-# 2. Seeds it over ITS-REST as scripts/ui-e2e.sh does (the template, an EHR,
-#    a composition committed then updated, a FLAT composition) plus what the
-#    in-process screens read: the subject, a tag, a directory, a person, an
-#    organisation, their relationship, a demographic tag and a stored query.
+#    the checkout's own `ferroehr` binary over docker/ferroehr.dev.toml, the
+#    posture the browser journeys run, and binds its Basic users to PERSONs
+#    through SCIM as scripts/ui-e2e.sh does.
+# 2. Seeds it with the one demo seed (scripts/sandbox/reseed.sh) as the
+#    journeys do: ferroehr-admin seeds, ferroehr is the clinician and
+#    ferroehr-proxy the representative. The ids the screens open are read
+#    from the ids file the seed writes.
 # 3. Runs the `ssr_app` tests with the recorder on, each forwarding to the
-#    CDR and writing the exchanges it made.
+#    CDR as ferroehr-admin and writing the exchanges it made.
 # 4. Runs the recorder's last step, which merges them into recording.json and
-#    manifest.json with stand-ins for every id and instant the run stamped,
-#    so a second run writes the same bytes.
+#    manifest.json with stand-ins for every id, digest and instant the run
+#    stamped and for the dates the seed counted from the day it ran.
 #
 # Usage:
 #   scripts/viewer-record.sh
 #
 # Env:
 #   VIEWER_RECORD_CDR       record against this running CDR instead (its
-#                           database must be empty; user ferroehr / ferroehr
-#                           must read the admin API and be bound to a PERSON)
+#                           database must be empty, and its logins bound and
+#                           granted as scripts/ui-e2e.sh leaves them)
+#   VIEWER_RECORD_PG_NAME   the PostgreSQL container's name (default
+#                           ferroehr-viewer-record-pg)
 #   VIEWER_RECORD_PG_IMAGE  the PostgreSQL image (default: the compose pin)
 #   VIEWER_RECORD_PG_PORT   its host port (default 55432)
 #   VIEWER_RECORD_PORT      the CDR's host port (default 18080)
@@ -40,7 +41,7 @@ cd "$ROOT"
 PG_IMAGE="${VIEWER_RECORD_PG_IMAGE:-$(grep -o -m 1 'ghcr.io/ferrohealth/ferroehr-postgres:[^}]*' docker-compose.yml)}"
 PG_PORT="${VIEWER_RECORD_PG_PORT:-55432}"
 CDR_PORT="${VIEWER_RECORD_PORT:-18080}"
-PG_NAME="ferroehr-viewer-record-pg"
+PG_NAME="${VIEWER_RECORD_PG_NAME:-ferroehr-viewer-record-pg}"
 # The throwaway database's role, which the image's init script creates.
 PG_ROLE="ferroehr"
 PG_SECRET="ferroehr"
@@ -99,7 +100,7 @@ else
   SERVER_ENV=(FERROEHR_CONFIG=docker/ferroehr.dev.toml
     FERROEHR__DATABASE__URL="postgres://$PG_ROLE:$PG_SECRET@127.0.0.1:$PG_PORT/$PG_ROLE"
     FERROEHR__SERVER__LISTEN="127.0.0.1:$CDR_PORT"
-    FERROEHR__AUTHZ__RBAC__ENABLED=false
+    "FERROEHR__AUDIT__PURPOSE_CODES=TREAT,ETREAT"
     FERROEHR__USAGE_REPORT__ENABLED=false
     FERROEHR__TELEMETRY__FORMAT=json
     FERROEHR__AUTH__ISSUER__BASIC_USERS__JWKS_FILE="$ROOT/deploy/hosted/basic-users-jwks.json"
@@ -109,30 +110,18 @@ else
   SERVER_PID=$!
 fi
 wait_for "$CDR_URL/health/readiness" 120
+# From here on every instant the CDR stamps is the run's, the logins' binding
+# included.
+date -u +%Y-%m-%dT%H:%M:%SZ >"$WORK/started"
 if [[ -z "${VIEWER_RECORD_CDR:-}" ]]; then
-  echo "── binding ferroehr to a PERSON through SCIM"
-  bash scripts/scim-provision.sh "$CDR_URL" basic-users ferroehr
+  echo "── binding the Basic users to PERSONs through SCIM"
+  SCIM_GRANT="env ${SERVER_ENV[*]} $ROOT/target/debug/ferroehr" bash scripts/scim-provision.sh \
+    "$CDR_URL" basic-users urn:example:basic-user \
+    ferroehr ferroehr-admin --roles READONLY ferroehr-readonly
 fi
 
-V1="$CDR_URL/ferroehr/rest/openehr/v1"
-EXT="$CDR_URL/ferroehr/rest/extensions/v1"
-AUTH=(-u ferroehr:ferroehr)
-JSON=(-H "Content-Type: application/json")
-ACCEPT=(-H "Accept: application/json")
-# quiet CURL-ARGS...: a call whose answer only matters when it fails.
-quiet() {
-  if ! curl -sS --fail-with-body -o "$WORK/answer" "$@"; then
-    cat "$WORK/answer" >&2
-    echo >&2
-    return 1
-  fi
-}
-# ask CURL-ARGS...: a call whose answer is printed, or refused with its body.
-ask() {
-  quiet "$@" || return 1
-  cat "$WORK/answer"
-}
-ehrs=$(ask "${AUTH[@]}" -X POST "$V1/query/aql" "${JSON[@]}" \
+ehrs=$(curl -sS --fail-with-body -u ferroehr-admin:ferroehr -X POST \
+  "$CDR_URL/ferroehr/rest/openehr/v1/query/aql" -H "Content-Type: application/json" \
   -d '{"q":"SELECT COUNT(*) FROM EHR e"}' | jq -r '.rows[0][0]')
 if [[ "$ehrs" != "0" ]]; then
   echo "FATAL: the CDR already holds $ehrs EHRs; the recording needs an empty one" >&2
@@ -140,122 +129,50 @@ if [[ "$ehrs" != "0" ]]; then
 fi
 
 # ── 2. The seed ─────────────────────────────────────────────────────────────
-date -u +%Y-%m-%dT%H:%M:%SZ >"$WORK/started"
-echo "── seeding"
-TEMPLATE="minimal_evaluation.en.v1"
-quiet "${AUTH[@]}" -X POST "$V1/definition/template/adl1.4" \
-  -H "Content-Type: application/xml" \
-  --data-binary @app/ferroehr-viewer/tests/fixtures/minimal_evaluation.opt
+# The days from the run its bodies' `__DATE:<days>__` tokens name, and the
+# run's own day, which a scene that ends a relationship today sends; the last
+# step moves each with the stand-in epoch.
+{
+  echo 0
+  grep -rhoE '__DATE:[+-]?[0-9]+__' scripts/sandbox/seed \
+    | sed -E 's/__DATE:\+?(-?[0-9]+)__/\1/'
+} | sort -un >"$WORK/seed-days"
+echo "── seeding the demo dataset"
+SANDBOX_BASE="$CDR_URL" SANDBOX_USER=ferroehr-admin SANDBOX_CLINICIAN=ferroehr \
+  SANDBOX_TERMINOLOGY=without-loinc \
+  SANDBOX_IDS_OUT="$WORK/seed-ids.json" bash scripts/sandbox/reseed.sh
 
-# The subject is a synthetic record number (.claude/rules/personal-data.md).
-EHR=$(ask "${AUTH[@]}" -X POST "$V1/ehr" "${JSON[@]}" \
-  "${ACCEPT[@]}" -H "Prefer: return=representation" -d '{
-    "_type": "EHR_STATUS",
-    "name": {"_type": "DV_TEXT", "value": "EHR Status"},
-    "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
-    "archetype_details": {"_type": "ARCHETYPED", "rm_version": "1.2.0",
-      "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-EHR_STATUS.generic.v1"}},
-    "subject": {"_type": "PARTY_SELF", "external_ref": {"_type": "PARTY_REF",
-      "namespace": "demo.hospital.mrn", "type": "PERSON",
-      "id": {"_type": "GENERIC_ID", "value": "p-0417", "scheme": "mrn"}}},
-    "is_queryable": true, "is_modifiable": true}' | jq -r '.ehr_id.value')
-
-etag_of() { tr -d '\r' | sed -n 's/^[Ee][Tt]ag: W\/"\(.*\)"$/\1/p'; }
-
-ask "${AUTH[@]}" "$V1/definition/template/adl1.4/$TEMPLATE/example" \
-  "${ACCEPT[@]}" >"$WORK/example.json"
-VUID=$(curl -sS --fail-with-body -D - -o /dev/null "${AUTH[@]}" -X POST "$V1/ehr/$EHR/composition" \
-  "${JSON[@]}" -H "Prefer: return=minimal" \
-  --data-binary @"$WORK/example.json" | etag_of)
-COMPOSITION="${VUID%%::*}"
-quiet "${AUTH[@]}" -X PUT "$V1/ehr/$EHR/composition/$COMPOSITION" \
-  "${JSON[@]}" -H "If-Match: \"$VUID\"" \
-  --data-binary @"$WORK/example.json"
-
-FLAT_VUID=$(curl -sS --fail-with-body -D - -o /dev/null "${AUTH[@]}" -X POST "$V1/ehr/$EHR/composition" \
-  -H "Content-Type: application/openehr.wt.flat+json" -H "openehr-template-id: $TEMPLATE" \
-  -H "Prefer: return=minimal" -d '{
-    "ctx/language": "en", "ctx/territory": "US",
-    "ctx/composer_name": "Seed composer", "ctx/time": "2026-07-14T08:00:00Z",
-    "minimal/minimal/quantity|magnitude": 36.5, "minimal/minimal/quantity|unit": "kg"}' \
-  | etag_of)
-COMPOSITION_FLAT="${FLAT_VUID%%::*}"
-
-quiet "${AUTH[@]}" -X PUT "$V1/ehr/$EHR/composition/$COMPOSITION/tags" \
-  "${JSON[@]}" -d '[{"key": "reviewed", "value": "yes"}]'
-
-quiet "${AUTH[@]}" -X POST "$V1/ehr/$EHR/directory" \
-  "${JSON[@]}" -d "{
-    \"_type\": \"FOLDER\", \"name\": {\"_type\": \"DV_TEXT\", \"value\": \"root\"},
-    \"archetype_node_id\": \"openEHR-EHR-FOLDER.generic.v1\",
-    \"archetype_details\": {\"_type\": \"ARCHETYPED\",
-      \"archetype_id\": {\"_type\": \"ARCHETYPE_ID\", \"value\": \"openEHR-EHR-FOLDER.generic.v1\"},
-      \"rm_version\": \"1.1.0\"},
-    \"folders\": [{\"_type\": \"FOLDER\",
-      \"name\": {\"_type\": \"DV_TEXT\", \"value\": \"Episodes\"},
-      \"archetype_node_id\": \"at0001\",
-      \"items\": [{\"_type\": \"OBJECT_REF\", \"namespace\": \"local\",
-        \"type\": \"VERSIONED_COMPOSITION\",
-        \"id\": {\"_type\": \"HIER_OBJECT_ID\", \"value\": \"$COMPOSITION\"}}]}]}"
-
-# party RM_TYPE SEGMENT LABEL...: creates a party whose one identity holds
-# one ELEMENT per label and prints its versioned-object id.
-party() {
-  local rm_type="$1" segment="$2"
-  shift 2
-  local archetype="openEHR-DEMOGRAPHIC-$rm_type.$segment.v1"
-  local items
-  items=$(jq -nc --args '[$ARGS.positional | to_entries[] | (.value | index(":")) as $at | {
-    "_type": "ELEMENT", "name": {"_type": "DV_TEXT", "value": .value[0:$at]},
-    "archetype_node_id": "at000\(.key + 2)",
-    "value": {"_type": "DV_TEXT", "value": .value[$at + 1:]}}]' "$@")
-  jq -nc --arg t "$rm_type" --arg a "$archetype" --arg s "$segment" --argjson items "$items" '{
-    "_type": $t, "name": {"_type": "DV_TEXT", "value": $t}, "archetype_node_id": $a,
-    "archetype_details": {"_type": "ARCHETYPED",
-      "archetype_id": {"_type": "ARCHETYPE_ID", "value": $a}, "rm_version": "1.1.0"},
-    "identities": [{"_type": "PARTY_IDENTITY",
-      "name": {"_type": "DV_TEXT", "value": "legal name"},
-      "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_IDENTITY.\($s)_name.v1",
-      "details": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "Details"},
-        "archetype_node_id": "at0001", "items": $items}}]}' \
-    | ask "${AUTH[@]}" -X POST "$V1/demographic/$segment" \
-      "${JSON[@]}" "${ACCEPT[@]}" \
-      -H "Prefer: return=representation" --data-binary @- \
-    | jq -r '.uid.value | split("::")[0]'
-}
-PARTY=$(party PERSON person "Given name:Demo" "Family name:Person 0417")
-ORGANISATION=$(party ORGANISATION organisation "Name:Demo Clinic")
-RELATIONSHIP=$(jq -nc --arg s "$PARTY" --arg t "$ORGANISATION" '{
-    "_type": "PARTY_RELATIONSHIP", "name": {"_type": "DV_TEXT", "value": "employment"},
-    "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.employment.v1",
-    "source": {"_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
-      "id": {"_type": "HIER_OBJECT_ID", "value": $s}},
-    "target": {"_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
-      "id": {"_type": "HIER_OBJECT_ID", "value": $t}}}' \
-  | ask "${AUTH[@]}" -X POST "$EXT/demographic/party_relationship" \
-    "${JSON[@]}" "${ACCEPT[@]}" \
-    -H "Prefer: return=representation" --data-binary @- \
-  | jq -r '.uid.value | split("::")[0]')
-quiet "${AUTH[@]}" -X PUT "$V1/demographic/person/$PARTY/tags" \
-  "${JSON[@]}" -d '[{"key": "follow-up", "value": "2026-11-04"}]'
-
-QUERY="org.example.cardio::latest"
-quiet "${AUTH[@]}" -X PUT "$V1/definition/query/$QUERY" \
-  -H "Content-Type: text/plain" \
-  --data-binary "SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c"
-
-jq -nc --arg ehr "$EHR" --arg composition "$COMPOSITION" \
-  --arg composition_flat "$COMPOSITION_FLAT" --arg party "$PARTY" \
-  --arg organisation "$ORGANISATION" --arg relationship "$RELATIONSHIP" \
-  --arg template "$TEMPLATE" --arg query "$QUERY" \
-  '{$ehr, $composition, $composition_flat, $party, $organisation, $relationship,
-    $template, $query, "query_version": "1.0.0"}' >"$WORK/manifest.json"
-for id in "$EHR" "$COMPOSITION" "$COMPOSITION_FLAT" "$PARTY" "$ORGANISATION" "$RELATIONSHIP"; do
-  if [[ -z "$id" || "$id" == null ]]; then
-    echo "FATAL: the seed is incomplete: $(cat "$WORK/manifest.json")" >&2
-    exit 1
-  fi
-done
+# The ids the screens open, each read from the seed's ids file at the slot or
+# key the seed's manifest gives it.
+jq --slurpfile m scripts/sandbox/seed/manifest.json '
+  $m[0] as $m | .tokens as $t | .ehrs as $e
+  | ($m.world.legal_marks) as $marks
+  | {
+      ehr: $e[0],
+      composition: $t["__SERIES:minimal-evaluation__"],
+      held: $t["__VO:access-delay__"],
+      ehr_access: $e[$m.world.ehr_access[0].ehr],
+      ehr_restricted: $e[$marks.restriction.ehr],
+      ehr_objected: $e[$marks.research_objection.ehr],
+      ehr_due: $e[$marks.retention_anchors[0].ehr],
+      retention_held: $t["__VO:retention-hold-1__"],
+      ehr_care_ended: $e[$m.world.care_relationships[] | select(.key == "care-patient-02") | .ehr],
+      patient: $t["__ID:patient-01__"],
+      carer: $t["__ID:group-cardiology__"],
+      care: $t["__ID:care-patient-01__"],
+      care_ended: $t["__ID:care-patient-02__"],
+      care_end: $t["__ID:care-patient-03__"],
+      party: $t["__ID:person-01__"],
+      organisation: $t["__ID:organisation-hospital__"],
+      relationship: $t["__ID:representation-guardian__"],
+      template: "minimal_evaluation.en.v1",
+      query: "eu.ferroehr.sandbox::composition_index",
+      query_version: "1.0.0"
+    }' "$WORK/seed-ids.json" >"$WORK/manifest.json"
+if jq -e '[.[] | select(. == null or . == "")] | length > 0' "$WORK/manifest.json" >/dev/null; then
+  echo "FATAL: the seed left an id unnamed: $(cat "$WORK/manifest.json")" >&2
+  exit 1
+fi
 echo "   seeded $(cat "$WORK/manifest.json")"
 # A second later, so the marker falls after every instant the seed stamped.
 sleep 1
@@ -265,7 +182,9 @@ date -u +%Y-%m-%dT%H:%M:%SZ >"$WORK/seeded"
 export FERROEHR_VIEWER_RECORD_CDR="$CDR_URL"
 export FERROEHR_VIEWER_RECORD_DIR="$WORK"
 echo "── recording the ssr_app screens"
-cargo nextest run --locked -p ferroehr-viewer -E 'test(/^ssr_app::/)'
+# One at a time: a screen's writes then reach the CDR in the same order on
+# every run, so every later read answers the same.
+cargo nextest run --locked -p ferroehr-viewer -j 1 -E 'test(/^ssr_app::/)'
 echo "── writing the recording"
 cargo nextest run --locked -p ferroehr-viewer --run-ignored only \
   -E 'test(=cdr_record::write_the_recording)'

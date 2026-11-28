@@ -27,7 +27,7 @@ without a golden is a render nothing compares.
   https and trusting the CA from `service.tls.caExistingSecret`).
 - `production.yaml` — `ferroehr/values-production.yaml`, the overlay the chart
   ships to users (`deployment.profile: production`: one Secret per storage
-  domain, the migration Job under `migrate: verify`, a TLS Ingress and a
+  domain, the migration Job under `migrations: verify`, a TLS Ingress and a
   NetworkPolicy narrowed to the ingress controller).
 
 ## Regenerating

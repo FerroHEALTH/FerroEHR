@@ -431,7 +431,10 @@ async fn access_fields_round_trip_on_both_write_paths() {
 
     let mut single = read_event("2026-07-10T08:30:00Z".parse().unwrap());
     single.purpose = Some("TREATMENT".to_owned());
-    single.legal_basis = Some("gdpr-art-9-2-h".to_owned());
+    single.legal_basis = Some(ehds_logging::regulatory::LegalBasis {
+        lawfulness: ehds_logging::regulatory::Lawfulness::PublicTask,
+        condition: Some(ehds_logging::regulatory::Condition::HealthOrSocialCare),
+    });
     single.result_count = Some(17);
     single.request_id = Some("req-single".to_owned());
     store
@@ -468,8 +471,14 @@ async fn access_fields_round_trip_on_both_write_paths() {
         Some("TREATMENT")
     );
     assert_eq!(
-        rows[0].get::<Option<String>, _>("legal_basis").as_deref(),
-        Some("gdpr-art-9-2-h")
+        rows[0]
+            .get::<Option<String>, _>("legal_basis")
+            .as_deref()
+            .map(ferroehr::system_log::event::legal_basis_of)
+            .transpose()
+            .expect("the stored legal basis reads back"),
+        single.legal_basis,
+        "the column holds the typed legal basis, read back unchanged"
     );
     assert_eq!(rows[0].get::<Option<i64>, _>("result_count"), Some(17));
     assert_eq!(
@@ -894,7 +903,10 @@ fn every_kind_of_record(
     classified.purpose = Some("ETREAT".to_owned());
     classified.justification = Some(Box::new(emergency("unconscious on arrival")));
     classified.permit = Some("permit-1".to_owned());
-    classified.legal_basis = Some("gdpr-art-9-2-h".to_owned());
+    classified.legal_basis = Some(ehds_logging::regulatory::LegalBasis {
+        lawfulness: ehds_logging::regulatory::Lawfulness::PublicTask,
+        condition: Some(ehds_logging::regulatory::Condition::HealthOrSocialCare),
+    });
     classified.request_id = Some("req-1".to_owned());
     classified.result_count = Some(1);
     classified.record_origins(vec!["lab-system".to_owned(), "gp-system".to_owned()], None);

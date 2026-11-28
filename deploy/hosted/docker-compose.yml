@@ -67,6 +67,17 @@ services:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set in /opt/ferroehr-sandbox/.env}
     volumes:
       - ./ferroehr.sandbox.toml:/etc/ferroehr/ferroehr.toml:ro
+    # The sandbox's own signing key and its passphrase ([record.signing]),
+    # mounted at /run/secrets/<name> from the files `.env` names (the
+    # `secrets` block at the end says why a deploy refuses without them).
+    secrets:
+      - ferroehr-signing-key
+      - ferroehr-signing-passphrase
+    # [audit.access_log] publish_directory. A tmpfs, so a recreate after the
+    # nightly wipe empties it with the database; 1777 because the server runs
+    # as 65532 and a tmpfs mounts owned by root.
+    tmpfs:
+      - /var/lib/ferroehr/access-log:mode=1777,size=16m
     # The issuer's namespace (the header says why); Caddy and the viewer reach
     # the CDR as ferroehr:8080, the name the issuer answers to.
     network_mode: service:identity-issuer
@@ -163,6 +174,9 @@ services:
       FERROEHR__USAGE_REPORT__ENABLED: "false"
     volumes:
       - ./ferroehr.sandbox.toml:/etc/ferroehr/ferroehr.toml:ro
+    # The loader reads the passphrase file of every configuration it loads.
+    secrets:
+      - ferroehr-signing-passphrase
     command:
       - party-binding
       - grant
@@ -203,6 +217,9 @@ services:
       FERROEHR__USAGE_REPORT__ENABLED: "false"
     volumes:
       - ./ferroehr.sandbox.toml:/etc/ferroehr/ferroehr.toml:ro
+    # The loader reads the passphrase file of every configuration it loads.
+    secrets:
+      - ferroehr-signing-passphrase
     command:
       - party-binding
       - grant
@@ -220,7 +237,48 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # Provisions the demo user `ferroehr` as a professional PERSON through the
+  # Grants the PERSON of the demo clinician `ferroehr-clinician` the clinical
+  # scopes the demo dataset's reads and attestations use, as ferroehr-hold
+  # does for `ferroehr`.
+  ferroehr-hold-clinician:
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:latest}
+    container_name: ferroehr-sandbox-hold-clinician
+    restart: on-failure
+    depends_on:
+      ferroehr-provision:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    environment:
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set in /opt/ferroehr-sandbox/.env}
+      FERROEHR__USAGE_REPORT__ENABLED: "false"
+    volumes:
+      - ./ferroehr.sandbox.toml:/etc/ferroehr/ferroehr.toml:ro
+    # The loader reads the passphrase file of every configuration it loads.
+    secrets:
+      - ferroehr-signing-passphrase
+    command:
+      - party-binding
+      - grant
+      - --basic-user
+      - ferroehr-clinician
+      - --operation
+      - hold_scopes
+      - --element
+      - scope=user/composition-*.cruds
+      - --element
+      - scope=user/template-*.rs
+      - --element
+      - scope=user/aql-*.cruds
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+  # Provisions the demo users `ferroehr` and `ferroehr-clinician` as
+  # professional PERSONs through the
   # CDR's SCIM endpoint (RFC 7644 §3.3), the way an identity provider
   # provisions people, so the Basic login is bound to the PERSON FerroEHR
   # issues for its binding key: the `sandbox-scim` client takes a client
@@ -254,16 +312,18 @@ services:
         -d client_secret=sandbox -d scope=ferroehr/scim
         http://localhost:8180/sandbox/token | sed -n 's/.*"access_token" *: *"\([^"]*\)".*/\1/p');
         if [ -z "$$token" ]; then echo 'the issuer answered no access token' >&2; exit 1; fi;
+        for user in ferroehr ferroehr-clinician; do
         status=$$(curl -sS -o /tmp/answer -w '%{http_code}' -X POST
         -H "Authorization: Bearer $$token" -H 'Content-Type: application/scim+json'
-        --data '{"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User"],"userName":"ferroehr","urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User":{"loginIdentifier":"ferroehr"}}'
+        --data "{\"schemas\":[\"urn:ietf:params:scim:schemas:core:2.0:User\",\"urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User\"],\"userName\":\"$$user\",\"urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User\":{\"loginIdentifier\":\"$$user\"}}"
         http://localhost:8080/scim/v2/Users);
-        if [ "$$status" = 201 ]; then echo 'provisioned ferroehr'; exit 0; fi;
+        if [ "$$status" = 201 ]; then echo "provisioned $$user"; continue; fi;
         if [ "$$status" = 409 ] && grep -q '"uniqueness"' /tmp/answer &&
         curl -fsS -H "Authorization: Bearer $$token"
-        'http://localhost:8080/scim/v2/Users?filter=userName%20eq%20%22ferroehr%22' |
-        grep -q '"totalResults" *: *1[,}]'; then echo 'ferroehr is provisioned already'; exit 0; fi;
-        echo "provisioning ferroehr answered $$status" >&2; cat /tmp/answer >&2; exit 1
+        "http://localhost:8080/scim/v2/Users?filter=userName%20eq%20%22$$user%22" |
+        grep -q '"totalResults" *: *1[,}]'; then echo "$$user is provisioned already"; continue; fi;
+        echo "provisioning $$user answered $$status" >&2; cat /tmp/answer >&2; exit 1;
+        done
     read_only: true
     tmpfs:
       - /tmp
@@ -277,7 +337,7 @@ services:
   # below its only callers. Its database is on the DB box; the URL and the
   # sealing key are compose secrets read from `.env`.
   ferropix:
-    image: ${FERROPIX_IMAGE:-ghcr.io/ferrohealth/ferropix:0.0.43@sha256:94fa0f395de800e51f5dc34fb01c9f4d8443c2c4adaec1c22ce85b3f66dba3d9}
+    image: ${FERROPIX_IMAGE:-ghcr.io/ferrohealth/ferropix:0.0.44@sha256:ce5fed1f5e96e9a15923804279c0c0e76fcdb5961961942859b99eb568ef9ba2}
     container_name: ferroehr-sandbox-ferropix
     restart: unless-stopped
     network_mode: service:identity-issuer
@@ -366,7 +426,7 @@ services:
   # 1536m cap also fits the Netherlands edition (889 MB).
   # The CDR's cap moved from 4096m to 3072m to make room on the 8 GB box.
   ferroterm:
-    image: ${FERROTERM_IMAGE:-ghcr.io/ferrohealth/ferroterm:0.4.8@sha256:f2e4d525b538f56922768ab1ae143cc855dd14c2f007f30c5e3e540bdf081511}
+    image: ${FERROTERM_IMAGE:-ghcr.io/ferrohealth/ferroterm:0.4.9@sha256:101080ef2c4378a9a55569726e058d76b8aa2541c58fca8b543601ff9d254065}
     container_name: ferroehr-sandbox-ferroterm
     restart: unless-stopped
     # The image is its own health probe (`ferroterm healthcheck`, readiness
@@ -459,6 +519,17 @@ configs:
     content: ${FERROPIX_DATABASE_URL:?FERROPIX_DATABASE_URL must be set in /opt/ferroehr-sandbox/.env}
   ferropix-data-key:
     content: ${FERROPIX_DATA_KEY:?FERROPIX_DATA_KEY must be set in /opt/ferroehr-sandbox/.env}
+
+# The sandbox's signing key and its passphrase, generated on the box and kept
+# beside `.env`, never in the repository or the image (deploy/hosted/README.md,
+# "The signing key"). `.env` names the two files. Unset, `docker compose config`
+# fails, so deploy.sh refuses the posture before it installs it or stops the
+# running CDR.
+secrets:
+  ferroehr-signing-key:
+    file: ${FERROEHR_SIGNING_KEY_FILE:?FERROEHR_SIGNING_KEY_FILE must name the signing key in /opt/ferroehr-sandbox/.env}
+  ferroehr-signing-passphrase:
+    file: ${FERROEHR_SIGNING_PASSPHRASE_FILE:?FERROEHR_SIGNING_PASSPHRASE_FILE must name the signing key passphrase in /opt/ferroehr-sandbox/.env}
 
 volumes:
   caddy_data:

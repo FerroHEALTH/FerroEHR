@@ -34,7 +34,7 @@ curl -u ferroehr:ferroehr -X POST -i \
   http://localhost:8080/ferroehr/rest/openehr/v1/ehr
 ```
 
-`POST /ehr` — the body is optional; you may supply an `EHR_STATUS` to set the
+`POST /ehr`: the body is optional; you may supply an `EHR_STATUS` to set the
 subject and flags at creation. Returns **201 Created** with the new EHR id in
 `ETag` and a `Location` header. With `Prefer: return=representation` the body is
 the full `EHR`; otherwise it is empty. Supplying an `EHR_STATUS` whose subject
@@ -121,12 +121,12 @@ The `versioned_ehr_status` sub-resource exposes the full version history:
 - `GET …/versioned_ehr_status`: the `VERSIONED_EHR_STATUS` object,
 - `GET …/versioned_ehr_status/revision_history`: the revision history,
 - `GET …/versioned_ehr_status/version` (optionally `?version_at_time=`) and
-  `…/version/{version_uid}` — a specific version.
+  `…/version/{version_uid}`: a specific version.
 
 ## EHR_ACCESS
 
 **EHR_ACCESS** holds the record's access directives: who may reach which data,
-for what, until when (the [access directives](../security.md#access-directives)
+for what, until when (the [access directives](../access-control.md#access-directives)
 scheme). An EHR holds exactly one, versioned like `EHR_STATUS`. The openEHR
 REST API defines no `EHR_ACCESS` endpoint, so FerroEHR reads it through its own
 extension under the extensions root, with the paths, `version_at_time` and
@@ -398,7 +398,7 @@ These things about the payload are worth calling out:
   own rules (the **422** above) apply on the direct writes as well.
 - **For a caller it knows, the server writes the committer.** When your login
   is bound to a demographic `PERSON` (see
-  [`[authz.party_binding]`](../installation/config-auth.md#authzparty_binding)),
+  [`[authz.party_binding]`](../installation/config-authz.md#authzparty_binding)),
   every commit, attestation and CONTRIBUTION records a `PARTY_IDENTIFIED` with
   the `PERSON`'s name, your login identifier (`DV_IDENTIFIER{issuer = token
   iss, id = <the token's sub>, type = "oauth2"}`, or
@@ -511,11 +511,17 @@ read uses, so a client never maps codes locally. `total` counts **all** of the
 EHR's contributions, not just the returned window.
 
 > [!NOTE]
-> The contribution envelope is **canonical JSON only**: openEHR publishes no
-> CONTRIBUTION XML document, so an XML `Accept` on these routes is a **406** and
-> an XML `Content-Type` a **415**. The FLAT and STRUCTURED formats, when used,
-> apply only to the inner composition `data` of each version, never to the
-> envelope.
+> A contribution is committed as **canonical JSON only**: no released schema
+> defines the XML of the commit body, so an XML `Content-Type` is a **415**. The
+> committed contribution is served in canonical JSON or XML: the by-uid read and
+> the answer of a create with `Prefer: return=representation` honour an XML
+> `Accept` under a `<contribution>` root of the ITS-XML `CONTRIBUTION` type (see
+> [Root elements no schema publishes](content-negotiation.md#root-elements-no-schema-publishes)).
+> Two answers stay JSON only and refuse an XML `Accept` with a **406**: a read
+> with `Prefer: resolve_refs`, whose versions are no `OBJECT_REF`s, and the
+> contribution list, a FerroEHR summary no schema defines. The FLAT and
+> STRUCTURED formats, when used, apply only to the inner composition `data` of
+> each version, never to the envelope.
 
 ## ITEM_TAG
 
@@ -546,7 +552,7 @@ curl -u ferroehr:ferroehr -X DELETE \
   case-sensitive, and AND-combined; an omitted filter constrains nothing. An EHR
   with no matching tag answers **200** with `[]`, never 404.
 - `GET|PUT /ehr/{ehr_id}/composition/{uid_based_id}/tags` and the same pair
-  under `…/ehr_status/{uid_based_id}/tags` — read or **replace** the addressed
+  under `…/ehr_status/{uid_based_id}/tags`: read or **replace** the addressed
   collection. The `PUT` body is a bare JSON array of tags (`key` required,
   `value` and `target_path` optional; `target` and `owner_id` come from the
   route, and a body that supplies them, or any other undeclared member, is a

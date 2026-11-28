@@ -18,10 +18,14 @@
 //!    binding the deployment declared in `[privacy.cohort.predicates]`. It selects
 //!    party ids and nothing else — no name, no address, no identifier leaves
 //!    the domain.
-//! 2. **The crossing** runs on the clinical pool: those party ids in, the ids
-//!    of the EHRs whose `EHR_STATUS.subject.external_ref` names one of them
-//!    out (RM ehr master04 §EHR Status). One statement, one round trip, no
-//!    attribute.
+//! 2. **The crossing** takes those party ids to EHRs two ways, and a party
+//!    reached both ways counts once. On the clinical pool, the EHRs whose
+//!    `EHR_STATUS.subject.external_ref` names one of them (RM ehr master04
+//!    §EHR Status): one statement, no attribute. And through each record
+//!    subject a selected `PERSON` declares, which the installed EHR index
+//!    provider resolves forward into the clinical domain as it resolves a
+//!    named subject ([`FerroEhrService::subject_ehrs`]). The record subjects
+//!    reach the provider and never the caller.
 //! 3. **The query** runs on the clinical pool, scoped to those EHR ids through
 //!    [`AqlQueryRequest::ehr_ids`] as a [`EhrScopeKind::PopulationSubset`].
 //!    A cohort is a population query, so the population gate applies to it as
@@ -58,10 +62,9 @@
 //! server: the server translates a real identifier forward through the PIX
 //! Manager (ITI-83 with `targetSystem` set to that domain), never a pseudonym
 //! back (RM ehr master04 §EHR Status, `EHR_STATUS.subject`; GDPR Art. 4(5) and
-//! Art. 25). So a cohort that names its subjects by identifier is resolved one
-//! subject at a time through that forward translation, and a cohort that
-//! selects on demographic attributes, which would need the reverse
-//! translation, is refused as [`CohortError::IdentityNotHeld`].
+//! Art. 25). So a named subject, and the record subject of a `PERSON` a
+//! predicate selects, are each resolved one at a time through that forward
+//! translation, and the `external_ref` statement finds no EHR there.
 //!
 //! ## Every execution is recorded
 //!
@@ -93,7 +96,6 @@ use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::ehr_index::IndexError;
-use crate::service::ehr_index::provider::EhrIndexProvider;
 use crate::service::ehr_index::types::SubjectRef;
 use crate::service::query::request::{AqlQueryRequest, QueryOutcome};
 use crate::system_log::event::{
@@ -184,19 +186,9 @@ pub enum CohortError {
     /// through here would cross the boundary for nothing.
     #[error("a cohort query names at least one predicate or subject")]
     NoPredicates,
-    /// The request selects on demographic predicates while an IHE patient
-    /// identity source holds the subject-to-EHR cross-reference: an
-    /// `EHR_STATUS` there names a clinical pseudonym, never a party, and
-    /// resolving a party would need a translation of the pseudonym back to
-    /// another domain, which the server never asks for.
-    #[error(
-        "a cohort predicate selects parties, and under the IHE patient identity source an \
-         EHR names its subject by a clinical pseudonym and this server never translates a \
-         pseudonym back; name the cohort's subjects by identifier instead"
-    )]
-    IdentityNotHeld,
-    /// A subject the cohort names could not be resolved: no provider is
-    /// installed, or the identity source failed or answered no pseudonym.
+    /// A subject the cohort names, or a record subject of a selected `PERSON`,
+    /// could not be resolved: no provider is installed, or the identity source
+    /// failed or answered an identifier the subject rule refuses.
     #[error("a cohort subject could not be resolved")]
     Subject(#[source] IndexError),
     /// The request pre-scopes the inner query to EHRs of its own.
@@ -209,6 +201,9 @@ pub enum CohortError {
     /// selected party is, failed.
     #[error("the cohort store is unavailable")]
     Storage(#[source] crate::storage::error::StorageError),
+    /// The record subjects the selected `PERSON`s declare could not be read.
+    #[error("the record subjects of the cohort could not be read")]
+    RecordSubjects(#[source] crate::party_binding::grants::live::GrantsUnavailable),
     /// No connection to the demographic or clinical store could be obtained,
     /// so nothing ran.
     #[error("the cohort store is unavailable")]
@@ -224,11 +219,11 @@ impl From<CohortError> for ServiceError {
         match error {
             CohortError::Query(inner) | CohortError::Unrecorded(inner) => inner,
             CohortError::Subject(inner) => ServiceError::from(inner),
+            CohortError::RecordSubjects(inner) => ServiceError::from(inner),
             CohortError::NotConfigured
             | CohortError::UnknownPredicate(_)
             | CohortError::InvalidValue { .. }
             | CohortError::NoPredicates
-            | CohortError::IdentityNotHeld
             | CohortError::ScopeNotAllowed => ServiceError::bad_request(error.to_string(), error),
             CohortError::CohortTooLarge { .. } => {
                 ServiceError::content_invalid(Violation::new(error.to_string()).with_source(error))
@@ -256,12 +251,13 @@ impl FerroEhrService {
     /// # Errors
     /// [`CohortError::NotConfigured`] when the deployment binds no predicate,
     /// [`CohortError::NoPredicates`] / [`CohortError::ScopeNotAllowed`] /
-    /// [`CohortError::IdentityNotHeld`] /
     /// [`CohortError::UnknownPredicate`] / [`CohortError::InvalidValue`] for a
     /// malformed request, [`CohortError::CohortTooLarge`] above the configured
     /// ceiling, [`CohortError::Acquire`] when no domain connection can be
     /// obtained, [`CohortError::Storage`] when a domain read fails,
-    /// [`CohortError::Subject`] when a named subject cannot be resolved,
+    /// [`CohortError::RecordSubjects`] when the selected persons' record
+    /// subjects cannot be read, [`CohortError::Subject`] when a named or a
+    /// record subject cannot be resolved,
     /// [`CohortError::Query`] when the AQL execution fails, and
     /// [`CohortError::Unrecorded`] when the access record could not be taken
     /// that cannot be written.
@@ -349,21 +345,20 @@ impl FerroEhrService {
         ))
     }
 
-    /// Steps one and two for the predicates: the parties they select, and the
-    /// EHRs whose `EHR_STATUS.subject.external_ref` names one of them.
+    /// Steps one and two for the predicates: the parties they select, the EHRs
+    /// whose `EHR_STATUS.subject.external_ref` names one of them, and the EHRs
+    /// of the record subjects the selected `PERSON`s declare.
     ///
     /// # Errors
-    /// [`CohortError::IdentityNotHeld`] under an IHE patient identity source,
-    /// [`CohortError::CohortTooLarge`] above `max`, and the predicate and
-    /// store failures.
+    /// [`CohortError::CohortTooLarge`] above `max`,
+    /// [`CohortError::RecordSubjects`] when the record subjects cannot be read,
+    /// [`CohortError::Subject`] when one cannot be resolved, and the predicate
+    /// and store failures.
     async fn predicate_ehrs(
         &self,
         predicates: &[CohortPredicate],
         max: u64,
     ) -> Result<BTreeSet<EhrId>, CohortError> {
-        if matches!(self.ehr_index_provider(), EhrIndexProvider::Ihe(_)) {
-            return Err(CohortError::IdentityNotHeld);
-        }
         let parties = self.cohort_parties(predicates).await?;
         let size = u64::try_from(parties.len()).unwrap_or(u64::MAX);
         if size > max {
@@ -376,7 +371,21 @@ impl FerroEhrService {
         let found = crate::storage::ehr_repo::ehrs_by_subject_ids(&self.pool, &ids, PARTY_TYPES)
             .await
             .map_err(CohortError::Storage)?;
-        Ok(found.into_iter().map(|(_, ehr)| ehr).collect())
+        let mut ehrs: BTreeSet<EhrId> = found.into_iter().map(|(_, ehr)| ehr).collect();
+        let persons: Vec<uuid::Uuid> = parties.iter().map(|party| party.0).collect();
+        let declared = self
+            .grants
+            .declared_subjects(&persons)
+            .await
+            .map_err(CohortError::RecordSubjects)?;
+        for subject in declared {
+            let found = self
+                .subject_ehrs(&SubjectRef::person(subject.id, subject.namespace))
+                .await
+                .map_err(CohortError::Subject)?;
+            ehrs.extend(found);
+        }
+        Ok(ehrs)
     }
 
     /// The EHRs of the subjects the cohort names, each resolved by the
@@ -503,7 +512,7 @@ impl FerroEhrService {
         super::stamp_requester(&mut event);
         event.purpose = purpose;
         event.permit = crate::system_log::access_context::current_permit();
-        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
+        event.legal_basis = self.audit_legal_basis();
         self.record_access(event)
             .await
             .map_err(CohortError::Unrecorded)
@@ -599,11 +608,10 @@ mod tests {
             )
         };
         let unrecorded = |e: &ServiceError| matches!(e, ServiceError::Unrecorded(_));
-        let cases: [(CohortError, Expect<'_>); 8] = [
+        let cases: [(CohortError, Expect<'_>); 7] = [
             (CohortError::NotConfigured, &precondition),
             (CohortError::NoPredicates, &precondition),
             (CohortError::ScopeNotAllowed, &precondition),
-            (CohortError::IdentityNotHeld, &precondition),
             (
                 CohortError::UnknownPredicate("nope".to_owned()),
                 &precondition,

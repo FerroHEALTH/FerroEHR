@@ -93,7 +93,7 @@
         "operationId": "access_purposes",
         "responses": {
           "200": {
-            "description": "The header a purpose is declared in, the code system of the codes, and the accepted codes in configured order, each with its display text when the terminology server gives one. An empty `codes` accepts any code.",
+            "description": "The header a purpose is declared in, the header the reason of a justified access is stated in, the code system of the codes, and the accepted codes in configured order, each with its display text when the terminology server gives one. An empty `codes` accepts any code.",
             "content": {
               "application/json": {
                 "schema": {}
@@ -4258,6 +4258,85 @@
       }
     },
     "/ferroehr/rest/extensions/v1/admin/research-objection": {
+      "get": {
+        "tags": [
+          "admin-marks"
+        ],
+        "summary": "Read one EHR's research objection (`GET /admin/research-objection`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_research_objection_read",
+        "parameters": [
+          {
+            "name": "ehr_id",
+            "in": "query",
+            "description": "The EHR whose objection to read.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`{ \"objected\": …, \"objected_at\": …, \"ground\": … }`: whether an objection stands unoverridden, when the subject objected, and the controller's Art. 21(6) override ground. An EHR with none answers `objected: false` and nulls.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "`ehr_id` is missing or not a UUID.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such EHR.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "admin-marks"
@@ -4601,6 +4680,85 @@
       }
     },
     "/ferroehr/rest/extensions/v1/admin/retention/anchor": {
+      "get": {
+        "tags": [
+          "admin-marks"
+        ],
+        "summary": "Read one EHR's retention anchor and any EHR-wide hold\n(`GET /admin/retention/anchor`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_retention_anchor_read",
+        "parameters": [
+          {
+            "name": "ehr_id",
+            "in": "query",
+            "description": "The EHR whose anchor to read.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`{ \"anchor\": { \"jurisdiction\": …, \"anchored_at\": …, \"hold_at\": …, \"hold_ground\": … } }`, or `{ \"anchor\": null }` while none is recorded.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "`ehr_id` is missing or not a UUID.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such EHR.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
       "put": {
         "tags": [
           "admin-marks"
@@ -4762,6 +4920,85 @@
       }
     },
     "/ferroehr/rest/extensions/v1/admin/retention/hold": {
+      "get": {
+        "tags": [
+          "admin-marks"
+        ],
+        "summary": "Read the versioned objects of one EHR held from disposal\n(`GET /admin/retention/hold`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_retention_hold_register",
+        "parameters": [
+          {
+            "name": "ehr_id",
+            "in": "query",
+            "description": "The EHR whose holds to read.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`{ \"holds\": [{ \"vo_id\": …, \"held_at\": … }] }`, newest hold first.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "`ehr_id` is missing or not a UUID.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such EHR.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "admin-marks"
@@ -8035,6 +8272,14 @@
         "responses": {
           "200": {
             "description": "`offset`, `fetch` and `entries`: each entry in its ITS-JSON form for a reviewer, or in the subject view for the subject of care and their representative. No total count.",
+            "headers": {
+              "FerroEHR-Access-Log-View": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "`subject` when the answer is the subject view, `full` when it is the full view. Our own extension."
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {}
@@ -8124,6 +8369,14 @@
         "responses": {
           "200": {
             "description": "The entry, in its ITS-JSON form for a reviewer or in the subject view for the subject of care and their representative.",
+            "headers": {
+              "FerroEHR-Access-Log-View": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "`subject` when the answer is the subject view, `full` when it is the full view. Our own extension."
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {}
@@ -9367,7 +9620,7 @@
           "Query"
         ],
         "summary": "Execute an AQL query over a cohort selected in the demographic domain\n(`POST /query/cohort`).",
-        "description": "Our own extension: no openEHR spec governs this operation. A predicate\nfrom the deployment's `[privacy.cohort.predicates]` allow-list selects\nparties in the demographic domain; the clinical domain resolves them to\nthe EHRs whose `EHR_STATUS.subject` names one of them and runs the AQL\nover exactly those EHRs. Only identifiers cross between the steps, and\nthe caller never receives a party id.\n\nThe result set carries a `meta.cohort` object with the cohort size, the\nnumber of EHRs served, whether small-cell suppression withheld the rows, and\na SHA-256 digest of the predicate list, which is also how the one access\nevent this execution records names the cohort.\n\nA request may instead, or as well, name its `subjects` by identifier in any\nidentifier domain, each resolved through the installed EHR index provider;\nunder an IHE patient identity source that is the only form served, since\nthe server holds no party-to-EHR map there.\n\nThe route answers `404` until the deployment binds at least one predicate\nor sets `[privacy.cohort] subjects = true`.",
+        "description": "Our own extension: no openEHR spec governs this operation. A predicate\nfrom the deployment's `[privacy.cohort.predicates]` allow-list selects\nparties in the demographic domain; they resolve to the EHRs whose\n`EHR_STATUS.subject` names one of them and to the EHRs of the record\nsubjects each selected `PERSON` declares, which the installed EHR index\nprovider resolves, and the AQL runs over exactly those EHRs. Only\nidentifiers cross between the steps, and the caller never receives a\nparty id or a record subject.\n\nThe result set carries a `meta.cohort` object with the cohort size, the\nnumber of EHRs served, whether small-cell suppression withheld the rows, and\na SHA-256 digest of the predicate list, which is also how the one access\nevent this execution records names the cohort.\n\nA request may instead, or as well, name its `subjects` by identifier in any\nidentifier domain, each resolved through the installed EHR index provider;\nunder an IHE patient identity source a predicate reaches EHRs only through\nthe record subjects, since no `EHR_STATUS` there names a party.\n\nThe route answers `404` until the deployment binds at least one predicate\nor sets `[privacy.cohort] subjects = true`.",
         "operationId": "query_execute_cohort",
         "requestBody": {
           "description": "`q` REQUIRED (the AQL), `cohort` (the predicates, intersected) and `subjects` (identifiers as `id`, `namespace` and an optional `type`, each resolved through the EHR index provider), at least one of the two non-empty, plus the OPTIONAL `purpose`, `query_parameters`, `offset` and `fetch`. The last four are spelled as on the released `AdhocQueryExecute` body, so a client that already speaks the query API needs no second vocabulary. There is no `ehr_id`: the cohort IS the scope. Each `cohort` entry names a key the deployment bound in `[privacy.cohort.predicates]`; several entries INTERSECT. An undeclared member is refused `400`.",
@@ -9400,7 +9653,7 @@
             }
           },
           "400": {
-            "description": "The request names neither a predicate nor a subject, names a predicate under an IHE patient identity source, names one the deployment did not bind, carries a value the binding's kind cannot read (an age band that is not `<min>-<max>`), pre-scopes the query with `ehr_ids`, or carries AQL that does not parse or type-check.",
+            "description": "The request names neither a predicate nor a subject, names a predicate the deployment did not bind, carries a value the binding's kind cannot read (an age band that is not `<min>-<max>`), pre-scopes the query with `ehr_ids`, or carries AQL that does not parse or type-check.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -10155,7 +10408,6 @@
                   "solution_version": "3.11.0",
                   "vendor": "Cadasto B.V.",
                   "restapi_specs_version": "1.1.0",
-                  "conformance_profile": "BASE+OPTIONS",
                   "endpoints": [
                     "/ehr",
                     "/demographic",
@@ -13161,7 +13413,7 @@
           "CONTRIBUTION"
         ],
         "summary": "Create a demographic `CONTRIBUTION` (`POST /demographic/contribution`).",
-        "description": "The released operation defines the relaxed commit envelope verbatim: \"We\nwill use the relaxed CONTRIBUTION with the following optional attributes:\n`uid`: when provided, it will be accepted in case is not in-use, otherwise\nerror will be returned; `audit.time_committed`: server will always set it;\n`audit.system_id`: when provided, it will be validated\" (ITS-REST\n`specifications/operations/demographic_contribution_create.yaml`). \"The\n`audit` and each `versions[i].commit_audit` are `UPDATE_AUDIT` objects …\nClients SHOULD send `_type: \\\"UPDATE_AUDIT\\\"`; for interoperability servers\nSHOULD additionally accept `_type: \\\"AUDIT_DETAILS\\\"` or an omitted `_type`\nfor this attribute.\"\n\nThe commit envelope is canonical JSON only.",
+        "description": "The released operation defines the relaxed commit envelope verbatim: \"We\nwill use the relaxed CONTRIBUTION with the following optional attributes:\n`uid`: when provided, it will be accepted in case is not in-use, otherwise\nerror will be returned; `audit.time_committed`: server will always set it;\n`audit.system_id`: when provided, it will be validated\" (ITS-REST\n`specifications/operations/demographic_contribution_create.yaml`). \"The\n`audit` and each `versions[i].commit_audit` are `UPDATE_AUDIT` objects …\nClients SHOULD send `_type: \\\"UPDATE_AUDIT\\\"`; for interoperability servers\nSHOULD additionally accept `_type: \\\"AUDIT_DETAILS\\\"` or an omitted `_type`\nfor this attribute.\"\n\nThe commit envelope is canonical JSON only; the committed CONTRIBUTION is\nanswered in canonical JSON or XML.",
         "operationId": "demographic_contribution_create",
         "parameters": [
           {
@@ -13193,7 +13445,7 @@
           {
             "name": "Accept",
             "in": "header",
-            "description": "The canonical response format (ITS-REST `specifications/parameters/header/Accept_canonical.yaml`). The `201` body is served as `application/json`; an `Accept` that excludes JSON is `406`.",
+            "description": "The canonical response format (ITS-REST `specifications/parameters/header/Accept_canonical.yaml`). The `201` body is served as `application/json` or `application/xml`; any other `Accept` is `406`.",
             "required": false,
             "schema": {
               "type": [
@@ -13421,7 +13673,7 @@
             }
           },
           "406": {
-            "description": "The `Accept` header cannot be satisfied: the `201` body is served as canonical JSON only, so an `Accept` excluding `application/json` MUST be refused (`Resources.md` §\"JSON Format\"). The released operation does not enumerate `406`; the MUST is cross-cutting.",
+            "description": "The `Accept` header cannot be satisfied: the `201` body is the CONTRIBUTION in canonical JSON or in XML under a `contribution` root (#4652), so any other `Accept` MUST be refused (`Resources.md` §\"XML Format\"). The released operation does not enumerate `406`; the MUST is cross-cutting.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -13485,7 +13737,7 @@
           {
             "name": "Accept",
             "in": "header",
-            "description": "The canonical response format (ITS-REST `specifications/parameters/header/Accept_canonical.yaml`). This build serves the CONTRIBUTION envelope as `application/json`; an `Accept` that excludes JSON — including the Simplified types the released `200` describes — is `406`.",
+            "description": "The canonical response format (ITS-REST `specifications/parameters/header/Accept_canonical.yaml`). This build serves the CONTRIBUTION as `application/json` or `application/xml`; any other `Accept`, the Simplified types the released `200` describes included, is `406`.",
             "required": false,
             "schema": {
               "type": [
@@ -13570,7 +13822,7 @@
             }
           },
           "406": {
-            "description": "The `Accept` header cannot be satisfied: the CONTRIBUTION envelope is served as canonical JSON only on this build, so an `Accept` excluding `application/json` (XML, or one of the Simplified types the released `200` describes) MUST be refused — \"If the service cannot fulfill this aspect of the request, it MUST respond with HTTP status code `406 Not Acceptable`\" (`Resources.md` §\"JSON Format\"/§\"Simplified Formats\"). The released operation does not enumerate `406`; the MUST is cross-cutting.",
+            "description": "The `Accept` header cannot be satisfied: the CONTRIBUTION is served as canonical JSON or as XML under a `contribution` root (#4652), so any other `Accept` (one of the Simplified types the released `200` describes) MUST be refused — \"If the service cannot fulfill this aspect of the request, it MUST respond with HTTP status code `406 Not Acceptable`\" (`Resources.md` §\"JSON Format\"/§\"Simplified Formats\"). The released operation does not enumerate `406`; the MUST is cross-cutting.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -19514,7 +19766,7 @@
           "VERSIONED_PARTY"
         ],
         "summary": "Retrieve the `VERSIONED_PARTY` container\n(`GET /demographic/versioned_party/{versioned_object_uid}`).",
-        "description": "\"Retrieves a `VERSIONED_PARTY` identified by `versioned_object_uid`.\"\n(ITS-REST `specifications/operations/versioned_party_get.yaml`). The\nfour `versioned_party_*` reads serve canonical JSON only; an XML-only\n`Accept` is `406`.",
+        "description": "\"Retrieves a `VERSIONED_PARTY` identified by `versioned_object_uid`.\"\n(ITS-REST `specifications/operations/versioned_party_get.yaml`). The\nfour `versioned_party_*` reads serve canonical JSON or XML (`Resources.md`\n§XML Format).",
         "operationId": "versioned_party_get",
         "parameters": [
           {
@@ -19530,7 +19782,7 @@
           {
             "name": "Accept",
             "in": "header",
-            "description": "The canonical response format (ITS-REST `specifications/parameters/header/Accept_canonical.yaml`). This build serves the container as `application/json`; an `Accept` that excludes JSON is `406`.",
+            "description": "The canonical response format (ITS-REST `specifications/parameters/header/Accept_canonical.yaml`). This build serves the container as `application/json` or `application/xml`; any other `Accept` is `406`.",
             "required": false,
             "schema": {
               "type": [
@@ -19599,7 +19851,7 @@
             }
           },
           "406": {
-            "description": "The `Accept` header cannot be satisfied: this build serves the VERSIONED_PARTY container as canonical JSON only, so an `Accept` that excludes `application/json` is refused — \"If the service cannot fulfill this aspect of the request, it MUST respond with HTTP status code `406 Not Acceptable`\" (`Resources.md` §\"XML Format\"/§\"JSON Format\"). The released operation does not enumerate `406`; the MUST is cross-cutting.",
+            "description": "The `Accept` header cannot be satisfied: the VERSIONED_PARTY container is served as canonical `application/json` or as `application/xml` under a `versioned_party` root (#4652), so any other `Accept` is refused — \"If the service cannot fulfill this aspect of the request, it MUST respond with HTTP status code `406 Not Acceptable`\" (`Resources.md` §\"XML Format\"/§\"JSON Format\"). The released operation does not enumerate `406`; the MUST is cross-cutting.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -19633,7 +19885,7 @@
           {
             "name": "Accept",
             "in": "header",
-            "description": "The canonical response format (ITS-REST `specifications/parameters/header/Accept_canonical.yaml`). This build serves the history as `application/json`; an `Accept` that excludes JSON is `406`.",
+            "description": "The canonical response format (ITS-REST `specifications/parameters/header/Accept_canonical.yaml`). This build serves the history as `application/json` or `application/xml`; any other `Accept` is `406`.",
             "required": false,
             "schema": {
               "type": [
@@ -19688,7 +19940,7 @@
             }
           },
           "406": {
-            "description": "The `Accept` header cannot be satisfied: the REVISION_HISTORY is served as canonical JSON only on this build, so an `Accept` excluding `application/json` MUST be refused (`Resources.md` §\"JSON Format\"). The released operation does not enumerate `406`; the MUST is cross-cutting.",
+            "description": "The `Accept` header cannot be satisfied: the REVISION_HISTORY is served as canonical JSON or as XML under a `revision_history` root (#4652), so any other `Accept` MUST be refused (`Resources.md` §\"XML Format\"). The released operation does not enumerate `406`; the MUST is cross-cutting.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -19732,7 +19984,7 @@
           {
             "name": "Accept",
             "in": "header",
-            "description": "The canonical response format (ITS-REST `specifications/parameters/header/Accept_canonical.yaml`). This build serves the VERSION as `application/json`; an `Accept` that excludes JSON is `406`.",
+            "description": "The canonical response format (ITS-REST `specifications/parameters/header/Accept_canonical.yaml`). This build serves the VERSION as `application/json` or `application/xml`; any other `Accept` is `406`.",
             "required": false,
             "schema": {
               "type": [
@@ -19787,7 +20039,7 @@
             }
           },
           "406": {
-            "description": "The `Accept` header cannot be satisfied: the VERSION is served as canonical JSON only on this build, so an `Accept` excluding `application/json` MUST be refused (`Resources.md` §\"JSON Format\"). The released operation does not enumerate `406`; the MUST is cross-cutting.",
+            "description": "The `Accept` header cannot be satisfied: the VERSION is served as canonical JSON or as XML under the published `version` root, so any other `Accept` MUST be refused (`Resources.md` §\"XML Format\"). The released operation does not enumerate `406`; the MUST is cross-cutting.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -19841,7 +20093,7 @@
           {
             "name": "Accept",
             "in": "header",
-            "description": "The canonical response format (ITS-REST `specifications/parameters/header/Accept_canonical.yaml`). This build serves the VERSION as `application/json`; an `Accept` that excludes JSON is `406`.",
+            "description": "The canonical response format (ITS-REST `specifications/parameters/header/Accept_canonical.yaml`). This build serves the VERSION as `application/json` or `application/xml`; any other `Accept` is `406`.",
             "required": false,
             "schema": {
               "type": [
@@ -19896,7 +20148,7 @@
             }
           },
           "406": {
-            "description": "The `Accept` header cannot be satisfied: the VERSION is served as canonical JSON only on this build, so an `Accept` excluding `application/json` MUST be refused (`Resources.md` §\"JSON Format\"). The released operation does not enumerate `406`; the MUST is cross-cutting.",
+            "description": "The `Accept` header cannot be satisfied: the VERSION is served as canonical JSON or as XML under the published `version` root, so any other `Accept` MUST be refused (`Resources.md` §\"XML Format\"). The released operation does not enumerate `406`; the MUST is cross-cutting.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -22863,7 +23115,7 @@
             }
           },
           "406": {
-            "description": "The `Accept` header cannot be satisfied: a CONTRIBUTION envelope is served as canonical `application/json` only, optionally with its inner `versions[i].data` payloads in `application/openehr.wt.flat+json` / `application/openehr.wt.structured+json` — there is no canonical-XML CONTRIBUTION shape, so `application/xml` is refused (`Resources.md` §\"JSON Format\"/§\"Simplified Formats\": \"If the service cannot fulfill this aspect of the request, it MUST respond with HTTP status code `406 Not Acceptable`\").",
+            "description": "The `Accept` header cannot be satisfied: a CONTRIBUTION is served as canonical `application/json`, optionally with its inner `versions[i].data` payloads in `application/openehr.wt.flat+json` / `application/openehr.wt.structured+json`, or as `application/xml` under a `contribution` root (#4652), and any other `Accept` is refused (`Resources.md` §\"JSON Format\"/§\"Simplified Formats\": \"If the service cannot fulfill this aspect of the request, it MUST respond with HTTP status code `406 Not Acceptable`\").",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -22893,7 +23145,7 @@
             }
           },
           "415": {
-            "description": "The request `Content-Type` is not one this resource can process — anything outside `application/json` and the two Simplified Formats, `application/xml` included (a CONTRIBUTION has no canonical XML wire shape), or a deprecated `…schema+json` variant (`Resources.md` §\"JSON Format\": \"If the service cannot process the request payload as JSON format, it MUST respond with HTTP status code `415 Unsupported Media Type`\"; §\"Simplified Formats\" carries the same MUST for the simplified types).",
+            "description": "The request `Content-Type` is not one this resource can process — anything outside `application/json` and the two Simplified Formats, `application/xml` included (no released schema defines the XML of the commit body), or a deprecated `…schema+json` variant (`Resources.md` §\"JSON Format\": \"If the service cannot process the request payload as JSON format, it MUST respond with HTTP status code `415 Unsupported Media Type`\"; §\"Simplified Formats\" carries the same MUST for the simplified types).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -22960,7 +23212,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The CONTRIBUTION. The envelope is ALWAYS canonical JSON — SPECITS-84 (Amendment_record, 27 Apr 2026) and ITS-REST `specifications/responses/200_CONTRIBUTION.yaml`: \"the response body is still a canonical CONTRIBUTION envelope; only each `versions[i].data` payload is serialized in the requested FLAT or STRUCTURED form\" — so a simplified `Accept` changes only resolved inner COMPOSITIONs; unresolved OBJECT_REF members have no `data` and pass through untouched, and a resolved non-COMPOSITION payload (EHR_STATUS, FOLDER) is `406`, the Simplified Formats being defined for templated COMPOSITION content only. The example is the default, canonical, unresolved form: `versions` as OBJECT_REFs whose `id` is an OBJECT_VERSION_ID, `namespace` is `local` and `type` is the affected DATA class (COMPOSITION / EHR_STATUS / FOLDER — the discipline of the released `Contribution.yaml` example, even though RM common master06 describes the list as the affected VERSION objects), with the full AUDIT_DETAILS whose `description` is optional (0..1 in RM, so it is absent when the committer sent none).",
+            "description": "The CONTRIBUTION, in canonical JSON or, unresolved, as XML under a `contribution` root (#4652). Under a Simplified `Accept` the envelope stays canonical JSON — SPECITS-84 (Amendment_record, 27 Apr 2026) and ITS-REST `specifications/responses/200_CONTRIBUTION.yaml`: \"the response body is still a canonical CONTRIBUTION envelope; only each `versions[i].data` payload is serialized in the requested FLAT or STRUCTURED form\" — so a simplified `Accept` changes only resolved inner COMPOSITIONs; unresolved OBJECT_REF members have no `data` and pass through untouched, and a resolved non-COMPOSITION payload (EHR_STATUS, FOLDER) is `406`, the Simplified Formats being defined for templated COMPOSITION content only. The example is the default, canonical, unresolved form: `versions` as OBJECT_REFs whose `id` is an OBJECT_VERSION_ID, `namespace` is `local` and `type` is the affected DATA class (COMPOSITION / EHR_STATUS / FOLDER — the discipline of the released `Contribution.yaml` example, even though RM common master06 describes the list as the affected VERSION objects), with the full AUDIT_DETAILS whose `description` is optional (0..1 in RM, so it is absent when the committer sent none).",
             "headers": {
               "ETag": {
                 "schema": {
@@ -23063,7 +23315,7 @@
             }
           },
           "406": {
-            "description": "The `Accept` header cannot be satisfied: the CONTRIBUTION envelope is served as canonical `application/json` only (there is no canonical-XML CONTRIBUTION shape, so `application/xml` is refused), and a Simplified-Format `Accept` is refused when a resolved member payload is not a COMPOSITION (`Resources.md` §\"JSON Format\"/§\"Simplified Formats\": \"If the service cannot fulfill this aspect of the request, it MUST respond with HTTP status code `406 Not Acceptable`\").",
+            "description": "The `Accept` header cannot be satisfied: the CONTRIBUTION is served as canonical `application/json` or as `application/xml` under a `contribution` root (#4652), a `Prefer: resolve_refs` read, whose versions are no OBJECT_REFs, as JSON only, and a Simplified-Format `Accept` is refused when a resolved member payload is not a COMPOSITION (`Resources.md` §\"JSON Format\"/§\"Simplified Formats\": \"If the service cannot fulfill this aspect of the request, it MUST respond with HTTP status code `406 Not Acceptable`\").",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -28987,7 +29239,6 @@
           "solution_version": "3.11.0",
           "vendor": "Cadasto B.V.",
           "restapi_specs_version": "1.1.0",
-          "conformance_profile": "BASE+OPTIONS",
           "endpoints": [
             "/ehr",
             "/demographic",

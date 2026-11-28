@@ -183,7 +183,7 @@ fn fact_rows(version_uid: &str, facts: Option<&VersionedObjectFacts>) -> Vec<(St
         ));
         rows.push((
             tr(RecordsMsg::FactSigned),
-            t(tr(if facts.signed { Msg::Yes } else { Msg::No })),
+            crate::pages::versions::signature_words(facts),
         ));
         rows.push((tr(RecordsMsg::FactLifecycle), t(&facts.lifecycle_state)));
     }
@@ -506,11 +506,9 @@ fn edit_form(ehr_id: &str, editor: Editor) -> Html {
 /// Edit status.
 pub async fn edit_page() -> Drawn {
     let ehr_id = ehr_id_param();
-    let body = match read_edit(ehr_id.clone()).await {
-        Form::Shown(editor) => edit_form(&ehr_id, *editor),
-        Form::Refused(refusal) => refusal.view(),
-        Form::Left => Html::empty(),
-    };
+    let body = read_edit(ehr_id.clone())
+        .await
+        .view(|editor| edit_form(&ehr_id, editor));
     let mut trail = crumbs(&ehr_id);
     trail.push(Crumb::new(
         tr(RecordsMsg::EhrTabStatus),

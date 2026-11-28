@@ -1688,10 +1688,12 @@ guarded_handler! {
     ///
     /// Our own extension: no openEHR spec governs this operation. A predicate
     /// from the deployment's `[privacy.cohort.predicates]` allow-list selects
-    /// parties in the demographic domain; the clinical domain resolves them to
-    /// the EHRs whose `EHR_STATUS.subject` names one of them and runs the AQL
-    /// over exactly those EHRs. Only identifiers cross between the steps, and
-    /// the caller never receives a party id.
+    /// parties in the demographic domain; they resolve to the EHRs whose
+    /// `EHR_STATUS.subject` names one of them and to the EHRs of the record
+    /// subjects each selected `PERSON` declares, which the installed EHR index
+    /// provider resolves, and the AQL runs over exactly those EHRs. Only
+    /// identifiers cross between the steps, and the caller never receives a
+    /// party id or a record subject.
     ///
     /// The result set carries a `meta.cohort` object with the cohort size, the
     /// number of EHRs served, whether small-cell suppression withheld the rows, and
@@ -1700,8 +1702,8 @@ guarded_handler! {
     ///
     /// A request may instead, or as well, name its `subjects` by identifier in any
     /// identifier domain, each resolved through the installed EHR index provider;
-    /// under an IHE patient identity source that is the only form served, since
-    /// the server holds no party-to-EHR map there.
+    /// under an IHE patient identity source a predicate reaches EHRs only through
+    /// the record subjects, since no `EHR_STATUS` there names a party.
     ///
     /// The route answers `404` until the deployment binds at least one predicate
     /// or sets `[privacy.cohort] subjects = true`.
@@ -1744,9 +1746,8 @@ guarded_handler! {
              body = serde_json::Value,
              content_type = "application/json"),
             (status = 400, description = "The request names neither a predicate nor \
-                                          a subject, names a predicate under an \
-                                          IHE patient identity source, names one \
-                                          the deployment did not bind, carries a \
+                                          a subject, names a predicate the \
+                                          deployment did not bind, carries a \
                                           value the binding's kind cannot read (an \
                                           age band that is not `<min>-<max>`), \
                                           pre-scopes the query with `ehr_ids`, or \

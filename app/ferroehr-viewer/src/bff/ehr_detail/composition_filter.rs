@@ -45,8 +45,9 @@ const TO_PREDICATE: &str = " AND c/context/start_time/value <= $to";
 /// The composer predicate (`PARTY_IDENTIFIED._name_` on `COMPOSITION.composer`).
 const COMPOSER_PREDICATE: &str = " AND c/composer/name LIKE $composer";
 
-/// Newest first, on the same instant the date filter bounds.
-const ORDER_BY: &str = " ORDER BY c/context/start_time/value DESC";
+/// Newest first, on the same instant the date filter bounds; the uid breaks a
+/// tie, so a page neither repeats nor skips a composition of the same instant.
+const ORDER_BY: &str = " ORDER BY c/context/start_time/value DESC, c/uid/value DESC";
 
 /// The instant a date-only lower bound means: the start of that UTC day.
 const DAY_START: &str = "T00:00:00Z";
@@ -267,7 +268,7 @@ mod tests {
         assert!(
             query
                 .aql
-                .ends_with("ORDER BY c/context/start_time/value DESC")
+                .ends_with("ORDER BY c/context/start_time/value DESC, c/uid/value DESC")
         );
     }
 

@@ -38,11 +38,11 @@ purpose_system = "http://terminology.hl7.org/CodeSystem/v3-ActReason"
 | `suppress_login_events` | bool | `true` | Skip successful-login records. Rejected accesses (`401`/`403`) are always recorded. |
 | `resolve_subject` | bool | `true` | Enrich the patient participant with an indexed lookup of the EHR's subject, remembered per EHR for an hour, so a request seldom asks. The IHE BALP patient patterns and the patient-centric audit search need the subject. |
 | `server_host` | string | unset ⇒ the `value_if_missing` fill | This node's advertised network address, reported as the destination `NetworkAccessPointID`. |
-| `purpose_header` | string | `x-purpose-of-use` | The request header a caller declares its purpose of use in, recorded on every access record. NEN 7513 asks on whose authority a record was read and EHDS Art. 9 asks why; neither is derivable from the request, so the caller declares it. IHE carries the equivalent in a SAML attribute rather than a header, so the header is FerroEHR's own. An issuer with an `[auth.issuer.<name>.attributes]` table states the purposes in its token, and a header naming another purpose is refused ([where the purpose comes from](../audit.md#where-the-purpose-of-use-comes-from)). |
+| `purpose_header` | string | `x-purpose-of-use` | The request header a caller declares its purpose of use in, recorded on every access record. NEN 7513 asks on whose authority a record was read and EHDS Art. 9 asks why; neither is derivable from the request, so the caller declares it. IHE carries the equivalent in a SAML attribute rather than a header, so the header is FerroEHR's own. An issuer with an `[auth.issuer.<name>.attributes]` table states the purposes in its token, and a header naming another purpose is refused ([where the purpose comes from](../ehds-logging.md#where-the-purpose-of-use-comes-from)). |
 | `permit_header` | string | `x-data-permit` | The request header a secondary-use caller declares the data permit it acts under in (EHDS Art. 68), recorded on every access record as `permit`. The value is the permit's identifier, 1 to 128 characters of letters, digits and `.` `_` `:` `/` `#` `-`; any other value is recorded as absent. No specification names a header for it, so the header is FerroEHR's own. See [Secondary use](../compliance/secondary-use.md#the-access-record). |
-| `reason_header` | string | `x-access-reason` | The request header a caller states the reason for a [justified access](../security.md#justified-access-outside-the-care-relationships) in: the clinician's own words, percent-encoded UTF-8, 1 to 1000 characters after decoding, with no control character; any other value is a `400`. The access record keeps the reason, and the FHIR `AuditEvent` carries it as the text of the purpose of use ([justified and emergency access](../audit.md#justified-and-emergency-access)). No specification names a header for it, so the header and its bound are FerroEHR's own. |
+| `reason_header` | string | `x-access-reason` | The request header a caller states the reason for a [justified access](../access-control.md#justified-access-outside-the-care-relationships) in: the clinician's own words, percent-encoded UTF-8, 1 to 1000 characters after decoding, with no control character; any other value is a `400`. The access record keeps the reason, and the FHIR `AuditEvent` carries it as the text of the purpose of use ([justified and emergency access](../ehds-logging.md#justified-and-emergency-access)). No specification names a header for it, so the header and its bound are FerroEHR's own. |
 | `purpose_codes` | list of string | `[]` | The purpose codes this deployment accepts. Empty records whatever the caller declares. A non-empty list records a declared code only when it is on the list, so an unagreed string does not sit in the trail reading like an established purpose. |
-| `purpose_system` | string | `http://terminology.hl7.org/CodeSystem/v3-ActReason` | The canonical URL of the FHIR `CodeSystem` the `purpose_codes` belong to, HL7's `ActReason` by default. `GET {extensions}/access/purposes` answers the header, this system and each accepted code with the display text the [terminology server](config-integrations.md#terminology)'s `CodeSystem/$lookup` gives it, so a client such as the viewer offers the codes by name. Any authenticated caller reads that list, one with no role included: it names no personal data. No specification names the system of a purpose header, so the key is FerroEHR's own. |
+| `purpose_system` | string | `http://terminology.hl7.org/CodeSystem/v3-ActReason` | The canonical URL of the FHIR `CodeSystem` the `purpose_codes` belong to, HL7's `ActReason` by default. `GET {extensions}/access/purposes` answers the header, the `reason_header`, this system and each accepted code with the display text the [terminology server](config-integrations.md#terminology)'s `CodeSystem/$lookup` gives it, so a client such as the viewer offers the codes by name. Any authenticated caller reads that list, one with no role included: it names no personal data. No specification names the system of a purpose header, so the key is FerroEHR's own. |
 | `legal_basis` | string | unset | The legal basis this deployment processes under, recorded on every access record. A deployment-level fact: the controller establishes the GDPR Art. 6/9 condition once. Unset records nothing rather than a guess. |
 
 Every record of a request is written to the local store before the response
@@ -66,27 +66,26 @@ and `Retry-After`. There is no fail mode and no queue: `fail_mode` and
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `verify_interval` | duration | `"1h"` | The time between two scheduled verifications of the sealed windows of the system records and the access log; `"0s"` turns the schedule off. Each run verifies the windows sealed since the newest window an earlier run found intact. A finding is logged at `ERROR`, counted in `atna_audit_chain_findings` and reported by the `audit_chain` indicator on `GET /health/readiness`. See [Tamper evidence](../audit.md#tamper-evidence). |
+| `verify_interval` | duration | `"1h"` | The time between two scheduled verifications of the sealed windows of the system records and the access log; `"0s"` turns the schedule off. Each run verifies the windows sealed since the newest window an earlier run found intact. A finding is logged at `ERROR`, counted in `atna_audit_chain_findings` and reported by the `audit_chain` indicator on `GET /health/readiness`. See [Tamper evidence](../audit-integrity.md#tamper-evidence). |
 | `full_verify_interval` | duration | `"7d"` | The time between two scheduled full passes over every sealed window of both logs; `"0s"` leaves the full pass to `ferroehr audit-chain verify` on demand. A run that found damage is always followed by a full pass. |
 | `max_verify_lag` | duration | `"4h"` | How long a record may wait past its chain's verification cursor before the `audit_chain` indicator reads `DEGRADED`; `"0s"` reports the lag only as the `audit_chain_verification_lag` and `audit_chain_unverified_age_seconds` metrics. Set it above `verify_interval`. |
 
 The local store is always on while auditing is: every record is written to
 it before its access is reported, and syslog and the FHIR feed deliver from
-it, so a down repository loses nothing. `enabled` is an unknown key, refused
-at load.
+it, so a down repository loses nothing.
 
 How long the store and the access log keep a record is the controller's
 access policy (`ACCESS_POLICY.log_retention`), not a configuration key: the
 period, whether EHDS binds the controller, and the floors and ceilings its law
 sets, each with its provision. `retention` and `sgb_v_309_controller` are
 unknown keys and refused at load. See
-[Audit trail](../audit.md#retention-and-who-chooses-it).
+[Audit trail](../ehds-logging.md#retention-and-who-chooses-it).
 
 ### The audit category register
 
 The map every access record is classified through by EHDS category (Annex II
-3.2(c); see [the EHDS logging elements](../audit.md#the-ehds-logging-elements-mapped))
-is an [admin register](../operational-policy.md#the-admin-registers), not a
+3.2(c); see [the EHDS logging elements](../ehds-logging.md#the-ehds-logging-elements-mapped))
+is an [admin register](../access-policy.md#the-admin-registers), not a
 configuration key: you read and replace it through
 `{ext}/admin/registers/audit-categories`, every version is kept with its
 committer, and a change applies on the next request without a restart. The
@@ -95,8 +94,7 @@ FerroHEALTH products share (FerroAUDIT); the register is the deployment's map.
 A template id, or failing that a root archetype id, maps to a list of
 categories, or to the word `none` for data of no category. An access the map
 in force cannot classify is recorded `unclassified` with its ids, never
-refused. `[audit.categories]` in `ferroehr.toml` is an unknown key and refuses
-boot.
+refused.
 
 **The shipped map.** While the register declares no template and no
 archetype, the map FerroEHR ships applies
@@ -171,7 +169,7 @@ free text, so the origins your deployment recognises are policy in the CDR,
 not configuration: each is the `origin` element of a `data_origin` grant in
 force, which a
 [retention period](../compliance/retention.md#keying-a-period-on-an-origin)
-and an [access directive's data scope](../security.md#access-directives) may then
+and an [access directive's data scope](../access-control.md#access-directives) may then
 name ([Operational policy](../operational-policy.md#what-the-grants-decide)).
 A body that carries no `FEEDER_AUDIT`, committed by the holder of such a
 grant, is stamped with its origin; a direct commit by any other caller keeps
@@ -258,4 +256,4 @@ can remove the newest windows together with the checkpoints that seal them,
 and only a checkpoint published where that person cannot write shows it.
 Mount the directory from write-once storage, or from storage another system
 collects from, and give every instance the same one. See the
-[audit page](../audit.md#seals-checkpoints-and-the-transfer-of-a-log).
+[audit page](../audit-integrity.md#seals-checkpoints-and-the-transfer-of-a-log).

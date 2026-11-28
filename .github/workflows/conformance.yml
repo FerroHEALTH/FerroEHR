@@ -30,7 +30,9 @@
 # it is the record of record and the verdict of this job. The `development`
 # profile reads them against the pinned master of each openEHR repository,
 # which FerroEHR builds on; it is published beside the record under a heading
-# and an artifact of its own and is never counted toward it. Each run covers
+# and an artifact of its own and is never counted toward it, and its own
+# committed record (docs/conformance/ferroehr/development/) must hold its
+# statuses. Each run covers
 # the `smart` documents: the Action passes the SMART Platform base URL and
 # hands the committed test issuer's key to the container by name (#4503).
 #
@@ -43,11 +45,9 @@
 # results views of each profile as its own artifact. recording.har holds the
 # server's response bodies and is never uploaded.
 #
-# Each run draws its Veredictum badges and, from a run on main that is not a
-# pull request, pushes them to a branch of its own the README reads: the
-# released run to veredictum-badges, the development run to
-# veredictum-badges-development (Veredictum book, Badges). A caller grants
-# `contents: write` for that push and `packages: read` for the pulls.
+# The README badges come from the committed records
+# (scripts/render/measured-badges.sh), so the Action pushes no badge branch.
+# A caller grants `contents: read` and `packages: read` for the pulls.
 #
 # No openEHR specification governs how CI runs the instrument: our own design.
 name: Conformance
@@ -146,10 +146,7 @@ jobs:
     outputs:
       verdict: ${{ steps.verdict.outputs.verdict }}
     permissions:
-      # Each run pushes its badges to its own branch: veredictum-badges and
-      # veredictum-badges-development.
-      # The Action pushes only from a run on main that is not a pull request.
-      contents: write
+      contents: read
       packages: read # pull the images under test from GHCR
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -339,7 +336,6 @@ jobs:
           admin-auth: basic
           profile: released
           out-dir: conformance-results/released
-          badge-branch: veredictum-badges
           image: ghcr.io/vernum-projecten/veredictum@sha256:4416e6701883fba427a97d05b915ed9552253edf5b010cc30ad9eebd5271687e
       # Fresh volumes again, so the development run starts on the ground the
       # released run had.
@@ -376,7 +372,6 @@ jobs:
           admin-auth: basic
           profile: development
           out-dir: conformance-results/development
-          badge-branch: veredictum-badges-development
           image: ghcr.io/vernum-projecten/veredictum@sha256:4416e6701883fba427a97d05b915ed9552253edf5b010cc30ad9eebd5271687e
       # The views each run's outputs name, one directory per profile, so the
       # two are never mixed. recording.har is never among them.
@@ -419,7 +414,8 @@ jobs:
           path: conformance-views/development
           if-no-files-found: warn
       # The released run decides the job. The development run fails it only
-      # when it could not run at all, which is a defect of this pipeline. An
+      # when it could not run at all, which is a defect of this pipeline, or
+      # when its statuses differ from its committed record. An
       # advisory caller gets the same verdict as an output, a summary line and
       # a warning, and a green job.
       - id: verdict
@@ -429,6 +425,7 @@ jobs:
           RELEASED_EXIT: ${{ steps.released.outputs.exit-code }}
           RELEASED_RESULTS: ${{ steps.released.outputs.results }}
           DEVELOPMENT_EXIT: ${{ steps.development.outputs.exit-code }}
+          DEVELOPMENT_RESULTS: ${{ steps.development.outputs.results }}
           ADVISORY: ${{ inputs.advisory == true }}
         shell: bash
         run: |
@@ -444,6 +441,9 @@ jobs:
           # A released run whose only red rows are the deviations FerroEHR carries on
           # purpose passes; each stays red in the results (deviations.json).
           bash scripts/conformance-deviations.sh --self-test
+          # The committed record must hold this run's statuses, so a change
+          # that moves a row commits the record of its own run (#6747).
+          bash scripts/conformance-record.sh --self-test
           case "$RELEASED_EXIT" in
             0 | 1)
               status=0
@@ -453,6 +453,8 @@ jobs:
               else
                 judged="$(bash scripts/conformance-deviations.sh "$RELEASED_RESULTS" \
                   docs/conformance/party/ferroehr/deviations.json "$GITHUB_STEP_SUMMARY" 2>&1)" || status=$?
+                compared="$(bash scripts/conformance-record.sh compare "$RELEASED_RESULTS" 2>&1)" || status=$?
+                printf -v judged '%s\n%s' "$judged" "$compared"
               fi
               grep -v '^::error::' <<<"$judged" || true
               if [ "$status" != 0 ]; then
@@ -465,6 +467,24 @@ jobs:
             *)
               problems+=("the released-profile run exited ${RELEASED_EXIT:-without a status}")
               bad=1
+              ;;
+          esac
+          # The development record holds the development run's statuses too
+          # (#6769), so its README badges name what that run gives.
+          case "$DEVELOPMENT_EXIT" in
+            0 | 1 | 3)
+              if [ ! -f "${DEVELOPMENT_RESULTS:-}" ]; then
+                problems+=("the development-profile run wrote no results.json to compare")
+                bad=1
+              elif ! compared="$(bash scripts/conformance-record.sh compare "$DEVELOPMENT_RESULTS" 2>&1)"; then
+                grep -v '^::error::' <<<"$compared" || true
+                while IFS= read -r line; do
+                  case "$line" in "::error::"*) problems+=("${line#::error::}") ;; esac
+                done <<<"$compared"
+                bad=1
+              else
+                echo "$compared"
+              fi
               ;;
           esac
           if [ "$bad" = 0 ]; then verdict=passed; else verdict=failed; fi

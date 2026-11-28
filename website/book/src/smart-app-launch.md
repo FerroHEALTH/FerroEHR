@@ -114,7 +114,7 @@ restart: a capability of a `ROLE` the client's `AGENT` performs, coded
 `openehr_access::query_system_wide` or
 `openehr_access::access_demographic`, under an `[authz.grants] allowed`
 that admits the code. See
-[Operational policy](operational-policy.md#a-backend-client-and-a-demographic-client)
+[Operational policy](policy-examples.md#a-backend-client-and-a-demographic-client)
 for a worked example. A grant counts for a client's own app-only token; a
 person signed in through that client holds the person's grants.
 
@@ -124,7 +124,7 @@ When an app is launched for a patient, your authorization server puts the
 openEHR EHR id of the launch context in the token's `ehrId` claim
 (master07 §Context Selection). The SMART layer checks a `patient/` grant for
 its resource family and permission, and the
-[access evaluator](security.md#a-patients-own-ehr) holds a caller whose
+[access evaluator](access-control.md#a-patients-own-ehr) holds a caller whose
 grants are `patient/` grants alone to that one EHR:
 
 - the grant reaches only the EHR its token's `ehrId` names, so a token that
@@ -140,7 +140,7 @@ grants are `patient/` grants alone to that one EHR:
 - it reaches EHR data alone, never a template definition;
 - a write under a grant of `patient/` scopes alone is the person's own: it is
   marked as inserted by the person and may not alter a version a professional
-  committed ([EHDS Art. 5](security.md#information-a-person-inserts-ehds-art-5)).
+  committed ([EHDS Art. 5](access-control.md#information-a-person-inserts-ehds-art-5)).
 
 `user/` and `system/` grants carry no such binding, and when a `user/` grant
 covers the same operation the wider grant wins.
@@ -293,7 +293,7 @@ public key by value:
   "client_id": "ferroehr-viewer",
   "client_name": "FerroEHR viewer",
   "token_endpoint_auth_method": "private_key_jwt",
-  "jwks": {"keys": [{"kty": "RSA", "kid": "viewer-1", "alg": "RS384", "n": "…", "e": "AQAB"}]},
+  "jwks": {"keys": [{"kty": "AKP", "kid": "viewer-1", "alg": "ML-DSA-65", "pub": "…"}]},
   "scope": "system/launch.c",
   "grant_types": ["client_credentials"],
   "resources": ["https://ehr.example.org/ferroehr/rest/openehr/v1"]
@@ -329,8 +329,22 @@ client_id = "growth-chart"
 launch_url = "https://apps.example.org/growth/launch"
 ```
 
-The document's `jwks` holds the key's public half under the same `kid`. For
-an RSA key:
+The document's `jwks` holds the key's public half under the same `kid`. The
+viewer signs its client assertion with the algorithm of its key: ML-DSA-44,
+ML-DSA-65 or ML-DSA-87 (RFC 9964) with an ML-DSA key, RS384 with an RSA key
+and ES384 with a P-384 key. FerroSMART takes all five; RS384 and ES384 are the
+two SMART App Launch 2.2.0 has every server support. For an ML-DSA-65 key,
+made with OpenSSL 3.5 or later (its public key is the last 1952 octets of the
+RFC 9881 SubjectPublicKeyInfo):
+
+```sh
+openssl genpkey -algorithm ML-DSA-65 -out ferroehr-viewer-launch.pem
+pub=$(openssl pkey -in ferroehr-viewer-launch.pem -pubout -outform DER | tail -c 1952 \
+  | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+jq -n --arg pub "$pub" '{keys: [{kty: "AKP", kid: "viewer-1", alg: "ML-DSA-65", pub: $pub}]}'
+```
+
+For an RSA key:
 
 ```sh
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out ferroehr-viewer-launch.pem
@@ -377,10 +391,10 @@ the FHIR facade's base, the page of an EHR whose subject namespace is one of
 Launching a Task changes no Task status. The section needs these, beside the
 EHR launch setup above:
 
-- **An OpenID Connect sign-in at FerroSMART** over a `memory` session store
-  with `oidc.offline_access = true`, so the session holds the refresh token
-  the facade token comes from. A Basic sign-in or a `sealed` store holds
-  none, and the section asks you to sign in with FerroSMART.
+- **An OpenID Connect sign-in at FerroSMART** with
+  `oidc.offline_access = true`, so the session holds the refresh token the
+  facade token comes from. A Basic sign-in holds none, and the section asks
+  you to sign in with FerroSMART.
 - **The FHIR scopes in the sign-in**: `oidc.scopes` lists the scopes the
   facade token needs, such as `user/Task.rs`, and the viewer's sign-in client
   at FerroSMART carries them in its `scopes` ceiling. FerroSMART narrows the

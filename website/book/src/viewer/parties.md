@@ -13,14 +13,27 @@ between them, and their tags.
 
 ## Finding a party
 
-Pick a kind and type a party's uid, then **Open**. There is no list of
-parties: the demographic API publishes no "list all people" endpoint, and AQL
-reads EHRs. A versioned object uid opens the latest version; a version uid
-opens the object it belongs to. Open is a plain form and works with
-JavaScript off.
+**Parties** lists the parties the CDR holds, the most recently committed
+first, with the name each goes by (the text of its first identity), its kind
+and when its latest version was committed. The tabs narrow the list to one
+kind. Each row opens its party. The list is the CDR's AQL over its
+demographic store (see [Querying with AQL](../querying-aql.md)), so it shows
+only the parties your account may read: a policy party, such as a role that
+grants an operation, is listed to an administrator alone. The page position is
+kept in your browser's session, never in the address.
 
-The one demographic collection the API publishes is the **tag index**, under
-Open: every tag on any party, each row opening the party it tags.
+**Find** narrows the list to the parties whose identities hold the text you
+type, matching case. A find names people, so the form posts and the text never
+appears in the address; it shows the first page of matches.
+
+You can also pick a kind and type a party's uid, then **Open**. A versioned
+object uid opens the latest version; a version uid opens the object it
+belongs to. Open is a plain form and works with JavaScript off. Against an
+openEHR server that runs no AQL over parties, the list is replaced by a note
+and Open remains.
+
+The **tag index** below lists every tag on any party, each row opening the
+party it tags.
 
 ![Parties](img/parties/parties.png)
 
@@ -51,6 +64,31 @@ source of. **Tags** lists its tags and sets or removes one.
 the opened one as its `If-Match`, so a party someone else changed meanwhile is
 refused with the CDR's `412`. **Delete party…** marks it deleted; its versions
 stay readable.
+
+### Binding keys
+
+A `PERSON`'s Overview lists its **binding keys**: each identifier it carries
+with an issuer, by issuer and id. The binding key is the one whose issuer a
+login issuer names (`[auth.issuer.<name>.party] identifier_issuer`, see
+[the party mapping](../installation/config-authz.md#the-party-mapping)); a
+login binds to the `PERSON` that carries it. A binding key never changes on an
+ordinary edit. While the CDR's admin API is on, **Re-key…** on a key's row
+asks for the new id and confirms
+(`POST {ext}/admin/party/binding-key`, see [Admin & messaging APIs →
+Re-keying](../operations-admin-apis.md#re-keying-a-professionals-binding-key)):
+the `PERSON` gets a new version with the new key and the old one stops
+binding in the same commit. The CDR refuses, in its words, a new key that is
+your own login (`403`), an unknown or deleted person (`404`), and a key no
+identifier of that issuer carries or one bound to another party (`409`).
+
+### Archiving a party
+
+While the CDR's admin API is on, a party's More menu offers **Archive…** and
+**Restore from the archive…** (`POST {ext}/admin/archive/parties` and
+`…/parties/restore`), each behind a confirmation. An archived party stays
+readable by its id but leaves query results until it is restored; its
+relationships are archived on their own and stay where they are. Both need
+the CDR's ADMIN role, and a refusal is shown in the CDR's words.
 
 ## Relationships
 

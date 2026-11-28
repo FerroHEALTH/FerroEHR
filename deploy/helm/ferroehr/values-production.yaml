@@ -32,7 +32,7 @@
 #   open_subject_namespace       made: privacy.subject_namespaces is declared.
 #   audit_off                    made: the audit trail is on.
 #   open_ehr_access_default      made: authz.rbac.ehr_access_default is `restricted`.
-#   migrate_on_runtime_credential made: db.migrate is `verify`; the migration Job
+#   migrate_on_runtime_credential made: database.migrations is `verify`; the migration Job
 #                                prepares the schema on its own credential.
 #   auth_off                     made: authentication on, through OIDC.
 #   rbac_off                     made: authorization stays on through the chart
@@ -85,7 +85,7 @@ database:
   migrateExistingSecretKey: FERROEHR__DATABASE__MIGRATE_URL
 
 # The schema is applied by a pre-install/pre-upgrade Job on the migrator
-# credential; the server itself issues no DDL (config.db.migrate below).
+# credential; the server itself issues no DDL (config.database.migrations below).
 migrations:
   job:
     enabled: true

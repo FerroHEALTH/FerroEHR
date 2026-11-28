@@ -330,14 +330,16 @@ pub struct AuditConfig {
     /// system of a purpose header, so the key is our own design.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub purpose_system: String,
-    /// The legal basis this deployment processes under
-    /// (`FERROEHR__AUDIT__LEGAL_BASIS`), recorded on every access record.
+    /// `[audit.regulatory]`: the legal basis this deployment processes under
+    /// and its controllers and processors, recorded on every access record.
     ///
     /// A deployment-level fact, not a per-request one: the controller
-    /// establishes the GDPR Art. 6/9 condition once
-    /// (<https://eur-lex.europa.eu/eli/reg/2016/679/oj>) and every access under
-    /// this deployment carries it. Unset records nothing rather than a guess.
-    pub legal_basis: Option<String>,
+    /// establishes the GDPR Art. 6(1) point and the Art. 9(2) condition once
+    /// (<https://eur-lex.europa.eu/eli/reg/2016/679/oj>), and Xt-EHR D5.2
+    /// §7.2.7 asks the logging metadata to carry the legal basis and the
+    /// controller and processor roles. Unset records none rather than a guess.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
+    pub regulatory: ehds_logging::regulatory::Regulatory,
     /// `[audit.store]` — the local Audit Record Repository.
     pub store: StoreConfig,
     /// `[audit.syslog]` — the classic DICOM-over-syslog feed; absent, off.
@@ -388,7 +390,7 @@ impl Default for AuditConfig {
             reason_header: "x-access-reason".to_owned(),
             purpose_codes: Vec::new(),
             purpose_system: "http://terminology.hl7.org/CodeSystem/v3-ActReason".to_owned(),
-            legal_basis: None,
+            regulatory: ehds_logging::regulatory::Regulatory::default(),
             store: StoreConfig::default(),
             syslog: None,
             fhir_feed: None,

@@ -30,7 +30,7 @@ use crate::common;
 use reqwest::StatusCode;
 use std::path::{Path, PathBuf};
 
-use common::{Harness, PHONE_WIDTH, env, fill, login_basic_as};
+use common::{Harness, PHONE_WIDTH, env, fill, login_basic_as, sign_out};
 
 /// The ADL 1.4 template every capture uses.
 const TEMPLATE_ID: &str = "minimal_evaluation.en.v1";
@@ -40,6 +40,9 @@ const ADL2_STEM: &str = "openEHR-EHR-COMPOSITION.cnf_adl2_versioned";
 
 /// The stored query the capture seeds.
 const QUERY_NAME: &str = "org.example.vitals::latest-weights";
+
+/// The ADL 1.4 archetype the capture seeds.
+const ARCHETYPE_ID: &str = "openEHR-EHR-INSTRUCTION.medication.v1";
 
 /// The REST root of the CDR.
 fn v1(cdr: &str) -> String {
@@ -133,6 +136,27 @@ fn directory(composition: &str) -> serde_json::Value {
             }]
         }]
     })
+}
+
+/// Stores the ADL 1.4 archetype the Archetypes captures show.
+async fn seed_archetype(cdr: &str, user: &str, pass: &str) {
+    let http = reqwest::Client::new();
+    let archetype = std::fs::read_to_string(format!(
+        "{}/../../corpus/fixtures/archetypes/adl14.medication.v1.adl",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .expect("the ADL 1.4 archetype fixture exists");
+    let (status, _) = send(
+        http.post(format!(
+            "{cdr}/ferroehr/rest/extensions/v1/definition/archetype/adl1.4"
+        ))
+        .header("Content-Type", "text/plain")
+        .body(archetype),
+        user,
+        pass,
+    )
+    .await;
+    println!("archetype seed -> {status}");
 }
 
 /// Seed the fixtures the captures show: the OPT and the ADL2 releases, a
@@ -322,13 +346,18 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         review(format!("{ehr}/contributions"), "ehrs/contributions"),
         review(format!("{ehr}/contribution/new"), "ehrs/contribution-new"),
         review(format!("{ehr}/tags"), "ehrs/tags"),
+        review(format!("{ehr}/care"), "ehrs/care"),
+        light(format!("{ehr}/marks"), "ehrs/marks"),
+        light(format!("{ehr}/access"), "ehrs/access"),
+        review(format!("{ehr}/access/edit"), "ehrs/access-edit"),
+        light(format!("{ehr}/access-log"), "access-log/access-log"),
         review(format!("{ehr}/compositions/new"), "compositions/new"),
         both(composition.clone(), "compositions/reading"),
         review(
             format!("{composition}?tab=document"),
             "compositions/document",
         ),
-        review(
+        light(
             format!("{composition}?tab=versions"),
             "compositions/versions",
         ),
@@ -339,6 +368,16 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         both("/templates", "templates/templates"),
         review("/templates?family=adl2", "templates/templates-adl2"),
         light("/templates/upload", "templates/upload"),
+        light("/archetypes", "templates/archetypes"),
+        review(format!("/archetypes/{ARCHETYPE_ID}"), "templates/archetype"),
+        light(
+            format!("/archetypes/{ARCHETYPE_ID}?tab=adl2"),
+            "templates/archetype-adl2",
+        ),
+        light(
+            format!("{template}?tab=adl2"),
+            "templates/template-adl2-conversion",
+        ),
         light(template.clone(), "templates/template"),
         light(format!("{template}?tab=paths"), "templates/template-paths"),
         review(
@@ -380,6 +419,7 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         ),
         both(format!("/query?template={TEMPLATE_ID}"), "queries/build"),
         light("/query/aql", "queries/aql"),
+        light("/query/cohort", "queries/cohort"),
         both("/server", "server/overview"),
         light("/server/health", "server/health"),
         light(
@@ -389,9 +429,35 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         review("/server/logging", "server/logging"),
         review("/server/api", "server/api"),
         review("/server/smart", "server/smart"),
+        light("/server/activity?a_service=EHR", "server/activity"),
+        light("/server/repository", "server/repository"),
+        light("/ehrs/import", "ehrs/import"),
+        light("/server/identity", "server/identity"),
+        light("/audit/delivery", "audit/delivery"),
+        review("/server/integrity", "server/integrity"),
+        light("/access-policy", "access-policy/policy"),
+        light("/access-policy/versions", "access-policy/versions"),
+        review("/access-policy/edit", "access-policy/edit"),
+        light("/grants", "grants/grants"),
+        light("/retention", "retention/retention"),
+        light(
+            "/access-policy/registers/access-delay",
+            "access-policy/access-delay",
+        ),
+        review(
+            "/access-policy/registers/audit-categories",
+            "access-policy/audit-categories",
+        ),
+        review(
+            "/access-policy/registers/access-delay/edit",
+            "access-policy/access-delay-edit",
+        ),
         both("/audit", "audit/audit"),
+        light("/access-log", "access-log/review"),
+        light("/access-log/integrity", "access-log/integrity"),
         review("/audit?patient=no-such-patient", "audit/audit-empty"),
         review("/configuration", "configuration/configuration"),
+        light("/configuration/viewer", "configuration/viewer"),
         light("/preferences", "preferences/preferences"),
         light("/preferences/reading", "preferences/reading"),
         review("/preferences/keyboard", "preferences/keyboard"),
@@ -412,6 +478,7 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
             "parties/party-versions",
         ));
         all.push(review(format!("{party}/edit"), "parties/party-edit"));
+        all.push(light(format!("{party}/care"), "parties/party-care"));
     }
     all
 }
@@ -467,6 +534,18 @@ async fn capture_states(h: &Harness, seeded: &Seeded, book: &Path) {
     common::wait_visible(h, "#delete-confirm").await;
     shot_to(h, book, "ehrs/ehr-delete").await;
 
+    h.goto(&format!("/ehrs/{}", seeded.ehr)).await;
+    h.wait_css("summary[aria-controls='ehr-more']")
+        .await
+        .click()
+        .await;
+    h.wait_css("button[command='show-modal'][commandfor='archive-record']")
+        .await
+        .click()
+        .await;
+    common::wait_visible(h, "#archive-record button[type=submit]").await;
+    shot_to(h, book, "ehrs/ehr-archive").await;
+
     h.goto(&format!("/templates/{TEMPLATE_ID}?confirm=delete"))
         .await;
     h.wait_css("main form.fui-cluster").await;
@@ -496,6 +575,63 @@ async fn capture_states(h: &Harness, seeded: &Seeded, book: &Path) {
         .await;
     h.wait_css("#audit-record-text").await;
     shot_to(h, book, "audit/audit-record").await;
+
+    h.goto("/server/integrity").await;
+    common::submit(h, "main button[name='intent'][value='verify']").await;
+    common::wait_main_contains(h, "Versions checked").await;
+    shot_to(h, book, "server/integrity").await;
+}
+
+/// Capture a patient's access log as their representative reads it: the
+/// subject view the CDR names, with the note saying it is the person's own.
+async fn capture_own_view(h: &Harness, book: &Path) {
+    let (Some(ehr), Some(proxy), Some(proxy_pass)) = (
+        env("UI_E2E_PATIENT_EHR_ID"),
+        env("UI_E2E_PROXY_USER"),
+        env("UI_E2E_PROXY_PASS"),
+    ) else {
+        println!("SKIP the own-view capture: the seeded representative env is unset");
+        return;
+    };
+    sign_out(h).await;
+    login_basic_as(h, &proxy, &proxy_pass).await;
+    h.goto(&format!("/ehrs/{ehr}/access-log")).await;
+    common::wait_main_contains(h, "own view of their access log").await;
+    shot_to(h, book, "access-log/own-view").await;
+}
+
+/// Capture the justification form and its notice, as the clinician who
+/// reads an EHR outside their care relationships, under the seed's first
+/// policy version ([`common::policy::with_first_policy`]). It runs after
+/// every other capture, so the access-policy and access-log captures show the
+/// seed's own history.
+async fn capture_justification(h: &Harness, cdr: &str, admin: (&str, &str), book: &Path) {
+    let (Some(ehr), Some(clinician), Some(clinician_pass)) = (
+        env("UI_E2E_JUSTIFIED_EHR_ID"),
+        env("UI_E2E_BASIC_USER"),
+        env("UI_E2E_BASIC_PASS"),
+    ) else {
+        println!("SKIP the justification capture: the seeded clinician env is unset");
+        return;
+    };
+    Box::pin(common::policy::with_first_policy(cdr, admin, async {
+        sign_out(h).await;
+        login_basic_as(h, &clinician, &clinician_pass).await;
+        h.goto(&format!("/ehrs/{ehr}/status")).await;
+        h.wait_css("#j-reason").await;
+        shot_to(h, book, "justified/justify-form").await;
+        common::choose(h, "#j-purpose", "TREAT").await;
+        fill(
+            h,
+            "#j-reason",
+            "Second opinion requested by the ward (synthetic)",
+        )
+        .await;
+        common::submit(h, "form:has(#j-reason) button[type=submit]").await;
+        common::wait_main_contains(h, "You opened this record on a justification").await;
+        shot_to(h, book, "justified/justified").await;
+    }))
+    .await;
 }
 
 /// Capture the console's screenshots: every route in four layouts for the
@@ -522,6 +658,7 @@ async fn capture_documentation_screenshots() {
     let user = env("UI_E2E_ADMIN_USER").unwrap_or_else(|| "ferroehr-admin".to_owned());
     let pass = env("UI_E2E_ADMIN_PASS").unwrap_or_else(|| "ferroehr".to_owned());
     let seeded = seed(&cdr, &user, &pass, ehr, composition).await;
+    seed_archetype(&cdr, &user, &pass).await;
     let book = book_img_dir();
     let review = PathBuf::from(
         env("UI_E2E_SHOTS_DIR").unwrap_or_else(|| "target/ui-e2e/screenshots".to_owned()),
@@ -540,6 +677,8 @@ async fn capture_documentation_screenshots() {
     let all = routes(&seeded);
     capture_routes(&h, &all, &review, &book).await;
     capture_states(&h, &seeded, &book).await;
+    Box::pin(capture_justification(&h, &cdr, (&user, &pass), &book)).await;
+    capture_own_view(&h, &book).await;
 
     h.assert_console_clean(&["401", "403", "404", "Failed to load resource"])
         .await;

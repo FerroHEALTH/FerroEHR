@@ -64,6 +64,33 @@ impl FerroEhrConfig {
             )));
         }
         self.validate_body_tier(&mut errors);
+        self.validate_database_table(&mut errors);
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(ConfigErrors(errors))
+        }
+    }
+
+    /// The rules of the `[database]` table alone, which is all `ferroehr db
+    /// migrate` and `ferroehr db verify` read: a schema step run with the
+    /// migrator DSN and no other configuration, as the chart's migration Job
+    /// runs it, is not refused for a key it never reads.
+    ///
+    /// # Errors
+    /// [`ConfigErrors`] carrying every failing rule of the table.
+    pub fn validate_database(&self) -> Result<(), ConfigErrors> {
+        let mut errors = Vec::new();
+        self.validate_database_table(&mut errors);
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(ConfigErrors(errors))
+        }
+    }
+
+    fn validate_database_table(&self, errors: &mut Vec<ConfigError>) {
         errors.extend(
             self.database
                 .budget_errors()
@@ -77,12 +104,6 @@ impl FerroEhrConfig {
                 "database.audit.listen_url is not used: no policy listener listens on the audit domain"
                     .to_owned(),
             ));
-        }
-
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(ConfigErrors(errors))
         }
     }
 
@@ -161,11 +182,12 @@ impl FerroEhrConfig {
 
     /// A cohort predicate is only a selection criterion if the deployment can
     /// actually reach the leaf it names: an unknown key, an archetype that is
-    /// not a demographic HRID, or a node that is not an at-code binds a
+    /// not a demographic HRID, or a node that is not a node code binds a
     /// predicate that would match nothing and report an empty cohort rather
     /// than a misconfiguration. No openEHR spec governs configuration — our
     /// own design; the identifier grammars are BASE `base_types`
-    /// `master05-identification_package.adoc` §Archetype Identifiers.
+    /// `master05-identification_package.adoc` §Archetype Identifiers and AOM2
+    /// `org.openehr.am.aom2.adl_code_definitions.adoc` for the node codes.
     fn validate_cohort(&self, errors: &mut Vec<ConfigError>) {
         use crate::service::linkage::cohort::config as cohort;
         for (key, binding) in &self.privacy.cohort.predicates {
@@ -193,9 +215,10 @@ impl FerroEhrConfig {
                     binding.archetype
                 )));
             }
-            if !cohort::is_at_code(&binding.node) {
+            if !cohort::is_node_code(&binding.node) {
                 errors.push(ConfigError::semantic(format!(
-                    "privacy.cohort.predicates.{key}.node = {:?} is not an at-code (at0012)",
+                    "privacy.cohort.predicates.{key}.node = {:?} is not a node code (an ADL 1.4 \
+                     at-code such as at0012, or an ADL 2 id-code such as id5)",
                     binding.node
                 )));
             }

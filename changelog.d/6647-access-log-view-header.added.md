@@ -1,0 +1,1 @@
+- A read of an EHR's access log names the view it served in the `FerroEHR-Access-Log-View` response header, `subject` or `full`, and the viewer tells the person when the tab or an entry shows their own view.

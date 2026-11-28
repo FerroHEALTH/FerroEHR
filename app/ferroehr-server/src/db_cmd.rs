@@ -54,6 +54,10 @@ pub enum DbCmd {
 
 /// `ferroehr db migrate` / `verify` / `erase`, the out-of-band schema steps.
 ///
+/// `migrate` and `verify` validate the `[database]` table alone, since a
+/// schema step runs with the migrator DSN and nothing else; `erase` and
+/// `sweep-blobs` read more of the tree and validate all of it.
+///
 /// # Errors
 /// The configuration does not load or validate, telemetry does not start, or
 /// the selected step fails.
@@ -63,7 +67,10 @@ pub async fn run(
     overrides: &[(String, String)],
 ) -> anyhow::Result<()> {
     let config = ferroehr::config::load(config_path, overrides)?;
-    config.validate()?;
+    match cmd {
+        DbCmd::Migrate | DbCmd::Verify => config.validate_database()?,
+        DbCmd::Erase { .. } | DbCmd::SweepBlobs { .. } => config.validate()?,
+    }
     let build_info = BuildInfo::for_profile(config.deployment.spec_profile);
     let telemetry = telemetry::init(
         &config.telemetry,

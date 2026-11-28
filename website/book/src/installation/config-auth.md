@@ -1,8 +1,10 @@
 # Authentication & access
 
 Who may call the server, what they may do once identified, and the surfaces
-that are gated rather than always-on: `[auth]`, `[authz]`, `[api] admin`,
-`[auth.smart]`, `[management]`, and `[record.signing]`. Precedence, the
+that are gated rather than always-on: `[auth]`, `[api] admin`, the
+access-delay register, `[auth.smart]`, `[management]`, `[deployment]`,
+`[record.signing]` and `[record.versioning]`. `[authz]` is on [Authorization
+keys](config-authz.md) and `[auth.scim]` on [SCIM provisioning](config-scim.md). Precedence, the
 environment-name grammar, and file discovery are on the
 [Configuration reference](configuration.md) index.
 
@@ -14,7 +16,7 @@ Authentication: bearer tokens of one or more trusted issuers, Basic
 credentials, or both. `[auth]` is the section every FerroHEALTH product shares,
 checked by the `ferrohealth-smart` crate (0.32). FerroEHR is a resource server:
 it checks tokens and never issues them. Every person a request comes from is
-bound to a demographic `PERSON` (see [`[authz.party_binding]`](#authzparty_binding)).
+bound to a demographic `PERSON` (see [`[authz.party_binding]`](config-authz.md#authzparty_binding)).
 
 Each issuer is a table named by you, `[auth.issuer.<name>]`, and every other
 key that refers to an issuer names that table: `[auth] described_issuer`,
@@ -83,6 +85,7 @@ The section keys:
 | `scopes_supported` | list of string | `[]` | The scopes the discovery document lists. Empty, it lists the scopes the route table honours. |
 | `described_issuer` | string | unset | The name of the issuer the discovery document describes: one whose metadata FerroEHR reads, introspects, or takes from [`[auth.smart] issuer_metadata_file`](#authsmart). Read only with `[auth.smart] discovery = true`, where naming an unknown table or one without metadata is a boot error. Required with discovery when more than one issuer could be described. See [the described issuer](#the-described-issuer). |
 | `product_scope` | string | `""` ⇒ `__ferroehr.platform` | FerroEHR's own scope. It admits the ADMIN API and, beside the clients the CDR grants `access_demographic`, the DEMOGRAPHIC API, the two surfaces no SMART on openEHR resource family covers. A full URI or a string starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility). |
+| `post_quantum_only` | bool | `false` | Verify access tokens and DPoP proofs with ML-DSA-44, ML-DSA-65 or ML-DSA-87 (RFC 9964) alone. Every JWT issuer's `algorithms` and `[auth.dpop] algorithms` left at the default become those three, an explicit list of ML-DSA parameter sets is kept, and a list naming any other algorithm refuses the start. An issuer under `mode = "introspection"` keeps its list, because its authorization server checks the token. Set it once every issuer signs with ML-DSA. |
 
 The `[[auth.issuer]]` array, the section-level `[[auth.party]]`,
 `[[auth.federation]]` and `[[auth.attributes]]` tables, an issuer's `profile =
@@ -113,16 +116,16 @@ boot cannot see.
 | `issuer` | string | required | The issuer identifier: an `https` URL with no query, no fragment and no user name or password; plain `http` on a loopback host only. Two tables naming one issuer refuse the start. |
 | `kind` | `federation` | unset | Unset, the issuer is a SMART App Launch 2.2 authorization server, such as [FerroSMART](../behind-ferrosmart.md), signing the tokens of the deployment's own users and clients. `federation` signs another party's professionals or organisation. |
 | `audience` | list of string | the openEHR base | Accepted `aud` values; a token naming none of them is refused (RFC 9068 §4, RFC 8725 §3.9). Unset, the openEHR REST API's `baseUrl` (see [the audience](#the-audience)). |
-| `algorithms` | list of string | `["RS256","RS384","PS256","PS384","ES256","ES384"]` | Accepted signature algorithms. Asymmetric only: an `HS*` algorithm is a boot error, and `none` is no algorithm at all (RFC 8725 §3.1, §3.2). |
+| `algorithms` | list of string | `["RS256","RS384","PS256","PS384","ES256","ES384"]` | Accepted signature algorithms: `RS256` to `RS512`, `PS256` to `PS512`, `ES256`, `ES384`, `EdDSA` (RFC 8037) and `ML-DSA-44`, `ML-DSA-65` and `ML-DSA-87` (RFC 9964). Asymmetric only: an `HS*` algorithm or `none` fails to parse (RFC 8725 §3.1, §3.2). |
 | `clock_skew` | duration | `"60s"` | Leeway on `exp`, `nbf` and `iat`. At most `"5min"`. |
 | `jwks_max_age` | duration | `"10min"` | A key set older than this is read again. |
 | `jwks_refresh_interval` | duration | `"1min"` | A token naming an unknown `kid` reads the key set again at most once per interval. |
 | `jwks_file` | path | `""` | A JWK Set of public keys handed over out of band, read at start instead of the issuer's metadata. A symmetric key (`kty: "oct"`) or a private-key member (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`) is a boot error. An issuer read from a file has no metadata, so it serves the SMART discovery document only with [`[auth.smart] issuer_metadata_file`](#authsmart) set. |
 | `timeout` | duration | `"10s"` | One call to the authorization server. |
 | `mode` | `jwt` or `introspection` | `jwt` | How the issuer's tokens are checked: as JWTs against its key set, or posted to its RFC 7662 endpoint (see [Opaque tokens](#opaque-tokens-by-introspection)). |
-| `role_claims` | list of string | `["roles","groups","entitlements"]` | Token claim paths the caller's roles are read from; dotted paths walk nested claims, and a role is matched without regard to case. **`scope` is not a role source**. A `federation` issuer reads no role. Whether a role grants `admin_role` is [`[authz.rbac] role_issuers`](#authzrbac). |
+| `role_claims` | list of string | `["roles","groups","entitlements"]` | Token claim paths the caller's roles are read from; dotted paths walk nested claims, and a role is matched without regard to case. **`scope` is not a role source**. A `federation` issuer reads no role. Whether a role grants `admin_role` is [`[authz.rbac] role_issuers`](config-authz.md#authzrbac). |
 | `sender_constraint` | `none` or `required` | `none` | `required` admits only a token bound to a DPoP key (RFC 9449) or to the client certificate of a mutual-TLS connection (RFC 8705 §3). A token carrying `cnf` is held to it under either value. |
-| `assurance` | table | unset | The assurance level the issuer's tokens carry, in the shape of [`[authz.assurance]`](#authzassurance-the-assurance-level-patient-data-requires). |
+| `assurance` | table | unset | The assurance level the issuer's tokens carry, in the shape of [`[authz.assurance]`](config-authz.md#authzassurance-the-assurance-level-patient-data-requires). |
 
 ### `[auth.issuer.<name>.profile]`: the token shape
 
@@ -161,9 +164,9 @@ that `baseUrl`, so a deployment writes its public URL once. Without
 
 | Table | Description |
 |---|---|
-| `[auth.issuer.<name>.party]` | One per issuer whose users sign in to FerroEHR: where their logins are looked up. `identifier_issuer` (the issuer's own identifier when empty) and `identifier_type` (`pairwise`, FerroSMART's pairwise `sub`, when empty; `guid` and `uuid` compare in lower case) name the identifiers each token's `sub` is matched against (OpenID Connect Core 1.0 §5.7); `group_claim` with `group_identifier_issuer` reads the groups a token asserts. A user token of an issuer without one is refused `403` `refused-unbound`, so an issuer without a table admits its clients' own tokens alone. Boot refuses a table under a `federation` issuer, two tables sharing an `identifier_issuer`, and a table whose `identifier_type` is the `type` of no [`[[authz.party_binding.person.template]]`](#authzparty_binding) `key`: SCIM and just-in-time creation write the key under that type and the lookup compares the type exactly, so no login of the issuer would bind. |
+| `[auth.issuer.<name>.party]` | One per issuer whose users sign in to FerroEHR: where their logins are looked up. `identifier_issuer` (the issuer's own identifier when empty) and `identifier_type` (`pairwise`, FerroSMART's pairwise `sub`, when empty; `guid` and `uuid` compare in lower case) name the identifiers each token's `sub` is matched against (OpenID Connect Core 1.0 §5.7); `group_claim` with `group_identifier_issuer` reads the groups a token asserts. A user token of an issuer without one is refused `403` `refused-unbound`, so an issuer without a table admits its clients' own tokens alone. Boot refuses a table under a `federation` issuer, two tables sharing an `identifier_issuer`, and a table whose `identifier_type` is the `type` of no [`[[authz.party_binding.person.template]]`](config-authz.md#authzparty_binding) `key`: SCIM and just-in-time creation write the key under that type and the lookup compares the type exactly, so no login of the issuer would bind. |
 | `[auth.issuer.<name>.federation]` | Required on a `federation` issuer and refused on any other: how its tokens' claims map to the fields of another party's professional or organisation (`mapping = "iua"`, `"ehdsi"` or per field), the countries, issuing authorities and provider prefixes that bound them, and `contact_point` for a MyHealth@EU contact point. `fields` maps a field to its claim (`{ claim = "..." }`), its `authorization_details` member, or a coded constant with its code system (`{ constant = "…", system = "…" }`), among them `consent.reference`, the consent decision reference of a consent-conditioned read, `correlation_id`, the requester's id a `chained` organisation request carries, and `trc.care_role`, the care role a treatment relationship attests (see [the attested care path](../operational-policy.md)). |
-| `[auth.issuer.<name>.attributes]` | At most one per issuer with a party table: where its tokens state the professional's attributes (`mapping = "iua"`, the IHE IUA claims under `extensions.ihe_iua`, or per field in `fields`), and `authorization_details_purposes`, whether the `purpose_of_use` of each RFC 9396 `authorization_details` entry is a purpose of use too. Its purposes of use and roles go into each [access record](../audit.md#where-the-purpose-of-use-comes-from), and a `[audit] purpose_header` naming a purpose the token does not state refuses the request with `403`. |
+| `[auth.issuer.<name>.attributes]` | At most one per issuer with a party table: where its tokens state the professional's attributes (`mapping = "iua"`, the IHE IUA claims under `extensions.ihe_iua`, or per field in `fields`), and `authorization_details_purposes`, whether the `purpose_of_use` of each RFC 9396 `authorization_details` entry is a purpose of use too. Its purposes of use and roles go into each [access record](../ehds-logging.md#where-the-purpose-of-use-comes-from), and a `[audit] purpose_header` naming a purpose the token does not state refuses the request with `403`. |
 | `[auth.dpop]` | The DPoP proof check of a sender-constrained issuer: `max_age` (`"60s"`), `clock_skew` (`"10s"`) and `algorithms`. Each accepted proof is recorded in the database every replica shares until its window ends, so a proof is accepted once across all of them (RFC 9449 §11.1), and a database that cannot record it refuses the request with `503`. A proof's `htu` must name [`server.public_base_url`](config-server.md#public_base_url-the-one-public-url), `server.base_path` and the request path, so the table needs that key. |
 
 > [!WARNING]
@@ -230,7 +233,7 @@ client_secret_file = "/run/secrets/introspection-client"
 
 `[[auth.basic.users]]` is an array of tables. A Basic user is always a
 person: it maps to the `PERSON` carrying its binding key through
-[`[[authz.party_binding.basic_user]]`](#authzparty_binding), and a Basic user
+[`[[authz.party_binding.basic_user]]`](config-authz.md#authzparty_binding), and a Basic user
 with no mapping refuses the start, naming the user. A machine authenticates
 with the client credentials grant (RFC 6749 §4.4), and a `system/` scope on a
 Basic user refuses the start.
@@ -241,7 +244,7 @@ Basic user refuses the start.
 | `password_hash` | secret | required | Argon2**id** PHC hash (`$argon2id$v=19$…`), never a plaintext password. Boot-validated against the OWASP floor; see below. |
 | `password_hash_file` | path | unset | Read the hash from a file instead, for a mounted secret. A hash is an offline cracking target, so prefer this wherever the configuration file itself is not treated as sensitive. Exactly one of the pair is required. |
 | `scopes` | list of string | `[]` | The SMART on openEHR scopes the user holds, checked on every route exactly like a token's `scope` claim. A user bound to a `PERSON` also holds the scopes of its `hold_scopes` grants ([What the grants decide](../operational-policy.md#what-the-grants-decide)). A user with none is refused everywhere a requirement applies. |
-| `roles` | list of string | `[]` | The user's RBAC roles, upper-cased on authentication. A user bound to a `PERSON` also holds the roles of its `hold_roles` grants, never a privileged one. A user with none holds no role and is refused wherever [`[authz.rbac]`](#authzrbac) asks for one. |
+| `roles` | list of string | `[]` | The user's RBAC roles, upper-cased on authentication. A user bound to a `PERSON` also holds the roles of its `hold_roles` grants, never a privileged one. A user with none holds no role and is refused wherever [`[authz.rbac]`](config-authz.md#authzrbac) asks for one. |
 
 `[auth.basic]` itself takes one key beside the users:
 
@@ -263,471 +266,6 @@ Basic user refuses the start.
 An unknown user-id is checked against a decoy hash of the same cost, so the
 time a refusal takes does not say whether the user exists.
 
-## `[authz]`
-
-Role-based (RBAC) authorization, the party binding, the grant ceiling and the
-patient-data assurance gate. Which caller may read which data is the access
-evaluator's, over each EHR's `access_directives` and the controller's access
-policy, and takes no key here. The full evaluation order and design rationale are
-in [Security](../security.md).
-
-### `[authz.assurance]`: the assurance level patient data requires
-
-Off by default. What it refuses and the `401` challenge it sends are described
-in [Security](../security.md#assurance-level-and-the-natural-person-on-patient-data).
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `claim` | string | `acr` | The token claim carrying the authentication context class; a dotted path reaches into a JSON object. |
-| `levels` | table of string → `low` \| `substantial` \| `high` | empty | Maps each value your identity provider puts in `claim` to an eIDAS level of assurance. A value the table does not name carries no level. File-only: the keys are usually URIs. |
-| `minimum` | `low` \| `substantial` \| `high` | unset | The level a patient-data request must carry. Unset refuses nothing. |
-
-```toml
-[authz.assurance]
-minimum = "substantial"
-
-[authz.assurance.levels]
-"http://eidas.europa.eu/LoA/low" = "low"
-"http://eidas.europa.eu/LoA/substantial" = "substantial"
-"http://eidas.europa.eu/LoA/high" = "high"
-```
-
-These are the values FerroSMART writes into `acr`. Behind FerroSMART, set
-the floor to substantial at least: the xShare Yellow Button that FerroBRIDGE
-serves reads the patient's record with their own exchanged token, which
-this gate holds to the floor
-([Behind FerroSMART](../behind-ferrosmart.md#the-patients-own-token-through-ferrobridge)).
-
-Boot refuses a `minimum` with an empty `levels` table or with no value mapped at
-or above it (every patient-data request would be refused), a blank `claim`
-beside a declared table, and a `levels` value that is blank or carries
-whitespace, a quote or a backslash, because the refusal names the accepted
-values in one quoted, space-separated `acr_values` parameter (RFC 9470 §3).
-
-A Basic credential carries no level, so with `minimum` set every Basic user,
-mapped to a person or not, is refused on patient data. While `minimum` is unset
-and a Basic user is mapped in `[[authz.party_binding.basic_user]]`, boot logs a
-`warn` naming those users.
-
-The access record carries the acting mode and the professional the caller
-classification names; see [Audit trail](../audit.md#the-ehds-logging-elements-mapped).
-`[authz.professional]` is refused at boot: the token's `fhirUser` classifies
-the caller, and its RFC 8693 `act` names who acts for them.
-
-### `[authz.party_binding]`
-
-How a person is attributed. There is no switch: binding is how FerroEHR
-attributes a person, and `enabled` is refused at boot.
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `provider` | `{ issuer, id }` | **required** once `[auth]` admits a credential | The healthcare provider this deployment acts for, as an identifier issuer and id (in the Netherlands the URA). Every access record of a bound or provisional person and every version a person commits name it (EHDS Art. 13(4), Annex II 3.2(a)). |
-| `namespace` | string | `demographic` | The `PARTY_REF.namespace` a bound party is written under, the value of the ITS-REST overview example (`committer.external_ref.namespace="demographic"`), held to the `OBJECT_REF.namespace` pattern `[a-zA-Z][a-zA-Z0-9_.:/&?=+-]*`. |
-| `basic_user` | `[[authz.party_binding.basic_user]]` tables | `[]` | One per Basic user: `user`, `key_issuer` (the `identifier_issuer` of an `[auth.issuer.<name>.party]` table) and `key`, the binding key the user's `PERSON` carries. A Basic user with no table, a table naming no Basic user and a `key_issuer` no table names refuse the start. |
-| `issuer` | `[[authz.party_binding.issuer]]` tables | `[]` | How the tokens of one issuer are read when a first login creates a provisional `PERSON`; see [Just-in-time creation](#just-in-time-creation). |
-| `provisional_report_after` | duration | `"30d"` | The age past which `ferroehr party-binding check` reports a provisional `PERSON`. |
-
-```toml
-[authz.party_binding]
-provider = { issuer = "urn:oid:2.16.528.1.1007.3.3", id = "12345678" }
-
-[[authz.party_binding.basic_user]]
-user = "clinician"
-key_issuer = "urn:example:staff-login"
-key = "3f2b0c1e-0000-4000-8000-000000000001"
-```
-
-#### The party mapping
-
-SCIM provisioning, just-in-time creation and the login binding read and
-write the same demographic parties under one mapping. It names the
-templates each party is valid against, the identifier selectors of the
-binding key, `userName` and `externalId`, and where each SCIM attribute and
-OpenID Connect claim goes. Names go in `PARTY.identities` and identifiers
-in `PARTY.details` (RM demographic §Names and Addresses, §Party
-Identification), and boot refuses a name mapped into `details` or an
-identifier mapped into `identities`. No openEHR specification governs this
-mapping: it is FerroEHR's own design, and its targets are RM demographic
-paths.
-
-| Section | Keys | Description |
-|---|---|---|
-| `[[authz.party_binding.person.template]]` | `template_id`, `key`, `user_name`, `external_id`, `default` | One per template a professional's `PERSON` may use, so a migrated template can stay beside a new one. `key`, `user_name` and `external_id` are selectors, each `{ path, type }`: the path of the `ELEMENT` holding the `DV_IDENTIFIER` and its `type`. Every identifier can sit at one path (the repeated element of an identifier cluster), so two selectors at one path are told apart by `type`, and the key by its issuer, the `identifier_issuer` of an `[auth.issuer.<name>.party]` table. Exactly one table sets `default = true`: SCIM and just-in-time creation create new persons with it. |
-| `[[authz.party_binding.person.attribute]]` | `scim`, `oidc`, `jit`, `name`, `path` | One per mapped value: a SCIM attribute path (the RFC 7644 `valuePath` form, `emails[type eq "work"].value`, and the FerroEHR extension `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier` that feeds the binding key), an OpenID Connect claim, whether just-in-time creation writes it (`jit`, default `false`), whether it is the name the committer reads (`name`, at most one), and `path`, one path per template id. `id`, `schemas`, `meta`, `active`, `userName` and `externalId` are SCIM's own and are never mapped. |
-| `[authz.party_binding.professional_role]` | `template_id` | The template of the professional `ROLE`, rooted at `ROLE`. A `PERSON` is a professional while it lists a `ROLE` of this template that names it as `performer`, is `complete` or `incomplete`, and whose `time_validity` holds today. |
-| `[authz.party_binding.group]` | `template_id`, `external_id`, `display_name` | The template of a SCIM Group's `GROUP`, its `externalId` selector and the path of its `displayName`. |
-| `[authz.party_binding.membership]` | `archetype_id` | The `PARTY_RELATIONSHIP` archetype of a group membership, as each membership's `archetype_node_id` carries it (the interface form of an ADL 2 id, `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1`). SCIM serves `/Groups` when the group table names a `display_name` and this table is set. |
-| `[authz.party_binding.patient]` | `template_id`, `identifier`, `name` | The template of a patient's `PERSON`, the subject of an EHR and the target of a representation: the path of the `ELEMENT` holding its identifiers (each a `DV_IDENTIFIER` of any type and issuer) and the path of its name. A `PERSON` written under this template is validated against it. |
-
-With no mapping key set, every section maps FerroEHR's [default
-demographic definitions](default-demographic-definitions.md), which the
-server stores as it boots when the definition store holds no definition of
-their id. An empty configuration has this mapping:
-
-```toml
-[[authz.party_binding.person.template]]
-template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
-default = true
-key = { path = "/details[id2]/items[id3]", type = "login" }
-user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
-external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
-
-[[authz.party_binding.person.template]]
-template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0"
-key = { path = "/details[id2]/items[id3]", type = "login" }
-user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
-external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
-
-[[authz.party_binding.person.attribute]]
-scim = "name.formatted"
-name = true
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]", "openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0" = "/identities[id6]/details[id7]/items[id8]" }
-
-[[authz.party_binding.person.attribute]]
-scim = "name.givenName"
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id7]", "openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0" = "/identities[id6]/details[id7]/items[id9]" }
-
-[[authz.party_binding.person.attribute]]
-scim = "name.familyName"
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id8]", "openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0" = "/identities[id6]/details[id7]/items[id10]" }
-
-[[authz.party_binding.person.attribute]]
-scim = 'emails[type eq "work"].value'
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/contacts[id9]/addresses[id10]/details[id11]/items[id12]" }
-
-[authz.party_binding.professional_role]
-template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
-
-[authz.party_binding.group]
-template_id = "openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0"
-external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
-display_name = "/identities[id4]/details[id5]/items[id6]"
-
-[authz.party_binding.membership]
-archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1"
-
-[authz.party_binding.patient]
-template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0"
-identifier = "/details[id2]/items[id3]"
-name = "/identities[id6]/details[id7]/items[id8]"
-```
-
-The template ids are the ADL 2 ids of the stored archetypes, and the
-membership archetype is named in the interface form each membership's
-`archetype_node_id` carries. The patient template is a person template too,
-never the default: a patient's login binds their `PERSON` in it. A
-representation needs no section: FerroEHR recognises it by its coded name, in
-any archetype (see
-[Representatives](../operational-policy.md#representatives)). The default
-key is of the type `login`, so an `[auth.issuer.<name>.party]` table whose
-`identifier_type` is `login` needs no mapping key.
-
-A section you set replaces that section's default whole: a deployment that
-sets `[[authz.party_binding.person.template]]` maps its own attributes too.
-A deployment with templates of its own sets the sections that name them and
-stores its templates before boot (`ferroehr definitions load`); the server
-stores nothing under its ids, and still stores the default definitions,
-which no section of its mapping then names.
-
-A worked example over the default definitions, with the Microsoft Entra
-object id as the binding key. It sets the person section, and every other
-section keeps its default:
-
-```toml
-[[authz.party_binding.person.template]]
-template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
-default = true
-key = { path = "/details[id2]/items[id3]", type = "guid" }
-user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
-external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
-
-[[authz.party_binding.person.attribute]]
-scim = "name.formatted"
-oidc = "name"
-jit = true
-name = true
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
-```
-
-With Microsoft Entra ID, map the object id to `externalId` (Entra's
-matching) and to the binding-key attribute (the binding): two attributes,
-two selectors. The key's party table's `identifier_type` is `guid`, so a
-key differing only in case binds one login.
-
-Boot refuses, naming the key: no or two `default` tables; a selector path
-that does not compile; two equal selectors; any selector under the Dutch
-BSN namespace (OID `2.16.840.1.113883.2.4.6.3`); a key fed by an email
-address, a phone number, `preferred_username`, `name`, `upn` or
-`unique_name`; a template that is absent, rooted at another class or lacks
-a mapped path; and a path whose type cannot carry its source. Deleting a template
-the mapping names is refused with `409`.
-
-The parties the binding relies on are protected: a `PERSON` of a mapped
-template carrying a selector identifier, its professional `ROLE`, a
-representation (a `PARTY_RELATIONSHIP` of its own named
-`openehr_access::represents`), and a `GROUP` of the group template. Only an
-administrator (`authz.rbac.admin_role`) writes one through the demographic
-API, including the creation of a party that carries a selector identifier;
-a `write_representation` holder writes a representation for the providers
-its grant names, and the patient a representation targets writes one on the
-basis `HL7_RoleCode::DELEGATEE`.
-The policy parties (a party holding a capability coded in
-`openehr_access`, an acts-for relationship or an `openehr_access::client_id` client identifier)
-are recognised by what they hold and take no key of this mapping; they are an administrator's to write and to read,
-never a SCIM client's: see [Operational policy](../operational-policy.md#who-writes-and-reads-a-policy-party).
-An administrator's version that leaves a protected identifier out is refused
-with `422`. A present binding key is immutable (RFC 7643 §2.2): a version
-that changes it is refused with `403`, and
-[`POST /admin/party/binding-key`](../operations-admin-apis.md) is the one
-change. Each selector value binds one live party: a commit that gives a
-binding key, a `userName` (compared after RFC 8265 width mapping, lower case
-and NFC), an `externalId` or a group `displayName` a second party is refused
-with `409`. A deleted `PERSON` leaves its key as a tombstone that refuses
-the login until an administrator binds the key again.
-
-#### Changing the mapping
-
-The side table is filled from the configured mapping and the party
-versions. The first boot fills it and stores the mapping's digest, which
-covers the templates, the selectors, the role, the group and the membership.
-It leaves out the key issuers: the `identifier_issuer` of each
-`[auth.issuer.<name>.party]` table. Each running replica holds
-a lease it renews every 20 seconds, and the lease lists the key issuers the
-replica derives keys for.
-
-**Adding or removing a key issuer needs no stop and no refill.** Each key
-issuer is a key space with a state:
-
-| State | Its keys bind a login | What happens next |
-|---|---|---|
-| `pending` | No: the login is answered `503` with a `Retry-After` | Once every live replica names the issuer, a replica fills its keys from the party versions |
-| `filling` | No: `503` with a `Retry-After` | The fill runs online in pages and the issuer turns `active` |
-| `active` | Yes | A replica that starts without the issuer turns it `retiring` |
-| `retiring` | No: the login is refused with `403 refused-unbound` | Once no live replica names it, its keys are deleted; once every live replica names it again, it is filled anew |
-
-So a rolling upgrade that adds an issuer serves every other issuer
-throughout, and the new issuer's logins bind on every replica once the last
-replica without it is replaced. A replica restarted without an issuer stops
-that issuer's logins binding on every replica at once, so revoking an issuer
-needs no downtime. A fill that finds two parties carrying one
-key under the new issuer keeps it `pending`, logs both parties, and looks
-again after five minutes; the other issuers keep binding.
-
-**A change to the templates, selectors, role, group or membership is a
-stop-the-world step.** A replica whose mapping digest differs from the stored
-one refuses to start, naming both digests:
-
-1. Stop every replica. With Helm, scale the deployment to zero first: a
-   rolling upgrade would start new replicas beside old ones.
-2. Run `ferroehr party-binding refill` with the new configuration. It
-   refuses while a replica's lease was renewed within the last minute, and
-   refuses a store in which two parties carry one selector value, naming
-   both.
-3. Start the replicas with the new mapping. A replica still holding the old
-   mapping refuses to start.
-
-#### How a login is looked up
-
-Every request of a person is looked up in the binding side table of the
-party store, on the party database role, with no cache, so a change to a
-party takes effect on the next request on every instance. The table holds
-the binding key of each `PERSON` of a mapped template that performs a
-professional `ROLE` (a `ROLE` of the mapped role template that its `roles`
-list, that names it as `performer`, whose state is `complete` or
-`incomplete` and whose `time_validity` holds today's date in UTC) or that
-is the source of a representation. A key of type `guid` or
-`uuid` is compared in lower case. The table is written in each party
-commit's transaction and can be rebuilt from the party versions alone.
-
-The request is refused with `403` and the binding code in the problem body
-when the login matches two parties (`refused-ambiguous`), when its party is
-`inactive` (`refused-inactive`) or `abandoned` (`refused-abandoned`), when
-its key belongs to a deleted party (`refused-deprovisioned`), when the token
-carries no `sub` (`refused-key-claim-missing`), when the party lacks the
-marker the caller's kind needs (`refused-wrong-marker`), when the groups a
-token asserts cannot be read (`refused-groups-unavailable`), and when a
-representative reaches a subject its party has no live
-representation of, stored in the CDR for the provider the deployment acts
-for and not written by the representative itself
-(`refused-representation-unrecorded`). A party
-store that cannot answer is answered `503`.
-
-A person whose login matches no party is refused with `403` and
-`refused-unbound` on every request, reads and writes alike; only the public
-endpoints outside the auth layer answer. The problem names the identifier
-issuer to provision the person under, and the refusal of a token without
-`sub` names that claim instead. No setting serves an unbound person
-under a login-only committer, so provision every professional (through
-[SCIM](#authscim) or the demographic API) before you add an issuer, or
-let the issuer create a provisional `PERSON` at the first login
-([just-in-time creation](#just-in-time-creation)). Each
-refusal writes one `warn` line naming the issuer and the outcome, never the
-claim value, and counts into the `binding_refusals` metric by `issuer` and
-`outcome`.
-
-A representative reaches only the EHRs of a subject their `PERSON` holds a
-live representation of, stored in the CDR for the provider
-`[authz.party_binding.provider]` names and read from the store, never from
-the token (EHDS Art. 4(2)). The access evaluator holds every request that
-names an EHR to those EHRs, whatever the token's scopes cover, and refuses
-any other with `403` `refused-not-represented`; a query must name one with
-`ehr_id`, and an operation that names no EHR is refused the same way.
-Templates stay readable. A professional's token whose only clinical scopes
-are `patient/` is confined to its launch EHR, and its commits record the
-professional, never `PARTY_SELF`. See
-[Representatives](../operational-policy.md#representatives).
-
-#### Just-in-time creation
-
-Just-in-time creation lets a professional with no party work under their own
-account at their first login, before SCIM or an administrator completes the
-record. When a professional's login matches no party, and a
-`create_at_login` grant in the CDR admits it, FerroEHR commits one `PERSON`
-of the default template with lifecycle state `553|incomplete|`, which RM
-common §Incomplete Content allows for "incomplete demographic details", and
-its professional `ROLE` in the same demographic contribution, then serves the
-request bound to it. The next request binds to that `PERSON` and creates
-nothing. When a login creates a party is FerroEHR's own design: no openEHR
-specification governs it.
-
-Which logins are created is operational policy, so it is CDR data and no
-configuration key: an administrator writes a `ROLE` whose capability grants
-`openehr_access::create_at_login`, naming the issuer and the admission
-conditions, through the Demographic API. The grant is read on each first
-login, so a change applies to the next one without a restart. The
-[Operational policy](../operational-policy.md#just-in-time-admission) page
-documents the grant and has a worked example. `[authz.grants] allowed`
-must list `create_at_login`, which the default does not, or no such grant
-can be written or honoured.
-
-The `[[authz.party_binding.issuer]]` table only says how an issuer's tokens
-are read, and an issuer without one reads the defaults:
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `issuer` | string | required | An issuer an `[auth.issuer.<name>.party]` table binds. |
-| `user_name_claim` | string | `sub` | The claim the `userName` is read from. It must be one the issuer controls: an email address, a phone number, `preferred_username`, `name`, `upn` and `unique_name` refuse the start. |
-| `idp_claim` | string | `idp` | The dotted claim path an `admit_idp` condition reads the identity provider from (the Microsoft Entra `idp` claim). |
-
-Creation also needs a default person template with a `user_name` selector,
-`[authz.party_binding.professional_role]`, and an attribute that maps an
-OpenID Connect name claim (`name`, `given_name`, `family_name`,
-`middle_name` or `nickname`) to the default template. The default mapping
-has them. When a grant admits a login and the mapping lacks one, the login
-is not created and the server logs what is missing.
-
-```toml
-[[authz.party_binding.issuer]]
-issuer = "https://login.microsoftonline.com/<tenant-id>/v2.0"
-user_name_claim = "oid"
-```
-
-What it writes is the attribution minimum: the binding key, the `userName`
-and the name claims the token carries. Any other mapped attribute is written
-only where its `[[authz.party_binding.person.attribute]]` sets `jit = true`
-(GDPR Art. 25(2), data protection by default), and `externalId` is never
-written, since RFC 7643 §3.1 leaves it to the provisioning client. The
-version is committed with change type `249|creation|`, a description naming
-just-in-time creation and the issuer, and the person's own committer: the
-name, the login identifier and an `external_ref` naming the new `PERSON`.
-FerroEHR reads every value from the access token only (RFC 9068 §2.2.2), so
-the issuer must put the name claims in the access token.
-
-It runs only for a person or a delegated caller of the issuer, never for a
-representative, a patient, a system or a `federation` caller, and never for a
-login whose outcome is anything other than unbound: an ambiguous, inactive,
-abandoned or deprovisioned party, a token without the key claim and a party
-with the wrong marker are refused as before. A `PERSON` a SCIM client deleted
-is never created again by a later login, whatever the identity provider still
-issues. A login that no grant in force admits, or whose token carries no
-mapped name claim, is refused with `403` and `refused-unbound`.
-
-Concurrent first requests of one login commit one `PERSON`: the binding key's
-unique index refuses the second commit, and that request binds to the first
-one's `PERSON`. A login whose `userName` another party already holds is
-refused with `403` and binds nothing. Just-in-time creation only creates: it
-never updates, deactivates or deletes a `PERSON`, so a later login with
-changed claims changes nothing.
-
-A `PERSON` whose latest version is `incomplete` is provisional. The access
-record of each of its requests carries `binding = provisional`, a demographic
-read and an AQL query over `VERSION/lifecycle_state` show it, and
-`ferroehr party-binding check` reports the provisional persons older than
-`provisional_report_after` under `side_table.provisional`. What a provisional person may do is decided by
-their SMART scopes and roles, as for anyone. A SCIM client whose
-`binding_issuer` is the issuer's `identifier_issuer` completes the `PERSON`:
-it finds it by `userName`, with a binding key equal to its own, writes the
-`externalId` with a `PATCH`, and a complete `PUT` completes it. SCIM
-`active = false` abandons it.
-
-The lawful basis for the attribution minimum (key, `userName`, name) is GDPR
-Art. 6(1)(c): EHDS Art. 13(4) and the logging duties need the professional
-identified. An operator who opts a contact attribute in with `jit = true`
-names its own basis, Art. 6(1)(b) or (f). Because the data come from the
-identity provider and not from the person, tell the professionals what Art. 14
-asks: what is copied, from which source, and why. On a realm or tenant that
-creates persons, make the name attributes administrator-controlled, as the key
-is; [Enterprise identity providers](../identity-providers.md#just-in-time-creation)
-shows the settings per identity provider.
-
-### Imports and system clients
-
-The systems whose wrapped committers an import may carry are no key: a
-`creating_system` element of the importer's import grant names each one
-([What the grants decide](../operational-policy.md#what-the-grants-decide)).
-
-The system clients are not configuration. An OAuth client-credentials client
-is granted what it may commit, import or export in the CDR, as an `ACTOR`
-carrying its `client_id` that acts for a provider and performs a `ROLE` whose
-capabilities grant the operations; see
-[What a system client may do](../operational-policy.md#what-a-system-client-may-do).
-The former `[[authz.system_client]]` table is an unknown key and refuses the
-start.
-
-### Federation agreements
-
-A federation agreement is CDR data, not a configuration key: a grant of
-`federated_person_access` or `federated_organisation_access` on the partner's
-party, read on every request and judged when it is written. The configuration
-keeps what the agreements are judged against: the `federation` issuers, their
-`[auth.issuer.<name>.federation]` tables, `[authz.grants] allowed` (which must name both
-codes before an agreement can be written). The period a `chained` agreement
-is held to is the access log retention of the controller's access policy
-(`ACCESS_POLICY.log_retention`). The model, the codes and the rules are on
-[Operational policy](../operational-policy.md#federation-agreements). The
-`[[authz.federation.agreement]]` table is removed, and a configuration that
-still holds it is refused at boot as an unknown key.
-
-### `[authz.grants]`
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `allowed` | list of operation codes | `["commit_composition"]` | The operations of the `openehr_access` terminology the policy grants may grant. A `ROLE` committed with a capability that codes an operation this list does not name is refused with `403`, and one already stored is never honoured, so a compromised administrator account grants no more than you allow. Allow `compose_for` to let a professional name another `PERSON` of the same provider as the composer of what they commit ([Who is the committer](../security/committer.md#the-composer-of-a-professionals-composition)). An empty list lets the party store grant nothing; an unknown code refuses the start. Environment: `FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated. The codes and how a request reads its grants are on [Operational policy](../operational-policy.md#how-a-request-reads-its-grants). |
-
-### `[authz.rbac]`
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `enabled` | bool | `true` | The coarse role gate (active when authentication is enabled). Off, every authenticated caller may use every enabled surface, reported as the `rbac_off` deployment gap. `ehr_access_default` and `admin_role` apply either way. |
-| `admin_role` | string | `ADMIN` | Role required for admin-class operations. A blank value is a boot error. |
-| `readonly_role` | string | `READONLY` | Role marking a principal read-only: refused on every write operation (create/update/delete/upload), even alongside granting roles. Reads and AQL queries are still allowed. |
-| `role_issuers` | list of string | `[]` | The issuers whose role claims may grant `admin_role`. A token of any other issuer never holds it, a Basic user keeps the roles its own table grants, and a `hold_roles` policy grant never gives one. A `federation` issuer refuses the start. Empty, no token grants them. |
-| `ehr_access_default` | enum{open,restricted} | `open` | What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits. `restricted` is object-level default-deny: only `admin_role` reaches a setting-less EHR, so an operator can still author the settings that open it. It is enforced whether `enabled` is on or off. With `[auth] enabled = false` nothing could enforce `restricted`, so that combination is a boot error. See [Security](../security.md#per-ehr-access-control-ehr_access). |
-
-Reading one subject's access log, acting as an EHDS Art. 10 access service,
-and importing an EHR or an extract have no key here: each is a grant in the
-CDR (`read_subject_audit`, `access_service`, `import_ehr` and
-`import_ehr_extract`),
-under `[authz.grants] allowed`. The keys that named a role for them before
-5.7.1 are unknown keys, and the server refuses to start with one
-([What the grants decide](../operational-policy.md#what-the-grants-decide)).
-
-> [!NOTE]
-> The management surface is **not** configured under `[authz.rbac]`.
-> [`[management.endpoints]`](#management) owns it, one level per endpoint, with
-> no global default beside it: an endpoint you do not name is `off` and is not
-> mounted. Only the `admin_only` level consults `authz.rbac.admin_role`.
-
 ## `[api] admin`
 
 | Key | Type | Default | Description |
@@ -738,401 +276,16 @@ Physical deletion is irreversible, so the group stays off by default. With it
 on, `/admin` also joins the group list the `OPTIONS` System-Options manifest
 advertises, so the manifest never names a group that answers `404`.
 
-## `[auth.scim]`
-
-FerroEHR is a SCIM 2.0 service provider (RFC 7644) at `/scim/v2/`, the
-endpoint an identity provider provisions each professional through. It is off
-by default.
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `filter_max_results` | integer | `100` | The most resources one list response returns, which `ServiceProviderConfig` declares as `filter.maxResults`. At least 1. |
-| `max_deactivations` | integer | `100` | The most Users one client deactivates or deletes per window. Past it, a deactivation or deletion is **429** with `Retry-After` and logged at `error`. The count is kept in the database, so every replica shares one bound. At least 1. |
-| `deactivation_window` | duration | `"1h"` | The length of that window. At least `"1min"`. |
-| `contact_erasure_delay` | duration | `"0s"` | How long after a User's deletion the contacts of every version of its `PERSON` are erased (GDPR Art. 17). `"0s"` erases them in the deletion itself; at most `"30d"`. |
-| `max_group_members` | integer | `5000` | The most members one Group holds. An add past it is **400** `invalidValue`. A membership change versions only the member's `PERSON`, so its cost does not grow with the Group. At least 1. |
-
-Who provisions is CDR data, read on every request: a provisioning client is
-an OAuth client-credentials client of your own authorization server whose
-`ACTOR` holds a `scim_provision` grant in force. The grant's
-`binding_issuer` is the identifier issuer of the binding keys the client
-provisions: the `identifier_issuer` of an `[auth.issuer.<name>.party]` table
-your professionals log in through. Its `token_scope` is the scope a token of the client
-must hold; SMART on openEHR defines none for SCIM, so the value is yours to
-choose. Each User belongs to the one client whose `binding_issuer` issues its
-key, so no two clients' grants name one. `[authz.grants] allowed` must admit
-`scim_provision`. The first such grant is written with
-[`ferroehr party-binding grant`](../operational-policy.md#the-first-grant),
-since no administrator can log in before the persons it provisions exist;
-[Operational policy](../operational-policy.md#what-the-grants-decide) has the
-grant's terms.
-
-Every `meta.location` and discovery document names the resource by its URI
-(RFC 7643 §3.1), under `<public_base_url>/scim/v2` with
-[`server.public_base_url`](config-server.md#public_base_url-the-one-public-url)
-and `server.base_path`, so the table needs that key.
-
-The table's presence turns the endpoint on; it has no `enabled` key, and
-setting one refuses the start. The start is refused when the table is present
-without `server.public_base_url`, and when the [party mapping](#authzparty_binding)
-lacks what a User is written with: a default person template with a
-`user_name` selector, and `[authz.party_binding.professional_role]`.
-
-```toml
-[server]
-public_base_url = "https://cdr.example.com"
-
-[auth.scim]
-
-[authz.grants]
-allowed = ["commit_composition", "scim_provision"]
-```
-
-`/scim/v2/ServiceProviderConfig` answers without a token, so a client can read
-the authentication scheme before it holds one. Every other path needs a
-bearer token of a client that acts for nobody and holds a `scim_provision`
-grant in force:
-
-- no token, or one that does not verify, is **401** with
-  `WWW-Authenticate: Bearer`;
-- a person's token, a client with no grant in force, a grant whose
-  `binding_issuer` is not the `identifier_issuer` of an `[auth.issuer.<name>.party]`
-  table, or another client's grant names too, and a token without the grant's `token_scope` are **403**, the
-  last with `WWW-Authenticate: Bearer error="insufficient_scope"` (RFC 6750
-  §3.1).
-
-Every refusal is an RFC 7644 §3.12 `Error` message in `application/scim+json`.
-The client's requests count against
-[`[server.caller_rate]`](config-server.md) like any caller's, so each
-replica gives the client an allowance of its own, and past it a request is
-**429** with `Retry-After`. `/scim/v2/Schemas` serves the core User schema
-reduced to `userName`, `active` and the SCIM attributes
-`[[authz.party_binding.person.attribute]]` maps, and FerroEHR's extension
-`urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User` with
-`loginIdentifier`, the attribute that feeds the binding key. `/ResourceTypes`
-lists the `User` type at `/Users`, and the `Group` type at `/Groups` with
-FerroEHR's Group extension
-`urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:Group` and its
-immutable boolean `careTeam` when Groups are served.
-
-The two extension URNs are a deliberate deviation from RFC 7643. They sit
-under `urn:ietf:params:scim:schemas:extension:`, the sub-namespace RFC 7643
-§10.2 and RFC 3553 reserve for names IANA assigns, and neither name is in the
-IANA "SCIM Schema URIs" registry (RFC 7643 §10.3). The reason is Microsoft
-Entra ID: its provisioning client sends a custom attribute only under a name
-of the form
-`urn:ietf:params:scim:schemas:extension:CustomExtensionName:2.0:User:CustomAttribute`
-("For SCIM applications, the attribute name must follow the pattern shown in
-the example", *Customize Microsoft Entra attribute mappings*, vendored at
-`docs/specs/microsoft-entra/docs/identity/app-provisioning/customize-application-attributes.md`
-line 148). A schema id outside that namespace, which RFC 7643 §3 would allow,
-leaves an Entra non-gallery application unable to send `loginIdentifier`, so
-it could not provision anyone. The binding key fits no registered attribute:
-`userName` is mutable, `externalId` is the client's own identifier for the
-resource (RFC 7643 §3.1), and the Enterprise User extension (§4.3) carries no
-login subject. The two URNs are the provisioning contract of the FerroHEALTH
-products, fixed in the same way as the `/scim/v2` base path, and a client
-writes them exactly as `/Schemas` lists them.
-
-### Users
-
-A User is a `PERSON` of the default person template performing the
-professional `ROLE`: SCIM (RFC 7643, RFC 7644) provisions a workforce. A
-patient needs no provisioning, since their own token's login binds their
-`PERSON`. A representation is a `PARTY_RELATIONSHIP` of its own, written by
-the patient, an administrator or a `write_representation` holder
-(Regulation (EU) 2025/327 Art. 4(2)), and a User version that holds one in
-its relationships is refused `422`. This is FerroEHR's own design. The client serves these operations (RFC 7644 §3):
-
-- `POST /scim/v2/Users` creates the `PERSON` and its `ROLE` in one demographic
-  CONTRIBUTION, under the client as committer, and answers **201** with the
-  User, its `Location` and its `ETag`. The body carries `userName` and the
-  binding key in `loginIdentifier`; `externalId` and every mapped attribute
-  are optional. A version that fits its template in full is `complete`, and
-  one that fits only with every lower limit at zero is `incomplete`, which the
-  User's `lifecycleState` and `missingPaths` name. A User created with
-  `active = false` is **400** `invalidValue`.
-- `GET /scim/v2/Users/{id}` answers the User with its `ETag`, the weak tag of
-  its version, and **304** to an `If-None-Match` naming that version.
-- `GET /scim/v2/Users` answers a `ListResponse`, an empty one with **200**
-  when nothing matches. `filter` takes `eq` and `and` over `userName`,
-  `externalId` and `id`; names and operators are compared in any case, and
-  anything else is **400** `invalidFilter`. `startIndex` and `count` page the
-  result, at most `max_results` at a time.
-
-The User's `userName`, `externalId` and binding key are `DV_IDENTIFIER`s at
-their selectors, issued by the client's `binding_issuer`. A client sees only
-its own Users, the ones whose key its `binding_issuer` issues: every other id
-is **404** and absent from every list, as is a `PERSON` without a live
-professional `ROLE`. The `userName` index spans every client, so a **409**
-`uniqueness` tells one client that a `userName` exists under another;
-`externalId` is unique within one client. Every SCIM request is an access
-record of the client, with the `PERSON` as its object.
-
-A User is changed and removed through these operations:
-
-- `PUT /scim/v2/Users/{id}` replaces the User (RFC 7644 §3.5.1). A mapped
-  attribute the body leaves out is cleared; the binding key and `externalId`
-  are kept, and a left-out `active` keeps the lifecycle state.
-- `PATCH /scim/v2/Users/{id}` applies the RFC 7644 §3.5.2 operations, value
-  paths and a `replace` without `path` included, and commits the result as
-  one version. The operation is read in any case, as the Entra ID client
-  sends `Replace`.
-- `DELETE /scim/v2/Users/{id}` logically deletes the `PERSON` and its
-  professional `ROLE` in one demographic CONTRIBUTION and answers **204**.
-  Every later request on the id is **404**, the User leaves every list, and a
-  new User may take its `userName`. The binding key stays behind as a
-  tombstone: a login on it is refused as deprovisioned until the owning
-  client creates a User with it again.
-
-Each write answers with the User and its new `ETag`. An `If-Match` naming
-another version is **412**, a changed binding key is **400** `mutability`, and
-a write without `If-Match` is accepted (RFC 7644 §3.14 makes entity tags a
-MAY). `active` drives the lifecycle state of the `PERSON` (RM common
-§Version Lifecycle):
-
-| Current state | `active` in the request | Result |
-|---|---|---|
-| `complete` or `incomplete` | `true` or left out | `complete` when the template holds in full, else `incomplete` |
-| `complete` | `false` | `inactive` |
-| `incomplete` | `false` | `abandoned` |
-| `inactive` | `true` | `complete`, or `incomplete` when the template does not hold |
-| `abandoned` | `true` | `incomplete`, then `complete` in a second version when the template holds |
-| `inactive` or `abandoned` | `false` or left out, with a change | **400** `invalidValue`: reactivate the User first |
-| `inactive` or `abandoned` | `false` or left out, without a change | **200**, no new version |
-
-An inactive or abandoned User is still read and found by a filter, so its
-client can reactivate it. When the second version of an `abandoned` User
-fails, the User stays `incomplete` and the same request completes it.
-
-#### Roles
-
-A User's `roles` (RFC 7643 §4.1.2) are the roles the access policy's
-[controller rules](../operational-policy.md#controller-rules) name. Each
-value is one `ROLE` the User's `PERSON` performs, of the professional role
-template, whose `name` is the value coded in the terminology the client's
-`scim_provision` grant names, and whose `time_validity` starts on the day it
-is added. The grant states which roles the client may hand out:
-
-| Element | Value |
-|---|---|
-| `role_terminology` | The terminology id the client's role values are coded in, exactly one |
-| `role` | A role code the client may assign, one element per code |
-
-A request whose `roles` names a code the grant does not list, or any role
-when the grant names no `role_terminology`, is **403** and changes nothing.
-A `POST`, `PUT` or `PATCH` makes the User hold exactly the roles its result
-lists: a new value commits a new `ROLE`, and a removed one ends its `ROLE`
-the day before (its `time_validity` gains the date of the removal as its
-exclusive end) and drops it from the `PERSON`'s `roles`. The change decides
-the next request on the replica that took it, and on every other replica
-once the commit's notification arrives, with no added transaction. A token's
-role claims never drive a controller rule. These `ROLE`s carry no
-capability, so a SCIM client writes them, and an administrator alone grants
-a capability. RFC 7643 sets no vocabulary for `roles` and RFC 7644 §2 leaves
-the authorization model out: the mapping is FerroEHR's own design.
-
-The versions of a deleted User are kept for the record-keeping duties that
-need the professional's identification (GDPR Art. 6(1)(c), laid down in law
-as Art. 6(3) requires: in the Netherlands BW 7:454(3), twenty years, and the
-logging duty of the Besluit elektronische gegevensverwerking door
-zorgaanbieders). Outside the Netherlands, name your national retention
-provision. Enable the identity provider's protection against accidental
-deletions beside `max_deactivations`.
-
-Only the attribution minimum waits for that horizon: the name, the binding key
-and the identifiers, `userName` and `externalId` among them. The contacts
-serve no attribution, so FerroEHR erases them (GDPR Art. 5(1)(e)): with
-`auth.scim.contact_erasure_delay = 0` the deletion removes the `contacts` of every
-version of the `PERSON` in the same transaction, and with a period a sweep
-that runs every minute removes them once the period has passed. The sweep
-reaches every deleted `PERSON` whose binding key the `binding_issuer` of a
-`scim_provision` grant issues, one that has ended included,
-an administrator's demographic `DELETE` included. Each version keeps its uid,
-audit and contribution, and its node rows are derived again from the erased
-body. A server signature on such a version is removed, because it was taken
-over the content the erasure changed. Each erasure is an access record, a
-delete of `party:<id>#contacts`. A login on the key is still refused as
-deprovisioned.
-
-### Groups
-
-When `[authz.party_binding.group]` names a `display_name` and
-`[authz.party_binding.membership]` is set, `/scim/v2/Groups` is served beside
-`/Users`, and `/scim/v2/ResourceTypes` lists the Group. A Group is a
-demographic `GROUP` of the group template:
-
-- its `displayName` is the `GROUP`'s `PARTY_IDENTITY`, unique across the live
-  Groups after case folding, so a duplicate is **409** `uniqueness`;
-- its `externalId` is a `DV_IDENTIFIER` at the `external_id` selector under
-  the client's group issuer: the `group_identifier_issuer` of the
-  `[auth.issuer.<name>.party]` table whose `identifier_issuer` is the client's
-  `binding_issuer`, so the group claim of that issuer's tokens matches it.
-  When that table sets none, the group issuer is the `binding_issuer` with
-  `/groups` appended (`urn:example:login` gives `urn:example:login/groups`),
-  with any trailing `/` of the `binding_issuer` dropped first. A deployment
-  whose tokens assert groups sets `group_claim` and a
-  `group_identifier_issuer` in the table, and that value is the group issuer;
-- each member holds one inline `PARTY_RELATIONSHIP` of the membership
-  archetype, with its `PERSON` as `source` and the `GROUP` as `target`,
-  stored in the member's own version (RM demographic §Party Relationships).
-  No `ROLE` is created for a Group, and a `PERSON` in no Group has
-  `relationships` Void.
-- its `careTeam`, in FerroEHR's Group extension, says whether it is a care
-  team: set at creation, `false` when left out, and never changed (**400**
-  `mutability`). A care team is served with `careTeam = true` and the
-  extension in its `schemas`; any other Group is served without either. A
-  care team's `GROUP` is named by the coded `care_team` and each membership
-  by the coded `member_of` of `openehr_access` (RM demographic `PARTY.type()` is the `name`), so
-  its members are in the care of the patients under the team's care.
-  Creating one and changing its members needs the client's
-  `write_care_relationship` grant beside `scim_provision`, and is **403**
-  without it ([Care teams provisioned over SCIM](../operational-policy.md#care-teams-provisioned-over-scim)).
-  The group template and the membership archetype must admit a
-  `DV_CODED_TEXT` name, as the default definitions do.
-
-A Group belongs to the client that created it; every other client gets
-**404**. A member is a User of the same client: a member naming another
-client's User, an unknown id or a Group (nested Groups are not supported) is
-**400** `invalidValue`. What a Group allows stays with the token's scopes and
-roles; the access record lists the Groups the token names that the person
-belongs to, and a Group in `inactive` or `abandoned` lists no member.
-
-- `POST /scim/v2/Groups` creates the `GROUP` with its members, if any, and
-  answers **201** with the Group, its `Location` and `ETag`.
-- `GET /scim/v2/Groups/{id}` and `GET /scim/v2/Groups` filter with `eq` and
-  `and` over `displayName`, `externalId` and `id`, and
-  `excludedAttributes=members` leaves the members out. Each member is served
-  with its `value`, `$ref` and `type`.
-- `PATCH /scim/v2/Groups/{id}` answers **204** with the new `ETag` (RFC 7644
-  §3.5.2). `add` of `members` adds the listed members; `remove` with the
-  filter `members[value eq "<id>"]` removes that member, and `remove` of
-  `members` with neither a filter nor a value list removes them all.
-- `PUT /scim/v2/Groups/{id}` replaces the `displayName` and the members,
-  keeps a left-out `externalId`, and answers **200** with the Group.
-- `DELETE /scim/v2/Groups/{id}` logically deletes the `GROUP` with its
-  memberships, and every later request on the id is **404**.
-
-**Entra compatibility deviation.** A `remove` of `members` that carries a
-`value` list removes only the listed members, the request Microsoft Entra ID
-sends. RFC 7644 §3.5.2.2 removes "the attribute and all values" when no
-filter is specified; FerroEHR follows Entra only when the `value` list is
-present.
-
-A membership change is a new version of each member's `PERSON` it touches,
-in one CONTRIBUTION, and the `GROUP` gets no version; a change costs the same
-whatever the Group's size. The Group's `ETag` is its `GROUP` version with a
-membership revision that moves with every membership change, so it changes
-whenever its members do (RFC 7644 §3.14). The member User's `ETag` changes
-too, since its `PERSON` holds the membership (RFC 7643 §4.1.2); its body does
-not, because the User serves no `groups` attribute. Deleting a User deletes
-the memberships its `PERSON` holds with it. Deleting a Group drops the
-membership of each active member in the CONTRIBUTION that deletes the
-`GROUP`. A `GROUP` an administrator set `inactive` or `abandoned` keeps its
-version, since the version lifecycle draws no update of either state, and a
-SCIM write to such a Group is **400** `invalidValue`.
-
-**Deactivated Users leave their Groups.** The version lifecycle draws no
-update of an `inactive` or `abandoned` `PERSON` (RM common master06 §Version
-Lifecycle), so such a `PERSON` cannot take a membership change, and an
-inactive `PERSON` binds to nothing. Setting a User's `active` to `false`
-therefore drops its memberships in the same version, and each Group's
-`ETag` changes. A membership of a care-team Group stays, as does every other
-care relationship, since SCIM never changes one ([Deprovisioning a team
-member](../operational-policy.md#deprovisioning-a-team-member)). Microsoft Entra ID often disables a user and then removes it
-from its groups; the later `remove` finds nothing to remove and answers
-**204**. An `add` naming an inactive or abandoned User is **400**
-`invalidValue` ("reactivate the User first"). A reactivated User belongs to
-no plain Group until its client adds it again.
-
-### Provision from Microsoft Entra ID
-
-Microsoft Entra ID provisions through a non-gallery enterprise application.
-FerroEHR validates the access token your own authorization server issues to
-it, so the steps split between the two.
-
-1. **Map the person template.** The default
-   [party mapping](#the-party-mapping) maps `userName`, `externalId`, the
-   formatted, given and family name and the work email Entra sends. Set the
-   person section only to map more, or to key the binding on the object id
-   as the worked example there does.
-
-   A value path such as `emails[type eq "work"].value` serves the value and
-   its `type`. FerroEHR holds one value per `type` and no preference among
-   them, so `/scim/v2/Schemas` declares `primary` read-only and the `primary`
-   Entra sends is ignored (RFC 7644 §3.3).
-2. **Grant the client.** Grant its client `scim_provision`, with `ferroehr
-   party-binding grant` or as an administrator through the Demographic API:
-   the `--issuer` is your authorization server, the `binding_issuer` element the `identifier_issuer` of the
-   `[auth.issuer.<name>.party]` your professionals log in through, and the `token_scope`
-   element the scope its token holds. Set `server.public_base_url` to the URL
-   Entra reaches. In the Helm chart, a `config.auth.scim` value also adds the
-   `/scim/v2` path to the Ingress. `ferroehr config check` refuses a mapping
-   the endpoint cannot serve.
-3. **Federate Entra's credential at your authorization server.** Entra's
-   Workload Identity Federation presents a signed assertion, which your
-   authorization server exchanges for a client-credentials access token
-   (RFC 7523 §2.2). These checks are your authorization server's, not
-   FerroEHR's, so verify each one there, as Microsoft's "Workload Identity
-   Federation for SCIM Provisioning" guide requires:
-   - [ ] `iss` is pinned to your full tenant issuer,
-     `https://login.microsoftonline.com/<tenant>/v2.0`, and the assertion
-     verifies against that tenant's key set.
-   - [ ] `aud` is pinned to `api://<workload-identity-app-id>`, with one
-     workload-identity application per FerroEHR deployment.
-   - [ ] `azp` is pinned to the application id of Microsoft's provisioning
-     service.
-   - [ ] `uti` is cached for the lifetime of the assertion, and an assertion
-     whose `uti` was seen before is refused as a replay.
-   - [ ] The access token it issues holds the grant's `token_scope`, names the
-     client in `client_id`, and lives between 1 and 6 hours, the range
-     Microsoft's guide asks for.
-
-   The assertion's `sub` is the object id of a Microsoft application that
-   every integration in the tenant shares, never your `client_id`, so it does
-   not meet RFC 7523 §3 item 2.B. Accepting it is a deviation of your
-   authorization server; record it there. Leaving Entra's **Secret Token**
-   blank, so that Entra uses its own token, is not supported: Microsoft
-   reserves it for testing, and every non-gallery application in the tenant
-   receives a token with the same `iss` and `aud` (RFC 9700 §2.3). A
-   long-lived bearer token is not supported either.
-4. **Point Entra at FerroEHR.** Set the **Tenant URL** to
-   `<server.public_base_url>/scim/v2` and run **Test Connection**. Entra queries
-   `/Users` with `filter=externalId eq "<random guid>"`, which FerroEHR
-   answers with an empty `ListResponse`, and fetches a random User and a
-   random Group, each answered **404**.
-5. **Map the attributes in Entra.** Map `userName`, `externalId`, `active`
-   and the attributes of step 1. Map the attribute that carries the
-   professional's login identifier to
-   `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier`;
-   Entra sends it without listing the extension in `schemas`, which FerroEHR
-   accepts. An attribute the person template does not map is refused as
-   undefined, so remove the rest of Entra's default mappings.
-6. **Protect against mass deactivation.** Turn on Entra's accidental
-   deletions prevention, with a threshold at or below `max_deactivations`.
-7. **Provision groups.** Map the group's `objectId` to its `externalId`, so
-   the object ids Entra puts in the `groups` claim match, and provision only
-   the groups assigned to the application, which keeps a person's token under
-   the groups overage limit. Entra creates each Group with no member, reads it
-   with `excludedAttributes=members`, finds it by `displayName`, and adds and
-   removes members with PATCH.
-
-Entra writes `Replace` and `Add` with a capital letter, disables a User with
-`active = false`, sends `DELETE` once the user is removed, and never sends a
-null. A value cleared in Entra therefore stays in FerroEHR until the User is
-replaced or deleted, or an administrator removes it.
-
 ## The access-delay register
 
 The EHDS Art. 3(3) delay of the person's own access to newly registered data
 is a Member State option, and an
-[admin register](../operational-policy.md#the-admin-registers), not a
+[admin register](../access-policy.md#the-admin-registers), not a
 configuration key: you turn it on through
 `{ext}/admin/registers/access-delay` only where your Member State's rule
 provides for the delay, every version is kept with its committer, and a
-change applies on the next request without a restart. `[privacy.access_delay]`
-in `ferroehr.toml` is an unknown key and refuses boot. What the delay does is
-on [delayed access by the person](../security.md#delayed-access-by-the-person-ehds-art-33).
+change applies on the next request without a restart. What the delay does is
+on [delayed access by the person](../access-control.md#delayed-access-by-the-person-ehds-art-33).
 
 | Member | Type | Default | Description |
 |---|---|---|---|
@@ -1172,7 +325,7 @@ consume. `discovery` alone turns the document on.
 Which clients count as backend clients and which reach the DEMOGRAPHIC API is
 policy the CDR holds, never a key here: the `query_system_wide` and
 `access_demographic` grants of the client's `AGENT`
-([Operational policy](../operational-policy.md#a-backend-client-and-a-demographic-client)).
+([Operational policy](../policy-examples.md#a-backend-client-and-a-demographic-client)).
 
 No `smart` URL may carry a user name or password, whether or not the document
 is served: the discovery document publishes these URLs to every application,

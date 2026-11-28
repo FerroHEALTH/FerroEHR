@@ -5,10 +5,8 @@ login with no `PERSON` is refused (`403`, `refused-unbound`). This page
 takes a new deployment from an empty database to its first bound login, and
 takes an existing deployment, whose people were attributed by login alone,
 to binding. The configuration it names is in
-[Authentication & access](config-auth.md#the-party-mapping), and the two
-commands are in [CLI & production checklist](config-cli.md). Every
-incompatible change of the release, with its upgrade step, is on
-[Breaking changes of party binding](party-binding-breaking-changes.md).
+[Authentication & access](config-authz.md#the-party-mapping), and the two
+commands are in [CLI & production checklist](config-cli.md).
 
 No openEHR specification governs a deployment's migration or its
 credential store: this is FerroEHR's own design.
@@ -177,9 +175,5 @@ committer rule.
 
 | Product | What it needs | Release |
 |---|---|---|
-| FerroBRIDGE | Writes to the CDR under the facade caller's exchanged token (FerroHEALTH/FerroBRIDGE#1582) | FerroBRIDGE v0.0.23 |
-| FerroFED | The gateway reaches the CDR under the caller (FerroHEALTH/FerroFED#1615) | none as of FerroFED v0.0.19; the issue's FerroFED milestone is v0.0.20 |
-
-No FerroFED release up to v0.0.19 reaches the CDR under the caller, so a
-deployment with a FerroFED gateway adds its `persons` issuers only once a
-FerroFED release carries that change (FerroHEALTH/FerroFED#1615).
+| FerroBRIDGE | Writes to the CDR under the facade caller's exchanged token | FerroBRIDGE v0.0.23 or later |
+| FerroFED | The gateway reaches the CDR under the caller | FerroFED v0.0.20 or later |

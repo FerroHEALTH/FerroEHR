@@ -284,8 +284,8 @@ available updates to users, and the option to temporarily postpone them"
 - **Evidence:** [`SECURITY.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions);
   `app/ferroehr/src/support.rs`; `app/ferroehr/src/banner.rs`
   (`banner_states_the_support_period`);
-  [how long a version is supported](../operations.md#how-long-the-version-you-pinned-is-supported);
-  [upgrades](../operations.md#upgrades).
+  [how long a version is supported](../upgrades.md#how-long-the-version-you-pinned-is-supported);
+  [upgrades](../upgrades.md).
 - **Status:** met for the security-update and notification limbs, with the
   notice delivered outside the product as stated above.
 - **Open:** none.
@@ -346,8 +346,8 @@ transit by state of the art mechanisms, and by using other technical means"
   pseudonymisation domains on separate credentials, checked by `production`;
   secrets that never render; log sanitising.
 - **Evidence:** `[server.tls]` in `ferroehr.default.toml`;
-  [B1](../threat-model.md#b1--network-and-protocol),
-  [B6](../threat-model.md#b6--the-database),
+  [B1](../threat-model.md#b1-network-and-protocol),
+  [B6](../threat-model.md#b6-the-database),
   [national identifiers stay in the master patient index](../threat-model.md#national-identifiers-stay-in-the-master-patient-index),
   [the go-live checklist](../security/go-live-checklist.md#9-the-database-volumes-and-backups-are-encrypted-at-rest),
   [TLS and database security](../operations.md#tls-and-database-security).
@@ -415,7 +415,7 @@ corruptions"
   `app/ferroehr/migrations/clinical/0010_baseline_grants.sql` and its
   party twin;
   `app/ferroehr/src/config/strict.rs`;
-  [tamper evidence](../audit.md#tamper-evidence);
+  [tamper evidence](../audit-integrity.md#tamper-evidence);
   [verifying releases](../verifying-releases.md).
 - **Status:** met. A signature failure on read is refused and logged. The
   server verifies the sealed windows of the system records and the access log one
@@ -463,7 +463,7 @@ denial-of-service attacks"
 - **Evidence:** `app/ferroehr-rest/src/overload.rs`;
   `app/ferroehr-rest/src/rate_limit.rs`; `app/ferroehr-rest/src/limits.rs`;
   [request limits](../security.md#request-limits-and-rate-limiting);
-  [backup and recovery](../operations.md#backup-and-point-in-time-recovery).
+  [backup and recovery](../database-operations.md#backup-and-point-in-time-recovery).
 - **Status:** met. The residual risk is stated in the threat model: an
   authorised caller holding resources is not defended against, and the limiter
   is per process.
@@ -552,7 +552,7 @@ to other products or systems, ensure that this is done in a secure manner"
   `app/ferroehr/tests/it/decommission.rs`;
   [decommissioning](../operations-decommissioning.md);
   [physical deletion](../operations-admin-apis.md#physical-deletion);
-  [dump and load](../operations-admin-apis.md#dump-and-load).
+  [dump and load](../storage-admin-apis.md#dump-and-load).
 - **Status:** met, shipped in #3642. The decommissioning page lists what the
   erase cannot reach and the deploying organisation removes: backups, WAL
   archives and replicas, the chart's Secrets and claims, the database roles,

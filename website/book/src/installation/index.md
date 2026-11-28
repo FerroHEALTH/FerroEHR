@@ -3,8 +3,9 @@
 FerroEHR is one self-contained binary that connects to a PostgreSQL 19
 database. There is no application server to install and no language runtime to
 provision: the binary links a pure-Rust TLS stack and needs no OpenSSL and no
-JVM, so all you choose is how to run it and where the database lives. This part
-covers the three paths and the full configuration surface.
+JVM, so all you choose is how to run it and where the database lives. This
+section covers the three paths; every key is in the
+[configuration reference](configuration.md).
 
 - **[Try it in Codespaces](codespaces.md):** one click boots the published
   images in a GitHub Codespace in your browser, with the Swagger UI and the
@@ -45,10 +46,9 @@ not this build's) which lets the runtime role hold no DDL rights. Something
 else then runs `ferroehr db migrate` under a migrator role first. That check
 still reads every schema's migration state, so a least-privilege deployment
 also sets `database.migrate_url` to the credential that can. Both postures are laid
-out in [Operations → Applying migrations](../operations.md#applying-migrations).
-v6 needs a new, empty database: it does not upgrade a database a v5 release
-prepared, and you move the records with the archive dump and load
-([Operations → Upgrading from v5 to v6](../operations.md#upgrading-from-v5-to-v6)).
+out in [Operations → Applying migrations](../database-operations.md#applying-migrations).
+v6 starts fresh on a new, empty database, and you reimport your data into it
+([Coming from a 5.x release](../upgrades.md#coming-from-a-5x-release)).
 
 **A deployment declares what it may hold.** The top-level
 `deployment.profile` key is `sandbox` by default: the server starts whatever

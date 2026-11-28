@@ -332,6 +332,177 @@ async fn a_city_predicate_selects_only_the_linked_ehrs() {
     );
 }
 
+/// A predicate reaches a selected `PERSON`'s EHRs both ways: the EHR whose
+/// `EHR_STATUS` names the party, and the EHR of each record subject it
+/// declares, which the local provider resolves to the EHR naming it.
+#[tokio::test]
+async fn a_predicate_reaches_the_ehrs_of_a_persons_record_subjects() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
+        .with_ehr_index(ferroehr::service::ehr_index::provider::EhrIndexProvider::Local)
+        .with_cohort(cohort_config(0));
+    let city = format!("Zwolle-{}", Uuid::now_v7());
+    let record = ferroehr::service::ehr_index::types::SubjectRef::person(
+        format!("mrn-{}", Uuid::now_v7()),
+        "urn:oid:2.999.1.4115",
+    );
+    let mut body = person("Lotte", &city, "8011AB", "F", "1988-04-04");
+    body["details"]["items"]
+        .as_array_mut()
+        .expect("details items")
+        .push(json!({
+            "_type": "ELEMENT",
+            "archetype_node_id": "at0011",
+            "name": { "_type": "DV_CODED_TEXT", "value": "record_subject",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
+                    "code_string": "record_subject" } },
+            "value": { "_type": "DV_IDENTIFIER", "issuer": record.namespace,
+                "id": record.id, "type": "MR" }
+        }));
+    let party = crate::fixtures::create_party(&svc, uv(&body, "249", None))
+        .await
+        .expect("the person is written");
+    let by_party = crate::fixtures::create_ehr_for_party(&svc, party).await;
+    let by_record = crate::fixtures::create_ehr_subject(&svc, &record).await;
+    for ehr in [by_party, by_record] {
+        svc.create_composition(ehr, uv(&composition("Lotte"), "249", None))
+            .await
+            .expect("a composition in each EHR");
+    }
+
+    let outcome = svc
+        .execute_cohort_query(request(&[("city", city.as_str())]))
+        .await
+        .expect("the cohort query runs");
+
+    assert_eq!(
+        outcome.cohort_size, 2,
+        "one EHR each way, each counted once"
+    );
+    let mut served: Vec<String> = outcome
+        .query
+        .served_ehrs
+        .iter()
+        .map(|(ehr, _rows)| ehr.clone())
+        .collect();
+    served.sort();
+    let mut expected = vec![by_party.to_string(), by_record.to_string()];
+    expected.sort();
+    assert_eq!(served, expected);
+    assert!(
+        !outcome
+            .query
+            .result_set
+            .to_value()
+            .unwrap()
+            .to_string()
+            .contains(&record.id),
+        "the record subject never reaches the served document"
+    );
+}
+
+/// The ADL 2 patient archetype whose id-coded ELEMENT the id-code case binds.
+const ADL2_PATIENT_ARCHETYPE: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v3";
+
+/// A PERSON of an ADL 2 archetype, its nodes id-coded, whose `details` carry
+/// its sex as the coded ELEMENT `id5`.
+fn adl2_patient(name: &str, sex: &str) -> Value {
+    json!({
+        "_type": "PERSON",
+        "archetype_node_id": ADL2_PATIENT_ARCHETYPE,
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": ADL2_PATIENT_ARCHETYPE },
+            "rm_version": "1.1.0" },
+        "name": { "_type": "DV_TEXT", "value": name },
+        "identities": [{
+            "_type": "PARTY_IDENTITY",
+            "archetype_node_id": "id6",
+            "name": { "_type": "DV_TEXT", "value": "Name" },
+            "details": {
+                "_type": "ITEM_TREE",
+                "archetype_node_id": "id7",
+                "name": { "_type": "DV_TEXT", "value": "Name details" },
+                "items": [{
+                    "_type": "ELEMENT",
+                    "archetype_node_id": "id8",
+                    "name": { "_type": "DV_TEXT", "value": "Full name" },
+                    "value": { "_type": "DV_TEXT", "value": name }
+                }]
+            }
+        }],
+        "details": {
+            "_type": "ITEM_TREE",
+            "archetype_node_id": "id2",
+            "name": { "_type": "DV_TEXT", "value": "Details" },
+            "items": [{
+                "_type": "ELEMENT",
+                "archetype_node_id": "id5",
+                "name": { "_type": "DV_TEXT", "value": "Sex" },
+                "value": {
+                    "_type": "DV_CODED_TEXT", "value": sex,
+                    "defining_code": {
+                        "_type": "CODE_PHRASE",
+                        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
+                        "code_string": sex
+                    }
+                }
+            }]
+        }
+    })
+}
+
+/// A predicate bound to an ADL 2 id-code selects the parties whose id-coded
+/// ELEMENT holds the value, as an at-code binding does for ADL 1.4.
+#[tokio::test]
+async fn a_predicate_bound_to_an_adl2_id_code_selects_its_parties() {
+    let db = testkit::db().await.expect("testkit database");
+    let config = CohortConfig {
+        small_cell_threshold: 0,
+        max_cohort_size: 100_000,
+        predicates: BTreeMap::from([(
+            "sex".to_owned(),
+            PredicateBinding {
+                archetype: ADL2_PATIENT_ARCHETYPE.to_owned(),
+                node: "id5".to_owned(),
+                kind: PredicateKind::Coded,
+            },
+        )]),
+        subjects: false,
+    };
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
+        .with_cohort(config);
+    let mut selected = Vec::new();
+    for (name, sex) in [("Ines", "at11"), ("Jaap", "at12"), ("Kim", "at11")] {
+        let party = crate::fixtures::create_party(&svc, uv(&adl2_patient(name, sex), "249", None))
+            .await
+            .unwrap_or_else(|e| panic!("create_party ({name}): {e:?}"));
+        let ehr = crate::fixtures::create_ehr_for_party(&svc, party).await;
+        svc.create_composition(ehr, uv(&composition(name), "249", None))
+            .await
+            .unwrap_or_else(|e| panic!("create_composition ({name}): {e:?}"));
+        if sex == "at11" {
+            selected.push(ehr.to_string());
+        }
+    }
+
+    let outcome = svc
+        .execute_cohort_query(request(&[("sex", "at11")]))
+        .await
+        .expect("the cohort query runs");
+
+    assert_eq!(outcome.cohort_size, 2, "two patients carry at11 in id5");
+    let mut served: Vec<String> = outcome
+        .query
+        .served_ehrs
+        .iter()
+        .map(|(ehr, _rows)| ehr.clone())
+        .collect();
+    served.sort();
+    selected.sort();
+    assert_eq!(served, selected, "exactly their EHRs are in the cohort");
+}
+
 /// A cohort narrower than the configured floor has its rows withheld, and the
 /// response says so rather than looking like an empty cohort.
 #[tokio::test]

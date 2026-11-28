@@ -140,14 +140,6 @@ environment carries the same strings: `FERROEHR__RECORD__QUERY__TIMEOUT=45s`.
 `[server]` and `[auth]` are family sections that keep their own key shapes
 until the family releases move them.
 
-### Keys a release before v5.7.0 read
-
-v5.7.0 moved the configuration tree to one table per concern. A key an
-earlier release read is an unknown key like any other: the start is refused
-naming it, with the keys its table does read, so
-`ferroehr config check --config <old file>` lists every key an old file still
-sets. The v5.7.0 changelog maps each old key to its replacement.
-
 ## `deployment.spec_profile`
 
 ```toml
@@ -291,7 +283,7 @@ ticked by being present:
 | `shared_cluster` | The three pools reach three different PostgreSQL clusters, read from `pg_control_system().system_identifier` on each pool, never from the DSN text. The audit pool counts: Swiss law keeps the access log on a system separate from the one processing the data |
 | `open_subject_namespace` | `[privacy] subject_namespaces` declared, so an `EHR_STATUS` subject is an opaque pseudonym |
 | `audit_off` | `[audit] enabled = true`; every access is then recorded before it is reported, or refused |
-| `no_category_map` | A category map applies while auditing is on: the one FerroEHR ships (the default) or templates and archetypes of your own in the [audit category register](config-audit.md#the-audit-category-register), which refuses a write that opens this gap, so every access record names the categories of the data it reached (EHDS Annex II 3.2(c)). The gap opens only with `[audit.categories] shipped_map = false` and nothing declared |
+| `no_category_map` | A category map applies while auditing is on: the one FerroEHR ships (the default) or templates and archetypes of your own in the [audit category register](config-audit.md#the-audit-category-register), which refuses a write that opens this gap, so every access record names the categories of the data it reached (EHDS Annex II 3.2(c)). The gap opens only when the register sets `shipped_map` to `false` and declares nothing |
 | `open_ehr_access_default` | `[authz.rbac] ehr_access_default = "restricted"`, so an EHR carrying no `ACCESS_CONTROL_SETTINGS` is reachable only by an admin. The shipped default is `open`. The setting is enforced with `[authz.rbac] enabled` on or off |
 | `migrate_on_runtime_credential` | `[database] migrate_url` set, or `migrations = "verify"`, so no credential that serves requests can alter the schema. Evaluated per domain database: a domain relocated to a database of its own is prepared on `[database.<domain>] migrate_url` when that is set, and on that domain's runtime DSN, which opens the gap, when it is not |
 | `auth_off` | `[auth] enabled = true`, so no request is served unauthenticated (CRA Annex I Part I(2)(d)) |

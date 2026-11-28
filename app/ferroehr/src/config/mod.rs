@@ -322,6 +322,23 @@ mod tests {
         assert!(standalone().validate().is_ok());
     }
 
+    /// The schema steps validate the `[database]` table alone: the defaults
+    /// the whole tree refuses pass it, and a broken rule of the table still
+    /// refuses.
+    #[test]
+    fn the_schema_steps_validate_the_database_table_alone() {
+        assert!(FerroEhrConfig::default().validate().is_err());
+        assert!(FerroEhrConfig::default().validate_database().is_ok());
+        let mut listener = FerroEhrConfig::default();
+        listener.database.audit.listen_url =
+            Some(SecretUrl::new("postgres://u:p@db:5432/ferroehr"));
+        let text = listener
+            .validate_database()
+            .expect_err("an audit listener DSN connects nothing")
+            .to_string();
+        assert!(text.contains("database.audit.listen_url"), "{text}");
+    }
+
     /// `c` serialized as the TOML table `ferroehr config check` renders
     /// (`ferrohealth_config::report::check_report` writes the same table).
     pub(super) fn rendered(c: &FerroEhrConfig) -> String {
@@ -635,9 +652,11 @@ mod tests {
                 ("FERROEHR__AUTH__ISSUER__IDP__ISSUER", "https://idp"),
                 ("FERROEHR__AUTH__ISSUER__IDP__AUDIENCE", "ferroehr"),
                 ("FERROEHR__AUTH__ISSUER__IDP__CLOCK_SKEW", "2min"),
+                ("FERROEHR__AUTH__POST_QUANTUM_ONLY", "true"),
             ]),
             &[],
         );
+        assert!(c.auth.post_quantum_only);
         let [("idp", issuer)] = c.auth.shared.issuers().collect::<Vec<_>>()[..] else {
             panic!("one issuer table named idp from the env");
         };
@@ -645,10 +664,12 @@ mod tests {
             issuer.clock_skew,
             ferrohealth_config::units::Duration::from_mins(2)
         );
+        assert_eq!(issuer.algorithms, auth_section::ML_DSA);
 
         // Unset, the issuers carry their documented defaults.
         let d = assemble_ok(None, &env(&[]), &[]);
         assert_eq!(d.auth.shared.issuers().count(), 0);
+        assert!(!d.auth.post_quantum_only);
         let entry = ferrohealth_smart::config::IssuerEntry::default();
         assert_eq!(
             entry.clock_skew,

@@ -9,8 +9,8 @@ FerroEHR carries them as its own extension and this page is where they are
 written down.
 
 Nothing here deletes anything. A record in an openEHR repository is indelible
-by design — a deletion commits a new version whose content is removed, and the
-history stays — so a retention period in FerroEHR produces a **list**, and
+by design: a deletion commits a new version whose content is removed, and the
+history stays, so a retention period in FerroEHR produces a **list**, and
 acting on that list is the controller's decision, taken record by record and
 carried out through
 [physical deletion](../operations-admin-apis.md#physical-deletion).
@@ -43,7 +43,7 @@ on one, the citation, when the period expired, and two counts: the objects that 
 and the objects exempted by a per-object hold.
 
 Ship the register empty and declare the periods your organisation is subject
-to. The periods are not the software's to choose — they follow from the law the
+to. The periods are not the software's to choose: they follow from the law the
 deployment runs under, and two of the provisions in the [compliance
 overview](index.md) ask for exactly this register: GDPR Art. 30(1)(f) wants the
 envisaged time limits for erasure per category of data in the record of
@@ -152,14 +152,14 @@ they are. An EHR under a whole-record hold does not appear at all.
 GDPR Art. 4(3) defines restriction as marking stored data to limit its future
 processing, and Art. 18(2) says what is left once the mark is set: storage, and
 nothing else without the subject's consent or one of the named exceptions.
-FerroEHR implements that literally, at two grains — a whole EHR, or one
+FerroEHR implements that literally, at two grains: a whole EHR, or one
 versioned object inside it.
 
 A restricted object stays in storage untouched, and every path that would
 process it stops:
 
 - a point read, a versioned read and a revision history answer **403** with a
-  body naming the restriction — distinct from the authorization **403**, because
+  body naming the restriction, distinct from the authorization **403**, because
   the same caller with the same rights is refused until the restriction is
   lifted;
 - AQL results omit it, at every scope, so naming the `ehr_id` does not make the
@@ -195,7 +195,7 @@ Content-Type: application/json
 ```
 
 Omit `vo_id` to restrict the whole record. `ground` is one of the four
-Art. 18(1) points — `gdpr-18-1-a` through `gdpr-18-1-d` — or `national` for a
+Art. 18(1) points (`gdpr-18-1-a` through `gdpr-18-1-d`) or `national` for a
 member-state rule that goes beyond them, which is how German BDSG § 35 Abs. 2
 and Abs. 3 are carried.
 
@@ -215,7 +215,7 @@ unless the processing is necessary for a task carried out for reasons of public
 interest. That is narrower than Art. 18: it reaches research, not care.
 
 While an objection stands, the EHR is absent from every full-population AQL
-query, from every export, and from the change-event stream — the three surfaces
+query, from every export, and from the change-event stream, the three surfaces
 a secondary-use consumer reads this repository through. A query that names the
 `ehr_id` and a read of the record by the treating clinician are untouched.
 
@@ -291,7 +291,7 @@ imported with an EHR from another system ends the same way at the
 `retain_until` it states, and its tombstones fold once no imported record
 still kept needs them to verify.
 Retention of the trail itself is described in
-[Audit](../audit.md#retention-and-who-chooses-it).
+[Audit](../ehds-logging.md#retention-and-who-chooses-it).
 
 ## What this page does not claim
 

@@ -87,7 +87,9 @@ moka.workspace = true
 # The commit audit shared parts this process has seen (#6395).
 arc-swap.workspace = true
 serde.workspace = true
-serde_json = { workspace = true, features = ["raw_value"] }
+# NOTE: preserve_order keeps a committed body's members in the order they were
+# sent, which the stored rendering serves verbatim and `shift_remove` keeps (#6734).
+serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }
 # OPT 1.4 upload structure validation (`service::template`): a depth-aware scan
 # of the template XML that rejects foreign / duplicated top-level elements the
 # tolerant opt14 codec would otherwise accept (CNF master04 upload_opt-invalid_opt).
@@ -167,6 +169,10 @@ ferroehr-ext = { path = "../ferroehr-ext", features = ["multimedia"] }
 testkit = { path = "../../tools/testkit" }
 # The key exchange tests name the groups a peer offers (`testkit::kx`).
 rustls = { workspace = true }
+# The outbound client assertion test makes its ML-DSA-65 key (RFC 9964) and
+# writes it as PEM.
+aws-lc-rs.workspace = true
+pem.workspace = true
 # The access-record tests read what `ehds-logging` writes by its names.
 ehds-logging = { workspace = true, features = ["balp"] }
 serde_norway.workspace = true

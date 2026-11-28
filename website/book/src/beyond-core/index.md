@@ -16,7 +16,7 @@ you have to turn it on, and how to consume it.
 > separate server that maps between FHIR and openEHR with FHIRconnect mappings
 > and reaches FerroEHR over the ITS-REST API. On Kubernetes the FerroEHR chart
 > deploys it beside the CDR with `bridge.enabled=true`
-> ([FerroBRIDGE](../installation/kubernetes.md#ferrobridge-the-fhir-bridge-off-by-default)).
+> ([FerroBRIDGE](../installation/kubernetes-integrations.md#ferrobridge-the-fhir-bridge-off-by-default)).
 > FerroEHR keeps two uses of FHIR:
 > the access log rendered as FHIR `AuditEvent` with the ITI-81 retrieval
 > ([Audit](../audit.md)), and the client for external FHIR terminology servers
@@ -89,8 +89,8 @@ for the exact list of settings a slim binary rejects.
 - **[Change events (outbox feed)](outbox-feed.md):** a transactional outbox
   that records a PHI-free event for every commit and serves it, in order and
   at least once, to the readers you name, so downstream systems can respond to
-  changes instead of polling. FerroBRIDGE 0.0.15 and later deliver the events
-  on to an AMQP broker.
+  changes instead of polling. FerroBRIDGE delivers the events on to an AMQP
+  broker.
 - **[S3 multimedia](s3-multimedia.md):** threshold-based, content-addressed
   offload of large `DV_MULTIMEDIA` blobs to any S3-compatible object store, with
   integrity verification on the way back in.

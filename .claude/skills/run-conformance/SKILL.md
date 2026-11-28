@@ -61,7 +61,10 @@ spec"; it is the most common real culprit.** Two reflexes are FORBIDDEN:
   each openEHR repository, which FerroEHR builds on. It is published beside
   the record (its own job-summary heading, artifact and badge branch, and
   `docs/conformance/ferroehr-development/` locally) and never counted toward
-  it. It fails the job only when it could not run at all.
+  it. Its committed record, `docs/conformance/ferroehr/development/`, holds
+  every listed deviation red and may hold other red rows, which its README
+  badges name; the job fails when the run could not run at all or when its
+  statuses differ from that record (`scripts/conformance-record.sh`).
 
 ## Steps
 
@@ -118,9 +121,9 @@ spec"; it is the most common real culprit.** Two reflexes are FORBIDDEN:
 6. **At phase close:** the committed `results.json` and `summary.md` under
    `docs/conformance/ferroehr/` are the released-profile run of the current
    release (the `conformance-views-released` artifact of its Conformance
-   run). The Conformance workflow pushes the badges to the
-   `veredictum-badges` and `veredictum-badges-development` branches; they are
-   never committed.
+   run). `scripts/render/measured-badges.sh` draws the README badges and
+   `docs/conformance/badges.md` from those records; commit them with the
+   record.
 
 ## The measured performance stages
 

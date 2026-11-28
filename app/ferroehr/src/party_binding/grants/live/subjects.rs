@@ -62,6 +62,21 @@ impl LiveGrants {
         Ok(out)
     }
 
+    /// The record subjects the `PERSON`s `persons` declare while they are
+    /// `complete` or `incomplete`, in one read on the party pool.
+    ///
+    /// # Errors
+    /// [`GrantsUnavailable`] when the read fails.
+    pub async fn declared_subjects(
+        &self,
+        persons: &[Uuid],
+    ) -> Result<Vec<EhrSubject>, GrantsUnavailable> {
+        let mut conn = acquire(&self.pool).await.map_err(StorageError::from)?;
+        let declared =
+            crate::party_binding::grants::caller::subject::declared_by(&mut conn, persons).await?;
+        Ok(declared.into_iter().map(|(_, subject)| subject).collect())
+    }
+
     /// The patient `PERSON`s that carry the identifier `value` under
     /// `issuer` at the patient identifier path while they are `complete` or
     /// `incomplete`, sorted, read on the party pool with one indexed

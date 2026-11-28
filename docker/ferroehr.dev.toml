@@ -132,6 +132,10 @@ password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl
 # cases: authenticated, but every write operation is refused by the RBAC
 # read-only gate.
 [[auth.basic.users]]
+user = "ferroehr-proxy"
+password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
+
+[[auth.basic.users]]
 user = "ferroehr-readonly"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
 
@@ -143,9 +147,25 @@ first_admin = "ferroehr-admin"
 # The operations the party store may grant: beside a system client's commit,
 # the SCIM provisioning each lane's client is granted in the CDR before it
 # provisions (scripts/scim-provision.sh), the scopes and roles of the Basic
-# users it provisions, and the change feed a lane may grant a reader.
+# users it provisions, the change feed a lane may grant a reader, and the
+# access-control writes and privileges the demo dataset grants
+# (scripts/sandbox/seed/). A development posture only, never a production default.
 [authz.grants]
-allowed = ["commit_composition", "read_change_feed", "scim_provision", "hold_roles", "hold_scopes"]
+allowed = ["commit_composition", "read_change_feed", "scim_provision", "hold_roles", "hold_scopes", "write_access_policy", "write_care_relationship", "write_representation", "access_service", "import_ehr"]
+
+# A cohort may name its patients by identifier, as the demo dataset's cohort
+# query does.
+[privacy.cohort]
+subjects = true
+
+# The demo seed's patients (scripts/sandbox/seed/world/patient-*.json) carry
+# their sex in the id-coded ELEMENT id5 of the ADL 2 patient archetype, so a
+# cohort selects them by it (at10 male, at11 female) and reaches their EHRs
+# through the record subject each one declares.
+[privacy.cohort.predicates.sex]
+archetype = "openEHR-DEMOGRAPHIC-PERSON.patient.v3"
+node = "id5"
+kind = "coded"
 
 # The healthcare provider the dev lanes act for (an example id under the OID
 # arc 2.999), and the binding key of each Basic user.
@@ -161,6 +181,11 @@ key = "ferroehr"
 user = "ferroehr-admin"
 key_issuer = "urn:example:basic-user"
 key = "ferroehr-admin"
+
+[[authz.party_binding.basic_user]]
+user = "ferroehr-proxy"
+key_issuer = "urn:example:basic-user"
+key = "ferroehr-proxy"
 
 [[authz.party_binding.basic_user]]
 user = "ferroehr-readonly"

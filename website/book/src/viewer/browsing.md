@@ -31,8 +31,8 @@ the openEHR-ADL engine's own words. With JavaScript off, paste the source.
 
 ### A template
 
-A template's page has four tabs, and a fifth, **Compare**, when it has more
-than one release. **Overview** reads its identity, its releases with the
+An ADL 1.4 template's page has five tabs, and a sixth, **Compare**, when it has
+more than one release. **Overview** reads its identity, its releases with the
 number of compositions committed against each, and how to query it. The
 release you are reading is named beside the title; with more than one
 release it opens a list of the others, the newest marked, each a link that
@@ -51,6 +51,15 @@ answers the arrow keys; without them each node is a link.
 **Source** is the template as stored, with line numbers and Copy; **Download** in the More menu saves it as a file. **Example**
 is the composition the CDR generates for it, in the format, type and detail
 you pick.
+
+**ADL 2** shows the ADL 1.4 template converted to ADL 2, as the CDR converts
+it (`GET {ext}/definition/template/adl1.4/{template_id}/adl2`): one ADL 2
+archetype per archetype root the template embeds, the top root first, each
+with the conversion's notes, what it dropped or changed, and its source, then
+the slot fills that joined the roots. The conversion only reads; nothing is
+stored. See [Archetypes](archetypes.md) for the archetypes themselves.
+
+![A template's ADL 2 conversion](img/templates/template-adl2-conversion.png)
 
 **Compare** reads two releases, the one you are reading and the one before it
 unless you choose others, and lists each path the later release adds,
@@ -133,6 +142,35 @@ removes the EHR and everything in it; it needs the CDR's ADMIN role.
 
 ![Deleting an EHR](img/ehrs/ehr-delete.png)
 
+### Archiving an EHR
+
+While the CDR's admin API is on, the EHR's More menu offers **Archive…** and
+**Restore from the archive…** (`POST {ext}/admin/archive/ehrs` and
+`…/ehrs/restore`, see [Admin & messaging APIs →
+Archiving](../operations-admin-apis.md#archiving)). Each asks for
+confirmation. An archived EHR moves to the cold tier with all its content: it
+stays readable by its id, here and over the API, but it leaves every AQL
+result, so it disappears from the EHRs list and from queries until it is
+restored. Both need the CDR's ADMIN role; a refusal, such as an EHR the CDR
+does not hold, is shown in the CDR's words.
+
+![Archiving an EHR](img/ehrs/ehr-archive.png)
+
+### EHR Extracts
+
+**Export as EHR Extract** in an EHR's More menu downloads the EHR as the CDR
+exports it (`GET {ext}/message/export/{ehr_id}`): a JSON list holding one
+`EXTRACT` with every versioned object of the EHR, latest versions only, saved
+as `ehr-extract-<ehr_id>.json`. **Import EHR Extract** in the EHRs list's
+More menu takes an extract, JSON or XML, chosen, dropped or pasted, and
+imports it as a new EHR (`POST {ext}/message/import`), under the EHR id you
+give or else under the one the extract carries. A file the viewer exported
+imports as it is. A success opens the imported EHR; a refusal, such as an EHR
+id that exists already, stays on the page in the CDR's words. See [EHR
+Extract & messaging](../beyond-core/messaging.md).
+
+![Import EHR Extract](img/ehrs/import.png)
+
 ### Committing several changes at once
 
 **Commit several changes** builds one contribution: stage a new composition,
@@ -150,10 +188,43 @@ it, label and value, by section.
 **Document** shows it in the format you pick (JSON, XML, FLAT or STRUCTURED),
 as the CDR converts it. **Versions** lists every version and reads the
 `VERSIONED_COMPOSITION` and the chosen version's envelope; **At a time** opens
-the version that was current then. **Tags** lists the composition's tags and
+the version that was current then. The envelope names the kind of the
+version's signature (a SHA-256 digest, or an OpenPGP signature with its
+algorithm, such as ML-DSA-65+Ed25519) and shows the signature as stored, with
+the version's attestations beneath it: who attested, when, why and what. The
+CDR checks the signature when it serves the version; see
+[Version signing](../signing/index.md). **Tags** lists the composition's tags and
 sets or removes one; a tag stays on the composition across its versions and
 commits no version.
+
+![A composition's versions](img/compositions/versions.png)
 
 **Edit as a new version** opens the document in an editor; the save writes
 the next version. **Delete composition…** marks it deleted with a new version;
 its versions stay readable and it leaves the EHR's list.
+
+## Justified and emergency access
+
+For clinicians opening a record outside their care relationships.
+
+When FerroEHR refuses a read because the access rests on a justification of
+the access policy and states no reason (`refused-reason-missing`), the
+refusal is followed by **Open this record on a justification**. Choose a
+purpose of use from the list `GET /ferroehr/rest/extensions/v1/access/purposes`
+answers and give your reason in your own words, 1 to 1000 characters. The
+access policy decides, by the purpose, whether this is a justified or an
+emergency access; the viewer only states it. What a justification lifts and
+what it never lifts is on
+[Access control in detail](../access-control.md#justified-access-outside-the-care-relationships).
+
+![The justification form under a refusal](img/justified/justify-form.png)
+
+The justification holds for that one record for 15 minutes, until you choose
+**End now** in the notice above the page, or until you sign out. While it
+holds, every call the viewer makes to draw that record's pages carries the
+purpose in the purpose header and the reason, percent-encoded, in the reason
+header the purposes route names. The reason is kept in the viewer's
+server-side session and nowhere else, and the person reads it in their
+[access log](access-log.md).
+
+![A record opened on a justification](img/justified/justified.png)

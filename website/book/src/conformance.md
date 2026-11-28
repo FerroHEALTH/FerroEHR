@@ -64,26 +64,29 @@ contradicts (`cited-text-absent`, `contested-in-development`).
 
 ## The current result
 
-Every run on `main` draws its own badges and pushes them to a branch of the
-repository, so these show the latest run, the same badges the README carries.
-The released profile reads every citation against the frozen openEHR release
+These badges, the same the README carries, are drawn from the committed
+records by `scripts/render/measured-badges.sh`, and every conformance run of
+a change is held to those records; [the measured badges][badges] break each
+count down. The released profile reads every citation against the frozen openEHR release
 and is the record. The server it judges runs `spec_profile = "stable"`, the
 generation set that release defines; the development run keeps the default
 `development` profile:
 
-[![openEHR BASE · released][base-rel]][runs]
-[![openEHR OPTIONS · released][options-rel]][runs]
-[![specification · released][profile-rel]][runs]
-[![veredictum · released][instrument-rel]][runs]
+[![openEHR BASE released][base-rel]][badges]
+[![openEHR OPTIONS released][options-rel]][badges]
+
+The red BASE rows are the committer deviation FerroEHR carries on purpose
+([Known deviations](#known-deviations), decision
+[#5002](https://github.com/FerroHEALTH/FerroEHR/issues/5002), upstream report
+[#5019](https://github.com/FerroHEALTH/FerroEHR/issues/5019)); the same rows
+are red in the development run.
 
 The development profile reads the same catalogue against the pinned `master`
 of each openEHR repository, the text FerroEHR builds on. It is shown beside the
 record and never counted toward it:
 
-[![openEHR BASE · development][base-dev]][runs]
-[![openEHR OPTIONS · development][options-dev]][runs]
-[![specification · development][profile-dev]][runs]
-[![veredictum · development][instrument-dev]][runs]
+[![openEHR BASE development][base-dev]][badges]
+[![openEHR OPTIONS development][options-dev]][badges]
 
 The committed record, `docs/conformance/ferroehr/results.json`, holds one
 released-profile run. Its counts:
@@ -93,19 +96,20 @@ released-profile run. Its counts:
      scripts/checks/conformance-numbers.sh). -->
 {{#include ../generated/conformance-stats.md}}
 
+Every failed or errored row in it is a listed deviation: the guard
+`scripts/conformance-record.sh` fails the build when the record holds any other
+red row, when a listed row passes in it, or when the conformance run of a
+change gives a row another status than the record does.
+
 [`summary.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/conformance/ferroehr/summary.md)
 beside it breaks the same run down by chapter, band and section, and lists
 every skipped row with its reason.
 
-[runs]: https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain
-[base-rel]: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/base.svg
-[options-rel]: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/options.svg
-[profile-rel]: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/profile.svg
-[instrument-rel]: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/instrument.svg
-[base-dev]: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/base.svg
-[options-dev]: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/options.svg
-[profile-dev]: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/profile.svg
-[instrument-dev]: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/instrument.svg
+[badges]: https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/conformance/badges.md
+[base-rel]: https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-base.json
+[options-rel]: https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-options.json
+[base-dev]: https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-base-development.json
+[options-dev]: https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fconformance%2Fbadges%2Fopenehr-options-development.json
 
 ## The party set
 
@@ -255,7 +259,10 @@ it: `junit.xml`, `ctrf.json` and `summary.md`. Each view is a pure function of
 `results.json` and `summary.md` of one released-profile run are committed under
 `docs/conformance/ferroehr/`. The website and this page read their numbers from
 that record at build time, and the build fails when `summary.md` and
-`results.json` disagree.
+`results.json` disagree. The Conformance workflow fails a change whose released
+run gives any row another status than the record, so a change that moves a row
+commits the views of its own run: `scripts/conformance-record.sh refresh <run id>`
+writes the `conformance-views-released` artifact of that run into the record.
 
 ## What conformance does not cover
 

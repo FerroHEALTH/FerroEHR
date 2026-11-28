@@ -225,11 +225,11 @@ async fn a_stable_profile_xml_read_of_a_target_still_serves() {
     assert_eq!(status, StatusCode::OK, "{text}");
 }
 
-/// Reads a PERSON in canonical XML.
-async fn read_xml(app: &Router, vo: &str) -> String {
+/// Reads `path` under the openEHR base in canonical XML.
+async fn read_xml(app: &Router, path: &str) -> String {
     let (status, text) = send_body(
         app,
-        common::req("GET", format!("{BASE}/demographic/person/{vo}"))
+        common::req("GET", format!("{BASE}{path}"))
             .header(header::ACCEPT, "application/xml")
             .build(),
     )
@@ -244,7 +244,7 @@ async fn a_stable_profile_xml_read_lists_the_relationship_at_its_target() {
     let app = common::router_for_profile(SpecProfile::Stable, &db.pool()).await;
     let (source, target) = related_pair(&app).await;
 
-    let xml = read_xml(&app, &target).await;
+    let xml = read_xml(&app, &format!("/demographic/person/{target}")).await;
     let reverse = xml
         .split("<reverse_relationships")
         .nth(1)
@@ -261,8 +261,43 @@ async fn a_development_profile_xml_read_serves_no_reverse_relationships() {
     let app = common::router_for_profile(SpecProfile::Development, &db.pool()).await;
     let (_source, target) = related_pair(&app).await;
 
-    let xml = read_xml(&app, &target).await;
+    let xml = read_xml(&app, &format!("/demographic/person/{target}")).await;
     assert!(!xml.contains("reverse_relationships"), "{xml}");
+}
+
+/// A `VERSION<PARTY>` read in XML is the published `version` document typed
+/// `ORIGINAL_VERSION`, and its `data` is the PARTY of the generation the
+/// profile serves: the RM 1.1.0 one, with `reverse_relationships`, under the
+/// stable profile (ITS-XML RM Release-1.1.0 `Demographic.xsd`), none under
+/// the development profile.
+#[tokio::test]
+async fn a_version_xml_read_carries_the_party_of_its_profile() {
+    for (profile, listed) in [(SpecProfile::Stable, 1), (SpecProfile::Development, 0)] {
+        let db = common::test_db().await;
+        let app = common::router_for_profile(profile, &db.pool()).await;
+        // Version 2 of the target was committed after the source named it.
+        let h = history(&app).await;
+        let target = vo_of(&h.target_v1);
+        let xml = read_xml(
+            &app,
+            &format!(
+                "/demographic/versioned_party/{target}/version/{}",
+                h.target_v2
+            ),
+        )
+        .await;
+        let root = xml
+            .split('<')
+            .find(|tag| !tag.is_empty() && !tag.starts_with('?'))
+            .unwrap_or_default();
+        assert!(root.starts_with("version "), "{profile:?}: {xml}");
+        assert!(root.contains("ORIGINAL_VERSION"), "{profile:?}: {xml}");
+        assert_eq!(
+            xml.matches("<reverse_relationships").count(),
+            listed,
+            "{profile:?}: {xml}"
+        );
+    }
 }
 
 // ── Version-addressed and time-travelled reads (#5473) ───────────────────────

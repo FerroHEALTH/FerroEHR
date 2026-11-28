@@ -21,6 +21,8 @@
               (.claude/rules/testing.md §Test-fixture construction)"
 )]
 
+pub(crate) mod policy;
+
 use std::future::Future;
 use std::time::Duration;
 
@@ -1546,6 +1548,25 @@ pub(crate) async fn submit(h: &Harness, css: &str) {
     .await;
 }
 
+/// Open the binder tab `key`: its link where the row shows it, or the phone's
+/// tab select, which FerroUI draws in place of a row of more than five tabs.
+///
+/// # Panics
+/// When neither shows the tab, or no page answers within 15 s.
+pub(crate) async fn open_tab(h: &Harness, key: &str) {
+    let link = format!("a.fui-tab[data-tab='{key}']");
+    if is_visible(h, &link).await {
+        h.wait_css(&link).await.click().await;
+        return;
+    }
+    let href = h.wait_css(&link).await.attr("href").await;
+    h.wait_css("form.fui-tabs-select select")
+        .await
+        .select_by_value(&href)
+        .await;
+    submit(h, "form.fui-tabs-select button[type='submit']").await;
+}
+
 /// [`submit`] for a control found some other way than by CSS, such as by
 /// an `XPath`: click `control` and wait for the page that answers the post
 /// ([`leave_page`]).
@@ -1616,6 +1637,94 @@ async fn leave_page(h: &Harness, what: &str, action: impl Future<Output = ()>) {
     .await;
     assert!(moved, "{what} never brought a new page");
     h.wait_css("main").await;
+}
+
+/// The admin dev user (quickstart `docker/ferroehr.dev.toml`).
+pub(crate) fn admin_credentials() -> (String, String) {
+    (
+        env("UI_E2E_ADMIN_USER").unwrap_or_else(|| "ferroehr-admin".to_owned()),
+        env("UI_E2E_ADMIN_PASS").unwrap_or_else(|| "ferroehr".to_owned()),
+    )
+}
+
+/// The CDR the journeys' stack runs (`UI_E2E_CDR_URL`), or `None` after
+/// printing why `journey` skips.
+pub(crate) fn cdr_url(journey: &str) -> Option<String> {
+    let cdr = env("UI_E2E_CDR_URL");
+    if cdr.is_none() {
+        println!("SKIP {journey}: UI_E2E_CDR_URL is unset (run scripts/ui-e2e.sh)");
+    }
+    cdr
+}
+
+/// A word no earlier run of a journey wrote, for the records it seeds.
+pub(crate) fn fresh(prefix: &str) -> String {
+    format!(
+        "{prefix}-{}",
+        jiff::Timestamp::now().as_nanosecond().unsigned_abs()
+    )
+}
+
+/// Posts `body` to `path` under the openEHR REST root of `cdr` as the
+/// administrator and answers the representation's versioned-object id.
+///
+/// # Panics
+/// When the CDR refuses the write or names no id.
+pub(crate) async fn admin_create(cdr: &str, path: &str, body: &serde_json::Value) -> String {
+    let (user, pass) = admin_credentials();
+    let response = reqwest::Client::new()
+        .post(format!("{cdr}/ferroehr/rest/openehr/v1{path}"))
+        .basic_auth(user, Some(pass))
+        .header("Accept", "application/json")
+        .header("Prefer", "return=representation")
+        .json(body)
+        .send()
+        .await
+        .expect("the CDR answers the journey's seed");
+    assert!(
+        response.status().is_success(),
+        "the CDR takes the journey's {path}: {}",
+        response.status()
+    );
+    let answer: serde_json::Value = response.json().await.expect("the CDR answers JSON");
+    answer
+        .pointer("/uid/value")
+        .or_else(|| answer.pointer("/ehr_id/value"))
+        .and_then(serde_json::Value::as_str)
+        .and_then(|uid| uid.split("::").next())
+        .expect("the CDR names what it wrote")
+        .to_owned()
+}
+
+/// Sign out through the user menu, back to the sign-in page.
+///
+/// # Panics
+/// When the menu or its sign-out is not on the page.
+pub(crate) async fn sign_out(h: &Harness) {
+    h.wait_css("button[popovertarget='user-menu']")
+        .await
+        .click()
+        .await;
+    h.wait_css("#user-menu:popover-open").await;
+    h.wait_css("#user-menu form[action='/logout'] button")
+        .await
+        .click()
+        .await;
+    h.wait_url_contains("/sign-in").await;
+}
+
+/// Choose `value` in the field at `css`: a select where the page offers
+/// one, else typed into the text field it draws in its place.
+///
+/// # Panics
+/// When the field is not on the page.
+pub(crate) async fn choose(h: &Harness, css: &str, value: &str) {
+    let select = format!("select{css}");
+    if is_present(h, &select).await {
+        h.wait_css(&select).await.select_by_value(value).await;
+    } else {
+        fill(h, css, value).await;
+    }
 }
 
 /// Log in through the Basic form (journeys that need a session).

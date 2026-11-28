@@ -10,6 +10,9 @@ environment-name grammar, and file discovery are on the
 
 ## The command line
 
+Every command with every option, as `--help` prints it, is on the generated
+[Command-line reference](../reference/cli.md). This section explains them.
+
 Two flags are global: they apply to the server and to every subcommand:
 
 | Flag | Description |
@@ -153,7 +156,7 @@ Kubernetes Job, an init container, a CI/CD stage), then boot the server with
 all. `verify` still reads all five `_sqlx_migrations` bookkeeping tables, which
 no least-privilege role can do, so point `[database] migrate_url` at the credential
 that prepares the schema. See
-[Operations](../operations.md#which-credential-prepares-the-schema).
+[Operations](../database-operations.md#which-credential-prepares-the-schema).
 
 ### `ferroehr definitions load`
 
@@ -171,7 +174,7 @@ the same text is left alone, so the step runs at every start; one stored
 under the same id with other text is refused, because a stored definition
 never changes and a changed one takes a new version in its id.
 
-A deployment whose [party mapping](config-auth.md#the-party-mapping) names
+A deployment whose [party mapping](config-authz.md#the-party-mapping) names
 templates of its own runs it first, so the mapping finds them when the server
 boots: as a one-shot compose service, a Helm init container or a setup step.
 The [default demographic definitions](default-demographic-definitions.md),
@@ -185,13 +188,13 @@ ferroehr party-binding refill   # rebuild the party binding side table under the
 ```
 
 Rebuilds the binding side table from the party versions under the
-configured [party mapping](config-auth.md#the-party-mapping) and stores the
+configured [party mapping](config-authz.md#the-party-mapping) and stores the
 mapping's digest. Run it with every replica stopped after a change to the
 templates, selectors, role, group or membership: it refuses while a replica
 holds a live lease, and refuses a store in which two parties carry one
 selector value, naming both. A key issuer added or removed needs no refill:
 the running replicas fill and retire its keys themselves
-([Changing the mapping](config-auth.md#changing-the-mapping)).
+([Changing the mapping](config-authz.md#changing-the-mapping)).
 
 ### `ferroehr party-binding check`
 
@@ -202,7 +205,7 @@ ferroehr party-binding check [--admin <PARTY_ID>]... [--admin-key <ISSUER> <KEY>
 ```
 
 The pre-flight of a migration to party binding. It reads the party versions
-under the configured [party mapping](config-auth.md#the-party-mapping) and
+under the configured [party mapping](config-authz.md#the-party-mapping) and
 writes nothing: the side-table categories are read from a refill inside a
 transaction that is rolled back, so it runs before any boot fill and beside a
 running server. It connects with the configured database credentials and
@@ -217,7 +220,7 @@ The report is a JSON document on stdout:
 - `inactive` and `abandoned`: the key-bearing `PERSON`s whose head is
   `800|inactive|` or `801|abandoned|`;
 - `side_table.provisional`: the provisional `PERSON`s that
-  [just-in-time creation](config-auth.md#just-in-time-creation) created more
+  [just-in-time creation](config-authz.md#just-in-time-creation) created more
   than `[authz.party_binding] provisional_report_after` days ago (default 30)
   and that SCIM or an administrator has not completed, by container id and
   creation time, oldest first, with no name or other personal data;
@@ -289,7 +292,7 @@ performs whose capability grants the operation, with one scope element per
 `--element`, whose value is a `DV_TEXT`, and one `provider` element per
 `--provider-issuer` and the `--provider-id` in the same position, whose value
 is a `DV_IDENTIFIER` with that issuer and id, as a `write_care_relationship`
-grant names the providers it writes for. It is the first grant of a new deployment, typically the
+grant names the providers it writes for. It is the first grant of a new deployment, usually the
 `scim_provision` of the client that provisions the administrators, since no
 administrator can log in before their `PERSON` exists; every later grant is
 an administrator's write through the Demographic API. The commits take the
@@ -318,7 +321,7 @@ ferroehr access-log import --input <file>
 ```
 
 The access log's integrity and transfer, described on the
-[audit page](../audit.md#seals-checkpoints-and-the-transfer-of-a-log). `checkpoint`
+[audit page](../audit-integrity.md#seals-checkpoints-and-the-transfer-of-a-log). `checkpoint`
 and `export` need the keyring's OpenPGP key (`record.signing.mode = "pgp"`).
 `verify` prints each finding and exits 1 when the log does not verify, so a
 scheduled job can alert on it; pass `--checkpoint` a checkpoint you kept
@@ -335,7 +338,7 @@ ferroehr audit-chain verify [--seal <file>]  # verify against the newest or a ke
 ```
 
 The system records are the records outside the access log, described on the
-[audit page](../audit.md#seals-checkpoints-and-the-transfer-of-a-log). Both need
+[audit page](../audit-integrity.md#seals-checkpoints-and-the-transfer-of-a-log). Both need
 the keyring's OpenPGP key (`record.signing.mode = "pgp"`) to seal or to
 verify a seal. `verify` prints each finding and exits 1 when the records do
 not verify; pass `--seal` a seal you kept outside this system to verify

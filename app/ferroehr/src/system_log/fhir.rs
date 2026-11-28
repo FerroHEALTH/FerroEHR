@@ -23,6 +23,7 @@ use ehds_logging::record::{
     AccessRecord, Action, DataSubject, EhrAt, Origin, Outcome, PatientIdentifier, PatientLookup,
     Purpose, Request,
 };
+use ehds_logging::regulatory::Regulatory;
 use ehds_logging::retention::RetentionPolicy;
 use ihe_atna::balp::{
     APPLICATION, CREATE, CUSTODIAN, Coded, DELETE, DESTINATION_ROLE, DOMAIN_RESOURCE, Described,
@@ -30,7 +31,7 @@ use ihe_atna::balp::{
     OPERATION, Observer, Peer, READ, REST, SEARCH, SOURCE_APPLICATION_SERVER, SOURCE_ROLE,
     SYSTEM_OBJECT, SecurityLabel, UPDATE, USER_AUTHENTICATION, What,
 };
-use ihe_atna::user::{Code, OnBehalfOf, PurposeOfUse, User};
+use ihe_atna::user::{AccessToken, Code, OnBehalfOf, PurposeOfUse, User};
 use secrecy::SecretString;
 
 use crate::system_log::AuditError;
@@ -62,6 +63,9 @@ pub struct Recording {
     /// The access log retention of the access policy in force, whose period
     /// a record outside the EHDS access record is kept for.
     pub log: crate::system_log::retention::LogRetention,
+    /// The deployment's declared legal basis, controllers and processors
+    /// (`[audit.regulatory]`, Xt-EHR D5.2 §7.2.7).
+    pub regulatory: Regulatory,
 }
 
 /// The first date `event` may be deleted on once stored.
@@ -285,6 +289,11 @@ pub(crate) fn access_record(
         emergency: emergency_mark(event, &purposes),
         inserted: None,
         transformations: Vec::new(),
+        // NOTE: Xt-EHR D5.2 §7.2.7; the legal basis the event recorded at the access takes the declared one's place.
+        regulatory: ctx.recording.regulatory.overridden_by(&Regulatory {
+            legal_basis: event.legal_basis,
+            ..Regulatory::default()
+        }),
     }))
 }
 
@@ -355,7 +364,7 @@ fn exchange(
         User::local(event.user_id.clone())
             .with_issuer(event.issuer.clone())
             .with_client_id(event.client_id.clone())
-            .with_token_id(event.token_id.clone())
+            .with_token(event.token_id.clone().map(AccessToken::Jwt))
             .with_policies(event.policies())
             .with_purposes(
                 event

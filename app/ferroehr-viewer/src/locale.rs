@@ -15,9 +15,13 @@ use ferrohealth_ui::i18n::{Arg, Locale, Message};
 use fluent_templates::Loader;
 use serde::Deserialize;
 
+pub mod access;
 pub mod console;
 pub mod definitions;
+pub mod operations;
 pub mod overview;
+pub mod parties;
+pub mod policy;
 pub mod queries;
 pub mod records;
 pub mod server;
@@ -279,8 +283,44 @@ messages! {
         InvalidCode = "invalid-code",
         /// `About`
         NavAbout = "nav-about",
+        /// `Access policy`
+        NavAccessPolicy = "nav-access-policy",
         /// `Audit log`
         NavAudit = "nav-audit",
+        /// `Access log`
+        NavAccessLog = "nav-access-log",
+        /// `Roles and grants`
+        NavGrants = "nav-grants",
+        /// `Retention`
+        NavRetention = "nav-retention",
+        /// `None`
+        VersionSignatureNone = "version-signature-none",
+        /// `A SHA-256 digest`
+        VersionSignatureDigest = "version-signature-digest",
+        /// `An OpenPGP signature, ML-DSA-65+Ed25519`
+        VersionSignatureComposite = "version-signature-composite",
+        /// `An OpenPGP signature, algorithm { $algorithm }`
+        VersionSignatureOpenPgp = "version-signature-openpgp",
+        /// `An OpenPGP signature`
+        VersionSignatureOpenPgpUnread = "version-signature-openpgp-unread",
+        /// `A signature in the client's own form`
+        VersionSignatureOther = "version-signature-other",
+        /// `Signature`
+        VersionSignatureTitle = "version-signature-title",
+        /// `Attestations`
+        VersionAttestations = "version-attestations",
+        /// `Attester`
+        VersionAttester = "version-attester",
+        /// `When`
+        VersionAttestedAt = "version-attested-at",
+        /// `Reason`
+        VersionAttestReason = "version-attest-reason",
+        /// `Attests`
+        VersionAttestItems = "version-attest-items",
+        /// `The whole version`
+        VersionAttestWhole = "version-attest-whole",
+        /// `Pending`
+        VersionAttestPending = "version-attest-pending",
         /// `Configuration`
         NavConfiguration = "nav-configuration",
         /// `Dashboard`
@@ -309,6 +349,8 @@ messages! {
         NavStoredQueries = "nav-stored-queries",
         /// `Templates`
         NavTemplates = "nav-templates",
+        /// `Archetypes`
+        NavArchetypes = "nav-archetypes",
         /// `Terminology`
         NavTerminology = "nav-terminology",
         /// `FerroEHR { $version } at { $address }`
@@ -331,6 +373,8 @@ messages! {
         SandboxDetails = "sandbox-details",
         /// `{ $count ->`
         SandboxGaps = "sandbox-gaps",
+        /// `; `, between two gaps the sandbox band names
+        SandboxGapSeparator = "sandbox-gap-separator",
         /// `This deployment must not hold real patient data.`
         SandboxNoGaps = "sandbox-no-gaps",
         /// `Sandbox`
@@ -542,9 +586,13 @@ mod tests {
     use ferrohealth_ui::i18n::Locale;
     use fluent_templates::fluent_bundle::{FluentResource, FluentValue};
 
+    use super::access::AccessMsg;
     use super::console::ConsoleMsg;
     use super::definitions::DefinitionsMsg;
+    use super::operations::OperationsMsg;
     use super::overview::OverviewMsg;
+    use super::parties::PartiesMsg;
+    use super::policy::PolicyMsg;
     use super::queries::QueriesMsg;
     use super::records::RecordsMsg;
     use super::server::ServerMsg;
@@ -652,9 +700,13 @@ mod tests {
         assert_eq!(
             parts,
             [
+                "access",
                 "console",
                 "definitions",
+                "operations",
                 "overview",
+                "parties",
+                "policy",
                 "queries",
                 "records",
                 "server",
@@ -664,12 +716,16 @@ mod tests {
             "each directory under locales/ is the catalog of one part"
         );
         holds_every("shell", Msg::ALL);
+        holds_every("access", AccessMsg::ALL);
+        holds_every("operations", OperationsMsg::ALL);
         holds_every("overview", OverviewMsg::ALL);
         holds_every("records", RecordsMsg::ALL);
+        holds_every("parties", PartiesMsg::ALL);
         holds_every("definitions", DefinitionsMsg::ALL);
         holds_every("queries", QueriesMsg::ALL);
         holds_every("console", ConsoleMsg::ALL);
         holds_every("signin", SignInMsg::ALL);
+        holds_every("policy", PolicyMsg::ALL);
         holds_every("server", ServerMsg::ALL);
     }
 

@@ -14,7 +14,7 @@ use serde::de::DeserializeOwned;
 
 use ferroehr::service::response::{RawServiceResponse, ReadBody, ResourceMeta, ServiceResponse};
 
-use super::body::{empty, respond, respond_read, respond_rm, respond_typed};
+use super::body::{empty, respond_read, respond_rm, respond_typed};
 use super::prefer::write_negotiated;
 
 /// Format an HTTP-date (RFC 7231 IMF-fixdate, always GMT) for `Last-Modified`.
@@ -246,29 +246,6 @@ where
         |status| respond_read::<T>(headers, status, read, root_tag),
     );
     set_resource_headers(&mut out, base_path, Tree::Ehr, segment, meta);
-    out
-}
-
-/// As [`write_rm`] but for a JSON-only payload (no canonical-XML shape, e.g. a
-/// CONTRIBUTION wrapper).
-pub(crate) fn write_json(
-    headers: &HeaderMap,
-    base_path: &str,
-    minimal_status: StatusCode,
-    repr_status: StatusCode,
-    segment: Option<&str>,
-    resp: &ServiceResponse,
-) -> Response {
-    let mut out = write_negotiated(
-        headers,
-        minimal_status,
-        repr_status,
-        resp.meta.as_ref().map(|m| m.uid.as_str()),
-        |status| respond(headers, status, &resp.body),
-    );
-    if let Some(meta) = &resp.meta {
-        set_resource_headers(&mut out, base_path, Tree::Ehr, segment, meta);
-    }
     out
 }
 
@@ -584,18 +561,19 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn write_json_identifier_is_never_204() {
+    async fn write_rm_contribution_identifier_is_never_204() {
         use http_body_util::BodyExt;
         let value = serde_json::json!({"_type": "CONTRIBUTION"});
         let resp = ServiceResponse::new(value, meta("e1", "c::s::1"));
         let h = headers(&[("prefer", "return=identifier")]);
-        let out = write_json(
+        let out = write_rm::<openehr_rm::prelude::Contribution>(
             &h,
             BASE,
             StatusCode::NO_CONTENT,
             StatusCode::OK,
             Some("contribution"),
             &resp,
+            "contribution",
         );
         assert_eq!(
             out.status(),
@@ -613,16 +591,17 @@ mod tests {
     }
 
     #[test]
-    fn write_json_identifier_without_meta_declares_minimal() {
+    fn write_rm_contribution_identifier_without_meta_declares_minimal() {
         let resp = ServiceResponse::plain(serde_json::Value::Null);
         let h = headers(&[("prefer", "return=identifier")]);
-        let out = write_json(
+        let out = write_rm::<openehr_rm::prelude::Contribution>(
             &h,
             BASE,
             StatusCode::NO_CONTENT,
             StatusCode::OK,
             Some("contribution"),
             &resp,
+            "contribution",
         );
         assert_eq!(preference_applied(&out).as_deref(), Some("return=minimal"));
         assert_eq!(out.status(), StatusCode::NO_CONTENT);

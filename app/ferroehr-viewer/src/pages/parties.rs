@@ -11,6 +11,8 @@
 //! party is the address's `tab`, the version its `version`. No openEHR spec
 //! governs the viewer's pages: our own design.
 
+pub mod list;
+
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
@@ -26,10 +28,9 @@ use ferrohealth_ui::view::surface::{
     Crumb, Header, Mode, definitions, editor_heading, page_heading,
 };
 use ferrohealth_ui::view::tabs::{Tab, binder};
-use ferrohealth_ui::view::template::list::{ListCard, list_card, list_empty};
+use ferrohealth_ui::view::template::list::list_empty;
 
-use crate::bff::demographics::contribution::ContributionState;
-use crate::bff::demographics::contribution::fetch_demographic_contribution;
+use crate::bff::demographics::listing::identity_name;
 use crate::bff::demographics::party::PartyState;
 use crate::bff::demographics::party::{create_party, delete_party, fetch_party, update_party};
 use crate::bff::demographics::relationship::{PartyRefView, RelationshipState};
@@ -39,7 +40,7 @@ use crate::bff::demographics::relationship::{
 use crate::bff::demographics::{PartyKind, contribution_href, party_href, relationship_href};
 use crate::bff::demographics::{
     VersionedFamily, fetch_demographic_revision_history, fetch_demographic_version_document,
-    fetch_versioned_object, resolve_demographic_version_at_time, resolve_party_kind,
+    fetch_versioned_object, resolve_demographic_version_at_time,
 };
 use crate::bff::item_tags::{delete_tag, read_tags, set_tag};
 use crate::bff::wire::{VersionEntry, VersionedObjectFacts};
@@ -49,16 +50,19 @@ use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
 use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
-use crate::markup::{attr, flag, h, opt, t};
+use crate::markup::{flag, h, opt, t};
 use crate::pages::common::{
     EditorDock, Refused, card_panel, count, discarded, dock_editor, document_section, findings_of,
     info_note, is_status, marks_of, panel, plain_section, section, short, shortened, state_mark,
-    when,
 };
+use crate::pages::editor::{Unsaved, editor_line, reload_words, save_as_words};
 use crate::pages::form::Form;
 use crate::pages::item_tags::{TagAct, TagPanel, tag_act, tag_done, tag_panel};
 use crate::pages::versions::{History, history};
 use crate::routes::Drawn;
+
+pub mod binding_key;
+pub mod contribution;
 use crate::uid::{version_number, version_uid_at};
 
 /// The id of Delete party's confirmation dialog.
@@ -103,48 +107,10 @@ fn kind_options(kind: PartyKind) -> Html {
 /// The name a party goes by: the text values of its first identity's
 /// elements, joined, or its short id when it carries none.
 fn display_name(state: &PartyState) -> String {
-    use serde_json::Value;
-    let words: Vec<String> = serde_json::from_str::<Value>(&state.identities)
+    serde_json::from_str::<serde_json::Value>(&state.identities)
         .ok()
-        .and_then(|identities| identities.as_array().and_then(|list| list.first().cloned()))
-        .map(|identity| {
-            let mut words = Vec::new();
-            collect_text(&identity, &mut words);
-            words
-        })
-        .unwrap_or_default();
-    if words.is_empty() {
-        shortened(&state.versioned_object_uid)
-    } else {
-        words.join(" ")
-    }
-}
-
-#[expect(
-    clippy::disallowed_types,
-    reason = "the viewer reads the CDR's demographic JSON wire for a party's identities and name"
-)]
-/// The `DV_TEXT` values of the `ELEMENT`s under `node`, in order.
-fn collect_text(node: &serde_json::Value, words: &mut Vec<String>) {
-    use serde_json::Value;
-    match node {
-        Value::Object(object) => {
-            let element = object.get("_type").and_then(Value::as_str) == Some("ELEMENT");
-            if element {
-                if let Some(text) = node.pointer("/value/value").and_then(Value::as_str) {
-                    words.push(text.to_owned());
-                }
-                return;
-            }
-            for (key, child) in object {
-                if key != "name" {
-                    collect_text(child, words);
-                }
-            }
-        }
-        Value::Array(list) => list.iter().for_each(|child| collect_text(child, words)),
-        _ => {}
-    }
+        .and_then(|identities| identity_name(&identities))
+        .unwrap_or_else(|| shortened(&state.versioned_object_uid))
 }
 
 /// The kind's segment and the id the route names.
@@ -167,247 +133,6 @@ fn uid_param() -> String {
 /// The trail of the pages under a party.
 fn party_crumbs() -> Vec<Crumb> {
     vec![Crumb::new(tr(Msg::NavParties), "/parties")]
-}
-
-/// One row of the demographic tag index: the tag and the party it is on.
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct Indexed {
-    /// The tag's key.
-    key: String,
-    /// Its value.
-    value: String,
-    /// The party's name.
-    on: String,
-    /// The party's page.
-    href: Option<String>,
-    /// The party's kind.
-    kind: Option<PartyKind>,
-}
-
-/// The demographic tag index, each target named by asking the CDR which
-/// party holds it.
-async fn tag_index() -> Result<Vec<Indexed>, ViewerError> {
-    let tags = read_tags("demographic/tags").await?;
-    let mut named: Vec<(String, Option<PartyKind>, String)> = Vec::new();
-    let mut rows = Vec::new();
-    for tag in tags {
-        let container = crate::uid::container_uid_of(&tag.target);
-        let known = named.iter().find(|(uid, _, _)| *uid == container).cloned();
-        let (kind, name) = if let Some((_, kind, name)) = known {
-            (kind, name)
-        } else {
-            let kind = resolve_party_kind(container.clone())
-                .await?
-                .as_deref()
-                .and_then(PartyKind::from_segment);
-            let name = match kind {
-                Some(kind) => fetch_party(kind.segment().to_owned(), container.clone())
-                    .await?
-                    .map_or_else(|| shortened(&container), |state| display_name(&state)),
-                None => shortened(&container),
-            };
-            named.push((container.clone(), kind, name.clone()));
-            (kind, name)
-        };
-        rows.push(Indexed {
-            key: tag.key,
-            value: tag.value,
-            on: name,
-            href: kind.map(|kind| party_href(kind, &container)),
-            kind,
-        });
-    }
-    Ok(rows)
-}
-
-/// The tag index as a table.
-fn index_table(rows: &[Indexed]) -> Html {
-    let columns = [
-        Column::text("key", tr(RecordsMsg::TagsKey)).role(Role::Title),
-        Column::text("value", tr(Msg::TagsValue)).role(Role::Sub),
-        Column::text("on", tr(RecordsMsg::PartiesTagOn)).role(Role::Meta),
-        Column::text("kind", tr(Msg::ColumnKind)).role(Role::Meta),
-    ];
-    let body = rows
-        .iter()
-        .map(|row| {
-            let on = match &row.href {
-                Some(href) => h(format!(
-                    r#"<a class="fui-row-link" href="{}">{}</a>"#,
-                    t(href),
-                    t(&row.on)
-                )),
-                None => t(&row.on),
-            };
-            h(format!(
-                r#"<tr><th scope="row" data-role="title"><code>{}</code></th>{}{}{}</tr>"#,
-                t(&row.key),
-                cell(&columns[1], t(&row.value)),
-                cell(&columns[2], on),
-                cell(&columns[3], t(row.kind.map(kind_words).unwrap_or_default()))
-            ))
-        })
-        .collect();
-    let caption = tr(RecordsMsg::PartiesTagIndex);
-    data_table(DataTable::new(&caption, &columns, Body::Rows(body)))
-}
-
-/// Opens the party the form names: its page when its kind holds it, the page
-/// of the kind that does when another holds it. `Err` is what the field says.
-async fn open(kind: PartyKind, uid: &str) -> Result<String, Result<String, ViewerError>> {
-    match fetch_party(kind.segment().to_owned(), uid.to_owned()).await {
-        Ok(_) => return Ok(party_href(kind, uid)),
-        Err(error) if !is_status(&error, http::StatusCode::NOT_FOUND) => return Err(Err(error)),
-        Err(_) => {}
-    }
-    match resolve_party_kind(uid.to_owned()).await {
-        Ok(Some(segment)) => match PartyKind::from_segment(&segment) {
-            Some(other) => Ok(party_href(other, uid)),
-            None => Err(Ok(tr(RecordsMsg::PartiesNoneHolds))),
-        },
-        Ok(None) => Err(Ok(tr_with(
-            RecordsMsg::PartiesNoKindHolds,
-            &[("kind", kind_words(kind).into())],
-        ))),
-        Err(error) => Err(Err(error)),
-    }
-}
-
-/// Parties' model: the party asked for and the tag index.
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum PartiesModel {
-    /// The open form and the tag index.
-    Shown {
-        /// The kind asked for.
-        kind: PartyKind,
-        /// The id asked for.
-        uid: Option<String>,
-        /// What the id field says is wrong with it.
-        invalid: Option<String>,
-        /// The CDR's refusal of the open.
-        refused: Option<Refused>,
-        /// The tag index, or the CDR's refusal of it.
-        index: Result<Vec<Indexed>, Refused>,
-    },
-    /// The party asked for opened, so the page redirected to it.
-    Left,
-}
-
-/// What the page reads, on the server.
-async fn read_parties() -> PartiesModel {
-    let kind = crate::request::query("kind")
-        .as_deref()
-        .and_then(PartyKind::from_segment)
-        .unwrap_or(PartyKind::Person);
-    let uid = crate::request::query("uid")
-        .map(|uid| uid.trim().to_owned())
-        .filter(|uid| !uid.is_empty());
-    let (invalid, refused) = match &uid {
-        Some(uid) => match open(kind, uid).await {
-            Ok(href) => {
-                crate::request::redirect(&href);
-                return PartiesModel::Left;
-            }
-            Err(Ok(message)) => (Some(message), None),
-            Err(Err(error)) => (
-                None,
-                Some(Refused::new(tr(RecordsMsg::PartiesOpenRefused), error)),
-            ),
-        },
-        None => (None, None),
-    };
-    let index = tag_index()
-        .await
-        .map_err(|error| Refused::new(tr(RecordsMsg::PartiesTagsRefused), error));
-    PartiesModel::Shown {
-        kind,
-        uid,
-        invalid,
-        refused,
-        index,
-    }
-}
-
-/// Parties' body: the open form and the tag index.
-fn parties_view(model: PartiesModel) -> Html {
-    let PartiesModel::Shown {
-        kind,
-        uid,
-        invalid,
-        refused,
-        index,
-    } = model
-    else {
-        return Html::empty();
-    };
-    let mut id_field = Field::new("p-id", tr(RecordsMsg::PartiesUid)).holds_id();
-    if let Some(message) = &invalid {
-        id_field = id_field.after(h(format!(
-            r#"<p id="p-id-error" class="fui-field-error">{}</p>"#,
-            t(message)
-        )));
-    }
-    let id_field = id_field.view(h(format!(
-        r#"<input id="p-id" name="uid" type="text" class="fui-input fui-mono" spellcheck="false" autocomplete="off" value="{}"{}{}>"#,
-        t(uid.clone().unwrap_or_default()),
-        attr("aria-invalid", invalid.is_some().then_some("true")),
-        attr("aria-describedby", invalid.is_some().then_some("p-id-error"))
-    )));
-    let form = h(format!(
-        r#"<form class="fui-card fui-panel" method="get" action="/parties"><div class="fui-transform-options">{}{id_field}<div class="fui-transform-run"><button type="submit" class="fui-button fui-button-secondary">{}{}</button></div></div></form>"#,
-        Field::new("p-kind", tr(Msg::ColumnKind)).view(h(format!(
-            r#"<select id="p-kind" name="kind" class="fui-select">{}</select>"#,
-            kind_options(kind)
-        ))),
-        ferrohealth_ui::icon::icon(Glyph::ARROW_RIGHT, "16"),
-        t(tr(Msg::PartiesOpen))
-    ));
-    let (index, total) = match index {
-        Ok(rows) if rows.is_empty() => (list_empty(tr(RecordsMsg::PartiesNoTags), None), Some(0)),
-        Ok(rows) => (index_table(&rows), u64::try_from(rows.len()).ok()),
-        Err(refusal) => (refusal.view(), None),
-    };
-    let card = list_card(
-        &current(),
-        ListCard {
-            title: tr(RecordsMsg::PartiesTagsTitle),
-            count: total.map(ferrohealth_ui::view::template::list::HeadingCount::All),
-            order: None,
-            tabs: None,
-            actions: None,
-            body: index,
-            pager: None,
-        },
-    );
-    let top = refused.map(|refusal| refusal.view());
-    h(format!(
-        r#"<div class="fui-list-page">{}{form}{}{card}</div>"#,
-        info_note(t(tr(RecordsMsg::PartiesNote))),
-        opt(top)
-    ))
-}
-
-/// Parties: open a party by its id, and the tags on parties.
-/// Parties.
-pub async fn list_page() -> Drawn {
-    let heading = page_heading(
-        &current(),
-        Header {
-            title: tr(Msg::NavParties).into(),
-            subtitle: Some(tr(RecordsMsg::PartiesSubtitle).into()),
-            crumbs: Vec::new(),
-            mono: false,
-            badge: None,
-            subtitle_view: None,
-        },
-        ActionGroup::primary(Action::new(
-            Some(Glyph::PLUS),
-            tr(RecordsMsg::PartiesNew),
-            Act::Link("/parties/new".to_owned()),
-        )),
-    );
-    let body = parties_view(read_parties().await);
-    Drawn::page(tr(Msg::NavParties), heading.then(body))
 }
 
 #[expect(
@@ -719,7 +444,13 @@ fn identities(rendered: &[RenderedSection]) -> Html {
 }
 
 /// The Overview tab.
-fn overview(kind: PartyKind, uid: &str, state: &PartyState, rendered: &[RenderedSection]) -> Html {
+fn overview(
+    kind: PartyKind,
+    uid: &str,
+    state: &PartyState,
+    rendered: &[RenderedSection],
+    admin: bool,
+) -> Html {
     let relationships = state.relationships.len();
     let facts = definitions(vec![
         (tr(Msg::ColumnKind), t(kind_words(kind))),
@@ -744,12 +475,19 @@ fn overview(kind: PartyKind, uid: &str, state: &PartyState, rendered: &[Rendered
         ),
     ]);
     panel(
-        section(Some(tr(Msg::PartyFacts)), None, None, facts).then(section(
-            Some(tr(RecordsMsg::PartyIdentities)),
-            None,
-            None,
-            identities(rendered),
-        )),
+        section(Some(tr(Msg::PartyFacts)), None, None, facts)
+            .then(section(
+                Some(tr(RecordsMsg::PartyIdentities)),
+                None,
+                None,
+                identities(rendered),
+            ))
+            .then(opt(binding_key::keys_section(
+                kind,
+                uid,
+                &state.body,
+                admin,
+            ))),
     )
 }
 
@@ -854,7 +592,8 @@ fn envelope(facts: Result<VersionedObjectFacts, Refused>) -> Html {
     }
 }
 
-/// What a post to a party's page asks, done: delete, set or remove a tag.
+/// What a post to a party's page asks, done: re-key, archive, restore,
+/// delete, set or remove a tag.
 async fn party_act(
     kind: PartyKind,
     uid: &str,
@@ -863,6 +602,19 @@ async fn party_act(
     let Some(posted) = crate::posted::posted() else {
         return (None, None);
     };
+    if let Some(refused) = binding_key::act(uid, &posted).await {
+        return (refused, None);
+    }
+    if let Some(refused) = crate::pages::archive::act(
+        crate::admin::Archived::Parties,
+        uid,
+        &posted.intent(),
+        &party_href(kind, uid),
+    )
+    .await
+    {
+        return (refused, None);
+    }
     if posted.intent() == "delete-party" {
         return match delete_party(kind.segment().to_owned(), posted.text("version")).await {
             Ok(()) => {
@@ -940,8 +692,10 @@ struct Party {
     before_deletion: Option<String>,
     /// The number of the older version read.
     reading_number: Option<String>,
-    /// The delete the CDR refused.
+    /// The delete, archive or restore the CDR refused.
     acted: Option<Refused>,
+    /// Whether the admin group is mounted, so Archive and Restore are offered.
+    admin: bool,
     /// The tab shown.
     tab: PartyTab,
     /// What it shows.
@@ -1081,6 +835,7 @@ async fn read_party(kind: &str, uid: String) -> PartyModel {
         before_deletion,
         reading_number,
         acted,
+        admin: crate::admin::renders_admin_ops(&crate::admin::probe_admin_api().await),
         tab,
         body,
     }))
@@ -1143,7 +898,7 @@ fn party_tabs(kind: PartyKind, uid: &str, party: &Party, total: usize) -> Vec<Ta
     clippy::too_many_lines,
     reason = "one page: its header, its tabs, the tab shown and its dialog"
 )]
-fn party_view(uid: &str, party: Party) -> (String, Html) {
+fn party_view(uid: &str, party: Party, mark: Option<Html>) -> (String, Html) {
     let kind = party.kind;
     let total = party.versions.as_ref().map_or(0, Vec::len);
     let tabs = party_tabs(kind, uid, &party, total);
@@ -1156,6 +911,7 @@ fn party_view(uid: &str, party: Party) -> (String, Html) {
         before_deletion,
         reading_number,
         acted,
+        admin,
         tab,
         body,
         ..
@@ -1170,7 +926,11 @@ fn party_view(uid: &str, party: Party) -> (String, Html) {
         ))
     });
     let body = match (body, &current) {
-        (PartyBody::Overview(rendered), Some(state)) => overview(kind, uid, state, &rendered),
+        (PartyBody::Overview(rendered), Some(state)) => Html::join([
+            opt(mark.map(panel)),
+            crate::pages::care::party::care_link(kind, uid),
+            overview(kind, uid, state, &rendered, admin),
+        ]),
         (PartyBody::Document(pretty), Some(state)) => panel(document_section(
             tr_with(
                 RecordsMsg::PartyDocumentTitle,
@@ -1240,7 +1000,11 @@ fn party_view(uid: &str, party: Party) -> (String, Html) {
         &latest,
         deleted.as_ref(),
         before_deletion.as_deref(),
+        admin,
     );
+    let archive = (admin && current.is_some()).then(|| {
+        crate::pages::archive::dialogs(crate::admin::Archived::Parties, &party_href(kind, uid))
+    });
     let dialog = current.as_ref().map(|state| {
         confirm_dialog(
             &crate::locale::current(),
@@ -1289,6 +1053,7 @@ fn party_view(uid: &str, party: Party) -> (String, Html) {
             opt(acted.map(|refusal| refusal.view()))
         )),
         opt(dialog),
+        opt(archive),
     ]);
     (name, page)
 }
@@ -1300,7 +1065,14 @@ pub async fn party_page() -> Drawn {
     let (kind_segment, uid_segment) = party_route();
     match read_party(&kind_segment, uid_segment).await {
         PartyModel::Shown(party) => {
-            let (title, body) = party_view(&uid, *party);
+            let mark = crate::pages::policy::grants::read_mark(
+                party
+                    .current
+                    .as_ref()
+                    .filter(|_| party.tab == PartyTab::Overview),
+            )
+            .await;
+            let (title, body) = party_view(&uid, *party, mark);
             Drawn::page(title, body)
         }
         PartyModel::Missing(refusal) => {
@@ -1321,7 +1093,8 @@ fn copy_party_id(uid: &str) -> Item {
 }
 
 /// The header of a party: its name, kind and version line, and Edit with the
-/// More menu; a deleted party says when it was deleted.
+/// More menu, which offers Archive and Restore while the admin group is
+/// mounted; a deleted party says when it was deleted.
 fn party_header(
     kind: PartyKind,
     uid: &str,
@@ -1329,6 +1102,7 @@ fn party_header(
     latest: &str,
     deleted: Option<&VersionEntry>,
     last: Option<&str>,
+    admin: bool,
 ) -> Html {
     let (actions, subtitle, badge) = if let Some(deletion) = deleted {
         (
@@ -1377,7 +1151,15 @@ fn party_header(
                     )),
                 )),
                 copy_party_id(uid),
-            ],
+            ]
+            .into_iter()
+            .chain(
+                admin
+                    .then(crate::pages::archive::items)
+                    .into_iter()
+                    .flatten(),
+            )
+            .collect(),
         )
         .destructive(vec![Item::new(Action::new(
             Some(Glyph::TRASH),
@@ -1435,25 +1217,6 @@ fn parts_of(text: &str) -> (String, String) {
                 .map_or_else(String::new, Value::to_string),
         ),
         _ => (text.to_owned(), String::new()),
-    }
-}
-
-/// A save the CDR refused.
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct Unsaved {
-    /// The refusal.
-    refusal: Refused,
-    /// Whether another client changed the object meanwhile (`412`).
-    conflict: bool,
-}
-
-impl Unsaved {
-    /// The refusal `error` of what `summary` says.
-    fn new(summary: String, error: ViewerError) -> Self {
-        Self {
-            conflict: is_status(&error, http::StatusCode::PRECONDITION_FAILED),
-            refusal: Refused::new(summary, error),
-        }
     }
 }
 
@@ -1544,20 +1307,6 @@ async fn read_edit_party(kind: &str, uid: String) -> Form<PartyEditor, Gone> {
     }))
 }
 
-/// The words of Save for an editor opened at the version `opened`: the
-/// version the save makes.
-fn save_words(opened: &str) -> String {
-    version_number(opened).parse::<u32>().map_or_else(
-        |_| tr(Msg::EditorSave),
-        |number| {
-            tr_with(
-                RecordsMsg::EditorSaveAsVersion,
-                &[("version", number.saturating_add(1).into())],
-            )
-        },
-    )
-}
-
 /// Edit a party's page, its decision bar docked.
 fn edit_party_view(uid: &str, editor: PartyEditor) -> (String, Html) {
     let PartyEditor {
@@ -1574,30 +1323,14 @@ fn edit_party_view(uid: &str, editor: PartyEditor) -> (String, Html) {
         .as_ref()
         .and_then(|unsaved| findings_of(&unsaved.refusal.error, &text, &field));
     let conflict = unsaved.as_ref().is_some_and(|unsaved| unsaved.conflict);
-    let line = if unsaved.is_some() {
-        (Glyph::CIRCLE_X, tr(RecordsMsg::EditorNotSaved))
-    } else {
-        (Glyph::PENCIL, tr(RecordsMsg::EditorOpened))
-    };
+    let line = editor_line(unsaved.is_some());
     let top = unsaved.map(|unsaved| {
-        let reload = unsaved.conflict.then(|| {
-            h(format!(
-                r#"<div class="fui-cluster">{}<span class="fui-small fui-muted">{}</span></div>"#,
-                ferrohealth_ui::view::button::link_button(
-                    format!("{}/edit", party_href(kind, uid)),
-                    ferrohealth_ui::view::button::Variant::Secondary,
-                    Some(Glyph::REFRESH_CW),
-                    tr_with(
-                        RecordsMsg::EditorReloadVersion,
-                        &[("version", version_number(&current_uid).into())],
-                    ),
-                ),
-                t(tr(RecordsMsg::EditorReloadReplaces))
-            ))
-        });
-        unsaved.refusal.view().then(opt(reload))
+        unsaved.view(
+            &format!("{}/edit", party_href(kind, uid)),
+            reload_words(&current_uid),
+        )
     });
-    let save = save_words(&opened);
+    let save = save_as_words(&opened);
     dock_editor(EditorDock {
         form: EDIT_FORM.to_owned(),
         line: line.1,
@@ -2231,10 +1964,6 @@ async fn read_edit_relationship(uid: String) -> Form<RelationshipEditor, Gone> {
 }
 
 /// Edit a relationship's page, its decision bar docked.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one editor: its heading, its refusal, its ends, its type, its details and the dock"
-)]
 fn edit_relationship_view(uid: &str, editor: RelationshipEditor) -> (String, Html) {
     let RelationshipEditor {
         state,
@@ -2256,15 +1985,7 @@ fn edit_relationship_view(uid: &str, editor: RelationshipEditor) -> (String, Htm
         .is_some_and(Unwritten::conflict)
         .then(|| tr(RecordsMsg::EditorReloadFirst));
     let top = unwritten.map(|unwritten| unwritten.view());
-    let save = version_number(&opened).parse::<u32>().map_or_else(
-        |_| tr(Msg::EditorSave),
-        |number| {
-            tr_with(
-                RecordsMsg::EditorSaveAsVersion,
-                &[("version", number.saturating_add(1).into())],
-            )
-        },
-    );
+    let save = save_as_words(&opened);
     dock_editor(EditorDock {
         form: EDIT_FORM.to_owned(),
         line: line.1,
@@ -2346,108 +2067,4 @@ pub async fn edit_relationship_page() -> Drawn {
     not_editing(read_edit_relationship(uid.clone()).await, |editor| {
         edit_relationship_view(&uid, editor)
     })
-}
-
-/// What the page reads, on the server.
-async fn read_party_contribution(uid: String) -> Result<ContributionState, Refused> {
-    match fetch_demographic_contribution(uid).await {
-        Ok(mut state) => {
-            state.body =
-                crate::bff::pretty_body(&state.body, crate::format::ReprFormat::CanonicalJson);
-            Ok(state)
-        }
-        Err(error) => {
-            if is_status(&error, http::StatusCode::NOT_FOUND) {
-                crate::request::set_status(http::StatusCode::NOT_FOUND);
-            }
-            Err(Refused::new(tr(RecordsMsg::ContributionRefused), error))
-        }
-    }
-}
-
-/// A demographic contribution's audit, the versions it made and its record.
-fn party_contribution_view(state: &ContributionState) -> Html {
-    let mut rows = vec![
-        (tr(RecordsMsg::FactCommitted), when(&state.time_committed)),
-        (tr(RecordsMsg::FactCommitter), t(&state.committer)),
-        (tr(RecordsMsg::FactChange), t(&state.change_type)),
-    ];
-    if !state.description.is_empty() {
-        rows.push((tr(RecordsMsg::FactDescription), t(&state.description)));
-    }
-    let columns = [
-        Column::text("object", tr(RecordsMsg::ColumnObject)).role(Role::Title),
-        Column::text("kind", tr(Msg::ColumnKind)).role(Role::Sub),
-        Column::text("version", tr(Msg::ColumnVersion)).role(Role::Meta),
-    ];
-    let made = state
-        .versions
-        .iter()
-        .map(|version| {
-            let object = crate::uid::container_uid_of(&version.version_uid);
-            let href = PartyKind::from_rm_type(&version.rm_type)
-                .map(|kind| party_href(kind, &object))
-                .or_else(|| {
-                    (version.rm_type == "PARTY_RELATIONSHIP").then(|| relationship_href(&object))
-                });
-            let title = title_cell(None, href.as_deref(), t(shortened(&object)), None);
-            h(format!(
-                "<tr>{title}{}{}</tr>",
-                cell(&columns[1], t(&version.rm_type)),
-                cell(&columns[2], t(version_number(&version.version_uid)))
-            ))
-        })
-        .collect();
-    let caption = tr(RecordsMsg::ContributionVersions);
-    let table = data_table(DataTable::new(&caption, &columns, Body::Rows(made)));
-    card_panel(Html::join([
-        section(
-            Some(tr(RecordsMsg::ContributionAudit)),
-            None,
-            None,
-            definitions(rows),
-        ),
-        section(
-            Some(tr(RecordsMsg::ContributionVersions)),
-            u64::try_from(state.versions.len()).ok(),
-            None,
-            table,
-        ),
-        document_section(
-            tr(RecordsMsg::ContributionRecord),
-            Language::Json,
-            state.body.clone(),
-            "contribution-record",
-        ),
-    ]))
-}
-
-/// A demographic contribution.
-/// One demographic contribution.
-pub async fn party_contribution_page() -> Drawn {
-    let uid = uid_param();
-    let title = tr_with(
-        RecordsMsg::ContributionTitle,
-        &[("id", shortened(&uid).into())],
-    );
-    let heading = page_heading(
-        &current(),
-        Header {
-            title: title.clone().into(),
-            subtitle: Some(tr(RecordsMsg::ContributionSubtitle).into()),
-            crumbs: party_crumbs(),
-            mono: false,
-            badge: None,
-            subtitle_view: None,
-        },
-        ActionGroup::default(),
-    );
-    let body = match read_party_contribution(uid).await {
-        Ok(state) => party_contribution_view(&state),
-        Err(refusal) => refusal.view(),
-    };
-    Drawn::page(
-        title,
-        heading.then(h(format!(r#"<div class="fui-stack">{body}</div>"#))),
-    )
 }

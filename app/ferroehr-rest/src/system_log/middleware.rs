@@ -153,7 +153,7 @@ pub(super) fn fill_access(event: &mut AuditEvent, access: &AccessContext, state:
     event.request_id.clone_from(&access.request_id);
     event.purpose.clone_from(&access.purpose);
     event.permit.clone_from(&access.permit);
-    event.legal_basis = state.backend().audit_legal_basis().map(str::to_owned);
+    event.legal_basis = state.backend().audit_legal_basis();
 }
 
 /// Stamp what the handler said it touched onto the operation record: the

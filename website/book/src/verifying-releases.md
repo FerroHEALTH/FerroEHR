@@ -12,16 +12,6 @@ checksum alongside each artifact. Provenance is signed through
 [Sigstore](https://www.sigstore.dev/), so you can verify it yourself, and the
 signer identity is one you can pin to a single hardened workflow.
 
-The repository moved to the `FerroHEALTH` organization on 2026-10-01, and
-v4.3.2 is the first release built there. Releases up to and including v4.3.1
-were built and signed while it was `rubentalstra/FerroEHR`, so their
-attestations name that repository: verify them with `-R rubentalstra/FerroEHR`
-and `--signer-workflow rubentalstra/FerroEHR/…`. Their images and charts were
-published under `ghcr.io/rubentalstra`. The copies of v4.3.1 under
-`ghcr.io/ferrohealth` carry the same digests, so `gh attestation verify` accepts
-them with the old repository name. Their cosign signatures exist only beside
-the originals, so run `cosign verify` against the `ghcr.io/rubentalstra` path.
-
 <!-- toc -->
 
 ## What a release publishes
@@ -129,11 +119,11 @@ gh attestation verify ferroehr-<tag>-<arch>-unknown-linux-gnu.tar.gz \
 That workflow is the reusable release-build lane described under
 [SLSA levels](#what-slsa-level-each-artifact-reaches) below.
 
-**The binary also describes itself.** From v4.0.1 on, the shipped binary
+**The binary also describes itself.** The shipped binary
 embeds its own compressed dependency list in a `.dep-v0` linker section
 (built with [`cargo auditable`](https://github.com/rust-secure-code/cargo-auditable);
 the section is allocated, so it survives the release lane's `strip`). A
-scanner that reads binaries — syft, trivy, grype, osv-scanner — recovers the
+scanner that reads binaries (syft, trivy, grype, osv-scanner) recovers the
 crate graph from the artifact itself, even when the release page's SBOM never
 travelled with it:
 
@@ -141,16 +131,13 @@ travelled with it:
 syft ferroehr -o cyclonedx-json   # the extracted binary, not the tarball
 ```
 
-From v4.3.5 on, the binaries inside the `ferroehr` and `ferroehr-viewer`
-images are built with `cargo auditable` as well, so a scan of either image
-lists the Rust dependencies of the binary it carries, and the
+The binaries inside the `ferroehr` and `ferroehr-viewer` images are built with
+`cargo auditable` as well, so a scan of either image lists the Rust
+dependencies of the binary it carries, and the
 [exploitability record](#the-exploitability-record) judges them per image.
-Images of earlier releases carry no such list: a scan of them sees the
-operating-system layer only, and the server's Rust dependencies are visible
-through the tarball scan and its SBOM.
 
 ```bash
-# <version> is v4.3.5 or later, without the v
+# <version> is the release version, without the v
 trivy image --list-all-pkgs --format json ghcr.io/ferrohealth/ferroehr-viewer:<version> \
   | jq -r '.Results[] | select(.Type == "rustbinary") | .Packages[] | "\(.Name) \(.Version)"'
 ```
@@ -208,10 +195,10 @@ gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.7.1-rc1 \
 ```
 
 > [!IMPORTANT]
-> **Image tags carry no `v` prefix.** A release publishes `4.0.0`, `3.20` and
-> `latest` (plus a `sha-…` tag per commit), while the release *assets* are named
-> after the `v4.0.1` git tag. Using `v4.0.1` as an image reference will simply
-> not resolve.
+> **Image tags carry no `v` prefix.** A release publishes, for example,
+> `6.0.0`, `6.0` and `latest` (plus a `sha-…` tag per commit), while the
+> release *assets* are named after the `v6.0.0` git tag. `v6.0.0` as an image
+> reference does not resolve.
 
 The development tags (`ghcr.io/ferrohealth/ferroehr:main` and its two
 siblings) are signed the same way, so you can rehearse the command against them
@@ -223,7 +210,7 @@ workflow in this repository.
 
 **Verify by digest where it matters.** A tag is mutable, so anything that
 GATES on verification (admission control, a deploy script) should resolve the
-tag once and verify the digest it resolved — otherwise the bytes verified and
+tag once and verify the digest it resolved; otherwise the bytes verified and
 the bytes pulled can differ:
 
 ```bash
@@ -336,7 +323,7 @@ chart SBOM must resolve to a `sha256` digest before the chart is pushed.
 
 The levels are the [SLSA v1.2 Build track](https://slsa.dev/spec/v1.2/build-requirements)
 (the current spec; v1.0 is marked Retired, and the Build-track requirements
-are unchanged across those versions — GitHub's own documentation still
+are unchanged across those versions; GitHub's own documentation still
 phrases the same construction against "SLSA v1.0"). They differ per artifact,
 so a table is the honest form:
 
@@ -346,10 +333,8 @@ so a table is the honest form:
 | container images | **Build L3** | built, pushed and attested inside a reusable workflow (`build-image.yml`); the calling jobs pass names and label text, never steps |
 | the Helm chart | **Build L3** | packaged, pushed, signed and attested inside a reusable workflow (`build-chart.yml`); the caller carries only triggers |
 
-Images and the chart reach L3 from the first publish after v4.0.1; earlier
-artifacts were attested at Build L2 (in the job that built them), and their
-attestations verify with the repository-scoped command, not the pinned
-signer.
+Older releases have their own book at `/docs/<tag>/`, which says how their
+artifacts verify.
 
 Build L3's distinguishing requirement is that secret material used for
 authenticating the provenance "MUST NOT be accessible to the environment
@@ -374,7 +359,7 @@ long-lived crates.io token exists anywhere. Be precise about what that does
 and does not give you: it is **authentication, not provenance**. crates.io
 records and displays nothing about how a crate was built, and the Rust RFC
 that introduced Trusted Publishing lists provenance verification as
-explicitly out of scope — there is no registry-side attestation to verify,
+explicitly out of scope: there is no registry-side attestation to verify,
 from this project or any other. `cargo` checks the crate's checksum against
 the registry index, and that is the whole registry-side story. The crates'
 source of truth is this repository: the publishing lane, the tags, and the
@@ -400,6 +385,8 @@ tooling at them (`trivy --vex`, and most SCA platforms take an OpenVEX feed).
 | `rust-advisories.openvex.json` | the Rust dependency advisories: the ones the advisory gate accepts, plus one that only a `Cargo.lock`-reading scanner reports |
 | `ferroehr-os.openvex.json` | the Debian packages the `ferroehr` and `ferroehr-viewer` images inherit from their distroless base (glibc, the GCC runtime libraries, zlib) |
 | `postgres-os.openvex.json` | the Debian packages of the `ferroehr-postgres` image, one statement per finding |
+| `rust-releases.openvex.json` | a Rust dependency vulnerability that an earlier release carries and a later release fixes, with the release to upgrade to |
+| `postgres-releases.openvex.json` | a Debian package finding that the `ferroehr-postgres` image of an earlier release carries and a later release fixes, with the release to upgrade to |
 
 A statement with status `affected` names a finding that applies to you, with
 an action statement saying what to do until the fix ships. `trivy --vex`

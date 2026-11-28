@@ -1300,7 +1300,11 @@ pub(super) fn stored_record(row: &PgRow) -> Result<(Vec<u8>, StoredRecord), Audi
         .map_err(|_unreadable| unreadable("its token attributes do not read"))?;
     event.permit = row.try_get("permit")?;
     event.justification = stored_justification(row, chain_seq)?;
-    event.legal_basis = row.try_get("legal_basis")?;
+    event.legal_basis = row
+        .try_get::<Option<&str>, _>("legal_basis")?
+        .map(crate::system_log::event::legal_basis_of)
+        .transpose()
+        .map_err(|_unreadable| unreadable("its legal basis is none this build writes"))?;
     event.result_count = count(row, "result_count", chain_seq)?;
     event.origins = strings(row, "origins", chain_seq)?;
     event.origin_count = count(row, "origin_count", chain_seq)?;

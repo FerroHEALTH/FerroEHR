@@ -102,6 +102,13 @@ pub fn posted() -> Option<Posted> {
     crate::scope::with(|scope| scope.posted.clone()).flatten()
 }
 
+/// The value the page's form posted as `name`, trimmed; empty when the
+/// request posted no form or no such field.
+#[must_use]
+pub fn text(name: &str) -> String {
+    posted().map(|posted| posted.text(name)).unwrap_or_default()
+}
+
 /// The form the page answers, when the request posted one asking `intent`.
 #[must_use]
 pub fn posted_for(intent: &str) -> Option<Posted> {

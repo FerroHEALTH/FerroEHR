@@ -31,6 +31,47 @@ pub struct ExportForm {
     /// `query_parameters` as a JSON object (empty = none).
     #[serde(default)]
     pub parameters_json: String,
+    /// Set when the run selected its EHRs by the cohort predicates and
+    /// subjects the form holds; empty for a query over every EHR.
+    #[serde(default)]
+    pub cohort: String,
+    /// The cohort predicate `city`.
+    #[serde(default, rename = "cohort-city")]
+    pub city: String,
+    /// The cohort predicate `postcode_area`.
+    #[serde(default, rename = "cohort-postcode_area")]
+    pub postcode_area: String,
+    /// The cohort predicate `sex`.
+    #[serde(default, rename = "cohort-sex")]
+    pub sex: String,
+    /// The cohort predicate `age_band`.
+    #[serde(default, rename = "cohort-age_band")]
+    pub age_band: String,
+    /// The cohort predicate `organisation`.
+    #[serde(default, rename = "cohort-organisation")]
+    pub organisation: String,
+    /// The identifier domain of the cohort's named subjects.
+    #[serde(default, rename = "cohort-subject-namespace")]
+    pub subject_namespace: String,
+    /// The cohort's named subjects, one identifier per line.
+    #[serde(default, rename = "cohort-subject-ids")]
+    pub subject_ids: String,
+}
+
+impl ExportForm {
+    /// The cohort field `field` as posted.
+    fn cohort_field(&self, field: &str) -> String {
+        match field {
+            crate::bff::cohort::SUBJECT_NAMESPACE_FIELD => self.subject_namespace.clone(),
+            crate::bff::cohort::SUBJECT_IDS_FIELD => self.subject_ids.clone(),
+            "cohort-city" => self.city.clone(),
+            "cohort-postcode_area" => self.postcode_area.clone(),
+            "cohort-sex" => self.sex.clone(),
+            "cohort-age_band" => self.age_band.clone(),
+            "cohort-organisation" => self.organisation.clone(),
+            _ => String::new(),
+        }
+    }
 }
 
 /// `POST /export/aql/{format}`: run the query and answer with a file
@@ -73,8 +114,22 @@ async fn run(
             ServerMsg::ParametersMustJsonObject,
         )));
     }
-    let url = state.cdr.rest_v1("query/aql");
-    let body = serde_json::json!({ "q": form.q, "query_parameters": parameters }).to_string();
+    let (url, body) = if form.cohort.trim().is_empty() {
+        (
+            state.cdr.rest_v1("query/aql"),
+            serde_json::json!({ "q": form.q, "query_parameters": parameters }).to_string(),
+        )
+    } else {
+        (
+            state.cdr.extensions_v1("query/cohort"),
+            crate::bff::cohort::request_body(
+                &form.q,
+                &parameters,
+                &crate::bff::cohort::chosen(|field| form.cohort_field(field)),
+                None,
+            ),
+        )
+    };
     let response = state
         .cdr
         .call(http::Method::POST, &url, admin.credential())

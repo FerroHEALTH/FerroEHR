@@ -44,7 +44,7 @@ retention register in `ferroehr::storage::marks`. The middleware is installed
 outermost on the API router, around the authentication layer, so it sees every
 response of the openEHR REST surface, refusals included. What each record
 holds, field by field against Annex II 3.2, is on the
-[audit trail](../audit.md#the-ehds-logging-elements-mapped) page.
+[audit trail](../ehds-logging.md#the-ehds-logging-elements-mapped) page.
 
 Test paths below are relative to the repository root. Each was read for this
 log; "no test" means none exists.
@@ -301,7 +301,7 @@ unless accepted by name.
 
 **Remains:** a local store shares the fate of its database, so backups and
 an off-box sink are the deploying organisation's
-([B7](../threat-model.md#b7--the-audit-trail)).
+([B7](../threat-model.md#b7-the-audit-trail)).
 
 ## H6: a patient cannot read their log
 

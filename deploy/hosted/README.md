@@ -108,7 +108,7 @@ That leaves about 1.1 GiB for the OS, Docker and the page cache. The one-shots
 | `ferropix.sandbox.toml` | FerroPIX's sandbox posture: the loopback base, the development issuer, the synthetic identifier domain `urn:oid:2.999.1.1` fed by `sandbox-source`, and the pseudonymisation domain `urn:oid:2.999.7.1` whose consumer is the CDR (`ferroehr`) | the same way |
 | `ferropix-seed.sh` | The one-shot that registers the demo patients with FerroPIX (ITI-104) and answers their pseudonyms (ITI-83); the deploy script's `identities` verb runs it | baked into the image; the compose file mounts the image into the one-shot, so `deploy.sh` never handles it |
 | `sandbox-ferropix-rollout.sh` | The operator's script for the FerroPIX rollout on both boxes (below) | never. The operator runs it from a checkout of the tag the sandbox serves |
-| `env.example` | A copy-to-`.env` template: the DB box's private-network DSNs, FerroPIX's sealing key, the image references and the FerroTERM index list | never. `.env` is the operator's file, written by hand on the box (the rollout script writes the FerroPIX lines) |
+| `env.example` | A copy-to-`.env` template: the DB box's private-network DSNs, FerroPIX's sealing key, the image references and the FerroTERM index list | never. `.env` is the operator's file, written by hand on the box (the rollout script writes the FerroPIX lines, and the `release` verb moves the two image lines to `:latest`) |
 | `cloud-init-postgres.yaml` | The DATABASE box, fresh to serving state: the `deploy` user, key-only SSH, both firewalls, Docker, and the `ferroehr-postgres` compose posture bound to the private address | the DB server's user data at creation, once |
 | `ferroterm-index.env` | The record of the terminology index the box carries: its artifact layout, the `ferroterm-build` version and the editions. `scripts/checks/ferroterm-index-layout.sh` refuses a FerroTERM pin in `docker-compose.yml` whose layout differs | never. The index is built off-box and copied by the operator (below), and this file changes in the same pull request as the pin |
 | `docker/terminology/seed/` (in the repository) | The licence-free shaped code systems FerroTERM serves on the box | baked into the ferroehr image at `/opt/sandbox-posture/terminology/`; the compose file mounts it into FerroTERM straight from the image, so `deploy.sh` never handles it |
@@ -149,7 +149,9 @@ every step. Three callers:
 
 1. **A real release** — the `sandbox` job in `release.yml`, after scan-and-tag
    moves `:latest`. A prerelease moves no `:latest`, so it deploys nothing.
-   The job wipes the schemas FIRST (verb `wipe`), then deploys: the recreate
+   The job wipes the schemas FIRST (verb `wipe`), then deploys with verb
+   `release`, which first moves the two image lines of the box's `.env` to
+   the `:latest` release pointer (below): the recreate
    is the fresh boot that migrates the empty database, so a release that
    changes the storage generation lands too (the v4.3.1 image refused the
    first-generation database it found, #3467). The `sandbox-reseed` leg then
@@ -166,7 +168,7 @@ every step. Three callers:
 
 The deploy key is restricted on the box to `deploy.sh` (`command=` in
 `cloud-init.yaml`), which reads `SSH_ORIGINAL_COMMAND` and accepts exactly
-`deploy`, `restart`, `wipe`, `identities` and `verbs` (the list of the verbs
+`deploy`, `release`, `restart`, `wipe`, `identities` and `verbs` (the list of the verbs
 the copy offers, which each caller reads first). The lane builds nothing; it asserts by digest that
 `:latest` is the tagged image, refuses an image that does not declare
 `eu.ferroehr.image.carries-sandbox-posture=true`, deploys through
@@ -179,6 +181,34 @@ deployment being replaced answers 200 too.
 `hosted` environment, so nothing else in this repository can reach the key.
 No Hetzner API token exists in CI at all — the deploy talks to the host and
 nothing else, so a leaked key cannot destroy the server.
+
+## The image the box names: the release, or a v6 candidate
+
+`deploy.sh` deploys the image the app box's `.env` names in `FERROEHR_IMAGE`
+and `FERROEHR_VIEWER_IMAGE`. Normally both name the `:latest` release
+pointer, so the `sandbox` leg of a release deploys that release and its
+version check finds the release's `server_version`.
+
+During the v6 candidates the box runs each candidate instead (owner decision,
+2026-11-26, #6717):
+
+1. **When a candidate is cut** (`v6.0.0-rcN`), whoever cuts it moves both
+   lines in the box's `.env` to that candidate's tag and keeps the previous
+   file as `.env.prev`. In the same visit they install the candidate's
+   `deploy.sh` (`sandbox-ferropix-rollout.sh --step 3`, run from the
+   candidate's tag), so the box offers the `release` verb the next release
+   needs. Then they run the full reseed on it (`sandbox-reseed.yml`, #6694).
+   A prerelease moves no `:latest`, so no release leg does this step.
+2. **The release moves the lines back.** The `sandbox` leg of the v6.0.0
+   release, and of every release after it, deploys with the `release` verb:
+   `deploy.sh` moves both lines to the `:latest` pointer of the repository
+   each names, keeps the previous file as `.env.prev`, prints the two lines
+   it wrote, and then deploys. Nobody moves them by hand. A box whose
+   `deploy.sh` lacks the verb fails the leg before anything is deployed, and
+   names the install step above.
+
+Read the two lines on the box with `grep -E '^FERROEHR(_VIEWER)?_IMAGE=' /opt/ferroehr-sandbox/.env`
+after each candidate, and in the `sandbox` leg's log after a release.
 
 ## The demo dataset
 
@@ -325,6 +355,87 @@ systems live under `cnf.example.test`, and no example in the CKM pack
 references them; the coded text those examples do carry (`openehr`, ISO 639-1,
 ISO 3166-1, plus external SNOMED CT references) resolves against the server's
 own in-process terminology bundle.
+
+## The signing key
+
+The sandbox signs every version with an ML-DSA-65+Ed25519 key of its own
+(RFC 9980 algorithm ID 30), `[record.signing] mode = "pgp"` in
+`ferroehr.sandbox.toml`, and seals the access log into signed checkpoints
+with it. The key is made on the app box and never leaves it: no copy goes
+into the repository, the image, CI, a log or a message. The committed test
+key under `docker/signing/` signs in the development lanes and never here.
+
+The key and its passphrase are two files under
+`/opt/ferroehr-sandbox/secrets/`, a directory only `deploy` may enter. Both
+are owned by 65532, the user the CDR image runs as, with mode `0400`, so
+neither `deploy` nor any other account but root reads them. The compose
+file mounts them into the CDR as the secrets `ferroehr-signing-key` and
+`ferroehr-signing-passphrase` (at `/run/secrets/<name>`, the paths the
+configuration names), and the passphrase alone into the `ferroehr-grant`,
+`ferroehr-hold` and `ferroehr-hold-clinician` one-shots, whose configuration
+loader reads it. `.env`
+names the two files:
+
+```sh
+FERROEHR_SIGNING_KEY_FILE=./secrets/signing-key.asc
+FERROEHR_SIGNING_PASSPHRASE_FILE=./secrets/signing-passphrase
+```
+
+Without either line `docker compose config` fails, so `deploy.sh` refuses
+the posture before it installs anything or stops the running CDR. With a
+line that names a missing file, `up -d` fails after the old CDR is removed,
+so make the files first and add the lines after.
+
+### Making the key
+
+GnuPG cannot make an ML-DSA-65+Ed25519 key. `ferrohealth-sop`, the Stateless
+OpenPGP command line of `ferrohealth-openpgp-pq` at the version
+`docs/VERSIONS.md` pins, can. The box carries no Rust toolchain, so it is
+built in the Rust image `docker/Dockerfile` builds the server with, and the
+key is made in that image with no network. As `deploy` in
+`/opt/ferroehr-sandbox`:
+
+```sh
+RUST_IMAGE=rust:<version>-slim-trixie@sha256:<digest>   # the builder pin of docker/Dockerfile
+install -d -m 0700 secrets tools
+docker run --rm -v "$PWD/tools:/out" "$RUST_IMAGE" \
+  cargo install ferrohealth-openpgp-pq --version =0.1.0 --locked --root /out/sop
+docker run --rm --network none -v "$PWD/tools/sop:/sop:ro" -v "$PWD/secrets:/s" \
+  "$RUST_IMAGE" sh -euc '
+    umask 077
+    head -c 32 /dev/urandom | base64 | tr -d "\n" > /s/signing-passphrase
+    /sop/bin/ferrohealth-sop generate-key --signing-only \
+      --with-key-password=/s/signing-passphrase \
+      "FerroEHR hosted sandbox <sandbox@ferroehr.eu>" > /s/signing-key.asc
+    /sop/bin/ferrohealth-sop extract-cert < /s/signing-key.asc > /s/signing-cert.asc
+    echo probe | /sop/bin/ferrohealth-sop sign \
+      --with-key-password=/s/signing-passphrase /s/signing-key.asc > /tmp/probe.sig
+    echo probe | /sop/bin/ferrohealth-sop verify /tmp/probe.sig /s/signing-cert.asc > /dev/null
+    chown 65532:65532 /s/signing-key.asc /s/signing-passphrase
+    chmod 0400 /s/signing-key.asc /s/signing-passphrase
+    chmod 0444 /s/signing-cert.asc'
+sha256sum secrets/signing-cert.asc | cut -c1-12
+```
+
+The passphrase is 32 random bytes in base64, written without a line ending
+and never printed. The probe signs and verifies one line with the new pair
+before anything uses it. `signing-cert.asc` is the public half: the only
+file of the three that may be shown, and the log names its 12-digit SHA-256
+fingerprint. Then add the two `.env` lines above (keep a copy of the old
+`.env` as `.env.prev`).
+
+### Rotating the key
+
+Make the new pair beside the old one under `.new` names with the same two
+containers, move the old three files to `secrets/retired-<date>/`, move the
+new ones into place, and run the reseed at once (`sandbox-reseed.yml` by
+`workflow_dispatch`): its wipe empties the store and its `deploy` recreates
+the CDR on the new key. Until then a CDR that restarts reads the new key and
+refuses what the old one signed. The wiped store holds no version the old
+key signed, so the configuration lists no `retired_key_files`. A rotation without a wipe (a key taken out of service
+mid-day) lists the old certificate's public half there, in the posture, in
+the same release. Delete a retired directory only once nothing it signed
+is kept anywhere.
 
 ## Bootstrap and recovery
 

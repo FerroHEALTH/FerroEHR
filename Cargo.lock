@@ -1245,10 +1245,6 @@ version = "0.18.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d55f2d6c30eeec7d5c6f98bd4395d4abb1895629eab97ee6522d340623615f8a"
 dependencies = [
- "aes-gcm",
- "base64 0.22.1",
- "rand 0.8.7",
- "subtle",
  "time",
  "version_check",
 ]
@@ -1916,9 +1912,9 @@ dependencies = [
 
 [[package]]
 name = "ehds-logging"
-version = "0.28.0"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0595ae20c8fae9c1892db05bb3acbee4c9230305e6d705d9c2504c841718b8e5"
+checksum = "0230033f57c268fde13f1d26ae1bfb45a4898e3a01e24bb6acd46a7af6a9cd24"
 dependencies = [
  "async-trait",
  "ihe-atna",
@@ -2084,9 +2080,9 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "ferrobridge-term"
-version = "0.19.0"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e6dc4494be13d088ca66ae23c09a94acb7cd9b60f9e8b7ca2b4cf987701de06"
+checksum = "910bf88cd98ee4fd87a2964d8aa6cc60263bdd3cc8adea9b203a8eb2fe71a2b4"
 dependencies = [
  "async-trait",
  "backon",
@@ -2108,6 +2104,7 @@ dependencies = [
  "arc-swap",
  "assert_fs",
  "async-trait",
+ "aws-lc-rs",
  "axum",
  "base64 0.23.1",
  "bytes",
@@ -2147,6 +2144,7 @@ dependencies = [
  "openehr-term",
  "opentelemetry",
  "opentelemetry_sdk",
+ "pem 4.0.0",
  "pgp",
  "pprof",
  "proptest",
@@ -2308,6 +2306,7 @@ dependencies = [
 name = "ferroehr-viewer"
 version = "5.7.1-rc1"
 dependencies = [
+ "aws-lc-rs",
  "axum",
  "base64 0.23.1",
  "clap",
@@ -2331,6 +2330,7 @@ dependencies = [
  "openehr-base",
  "openehr-its",
  "openehr-query",
+ "openehr-rm",
  "openehr-sdt",
  "rcgen",
  "reqwest",
@@ -2436,9 +2436,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-session"
-version = "0.29.0"
+version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f202e4902815a7d02b45e4faea1cd68eed1c4ead02db89dca8f2929c1142cfd"
+checksum = "8c67e05732186380e01aabaa49d4f89642d5935e437ad41bea1ce6e9469f1cde"
 dependencies = [
  "aws-lc-rs",
  "axum",
@@ -2461,9 +2461,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-smart"
-version = "0.34.0"
+version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b07089669e8f38d9ff0b2ad0fbc192fc1cf62facc4a59687de63cec8e6f7e05"
+checksum = "8c56fa775cd1ef3e47aa7e46453ec47519d9364a01ba9061331d532e0aaeaf4d"
 dependencies = [
  "argon2 0.6.0",
  "aws-lc-rs",
@@ -2474,7 +2474,6 @@ dependencies = [
  "ferrohealth-server",
  "http",
  "jiff",
- "jsonwebtoken",
  "reqwest",
  "rustls",
  "schemars 1.2.3",
@@ -2594,9 +2593,9 @@ dependencies = [
 
 [[package]]
 name = "fhir-types"
-version = "0.2.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7dc799c13c2e292fbaae7c6aee40daf46d2e0ba4ead0275f6b51b67eeecdd524"
+checksum = "780072312884125c474b96982eff506d3531af955091740f683d55afa5795676"
 dependencies = [
  "quick-xml 0.42.0",
  "regex",
@@ -3458,9 +3457,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-atna"
-version = "0.28.0"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e80c1964088be423a90645f4c67b62b8b833238e7988f1f5eb4a42010ae003fc"
+checksum = "c62ee35b57d86783e349ff2090c501587702ad433d5588652117658c2ad55845"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -3484,9 +3483,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-iti"
-version = "0.23.0"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6610e6ad1ae8c9636e4d6f43e82b230b198a43bb79c9bddbe02ac665b54cff4"
+checksum = "07c94f430f2b76c1313c1042dd6a25a8051ce99a0327f5e8de702b53e03d3932"
 dependencies = [
  "ferrohealth-smart",
  "fhir-search",
@@ -6985,7 +6984,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",

@@ -277,7 +277,7 @@ pub async fn ehr_summary_read(
     let query = if crate::party_binding::request::reads_door() {
         sqlx::query(EHR_SUMMARY_RIDE_SQL)
             .bind(ehr_id)
-            .bind(door.as_deref().map(crate::db::snapshot::Snapshot::text))
+            .bind(door.as_deref())
     } else {
         sqlx::query(EHR_SUMMARY_SQL).bind(ehr_id)
     };

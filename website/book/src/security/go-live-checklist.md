@@ -38,7 +38,7 @@ The server runs the same check at every boot and refuses to serve on a breach,
 so this is the early warning rather than the only one.
 
 The statements that create the roles, and what each one may reach afterwards,
-are [Operations → Database roles](../operations.md#database-roles-and-least-privilege)
+are [Operations → Database roles](../database-operations.md#database-roles-and-least-privilege)
 and [the threat model](../threat-model.md#what-each-database-credential-can-reach).
 
 > [!WARNING]
@@ -171,10 +171,6 @@ dumps, and no network policy of ours selects the dump pods.
 [audit]
 enabled = true
 purpose_header = "x-purpose-of-use"
-
-[audit.store]
-enabled = true
-retention = 0    # or a value at or above your jurisdiction's floor
 ```
 
 Auditing is on by default with the local store as the sink. What a production
@@ -200,7 +196,7 @@ floor and ceiling your law sets with its provision, such as the five Dutch
 years of the [Besluit vaststelling bewaartermijn logging](https://wetten.overheid.nl/BWBR0042391)
 or the German three-year ceiling of SGB V § 309 Abs. 1. Until you do, every
 entry is kept without end and the `log_retention` readiness indicator reads
-`degraded`. The [audit trail page](../audit.md#retention-and-who-chooses-it)
+`degraded`. The [audit trail page](../ehds-logging.md#retention-and-who-chooses-it)
 sets out the rules a policy write is refused under.
 
 Verify the seals work before you need it:
@@ -213,8 +209,8 @@ ferroehr access-log verify
 - [ ] `[audit] enabled = true`.
 - [ ] A copy is forwarded off the box, to a sink the server's own identity
       cannot rewrite.
-- [ ] `retention` (or `retention`) is `0` or at or above the floor
-      that applies to you.
+- [ ] `ACCESS_POLICY.log_retention` is written, and the `log_retention`
+      indicator no longer reads `degraded`.
 - [ ] `ferroehr audit-chain verify` and `ferroehr access-log verify` report
       the trail intact on a healthy trail.
 

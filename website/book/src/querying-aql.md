@@ -43,14 +43,14 @@ ORDER BY o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitud
   Data recorded under an ADL 1.4 id (`.v1` alone) is found only by a `.v1`
   query. The namespace must match exactly: `org.example::…` finds only data
   recorded in `org.example`, and an id without a namespace finds only data
-  recorded without one (#4629, #4630).
+  recorded without one.
 - **`CONTAINS`** expresses structural containment: "an EHR that contains a
   composition that contains a blood-pressure observation". Chains can nest
   several deep, and combine with `AND`, `OR`, and `NOT`. Folder containment
   follows the RM's reference model: `FOLDER f CONTAINS COMPOSITION c` matches
   the compositions a folder's `items` reference, transitively over the
   folder's sub-tree, and `FOLDER f1 CONTAINS FOLDER f2` matches strict
-  sub-folders plus the folders of a versioned folder the `items` reference —
+  sub-folders plus the folders of a versioned folder the `items` reference,
   one reference hop, so a chain of references is expressed by chaining
   `CONTAINS`. A pair the RM defines no containment relationship for (say
   `COMPOSITION CONTAINS COMPOSITION`) is refused with a typed error.
@@ -428,7 +428,7 @@ producing a list of patient identifiers first, which is exactly the disclosure
 the split between clinical and demographic storage exists to avoid.
 
 `POST /ferroehr/rest/extensions/v1/query/cohort` answers them without producing that list. It is a FerroEHR
-extension — no openEHR spec governs it: AQL is defined over the clinical domain
+extension; no openEHR spec governs it: AQL is defined over the clinical domain
 and has no demographic source, and ITS-REST publishes an ad-hoc and a stored
 query and nothing else.
 
@@ -436,11 +436,16 @@ query and nothing else.
 
 1. A predicate from the deployment's allow-list selects **parties** in the
    demographic domain. It reads one archetype leaf and returns identifiers,
-   nothing else — no name, address or national identifier leaves that domain.
-2. Those parties resolve to the **EHRs** whose `EHR_STATUS.subject` names
-   them: the `external_ref` whose `id.value` is the party's uid without
-   `::<system>::<version>`, the reference `POST /ehr` stores. Identifiers in,
-   identifiers out.
+   nothing else: no name, address or national identifier leaves that domain.
+2. Those parties resolve to **EHRs** two ways, and an EHR reached both ways
+   counts once. One is the EHR whose `EHR_STATUS.subject` names the party:
+   the `external_ref` whose `id.value` is the party's uid without
+   `::<system>::<version>`, the reference `POST /ehr` stores. The other is
+   the EHR of each record subject a selected `PERSON` declares (an `ELEMENT`
+   in its `details` named `openehr_access::record_subject` whose value is a
+   `DV_IDENTIFIER`), which the `[pixm]` provider resolves as it resolves a
+   named subject, below. Identifiers in, identifiers out: a record subject
+   reaches the provider and never you.
 3. Your AQL runs on the clinical pool, scoped to exactly those EHRs.
 
 The demographic and the clinical statements never meet. With
@@ -449,11 +454,12 @@ other, and the server refuses to boot if one can read across. You never receive 
 identifier: the response carries what your AQL projected, plus counts.
 
 **The allow-list.** A cohort predicate can only name something the deployment
-declared, under `[privacy.cohort.predicates]` — the surface is off until at least one is
+declared, under `[privacy.cohort.predicates]`; the surface is off until at least one is
 bound, and the route answers `404` until then. Five keys are bindable:
 `city`, `postcode_area`, `sex`, `age_band` and `organisation`. Each binding
 names the archetype of the leaf's nearest archetyped ancestor, the leaf's
-at-code, and how a value is matched. See
+node code (an ADL 1.4 at-code such as `at0012`, or an ADL 2 id-code such as
+`id5`), and how a value is matched. See
 [Privacy & data minimisation](installation/config-privacy.md#privacycohort) for the
 keys and their defaults.
 
@@ -471,14 +477,15 @@ domain (ITI-83 with `targetSystem` set to that domain) and finds the EHR whose
 that cannot be resolved, because the identity source fails or no provider is
 installed, fails the whole query rather than shrinking the cohort.
 
-**Under an IHE patient identity source, cohorts name their subjects.** There an
-`EHR_STATUS` names its patient by the clinical pseudonym, never by a party of
-this server, and FerroEHR never asks the source to translate a pseudonym back
-into another domain (openEHR RM `EHR_STATUS.subject`; GDPR
-Art. 4(5) and Art. 25). A demographic predicate would need that,
-so a request with a non-empty `cohort` is refused `400` there, before any
-domain or the PIX Manager is asked. The cohort digest takes each subject by
-its namespace alone, so the access record carries no identifier value.
+**Under an IHE patient identity source** an `EHR_STATUS` names its patient
+by the clinical pseudonym, never by a party of this server, and FerroEHR never
+asks the source to translate a pseudonym back into another domain (openEHR RM
+`EHR_STATUS.subject`; GDPR Art. 4(5) and Art. 25). So a predicate reaches
+EHRs there only through the record subjects of the `PERSON`s it selects: a
+record subject already in the clinical domain names its EHR, and any other is
+translated forward by the PIX Manager, as a named subject is. A `PERSON` that
+declares no record subject adds no EHR. The cohort digest takes each subject
+by its namespace alone, so the access record carries no identifier value.
 
 **Running one.**
 
@@ -496,7 +503,7 @@ curl -u ferroehr:ferroehr -X POST \
 
 `q`, `offset`, `fetch` and `query_parameters` mean what they mean on the ad-hoc
 body. There is no `ehr_id`: the cohort **is** the scope, and supplying one is a
-`400`. Several `cohort` entries **intersect** — city *and* sex, not city *or*
+`400`. Several `cohort` entries **intersect**: city *and* sex, not city *or*
 sex.
 
 The response is an ordinary `RESULT_SET` with one extra block:
@@ -517,7 +524,7 @@ The response is an ordinary `RESULT_SET` with one extra block:
 ```
 
 `size` is how many EHRs the cohort resolved to, `served_ehrs` how many the rows
-actually came from, and `definition` a SHA-256 digest of the predicate list —
+actually came from, and `definition` a SHA-256 digest of the predicate list:
 the cohort's identity, carrying none of its values.
 
 **Small-cell suppression.** A result set narrow enough to name one person
@@ -528,7 +535,7 @@ looking like an empty cohort: a caller who cannot tell the two apart will keep
 widening the predicate until the boundary leaks. Set the threshold to `0` to
 disable suppression.
 
-**The access record.** Every execution — suppressed and failed ones included —
+**The access record.** Every execution, suppressed and failed ones included,
 records one `linkage`-domain access event naming the cohort by its digest, the
 purpose you declared, and how many EHRs were served. A crossing of this boundary
 that nobody can reconstruct afterwards is what the access log exists to prevent.
@@ -536,12 +543,13 @@ The predicate values are never recorded: they *are* the cohort, and a trail
 carrying them would be a second copy of it.
 
 **Limits.** A predicate matching more than `privacy.cohort.max_cohort_size` parties
-(default `100000`) is refused `422` rather than truncated — a silently shortened
+(default `100000`) is refused `422` rather than truncated: a silently shortened
 cohort is a wrong denominator with nothing on the wire to say so. More named
 subjects than that ceiling are refused the same way. An unbound predicate
 name, a malformed age band (the form is `<min>-<max>` whole years, both
-inclusive), a predicate under an IHE identity source, or a request with
-neither a predicate nor a subject is a `400`. An empty
+inclusive), or a request with neither a predicate nor a subject is a `400`.
+A record subject the provider cannot resolve fails the query, as a named
+subject does. An empty
 cohort runs no AQL and answers an empty result set.
 
 **Measured.** The committed record `docs/benchmarks/cohort/record.json`
@@ -711,7 +719,7 @@ gets `400` with a message naming the rule.
 
 **Who may run it, and what they see.** The log has its own access control,
 apart from any clinical query right, and the query follows the rules of the
-[access log's own resources](audit.md#reading-the-access-log-over-its-rest):
+[access log's own resources](access-log.md#reading-the-access-log-over-its-rest):
 
 | Caller | Reads |
 |---|---|

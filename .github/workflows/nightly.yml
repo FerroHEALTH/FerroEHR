@@ -19,8 +19,20 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
 
+# A run counts when a push, a reopen, a schedule or a dispatch started it, or
+# a `ci:perf` or `ci:heavy` label was added. Opening a pull request with labels
+# also sends one `labeled` event per label, so `opened` adds nothing. A run
+# that does not count takes a group of its own, starts no lane, and cancels no
+# run of the pull request: it used to cancel the run beside it, whose verdict
+# jobs then showed as failed checks (#6792).
 concurrency:
-  group: nightly-${{ github.event.pull_request.number || github.ref }}
+  group: >-
+    nightly-${{
+      (github.event_name != 'pull_request' || github.event.action == 'synchronize' || github.event.action == 'reopened'
+        || (github.event.action == 'labeled' && (github.event.label.name == 'ci:perf' || github.event.label.name == 'ci:heavy')))
+      && (github.event.pull_request.number || github.ref)
+      || format('idle-{0}', github.run_id)
+    }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions: {}
@@ -42,8 +54,10 @@ jobs:
     name: lanes
     if: >-
       github.event_name != 'pull_request' ||
-      contains(github.event.pull_request.labels.*.name, 'ci:heavy') ||
-      contains(github.event.pull_request.labels.*.name, 'ci:perf')
+      ((github.event.action == 'synchronize' || github.event.action == 'reopened'
+        || (github.event.action == 'labeled' && (github.event.label.name == 'ci:perf' || github.event.label.name == 'ci:heavy')))
+       && (contains(github.event.pull_request.labels.*.name, 'ci:heavy') ||
+           contains(github.event.pull_request.labels.*.name, 'ci:perf')))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

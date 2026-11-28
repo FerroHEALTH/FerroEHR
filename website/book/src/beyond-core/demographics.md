@@ -43,7 +43,7 @@ database refuses the mix in both directions: a version with no owning EHR cannot
 enter the clinical schema, and one that has an owner cannot enter `party`. Point `[database.party] url` at a role of its own
 and the schema separation becomes a credential separation as well. See
 [Operations → Database roles and least
-privilege](../operations.md#database-roles-and-least-privilege) for the roles
+privilege](../database-operations.md#database-roles-and-least-privilege) for the roles
 and [the pseudonymisation boundary](../security.md#the-pseudonymisation-boundary)
 for what the split is for.
 
@@ -70,6 +70,11 @@ All paths are relative to the API base path (`/ferroehr/rest/openehr/v1`), and
 | `GET` | `/demographic/versioned_party/{versioned_object_uid}/version` | version at a time (query parameter) |
 | `GET` | `/demographic/versioned_party/{versioned_object_uid}/version/{version_uid}` | a specific version |
 
+Each of these reads is served in canonical JSON or XML. A party is an
+`<items>` document, a version a `<version>` document, the versioned container a
+`<versioned_party>` and its history a `<revision_history>` (see
+[Root elements no schema publishes](../using-the-api/content-negotiation.md#root-elements-no-schema-publishes)).
+
 Party changes can also be committed and read as contributions
 (`POST /demographic/contribution`,
 `GET /demographic/contribution/{contribution_uid}`), and parties support item
@@ -86,7 +91,8 @@ each a **400**. A version whose object
 is not a party or a `PARTY_RELATIONSHIP`, a lifecycle state outside the openEHR
 *version lifecycle state* group, and content that fails validation are each a
 **422**. The body is canonical JSON only: an XML or simplified-format
-`Content-Type` is a **415**.
+`Content-Type` is a **415**. The committed contribution is served in canonical
+JSON or XML, as the EHR one is.
 
 ## Relationships
 

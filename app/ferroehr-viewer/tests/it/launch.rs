@@ -128,7 +128,7 @@ pub(crate) mod tempfile_path {
 }
 
 /// `[launch]` against `issuer`, signing with the key at `key`, launching
-/// one app, its EHR subjects of `demo.hospital.mrn` FHIR Patient ids.
+/// one app, its EHR subjects of `ferroehr-sandbox` FHIR Patient ids.
 fn section(issuer: &str, key: &std::path::Path) -> ferroehr_viewer::launch::LaunchSection {
     ferroehr_viewer::launch::LaunchSection {
         issuer: issuer.to_owned(),
@@ -136,7 +136,7 @@ fn section(issuer: &str, key: &std::path::Path) -> ferroehr_viewer::launch::Laun
         private_key_file: Some(key.to_path_buf()),
         kid: "viewer-1".to_owned(),
         resource: RESOURCE.to_owned(),
-        patient_namespaces: vec!["demo.hospital.mrn".to_owned()],
+        patient_namespaces: vec!["ferroehr-sandbox".to_owned()],
         app: vec![ferroehr_viewer::launch::LaunchApp {
             name: "Growth chart".to_owned(),
             client_id: "growth-chart".to_owned(),
@@ -250,7 +250,7 @@ async fn a_launch_registers_the_ehr_and_sends_the_new_window_to_the_app() {
     assert_eq!(field(form, "app_client_id"), Some("growth-chart"));
     assert_eq!(field(form, "resource"), Some(RESOURCE));
     assert_eq!(field(form, "ehrId"), Some(ehr.as_str()));
-    assert_eq!(field(form, "patient"), Some("p-0417"));
+    assert_eq!(field(form, "patient"), Some("sandbox-patient-01"));
     assert_eq!(field(form, "need_patient_banner"), Some("false"));
     let names: Vec<&str> = form.iter().map(|(name, _)| name.as_str()).collect();
     assert_eq!(
@@ -336,4 +336,73 @@ async fn an_app_the_configuration_does_not_list_is_never_launched() {
     assert_eq!(answer.status, http::StatusCode::OK);
     assert!(answer.main().contains("The app could not be launched"));
     assert!(stub.received.lock().expect("the stub's record").is_empty());
+}
+
+#[tokio::test]
+async fn an_ml_dsa_key_signs_the_launch_assertion_with_its_parameter_set() {
+    let stub = ferrosmart(
+        http::StatusCode::CREATED,
+        r#"{"launch":"Zm9vYmFyLWxhdW5jaC12YWx1ZS1mb3ItdGhlLXRlc3Qtb25seQ","expires_in":300}"#,
+    )
+    .await;
+    let generated = crate::ml_dsa::key(ferrohealth_smart::jws::algorithm::Algorithm::MlDsa65);
+    let key = tempfile_path::Path::new(&generated.pem);
+    let viewer = Viewer::start_launching(section(&stub.issuer, &key.0)).await;
+    let cookie = viewer.sign_in().await;
+    let answer = viewer
+        .send(
+            http::Method::POST,
+            &format!("/ehrs/{}", id("ehr")),
+            Some(&cookie),
+            Some(&[("intent", "launch"), ("app", "growth-chart")]),
+        )
+        .await;
+    assert_eq!(
+        answer.status,
+        http::StatusCode::SEE_OTHER,
+        "{}",
+        answer.body
+    );
+
+    let received = stub.received.lock().expect("the stub's record").clone();
+    let [form] = received.as_slice() else {
+        panic!("one launch request, got {received:?}");
+    };
+    let assertion = field(form, "client_assertion").expect("the assertion");
+    let token = ferrohealth_smart::jws::compact::decode(assertion).expect("a compact JWS");
+    assert_eq!(
+        token.header().alg,
+        ferrohealth_smart::jws::algorithm::Algorithm::MlDsa65,
+        "RFC 9964 §5"
+    );
+    assert_eq!(token.header().kid.as_deref(), Some("viewer-1"));
+    let payload = token
+        .verify(generated.signing.public_jwk())
+        .expect("the assertion verifies against the viewer's ML-DSA-65 key");
+    let claims: Assertion = serde_json::from_slice(payload).expect("the assertion's claims");
+    assert_eq!(claims.sub, "ferroehr-viewer");
+    assert!(
+        matches!(&claims.aud, Audience::One(one) if *one == stub.issuer)
+            || matches!(claims.aud, Audience::Many(ref many) if *many == [stub.issuer.clone()]),
+        "the issuer is the sole audience"
+    );
+}
+
+/// The claims of the client assertion the ML-DSA test reads.
+#[derive(serde::Deserialize)]
+struct Assertion {
+    /// The subject, the viewer's client id.
+    sub: String,
+    /// The audience, FerroSMART's issuer.
+    aud: Audience,
+}
+
+/// An `aud` claim, one string or a list (RFC 7519 §4.1.3).
+#[derive(serde::Deserialize)]
+#[serde(untagged)]
+enum Audience {
+    /// One audience.
+    One(String),
+    /// A list of audiences.
+    Many(Vec<String>),
 }

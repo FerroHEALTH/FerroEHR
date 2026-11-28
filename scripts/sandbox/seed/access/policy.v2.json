@@ -1,0 +1,168 @@
+{
+  "_type": "ACCESS_POLICY",
+  "name": {
+    "_type": "DV_TEXT",
+    "value": "FerroEHR Demo Hospital access policy"
+  },
+  "archetype_node_id": "openEHR-EHR-ACCESS_POLICY.controller.v1",
+  "archetype_details": {
+    "_type": "ARCHETYPED",
+    "archetype_id": {
+      "_type": "ARCHETYPE_ID",
+      "value": "openEHR-EHR-ACCESS_POLICY.controller.v1"
+    },
+    "rm_version": "1.2.0"
+  },
+  "controller": {
+    "_type": "PARTY_REF",
+    "namespace": "demographic",
+    "type": "ORGANISATION",
+    "id": {
+      "_type": "HIER_OBJECT_ID",
+      "value": "__ID:organisation-hospital__"
+    }
+  },
+  "justifications": [
+    {
+      "_type": "ACCESS_JUSTIFICATION",
+      "emergency": false,
+      "purposes": [
+        {
+          "_type": "DV_CODED_TEXT",
+          "value": "treatment",
+          "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": {
+              "_type": "TERMINOLOGY_ID",
+              "value": "HL7_ActReason"
+            },
+            "code_string": "TREAT"
+          }
+        }
+      ]
+    },
+    {
+      "_type": "ACCESS_JUSTIFICATION",
+      "emergency": true,
+      "purposes": [
+        {
+          "_type": "DV_CODED_TEXT",
+          "value": "emergency treatment",
+          "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": {
+              "_type": "TERMINOLOGY_ID",
+              "value": "HL7_ActReason"
+            },
+            "code_string": "ETREAT"
+          }
+        }
+      ]
+    }
+  ],
+  "care_relationship_required": false,
+  "relationship_grace": {
+    "_type": "DV_DURATION",
+    "value": "P14D"
+  },
+  "purpose_required": false,
+  "concealed_confidentialities": [
+    {
+      "_type": "DV_CODED_TEXT",
+      "value": "very restricted",
+      "defining_code": {
+        "_type": "CODE_PHRASE",
+        "terminology_id": {
+          "_type": "TERMINOLOGY_ID",
+          "value": "HL7_Confidentiality"
+        },
+        "code_string": "V"
+      }
+    }
+  ],
+  "classifications": [
+    {
+      "_type": "ACCESS_CLASSIFICATION",
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "Mental health notes"
+      },
+      "archetype_node_id": "at0002",
+      "data": {
+        "_type": "ACCESS_DATA_SCOPE",
+        "archetypes": [
+          {
+            "_type": "ARCHETYPE_ID",
+            "value": "openEHR-EHR-COMPOSITION.mental_health_note.v1"
+          }
+        ]
+      },
+      "sensitivities": [
+        {
+          "_type": "DV_CODED_TEXT",
+          "value": "very restricted",
+          "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": {
+              "_type": "TERMINOLOGY_ID",
+              "value": "2.16.840.1.113883.5.25"
+            },
+            "code_string": "V"
+          }
+        }
+      ]
+    }
+  ],
+  "log_restrictions": [
+    {
+      "_type": "ACCESS_LOG_RESTRICTION",
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "Accessor roles withheld"
+      },
+      "archetype_node_id": "id11",
+      "accessor_kinds": [
+        {
+          "_type": "DV_CODED_TEXT",
+          "value": "person",
+          "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": {
+              "_type": "TERMINOLOGY_ID",
+              "value": "openehr_access"
+            },
+            "code_string": "person"
+          }
+        }
+      ],
+      "withheld": [
+        {
+          "_type": "DV_CODED_TEXT",
+          "value": "accessor_roles",
+          "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": {
+              "_type": "TERMINOLOGY_ID",
+              "value": "openehr_access"
+            },
+            "code_string": "accessor_roles"
+          }
+        }
+      ],
+      "legal_grounds": [
+        {
+          "_type": "DV_CODED_TEXT",
+          "value": "national provision under EHDS Art. 9(3) (synthetic)",
+          "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": {
+              "_type": "TERMINOLOGY_ID",
+              "value": "urn:example:national-law"
+            },
+            "code_string": "art-9-3"
+          }
+        }
+      ]
+    }
+  ]
+}

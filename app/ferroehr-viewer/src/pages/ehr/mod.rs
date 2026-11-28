@@ -13,10 +13,14 @@
 //! characters of the id. No openEHR spec governs the viewer's pages: our own
 //! design.
 
+pub mod access;
+pub mod access_log;
+pub mod care;
 pub mod compositions;
 pub mod contribution;
 pub mod directory;
 pub mod launch_tasks;
+pub mod marks;
 pub mod status;
 pub mod tags;
 
@@ -30,10 +34,13 @@ use ferrohealth_ui::view::subject::{Subject, SubjectLine, subject_line};
 use ferrohealth_ui::view::surface::{Crumb, Header, page_heading};
 use ferrohealth_ui::view::tabs::{Tab, binder};
 
+use crate::admin::Archived;
 use crate::bff::ehr_detail::EhrSummary;
 use crate::bff::ehr_detail::status::EhrStatusState;
 use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
+use crate::locale::access::AccessMsg;
+use crate::locale::operations::OperationsMsg;
 use crate::locale::records::RecordsMsg;
 use crate::locale::server::ServerMsg;
 use crate::locale::{Msg, current, tr, tr_with};
@@ -56,6 +63,14 @@ pub enum EhrTab {
     Contributions,
     /// Its tags.
     Tags,
+    /// Its subject's care relationships.
+    Care,
+    /// Its legal marks.
+    Marks,
+    /// Its access settings.
+    Access,
+    /// Its access log.
+    AccessLog,
 }
 
 impl EhrTab {
@@ -67,6 +82,10 @@ impl EhrTab {
             Self::Status => "status",
             Self::Contributions => "contributions",
             Self::Tags => "tags",
+            Self::Care => "care",
+            Self::Marks => "marks",
+            Self::Access => "access",
+            Self::AccessLog => "access-log",
         }
     }
 }
@@ -211,6 +230,16 @@ pub struct EhrModel<P> {
     tasks: Option<launch_tasks::Panel>,
 }
 
+impl<P> EhrModel<P> {
+    /// Whether the CDR refused the caller the EHR itself (`403`), as it does
+    /// the person and their representative, who read its access log alone.
+    pub fn ehr_refused(&self) -> bool {
+        self.head
+            .as_ref()
+            .is_err_and(|error| is_status(error, http::StatusCode::FORBIDDEN))
+    }
+}
+
 /// The subject line of the EHR `ehr_id` whose status is `status`; a
 /// revealed subject id is written to the log with who revealed it.
 fn subject_facts(ehr_id: &str, status: &EhrStatusState) -> SubjectFacts {
@@ -290,8 +319,10 @@ where
 }
 
 /// The More menu of an EHR: Commit several changes, Create the directory
-/// when it has none, Copy EHR id, then Delete EHR… last when the admin group
-/// is mounted.
+/// when it has none, Copy EHR id, Export as EHR Extract, and while the
+/// admin group is mounted Archive… and Restore…, then Delete EHR… last.
+/// when it has none, Copy EHR id, and while the admin group is mounted
+/// Archive… and Restore…, then Delete EHR… last.
 fn more(ehr_id: &str, facts: &EhrHead) -> Menu {
     let mut items = vec![Item::new(Action::new(
         Some(Glyph::GIT_COMMIT),
@@ -313,7 +344,15 @@ fn more(ehr_id: &str, facts: &EhrHead) -> Menu {
         tr(RecordsMsg::EhrCopyId),
         Act::Copy(ehr_id.to_owned()),
     )));
+    items.push(Item::new(Action::new(
+        Some(Glyph::DOWNLOAD),
+        tr(OperationsMsg::ExportExtract),
+        Act::Download(crate::download::extract_href(ehr_id)),
+    )));
     items.extend(launch_items(ehr_id));
+    if facts.admin {
+        items.extend(crate::pages::archive::items());
+    }
     let destructive = if facts.admin {
         vec![Item::new(Action::new(
             Some(Glyph::TRASH),
@@ -485,6 +524,9 @@ fn header(ehr_id: &str, facts: &EhrHead) -> Html {
         heading,
         subject(ehr_id, facts.subject.as_ref()),
         opt(facts.admin.then(|| delete_dialog(ehr_id))),
+        opt(facts
+            .admin
+            .then(|| crate::pages::archive::dialogs(Archived::Ehrs, &ehr_href(ehr_id)))),
     ])
 }
 
@@ -518,12 +560,32 @@ fn tabs(ehr_id: &str, facts: &EhrHead) -> Vec<Tab> {
             tab_href(ehr_id, EhrTab::Tags),
             tr(RecordsMsg::EhrTabTags),
         ),
+        Tab::new(
+            EhrTab::Care.key(),
+            tab_href(ehr_id, EhrTab::Care),
+            tr(crate::locale::policy::PolicyMsg::CareTab),
+        ),
+        Tab::new(
+            EhrTab::Access.key(),
+            tab_href(ehr_id, EhrTab::Access),
+            tr(crate::locale::policy::PolicyMsg::AccessTab),
+        ),
+        Tab::new(
+            EhrTab::Marks.key(),
+            tab_href(ehr_id, EhrTab::Marks),
+            tr(crate::locale::policy::PolicyMsg::MarksTab),
+        ),
+        Tab::new(
+            EhrTab::AccessLog.key(),
+            tab_href(ehr_id, EhrTab::AccessLog),
+            tr(AccessMsg::Tab),
+        ),
     ]);
     tabs
 }
 
-/// What a post to an EHR's page asks, done: Create the directory and Delete
-/// EHR. `Some` holds what it did not do, drawn above the tabs.
+/// What a post to an EHR's page asks, done: Create the directory, Archive,
+/// Restore and Delete EHR. `Some` holds what it did not do, drawn above the tabs.
 async fn act(ehr_id: &str) -> Option<Acted> {
     let posted = crate::posted::posted()?;
     match posted.intent().as_str() {
@@ -563,6 +625,12 @@ async fn act(ehr_id: &str) -> Option<Acted> {
                     error,
                 ))),
             }
+        }
+        intent @ ("archive" | "restore") => {
+            crate::pages::archive::act(Archived::Ehrs, ehr_id, intent, &ehr_href(ehr_id))
+                .await
+                .flatten()
+                .map(Acted::Refused)
         }
         "launch" => launch(ehr_id, &posted.text("app")).await,
         "launch-task" => launch_task(ehr_id, &posted.text("task")).await,
@@ -648,8 +716,19 @@ fn missing(ehr_id: &str, error: &ViewerError) -> Html {
         Some(Glyph::ARROW_LEFT),
         tr(RecordsMsg::EhrBack),
     );
+    // NOTE: our own design, the person and their representative read the log of an EHR
+    // the CDR refuses them, so a 403 offers its Access log tab.
+    let log = is_status(error, http::StatusCode::FORBIDDEN).then(|| {
+        ferrohealth_ui::view::button::link_button(
+            tab_href(ehr_id, EhrTab::AccessLog),
+            ferrohealth_ui::view::button::Variant::Secondary,
+            None,
+            tr(AccessMsg::OpenLog),
+        )
+    });
     heading.then(h(format!(
-        r#"<div class="fui-stack">{}<div class="fui-cluster">{back}</div></div>"#,
-        refused(tr(RecordsMsg::EhrRefused), error, None)
+        r#"<div class="fui-stack">{}<div class="fui-cluster">{back}{}</div></div>"#,
+        refused(tr(RecordsMsg::EhrRefused), error, None),
+        opt(log)
     )))
 }

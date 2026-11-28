@@ -32,7 +32,7 @@ openehr-query = { path = "../../crates/openehr-query" }
 # enforces. Its outbound client (`fetch`) builds the CDR client.
 ferrohealth-smart = { workspace = true, features = ["fetch", "openehr-scopes", "server-tls"] }
 # The console sign-in and session: the `[oidc]` and `[session]` sections, the
-# sealed store the multi-instance viewer runs on, and the four sign-in routes
+# memory store the one viewer instance runs on, and the four sign-in routes
 # with the middleware every page sits behind (`axum`).
 ferrohealth-session = { workspace = true, features = ["axum"] }
 # The full ITS surface (OPT parsing + WebTemplate building) and the Simplified
@@ -48,6 +48,9 @@ openehr-base = { path = "../../crates/openehr-base" }
 # The AOM2 operational-template type the ADL2 detail screen's path catalog is
 # built from (`OperationalTemplateV2` canonical JSON in, Web Template out).
 openehr-am = { path = "../../crates/openehr-am" }
+# The draft access control package's terminology ids, such as the care role
+# terminology a care relationship form defaults to.
+openehr-rm = { path = "../../crates/openehr-rm", features = ["draft"] }
 
 # The shared FerroHEALTH console components, tokens, stylesheet, script
 # modules, highlighters and table model, with its asset router (`axum`).
@@ -59,7 +62,9 @@ ferrohealth-health = { workspace = true, features = ["registry"] }
 fluent-templates.workspace = true
 serde.workspace = true
 toml.workspace = true
-serde_json.workspace = true
+# NOTE: preserve_order draws the configuration page and an RM object without a
+# declared attribute order in the order the CDR answers them (#6734).
+serde_json = { workspace = true, features = ["preserve_order"] }
 # ISO 8601 parsing/formatting for the results chart's time axis.
 jiff.workspace = true
 thiserror.workspace = true
@@ -79,9 +84,6 @@ ferrohealth-telemetry.workspace = true
 # `form`: the launch request's form body (`crate::launch`).
 reqwest = { workspace = true, features = ["form"] }
 ferrohealth-config.workspace = true
-# The algorithm a launch key signs with (`crate::launch`), which
-# `ferrohealth-smart`'s `AssertionKey` names in `jsonwebtoken`'s type.
-jsonwebtoken.workspace = true
 ferrohealth-secret.workspace = true
 # The family's server plumbing: the stack with the health routes, the bounded
 # drain, `cli::Common` and the healthcheck, the console's browser security
@@ -95,6 +97,10 @@ base64.workspace = true
 csv.workspace = true
 
 [dev-dependencies]
+# Generates the ML-DSA keys of the launch and sign-in tests (RFC 9964).
+aws-lc-rs.workspace = true
+# Reads the launch tests' client assertions and mints their ID tokens.
+jsonwebtoken.workspace = true
 indexmap.workspace = true
 # A test CA and a server certificate minted at run time, for the outbound TLS
 # tests of the CDR and issuer clients.

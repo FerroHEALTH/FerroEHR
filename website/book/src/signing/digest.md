@@ -120,7 +120,7 @@ That copy has its own channel: `POST /ferroehr/rest/extensions/v1/admin/integrit
 re-derives every stored version from its decomposed rows and reports any
 that no longer match the stored document. It is an admin route, it runs
 outside the request path, and it reports by identifier rather than by
-content. The [admin API reference](../operations-admin-apis.md#storage-integrity)
+content. The [admin API reference](../storage-admin-apis.md#storage-integrity)
 documents the report and its five defect values.
 
 ## Verification at read
@@ -143,7 +143,7 @@ CONTRIBUTION read resolves under `Prefer: resolve_refs`. A plain content read
 (`GET /ehr/{ehr_id}/composition/{uid_based_id}`) returns the COMPOSITION
 rather than the VERSION that carries the signature, and runs no check. AQL
 reads the decomposed storage rows directly and runs no check either; the
-[storage-parity sweep](../operations-admin-apis.md#storage-integrity) is what
+[storage-parity sweep](../storage-admin-apis.md#storage-integrity) is what
 covers those.
 
 > [!WARNING]

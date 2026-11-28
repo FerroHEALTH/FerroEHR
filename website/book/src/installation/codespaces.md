@@ -38,7 +38,7 @@ checkout you opened it on: the `COMPOSE_FILE` environment variable inside the
 container pins every `docker compose` command to that file, so the
 repository's development override (which switches to from-source builds) does
 not apply. To develop FerroEHR itself, use a local checkout as described
-under [Repository development](compose.md#repository-development).
+under [Repository development](compose-overlays.md#repository-development).
 
 The Codespace runs on your own GitHub account. The smallest machine type
 (2 cores, 8 GB) is enough, and GitHub's free monthly Codespaces allowance
@@ -56,7 +56,7 @@ what it runs on and what to expect from it:
 | | |
 |---|---|
 | Compute | one dedicated Hetzner Cloud CX33 (4 shared vCPU, 8 GB RAM, 80 GB NVMe SSD; Nuremberg, `eu-central`; €8.49/month net), running the published container images behind a Caddy proxy that terminates TLS |
-| Database | a second, dedicated CX33 running the published `ferroehr-postgres` image (PostgreSQL 18), reachable only over a Hetzner private network — no public database port |
+| Database | a second, dedicated CX33 running the published `ferroehr-postgres` image (PostgreSQL 19), reachable only over a Hetzner private network, with no public database port |
 | Data durability | none by design: **every night around midnight UTC the whole store is wiped and fresh demo data is seeded** |
 
 The server does not scale to zero, so there is no cold start; it is still a

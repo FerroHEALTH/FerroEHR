@@ -80,6 +80,42 @@ crate::locale::messages! {
         QueryAql = "query-aql",
         /// `Query · AQL`
         QueryAqlTitle = "query-aql-title",
+        /// `Cohort`
+        QueryCohort = "query-cohort",
+        /// `Query · Cohort`
+        CohortTitle = "cohort-title",
+        /// `Cohort`
+        CohortPredicates = "cohort-predicates",
+        /// `Fill the predicates or name the subjects that select the cohort; several intersect. The query runs over the EHRs they select, and no party identifier reaches you.`
+        CohortIntro = "cohort-intro",
+        /// `City`
+        CohortCity = "cohort-city",
+        /// `Postcode area`
+        CohortPostcodeArea = "cohort-postcode-area",
+        /// `Sex`
+        CohortSex = "cohort-sex",
+        /// `Age band (min-max years)`
+        CohortAgeBand = "cohort-age-band",
+        /// `Organisation`
+        CohortOrganisation = "cohort-organisation",
+        /// `Subject namespace`
+        CohortSubjectNamespace = "cohort-subject-namespace",
+        /// `Subject identifiers, one per line`
+        CohortSubjectIds = "cohort-subject-ids",
+        /// `Fill a predicate or name a subject to select a cohort.`
+        CohortNoPredicate = "cohort-no-predicate",
+        /// `This CDR binds no cohort predicate and takes no named subject, so it runs no cohort query.`
+        CohortUnbound = "cohort-unbound",
+        /// `Cohort`
+        CohortFacts = "cohort-facts",
+        /// `EHRs in the cohort`
+        CohortSize = "cohort-size",
+        /// `EHRs the rows came from`
+        CohortServed = "cohort-served",
+        /// `Definition digest`
+        CohortDefinition = "cohort-definition",
+        /// `The rows are withheld: they came from fewer EHRs than the CDR's small-cell threshold, so they could name a person.`
+        CohortSuppressed = "cohort-suppressed",
         /// `The row limit is not a whole number.`
         QueryBadLimit = "query-bad-limit",
         /// `Build`

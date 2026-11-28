@@ -101,11 +101,16 @@ nav-dashboard = Dashboard
 nav-ehrs = EHRs
 nav-parties = Parties
 nav-templates = Templates
+nav-archetypes = Archetypes
 nav-terminology = Terminology
 nav-stored-queries = Stored queries
 nav-query = Query
 nav-server = Server
 nav-audit = Audit log
+nav-access-log = Access log
+nav-access-policy = Access policy
+nav-grants = Roles and grants
+nav-retention = Retention
 nav-configuration = Configuration
 nav-about = About
 pill-up = CDR up
@@ -118,9 +123,10 @@ pill-unreachable-detail = No answer from { $address }
 unknown-version = an unknown version
 sandbox-title = Sandbox
 sandbox-gaps = { $count ->
-    [one] 1 production safeguard is off
-   *[other] { $count } production safeguards are off
+    [one] 1 production safeguard is off: { $gaps }
+   *[other] { $count } production safeguards are off: { $gaps }
 }
+sandbox-gap-separator = {"; "}
 sandbox-details = Details
 sandbox-no-gaps = This deployment must not hold real patient data.
 signed-in-basic = Signed in with a CDR account
@@ -200,3 +206,20 @@ month-short-9 = Sep
 month-short-10 = Oct
 month-short-11 = Nov
 month-short-12 = Dec
+
+## A version's signature and attestations
+
+version-signature-none = None
+version-signature-digest = A SHA-256 digest
+version-signature-composite = An OpenPGP signature, ML-DSA-65+Ed25519
+version-signature-openpgp = An OpenPGP signature, algorithm { $algorithm }
+version-signature-openpgp-unread = An OpenPGP signature
+version-signature-other = A signature in the client's own form
+version-signature-title = Signature
+version-attestations = Attestations
+version-attester = Attester
+version-attested-at = When
+version-attest-reason = Reason
+version-attest-items = Attests
+version-attest-whole = The whole version
+version-attest-pending = Pending

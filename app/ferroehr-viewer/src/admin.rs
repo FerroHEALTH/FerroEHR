@@ -162,9 +162,90 @@ pub async fn admin_delete_ehr(
     Ok(())
 }
 
+/// What an archive call moves: EHRs or demographic parties.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Archived {
+    /// EHRs, with all their versioned content.
+    Ehrs,
+    /// Demographic parties.
+    Parties,
+}
+
+impl Archived {
+    /// The route's segment and the body's member naming the ids.
+    const fn wire(self) -> (&'static str, &'static str) {
+        match self {
+            Self::Ehrs => ("ehrs", "ehr_ids"),
+            Self::Parties => ("parties", "party_ids"),
+        }
+    }
+}
+
+/// The request of an archive call: its path under the extensions root and
+/// its body, moving the record `id` of `kind` to the cold tier, or back with
+/// `restore`.
+#[must_use]
+#[expect(
+    clippy::disallowed_types,
+    reason = "the archive body is the CDR's JSON wire, built as an untyped object"
+)]
+pub fn archive_request(kind: Archived, id: &str, restore: bool) -> (String, String) {
+    let (segment, member) = kind.wire();
+    let path = if restore {
+        format!("admin/archive/{segment}/restore")
+    } else {
+        format!("admin/archive/{segment}")
+    };
+    (path, serde_json::json!({ member: [id] }).to_string())
+}
+
+/// Moves the record `id` of `kind` to the cold tier, or back with `restore`
+/// (`POST {ext}/admin/archive/{ehrs|parties}[/restore]`).
+///
+/// # Errors
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)), the CDR's words for
+/// a malformed id (`400`), an id that names nothing (`404`) and an admin
+/// group that is off (`405`).
+pub async fn archive(kind: Archived, id: String, restore: bool) -> Result<(), ViewerError> {
+    let cdr = crate::bff::cdr()?;
+    let (path, body) = archive_request(kind, &id, restore);
+    let url = cdr.extensions_v1(&path);
+    cdr.post(&url).body("application/json", body).ok().await?;
+    Ok(())
+}
+
+/// The request body of a re-key: the `PERSON` `party_id` and its new
+/// binding key, `id` under `issuer`.
+#[must_use]
+#[expect(
+    clippy::disallowed_types,
+    reason = "the re-key body is the CDR's JSON wire, built as an untyped object"
+)]
+pub fn rekey_body(party_id: &str, issuer: &str, id: &str) -> String {
+    serde_json::json!({ "party_id": party_id, "issuer": issuer, "id": id }).to_string()
+}
+
+/// Changes the binding key of the `PERSON` `party_id` under `issuer` to
+/// `id` (`POST {ext}/admin/party/binding-key`).
+///
+/// # Errors
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)), the CDR's words for
+/// a new key that is the administrator's own login (`403`), an unknown or
+/// deleted `PERSON` (`404`), no key under `issuer` or a key bound to another
+/// party (`409`) and an admin group that is off (`405`).
+pub async fn rekey(party_id: &str, issuer: &str, id: &str) -> Result<(), ViewerError> {
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.extensions_v1("admin/party/binding-key");
+    cdr.post(&url)
+        .body("application/json", rekey_body(party_id, issuer, id))
+        .ok()
+        .await?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{AdminAvailability, availability_of, renders_admin_ops};
+    use super::{AdminAvailability, Archived, archive_request, availability_of, renders_admin_ops};
     use crate::error::ViewerError;
     use crate::system_api::ConformanceManifest;
 
@@ -213,5 +294,25 @@ mod tests {
         ))));
         assert!(AdminAvailability::Available.usable());
         assert!(!AdminAvailability::Disabled.usable());
+    }
+
+    /// An archive call names its ids under its kind's member, and a restore
+    /// goes to its own route.
+    #[test]
+    fn an_archive_call_names_its_record() {
+        assert_eq!(
+            archive_request(Archived::Ehrs, "e1", false),
+            (
+                "admin/archive/ehrs".to_owned(),
+                r#"{"ehr_ids":["e1"]}"#.to_owned()
+            )
+        );
+        assert_eq!(
+            archive_request(Archived::Parties, "p1", true),
+            (
+                "admin/archive/parties/restore".to_owned(),
+                r#"{"party_ids":["p1"]}"#.to_owned()
+            )
+        );
     }
 }

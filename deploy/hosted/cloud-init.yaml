@@ -65,8 +65,9 @@ write_files:
       }
 
   # The ONE command the CI key may run. It reads SSH_ORIGINAL_COMMAND and
-  # accepts exactly five verbs: `deploy` (the default — pull, extract the
-  # posture out of the pulled image, recreate), `restart` (restart the CDR
+  # accepts exactly six verbs: `deploy` (the default — pull, extract the
+  # posture out of the pulled image, recreate), `release` (move the two image
+  # lines of `.env` to the `:latest` release pointer, then deploy, #6717), `restart` (restart the CDR
   # alone; no caller names it since #5406), `wipe` (drop the CDR's schemas on the private database, using
   # the DSN this box already holds — the database has no public port and CI
   # holds no database credential), and `identities` (register the demo
@@ -107,9 +108,9 @@ write_files:
 
       verb="${SSH_ORIGINAL_COMMAND:-deploy}"
       case "$verb" in
-        deploy|restart|wipe|identities|verbs) ;;
+        deploy|release|restart|wipe|identities|verbs) ;;
         *)
-          echo "deploy: unknown verb '$verb' (this key runs 'deploy', 'restart', 'wipe', 'identities' or 'verbs')" >&2
+          echo "deploy: unknown verb '$verb' (this key runs 'deploy', 'release', 'restart', 'wipe', 'identities' or 'verbs')" >&2
           exit 1
           ;;
       esac
@@ -117,7 +118,7 @@ write_files:
       # `verbs` answers the verbs this copy offers, which every caller reads
       # before it calls one: this file does not update itself.
       if [[ "$verb" == "verbs" ]]; then
-        echo "verbs deploy restart wipe identities verbs"
+        echo "verbs deploy release restart wipe identities verbs"
         exit 0
       fi
 
@@ -183,9 +184,32 @@ write_files:
         exit 0
       fi
 
-      # `.env` is the operator's file and no automation writes it, so it is
-      # what names the image to interrogate. No fallback: an unnamed image is
-      # a stop, never a guess at which artifact the posture should come from.
+      # `release` is a release's deploy (release.yml): an image line the
+      # operator pinned to a candidate's tag moves back to the `:latest` release
+      # pointer of the same repository, the previous file kept as `.env.prev`,
+      # and the deploy below then runs the release.
+      if [[ "$verb" == "release" ]]; then
+        cp -p .env .env.prev
+        moved="$(mktemp .env.XXXXXX)"
+        while IFS= read -r line || [[ -n "$line" ]]; do
+          if [[ "$line" =~ ^([[:space:]]*FERROEHR(_VIEWER)?_IMAGE=)\"?([^\"]+)\"?$ ]]; then
+            ref="${BASH_REMATCH[3]%%@*}"
+            if [[ "${ref##*/}" == *:* ]]; then
+              ref="${ref%:*}"
+            fi
+            line="${BASH_REMATCH[1]}${ref}:latest"
+          fi
+          printf '%s\n' "$line"
+        done < .env > "$moved"
+        cat "$moved" > .env
+        rm -f "$moved"
+        grep -E '^[[:space:]]*FERROEHR(_VIEWER)?_IMAGE=' .env | sed 's/^/release: /'
+      fi
+
+      # `.env` is the operator's file, and only `release` moves its image lines,
+      # so it is what names the image to interrogate. No fallback: an unnamed
+      # image is a stop, never a guess at which artifact the posture should
+      # come from.
       image="$(sed -n 's/^[[:space:]]*FERROEHR_IMAGE=//p' .env | tail -n 1)"
       image="${image%\"}"
       image="${image#\"}"

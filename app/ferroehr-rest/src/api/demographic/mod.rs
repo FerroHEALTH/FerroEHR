@@ -36,6 +36,7 @@ use http::HeaderMap;
 use openehr_its::rest::runtime::ApiError;
 
 use crate::overview::error::RestError;
+use crate::overview::negotiate::body;
 use crate::overview::negotiate::resource::{Tree, set_versioning_headers};
 use ferroehr::error::ServiceError;
 use ferroehr::ids::VoId;
@@ -165,11 +166,19 @@ fn commit_time(body: &serde_json::Value) -> Option<jiff::Timestamp> {
     raw.parse::<jiff::Timestamp>().ok()
 }
 
+/// How a demographic read renders its body in the representation `Accept`
+/// negotiates.
+type Render = fn(&HeaderMap, http::StatusCode, &serde_json::Value) -> Response;
+
+/// The rendering of a demographic resource no ITS-XML class maps, served as
+/// canonical JSON only.
+const JSON_ONLY: Render = |h, status, value| body::respond(h, status, value);
+
 /// Renders a demographic read whose versioning headers ride the service's
 /// response metadata (overview §"`ETag` and Last-Modified"), with no
 /// `Location` (§Location restricts it to creation and redirect responses).
-fn respond_versioned(h: &HeaderMap, resp: &ServiceResponse) -> Response {
-    let mut out = crate::overview::negotiate::body::respond(h, http::StatusCode::OK, &resp.body);
+fn respond_versioned(h: &HeaderMap, resp: &ServiceResponse, render: Render) -> Response {
+    let mut out = render(h, http::StatusCode::OK, &resp.body);
     if let Some(meta) = resp.meta.as_ref() {
         set_versioning_headers(&mut out, meta, Tree::Demographic);
     }
@@ -178,8 +187,13 @@ fn respond_versioned(h: &HeaderMap, resp: &ServiceResponse) -> Response {
 
 /// Render a demographic read that the service returns without metadata, with
 /// the versioning headers derived from the served body ([`read_meta`]).
-fn read_versioned(h: &HeaderMap, versioned_object_uid: &str, body: &serde_json::Value) -> Response {
-    let mut out = crate::overview::negotiate::body::respond(h, http::StatusCode::OK, body);
+fn read_versioned(
+    h: &HeaderMap,
+    versioned_object_uid: &str,
+    body: &serde_json::Value,
+    render: Render,
+) -> Response {
+    let mut out = render(h, http::StatusCode::OK, body);
     set_versioning_headers(
         &mut out,
         &read_meta(versioned_object_uid, body),
@@ -253,7 +267,7 @@ mod tests {
     /// creation … or redirect responses".
     #[test]
     fn versioning_headers_carry_no_location() {
-        let mut resp = crate::overview::negotiate::body::empty(http::StatusCode::OK);
+        let mut resp = body::empty(http::StatusCode::OK);
         set_versioning_headers(&mut resp, &meta(), Tree::Demographic);
         assert_eq!(etag(&resp), Some(format!("W/\"{UID}\"").as_str()));
         assert!(
@@ -268,11 +282,11 @@ mod tests {
     #[test]
     fn versioning_headers_emit_last_modified_when_known() {
         let at: jiff::Timestamp = "2009-07-22T19:15:56Z".parse().unwrap();
-        let mut resp = crate::overview::negotiate::body::empty(http::StatusCode::OK);
+        let mut resp = body::empty(http::StatusCode::OK);
         set_versioning_headers(&mut resp, &meta().with_last_modified(at), Tree::Demographic);
         assert_eq!(last_modified(&resp), Some("Wed, 22 Jul 2009 19:15:56 GMT"));
 
-        let mut bare = crate::overview::negotiate::body::empty(http::StatusCode::OK);
+        let mut bare = body::empty(http::StatusCode::OK);
         set_versioning_headers(&mut bare, &meta(), Tree::Demographic);
         assert!(last_modified(&bare).is_none());
     }
@@ -282,7 +296,7 @@ mod tests {
     /// resource").
     #[test]
     fn write_headers_add_the_creation_location() {
-        let mut resp = crate::overview::negotiate::body::empty(http::StatusCode::CREATED);
+        let mut resp = body::empty(http::StatusCode::CREATED);
         set_resource_headers(&mut resp, BASE, Tree::Demographic, Some("person"), &meta());
         assert_eq!(etag(&resp), Some(format!("W/\"{UID}\"").as_str()));
         assert_eq!(
@@ -411,7 +425,7 @@ mod tests {
             "_type": "VERSIONED_PARTY",
             "uid": { "_type": "HIER_OBJECT_ID", "value": VO }
         });
-        let resp = read_versioned(&HeaderMap::new(), VO, &body);
+        let resp = read_versioned(&HeaderMap::new(), VO, &body, JSON_ONLY);
         assert_eq!(resp.status(), http::StatusCode::OK);
         assert_eq!(etag(&resp), Some(format!("W/\"{VO}\"").as_str()));
         assert!(

@@ -1,0 +1,1 @@
+- The viewer's Query › Cohort tab names a cohort's subjects by identifier and namespace, beside the demographic predicates, wherever the CDR lets a cohort name them (`[privacy.cohort] subjects`). A CDR that only takes named subjects, as one beside an IHE patient identity source does, now runs cohort queries from the viewer.

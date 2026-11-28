@@ -4511,9 +4511,9 @@ guarded_handler! {
             // The envelope is always canonical JSON; a Simplified media type selects
             // ONLY the inner `versions[i].data` COMPOSITION form (SPECITS-84, the
             // Amendment_record entry of 27 Apr 2026 + `contribution_create.yaml`
-            // §Simplified Formats). No canonical-XML CONTRIBUTION wire shape exists,
-            // so `application/xml` is not offered (a canonical-XML `Content-Type` is
-            // `415`).
+            // §Simplified Formats). No released schema defines the XML of the commit
+            // body (#1605), so `application/xml` is not accepted (a canonical-XML
+            // `Content-Type` is `415`).
             content(
                 (serde_json::Value = "application/json", example = json!({
                     "versions": [ {
@@ -4839,14 +4839,14 @@ guarded_handler! {
                                           (see `400`/`412`).",
              body = serde_json::Value),
             (status = 406, description = "The `Accept` header cannot be satisfied: \
-                                          a CONTRIBUTION envelope is served as \
-                                          canonical `application/json` only, \
-                                          optionally with its inner \
-                                          `versions[i].data` payloads in \
+                                          a CONTRIBUTION is served as canonical \
+                                          `application/json`, optionally with its \
+                                          inner `versions[i].data` payloads in \
                                           `application/openehr.wt.flat+json` / \
-                                          `application/openehr.wt.structured+json` \
-                                          — there is no canonical-XML CONTRIBUTION \
-                                          shape, so `application/xml` is refused \
+                                          `application/openehr.wt.structured+json`, \
+                                          or as `application/xml` under a \
+                                          `contribution` root (#4652), and any \
+                                          other `Accept` is refused \
                                           (`Resources.md` §\"JSON \
                                           Format\"/§\"Simplified Formats\": \"If the \
                                           service cannot fulfill this aspect of the \
@@ -4902,8 +4902,8 @@ guarded_handler! {
                                           this resource can process — anything \
                                           outside `application/json` and the two \
                                           Simplified Formats, `application/xml` \
-                                          included (a CONTRIBUTION has no canonical \
-                                          XML wire shape), or a deprecated \
+                                          included (no released schema defines the \
+                                          XML of the commit body), or a deprecated \
                                           `…schema+json` variant (`Resources.md` \
                                           §\"JSON Format\": \"If the service cannot \
                                           process the request payload as JSON \
@@ -5127,8 +5127,11 @@ guarded_handler! {
         ),
         responses(
             (
-                status = 200, description = "The CONTRIBUTION. The envelope is \
-                                            ALWAYS canonical JSON — SPECITS-84 \
+                status = 200, description = "The CONTRIBUTION, in canonical JSON \
+                                            or, unresolved, as XML under a \
+                                            `contribution` root (#4652). Under a \
+                                            Simplified `Accept` the envelope stays \
+                                            canonical JSON — SPECITS-84 \
                                             (Amendment_record, 27 Apr 2026) and \
                                             ITS-REST \
                                             `specifications/responses/200_CONTRIBUTION.yaml`: \
@@ -5242,11 +5245,12 @@ guarded_handler! {
                                           sub-resource of the EHR.",
              body = serde_json::Value),
             (status = 406, description = "The `Accept` header cannot be satisfied: \
-                                          the CONTRIBUTION envelope is served as \
-                                          canonical `application/json` only \
-                                          (there is no canonical-XML CONTRIBUTION \
-                                          shape, so `application/xml` is refused), \
-                                          and a Simplified-Format `Accept` is \
+                                          the CONTRIBUTION is served as canonical \
+                                          `application/json` or as `application/xml` \
+                                          under a `contribution` root (#4652), a \
+                                          `Prefer: resolve_refs` read, whose \
+                                          versions are no OBJECT_REFs, as JSON \
+                                          only, and a Simplified-Format `Accept` is \
                                           refused when a resolved member payload is \
                                           not a COMPOSITION (`Resources.md` \
                                           §\"JSON Format\"/§\"Simplified Formats\": \

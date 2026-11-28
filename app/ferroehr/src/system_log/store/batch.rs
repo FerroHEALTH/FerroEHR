@@ -60,7 +60,7 @@ batch_columns! {
     token_ids: Option<&'a str>,
     domains: &'a str,
     purposes: Option<&'a str>,
-    legal_bases: Option<&'a str>,
+    legal_bases: Option<String>,
     result_counts: Option<i64>,
     request_ids: Option<&'a str>,
     roles: Option<serde_json::Value>,
@@ -132,7 +132,11 @@ impl<'a> BatchColumns<'a> {
         self.token_ids.push(event.token_id.as_deref());
         self.domains.push(event.domain.as_str());
         self.purposes.push(event.purpose.as_deref());
-        self.legal_bases.push(event.legal_basis.as_deref());
+        self.legal_bases.push(
+            event
+                .legal_basis
+                .map(crate::system_log::event::legal_basis_text),
+        );
         self.result_counts.push(result_count(event));
         self.request_ids.push(event.request_id.as_deref());
         self.roles.push(roles_json(event));
@@ -229,7 +233,7 @@ impl BatchColumns<'_> {
             token_id: self.token_ids[i],
             domain: self.domains[i],
             purpose: self.purposes[i],
-            legal_basis: self.legal_bases[i],
+            legal_basis: self.legal_bases[i].as_deref(),
             result_count: self.result_counts[i],
             request_id: self.request_ids[i],
             roles: self.roles[i].as_ref(),

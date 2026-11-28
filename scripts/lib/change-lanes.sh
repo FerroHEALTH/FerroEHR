@@ -56,8 +56,9 @@ readonly ROOT
 # so a crate the harnesses come to depend on is covered the day it is added.
 # docs: the site sources and every input of the build's own gates.
 # conformance (#4449): the server build (never the viewer), the party set,
-# the conformance deployment's compose files and what it mounts, the
-# pipeline scripts and the recipe, conformance.yml, which ci.yml calls.
+# the committed record its run is compared with (#6747), the conformance
+# deployment's compose files and what it mounts, the pipeline scripts and
+# the recipe, conformance.yml, which ci.yml calls.
 readonly LANES='ci|deploy|^(scripts/deploy-probe|docker-compose|docker/|deploy/hosted/|scripts/checks/shipped-configs\.sh$)
 ci|code|^scripts/(checks/codegen-drift|ui-e2e)\.sh$|^deploy/hosted/ferroehr-viewer\.sandbox\.toml$|^(app/|crates/|tools/|corpus/|\.cargo/|\.config/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|rustfmt\.toml$|clippy\.toml$|deny\.toml$)
 ci|viewer|^(app/ferroehr-viewer/|app/ferroehr-server/src/|app/ferroehr/src/privacy/|app/ferroehr/src/config/|app/ferroehr-rest/src/extensions/access/|app/ferroehr-rest/src/smart/|app/ferroehr-rest/src/config\.rs$|app/ferroehr-rest/src/router\.rs$|docker/ferroehr\.dev\.toml$|app/ferroehr/assets/ferroehr\.default\.toml$|scripts/ui-e2e\.sh$|docker-compose\.yml$|docker-compose\.override\.yml$|docker-compose\.dev\.yml$|docker-compose\.keycloak\.yml$|docker/Dockerfile$|docker/viewer/|docker/keycloak/|docker/postgres/|Cargo\.lock$|\.github/workflows/ci\.yml$)
@@ -71,8 +72,8 @@ ci|vex|^(security/vex/|scripts/checks/(vex-reachability|advisory-exceptions|vex-
 ci|cache|(^|/)Cargo\.(toml|lock)$|^rust-toolchain\.toml$|^\.cargo/config\.toml$|^\.github/workflows/ci\.yml$
 ci|instructions|^(perf/instructions\.ceilings|scripts/perf/instructions\.sh)$
 ci|semver|^(crates/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|docs/VERSIONS\.md$|scripts/checks/semver\.sh$|scripts/lib/public-deps\.sh$|\.github/workflows/ci\.yml$)
-docs|docs|^(website/|docs/conformance/|docs/benchmarks/|scripts/(render|site)/|scripts/lib/veredictum\.sh$|scripts/checks/(docs-claims|conformance-numbers)\.sh$|\.github/workflows/docs\.yml$|\.github/actions/docs-toolchain/)
-conformance|conformance|^(app/ferroehr(-rest|-server|-ext)?/|crates/|tools/|\.cargo/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|\.dockerignore$|docker/Dockerfile$|docker/sut-[^/]+\.yml$|docker/ferroehr\.dev\.toml$|docker/postgres/|docker/terminology/|docs/conformance/party/|scripts/conformance\.sh$|scripts/lib/(veredictum|cnf-compose)\.sh$|\.github/workflows/conformance\.yml$)'
+docs|docs|^(website/|docs/conformance/|docs/benchmarks/|scripts/(render|site)/|scripts/lib/veredictum\.sh$|scripts/checks/(docs-claims|conformance-numbers)\.sh$|\.github/workflows/docs(-build)?\.yml$|\.github/actions/docs-toolchain/)
+conformance|conformance|^(app/ferroehr(-rest|-server|-ext)?/|crates/|tools/|\.cargo/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|\.dockerignore$|docker/Dockerfile$|docker/sut-[^/]+\.yml$|docker/ferroehr\.dev\.toml$|docker/postgres/|docker/terminology/|docs/conformance/party/|docs/conformance/ferroehr/results\.json$|scripts/conformance(-record|-deviations)?\.sh$|scripts/lib/(veredictum|cnf-compose)\.sh$|\.github/workflows/conformance\.yml$)'
 
 # path_dependencies <manifest>: the `path =` value of every normal and build
 # dependency the manifest declares, in the inline and in the table form, one
@@ -161,7 +162,7 @@ filler() {
 }
 
 self_test() {
-  local failures=0 big name workflow first last want got
+  local failures=0 cases=0 big name workflow first last want got
   big=$(filler 1999)
   if [[ "${#big}" -le 65536 ]]; then
     echo "self-test: the filler is ${#big} bytes, not past the 64 KiB pipe buffer" >&2
@@ -175,6 +176,7 @@ self_test() {
   fi
   # Each case: a name, the workflow, the path, and the lanes that must be true.
   while IFS='|' read -r name workflow first want; do
+    cases=$((cases + 1))
     for last in true false; do
       if [[ "$last" == true ]]; then
         got=$(classify "$workflow" "$big"$'\n'"$first")
@@ -219,11 +221,17 @@ a benchmark record builds the site|docs|docs/benchmarks/access-path/record.json|
 a crate source does not build the site|docs|crates/openehr-rm/src/lib.rs|
 a server source runs conformance|conformance|app/ferroehr-rest/src/router.rs|conformance
 the party statement runs conformance|conformance|docs/conformance/party/ferroehr/statement.json|conformance
+the committed record runs conformance|conformance|docs/conformance/ferroehr/results.json|conformance
+the record guard runs conformance|conformance|scripts/conformance-record.sh|conformance
 a compose overlay runs conformance|conformance|docker/sut-terminology.yml|conformance
 the pin runs conformance|conformance|scripts/lib/veredictum.sh|conformance
 the recipe runs conformance|conformance|.github/workflows/conformance.yml|conformance
 a viewer source runs no conformance|conformance|app/ferroehr-viewer/src/lib.rs|
 CASES
+  if [[ "$cases" -eq 0 ]]; then
+    echo "self-test: the case list is empty" >&2
+    failures=1
+  fi
   for workflow in ci docs conformance; do
     got=$(classify "$workflow" "" | grep -c '=true$' || true)
     if [[ "$got" != 0 ]]; then
@@ -260,7 +268,7 @@ CASES
     failures=1
   fi
   [[ "$failures" -eq 0 ]] || return 1
-  echo "change-lanes: self-test OK (31 paths classified first and last in a 2000-path list, the pipe form fails on it, and the fuzz closure follows fuzz/Cargo.toml)."
+  echo "change-lanes: self-test OK ($cases paths classified first and last in a 2000-path list, the pipe form fails on it, and the fuzz closure follows fuzz/Cargo.toml)."
 }
 
 case "${1-}" in

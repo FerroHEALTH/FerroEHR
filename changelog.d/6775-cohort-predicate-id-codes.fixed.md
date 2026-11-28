@@ -1,0 +1,1 @@
+- A cohort predicate (`[privacy.cohort.predicates.<name>] node`) binds an ADL 2 id-code (`id5`) as well as an ADL 1.4 at-code (`at0012`), so a deployment can select a cohort on an ELEMENT of the ADL 2 archetypes it serves. The server refused an id-code at boot before.

@@ -92,11 +92,13 @@ Two things to know before you build discovery on it:
   only the BASE rows do, and leaves the member out otherwise. ITS-REST types
   the member as a free string and the openEHR conformance framework names no
   profiles, so these values are FerroEHR's own. No configuration key sets it.
+  The current record holds the committer deviation as failed BASE rows
+  ([Known deviations](../conformance.md#known-deviations)), so the server
+  leaves the member out.
 
 > [!NOTE]
-> The manifest lives at the API base path and nowhere else. A bare `/` alias
-> existed in earlier versions and was removed. Point discovery at the base
-> path.
+> The manifest lives at the API base path and nowhere else. Point discovery
+> at the base path.
 
 ## Authentication
 
@@ -121,7 +123,7 @@ means "fix your credential":
 
 | Situation | Status | What it means |
 |---|---|---|
-| No `Authorization` header | `401` | with a `WWW-Authenticate` challenge listing the schemes this server implements, and **no** `error=` code — nothing has gone wrong yet ([RFC 6750 §3.1](https://www.rfc-editor.org/rfc/rfc6750#section-3.1)) |
+| No `Authorization` header | `401` | with a `WWW-Authenticate` challenge listing the schemes this server implements, and **no** `error=` code: nothing has gone wrong yet ([RFC 6750 §3.1](https://www.rfc-editor.org/rfc/rfc6750#section-3.1)) |
 | Credential presented and rejected | `401` | the challenge carries `error="invalid_token"`: expired, revoked, malformed (a bearer token outside the [RFC 6750 §2.1](https://www.rfc-editor.org/rfc/rfc6750#section-2.1) `b64token` alphabet included), or simply wrong |
 | `Authorization` header malformed | `400` | two `Authorization` headers, or a header that is no scheme followed by a space and a credential. The server never got as far as a credential, so this is a request defect (`error="invalid_request"`) |
 | Authenticated, not permitted | `403` | for a bearer caller the challenge carries `error="insufficient_scope"`, naming what is missing |

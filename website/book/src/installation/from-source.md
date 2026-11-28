@@ -69,9 +69,9 @@ target/release/ferroehr
 
 It runs its schema migrations at boot and then serves on the configured bind
 address (default `0.0.0.0:8080`). That boot-time migration is a setting, not a
-fixture: `db.migrate = "verify"` makes the server issue no DDL at all, for a
+fixture: `[database] migrations = "verify"` makes the server issue no DDL at all, for a
 deployment whose database role has none of those rights (see
-[Operations](../operations.md#applying-migrations)).
+[Operations](../database-operations.md#applying-migrations)).
 
 Two global flags and three subcommand groups round the CLI out:
 

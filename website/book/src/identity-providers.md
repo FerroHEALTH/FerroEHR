@@ -115,13 +115,11 @@ What changes against a provider FerroEHR trusts directly, such as the
   table. Moving people to another provider changes every key, and a
   deployment re-provisions their logins.
 - **Roles.** FerroSMART writes the person's roles, as it mapped them from the
-  provider, into the access token's `roles` claim (RFC 9068 §2.2.3.1) from
-  FerroSMART 0.2.0, the release the quickstart pins
-  (FerroHEALTH/FerroSMART#649). Name FerroSMART's table in `[authz.rbac]
-  role_issuers` for them to grant `admin_role` or the emergency role.
+  provider, into the access token's `roles` claim (RFC 9068 §2.2.3.1). Name FerroSMART's table in `[authz.rbac]
+  role_issuers` for them to grant `admin_role`. Emergency access is a
+  justification of the access policy, never a role.
 - **The product scope.** A person reaches the ADMIN API only with the
-  product scope, which FerroSMART grants through a role that maps to it from
-  FerroSMART 0.2.0 (FerroHEALTH/FerroSMART#647).
+  product scope, which FerroSMART grants through a role that maps to it.
 - **Clients** register at FerroSMART, whose registry is the one list of
   clients. A system client registers for Backend Services, with a JWK Set,
   and FerroEHR grants each its operations in the CDR as for any system
@@ -161,7 +159,7 @@ RFC 9068 §2.2; RFC 8693 §4.1), and the server acts on the kind:
 - **A representative** is a user whose `fhirUser` is a `RelatedPerson`, or
   whose `PERSON` is a representative's alone, admitted for a subject the CDR
   stores a live representation of
-  ([Representatives](operational-policy.md#representatives)).
+  ([Representatives](caller-facts.md#representatives)).
 - **A delegated user** is a token whose RFC 8693 `act` names an actor, such
   as a service that exchanged the user's token or an administrator who
   impersonates them. The token's subject is the user, so the request is bound
@@ -212,7 +210,7 @@ RFC 9068 §2.2; RFC 8693 §4.1), and the server acts on the kind:
     `professional.hp_professional_role` and `provider.facility_type`, are
     read as the caller's roles and its organisation's types, each a code of
     the system the value names. The controller's rules name callers by them
-    ([Controller rules](operational-policy.md#controller-rules)), so a
+    ([Controller rules](access-policy.md#controller-rules)), so a
     national rule such as one that keeps insurers or occupational physicians
     out of an exchange is a rule you commit, refused with `403` as
     `refused-policy-denied`. A value that names no system matches no rule;
@@ -357,7 +355,7 @@ its own. Configure three things:
 3. **The SCIM client.** Your authorization server issues the provisioning
    client an access token by the client credentials grant (RFC 6749 §4.4), or
    in exchange for a client assertion (RFC 7523 §2.2). Grant the client
-   [`scim_provision`](installation/config-auth.md#authscim) in the CDR with
+   [`scim_provision`](installation/config-scim.md#authscim) in the CDR with
    the `binding_issuer` of step 2. The SCIM client sends the key as
    `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier`
    (RFC 7644).
@@ -463,11 +461,11 @@ Never bind on `email`, `phone_number`, `preferred_username`, `name`, `upn` or
 An issuer can let a professional with no party work at their first login:
 FerroEHR then creates a provisional `PERSON` from the access token and binds
 the login to it, as
-[the configuration reference](installation/config-auth.md#just-in-time-creation)
+[the configuration reference](installation/config-authz.md#just-in-time-creation)
 describes. It is off until an administrator writes a `create_at_login`
 grant for the issuer in the CDR, whose admission conditions read the
 claims below
-([Operational policy](operational-policy.md#just-in-time-admission)). What
+([Operational policy](policy-examples.md#just-in-time-admission)). What
 each identity provider must do for it:
 
 - **Put the name claims in the access token.** FerroEHR reads the person's

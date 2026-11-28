@@ -1,0 +1,1 @@
+- A care relationship refused for having no end now says it "must be written with an end", where the `422` text read "is written with an end".

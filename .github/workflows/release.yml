@@ -1248,12 +1248,12 @@ jobs:
   # and compiles nothing. While `advisory` is set it ends green and hands its
   # verdict to announce as an output, which names it in the run summary
   # (#4455, #4605); nothing else needs it, and the milestone does not wait for
-  # it. The badge push is the Action's on main only, so a tag run pushes none.
+  # it.
   conformance:
     name: conformance
     needs: [plan, app-image, postgres-image]
     permissions:
-      contents: write # the reusable job's badge push, which never happens off main
+      contents: read
       packages: read # pull the digests this run pushed
     uses: ./.github/workflows/conformance.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
@@ -1327,9 +1327,12 @@ jobs:
           verb: wipe
           ssh-key: ${{ secrets.HOSTED_SSH_KEY }}
           known-hosts: ${{ secrets.HOSTED_KNOWN_HOSTS }}
+      # Verb `release` moves an image line the box's `.env` pins to a
+      # candidate back to `:latest` before it deploys (#6717).
       - name: Deploy the hosted sandbox
         uses: ./.github/actions/hosted-deploy # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
+          verb: release
           expected-version: ${{ needs.plan.outputs.version }}
           ssh-key: ${{ secrets.HOSTED_SSH_KEY }}
           known-hosts: ${{ secrets.HOSTED_KNOWN_HOSTS }}

@@ -1,0 +1,1 @@
+- FerroEHR takes the FerroHEALTH family's `fhir-types` 0.4 and `ferrohealth-smart` 0.36 line together: `ferrohealth-session` 0.33, `ihe-atna` and `ehds-logging` 0.31, `ihe-iti` 0.28 and `ferrobridge-term` 0.24. The configuration keys are unchanged.
